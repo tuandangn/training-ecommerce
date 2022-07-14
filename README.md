@@ -5,4 +5,6 @@ Training ecommerce website base on ASP.NET Core MVC
 # Entity Diagram
 ![Training-ecommerce-website-entity-diagram](https://user-images.githubusercontent.com/34543444/178924350-8f0b1f1e-1e36-40d9-b21e-70ca38941aca.png)
 # Entity Relation Diagram
-![Training-ecommerce-website-entity-relationship-diagram](https://user-images.githubusercontent.com/34543444/178776379-7fd1e4bf-f067-434c-92a5-e681365cd945.png)
+![Entity-relationship-diagram](https://user-images.githubusercontent.com/34543444/178935253-ff67b065-859f-4857-9e12-ed57ffca0315.png)
+# Database Entity Diagram
+![database-design](https://user-images.githubusercontent.com/34543444/178935231-486974f5-7da7-4059-a876-93a0e4b4a4bc.png)
