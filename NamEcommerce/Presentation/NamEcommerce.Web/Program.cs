@@ -1,37 +1,59 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
+using NamEcommerce.Data.SqlServer;
 
+//services
 var builder = WebApplication.CreateBuilder(args);
+ConfigureServices(builder.Services, builder.Configuration);
 
-// Add services to the container.
-builder.Services.AddControllersWithViews();
-builder.Services.AddAuthentication(opts =>
-{
-    opts.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-}).AddCookie(opts =>
-{
-    opts.LoginPath = "/User/Login";
-    opts.LogoutPath = "/User/Logout";
-});
-
+//middlewares
 var app = builder.Build();
+Configure(app);
 
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+//start
+app.Run();
+
+#region Local Methods
+
+void ConfigureServices(IServiceCollection services, ConfigurationManager configuration)
 {
-    app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-    app.UseHsts();
+    services.AddControllersWithViews();
+
+    services.AddAuthentication(opts =>
+        opts.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme
+    ).AddCookie(opts =>
+    {
+        opts.LoginPath = "/User/Login";
+        opts.LogoutPath = "/User/Logout";
+    });
+
+    services.AddDbContext<NamEcommerceDbContext>(opts =>
+        opts.UseSqlServer(
+            configuration.GetConnectionString(nameof(NamEcommerceDbContext)), 
+            opts => opts.MigrationsAssembly(typeof(Program).Assembly.FullName)
+        )
+    );
 }
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
+void Configure(WebApplication app)
+{
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseExceptionHandler("/Home/Error");
+        // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+        app.UseHsts();
+    }
 
-app.UseRouting();
+    app.UseHttpsRedirection();
+    app.UseStaticFiles();
 
-app.UseAuthorization();
+    app.UseRouting();
 
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    app.UseAuthorization();
 
-app.Run();
+    app.MapControllerRoute(
+        name: "default",
+        pattern: "{controller=Home}/{action=Index}/{id?}");
+}
+
+#endregion
