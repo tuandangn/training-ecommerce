@@ -1,0 +1,50 @@
+﻿@using NamEcommerce.Web.Models.Users
+@model RegisterModel
+@{
+    ViewData["Title"] = "Đăng ký";
+}
+<div class="row my-5">
+    <div class="offset-md-2 col-md-8 offset-lg-3 col-lg-6">
+        <div class="card shadow">
+            <div class="card-body px-4 py-5">
+                <h1 class="text-center mb-4">Đăng ký</h1>
+                <div asp-validation-summary="ModelOnly" class="alert alert-warning"></div>
+                <form class="row g-3" method="post" asp-antiforgery="true">
+                    <div class="col-12">
+                        <label asp-for="Fullname" class="form-label"></label>
+                        <input asp-for="Fullname" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Fullname)" />
+                        <span asp-validation-for="Fullname" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Email" class="form-label"></label>
+                        <input asp-for="Email" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Email)" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Password" class="form-label"></label>
+                        <input asp-for="Password" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Password)" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="ConfirmPassword" class="form-label"></label>
+                        <input asp-for="ConfirmPassword" class="form-control" placeholder="@Html.DisplayNameFor(m => m.ConfirmPassword)" />
+                        <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input asp-for="Persistent" class="form-check-input" />
+                            <label asp-for="Persistent" class="form-check-label"></label>
+                            <span asp-validation-for="Persistent" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Đăng ký</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts{
+    <partial name="_ValidationScriptsPartial" />
+}
