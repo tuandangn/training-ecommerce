@@ -3,7 +3,7 @@ Training ecommerce website base on ASP.NET Core MVC
 # DDD Architecture
 ![ddd-architecture](https://user-images.githubusercontent.com/34543444/181580598-915c8149-dad9-45d5-923b-ff5e1e4dc674.png)
 # Project Dependencies
-![project-dependencies](https://user-images.githubusercontent.com/34543444/181592206-a44a3d99-ca4d-43e2-a2f2-c149e091992c.png)
+![project-dependencies](https://user-images.githubusercontent.com/34543444/181748140-304c9a52-84a6-424c-a35b-827989f01159.png)
 # Entity Diagram
 ![Training-ecommerce-website-entity-diagram](https://user-images.githubusercontent.com/34543444/178924350-8f0b1f1e-1e36-40d9-b21e-70ca38941aca.png)
 # Entity Relation Diagram
