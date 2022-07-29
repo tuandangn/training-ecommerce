@@ -18,14 +18,14 @@ public sealed class CategoryAppService : ICategoryAppService
     {
         if (dto is null)
             throw new ArgumentNullException(nameof(dto));
-        if (await DoesNameExistAsync(dto.Name, null))
+        if (await DoesNameExistAsync(dto.Name, null).ConfigureAwait(false))
             throw new CategoryNameExistsException(dto.Name);
 
         var insertedCategory = await _categoryRepository.InsertAsync(
             new Category(default, dto.Name)
             {
                 DisplayOrder = dto.DisplayOrder
-            });
+            }).ConfigureAwait(false);
         return new CategoryDto(insertedCategory.Id, insertedCategory.Name, insertedCategory.DisplayOrder);
     }
 
@@ -34,7 +34,7 @@ public sealed class CategoryAppService : ICategoryAppService
         if (name is null)
             throw new ArgumentNullException(nameof(name));
 
-        var categories = await _categoryRepository.GetAllAsync();
+        var categories = await _categoryRepository.GetAllAsync().ConfigureAwait(false);
 
         return categories.Any(category => string.Equals(category.Name, name));
     }
