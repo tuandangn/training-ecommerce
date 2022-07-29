@@ -11,8 +11,8 @@ public sealed record Category : AppAggregateEntity
     public string Name { get; init; }
     public int DisplayOrder { get; set; }
 
-    public int? ParentId { get; set; }
-    public int OnParentDisplayOrder { get; set; }
+    public int? ParentId { get; internal set; }
+    public int OnParentDisplayOrder { get; internal set; }
 
     public DateTime CreatedOnUtc { get; init; }
 }

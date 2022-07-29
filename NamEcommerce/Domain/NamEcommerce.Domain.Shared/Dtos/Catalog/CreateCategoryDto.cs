@@ -1,10 +1,10 @@
 ﻿namespace NamEcommerce.Domain.Shared.Dtos.Catalog;
 
 [Serializable]
-public sealed class CreateCategoryDto
+public sealed record CreateCategoryDto
 {
-    public CreateCategoryDto(string name, int displayOrder)
-        => (Name, DisplayOrder) = (name, displayOrder);
+    public CreateCategoryDto(string name)
+        => Name = name;
 
     public string Name { get; set; }
 
