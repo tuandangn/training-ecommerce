@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NamEcommerce.Domain.Entities.Catalog;
+﻿namespace NamEcommerce.Domain.Entities.Catalog;
 
 [Serializable]
 public sealed record Category : AppEntity
@@ -9,6 +7,10 @@ public sealed record Category : AppEntity
         => Name = name;
 
     public string Name { get; init; }
-
     public int DisplayOrder { get; set; }
+
+    public int? ParentId { get; set; }
+    public int OnParentDisplayOrder { get; set; }
+
+    public DateTime CreatedOnUtc { get; init; }
 }

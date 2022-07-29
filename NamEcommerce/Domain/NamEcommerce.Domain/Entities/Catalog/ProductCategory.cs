@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace NamEcommerce.Domain.Entities.Catalog;
+﻿namespace NamEcommerce.Domain.Entities.Catalog;
 
 [Serializable]
 public sealed record ProductCategory : AppEntity
@@ -9,7 +7,6 @@ public sealed record ProductCategory : AppEntity
         => (ProductId, CategoryId) = (productId, categoryId);
 
     public int ProductId { get; init; }
-
     public int CategoryId { get; init; }
 
     public int DisplayOrder { get; set; }
