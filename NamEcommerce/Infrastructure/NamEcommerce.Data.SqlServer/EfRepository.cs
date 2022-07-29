@@ -1,8 +1,6 @@
-﻿using NamEcommerce.Data.Contracts;
+﻿namespace NamEcommerce.Data.SqlServer;
 
-namespace NamEcommerce.Data.SqlServer;
-
-public sealed class EfRepository<TEntity> : IRepository<TEntity> where TEntity : class
+public sealed class EfRepository<TEntity> : IRepository<TEntity> where TEntity : AppAggregateEntity
 {
     private readonly IDbContext _dbContext;
 
@@ -42,6 +40,9 @@ public sealed class EfRepository<TEntity> : IRepository<TEntity> where TEntity :
 
     public async Task<TEntity> UpdateAsync(TEntity entity)
     {
+        if (entity is null)
+            throw new ArgumentNullException(nameof(entity));
+
         var updatingEntity = _dbContext.Update(entity);
         await _dbContext.SaveChangesAsync().ConfigureAwait(false);
         return updatingEntity;

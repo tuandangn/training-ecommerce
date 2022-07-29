@@ -3,7 +3,7 @@ using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 
-namespace NamEcommerce.Domain.Services;
+namespace NamEcommerce.Domain.Services.Catalog;
 
 public sealed class CategoryAppService : ICategoryAppService
 {

@@ -1,6 +1,4 @@
-﻿using NamEcommerce.Data.Contracts;
-
-namespace NamEcommerce.Data.SqlServer;
+﻿namespace NamEcommerce.Data.SqlServer;
 
 public sealed class NamEcommerceDbContext : DbContext, IDbContext
 {
@@ -14,7 +12,7 @@ public sealed class NamEcommerceDbContext : DbContext, IDbContext
         base.OnModelCreating(modelBuilder);
     }
 
-    public IQueryable<TEntity> GetData<TEntity>() where TEntity : class
+    public IQueryable<TEntity> GetData<TEntity>() where TEntity : AppAggregateEntity
         => Set<TEntity>();
 
     async ValueTask<TEntity> IDbContext.AddAsync<TEntity>(TEntity entity, CancellationToken cancellationToken)
@@ -24,9 +22,7 @@ public sealed class NamEcommerceDbContext : DbContext, IDbContext
     }
 
     void IDbContext.Remove<TEntity>(TEntity entity)
-    {
-        Remove(entity);
-    }
+        => Remove(entity);
 
     TEntity IDbContext.Update<TEntity>(TEntity entity)
     {
@@ -34,13 +30,15 @@ public sealed class NamEcommerceDbContext : DbContext, IDbContext
         return entry.Entity;
     }
 
-    public ValueTask<TEntity?> FindAsync<TEntity, TKey>(TKey[] keyValues, CancellationToken cancellationToken = default) where TEntity : class
+    public ValueTask<TEntity?> FindAsync<TEntity, TKey>(TKey[] keyValues, CancellationToken cancellationToken = default) 
+        where TEntity : AppAggregateEntity
     {
         object[] keys = new object[keyValues.Length];
         Array.Copy(keyValues, keys, keyValues.Length);
         return FindAsync<TEntity>(keys, cancellationToken);
     }
 
-    public ValueTask<TEntity?> FindAsync<TEntity>(int key, CancellationToken cancellationToken = default) where TEntity : class
+    public ValueTask<TEntity?> FindAsync<TEntity>(int key, CancellationToken cancellationToken = default) 
+        where TEntity : AppAggregateEntity
         => FindAsync<TEntity, int>(new[] { key }, cancellationToken);
 }

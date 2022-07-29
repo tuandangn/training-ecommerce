@@ -1,5 +1,7 @@
 ﻿global using Microsoft.EntityFrameworkCore;
 global using Microsoft.EntityFrameworkCore.Metadata.Builders;
+global using NamEcommerce.Data.Contracts;
+global using NamEcommerce.Domain.Shared;
 global using NamEcommerce.Domain.Entities.Catalog;
 global using NamEcommerce.Domain.Entities.Users;
 global using NamEcommerce.Domain.Entities.Security;

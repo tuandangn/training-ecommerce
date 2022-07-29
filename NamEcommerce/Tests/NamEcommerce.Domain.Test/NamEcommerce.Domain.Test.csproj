@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Domain\NamEcommerce.Domain.Services\NamEcommerce.Domain.Services.csproj" />
     <ProjectReference Include="..\..\Domain\NamEcommerce.Domain\NamEcommerce.Domain.csproj" />
     <ProjectReference Include="..\NameEcommerce.TestHelper\NamEcommerce.TestHelper.csproj" />
   </ItemGroup>

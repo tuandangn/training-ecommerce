@@ -1,4 +1,6 @@
-﻿namespace NamEcommerce.Domain.Entities.Catalog;
+﻿using NamEcommerce.Domain.Shared;
+
+namespace NamEcommerce.Domain.Entities.Catalog;
 
 [Serializable]
 public sealed record ProductCategory : AppEntity

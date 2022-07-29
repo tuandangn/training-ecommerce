@@ -1,4 +1,6 @@
-﻿namespace NamEcommerce.Domain.Entities.Security;
+﻿using NamEcommerce.Domain.Shared;
+
+namespace NamEcommerce.Domain.Entities.Security;
 
 [Serializable]
 public sealed record RolePermission : AppEntity

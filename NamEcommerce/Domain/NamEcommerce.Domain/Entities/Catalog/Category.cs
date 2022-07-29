@@ -1,7 +1,9 @@
-﻿namespace NamEcommerce.Domain.Entities.Catalog;
+﻿using NamEcommerce.Domain.Shared;
+
+namespace NamEcommerce.Domain.Entities.Catalog;
 
 [Serializable]
-public sealed record Category : AppEntity
+public sealed record Category : AppAggregateEntity
 {
     internal Category(int id, string name) : base(id)
         => Name = name;

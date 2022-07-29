@@ -1,9 +1,10 @@
-﻿using NamEcommerce.Domain.Shared.Exceptions.Users;
+﻿using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Exceptions.Users;
 
 namespace NamEcommerce.Domain.Entities.Users;
 
 [Serializable]
-public sealed record User : AppEntity
+public sealed record User : AppAggregateEntity
 {
     internal User(int id, string username, string passwordHash, string fullName, string phoneNumber)
         : this(id, username, passwordHash, fullName, phoneNumber, Array.Empty<UserRole>())

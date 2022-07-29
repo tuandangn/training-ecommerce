@@ -1,4 +1,6 @@
-﻿namespace NamEcommerce.Domain.Entities.Orders;
+﻿using NamEcommerce.Domain.Shared;
+
+namespace NamEcommerce.Domain.Entities.Orders;
 
 [Serializable]
 public sealed record OrderItem : AppEntity

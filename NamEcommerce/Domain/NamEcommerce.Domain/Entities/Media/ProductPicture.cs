@@ -1,4 +1,6 @@
-﻿namespace NamEcommerce.Domain.Entities.Media;
+﻿using NamEcommerce.Domain.Shared;
+
+namespace NamEcommerce.Domain.Entities.Media;
 
 [Serializable]
 public sealed record ProductPicture : AppEntity

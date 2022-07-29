@@ -1,7 +1,9 @@
-﻿namespace NamEcommerce.Domain.Entities.Media;
+﻿using NamEcommerce.Domain.Shared;
+
+namespace NamEcommerce.Domain.Entities.Media;
 
 [Serializable]
-public sealed record Picture : AppEntity
+public sealed record Picture : AppAggregateEntity
 {
     public Picture(int id, byte[] data, string mimeType, string extension) : base(id)
         => (Data, MimeType, Extension) = (data, mimeType, extension);

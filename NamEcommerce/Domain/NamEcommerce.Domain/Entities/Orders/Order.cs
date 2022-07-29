@@ -1,7 +1,9 @@
-﻿namespace NamEcommerce.Domain.Entities.Orders;
+﻿using NamEcommerce.Domain.Shared;
+
+namespace NamEcommerce.Domain.Entities.Orders;
 
 [Serializable]
-public sealed record Order : AppEntity
+public sealed record Order : AppAggregateEntity
 {
     public Order(int id, int userId, decimal orderTotal, PaymentStatus paymentStatus, OrderStatus orderStatus)
         : this(id, userId, orderTotal, paymentStatus, orderStatus, Array.Empty<OrderItem>())

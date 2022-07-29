@@ -1,10 +1,11 @@
 ﻿using NamEcommerce.Domain.Entities.Media;
+using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 
 namespace NamEcommerce.Domain.Entities.Catalog;
 
 [Serializable]
-public record Product : AppEntity
+public record Product : AppAggregateEntity
 {
     internal Product(int id, string name, decimal price, string shortDesc)
         : this(id, name, price, shortDesc, Array.Empty<ProductCategory>(), Array.Empty<ProductPicture>())

@@ -1,7 +1,9 @@
-﻿namespace NamEcommerce.Domain.Entities.Users;
+﻿using NamEcommerce.Domain.Shared;
+
+namespace NamEcommerce.Domain.Entities.Users;
 
 [Serializable]
-public sealed record Role : AppEntity
+public sealed record Role : AppAggregateEntity
 {
     public Role(int id, string name) : base(id)
         => Name = name;
