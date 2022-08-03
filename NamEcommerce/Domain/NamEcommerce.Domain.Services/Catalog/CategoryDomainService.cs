@@ -3,6 +3,7 @@ using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Services;
 
 namespace NamEcommerce.Domain.Services.Catalog;
 
@@ -30,7 +31,7 @@ public sealed class CategoryDomainService : ICategoryDomainService
         return insertedCategory.ToDto();
     }
 
-    public async Task DeleteCategoryAsync(int categoryId)
+    public async Task DeleteCategoryAsync(Guid categoryId)
     {
         var category = await _categoryRepository.GetByIdAsync(categoryId).ConfigureAwait(false);
         if (category is null)
@@ -49,7 +50,7 @@ public sealed class CategoryDomainService : ICategoryDomainService
         }
     }
 
-    public async Task<bool> DoesNameExistAsync(string name, int? comparesWithCurrentId = null)
+    public async Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
     {
         if (name is null)
             throw new ArgumentNullException(nameof(name));
@@ -61,7 +62,7 @@ public sealed class CategoryDomainService : ICategoryDomainService
             && (!comparesWithCurrentId.HasValue || category.Id != comparesWithCurrentId));
     }
 
-    public async Task<CategoryDto> SetParentCategory(int categoryId, int parentId, int onParentDisplayOrder)
+    public async Task<CategoryDto> SetParentCategory(Guid categoryId, Guid parentId, int onParentDisplayOrder)
     {
         var child = await _categoryRepository.GetByIdAsync(categoryId).ConfigureAwait(false);
         if (child is null)

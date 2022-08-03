@@ -2,7 +2,7 @@
 
 public record AppAggregateEntity : AppEntity
 {
-    public AppAggregateEntity(int id) : base(id)
+    public AppAggregateEntity(Guid id) : base(id)
     {
     }
 }

@@ -3,7 +3,7 @@
 [Serializable]
 public sealed class ProductAlreadyInCategoryException : Exception
 {
-    public ProductAlreadyInCategoryException(int categoryId, string productName)
+    public ProductAlreadyInCategoryException(Guid categoryId, string productName)
         : base($"Product '{productName}' already have been in category with id '{categoryId}'")
     {
     }

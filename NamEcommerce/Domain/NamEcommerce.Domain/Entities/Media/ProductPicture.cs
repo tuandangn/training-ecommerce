@@ -5,11 +5,11 @@ namespace NamEcommerce.Domain.Entities.Media;
 [Serializable]
 public sealed record ProductPicture : AppEntity
 {
-    public ProductPicture(int id, int productId, int pictureId) : base(id)
+    public ProductPicture(Guid id, Guid productId, Guid pictureId) : base(id)
         => (ProductId, PictureId) = (productId, pictureId);
 
-    public int ProductId { get; init; }
-    public int PictureId { get; init; }
+    public Guid ProductId { get; init; }
+    public Guid PictureId { get; init; }
 
     public int DisplayOrder { get; set; }
 }

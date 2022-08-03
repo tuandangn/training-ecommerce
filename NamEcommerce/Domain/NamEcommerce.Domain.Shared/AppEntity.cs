@@ -3,8 +3,8 @@
 [Serializable]
 public abstract record AppEntity
 {
-    public AppEntity(int id)
+    public AppEntity(Guid id)
         => Id = id;
 
-    public int Id { get; private set; }
+    public Guid Id { get; private set; }
 }

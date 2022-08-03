@@ -5,16 +5,16 @@ namespace NamEcommerce.Domain.Entities.Orders;
 [Serializable]
 public sealed record Order : AppAggregateEntity
 {
-    public Order(int id, int userId, decimal orderTotal, PaymentStatus paymentStatus, OrderStatus orderStatus)
+    public Order(Guid id, Guid userId, decimal orderTotal, PaymentStatus paymentStatus, OrderStatus orderStatus)
         : this(id, userId, orderTotal, paymentStatus, orderStatus, Array.Empty<OrderItem>())
     { }
 
-    public Order(int id, int userId, decimal orderTotal, PaymentStatus paymentStatus, OrderStatus orderStatus, IList<OrderItem> orderItems) 
+    public Order(Guid id, Guid userId, decimal orderTotal, PaymentStatus paymentStatus, OrderStatus orderStatus, IList<OrderItem> orderItems) 
         : base(id)
         => (UserId, OrderTotal, PaymentStatus, OrderStatus, _orderItems) 
         = (userId, orderTotal, paymentStatus, orderStatus, orderItems);
 
-    public int UserId { get; init; }
+    public Guid UserId { get; init; }
     public decimal OrderTotal { get; init; }
     public decimal OrderDiscount { get; init; }
 

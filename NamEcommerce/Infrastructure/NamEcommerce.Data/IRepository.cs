@@ -1,14 +1,16 @@
-﻿namespace NamEcommerce.Data.Contracts;
+﻿using NamEcommerce.Domain.Shared;
 
-public interface IRepository<TEntity> where TEntity : class
+namespace NamEcommerce.Data.Contracts;
+
+public interface IRepository<TEntity> where TEntity : AppAggregateEntity
 {
     Task<IEnumerable<TEntity>> GetAllAsync();
 
-    Task<TEntity?> GetByIdAsync(int id);
+    Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<TEntity> InsertAsync(TEntity entity);
+    Task<TEntity> InsertAsync(TEntity entity, CancellationToken cancellationToken = default);
 
-    Task<TEntity> UpdateAsync(TEntity entity);
+    Task<TEntity> UpdateAsync(TEntity entity, CancellationToken cancellationToken = default);
 
-    Task DeleteAsync(TEntity entity);
+    Task DeleteAsync(TEntity entity, CancellationToken cancellationToken = default);
 }

@@ -12,7 +12,7 @@ public sealed class EfRepositoryTests
     {
         var repository = new EfRepository<Category>(null!);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => repository.DeleteAsync(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => repository.DeleteAsync(null!, default));
     }
 
     [Fact]
@@ -20,11 +20,10 @@ public sealed class EfRepositoryTests
     {
         var entity = new Category(default, string.Empty);
         var dbContextMock = DbContext.Create()
-            .WhenCall(dbContext => dbContext.Remove(entity))
-            .WhenCall(dbContext => dbContext.SaveChangesAsync(default), Task.FromResult(1));
+            .WhenCall(dbContext => dbContext.RemoveAsync(entity, default));
         var repository = new EfRepository<Category>(dbContextMock.Object);
 
-        await repository.DeleteAsync(entity);
+        await repository.DeleteAsync(entity, default);
 
         dbContextMock.Verify();
     }
@@ -38,20 +37,19 @@ public sealed class EfRepositoryTests
     {
         var repository = new EfRepository<Category>(null!);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => repository.InsertAsync(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => repository.InsertAsync(null!, default));
     }
 
     [Fact]
     public async Task InsertAsync_EntityIsNotNull_InsertEntity()
     {
         var entity = new Category(default, string.Empty);
-        var returnEntity = new Category(1, string.Empty);
+        var returnEntity = new Category(Guid.NewGuid(), string.Empty);
         var dbContextMock = DbContext.Create()
-            .WhenCall(dbContext => dbContext.AddAsync(entity, default), ValueTask.FromResult(returnEntity))
-            .WhenCall(dbContext => dbContext.SaveChangesAsync(default), Task.FromResult(1));
+            .WhenCall(dbContext => dbContext.AddAsync(entity, default), Task.FromResult(returnEntity));
         var repository = new EfRepository<Category>(dbContextMock.Object);
 
-        var insertedEntity = await repository.InsertAsync(entity);
+        var insertedEntity = await repository.InsertAsync(entity, default);
 
         Assert.Equal(insertedEntity, returnEntity);
         dbContextMock.Verify();
@@ -65,7 +63,7 @@ public sealed class EfRepositoryTests
     {
         var returnValues = new[] { new Category(default, string.Empty), new Category(default, string.Empty), new Category(default, string.Empty) };
         var dbContextMock = DbContext.Create()
-            .WhenCall(dbContext => dbContext.GetData<Category>(), returnValues.AsQueryable());
+            .WhenCall(dbContext => dbContext.GetDataAsync<Category>(), returnValues.AsQueryable());
         var repository = new EfRepository<Category>(dbContextMock.Object);
 
         var allData = await repository.GetAllAsync();
@@ -83,11 +81,11 @@ public sealed class EfRepositoryTests
 
     public async Task GetByIdAsync_NotFound_ReturnsNull()
     {
-        var id = 0;
-        var dbContextMock = DbContext.Create().WhenCall(dbContext => dbContext.FindAsync<Category>(id, default), null);
+        var id = Guid.NewGuid();
+        var dbContextMock = DbContext.Create().WhenCall(dbContext => dbContext.FindAsync<Category>(id, default), (Category)null!);
         var repository = new EfRepository<Category>(dbContextMock.Object);
 
-        var notFound = await repository.GetByIdAsync(id);
+        var notFound = await repository.GetByIdAsync(id, default);
 
         Assert.Null(notFound);
         dbContextMock.Verify();
@@ -95,12 +93,12 @@ public sealed class EfRepositoryTests
 
     public async Task GetByIdAsync_Found_ReturnsFoundEntity()
     {
-        var id = 1;
+        var id = Guid.NewGuid();
         var entity = new Category(default, string.Empty);
         var dbContextMock = DbContext.Create().WhenCall(dbContext => dbContext.FindAsync<Category>(id, default), entity);
         var repository = new EfRepository<Category>(dbContextMock.Object);
 
-        var found = await repository.GetByIdAsync(id);
+        var found = await repository.GetByIdAsync(id, default);
 
         Assert.Equal(entity, found);
     }
@@ -113,19 +111,18 @@ public sealed class EfRepositoryTests
     {
         var repository = new EfRepository<Category>(null!);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => repository.UpdateAsync(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => repository.UpdateAsync(null!, default));
     }
 
     public async Task UpdateAsync_EntityIsNotNull_UpdateEntity()
     {
         var entity = new Category(default, string.Empty);
-        var returnEntity = new Category(1, string.Empty);
+        var returnEntity = new Category(Guid.NewGuid(), string.Empty);
         var dbContextMock = DbContext.Create()
-            .WhenCall(dbContext => dbContext.Update(entity), returnEntity)
-            .WhenCall(dbContext => dbContext.SaveChangesAsync(default), 1);
+            .WhenCall(dbContext => dbContext.UpdateAsync(entity, default), returnEntity);
         var repository = new EfRepository<Category>(dbContextMock.Object);
 
-        var updatedEntity = await repository.UpdateAsync(entity);
+        var updatedEntity = await repository.UpdateAsync(entity, default);
 
         Assert.Equal(returnEntity, updatedEntity);
         dbContextMock.Verify();

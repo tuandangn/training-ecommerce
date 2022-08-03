@@ -11,7 +11,7 @@ using NamEcommerce.Data.SqlServer;
 
 namespace NamEcommerce.Web.Migrations
 {
-    [DbContext(typeof(NamEcommerceDbContext))]
+    [DbContext(typeof(NamEcommerceEfDbContext))]
     [Migration("20220728163337_Initial")]
     partial class Initial
     {

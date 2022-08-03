@@ -7,4 +7,4 @@ global using NamEcommerce.Domain.Entities.Users;
 global using NamEcommerce.Domain.Entities.Security;
 global using NamEcommerce.Domain.Entities.Media;
 global using NamEcommerce.Domain.Entities.Orders;
-global using static NamEcommerce.Data.SqlServer.NamEcommerceDataDefaults;
+global using static NamEcommerce.Data.SqlServer.NamEcommerceEfDataDefaults;

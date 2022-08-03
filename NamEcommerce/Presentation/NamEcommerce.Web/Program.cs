@@ -27,9 +27,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         opts.LogoutPath = "/User/Logout";
     });
 
-    services.AddDbContext<NamEcommerceDbContext>(opts =>
+    services.AddDbContext<NamEcommerceEfDbContext>(opts =>
         opts.UseSqlServer(
-            configuration.GetConnectionString(nameof(NamEcommerceDbContext)), 
+            configuration.GetConnectionString(nameof(NamEcommerceEfDbContext)), 
             opts => opts.MigrationsAssembly(typeof(Program).Assembly.FullName)
         )
     );

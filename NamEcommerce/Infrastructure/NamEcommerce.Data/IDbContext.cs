@@ -4,20 +4,16 @@ namespace NamEcommerce.Data.Contracts;
 
 public interface IDbContext
 {
-    IQueryable<TEntity> GetData<TEntity>() where TEntity : AppAggregateEntity;
+    Task<IEnumerable<TEntity>> GetDataAsync<TEntity>() where TEntity : AppAggregateEntity;
 
-    ValueTask<TEntity?> FindAsync<TEntity, TKey>(TKey[] keyValues, CancellationToken cancellationToken = default)
-        where TEntity : AppAggregateEntity;
-    ValueTask<TEntity?> FindAsync<TEntity>(int key, CancellationToken cancellationToken = default)
+    Task<TEntity?> FindAsync<TEntity>(Guid key, CancellationToken cancellationToken = default)
         where TEntity : AppAggregateEntity;
 
-    ValueTask<TEntity> AddAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default)
+    Task<TEntity> AddAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default)
         where TEntity : AppAggregateEntity;
 
-    void Remove<TEntity>(TEntity entity) where TEntity : AppAggregateEntity;
+    Task RemoveAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : AppAggregateEntity;
 
-    TEntity Update<TEntity>(TEntity entity)
+    Task<TEntity> UpdateAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default)
              where TEntity : AppAggregateEntity;
-
-    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

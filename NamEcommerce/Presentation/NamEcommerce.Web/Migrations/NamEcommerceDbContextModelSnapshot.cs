@@ -10,7 +10,7 @@ using NamEcommerce.Data.SqlServer;
 
 namespace NamEcommerce.Web.Migrations
 {
-    [DbContext(typeof(NamEcommerceDbContext))]
+    [DbContext(typeof(NamEcommerceEfDbContext))]
     partial class NamEcommerceDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)

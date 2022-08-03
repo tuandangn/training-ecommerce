@@ -21,7 +21,7 @@ public sealed class CategoryDomainServiceTests
     public async Task CreateCategoryAsync_NameIsExists_ThrowsCategoryNameExistsException()
     {
         var testName = "test-name-existing";
-        var categoryRepositoryMock = CategoryRepository.SetNameExists(testName, 1);
+        var categoryRepositoryMock = CategoryRepository.SetNameExists(testName, Guid.NewGuid());
 
         var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
 
@@ -34,8 +34,8 @@ public sealed class CategoryDomainServiceTests
     [Fact]
     public async Task CreateCategoryAsync_DtoIsValid_ReturnsCreatedCategoryDto()
     {
-        var category = new Category(0, "name") { DisplayOrder = 1 };
-        var returnCategory = new Category(1, category.Name)
+        var category = new Category(Guid.NewGuid(), "name") { DisplayOrder = 1 };
+        var returnCategory = new Category(category.Id, category.Name)
         {
             DisplayOrder = category.DisplayOrder
         };
@@ -66,7 +66,7 @@ public sealed class CategoryDomainServiceTests
     [Fact]
     public async Task DoesNameExistAsync_NameIsMatchAndCompareIdEquals_ReturnsFalse()
     {
-        var hasNameCategoryId = 1;
+        var hasNameCategoryId = Guid.NewGuid();
         var testName = "test-name-existing";
         var categoryRepositoryMock = CategoryRepository.SetNameExists(testName, hasNameCategoryId);
         var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
@@ -81,7 +81,7 @@ public sealed class CategoryDomainServiceTests
     public async Task DoesNameExistAsync_NameIsMatchAndCompareIdIsNotProvided_ReturnsTrue()
     {
         var testName = "test-name-existing";
-        var categoryRepositoryMock = CategoryRepository.SetNameExists(testName, 1);
+        var categoryRepositoryMock = CategoryRepository.SetNameExists(testName, Guid.NewGuid());
         var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
 
         var nameExists = await categoryDomainService.DoesNameExistAsync(testName, comparesWithCurrentId: null);
@@ -105,7 +105,7 @@ public sealed class CategoryDomainServiceTests
     [Fact]
     public async Task UpdateCategoryAsync_CategoryIsNotFound_ThrowsArgumentException()
     {
-        var notFoundCategoryId = 0;
+        var notFoundCategoryId = Guid.NewGuid();
         var categoryRepositoryMock = CategoryRepository.NotFound(notFoundCategoryId);
         var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
 
@@ -117,12 +117,12 @@ public sealed class CategoryDomainServiceTests
     [Fact]
     public async Task UpdateCategoryAsync_CategoryNameIsExists_ThrowsCategoryNameExistsException()
     {
-        var oldCategory = new Category(1, "parent-old");
+        var oldCategory = new Category(Guid.NewGuid(), "parent-old");
         var updateCategory = oldCategory with
         {
             Name = "parent-new"
         };
-        var sameNameCategoryId = 2;
+        var sameNameCategoryId = Guid.NewGuid();
         var categoryRepositoryMock = CategoryRepository.CategoryById(oldCategory.Id, oldCategory)
             .SetNameExists(updateCategory.Name, sameNameCategoryId);
         var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
@@ -136,7 +136,7 @@ public sealed class CategoryDomainServiceTests
     [Fact]
     public async Task UpdateCategoryAsync_UpdateCategory()
     {
-        var oldCategory = new Category(1, "parent-old")
+        var oldCategory = new Category(Guid.NewGuid(), "parent-old")
         {
             DisplayOrder = 1
         };
@@ -150,7 +150,7 @@ public sealed class CategoryDomainServiceTests
                 && c.Name == updateCategory.Name
                 && c.DisplayOrder == updateCategory.DisplayOrder;
         var categoryRepositoryMock = CategoryRepository.CategoryById(oldCategory.Id, oldCategory)
-            .WhenCall(repository => repository.UpdateAsync(It.Is(isCategoryMatch)), updateCategory);
+            .WhenCall(repository => repository.UpdateAsync(It.Is(isCategoryMatch), default), updateCategory);
         var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
 
         var resultCategory = await categoryDomainService.UpdateCategoryAsync(
@@ -170,21 +170,21 @@ public sealed class CategoryDomainServiceTests
     [Fact]
     public async Task SetParentCategory_CategoryIsNotFound_ThrowsArgumentException()
     {
-        var notFoundCategoryId = 0;
+        var notFoundCategoryId = Guid.NewGuid();
         var categoryRepositoryMock = CategoryRepository.NotFound(notFoundCategoryId);
         var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
 
         await Assert.ThrowsAsync<ArgumentException>(()
             => categoryDomainService.SetParentCategory(notFoundCategoryId, default, default));
 
-        categoryRepositoryMock.Verify(repository => repository.GetByIdAsync(notFoundCategoryId), Times.Once);
+        categoryRepositoryMock.Verify(repository => repository.GetByIdAsync(notFoundCategoryId, default), Times.Once);
     }
 
     [Fact]
     public async Task SetParentCategory_ParentCategoryIsNotFound_ThrowsArgumentException()
     {
-        var categoryId = 1;
-        var notFoundParentCategoryId = 0;
+        var categoryId = Guid.NewGuid();
+        var notFoundParentCategoryId = Guid.NewGuid();
         var categoryRepositoryMock = CategoryRepository
             .CategoryById(categoryId, new Category(categoryId, string.Empty))
             .NotFound(notFoundParentCategoryId);
@@ -193,15 +193,15 @@ public sealed class CategoryDomainServiceTests
         await Assert.ThrowsAsync<ArgumentException>(()
             => categoryDomainService.SetParentCategory(categoryId, notFoundParentCategoryId, default));
 
-        categoryRepositoryMock.Verify(repository => repository.GetByIdAsync(categoryId), Times.Once);
-        categoryRepositoryMock.Verify(repository => repository.GetByIdAsync(notFoundParentCategoryId), Times.Once);
+        categoryRepositoryMock.Verify(repository => repository.GetByIdAsync(categoryId, default), Times.Once);
+        categoryRepositoryMock.Verify(repository => repository.GetByIdAsync(notFoundParentCategoryId, default), Times.Once);
     }
 
     [Fact]
     public async Task SetParentCategory_CircularParentCategory_ThrowsCategoryCircularRelationshipException()
     {
-        var childCategory = new Category(1, string.Empty);
-        var parentCategory = new Category(2, string.Empty)
+        var childCategory = new Category(Guid.NewGuid(), string.Empty);
+        var parentCategory = new Category(Guid.NewGuid(), string.Empty)
         {
             ParentId = childCategory.Id
         };
@@ -217,8 +217,8 @@ public sealed class CategoryDomainServiceTests
     [Fact]
     public async Task SetParentCategory_UpdateParentCategoryInfo()
     {
-        var childCategory = new Category(1, string.Empty);
-        var parentCategory = new Category(2, string.Empty);
+        var childCategory = new Category(Guid.NewGuid(), string.Empty);
+        var parentCategory = new Category(Guid.NewGuid(), string.Empty);
         var onParentDisplayOrder = 3;
         var returnCategory = childCategory with
         {
@@ -229,7 +229,7 @@ public sealed class CategoryDomainServiceTests
             .CategoryById(childCategory.Id, childCategory)
             .CategoryById(parentCategory.Id, parentCategory)
             .WhenCall(repository => repository.UpdateAsync(
-                It.Is<Category>(c => c.ParentId == parentCategory.Id && c.OnParentDisplayOrder == onParentDisplayOrder)),
+                It.Is<Category>(c => c.ParentId == parentCategory.Id && c.OnParentDisplayOrder == onParentDisplayOrder), default),
                 returnCategory
             );
         var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
@@ -247,7 +247,7 @@ public sealed class CategoryDomainServiceTests
     [Fact]
     public async Task DeleteCategoryAsync_CategoryIsNotFound_ThrowsArgumentException()
     {
-        var notFoundCategoryId = 0;
+        var notFoundCategoryId = Guid.NewGuid();
         var categoryRepositoryMock = CategoryRepository.NotFound(notFoundCategoryId);
         var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
 
@@ -260,7 +260,7 @@ public sealed class CategoryDomainServiceTests
     [Fact]
     public async Task DeleteCategoryAsync_DeleteCategory()
     {
-        var category = new Category(1, string.Empty);
+        var category = new Category(Guid.NewGuid(), string.Empty);
         var categoryRepositoryMock = CategoryRepository.CategoryById(category.Id, category);
         var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
 
@@ -272,20 +272,20 @@ public sealed class CategoryDomainServiceTests
     [Fact]
     public async Task DeleteCategoryAsync_HasChildCategories_SetParentIdToNull()
     {
-        var parent = new Category(1, "parent");
-        var child1 = new Category(2, "child1") { ParentId = parent.Id };
-        var child2 = new Category(3, "child2") { ParentId = parent.Id };
+        var parent = new Category(Guid.NewGuid(), "parent");
+        var child1 = new Category(Guid.NewGuid(), "child1") { ParentId = parent.Id };
+        var child2 = new Category(Guid.NewGuid(), "child2") { ParentId = parent.Id };
         var categoryRepositoryMock = CategoryRepository
             .SetData(child1, child2)
             .CategoryById(parent.Id, parent)
             .WhenCall(repository => 
-                repository.UpdateAsync(It.Is<Category>(c => c.Id == child1.Id && c.ParentId == null)),
+                repository.UpdateAsync(It.Is<Category>(c => c.Id == child1.Id && c.ParentId == null), default),
                 child1 with
                 {
                     ParentId = null
                 })
             .WhenCall(repository => 
-                repository.UpdateAsync(It.Is<Category>(c => c.Id == child2.Id && c.ParentId == null)),
+                repository.UpdateAsync(It.Is<Category>(c => c.Id == child2.Id && c.ParentId == null), default),
                 child2 with
                 {
                     ParentId = null

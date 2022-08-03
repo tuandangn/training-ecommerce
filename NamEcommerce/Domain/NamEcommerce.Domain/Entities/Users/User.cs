@@ -6,11 +6,11 @@ namespace NamEcommerce.Domain.Entities.Users;
 [Serializable]
 public sealed record User : AppAggregateEntity
 {
-    internal User(int id, string username, string passwordHash, string fullName, string phoneNumber)
+    internal User(Guid id, string username, string passwordHash, string fullName, string phoneNumber)
         : this(id, username, passwordHash, fullName, phoneNumber, Array.Empty<UserRole>())
     { }
 
-    internal User(int id, string username, string passwordHash, string fullName, string phoneNumber, IList<UserRole> userRoles)
+    internal User(Guid id, string username, string passwordHash, string fullName, string phoneNumber, IList<UserRole> userRoles)
         : base(id)
         => (Username, PasswordHash, FullName, PhoneNumber, _userRoles)
             = (username, passwordHash, fullName, phoneNumber, userRoles);
@@ -36,7 +36,7 @@ public sealed record User : AppAggregateEntity
 
         _userRoles = userRoles;
     }
-    internal void AddToRole(int roleId)
+    internal void AddToRole(Guid roleId)
     {
         if (UserRoles.Any(ur => ur.RoleId == roleId))
             throw new UserAlreadyHaveRoleException(roleId, Username);

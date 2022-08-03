@@ -3,10 +3,10 @@
 [Serializable]
 public sealed record UpdateCategoryDto
 {
-    public UpdateCategoryDto(int id, string name)
+    public UpdateCategoryDto(Guid id, string name)
         => (Id, Name) = (id, name);
 
-    public int Id { get; init; }
+    public Guid Id { get; init; }
     public string Name { get; set; }
     public int DisplayOrder { get; set; }
 }

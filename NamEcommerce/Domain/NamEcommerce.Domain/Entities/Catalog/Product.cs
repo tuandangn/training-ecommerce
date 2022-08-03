@@ -7,11 +7,11 @@ namespace NamEcommerce.Domain.Entities.Catalog;
 [Serializable]
 public record Product : AppAggregateEntity
 {
-    internal Product(int id, string name, decimal price, string shortDesc)
+    internal Product(Guid id, string name, decimal price, string shortDesc)
         : this(id, name, price, shortDesc, Array.Empty<ProductCategory>(), Array.Empty<ProductPicture>())
     { }
 
-    internal Product(int id, string name, decimal price, string shortDesc,
+    internal Product(Guid id, string name, decimal price, string shortDesc,
         IList<ProductCategory> productCategories, IList<ProductPicture> productPictures) : base(id)
         => (Name, Price, ShortDesc, _productCategories, _productPictures) 
         = (name, price, shortDesc, productCategories, productPictures);
@@ -43,7 +43,7 @@ public record Product : AppAggregateEntity
 
         _productCategories = productCategories;
     }
-    internal void AddToCategory(int categoryId, int displayOrder)
+    internal void AddToCategory(Guid categoryId, int displayOrder)
     {
         if (ProductCategories.Any(pc => pc.CategoryId == categoryId))
             throw new ProductAlreadyInCategoryException(categoryId, Name);
@@ -60,7 +60,7 @@ public record Product : AppAggregateEntity
 
         _productPictures = productPictues;
     }
-    internal void AddPicture(int pictureId, int displayOrder)
+    internal void AddPicture(Guid pictureId, int displayOrder)
     {
         _productPictures.Add(new ProductPicture(default, Id, pictureId)
         {
