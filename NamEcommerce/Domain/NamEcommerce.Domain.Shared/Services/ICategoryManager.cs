@@ -2,7 +2,7 @@
 
 namespace NamEcommerce.Domain.Shared.Services;
 
-public interface ICategoryDomainService
+public interface ICategoryManager
 {
     Task<CategoryDto> CreateCategoryAsync(CreateCategoryDto dto);
 

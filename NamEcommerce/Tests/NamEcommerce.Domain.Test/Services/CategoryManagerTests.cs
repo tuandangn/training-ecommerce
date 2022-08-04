@@ -3,17 +3,17 @@ using System.Linq.Expressions;
 
 namespace NamEcommerce.Domain.Test.Services;
 
-public sealed class CategoryDomainServiceTests
+public sealed class CategoryManagerTests
 {
     #region CreateCategoryAsync
 
     [Fact]
     public async Task CreateCategoryAsync_InputDtoIsNull_ThrowsArgumentNullException()
     {
-        var categoryDomainService = new CategoryDomainService(null!);
+        var categoryManager = new CategoryManager(null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            categoryDomainService.CreateCategoryAsync(null!)
+            categoryManager.CreateCategoryAsync(null!)
         );
     }
 
@@ -23,10 +23,10 @@ public sealed class CategoryDomainServiceTests
         var testName = "test-name-existing";
         var categoryRepositoryMock = CategoryRepository.SetNameExists(testName, Guid.NewGuid());
 
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
         await Assert.ThrowsAsync<CategoryNameExistsException>(() =>
-            categoryDomainService.CreateCategoryAsync(new CreateCategoryDto(testName))
+            categoryManager.CreateCategoryAsync(new CreateCategoryDto(testName))
         );
         categoryRepositoryMock.Verify();
     }
@@ -40,9 +40,9 @@ public sealed class CategoryDomainServiceTests
             DisplayOrder = category.DisplayOrder
         };
         var categoryRepositoryMock = CategoryRepository.CreateCategoryWillReturns(category, returnCategory);
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
-        var categoryDto = await categoryDomainService.CreateCategoryAsync(
+        var categoryDto = await categoryManager.CreateCategoryAsync(
             new CreateCategoryDto(category.Name) { DisplayOrder = category.DisplayOrder });
 
         Assert.Equal(categoryDto, returnCategory.ToDto());
@@ -56,10 +56,10 @@ public sealed class CategoryDomainServiceTests
     [Fact]
     public async Task DoesNameExistAsync_NameIsNull_ThrowsArgumentNullException()
     {
-        var categoryDomainService = new CategoryDomainService(null!);
+        var categoryManager = new CategoryManager(null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            categoryDomainService.DoesNameExistAsync(null!)
+            categoryManager.DoesNameExistAsync(null!)
         );
     }
 
@@ -69,9 +69,9 @@ public sealed class CategoryDomainServiceTests
         var hasNameCategoryId = Guid.NewGuid();
         var testName = "test-name-existing";
         var categoryRepositoryMock = CategoryRepository.SetNameExists(testName, hasNameCategoryId);
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
-        var nameExists = await categoryDomainService.DoesNameExistAsync(testName, comparesWithCurrentId: hasNameCategoryId);
+        var nameExists = await categoryManager.DoesNameExistAsync(testName, comparesWithCurrentId: hasNameCategoryId);
 
         Assert.False(nameExists);
         categoryRepositoryMock.Verify();
@@ -82,9 +82,9 @@ public sealed class CategoryDomainServiceTests
     {
         var testName = "test-name-existing";
         var categoryRepositoryMock = CategoryRepository.SetNameExists(testName, Guid.NewGuid());
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
-        var nameExists = await categoryDomainService.DoesNameExistAsync(testName, comparesWithCurrentId: null);
+        var nameExists = await categoryManager.DoesNameExistAsync(testName, comparesWithCurrentId: null);
 
         Assert.True(nameExists);
         categoryRepositoryMock.Verify();
@@ -97,9 +97,9 @@ public sealed class CategoryDomainServiceTests
     [Fact]
     public async Task UpdateCategoryAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var categoryDomainService = new CategoryDomainService(null!);
+        var categoryManager = new CategoryManager(null!);
 
-        await Assert.ThrowsAsync<ArgumentNullException>(() => categoryDomainService.UpdateCategoryAsync(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => categoryManager.UpdateCategoryAsync(null!));
     }
 
     [Fact]
@@ -107,10 +107,10 @@ public sealed class CategoryDomainServiceTests
     {
         var notFoundCategoryId = Guid.NewGuid();
         var categoryRepositoryMock = CategoryRepository.NotFound(notFoundCategoryId);
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
         await Assert.ThrowsAsync<ArgumentException>(()
-            => categoryDomainService.UpdateCategoryAsync(new UpdateCategoryDto(notFoundCategoryId, string.Empty)));
+            => categoryManager.UpdateCategoryAsync(new UpdateCategoryDto(notFoundCategoryId, string.Empty)));
         categoryRepositoryMock.Verify();
     }
 
@@ -125,9 +125,9 @@ public sealed class CategoryDomainServiceTests
         var sameNameCategoryId = Guid.NewGuid();
         var categoryRepositoryMock = CategoryRepository.CategoryById(oldCategory.Id, oldCategory)
             .SetNameExists(updateCategory.Name, sameNameCategoryId);
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
-        await Assert.ThrowsAsync<CategoryNameExistsException>(() => categoryDomainService.UpdateCategoryAsync(
+        await Assert.ThrowsAsync<CategoryNameExistsException>(() => categoryManager.UpdateCategoryAsync(
             new UpdateCategoryDto(updateCategory.Id, updateCategory.Name)));
 
         categoryRepositoryMock.Verify();
@@ -151,9 +151,9 @@ public sealed class CategoryDomainServiceTests
                 && c.DisplayOrder == updateCategory.DisplayOrder;
         var categoryRepositoryMock = CategoryRepository.CategoryById(oldCategory.Id, oldCategory)
             .WhenCall(repository => repository.UpdateAsync(It.Is(isCategoryMatch), default), updateCategory);
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
-        var resultCategory = await categoryDomainService.UpdateCategoryAsync(
+        var resultCategory = await categoryManager.UpdateCategoryAsync(
             new UpdateCategoryDto(updateCategory.Id, updateCategory.Name)
             {
                 DisplayOrder = updateCategory.DisplayOrder,
@@ -172,10 +172,10 @@ public sealed class CategoryDomainServiceTests
     {
         var notFoundCategoryId = Guid.NewGuid();
         var categoryRepositoryMock = CategoryRepository.NotFound(notFoundCategoryId);
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
         await Assert.ThrowsAsync<ArgumentException>(()
-            => categoryDomainService.SetParentCategory(notFoundCategoryId, default, default));
+            => categoryManager.SetParentCategory(notFoundCategoryId, default, default));
 
         categoryRepositoryMock.Verify(repository => repository.GetByIdAsync(notFoundCategoryId, default), Times.Once);
     }
@@ -188,10 +188,10 @@ public sealed class CategoryDomainServiceTests
         var categoryRepositoryMock = CategoryRepository
             .CategoryById(categoryId, new Category(categoryId, string.Empty))
             .NotFound(notFoundParentCategoryId);
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
         await Assert.ThrowsAsync<ArgumentException>(()
-            => categoryDomainService.SetParentCategory(categoryId, notFoundParentCategoryId, default));
+            => categoryManager.SetParentCategory(categoryId, notFoundParentCategoryId, default));
 
         categoryRepositoryMock.Verify(repository => repository.GetByIdAsync(categoryId, default), Times.Once);
         categoryRepositoryMock.Verify(repository => repository.GetByIdAsync(notFoundParentCategoryId, default), Times.Once);
@@ -208,10 +208,10 @@ public sealed class CategoryDomainServiceTests
         var categoryRepositoryStub = CategoryRepository
             .CategoryById(childCategory.Id, childCategory)
             .CategoryById(parentCategory.Id, parentCategory);
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryStub.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryStub.Object);
 
         await Assert.ThrowsAsync<CategoryCircularRelationshipException>(()
-            => categoryDomainService.SetParentCategory(childCategory.Id, parentCategory.Id, default));
+            => categoryManager.SetParentCategory(childCategory.Id, parentCategory.Id, default));
     }
 
     [Fact]
@@ -232,9 +232,9 @@ public sealed class CategoryDomainServiceTests
                 It.Is<Category>(c => c.ParentId == parentCategory.Id && c.OnParentDisplayOrder == onParentDisplayOrder), default),
                 returnCategory
             );
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
-        var categoryDto = await categoryDomainService.SetParentCategory(childCategory.Id, parentCategory.Id, onParentDisplayOrder);
+        var categoryDto = await categoryManager.SetParentCategory(childCategory.Id, parentCategory.Id, onParentDisplayOrder);
 
         Assert.Equal(categoryDto, returnCategory.ToDto());
         categoryRepositoryMock.Verify();
@@ -249,10 +249,10 @@ public sealed class CategoryDomainServiceTests
     {
         var notFoundCategoryId = Guid.NewGuid();
         var categoryRepositoryMock = CategoryRepository.NotFound(notFoundCategoryId);
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
         await Assert.ThrowsAsync<ArgumentException>(()
-            => categoryDomainService.DeleteCategoryAsync(notFoundCategoryId));
+            => categoryManager.DeleteCategoryAsync(notFoundCategoryId));
 
         categoryRepositoryMock.Verify();
     }
@@ -262,9 +262,9 @@ public sealed class CategoryDomainServiceTests
     {
         var category = new Category(Guid.NewGuid(), string.Empty);
         var categoryRepositoryMock = CategoryRepository.CategoryById(category.Id, category);
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
-        await categoryDomainService.DeleteCategoryAsync(category.Id);
+        await categoryManager.DeleteCategoryAsync(category.Id);
 
         categoryRepositoryMock.Verify();
     }
@@ -290,9 +290,9 @@ public sealed class CategoryDomainServiceTests
                 {
                     ParentId = null
                 });
-        var categoryDomainService = new CategoryDomainService(categoryRepositoryMock.Object);
+        var categoryManager = new CategoryManager(categoryRepositoryMock.Object);
 
-        await categoryDomainService.DeleteCategoryAsync(parent.Id);
+        await categoryManager.DeleteCategoryAsync(parent.Id);
 
         categoryRepositoryMock.Verify();
     }

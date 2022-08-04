@@ -2,8 +2,6 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.MongoDb;
-using NamEcommerce.Domain.Services.Catalog;
-using NamEcommerce.Domain.Shared.Services;
 
 //services
 var builder = WebApplication.CreateBuilder(args);

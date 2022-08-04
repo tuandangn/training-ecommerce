@@ -7,11 +7,11 @@ using NamEcommerce.Domain.Shared.Services;
 
 namespace NamEcommerce.Domain.Services.Catalog;
 
-public sealed class CategoryDomainService : ICategoryDomainService
+public sealed class CategoryManager : ICategoryManager
 {
     private readonly IRepository<Category> _categoryRepository;
 
-    public CategoryDomainService(IRepository<Category> categoryRepository)
+    public CategoryManager(IRepository<Category> categoryRepository)
     {
         _categoryRepository = categoryRepository;
     }
@@ -24,7 +24,7 @@ public sealed class CategoryDomainService : ICategoryDomainService
             throw new CategoryNameExistsException(dto.Name);
 
         var insertedCategory = await _categoryRepository.InsertAsync(
-            new Category(default, dto.Name)
+            new Category(Guid.NewGuid(), dto.Name)
             {
                 DisplayOrder = dto.DisplayOrder
             }).ConfigureAwait(false);
