@@ -26,5 +26,6 @@ public sealed record Order : AppAggregateEntity
     public IEnumerable<OrderItem> OrderItems => _orderItems.AsEnumerable();
 
     public DateTime CreatedOnUtc { get; init; }
-    public DateTime UpdatedOnUtc { get; init; }
+        = DateTime.UtcNow;
+    public DateTime? UpdatedOnUtc { get; init; }
 }

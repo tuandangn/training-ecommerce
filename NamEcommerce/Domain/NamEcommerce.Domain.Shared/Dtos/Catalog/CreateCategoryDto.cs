@@ -6,7 +6,7 @@ public sealed record CreateCategoryDto
     public CreateCategoryDto(string name)
         => Name = name;
 
-    public string Name { get; set; }
+    public string Name { get; init; }
 
     public int DisplayOrder { get; set; }
 }

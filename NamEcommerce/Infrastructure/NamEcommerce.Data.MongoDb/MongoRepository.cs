@@ -22,7 +22,6 @@ public sealed class MongoRepository<TEntity> : IRepository<TEntity> where TEntit
     public Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
         => _dbContext.FindAsync<TEntity>(id, cancellationToken);
 
-
     public Task<TEntity> InsertAsync(TEntity entity, CancellationToken cancellationToken = default)
         => _dbContext.AddAsync(entity, cancellationToken);
 

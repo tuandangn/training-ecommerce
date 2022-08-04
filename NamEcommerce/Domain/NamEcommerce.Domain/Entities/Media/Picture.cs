@@ -16,5 +16,6 @@ public sealed record Picture : AppAggregateEntity
     public bool IsNew { get; init; }
 
     public DateTime CreatedOnUtc { get; init; }
-    public DateTime UpdatedOnUtc { get; init; }
+        = DateTime.UtcNow;
+    public DateTime? UpdatedOnUtc { get; init; }
 }

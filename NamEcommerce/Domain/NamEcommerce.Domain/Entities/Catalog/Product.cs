@@ -25,6 +25,8 @@ public record Product : AppAggregateEntity
     public decimal? Tax { get; set; }
 
     public DateTime CreatedOnUtc { get; init; }
+        = DateTime.UtcNow;
+    public DateTime? UpdatedOnUtc { get; init; }
 
     private IList<ProductCategory> _productCategories;
     public IEnumerable<ProductCategory> ProductCategories

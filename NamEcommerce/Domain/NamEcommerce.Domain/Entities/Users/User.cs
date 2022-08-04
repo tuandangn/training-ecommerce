@@ -23,6 +23,7 @@ public sealed record User : AppAggregateEntity
     public string PhoneNumber { get; init; }
 
     public DateTime CreatedOnUtc { get; init; }
+        = DateTime.UtcNow;
 
     private IList<UserRole> _userRoles;
     public IEnumerable<UserRole> UserRoles => _userRoles.AsEnumerable();

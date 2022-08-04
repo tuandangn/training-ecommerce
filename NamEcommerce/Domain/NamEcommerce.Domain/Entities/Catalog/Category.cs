@@ -14,5 +14,6 @@ public sealed record Category : AppAggregateEntity
     public Guid? ParentId { get; internal set; }
     public int OnParentDisplayOrder { get; internal set; }
 
-    public DateTime CreatedOnUtc { get; init; }
+    public DateTime CreatedOnUtc { get; init; } 
+        = DateTime.UtcNow;
 }
