@@ -2,7 +2,7 @@
 using NamEcommerce.Data.Contracts;
 using System.Linq.Expressions;
 
-namespace NamEcommerce.Data.SqlServer.Test.Helpers;
+namespace NamEcommerce.TestHelper;
 
 public static class DbContext
 {
