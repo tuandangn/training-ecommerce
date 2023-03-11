@@ -17,6 +17,9 @@ public sealed class NamEcommerceMongoDbContext : IDbContext
 
     public IMongoDatabase Database => _database;
 
+    public IQueryable<TEntity> GetDataSource<TEntity>() where TEntity : AppAggregateEntity 
+        => GetCollection<TEntity>().AsQueryable();
+
     public async Task<TEntity> AddAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : AppAggregateEntity
     {
         var entities = GetCollection<TEntity>();

@@ -12,6 +12,9 @@ public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
         base.OnModelCreating(modelBuilder);
     }
 
+    public IQueryable<TEntity> GetDataSource<TEntity>() where TEntity : AppAggregateEntity
+        => Set<TEntity>();
+
     public async Task<TEntity?> FindAsync<TEntity>(Guid key, CancellationToken cancellationToken = default) 
         where TEntity : AppAggregateEntity
     {
@@ -21,8 +24,8 @@ public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
 
     public Task<IEnumerable<TEntity>> GetDataAsync<TEntity>() where TEntity : AppAggregateEntity
     {
-        IEnumerable<TEntity> entities = Set<TEntity>();
-        return Task.FromResult(entities);
+        IQueryable<TEntity> entities = Set<TEntity>();
+        return Task.FromResult<IEnumerable<TEntity>>(entities);
     }
 
     async Task<TEntity> IDbContext.AddAsync<TEntity>(TEntity entity, CancellationToken cancellationToken)

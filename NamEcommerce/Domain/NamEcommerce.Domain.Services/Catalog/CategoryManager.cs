@@ -16,6 +16,18 @@ public sealed class CategoryManager : ICategoryManager
         _categoryRepository = categoryRepository;
     }
 
+    public async Task<IEnumerable<CategoryDto>> GetAllCategoriesAsync()
+    {
+        var categories = await _categoryRepository.GetAllAsync().ConfigureAwait(false);
+
+        return categories.Select(category => new CategoryDto(category.Id, category.Name)
+        {
+            DisplayOrder = category.DisplayOrder,
+            ParentId = category.ParentId,
+            OnParentDisplayOrder = category.OnParentDisplayOrder
+        });
+    }
+
     public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryDto dto)
     {
         if (dto is null)
@@ -41,7 +53,7 @@ public sealed class CategoryManager : ICategoryManager
 
         var children = (await _categoryRepository.GetAllAsync().ConfigureAwait(false))
             .Where(cat => cat.ParentId == category.Id).ToList();
-        foreach(var child in children)
+        foreach (var child in children)
         {
             await _categoryRepository.UpdateAsync(child with
             {

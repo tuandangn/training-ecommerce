@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
-using NamEcommerce.Data.MongoDb;
+using NamEcommerce.Data.SqlServer;
+using System.Reflection;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -28,10 +29,11 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         opts.LogoutPath = "/User/Logout";
     });
 
-    services.AddScoped(typeof(IRepository<>), typeof(MongoRepository<>));
-
-    services.AddSingleton<IDbContext>(sp
-        => new NamEcommerceMongoDbContext(configuration.GetConnectionString(nameof(NamEcommerceMongoDbContext))));
+    services.AddDbContext<NamEcommerceEfDbContext>(opts =>
+        opts.UseSqlServer(configuration.GetConnectionString(nameof(NamEcommerceEfDbContext)),
+            opt => opt.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name))
+    );
+    services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
 }
 
 void Configure(WebApplication app)

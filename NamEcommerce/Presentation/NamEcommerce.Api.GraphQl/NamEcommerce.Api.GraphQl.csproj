@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="GraphQL" Version="7.3.0" />
+		<PackageReference Include="GraphQL.Server.Transports.AspNetCore" Version="7.3.0" />
+		<PackageReference Include="GraphQL.Server.Ui.GraphiQL" Version="7.3.0" />
+		<PackageReference Include="GraphQL.SystemTextJson" Version="7.3.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.7" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.7" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="6.0.7">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\Domain\NamEcommerce.Domain.Services\NamEcommerce.Domain.Services.csproj" />
+		<ProjectReference Include="..\..\Infrastructure\NamEcommerce.Data.SqlServer\NamEcommerce.Data.SqlServer.csproj" />
+		<ProjectReference Include="..\..\Application\NamEcommerce.Application.Shared\NamEcommerce.Application.Shared.csproj" />
+		<ProjectReference Include="..\..\Application\NamEcommerce.Application.Services\NamEcommerce.Application.Services.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="wwwroot\" />
+	</ItemGroup>
+
+</Project>

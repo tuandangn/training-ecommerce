@@ -4,6 +4,8 @@ namespace NamEcommerce.Data.Contracts;
 
 public interface IDbContext
 {
+    IQueryable<TEntity> GetDataSource<TEntity>() where TEntity : AppAggregateEntity;
+
     Task<IEnumerable<TEntity>> GetDataAsync<TEntity>() where TEntity : AppAggregateEntity;
 
     Task<TEntity?> FindAsync<TEntity>(Guid key, CancellationToken cancellationToken = default)

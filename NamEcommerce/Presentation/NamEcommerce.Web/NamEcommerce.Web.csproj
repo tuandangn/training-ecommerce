@@ -16,7 +16,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <ProjectReference Include="..\..\Infrastructure\NamEcommerce.Data.MongoDb\NamEcommerce.Data.MongoDb.csproj" />
+	  <ProjectReference Include="..\..\Infrastructure\NamEcommerce.Data.SqlServer\NamEcommerce.Data.SqlServer.csproj" />
 	</ItemGroup>
 
 </Project>
