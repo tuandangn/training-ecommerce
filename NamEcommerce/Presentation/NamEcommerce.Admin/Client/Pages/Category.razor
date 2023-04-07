@@ -1,4 +1,5 @@
 ﻿@page "/category"
+@inject IMediator Mediator
 
 <PageTitle>Category Management</PageTitle>
 
@@ -34,9 +35,9 @@ else
 }*@
 
 @code {
-    protected override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
-        return Task.CompletedTask;
+        var categoryList = await Mediator.Send(new GetCategory(Guid.Parse("37b8ee79-0314-4cb0-a702-ffa74136cce3")));
         //forecasts = await Http.GetFromJsonAsync<WeatherForecast[]>("WeatherForecast");
     }
 }

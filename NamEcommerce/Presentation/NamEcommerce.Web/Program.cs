@@ -33,7 +33,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         opts.UseSqlServer(configuration.GetConnectionString(nameof(NamEcommerceEfDbContext)),
             opt => opt.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name))
     );
-    services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
+    services.AddScoped(typeof(IRepository<>), typeof(NamEcommerceEfRepository<>));
 }
 
 void Configure(WebApplication app)

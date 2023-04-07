@@ -3,11 +3,11 @@ using NamEcommerce.Domain.Shared;
 
 namespace NamEcommerce.Data.MongoDb;
 
-public sealed class MongoRepository<TEntity> : IRepository<TEntity> where TEntity : AppAggregateEntity
+public sealed class NamECommerceMongoRepository<TEntity> : IRepository<TEntity> where TEntity : AppAggregateEntity
 {
     private readonly IDbContext _dbContext;
 
-    public MongoRepository(IDbContext dbContext)
+    public NamECommerceMongoRepository(IDbContext dbContext)
     {
         _dbContext = dbContext;
     }

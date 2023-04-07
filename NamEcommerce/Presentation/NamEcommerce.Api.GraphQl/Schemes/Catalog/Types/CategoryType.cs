@@ -23,8 +23,7 @@ public sealed class CategoryType : ObjectGraphType<CategoryModel>
                     return null;
                 var categoryDataLoader = context.RequestServices!.GetRequiredService<ICategoryDataLoader>();
                 var loader = loaderAccessor.Context!.GetOrAddBatchLoader<Guid, CategoryDto>(CategoryDataLoader.GET_BY_ID, categoryDataLoader.GetCategoriesByIdsAsync);
-                var categories = await loader.LoadAsync(new[] { context.Source.ParentId.Value }).GetResultAsync(context.CancellationToken);
-                var foundCategory = categories.FirstOrDefault(category => category.Id == context.Source.ParentId.Value);
+                var foundCategory = await loader.LoadAsync(context.Source.ParentId.Value).GetResultAsync(context.CancellationToken);
                 if (foundCategory == null)
                     return null;
                 return new CategoryModel(foundCategory.Id, foundCategory.Name)

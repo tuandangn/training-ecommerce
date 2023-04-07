@@ -3,6 +3,7 @@ using GraphQL;
 using GraphQL.DataLoader;
 using GraphQL.Server.Ui.GraphiQL;
 using GraphQL.Types;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Api.GraphQl.DataLoaders;
 using NamEcommerce.Api.GraphQl.Schemes;
@@ -21,13 +22,19 @@ var builder = WebApplication.CreateBuilder(args);
 #region Services
 {
     builder.Services.AddAuthorization();
+    builder.Services.AddCors(opts =>
+    {
+        opts.AddPolicy("Default", builder => 
+            builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()
+        );
+    });
 
     builder.Services.AddDbContext<NamEcommerceEfDbContext>(opts =>
         opts.UseSqlServer(builder.Configuration.GetConnectionString(nameof(NamEcommerceEfDbContext)),
             opt => opt.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name))
     );
     builder.Services.AddScoped<IDbContext, NamEcommerceEfDbContext>();
-    builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
+    builder.Services.AddScoped(typeof(IRepository<>), typeof(NamEcommerceEfRepository<>));
 
     builder.Services.AddScoped(typeof(IEntityDataReader<>), typeof(EntityDataReader<>));
     builder.Services.AddScoped<ICategoryManager, CategoryManager>();
@@ -58,6 +65,8 @@ var app = builder.Build();
         app.UseHsts();
     }
     app.UseHttpsRedirection();
+
+    app.UseCors("Default");
     app.UseRouting();
 
     app.Map("/catalog", _ =>

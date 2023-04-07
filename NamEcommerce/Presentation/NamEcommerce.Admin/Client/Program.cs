@@ -1,25 +1,26 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.Options;
+using NamEcommerce.Admin.Client;
+using NamEcommerce.Admin.Client.GraphQl;
 
-namespace NamEcommerce.Admin.Client;
+var builder = WebAssemblyHostBuilder.CreateDefault(args);
+builder.RootComponents.Add<App>("#app");
+builder.RootComponents.Add<HeadOutlet>("head::after");
 
-public sealed class Program
+builder.Services.Configure<GraphQlOptions>(options =>
 {
-    public static async Task Main(string[] args)
-    {
-        var builder = WebAssemblyHostBuilder.CreateDefault(args);
-        builder.RootComponents.Add<App>("#app");
-        builder.RootComponents.Add<HeadOutlet>("head::after");
+    builder.Configuration.Bind("NamEcommerce:GraphQl", options);
+});
+builder.Services.AddScoped(services 
+    => services.GetRequiredService<IOptionsSnapshot<GraphQlOptions>>().Value);
+builder.Services.AddMediatR(config =>
+{
+    config.RegisterServicesFromAssemblyContaining<App>();
+});
+builder.Services.AddScoped(sp => new HttpClient
+{
+    BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
+});
 
-        builder.Services.AddMediatR(config =>
-        {
-            config.RegisterServicesFromAssemblyContaining<Program>();
-        });
-        builder.Services.AddScoped(sp => new HttpClient
-        {
-            BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
-        });
-
-        await builder.Build().RunAsync();
-    }
-}
+await builder.Build().RunAsync();

@@ -10,7 +10,7 @@ public sealed class MongoRepositoryTests
     [Fact]
     public async Task DeleteAsync_EntityIsNull_ThrowsArgumentNullException()
     {
-        var repository = new MongoRepository<Category>(null!);
+        var repository = new NamECommerceMongoRepository<Category>(null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => repository.DeleteAsync(null!, default));
     }
@@ -21,7 +21,7 @@ public sealed class MongoRepositoryTests
         var entity = new Category(default, string.Empty);
         var dbContextMock = DbContext.Create()
             .WhenCall(dbContext => dbContext.RemoveAsync(entity, default));
-        var repository = new MongoRepository<Category>(dbContextMock.Object);
+        var repository = new NamECommerceMongoRepository<Category>(dbContextMock.Object);
 
         await repository.DeleteAsync(entity, default);
 
@@ -35,7 +35,7 @@ public sealed class MongoRepositoryTests
     [Fact]
     public async Task InsertAsync_EntityIsNull_ThrowsArgumentNullException()
     {
-        var repository = new MongoRepository<Category>(null!);
+        var repository = new NamECommerceMongoRepository<Category>(null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => repository.InsertAsync(null!, default));
     }
@@ -47,7 +47,7 @@ public sealed class MongoRepositoryTests
         var returnEntity = new Category(Guid.NewGuid(), string.Empty);
         var dbContextMock = DbContext.Create()
             .WhenCall(dbContext => dbContext.AddAsync(entity, default), Task.FromResult(returnEntity));
-        var repository = new MongoRepository<Category>(dbContextMock.Object);
+        var repository = new NamECommerceMongoRepository<Category>(dbContextMock.Object);
 
         var insertedEntity = await repository.InsertAsync(entity, default);
 
@@ -65,7 +65,7 @@ public sealed class MongoRepositoryTests
         var returnValues = new[] { new Category(default, string.Empty), new Category(default, string.Empty), new Category(default, string.Empty) };
         var dbContextMock = DbContext.Create()
             .WhenCall(dbContext => dbContext.GetDataAsync<Category>(), returnValues.AsQueryable());
-        var repository = new MongoRepository<Category>(dbContextMock.Object);
+        var repository = new NamECommerceMongoRepository<Category>(dbContextMock.Object);
 
         var allData = await repository.GetAllAsync();
 
@@ -85,7 +85,7 @@ public sealed class MongoRepositoryTests
     {
         var id = Guid.NewGuid();
         var dbContextMock = DbContext.Create().WhenCall(dbContext => dbContext.FindAsync<Category>(id, default), (Category)null!);
-        var repository = new MongoRepository<Category>(dbContextMock.Object);
+        var repository = new NamECommerceMongoRepository<Category>(dbContextMock.Object);
 
         var notFound = await repository.GetByIdAsync(id, default);
 
@@ -99,7 +99,7 @@ public sealed class MongoRepositoryTests
         var id = Guid.NewGuid();
         var entity = new Category(default, string.Empty);
         var dbContextMock = DbContext.Create().WhenCall(dbContext => dbContext.FindAsync<Category>(id, default), entity);
-        var repository = new MongoRepository<Category>(dbContextMock.Object);
+        var repository = new NamECommerceMongoRepository<Category>(dbContextMock.Object);
 
         var found = await repository.GetByIdAsync(id, default);
 
@@ -113,7 +113,7 @@ public sealed class MongoRepositoryTests
     [Fact]
     public async Task UpdateAsync_EntityIsNull_ThrowsArgumentNullException()
     {
-        var repository = new MongoRepository<Category>(null!);
+        var repository = new NamECommerceMongoRepository<Category>(null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => repository.UpdateAsync(null!, default));
     }
@@ -125,7 +125,7 @@ public sealed class MongoRepositoryTests
         var returnEntity = new Category(Guid.NewGuid(), string.Empty);
         var dbContextMock = DbContext.Create()
             .WhenCall(dbContext => dbContext.UpdateAsync(entity, default), returnEntity);
-        var repository = new MongoRepository<Category>(dbContextMock.Object);
+        var repository = new NamECommerceMongoRepository<Category>(dbContextMock.Object);
 
         var updatedEntity = await repository.UpdateAsync(entity, default);
 
