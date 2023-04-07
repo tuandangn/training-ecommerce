@@ -6,7 +6,7 @@ public static class CategoryQueries
     @"
     query CategoryListQuery {
         catalog {
-            allCategories {
+            categories: allCategories {
                 id name
                 parent { id name }
             }
@@ -20,7 +20,7 @@ public static class CategoryQueries
         catalog {
             category(id: $id) {
                 id name
-                parent { id name parent { id name } }
+                parent { id name }
             }
         }
     }

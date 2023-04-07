@@ -1,0 +1,52 @@
+﻿@page "/category/list"
+@inject IMediator Mediator
+
+<PageTitle>Category Management</PageTitle>
+
+<h1>Category Management</h1>
+
+@if (model == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!model.Success)
+{
+    <div class="alert alert-danger">
+        @model.Message
+    </div>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Parent</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var category in model.Data!.Categories)
+            {
+                <tr>
+                    <td>@category.Name</td>
+                    <td>@category.Parent?.Name</td>
+                    <td class="text-end">
+                        <a href="" class="btn btn-sm btn-light">
+                            Edit
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    ResponseModel<CategoryListModel>? model = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await Mediator.Send(new GetCategoryList(1, 10));
+    }
+}

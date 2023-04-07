@@ -3,13 +3,6 @@
 namespace NamEcommerce.Admin.Client.Models.Catalog;
 
 [Serializable]
-public sealed class CategoryResponseModel
-{
-    [JsonPropertyName("category")]
-    public CategoryModel? Category { get; set; }
-}
-
-[Serializable]
 public sealed class CategoryModel
 {
     [JsonPropertyName("id")]
