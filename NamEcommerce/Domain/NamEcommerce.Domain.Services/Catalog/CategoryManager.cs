@@ -10,22 +10,12 @@ namespace NamEcommerce.Domain.Services.Catalog;
 public sealed class CategoryManager : ICategoryManager
 {
     private readonly IRepository<Category> _categoryRepository;
+    private readonly IEntityDataReader<Category> _categoryDataReader;
 
-    public CategoryManager(IRepository<Category> categoryRepository)
+    public CategoryManager(IRepository<Category> categoryRepository, IEntityDataReader<Category> categoryDataReader)
     {
         _categoryRepository = categoryRepository;
-    }
-
-    public async Task<IEnumerable<CategoryDto>> GetAllCategoriesAsync()
-    {
-        var categories = await _categoryRepository.GetAllAsync().ConfigureAwait(false);
-
-        return categories.Select(category => new CategoryDto(category.Id, category.Name)
-        {
-            DisplayOrder = category.DisplayOrder,
-            ParentId = category.ParentId,
-            OnParentDisplayOrder = category.OnParentDisplayOrder
-        });
+        _categoryDataReader = categoryDataReader;
     }
 
     public async Task<CategoryDto> CreateCategoryAsync(CreateCategoryDto dto)
@@ -62,16 +52,17 @@ public sealed class CategoryManager : ICategoryManager
         }
     }
 
-    public async Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
+    public Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
     {
         if (name is null)
             throw new ArgumentNullException(nameof(name));
 
-        var categories = await _categoryRepository.GetAllAsync().ConfigureAwait(false);
+        var query = from category in _categoryDataReader.DataSource
+                    where category.Name == name && (comparesWithCurrentId == null || category.Id != comparesWithCurrentId)
+                    select category;
 
-        return categories.Any(category =>
-            string.Equals(category.Name, name)
-            && (!comparesWithCurrentId.HasValue || category.Id != comparesWithCurrentId));
+        var hasSameNameCategory = query.FirstOrDefault() != null;
+        return Task.FromResult(hasSameNameCategory);
     }
 
     public async Task<CategoryDto> SetParentCategory(Guid categoryId, Guid parentId, int onParentDisplayOrder)

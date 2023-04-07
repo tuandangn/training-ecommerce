@@ -7,7 +7,8 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="GraphQL" Version="7.3.0" />
+		<PackageReference Include="GraphQL" Version="7.3.1" />
+		<PackageReference Include="GraphQL.DataLoader" Version="7.3.1" />
 		<PackageReference Include="GraphQL.Server.Transports.AspNetCore" Version="7.3.0" />
 		<PackageReference Include="GraphQL.Server.Ui.GraphiQL" Version="7.3.0" />
 		<PackageReference Include="GraphQL.SystemTextJson" Version="7.3.0" />
@@ -26,10 +27,11 @@
 		<ProjectReference Include="..\..\Domain\NamEcommerce.Domain.Services\NamEcommerce.Domain.Services.csproj" />
 		<ProjectReference Include="..\..\Infrastructure\NamEcommerce.Data.SqlServer\NamEcommerce.Data.SqlServer.csproj" />
 		<ProjectReference Include="..\..\Application\NamEcommerce.Application.Shared\NamEcommerce.Application.Shared.csproj" />
-		<ProjectReference Include="..\..\Application\NamEcommerce.Application.Services\NamEcommerce.Application.Services.csproj" />
+		<ProjectReference Include="..\..\Application\NamEcommerce.Application.Services.StubData\NamEcommerce.Application.Services.StubData.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Folder Include="Extensions\" />
 	  <Folder Include="wwwroot\" />
 	</ItemGroup>
 

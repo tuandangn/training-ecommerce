@@ -45,9 +45,15 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NamEcommerce.Data.SqlServer
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NamEcommerce.Application.Services", "Application\NamEcommerce.Application.Services\NamEcommerce.Application.Services.csproj", "{4E61E7B4-9BB0-49FD-A9B5-954E530A9774}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NamEcommerce.Application.Services.Test", "Tests\NamEcommerce.Application.Services.Test\NamEcommerce.Application.Services.Test.csproj", "{372A28B4-70C5-48E5-9C66-322F9BAD6677}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NamEcommerce.Application.Services.Test", "Tests\NamEcommerce.Application.Services.Test\NamEcommerce.Application.Services.Test.csproj", "{372A28B4-70C5-48E5-9C66-322F9BAD6677}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NamEcommerce.Api.GraphQl.Test", "Tests\NamEcommerce.Api.GraphQl.Test\NamEcommerce.Api.GraphQl.Test.csproj", "{C99C8DB2-B2FF-4652-8E48-0B04A2FC9944}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NamEcommerce.Api.GraphQl.Test", "Tests\NamEcommerce.Api.GraphQl.Test\NamEcommerce.Api.GraphQl.Test.csproj", "{C99C8DB2-B2FF-4652-8E48-0B04A2FC9944}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NamEcommerce.Admin.Client", "Presentation\NamEcommerce.Admin\Client\NamEcommerce.Admin.Client.csproj", "{7687117E-1341-4B49-98EB-89F78C98F047}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NamEcommerce.Application.Services.StubData", "Application\NamEcommerce.Application.Services.StubData\NamEcommerce.Application.Services.StubData.csproj", "{3C145014-7E15-4C6C-82F9-6F008341F514}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NamEcommerce.Application.Miscellaneous", "Application\NamEcommerce.Application.Miscellaneous\NamEcommerce.Application.Miscellaneous.csproj", "{6E54C3C6-80BA-4719-8439-66A014221497}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -123,6 +129,18 @@ Global
 		{C99C8DB2-B2FF-4652-8E48-0B04A2FC9944}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C99C8DB2-B2FF-4652-8E48-0B04A2FC9944}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C99C8DB2-B2FF-4652-8E48-0B04A2FC9944}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7687117E-1341-4B49-98EB-89F78C98F047}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7687117E-1341-4B49-98EB-89F78C98F047}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7687117E-1341-4B49-98EB-89F78C98F047}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7687117E-1341-4B49-98EB-89F78C98F047}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3C145014-7E15-4C6C-82F9-6F008341F514}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3C145014-7E15-4C6C-82F9-6F008341F514}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3C145014-7E15-4C6C-82F9-6F008341F514}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3C145014-7E15-4C6C-82F9-6F008341F514}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6E54C3C6-80BA-4719-8439-66A014221497}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E54C3C6-80BA-4719-8439-66A014221497}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E54C3C6-80BA-4719-8439-66A014221497}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E54C3C6-80BA-4719-8439-66A014221497}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -145,6 +163,9 @@ Global
 		{4E61E7B4-9BB0-49FD-A9B5-954E530A9774} = {1A442855-695A-4D15-A952-ECC81445B039}
 		{372A28B4-70C5-48E5-9C66-322F9BAD6677} = {821820B5-1AF0-474E-ACF0-6C1C971D96B1}
 		{C99C8DB2-B2FF-4652-8E48-0B04A2FC9944} = {821820B5-1AF0-474E-ACF0-6C1C971D96B1}
+		{7687117E-1341-4B49-98EB-89F78C98F047} = {EF1405A1-DA93-454A-83F3-7C242878D2F2}
+		{3C145014-7E15-4C6C-82F9-6F008341F514} = {1A442855-695A-4D15-A952-ECC81445B039}
+		{6E54C3C6-80BA-4719-8439-66A014221497} = {1A442855-695A-4D15-A952-ECC81445B039}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E82EA0E0-2978-4691-ABD6-C41727DD7A4A}

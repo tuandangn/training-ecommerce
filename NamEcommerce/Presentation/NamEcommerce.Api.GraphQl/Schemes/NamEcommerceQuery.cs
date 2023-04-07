@@ -5,11 +5,13 @@ namespace NamEcommerce.Api.GraphQl.Schemes;
 
 public sealed class NamEcommerceQuery : ObjectGraphType
 {
-    public NamEcommerceQuery(IServiceProvider services)
+    public NamEcommerceQuery()
     {
         Name = "NamEcommerceQuery";
         Description = "Describes main queries";
 
-        Field<CatalogQuery>("catalog").Resolve(_ => services.GetRequiredService<CatalogQuery>());
+        Field<CatalogQuery>("catalog")
+            .Description("Describes catalog queries")
+            .Resolve(context => context.RequestServices!.GetRequiredService<CatalogQuery>());
     }
 }

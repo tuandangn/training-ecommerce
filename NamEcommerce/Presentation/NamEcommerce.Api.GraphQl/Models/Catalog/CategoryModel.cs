@@ -8,4 +8,5 @@ public sealed record CategoryModel
 
     public Guid Id { get; }
     public string Name { get; }
+    public Guid? ParentId { get; set; }
 }

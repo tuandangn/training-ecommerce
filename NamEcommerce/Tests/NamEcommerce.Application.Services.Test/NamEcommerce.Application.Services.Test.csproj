@@ -24,5 +24,6 @@
 	<ItemGroup>
 		<PackageReference Include="Moq" Version="4.18.1" />
 		<ProjectReference Include="..\..\Application\NamEcommerce.Application.Services\NamEcommerce.Application.Services.csproj" />
+		<ProjectReference Include="..\NameEcommerce.TestHelper\NamEcommerce.TestHelper.csproj" />
 	</ItemGroup>
 </Project>

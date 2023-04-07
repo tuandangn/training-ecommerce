@@ -44,4 +44,10 @@ public static class DbContext
         mock.Setup(expr).ReturnsAsync(@return).Verifiable();
         return mock;
     }
+    public static Mock<IDbContext> WhenCall<TResult>(this Mock<IDbContext> mock,
+        Expression<Func<IDbContext, IQueryable<TResult>>> expr, params TResult[] @return)
+    {
+        mock.Setup(expr).Returns(@return.AsQueryable()).Verifiable();
+        return mock;
+    }
 }

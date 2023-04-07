@@ -7,10 +7,8 @@ namespace NamEcommerce.TestHelper;
 
 public static class Repository
 {
-    public static Mock<IRepository<TEntity>> Create<TEntity>() where TEntity : AppAggregateEntity
-    {
-        return new Mock<IRepository<TEntity>>();
-    }
+    public static Mock<IRepository<TEntity>> Create<TEntity>() where TEntity : AppAggregateEntity 
+        => new Mock<IRepository<TEntity>>();
 
     public static Mock<IRepository<TEntity>> WithData<TEntity>(this Mock<IRepository<TEntity>> mock, params TEntity[] entities)
         where TEntity : AppAggregateEntity

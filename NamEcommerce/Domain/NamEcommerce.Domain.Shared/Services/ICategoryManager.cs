@@ -4,8 +4,6 @@ namespace NamEcommerce.Domain.Shared.Services;
 
 public interface ICategoryManager
 {
-    Task<IEnumerable<CategoryDto>> GetAllCategoriesAsync();
-
     Task<CategoryDto> CreateCategoryAsync(CreateCategoryDto dto);
 
     Task<CategoryDto> UpdateCategoryAsync(UpdateCategoryDto dto);

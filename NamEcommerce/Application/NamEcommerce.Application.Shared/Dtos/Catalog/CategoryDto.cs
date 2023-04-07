@@ -9,4 +9,5 @@ public sealed record CategoryDto
     public Guid Id { get; set; }
     public string Name { get; set; }
     public int DisplayOrder { get; set; }
+    public Guid? ParentId { get; set; }
 }
