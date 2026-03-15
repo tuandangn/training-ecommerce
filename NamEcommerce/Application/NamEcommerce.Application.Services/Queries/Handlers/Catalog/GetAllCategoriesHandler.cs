@@ -20,6 +20,7 @@ public sealed class GetAllCategoriesHandler : IRequestHandler<GetAllCategories, 
     {
         var categories = await _categoryDataReader.GetAllAsync().ConfigureAwait(false);
         return categories.OrderBy(category => category.DisplayOrder)
+            .ThenBy(category => category.Name)
             .Select(category => category.ToDto());
     }
 }

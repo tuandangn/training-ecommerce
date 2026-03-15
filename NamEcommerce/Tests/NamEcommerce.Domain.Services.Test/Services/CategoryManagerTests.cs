@@ -2,7 +2,7 @@
 using NamEcommerce.Domain.Services.Test.Helpers;
 using System.Linq.Expressions;
 
-namespace NamEcommerce.Domain.Test.Services;
+namespace NamEcommerce.Domain.Services.Test.Services;
 
 public sealed class CategoryManagerTests
 {

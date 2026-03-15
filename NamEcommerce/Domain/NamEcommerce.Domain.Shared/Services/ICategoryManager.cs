@@ -8,7 +8,7 @@ public interface ICategoryManager
 
     Task<CategoryDto> UpdateCategoryAsync(UpdateCategoryDto dto);
 
-    Task DeleteCategoryAsync(Guid categoryId);
+    Task DeleteCategoryAsync(Guid id);
 
     Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null);
 

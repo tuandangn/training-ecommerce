@@ -1,4 +1,5 @@
-﻿using GraphQL.DataLoader;
+﻿using GraphQL;
+using GraphQL.DataLoader;
 using GraphQL.Types;
 using NamEcommerce.Api.GraphQl.DataLoaders;
 using NamEcommerce.Api.GraphQl.Models.Catalog;

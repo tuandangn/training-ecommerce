@@ -33,13 +33,13 @@ public sealed class CategoryManager : ICategoryManager
         return insertedCategory.ToDto();
     }
 
-    public async Task DeleteCategoryAsync(Guid categoryId)
+    public async Task DeleteCategoryAsync(Guid id)
     {
-        var category = await _categoryRepository.GetByIdAsync(categoryId).ConfigureAwait(false);
+        var category = await _categoryRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (category is null)
-            throw new ArgumentException("Category is not found", nameof(categoryId));
+            throw new ArgumentException("Category is not found", nameof(id));
 
-        await _categoryRepository.DeleteAsync(category);
+        await _categoryRepository.DeleteAsync(category).ConfigureAwait(false);
 
         var children = (await _categoryRepository.GetAllAsync().ConfigureAwait(false))
             .Where(cat => cat.ParentId == category.Id).ToList();
@@ -48,7 +48,7 @@ public sealed class CategoryManager : ICategoryManager
             await _categoryRepository.UpdateAsync(child with
             {
                 ParentId = null
-            });
+            }).ConfigureAwait(false);
         }
     }
 

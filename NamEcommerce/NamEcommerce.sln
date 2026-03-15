@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.2.32526.322
+# Visual Studio Version 18
+VisualStudioVersion = 18.4.11605.240 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Presentation", "Presentation", "{EF1405A1-DA93-454A-83F3-7C242878D2F2}"
 EndProject
@@ -54,6 +54,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NamEcommerce.Application.Services.StubData", "Application\NamEcommerce.Application.Services.StubData\NamEcommerce.Application.Services.StubData.csproj", "{3C145014-7E15-4C6C-82F9-6F008341F514}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NamEcommerce.Application.Miscellaneous", "Application\NamEcommerce.Application.Miscellaneous\NamEcommerce.Application.Miscellaneous.csproj", "{6E54C3C6-80BA-4719-8439-66A014221497}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NamEcommerce.Admin.Client.Test", "Tests\NamEcommerce.Admin.Client.Test\NamEcommerce.Admin.Client.Test.csproj", "{F9BE589F-D8E9-409D-940B-DD8DB4204C76}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -141,6 +143,10 @@ Global
 		{6E54C3C6-80BA-4719-8439-66A014221497}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6E54C3C6-80BA-4719-8439-66A014221497}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6E54C3C6-80BA-4719-8439-66A014221497}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9BE589F-D8E9-409D-940B-DD8DB4204C76}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9BE589F-D8E9-409D-940B-DD8DB4204C76}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9BE589F-D8E9-409D-940B-DD8DB4204C76}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9BE589F-D8E9-409D-940B-DD8DB4204C76}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -166,6 +172,7 @@ Global
 		{7687117E-1341-4B49-98EB-89F78C98F047} = {EF1405A1-DA93-454A-83F3-7C242878D2F2}
 		{3C145014-7E15-4C6C-82F9-6F008341F514} = {1A442855-695A-4D15-A952-ECC81445B039}
 		{6E54C3C6-80BA-4719-8439-66A014221497} = {1A442855-695A-4D15-A952-ECC81445B039}
+		{F9BE589F-D8E9-409D-940B-DD8DB4204C76} = {821820B5-1AF0-474E-ACF0-6C1C971D96B1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E82EA0E0-2978-4691-ABD6-C41727DD7A4A}

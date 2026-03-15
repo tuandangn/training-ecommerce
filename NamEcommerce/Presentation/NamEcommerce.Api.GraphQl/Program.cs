@@ -35,11 +35,13 @@ var builder = WebApplication.CreateBuilder(args);
     );
     builder.Services.AddScoped<IDbContext, NamEcommerceEfDbContext>();
     builder.Services.AddScoped(typeof(IRepository<>), typeof(NamEcommerceEfRepository<>));
-
     builder.Services.AddScoped(typeof(IEntityDataReader<>), typeof(EntityDataReader<>));
+
     builder.Services.AddScoped<ICategoryManager, CategoryManager>();
+    builder.Services.AddScoped<IUnitMeasurementManager, UnitMeasurementManager>();
 
     builder.Services.AddTransient<ICategoryDataLoader, CategoryDataLoader>();
+    builder.Services.AddTransient<IUnitMeasurementDataLoader, UnitMeasurementDataLoader>();
 
     builder.Services.AddGraphQL(opts =>
     {
@@ -52,6 +54,7 @@ var builder = WebApplication.CreateBuilder(args);
     builder.Services.AddMediatR(config =>
     {
         config.RegisterServicesFromAssemblyContaining<StubDataGetAllCategoriesHandler>();
+        config.RegisterServicesFromAssemblyContaining<StubDataGetAllUnitMeasurementsHandler>();
     });
 }
 #endregion

@@ -15,6 +15,8 @@ public sealed class CatalogQuery : ObjectGraphType
         Name = "CatalogQuery";
         Description = "Describes catalog queries";
 
+        #region Category Queries
+
         Field<ListGraphType<NonNullGraphType<CategoryType>>>("allCategories")
             .Description("Get all categories")
             .ResolveAsync(async context =>
@@ -34,13 +36,42 @@ public sealed class CatalogQuery : ObjectGraphType
             {
                 var categoryDataLoader = context.RequestServices!.GetRequiredService<ICategoryDataLoader>();
                 var loader = loaderAccessor.Context!.GetOrAddBatchLoader<Guid, CategoryDto>(CategoryDataLoader.GET_BY_ID, categoryDataLoader.GetCategoriesByIdsAsync);
-                var foundCategory = await loader.LoadAsync(context.GetArgument<Guid>("id")).GetResultAsync(context.CancellationToken);
-                if (foundCategory == null)
+                var foundUnitMeasurement = await loader.LoadAsync(context.GetArgument<Guid>("id")).GetResultAsync(context.CancellationToken);
+                if (foundUnitMeasurement == null)
                     return null;
-                return new CategoryModel(foundCategory.Id, foundCategory.Name)
+                return new CategoryModel(foundUnitMeasurement.Id, foundUnitMeasurement.Name)
                 {
-                    ParentId = foundCategory.ParentId
+                    ParentId = foundUnitMeasurement.ParentId
                 };
             });
+
+        #endregion
+
+        #region Unit Measurement Queries
+
+        Field<ListGraphType<NonNullGraphType<UnitMeasurementType>>>("allUnitMeasurements")
+            .Description("Get all unit measurements")
+            .ResolveAsync(async context =>
+            {
+                var unitMeasurementDataLoader = context.RequestServices!.GetRequiredService<IUnitMeasurementDataLoader>();
+                var loader = loaderAccessor.Context!.GetOrAddLoader(UnitMeasurementDataLoader.GET_ALL, unitMeasurementDataLoader.GetAllUnitMeasurementsAsync);
+                var allUnitMeasurements = await loader.LoadAsync().GetResultAsync(context.CancellationToken);
+                return allUnitMeasurements.Select(unitMeasurement => new UnitMeasurementModel(unitMeasurement.Id, unitMeasurement.Name)).ToList();
+            });
+        Field<UnitMeasurementType>("unitMeasurement")
+            .Description("Get unit measurement by id")
+            .Argument<NonNullGraphType<IdGraphType>>("id", "Unit measurement id")
+            .ResolveAsync(async context =>
+            {
+                var unitMeasurementDataLoader = context.RequestServices!.GetRequiredService<IUnitMeasurementDataLoader>();
+                var loader = loaderAccessor.Context!.GetOrAddBatchLoader<Guid, UnitMeasurementDto>(UnitMeasurementDataLoader.GET_BY_ID, unitMeasurementDataLoader.GetUnitMeasurementsByIdsAsync);
+                var foundUnitMeasurement = await loader.LoadAsync(context.GetArgument<Guid>("id")).GetResultAsync(context.CancellationToken);
+                if (foundUnitMeasurement == null)
+                    return null;
+                return new CategoryModel(foundUnitMeasurement.Id, foundUnitMeasurement.Name);
+            });
+
+
+        #endregion
     }
 }

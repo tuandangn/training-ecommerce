@@ -1,7 +1,7 @@
 ﻿using NamEcommerce.Domain.Services.Test.Helpers;
 using NamEcommerce.Domain.Services.Users;
 
-namespace NamEcommerce.Domain.Test.Services;
+namespace NamEcommerce.Domain.Services.Test.Services;
 
 public sealed class UserManagerTests
 {
