@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace NamEcommerce.Web.Controllers;
 
-public sealed class HomeController : Controller
+public sealed class HomeController : BaseController
 {
     private readonly ILogger<HomeController> _logger;
 
@@ -14,11 +14,6 @@ public sealed class HomeController : Controller
     }
 
     public IActionResult Index()
-    {
-        return View();
-    }
-
-    public IActionResult Privacy()
     {
         return View();
     }

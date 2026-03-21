@@ -1,14 +1,11 @@
 #region Namespaces
 using GraphQL;
-using GraphQL.DataLoader;
 using GraphQL.Server.Ui.GraphiQL;
-using GraphQL.Types;
-using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Api.GraphQl.DataLoaders;
 using NamEcommerce.Api.GraphQl.Schemes;
 using NamEcommerce.Api.GraphQl.Schemes.Catalog;
-using NamEcommerce.Application.Services.StubData;
+using NamEcommerce.Application.Services.Queries.Handlers.Catalog;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Domain.Services.Catalog;
@@ -53,8 +50,8 @@ var builder = WebApplication.CreateBuilder(args);
     });
     builder.Services.AddMediatR(config =>
     {
-        config.RegisterServicesFromAssemblyContaining<StubDataGetAllCategoriesHandler>();
-        config.RegisterServicesFromAssemblyContaining<StubDataGetAllUnitMeasurementsHandler>();
+        //*TODO*
+        config.RegisterServicesFromAssemblyContaining<GetAllUnitMeasuresHandler>();
     });
 }
 #endregion

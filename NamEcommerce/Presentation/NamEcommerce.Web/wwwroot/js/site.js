@@ -1,4 +1,31 @@
-﻿// Please see documentation at https://docs.microsoft.com/aspnet/core/client-side/bundling-and-minification
-// for details on configuring this project to bundle and minify static web assets.
+﻿'use strict';
 
-// Write your JavaScript code.
+$(function() {
+    const disabledSubmitForms = [];
+
+    $('form').on('submit', function(e) {
+        var form = this;
+        if (!isFormValid(form))
+            return;
+        enableSubmitButtons(form, false);
+        disabledSubmitForms.push(form);
+    });
+
+    $(document).ajaxComplete(function() { 
+        disabledSubmitForms.forEach(form => enableSubmitButtons(form, true));
+    });
+})
+
+/* form */
+function isFormValid(form) {
+    try {
+        return $(form).valid();
+    } catch {
+        return false;
+    }
+}
+
+function enableSubmitButtons(form, enabled) {
+    $(form).find('[type=submit]').prop('disabled', !enabled);
+}
+

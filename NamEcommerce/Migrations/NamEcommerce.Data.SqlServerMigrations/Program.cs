@@ -19,3 +19,6 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthorization();
 app.Run();
+
+
+//Update-Database AddPasswordSalt -Project NamEcommerce.Data.SqlServerMigrations -StartupProject NamEcommerce.Data.SqlServerMigrations -Context NamEcommerce.Data.SqlServer.NamEcommerceEfDbContext

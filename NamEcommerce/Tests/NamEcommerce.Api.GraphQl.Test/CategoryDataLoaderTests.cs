@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using NamEcommerce.Api.GraphQl.DataLoaders;
-using NamEcommerce.Application.Shared.Dtos.Catalog;
-using NamEcommerce.Application.Shared.Queries.Models.Catalog;
+using NamEcommerce.Application.Contracts.Dtos.Catalog;
+using NamEcommerce.Application.Contracts.Queries.Catalog;
 
 namespace NamEcommerce.Api.GraphQl.Test;
 
@@ -12,7 +12,7 @@ public sealed class CategoryDataLoaderTests
     [Fact]
     public async Task GetAllCategoriesAsync_ReturnsResult()
     {
-        var categories = new[] { new CategoryDto(Guid.NewGuid(), "Category 1") };
+        var categories = new[] { new CategoryAppDto(Guid.NewGuid(), "Category 1") };
         var query = new GetAllCategories();
         var mediatorMock = new Mock<IMediator>();
         mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(categories);
@@ -32,7 +32,7 @@ public sealed class CategoryDataLoaderTests
     [Fact]
     public async Task GetCategoryByIdAsync_ReturnsResult()
     {
-        var category = new CategoryDto(Guid.NewGuid(), "Category 1");
+        var category = new CategoryAppDto(Guid.NewGuid(), "Category 1");
         var query = new GetCategoryById(category.Id);
         var mediatorMock = new Mock<IMediator>();
         mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(category);
@@ -52,7 +52,7 @@ public sealed class CategoryDataLoaderTests
     public async Task GetCategoriesByIdsAsync_ReturnsResult()
     {
         var ids = new[] { Guid.NewGuid(), Guid.NewGuid() };
-        var categories = new[] { new CategoryDto(ids[0], "Category 1"), new CategoryDto(ids[1], "Category 2") };
+        var categories = new[] { new CategoryAppDto(ids[0], "Category 1"), new CategoryAppDto(ids[1], "Category 2") };
         var query = new GetCategoriesByIds(ids);
         var mediatorMock = new Mock<IMediator>();
         mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(categories);

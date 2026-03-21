@@ -1,0 +1,27 @@
+﻿@model UserHeaderLinksModel
+@inject IWebHelper WebHelper
+
+@if (WebHelper.IsLoginPage() || WebHelper.IsRegisterPage())
+{
+    return;
+}
+<ul class="navbar-nav">
+    @if (Model.IsAuthenticated)
+    {
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="otherMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-person-circle"></i>
+                @Model.Username
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="otherMenuItemsDropdown">
+                <li><a class="dropdown-item" asp-controller="User" asp-action="Logout">Đăng xuất</a></li>
+            </ul>
+        </li>
+    }
+    else
+    {
+        <li class="nav-item">
+            <a class="nav-link" asp-controller="User" asp-action="Login">Đăng nhập</a>
+        </li>
+    }
+</ul>

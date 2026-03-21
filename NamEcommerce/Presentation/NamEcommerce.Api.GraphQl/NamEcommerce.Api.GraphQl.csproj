@@ -24,10 +24,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\Application\NamEcommerce.Application.Services\NamEcommerce.Application.Services.csproj" />
 		<ProjectReference Include="..\..\Domain\NamEcommerce.Domain.Services\NamEcommerce.Domain.Services.csproj" />
 		<ProjectReference Include="..\..\Infrastructure\NamEcommerce.Data.SqlServer\NamEcommerce.Data.SqlServer.csproj" />
-		<ProjectReference Include="..\..\Application\NamEcommerce.Application.Shared\NamEcommerce.Application.Shared.csproj" />
-		<ProjectReference Include="..\..\Application\NamEcommerce.Application.Services.StubData\NamEcommerce.Application.Services.StubData.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

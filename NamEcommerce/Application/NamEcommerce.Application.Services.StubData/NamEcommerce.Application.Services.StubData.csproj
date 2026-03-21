@@ -11,6 +11,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\Domain\NamEcommerce.Domain.Shared\NamEcommerce.Domain.Shared.csproj" />
-		<ProjectReference Include="..\NamEcommerce.Application.Shared\NamEcommerce.Application.Shared.csproj" />
+		<ProjectReference Include="..\NamEcommerce.Application.Contracts\NamEcommerce.Application.Contracts.csproj" />
 	</ItemGroup>
 </Project>

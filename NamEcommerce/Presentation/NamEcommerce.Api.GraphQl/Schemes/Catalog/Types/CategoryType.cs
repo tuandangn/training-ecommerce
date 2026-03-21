@@ -3,7 +3,7 @@ using GraphQL.DataLoader;
 using GraphQL.Types;
 using NamEcommerce.Api.GraphQl.DataLoaders;
 using NamEcommerce.Api.GraphQl.Models.Catalog;
-using NamEcommerce.Application.Shared.Dtos.Catalog;
+using NamEcommerce.Application.Contracts.Dtos.Catalog;
 
 namespace NamEcommerce.Api.GraphQl.Schemes.Catalog.Types;
 
@@ -23,7 +23,7 @@ public sealed class CategoryType : ObjectGraphType<CategoryModel>
                 if (!context.Source.ParentId.HasValue)
                     return null;
                 var categoryDataLoader = context.RequestServices!.GetRequiredService<ICategoryDataLoader>();
-                var loader = loaderAccessor.Context!.GetOrAddBatchLoader<Guid, CategoryDto>(CategoryDataLoader.GET_BY_ID, categoryDataLoader.GetCategoriesByIdsAsync);
+                var loader = loaderAccessor.Context!.GetOrAddBatchLoader<Guid, CategoryAppDto>(CategoryDataLoader.GET_BY_ID, categoryDataLoader.GetCategoriesByIdsAsync);
                 var foundCategory = await loader.LoadAsync(context.Source.ParentId.Value).GetResultAsync(context.CancellationToken);
                 if (foundCategory == null)
                     return null;

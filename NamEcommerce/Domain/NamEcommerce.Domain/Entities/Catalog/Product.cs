@@ -17,7 +17,9 @@ public record Product : AppAggregateEntity
         = (name, price, shortDesc, productCategories, productPictures);
 
     public string Name { get; init; }
+    public string NormalizedName { get; internal set; } = "";
     public string ShortDesc { get; init; }
+    public string NormalizedShortDesc { get; internal set; } = "";
     public string? FullDesc { get; set; }
 
     public decimal Price { get; init; }

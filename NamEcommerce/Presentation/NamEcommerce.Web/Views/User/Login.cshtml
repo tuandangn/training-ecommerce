@@ -1,0 +1,43 @@
+﻿@using NamEcommerce.Web.Models.Users
+@model LoginModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Đăng ký";
+
+    var errorMessage = TempData[ViewConstants.LoginErrorMessage] as string;
+    string? returnUrl = Context.Request.Query["ReturnUrl"];
+}
+<div class="row my-5">
+    <div class="offset-md-2 col-md-8 offset-lg-3 col-lg-6">
+        <div class="card shadow">
+            <div class="card-body px-4 py-5">
+                <h1 class="text-center mb-4">Đăng nhập</h1>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        @errorMessage
+                    </div>
+                }
+                <div asp-validation-summary="ModelOnly" class="alert alert-warning"></div>
+                <input type="hidden" name="ReturnUrl" value="@returnUrl" />
+                <form class="row g-3" method="post" asp-antiforgery="true">
+                    <div class="col-12">
+                        <label asp-for="Username" class="form-label"></label>
+                        <input asp-for="Username" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Username)" />
+                        <span asp-validation-for="Username" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="Password" class="form-label"></label>
+                        <input asp-for="Password" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Password)" />
+                        <span asp-validation-for="Password" class="text-danger small"></span>
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary">Đăng nhập</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

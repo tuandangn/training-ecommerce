@@ -1,6 +1,6 @@
 ﻿using MediatR;
-using NamEcommerce.Application.Shared.Dtos.Catalog;
-using NamEcommerce.Application.Shared.Queries.Models.Catalog;
+using NamEcommerce.Application.Contracts.Dtos.Catalog;
+using NamEcommerce.Application.Contracts.Queries.Catalog;
 
 namespace NamEcommerce.Api.GraphQl.DataLoaders;
 
@@ -16,17 +16,17 @@ public sealed class UnitMeasurementDataLoader : IUnitMeasurementDataLoader
         _mediator = mediator;
     }
 
-    public Task<IEnumerable<UnitMeasurementDto>> GetAllUnitMeasurementsAsync(CancellationToken cancellationToken)
+    public Task<IEnumerable<UnitMeasurementAppDto>> GetAllUnitMeasurementsAsync(CancellationToken cancellationToken)
         => _mediator.Send(new GetAllUnitMeasurements(), cancellationToken);
 
-    public async Task<UnitMeasurementDto?> GetUnitMeasurementByIdAsync(CancellationToken cancellationToken, Guid? id)
+    public async Task<UnitMeasurementAppDto?> GetUnitMeasurementByIdAsync(CancellationToken cancellationToken, Guid? id)
     {
         if (!id.HasValue)
             return null;
         return await _mediator.Send(new GetUnitMeasurementById(id.Value), cancellationToken);
     }
 
-    public async Task<IDictionary<Guid, UnitMeasurementDto>> GetUnitMeasurementsByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken)
+    public async Task<IDictionary<Guid, UnitMeasurementAppDto>> GetUnitMeasurementsByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken)
     {
         var categories = await _mediator.Send(new GetUnitMeasurementsByIds(ids), cancellationToken);
 

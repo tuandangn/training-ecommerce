@@ -1,0 +1,79 @@
+﻿@model PaginationModel
+@if (Model.TotalCount <= 0)
+{
+    return;
+}
+@if (Model.TotalPages < Model.PageNumber)
+{
+    <div class="alert alert-info mb-0">
+        <div>
+            Không có dữ liệu nào được hiển thị ở đây trong tổng số <span class="fw-bold">@Model.TotalCount</span> dữ liệu tìm thấy.
+        </div>
+    </div>
+    <div class="d-flex align-items-center justify-content-between justify-content-md-start my-2">
+        <a asp-route-pageNumber="1" class="btn btn-link me-2 text-decoration-none">
+            <i class="bi bi-arrow-left"></i>
+            <span>Trở về trang đầu</span>
+        </a>
+        <a asp-route-pageNumber="@Model.TotalPages" class="btn btn-link text-decoration-none">
+            <span>Đến trang cuối</span>
+            <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+    return;
+}
+<div class="d-flex align-items-center mb-2">
+    <div class="flex-grow-1">
+        @if (Model.TotalPages > 1)
+        {
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    @if (Model.TotalPages > 0)
+                    {
+                        <li class="page-item @(Model.PageIndex == 0 ? "disabled" : "")">
+                            <a class="page-link" asp-route-pageNumber="@(Model.PageIndex)">
+                                <i class="bi bi-arrow-left"></i>
+                                <span class="visually-hidden">Trang trước</span>
+                            </a>
+                        </li>
+                    }
+                    @for (var i = 0; i < Model.TotalPages; i++)
+                    {
+                        <li class="page-item @(i == Model.PageIndex ? "active disabled" : "")">
+                            <a class="page-link @(i == Model.PageIndex ? "bg-light text-primary" : "")" asp-route-pageNumber="@(i + 1)">@(i + 1)</a>
+                        </li>
+                    }
+                    @if (Model.TotalPages > 0)
+                    {
+                        <li class="page-item @(Model.PageNumber == Model.TotalPages ? "disabled" : "")">
+                            <a class="page-link" asp-route-pageNumber="@(Model.PageNumber + 1)">
+                                <i class="bi bi-arrow-right"></i>
+                                <span class="visually-hidden">Trang sau</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </nav>
+        }
+    </div>
+    <span class="text-muted small">
+        @if (Model.TotalPages == 1)
+        {
+            @: <span class="fw-bold small">@Model.TotalCount</span> dữ liệu
+        }
+        else
+        {
+            var from = Model.PageIndex * Model.PageSize + 1;
+            var to = Model.PageNumber * Model.PageSize;
+            if (to > Model.TotalCount) to = Model.TotalCount;
+            if (from != to)
+            {
+                @: Từ <span class="fw-bold small">@from - @to</span> của @Model.TotalCount dữ liệu
+            }
+            else
+            {
+                @: Dữ liệu <span class="fw-bold small">@from</span> của @Model.TotalCount dữ liệu
+            }
+        }
+    </span>
+</div>

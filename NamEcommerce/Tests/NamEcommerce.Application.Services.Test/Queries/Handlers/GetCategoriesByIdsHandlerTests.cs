@@ -1,7 +1,7 @@
 ﻿using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Application.Services.Queries.Handlers.Catalog;
 using NamEcommerce.Application.Services.Test.Helpers;
-using NamEcommerce.Application.Shared.Queries.Models.Catalog;
+using NamEcommerce.Application.Contracts.Queries.Catalog;
 using NamEcommerce.Domain.Entities.Catalog;
 
 namespace NamEcommerce.Application.Services.Test.Queries.Handlers;

@@ -6,8 +6,9 @@ namespace NamEcommerce.Domain.Services.Extensions;
 public static class UnitMeasurementExtensions
 {
     public static UnitMeasurementDto ToDto(this UnitMeasurement unitMeasurement)
-        => new(unitMeasurement.Id, unitMeasurement.Name)
+        => new UnitMeasurementDto(unitMeasurement.Id)
         {
+            Name = unitMeasurement.Name,
             DisplayOrder = unitMeasurement.DisplayOrder
         };
 }

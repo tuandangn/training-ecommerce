@@ -1,11 +1,14 @@
-﻿namespace NamEcommerce.Web.Models.Users;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace NamEcommerce.Web.Models.Users;
 
 [Serializable]
 public sealed class LoginModel
 {
-    public string? Email { get; set; }
+    [Display(Name = "Tên đăng nhập")]
+    public string? Username { get; set; }
 
+    [Display(Name = "Mật khẩu")]
+    [DataType(DataType.Password)]
     public string? Password { get; set; }
-
-    public bool Persistent { get; set; }
 }

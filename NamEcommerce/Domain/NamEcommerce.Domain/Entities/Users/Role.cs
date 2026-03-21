@@ -9,4 +9,5 @@ public sealed record Role : AppAggregateEntity
         => Name = name;
 
     public string Name { get; init; }
+    public string NormalizedName { get; internal set; } = "";
 }

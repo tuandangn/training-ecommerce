@@ -22,26 +22,29 @@ public sealed class CategoryManager : ICategoryManager
     {
         if (dto is null)
             throw new ArgumentNullException(nameof(dto));
+
         if (await DoesNameExistAsync(dto.Name, null).ConfigureAwait(false))
             throw new CategoryNameExistsException(dto.Name);
 
         var insertedCategory = await _categoryRepository.InsertAsync(
             new Category(Guid.NewGuid(), dto.Name)
             {
-                DisplayOrder = dto.DisplayOrder
+                DisplayOrder = dto.DisplayOrder,
+                CreatedOnUtc = DateTime.UtcNow
             }).ConfigureAwait(false);
+
         return insertedCategory.ToDto();
     }
 
     public async Task DeleteCategoryAsync(Guid id)
     {
-        var category = await _categoryRepository.GetByIdAsync(id).ConfigureAwait(false);
+        var category = await _categoryDataReader.GetByIdAsync(id).ConfigureAwait(false);
         if (category is null)
-            throw new ArgumentException("Category is not found", nameof(id));
+            throw new InvalidOperationException("Category is not found");
 
         await _categoryRepository.DeleteAsync(category).ConfigureAwait(false);
 
-        var children = (await _categoryRepository.GetAllAsync().ConfigureAwait(false))
+        var children = (await _categoryDataReader.GetAllAsync().ConfigureAwait(false))
             .Where(cat => cat.ParentId == category.Id).ToList();
         foreach (var child in children)
         {
@@ -61,17 +64,17 @@ public sealed class CategoryManager : ICategoryManager
                     where category.Name == name && (comparesWithCurrentId == null || category.Id != comparesWithCurrentId)
                     select category;
 
-        var hasSameNameCategory = query.FirstOrDefault() != null;
-        return Task.FromResult(hasSameNameCategory);
+        var sameNameExists = query.FirstOrDefault() != null;
+        return Task.FromResult(sameNameExists);
     }
 
-    public async Task<CategoryDto> SetParentCategory(Guid categoryId, Guid parentId, int onParentDisplayOrder)
+    public async Task<CategoryDto> SetParentCategoryAsync(Guid categoryId, Guid parentId, int onParentDisplayOrder)
     {
-        var child = await _categoryRepository.GetByIdAsync(categoryId).ConfigureAwait(false);
+        var child = await _categoryDataReader.GetByIdAsync(categoryId).ConfigureAwait(false);
         if (child is null)
             throw new ArgumentException("Category is not found", nameof(categoryId));
 
-        var parent = await _categoryRepository.GetByIdAsync(parentId).ConfigureAwait(false);
+        var parent = await _categoryDataReader.GetByIdAsync(parentId).ConfigureAwait(false);
         if (parent is null)
             throw new ArgumentException("Category is not found", nameof(parentId));
 
@@ -92,7 +95,7 @@ public sealed class CategoryManager : ICategoryManager
         if (dto is null)
             throw new ArgumentNullException(nameof(dto));
 
-        var category = await _categoryRepository.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        var category = await _categoryDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (category is null)
             throw new ArgumentException("Category is not found", nameof(dto.Id));
 

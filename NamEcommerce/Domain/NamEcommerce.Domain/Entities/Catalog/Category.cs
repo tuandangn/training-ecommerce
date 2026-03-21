@@ -9,6 +9,7 @@ public sealed record Category : AppAggregateEntity
         => Name = name;
 
     public string Name { get; init; }
+    public string NormalizedName { get; internal set; } = "";
     public int DisplayOrder { get; set; }
 
     public Guid? ParentId { get; internal set; }

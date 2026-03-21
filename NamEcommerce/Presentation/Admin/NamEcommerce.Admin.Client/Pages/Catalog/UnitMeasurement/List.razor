@@ -1,0 +1,53 @@
+﻿@page "/UnitMeasurement/List"
+@inject IMediator Mediator
+
+<PageTitle>@MainName - Đơn vị tính</PageTitle>
+
+<h1>Đơn vị tính</h1>
+
+@if (model == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!model.Success)
+{
+    <div class="alert alert-danger">
+        @model.Message
+    </div>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Đơn vị tính</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var unitMeasurement in model.Data!.UnitMeasurements)
+            {
+                <tr>
+                    <td>@unitMeasurement.Name</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-light" href="UnitMeasurement/Edit/@unitMeasurement.Id">
+                            Sửa
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    [CascadingParameter(Name = "MainName")]
+    public string? MainName { get; set; }
+
+    ResponseModel<UnitMeasurementListModel>? model = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        model = await Mediator.Send(new GetUnitMeasurementList(1, 10));
+    }
+}

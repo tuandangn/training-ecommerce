@@ -2,6 +2,9 @@
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
+using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services;
 
 namespace NamEcommerce.Domain.Services.Catalog;
@@ -17,43 +20,88 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
         _unitMeasurementDataReader = unitMeasurementDataReader;
     }
 
-    public async Task<UnitMeasurementDto> CreateUnitMeasurementAsync(CreateUnitMeasurementDto dto)
+    public async Task<CreateUnitMeasurementResultDto> CreateUnitMeasurementAsync(CreateUnitMeasurementDto dto)
     {
-        if (dto is null)
-            throw new ArgumentNullException(nameof(dto));
+        ArgumentNullException.ThrowIfNull(dto);
+
+        if (await DoesNameExistAsync(dto.Name, null).ConfigureAwait(false))
+            throw new UnitMeasurementNameExistsException(dto.Name);
 
         var insertedUnitMeasurement = await _unitMeasurementRepository.InsertAsync(
             new UnitMeasurement(Guid.NewGuid(), dto.Name)
             {
                 DisplayOrder = dto.DisplayOrder
             }).ConfigureAwait(false);
-        return insertedUnitMeasurement.ToDto();
+        return new CreateUnitMeasurementResultDto
+        {
+            CreatedId = insertedUnitMeasurement.Id
+        };
     }
 
     public async Task DeleteUnitMeasurementAsync(Guid id)
     {
-        var unitMeasurement = await _unitMeasurementRepository.GetByIdAsync(id).ConfigureAwait(false);
+        var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(id).ConfigureAwait(false);
         if (unitMeasurement is null)
             throw new ArgumentException("Unit measurement is not found", nameof(id));
 
         await _unitMeasurementRepository.DeleteAsync(unitMeasurement).ConfigureAwait(false);
     }
 
-    public async Task<UnitMeasurementDto> UpdateUnitMeasurementAsync(UpdateUnitMeasurementDto dto)
+    public async Task<UpdateUnitMeasurementResultDto> UpdateUnitMeasurementAsync(UpdateUnitMeasurementDto dto)
     {
-        if (dto is null)
-            throw new ArgumentNullException(nameof(dto));
+        ArgumentNullException.ThrowIfNull(dto);
 
-        var unitMeasurement = await _unitMeasurementRepository.GetByIdAsync(dto.Id);
+        var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.Id);
         if (unitMeasurement is null)
             throw new ArgumentException("Unit measurement is not found", nameof(dto));
 
-        var result = await _unitMeasurementRepository.UpdateAsync(unitMeasurement with
-        {
-            Name = dto.Name,
-            DisplayOrder = dto.DisplayOrder
-        }).ConfigureAwait(false);
+        await unitMeasurement.SetNameAsync(dto.Name, this);
+        unitMeasurement.DisplayOrder = dto.DisplayOrder;
 
-        return result.ToDto();
+        var result = await _unitMeasurementRepository.UpdateAsync(unitMeasurement).ConfigureAwait(false);
+
+        return new UpdateUnitMeasurementResultDto(result.Id)
+        {
+            Name = result.Name,
+            DisplayOrder = result.DisplayOrder
+        };
+    }
+
+    public Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(name);
+
+        var query = from unitMesuarement in _unitMeasurementDataReader.DataSource
+                    where unitMesuarement.Name == name && (comparesWithCurrentId == null || unitMesuarement.Id != comparesWithCurrentId)
+                    select unitMesuarement;
+
+        var sameNameExists = query.FirstOrDefault() != null;
+        return Task.FromResult(sameNameExists);
+    }
+
+    public Task<IPagedDataDto<UnitMeasurementDto>> GetUnitMeasurementsAsync(string? keywords, int pageIndex, int pageSize)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
+
+        var query = _unitMeasurementDataReader.DataSource;
+
+        if (!string.IsNullOrEmpty(keywords))
+        {
+            var normizedKeywords = TextHelper.Normalize(keywords);
+            query = query.Where(c => c.NormalizedName.Contains(normizedKeywords));
+        }
+
+        query = query.OrderBy(c => c.DisplayOrder)
+            .ThenBy(c => c.Name);
+
+        var totalCount = query.Count();
+        var pagedData = query
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        var data = PagedDataDto.Create(pagedData.Select(unitMeasurement => unitMeasurement.ToDto()), pageIndex, pageSize, totalCount);
+        return Task.FromResult(data);
     }
 }

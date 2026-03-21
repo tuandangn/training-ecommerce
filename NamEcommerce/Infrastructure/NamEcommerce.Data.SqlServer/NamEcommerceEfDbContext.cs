@@ -13,18 +13,18 @@ public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
     }
 
     public IQueryable<TEntity> GetDataSource<TEntity>() where TEntity : AppAggregateEntity
-        => Set<TEntity>();
+        => Set<TEntity>().AsNoTracking();
 
     public async Task<TEntity?> FindAsync<TEntity>(Guid key, CancellationToken cancellationToken = default) 
         where TEntity : AppAggregateEntity
     {
-        var entity = await FindAsync<TEntity>(new[] { key }).ConfigureAwait(false);
+        var entity = await FindAsync<TEntity>(new object[] { key }).ConfigureAwait(false);
         return entity;
     }
 
     public Task<IEnumerable<TEntity>> GetDataAsync<TEntity>() where TEntity : AppAggregateEntity
     {
-        IQueryable<TEntity> entities = Set<TEntity>();
+        IQueryable<TEntity> entities = Set<TEntity>().AsNoTracking();
         return Task.FromResult<IEnumerable<TEntity>>(entities);
     }
 

@@ -1,13 +1,13 @@
 ﻿using MediatR;
+using NamEcommerce.Application.Contracts.Dtos.Catalog;
+using NamEcommerce.Application.Contracts.Queries.Catalog;
 using NamEcommerce.Application.Services.Extensions;
-using NamEcommerce.Application.Shared.Dtos.Catalog;
-using NamEcommerce.Application.Shared.Queries.Models.Catalog;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Shared.Services;
 
 namespace NamEcommerce.Application.Services.Queries.Handlers.Catalog;
 
-public sealed class GetUnitMeasurementsByIdsHandler : IRequestHandler<GetUnitMeasurementsByIds, IEnumerable<UnitMeasurementDto>>
+public sealed class GetUnitMeasurementsByIdsHandler : IRequestHandler<GetUnitMeasurementsByIds, IEnumerable<UnitMeasurementAppDto>>
 {
     private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
 
@@ -16,10 +16,10 @@ public sealed class GetUnitMeasurementsByIdsHandler : IRequestHandler<GetUnitMea
         _unitMeasurementDataReader = unitMeasurementDataReader;
     }
 
-    public async Task<IEnumerable<UnitMeasurementDto>> Handle(GetUnitMeasurementsByIds request, CancellationToken cancellationToken)
+    public async Task<IEnumerable<UnitMeasurementAppDto>> Handle(GetUnitMeasurementsByIds request, CancellationToken cancellationToken)
     {
         if (request.Ids.Count() == 0)
-            return Enumerable.Empty<UnitMeasurementDto>();
+            return Enumerable.Empty<UnitMeasurementAppDto>();
 
         var unitMeasurements = await _unitMeasurementDataReader.GetByIdsAsync(request.Ids);
 

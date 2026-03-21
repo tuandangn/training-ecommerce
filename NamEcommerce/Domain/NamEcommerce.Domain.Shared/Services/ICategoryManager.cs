@@ -12,5 +12,5 @@ public interface ICategoryManager
 
     Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null);
 
-    Task<CategoryDto> SetParentCategory(Guid categoryId, Guid parentId, int onParentDisplayOrder);
+    Task<CategoryDto> SetParentCategoryAsync(Guid categoryId, Guid parentId, int onParentDisplayOrder);
 }

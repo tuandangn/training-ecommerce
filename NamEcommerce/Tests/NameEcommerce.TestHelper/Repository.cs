@@ -46,4 +46,11 @@ public static class Repository
         mock.Setup(expr).ReturnsAsync(@return).Verifiable();
         return mock;
     }
+    public static Mock<IRepository<TEntity>> CanCall<TEntity>(this Mock<IRepository<TEntity>> mock,
+        Expression<Func<IRepository<TEntity>, Task>> expr)
+        where TEntity : AppAggregateEntity
+    {
+        mock.Setup(expr).Returns(Task.CompletedTask).Verifiable();
+        return mock;
+    }
 }

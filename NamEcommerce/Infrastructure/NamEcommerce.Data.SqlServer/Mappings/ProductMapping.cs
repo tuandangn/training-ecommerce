@@ -9,6 +9,8 @@ public sealed class ProductMapping : IEntityTypeConfiguration<Product>
         builder.HasKey(p => p.Id);
 
         builder.Property(p => p.Name).HasMaxLength(200).IsRequired();
+        builder.Property(p => p.NormalizedName).HasMaxLength(400);
         builder.Property(p => p.ShortDesc).HasMaxLength(800).IsRequired();
+        builder.Property(p => p.NormalizedShortDesc).HasMaxLength(1600);
     }
 }

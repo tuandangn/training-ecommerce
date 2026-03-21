@@ -21,4 +21,7 @@ public static class CategoryRepository
 
     public static Mock<IRepository<Category>> UpdateCategoryWillReturns(this Mock<IRepository<Category>> mock, Category category, Category @return)
         => mock.WhenCall(r => r.UpdateAsync(category, default), @return);
+
+    public static Mock<IRepository<Category>> CanDeleteCategory(Category category)
+        => Repository.Create<Category>().CanCall(r => r.DeleteAsync(category, default));
 }

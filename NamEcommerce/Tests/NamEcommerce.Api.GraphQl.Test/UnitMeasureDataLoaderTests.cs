@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using NamEcommerce.Api.GraphQl.DataLoaders;
-using NamEcommerce.Application.Shared.Dtos.Catalog;
-using NamEcommerce.Application.Shared.Queries.Models.Catalog;
+using NamEcommerce.Application.Contracts.Dtos.Catalog;
+using NamEcommerce.Application.Contracts.Queries.Catalog;
 
 namespace NamEcommerce.Api.GraphQl.Test;
 
@@ -12,7 +12,11 @@ public sealed class UnitMeasureDataLoaderTests
     [Fact]
     public async Task GetAllUnitMeasurementsAsync_ReturnsResult()
     {
-        var unitMeasurements = new[] { new UnitMeasurementDto(Guid.NewGuid(), "UnitMeasurement 1") };
+        var unitMeasurements = new[] {
+            new UnitMeasurementAppDto(Guid.NewGuid()){
+                Name = "UnitMeasurement 1"
+            }
+        };
         var query = new GetAllUnitMeasurements();
         var mediatorMock = new Mock<IMediator>();
         mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(unitMeasurements);
@@ -32,7 +36,10 @@ public sealed class UnitMeasureDataLoaderTests
     [Fact]
     public async Task GetUnitMeasurementByIdAsync_ReturnsResult()
     {
-        var unitMeasurement = new UnitMeasurementDto(Guid.NewGuid(), "UnitMeasurement 1");
+        var unitMeasurement = new UnitMeasurementAppDto(Guid.NewGuid())
+        {
+            Name = "UnitMeasurement 1"
+        };
         var query = new GetUnitMeasurementById(unitMeasurement.Id);
         var mediatorMock = new Mock<IMediator>();
         mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(unitMeasurement);
@@ -52,7 +59,16 @@ public sealed class UnitMeasureDataLoaderTests
     public async Task GetUnitMeasurementsByIdsAsync_ReturnsResult()
     {
         var ids = new[] { Guid.NewGuid(), Guid.NewGuid() };
-        var unitMeasurements = new[] { new UnitMeasurementDto(ids[0], "UnitMeasurement 1"), new UnitMeasurementDto(ids[1], "UnitMeasurement 2") };
+        var unitMeasurements = new[] {
+            new UnitMeasurementAppDto(ids[0])
+            {
+                Name = "UnitMeasurement 1"
+            },
+            new UnitMeasurementAppDto(ids[1])
+            {
+                Name = "UnitMeasurement 2"
+            }
+        };
         var query = new GetUnitMeasurementsByIds(ids);
         var mediatorMock = new Mock<IMediator>();
         mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(unitMeasurements);

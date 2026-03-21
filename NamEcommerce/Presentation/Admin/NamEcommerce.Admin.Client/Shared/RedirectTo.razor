@@ -1,0 +1,15 @@
+﻿@inject NavigationManager NavManager
+
+@code {
+    [Parameter] public string Url { get; set; } = "/";
+    [Parameter] public bool ForceLoad { get; set; }
+    [Parameter] public int WaitInSeconds { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if(WaitInSeconds > 0)
+            await Task.Delay(WaitInSeconds * 1000);
+
+        NavManager.NavigateTo(Url, ForceLoad);
+    }
+}

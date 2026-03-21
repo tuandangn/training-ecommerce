@@ -1,0 +1,41 @@
+﻿@model EditUnitMeasurementModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Chỉnh sửa Đơn vị tính";
+}
+<section class="content-title my-4 text-center">
+    <h1>
+        Chỉnh sửa
+        <a asp-action="List" class="text-muted d-block fs-3 ps-2 text-decoration-none">Đơn vị tính</a>
+    </h1>
+</section>
+<section class="content-data">
+    <div>
+        <div class="p-4 shadow offset-lg-3 col-lg-6 offset-md-2 col-md-8">
+            <div class="d-flex justify-content-end mb-2">
+                <a asp-action="List" class="text-muted small text-decoration-none">
+                    <i class="bi bi-arrow-90deg-left"></i>
+                    Trở lại
+                </a>
+            </div>
+            <div asp-validation-summary="ModelOnly" class="alert alert-warning"></div>
+            <form class="row g-3" method="post" asp-antiforgery="true">
+                <div class="col-12">
+                    <label asp-for="Name" class="form-label"></label>
+                    <input asp-for="Name" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Name)" />
+                    <span asp-validation-for="Name" class="text-danger small"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="DisplayOrder" class="form-label"></label>
+                    <input asp-for="DisplayOrder" class="form-control w-50" placeholder="@Html.DisplayNameFor(m => m.DisplayOrder)" />
+                    <span asp-validation-for="DisplayOrder" class="text-danger small"></span>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Chỉnh sửa</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

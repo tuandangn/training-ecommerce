@@ -1,6 +1,6 @@
 ﻿using MediatR;
-using NamEcommerce.Application.Shared.Dtos.Catalog;
-using NamEcommerce.Application.Shared.Queries.Models.Catalog;
+using NamEcommerce.Application.Contracts.Dtos.Catalog;
+using NamEcommerce.Application.Contracts.Queries.Catalog;
 
 namespace NamEcommerce.Api.GraphQl.DataLoaders;
 
@@ -16,17 +16,17 @@ public sealed class CategoryDataLoader : ICategoryDataLoader
         _mediator = mediator;
     }
 
-    public Task<IEnumerable<CategoryDto>> GetAllCategoriesAsync(CancellationToken cancellationToken)
+    public Task<IEnumerable<CategoryAppDto>> GetAllCategoriesAsync(CancellationToken cancellationToken)
         => _mediator.Send(new GetAllCategories(), cancellationToken);
 
-    public async Task<CategoryDto?> GetCategoryByIdAsync(CancellationToken cancellationToken, Guid? id)
+    public async Task<CategoryAppDto?> GetCategoryByIdAsync(CancellationToken cancellationToken, Guid? id)
     {
         if (!id.HasValue)
             return null;
         return await _mediator.Send(new GetCategoryById(id.Value), cancellationToken);
     }
 
-    public async Task<IDictionary<Guid, CategoryDto>> GetCategoriesByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken)
+    public async Task<IDictionary<Guid, CategoryAppDto>> GetCategoriesByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken)
     {
         var categories = await _mediator.Send(new GetCategoriesByIds(ids), cancellationToken);
 

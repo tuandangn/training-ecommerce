@@ -1,25 +1,86 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using MediatR;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Web.Common;
+using NamEcommerce.Web.Contracts.Commands.Models;
 using NamEcommerce.Web.Models.Users;
 
 namespace NamEcommerce.Web.Controllers;
 
-public sealed class UserController : Controller
+public sealed class UserController : BaseController
 {
-    public IActionResult Login() => View();
+    private readonly IMediator _mediator;
+    private readonly AppConfig _appConfig;
 
-    public IActionResult Register()
-        => View(new RegisterModel());
-
-    [HttpPost]
-    public IActionResult Register(RegisterModel model)
+    public UserController(IMediator mediator, AppConfig appConfig)
     {
-        throw new NotImplementedException();
+        _mediator = mediator;
+        _appConfig = appConfig;
     }
 
-    public IActionResult Logout()
+    public IActionResult Index() => RedirectToAction(nameof(Login));
+
+    public IActionResult Login() => View();
+
+    [HttpPost]
+    public async Task<IActionResult> Login(LoginModel model, string? returnUrl = null)
     {
-        HttpContext.SignOutAsync();
-        return RedirectToAction(nameof(Index), "Home");
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var authenticateUserResult = await _mediator.Send(new AuthenticateUserCommand(model.Username!, model.Password!));
+        if (!authenticateUserResult.Success)
+        {
+            ModelState.AddModelError(string.Empty, authenticateUserResult.ErrorMessage!);
+            return View(model);
+        }
+
+        if (Url.IsLocalUrl(returnUrl))
+            return LocalRedirect(returnUrl);
+        return RedirectToHome();
+    }
+
+    public async Task<IActionResult> Logout()
+    {
+        await HttpContext.SignOutAsync();
+        return RedirectToHome();
+    }
+
+    public IActionResult Register()
+    {
+        if (!_appConfig.AllowRegisterUser)
+        {
+            TempData[ViewConstants.GlobalErrorMessage] = "Đăng ký người dùng mới không được phép lúc này.";
+            return RedirectToHome();
+        }
+
+        return View();
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Register(RegisterModel model)
+    {
+        if (!_appConfig.AllowRegisterUser)
+            return RedirectToHome();
+
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var registerUserResult = await _mediator.Send(new RegisterUserCommand(model.Username!, model.Password!, model.Fullname!)
+        {
+            PhoneNumber = model.PhoneNumber!,
+            Address = model.Address
+        });
+        if (registerUserResult.Success)
+            return RedirectToHome();
+
+        if (registerUserResult.CreatedId is not null)
+        {
+            TempData[ViewConstants.LoginErrorMessage] = registerUserResult.ErrorMessage;
+            return RedirectToAction(nameof(Login));
+        }
+
+        ModelState.AddModelError(string.Empty, registerUserResult.ErrorMessage!);
+        return View(model);
     }
 }

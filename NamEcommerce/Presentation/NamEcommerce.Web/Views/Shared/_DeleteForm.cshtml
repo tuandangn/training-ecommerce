@@ -1,0 +1,6 @@
+﻿@model Guid
+@{
+    var templateInfo = ViewData.TemplateInfo;
+}
+<form asp-action="Delete" asp-route-id="@Model" id="deleteForm@(Model)" method="post" asp-antiforgery="true" novalidate>
+</form>
