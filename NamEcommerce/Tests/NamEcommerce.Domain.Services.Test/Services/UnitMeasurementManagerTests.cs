@@ -1,5 +1,4 @@
-﻿using NamEcommerce.Domain.Services.Extensions;
-using NamEcommerce.Domain.Services.Test.Helpers;
+﻿using NamEcommerce.Domain.Services.Test.Helpers;
 using System.Linq.Expressions;
 
 namespace NamEcommerce.Domain.Services.Test.Services;
@@ -19,6 +18,19 @@ public sealed class UnitMeasurementManagerTests
     }
 
     [Fact]
+    public async Task CreateUnitMeasurementAsync_DataIsInvalid_ThrowsUnitMeasurementDataIsInvalidException()
+    {
+        var unitMeasurementManager = new UnitMeasurementManager(null!, null!);
+
+        await Assert.ThrowsAsync<UnitMeasurementDataIsInvalidException>(() =>
+            unitMeasurementManager.CreateUnitMeasurementAsync(new CreateUnitMeasurementDto
+            {
+                Name = string.Empty
+            })
+        );
+    }
+
+    [Fact]
     public async Task CreateUnitMeasurementAsync_NameIsExists_ThrowsUnitMeasurementNameExistsException()
     {
         var testName = "existing-name";
@@ -34,7 +46,7 @@ public sealed class UnitMeasurementManagerTests
     [Fact]
     public async Task CreateUnitMeasurementAsync_DataIsValid_ReturnsCreatedUnitMeasurement()
     {
-        var unitMeasurement = new UnitMeasurement(Guid.NewGuid(), "name") { DisplayOrder = 1 };
+        var unitMeasurement = new UnitMeasurement(Guid.NewGuid(), "unit-measurement") { DisplayOrder = 1 };
         var returnUnitMeasurement = new UnitMeasurement(unitMeasurement.Id, unitMeasurement.Name)
         {
             DisplayOrder = unitMeasurement.DisplayOrder
@@ -97,6 +109,19 @@ public sealed class UnitMeasurementManagerTests
     }
 
     [Fact]
+    public async Task UpdateUnitMeasurementAsync_DataIsInvalid_ThrowsUnitMeasurementDataIsInvalidException()
+    {
+        var unitMeasurementManager = new UnitMeasurementManager(null!, null!);
+
+        await Assert.ThrowsAsync<UnitMeasurementDataIsInvalidException>(() =>
+            unitMeasurementManager.UpdateUnitMeasurementAsync(new UpdateUnitMeasurementDto(Guid.NewGuid())
+            {
+                Name = string.Empty
+            })
+        );
+    }
+
+    [Fact]
     public async Task UpdateUnitMeasurementAsync_UnitMeasurementIsNotFound_ThrowsArgumentException()
     {
         var notFoundUnitMeasurementId = Guid.NewGuid();
@@ -106,7 +131,7 @@ public sealed class UnitMeasurementManagerTests
         await Assert.ThrowsAsync<ArgumentException>(()
             => unitMeasurementManager.UpdateUnitMeasurementAsync(new UpdateUnitMeasurementDto(notFoundUnitMeasurementId)
             {
-                Name = string.Empty
+                Name = "unit-measurement"
             }));
         unitMeasurementDataReaderMock.Verify();
     }
@@ -114,11 +139,8 @@ public sealed class UnitMeasurementManagerTests
     [Fact]
     public async Task UpdateUnitMeasurementAsync_UnitMeasurementNameIsExists_ThrowsUnitMeasurementNameExistsException()
     {
-        var oldUnitMeasurement = new UnitMeasurement(Guid.NewGuid(), "parent-old");
-        var updateUnitMeasurement = oldUnitMeasurement with
-        {
-            Name = "parent-new"
-        };
+        var oldUnitMeasurement = new UnitMeasurement(Guid.NewGuid(), "old-unit-measurement-name");
+        var updateUnitMeasurement = new UnitMeasurement(oldUnitMeasurement.Id, "new-unit-measurement-name");
         var sameNameCategoryId = Guid.NewGuid();
         var unitMeasurementDataReaderMock = UnitMeasurementDataReader
             .HasOne(new UnitMeasurement(default, updateUnitMeasurement.Name))
@@ -137,13 +159,12 @@ public sealed class UnitMeasurementManagerTests
     [Fact]
     public async Task UpdateUnitMeasurementAsync_UpdateUnitMeasurement()
     {
-        var oldUnitMeasurement = new UnitMeasurement(Guid.NewGuid(), "parent-old")
+        var oldUnitMeasurement = new UnitMeasurement(Guid.NewGuid(), "old-unit-measurement-name")
         {
             DisplayOrder = 1
         };
-        var updateUnitMeasurement = oldUnitMeasurement with
+        var updateUnitMeasurement = new UnitMeasurement(oldUnitMeasurement.Id, "new-unit-measurement-name")
         {
-            Name = "parent-new",
             DisplayOrder = 2
         };
         Expression<Func<UnitMeasurement, bool>> isUnitMeasurementMatch =

@@ -5,7 +5,7 @@ namespace NamEcommerce.Application.Contracts.Catalog;
 
 public interface IUnitMeasurementAppService
 {
-    Task<IPagedDataDto<UnitMeasurementAppDto>> GetUnitMeasurementsAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue);
+    Task<IPagedDataAppDto<UnitMeasurementAppDto>> GetUnitMeasurementsAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue);
 
     Task<IEnumerable<UnitMeasurementAppDto>> GetUnitMeasurementsByIdsAsync(IEnumerable<Guid> ids);
 

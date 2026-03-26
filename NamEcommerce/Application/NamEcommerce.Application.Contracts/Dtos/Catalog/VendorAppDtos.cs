@@ -36,7 +36,7 @@ public sealed record CreateVendorResultAppDto
 }
 
 [Serializable]
-public sealed record UpdateVendorAppDto(Guid Id) : BaseUnitMeasurementAppDto;
+public sealed record UpdateVendorAppDto(Guid Id) : BaseVendorAppDto;
 [Serializable]
 public sealed record UpdateVendorResultAppDto
 {

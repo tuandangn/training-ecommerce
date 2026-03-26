@@ -1,10 +1,18 @@
-﻿namespace NamEcommerce.Domain.Shared.Dtos.Catalog;
+﻿using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+
+namespace NamEcommerce.Domain.Shared.Dtos.Catalog;
 
 [Serializable]
 public abstract record BaseUnitMeasurementDto
 {
     public required string Name { get; init; }
     public int DisplayOrder { get; set; }
+
+    public virtual void Verify()
+    {
+        if (string.IsNullOrEmpty(Name))
+            throw new UnitMeasurementDataIsInvalidException("Unit measurement name is not empty");
+    }
 }
 
 [Serializable]

@@ -2,14 +2,14 @@
 
 namespace NamEcommerce.Application.Contracts.Dtos.Common;
 
-public interface IPagedDataDto<TData> : IEnumerable, IEnumerable<TData>
+public interface IPagedDataAppDto<TData> : IEnumerable, IEnumerable<TData>
 {
     IEnumerable<TData> Items { get; set; }
     PaginationDto Pagination { get; set; }
 }
 
 [Serializable]
-public sealed class PagedDataDto<TData> : IPagedDataDto<TData>, IEnumerable, IEnumerable<TData>
+public sealed class PagedDataAppDto<TData> : IPagedDataAppDto<TData>, IEnumerable, IEnumerable<TData>
 {
     public required IEnumerable<TData> Items { get; set; }
     public required PaginationDto Pagination { get; set; }
@@ -20,10 +20,10 @@ public sealed class PagedDataDto<TData> : IPagedDataDto<TData>, IEnumerable, IEn
         => GetEnumerator();
 }
 
-public static class PagedDataDto
+public static class PagedDataAppDto
 {
-    public static IPagedDataDto<TData> Create<TData>(IEnumerable<TData> items, int? pageIndex = null, int? pageSize = null)
-        => new PagedDataDto<TData>()
+    public static IPagedDataAppDto<TData> Create<TData>(IEnumerable<TData> items, int? pageIndex = null, int? pageSize = null)
+        => new PagedDataAppDto<TData>()
         {
             Items = items,
             Pagination = new PaginationDto
@@ -34,8 +34,8 @@ public static class PagedDataDto
             }
         };
 
-    public static IPagedDataDto<TData> Create<TData>(IEnumerable<TData> items, int pageIndex, int pageSize, int totalCount)
-        => new PagedDataDto<TData>()
+    public static IPagedDataAppDto<TData> Create<TData>(IEnumerable<TData> items, int pageIndex, int pageSize, int totalCount)
+        => new PagedDataAppDto<TData>()
         {
             Items = items,
             Pagination = new PaginationDto

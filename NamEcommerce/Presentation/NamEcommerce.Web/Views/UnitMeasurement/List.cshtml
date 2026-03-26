@@ -3,14 +3,25 @@
     ViewData[ViewConstants.PageTitle] = "Đơn vị tính";
     var successMessage = TempData[ViewConstants.UnitMeasurementSuccessMessage] as string;
     var errorMessage = TempData[ViewConstants.UnitMeasurementErrorMessage] as string;
+    
+    string? query = Context.Request.Query[Html.NameFor(m => m.Keywords)];
 }
 <section class="content-title my-4 text-center">
     <h1>Đơn vị tính</h1>
 </section>
 <section class="content-data p-4 mb-5 shadow">
-    <div class="mb-3 d-flex flex-wrap align-items-center g-3">
-        <partial name="_Search" model="@(new UnitMeasurementListSearchModel { Keywords = Model.Keywords })" />
-        <div class="flex-grow-1 text-end">
+    <div class="mb-2 d-flex align-items-start">
+        <div class="d-flex flex-wrap align-items-center mb-2">
+            <partial name="_Search" model="@(new UnitMeasurementListSearchModel { Keywords = Model.Keywords })" />
+            @if (!string.IsNullOrEmpty(query))
+            {
+                <a asp-action="List" class="btn btn-sm btn-link text-decoration-none text-muted">
+                    <i class="bi bi-x"></i>
+                    Xóa tìm kiếm
+                </a>
+            }
+        </div>
+        <div class="text-end mb-2 flex-grow-1">
             <a asp-action="Create" class="btn btn-outline-primary">
                 <i class="bi bi-plus"></i>
                 Thêm mới
@@ -46,8 +57,12 @@
                     @foreach (var item in Model.Data)
                     {
                         <tr>
-                            <td class="ps-3">@item.Name</td>
-                            <td class="text-center">@item.DisplayOrder</td>
+                            <td class="ps-3">
+                                @HighlighHelper.Highlight(item.Name, query)
+                            </td>
+                            <td class="text-center text-muted">
+                                @item.DisplayOrder
+                            </td>
                             <td class="text-end pe-3">
                                 <a class="btn btn-sm btn-link" asp-action="Edit" asp-route-id="@item.Id">
                                     <span class="visually-hidden">Edit</span>

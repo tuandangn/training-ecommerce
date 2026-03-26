@@ -22,9 +22,24 @@ public static class UnitMeasurementManager
         return mock;
     }
 
+    public static Mock<IUnitMeasurementManager> SetUsernameExists(string name, Guid compareId, bool exists)
+    {
+        var mock = new Mock<IUnitMeasurementManager>();
+        mock.Setup(r => r.DoesNameExistAsync(name, compareId)).ReturnsAsync(exists).Verifiable();
+
+        return mock;
+    }
+
     public static Mock<IUnitMeasurementManager> CreateUnitMeasurementReturns(this Mock<IUnitMeasurementManager> mock, CreateUnitMeasurementDto dto, CreateUnitMeasurementResultDto @return)
     {
         mock.Setup(r => r.CreateUnitMeasurementAsync(dto)).ReturnsAsync(@return).Verifiable();
+
+        return mock;
+    }
+
+    public static Mock<IUnitMeasurementManager> UpdateUnitMeasurementReturns(this Mock<IUnitMeasurementManager> mock, UpdateUnitMeasurementDto dto, UpdateUnitMeasurementResultDto @return)
+    {
+        mock.Setup(r => r.UpdateUnitMeasurementAsync(dto)).ReturnsAsync(@return).Verifiable();
 
         return mock;
     }

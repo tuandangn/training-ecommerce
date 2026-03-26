@@ -1,0 +1,153 @@
+﻿@using System.Text.Encodings.Web
+@using System.Text
+@inject UrlEncoder MyUrlEncoder
+@model ProductListModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Hàng hóa";
+    var successMessage = TempData[ViewConstants.ProductSuccessMessage] as string;
+    var errorMessage = TempData[ViewConstants.ProductErrorMessage] as string;
+
+    string? query = Context.Request.Query[Html.NameFor(m => m.Keywords)];
+}
+<section class="content-title my-4 text-center">
+    <h1>Hàng hóa</h1>
+</section>
+<section class="content-data p-4 mb-5 shadow">
+    <div class="mb-2 d-flex align-items-start">
+        <div class="d-flex flex-wrap align-items-center mb-2">
+            <partial name="_Search" model="@(new ProductListSearchModel { Keywords = Model.Keywords })" />
+            @if (!string.IsNullOrEmpty(query))
+            {
+                <a asp-action="List" class="btn btn-sm btn-link text-decoration-none text-muted">
+                    <i class="bi bi-x"></i>
+                    Xóa tìm kiếm
+                </a>
+            }
+        </div>
+        <div class="text-end mb-2 flex-grow-1">
+            <a asp-action="Create" class="btn btn-outline-primary">
+                <i class="bi bi-plus"></i>
+                Thêm mới
+            </a>
+        </div>
+    </div>
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th class="text-center" style="width:120px;">Hình ảnh</th>
+                    <th>Tên</th>
+                    <th>
+                        Danh mục
+                    </th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Data.Pagination.TotalCount > 0)
+                {
+                    @foreach (var item in Model.Data)
+                    {
+                        <tr>
+                            <td class="text-center" style="width:120px;">
+                                @if (string.IsNullOrEmpty(item.PictureUrl))
+                                {
+                                    <div class="p-2 text-muted d-flex flex-column align-items-center">
+                                        <i class="bi bi-card-image" style="font-size:2rem;"></i>
+                                        <div class="small mt-1">Chưa có hình</div>
+                                    </div>
+                                }
+                                else
+                                {
+
+                                    <img src="@item.PictureUrl" class="img-thumbnail img-fluid" alt="@item.Name" style="height:80px;"/>
+                                }
+                            </td>
+                            <td>
+                                @HighlighHelper.Highlight(item.Name, query)
+                            </td>
+                            <td class="text-muted">
+                                @if (item.CategoryId.HasValue)
+                                {
+                                    @item.CategoryBreadcrumb
+                                }
+                            </td>
+                            <td class="text-end pe-3">
+                                <a class="btn btn-sm btn-link" asp-action="Edit" asp-route-id="@item.Id">
+                                    <span class="visually-hidden">Edit</span>
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-link btnDelete" data-id="@item.Id" data-name="@item.Name">
+                                    <span class="visually-hidden">Delete</span>
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="4">
+                            <p class="my-2 ps-2">
+                                <span class="text-muted">Chưa có dữ liệu</span>
+                            </p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.Data.Pagination.TotalCount > 0)
+            {
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="ps-0">
+                            <partial name="_Pager" model="Model.Data.Pagination" />
+                        </td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+</section>
+@foreach (var item in Model.Data)
+{
+    <partial name="_DeleteForm" model="@item.Id" />
+}
+@section Scripts {
+    <script type="module" defer>
+        import { confirm } from "/modules/modals.js";
+
+        (function() {
+        $('.btnDelete').on('click', async function(e) {
+        e.preventDefault();
+        const name = $(this).data('name');
+
+        $(this).prop('disabled', true);
+
+        const confirmed = await confirm('Xóa hàng hóa', `Bạn muốn xóa hàng hóa <strong>${name}</strong>?`);
+        if (!confirmed) {
+        $(this).prop('disabled', false);
+        return;
+        }
+
+        const id = $(this).data('id');
+        const deleteForm = $(`#deleteForm${id}`);
+        deleteForm.submit();
+        });
+        })();
+    </script>
+}

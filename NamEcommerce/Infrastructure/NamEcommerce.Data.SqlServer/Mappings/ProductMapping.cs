@@ -12,5 +12,8 @@ public sealed class ProductMapping : IEntityTypeConfiguration<Product>
         builder.Property(p => p.NormalizedName).HasMaxLength(400);
         builder.Property(p => p.ShortDesc).HasMaxLength(800).IsRequired();
         builder.Property(p => p.NormalizedShortDesc).HasMaxLength(1600);
+
+        builder.Navigation(p => p.ProductCategories).AutoInclude();
+        builder.Navigation(p => p.ProductPictures).AutoInclude();
     }
 }

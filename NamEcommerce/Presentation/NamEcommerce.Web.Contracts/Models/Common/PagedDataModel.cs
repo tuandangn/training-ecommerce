@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 
-namespace NamEcommerce.Web.Contracts.Common;
+namespace NamEcommerce.Web.Contracts.Models.Common;
 
 public interface IPagedDataModel<TData> : IEnumerable, IEnumerable<TData>
 {

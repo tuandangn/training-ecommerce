@@ -6,10 +6,10 @@ namespace NamEcommerce.Domain.Services.Extensions;
 public static class CategoryExtensions
 {
     public static CategoryDto ToDto(this Category category)
-        => new CategoryDto(category.Id, category.Name)
+        => new CategoryDto(category.Id)
         {
+            Name = category.Name,
             DisplayOrder = category.DisplayOrder,
-            ParentId = category.ParentId,
-            OnParentDisplayOrder = category.OnParentDisplayOrder
+            ParentId = category.ParentId
         };
 }

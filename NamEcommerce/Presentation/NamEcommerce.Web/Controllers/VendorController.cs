@@ -66,49 +66,59 @@ public sealed class VendorController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.UnitMeasurementSuccessMessage] = "Thêm mới nhà cung cấp thành công!";
+        TempData[ViewConstants.VendorSuccessMessage] = "Thêm mới nhà cung cấp thành công!";
         return RedirectToAction(nameof(List));
     }
 
     public async Task<IActionResult> Edit(Guid id)
     {
-        var unitMeasurement = await _mediator.Send(new GetUnitMeasurementQuery { Id = id });
-        if (unitMeasurement == null)
-            return RedirectToAction(nameof(List));
-
-        var model = new EditUnitMeasurementModel
+        var vendor = await _mediator.Send(new GetVendorQuery { Id = id });
+        if (vendor == null)
         {
-            Id = unitMeasurement.Id,
-            Name = unitMeasurement.Name,
-            DisplayOrder = unitMeasurement.DisplayOrder
+            TempData[ViewConstants.VendorErrorMessage] = "Không tìm thấy nhà cung cấp.";
+            return RedirectToAction(nameof(List));
+        }
+
+        var model = new EditVendorModel
+        {
+            Id = vendor.Id,
+            Name = vendor.Name,
+            PhoneNumber = vendor.PhoneNumber,
+            Address = vendor.Address,
+            DisplayOrder = vendor.DisplayOrder
         };
 
         return View(model);
     }
 
     [HttpPost]
-    public async Task<IActionResult> Edit(EditUnitMeasurementModel model)
+    public async Task<IActionResult> Edit(EditVendorModel model)
     {
         if (!ModelState.IsValid)
             return View(model);
 
-        var unitMeasurement = await _mediator.Send(new GetUnitMeasurementQuery { Id = model.Id });
-        if (unitMeasurement == null)
+        var vendor = await _mediator.Send(new GetVendorQuery { Id = model.Id });
+        if (vendor == null)
+        {
+            TempData[ViewConstants.VendorErrorMessage] = "Không tìm thấy nhà cung cấp.";
             return RedirectToAction(nameof(List));
+        }
 
-        var updateUnitMeasurementResult = await _mediator.Send(new UpdateUnitMeasurementCommand
+        var updateVendorResult = await _mediator.Send(new UpdateVendorCommand
         {
             Id = model.Id,
-            Name = model.Name!,
+            Name = model.Name,
+            PhoneNumber = model.PhoneNumber,
+            Address = model.Address,
             DisplayOrder = model.DisplayOrder
         });
-        if (!updateUnitMeasurementResult.Success)
+        if (!updateVendorResult.Success)
         {
-            ModelState.AddModelError(string.Empty, updateUnitMeasurementResult.ErrorMessage!);
+            ModelState.AddModelError(string.Empty, updateVendorResult.ErrorMessage!);
             return View(model);
         }
 
-        TempData[ViewConstants.UnitMeasurementSuccessMessage] = "Chỉnh sửa đơn vị tính thành công!";
+        TempData[ViewConstants.VendorSuccessMessage] = "Chỉnh sửa nhà cung cấp thành công!";
         return RedirectToAction(nameof(List));
     }
 

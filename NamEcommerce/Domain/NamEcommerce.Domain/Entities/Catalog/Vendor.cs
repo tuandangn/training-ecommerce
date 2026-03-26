@@ -1,5 +1,7 @@
 ﻿using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
+using NamEcommerce.Domain.Shared.Services.Catalog;
 
 namespace NamEcommerce.Domain.Entities.Catalog;
 
@@ -16,11 +18,38 @@ public sealed record Vendor : AppAggregateEntity
         NormalizedAddress = TextHelper.Normalize(Address);
     }
 
-    public string Name { get; init; }
-    internal string NormalizedName { get; set; } = "";
-    public string PhoneNumber { get; init; }
-    public string? Address { get; set; }
-    internal string NormalizedAddress { get; set; } = "";
+    public string Name { get; private set; }
+    internal string NormalizedName { get; private set; } = "";
+    public string PhoneNumber { get; internal set; }
+    public string? Address
+    {
+        get;
+        internal set
+        {
+            field = value;
+            NormalizedAddress = TextHelper.Normalize(value);
+        }
+    }
+    internal string NormalizedAddress { get; private set; } = "";
 
     public int DisplayOrder { get; set; }
+
+    #region Methods
+
+    internal async Task SetNameAsync(string name, IVendorManager manager)
+    {
+        ArgumentNullException.ThrowIfNull(manager);
+        ArgumentException.ThrowIfNullOrEmpty(name);
+
+        if (string.Equals(Name, name, StringComparison.Ordinal))
+            return;
+
+        if (await manager.DoesNameExistAsync(name, Id).ConfigureAwait(false))
+            throw new VendorNameExistsException(name);
+
+        Name = name;
+        NormalizedName = TextHelper.Normalize(name);
+    }
+
+    #endregion
 }

@@ -118,7 +118,7 @@ public sealed class VendorAppServiceTests
     {
         var dto = new CreateVendorAppDto
         {
-            Name = "new-unit-measurement",
+            Name = "new-vendor",
             PhoneNumber = "0123456789",
             DisplayOrder = 0
         };
@@ -140,6 +140,153 @@ public sealed class VendorAppServiceTests
         Assert.True(result.Success);
         Assert.Equal(createVendorResult.CreatedId, result.CreatedId);
         vendorManager.Verify();
+    }
+
+    #endregion
+
+    #region UpdateVendorAsync
+
+    [Fact]
+    public async Task UpdateVendorAsync_DtoIsNull_ThrowsArgumentNullException()
+    {
+        var vendorAppService = new VendorAppService(null!, null!);
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => vendorAppService.UpdateVendorAsync(null!));
+    }
+
+    [Fact]
+    public async Task UpdateVendorAsync_DataIsInvalid_ReturnsFalseResult()
+    {
+        var invalidDto = new UpdateVendorAppDto(Guid.NewGuid())
+        {
+            Name = string.Empty,
+            PhoneNumber= string.Empty,
+            DisplayOrder = 0
+        };
+        var vendorAppService = new VendorAppService(null!, null!);
+        var falseResult = await vendorAppService.UpdateVendorAsync(invalidDto);
+
+        Assert.False(falseResult.Success);
+        Assert.NotEmpty(falseResult.ErrorMessage!);
+    }
+
+    [Fact]
+    public async Task UpdateVendorAsync_VendorIsNotFound_ReturnsFalseResult()
+    {
+        var notFoundVendorId = Guid.NewGuid();
+        var updateVendorDto = new UpdateVendorAppDto(notFoundVendorId)
+        {
+            Name = "vendor",
+            PhoneNumber = "0123456789",
+            DisplayOrder = 0
+        };
+        var vendorDataReaderMock = VendorDataReader.NotFound(notFoundVendorId);
+        var vendorAppService = new VendorAppService(null!, vendorDataReaderMock.Object);
+        var falseResult = await vendorAppService.UpdateVendorAsync(updateVendorDto);
+
+        Assert.False(falseResult.Success);
+        Assert.NotEmpty(falseResult.ErrorMessage!);
+        vendorDataReaderMock.Verify();
+    }
+
+    [Fact]
+    public async Task UpdateVendorAsync_NameIsExists_ThrowsReturnsFalseResult()
+    {
+        var existingName = "existing-name";
+        var existingNameDto = new UpdateVendorAppDto(Guid.NewGuid())
+        {
+            Name = existingName,
+            PhoneNumber = "0123456789",
+            DisplayOrder = 0
+        };
+        var vendorManager = VendorManager.SetUsernameExists(existingName, existingNameDto.Id, true);
+        var vendorDataReaderStub = VendorDataReader.VendorById(
+            existingNameDto.Id,
+            new Vendor(existingNameDto.Id, "vendor", "0123456789")
+        );
+        var vendorAppService = new VendorAppService(vendorManager.Object, vendorDataReaderStub.Object);
+
+        var falseResult = await vendorAppService.UpdateVendorAsync(existingNameDto);
+
+        Assert.False(falseResult.Success);
+        Assert.NotEmpty(falseResult.ErrorMessage!);
+        vendorManager.Verify();
+    }
+
+    [Fact]
+    public async Task UpdateVendorAsync_NameIsNotExists_ReturnsResult()
+    {
+        var dto = new UpdateVendorAppDto(Guid.NewGuid())
+        {
+            Name = "new-vendor",
+            PhoneNumber = "0123456789",
+            DisplayOrder = 0
+        };
+        var updateVendorResult = new UpdateVendorResultDto(dto.Id)
+        {
+            Name = dto.Name,
+            PhoneNumber= dto.PhoneNumber,
+            Address = dto.Address,
+            DisplayOrder = dto.DisplayOrder
+        };
+        var vendorManager = VendorManager.SetUsernameExists(dto.Name, updateVendorResult.Id, false)
+            .UpdateVendorReturns(new UpdateVendorDto(dto.Id)
+            {
+                Name = dto.Name,
+                PhoneNumber = dto.PhoneNumber,
+                DisplayOrder = dto.DisplayOrder
+            }, updateVendorResult);
+        var vendorDataReaderStub = VendorDataReader.VendorById(dto.Id, new Vendor(dto.Id, "old-vendor", "0123457698"));
+        var vendorAppService = new VendorAppService(vendorManager.Object, vendorDataReaderStub.Object);
+
+        var result = await vendorAppService.UpdateVendorAsync(dto);
+
+        Assert.True(result.Success);
+        Assert.Equal(updateVendorResult.Id, result.UpdatedId);
+        vendorManager.Verify();
+    }
+
+    #endregion
+
+    #region DeleteVendorAsync
+
+    [Fact]
+    public async Task DeleteVendorAsync_DtoIsNull_ThrowsArgumentNullException()
+    {
+        var vendorAppService = new VendorAppService(null!, null!);
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => vendorAppService.DeleteVendorAsync(null!));
+    }
+
+    [Fact]
+    public async Task DeleteVendorAsync_VendorNotFound_ReturnsFalseResult()
+    {
+        var notFoundId = Guid.NewGuid();
+        var notFoundDto = new DeleteVendorAppDto(notFoundId);
+        var vendorDataReaderMock = VendorDataReader.NotFound(notFoundId);
+        var vendorAppService = new VendorAppService(null!, vendorDataReaderMock.Object);
+
+        var falseResult = await vendorAppService.DeleteVendorAsync(notFoundDto);
+
+        Assert.False(falseResult.Success);
+        Assert.NotEmpty(falseResult.ErrorMessage!);
+        vendorDataReaderMock.Verify();
+    }
+
+    [Fact]
+    public async Task DeleteVendorAsync_VendorFound_DeleteAndReturns()
+    {
+        var dto = new DeleteVendorAppDto(Guid.NewGuid());
+        var vendor = new Vendor(dto.Id, "vendor", "0123456789");
+        var vendorDataReaderMock = VendorDataReader.VendorById(dto.Id, vendor);
+        var vendorManagerMock = VendorManager.CanDeleteVendor(dto.Id);
+        var vendorAppService = new VendorAppService(vendorManagerMock.Object, vendorDataReaderMock.Object);
+
+        var result = await vendorAppService.DeleteVendorAsync(dto);
+
+        Assert.True(result.Success);
+        vendorDataReaderMock.Verify();
+        vendorManagerMock.Verify();
     }
 
     #endregion

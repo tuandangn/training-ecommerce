@@ -1,0 +1,76 @@
+﻿@model Base64ImageModel
+@inject AppConfig AppConfig
+
+<div class="mb-3">
+    <label for="productPictureFile" class="form-label">Hình ảnh</label>
+    <input type="file" accept="image/*" id="productPictureFile" class="d-none" />
+    <label for="productPictureFile" class="d-block text-decoration-none" style="cursor:pointer;">
+        <img id="imagePreview" src="@Model.Base64Data" alt="" class="img-thumbnail img-fluid mb-2 @(string.IsNullOrEmpty(Model.Base64Data) ? "d-none" : "")" style="object-fit:cover;" />
+        <div id="imagePlaceholder" class="p-2 text-muted d-flex flex-column align-items-center @(string.IsNullOrEmpty(Model.Base64Data) ? "" : "d-none")" style="background:#fafafa;">
+            <i class="bi bi-card-image" style="font-size:2rem;"></i>
+            <div class="small mt-1">Chưa có hình</div>
+        </div>
+        <div class="d-grid">
+            <button type="button" class="btn btn-sm btn-light mt-2" id="btnChoosePicture">Chọn ảnh</button>
+        </div>
+    </label>
+    <span asp-validation-for="Base64Data" class="text-danger small"></span>
+    <input type="hidden" asp-for="Base64Data" />
+    <input type="hidden" asp-for="FileName" />
+    <input type="hidden" asp-for="Extension" />
+</div>
+<script defer>
+    (function(){
+        const imageInput = document.getElementById('productPictureFile');
+        const preview = document.getElementById('imagePreview');
+        const placeholder = document.getElementById('imagePlaceholder');
+
+        const base64Input = document.getElementById('@Html.IdFor(m => m.Base64Data)');
+        const fileNameInput = document.getElementById('@Html.IdFor(m => m.FileName)');
+        const extensionInput = document.getElementById('@Html.IdFor(m => m.Extension)');
+
+        const maxBytes = @(AppConfig.UploadFileMaxSizeInBytes);
+
+        imageInput.addEventListener('change', function(e) {
+            const file = this.files && this.files[0];
+            if (!file) {
+                // preview.src = '#';
+                // preview.classList.add('d-none');
+                // placeholder.classList.remove('d-none');
+                return;
+            }
+            const validationText = document.querySelector('[data-valmsg-for="@Html.NameFor(m => m.Base64Data)"]');
+            let validationError = '';
+            if (file.size > maxBytes)
+                validationError = 'Kích thước ảnh phải nhỏ hơn 5 MB.';
+            if (validationText)
+                validationText.innerHTML = validationError
+            else
+                alert(validationError);
+
+            if (validationError) {
+                this.value = ''; // reset
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const dataUrl = ev.target.result;
+                console.log(dataUrl);
+                preview.src = dataUrl;
+                preview.classList.remove('d-none');
+                placeholder.classList.add('d-none');
+
+                base64Input.value = dataUrl;
+                fileNameInput.value = file.name;
+                extensionInput.value = '.' + (file.name.split('.').pop());
+            };
+            reader.readAsDataURL(file);
+        });
+
+        const btnChoosePicture = document.getElementById('btnChoosePicture');
+        btnChoosePicture.addEventListener('click', function(e){
+            imageInput.click();
+        });
+    })();
+</script>

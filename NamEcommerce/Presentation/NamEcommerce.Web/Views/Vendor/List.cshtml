@@ -1,16 +1,30 @@
-﻿@model VendorListModel
+﻿@using System.Text.Encodings.Web
+@using System.Text
+@inject UrlEncoder MyUrlEncoder
+@model VendorListModel
 @{
     ViewData[ViewConstants.PageTitle] = "Nhà cung cấp";
     var successMessage = TempData[ViewConstants.VendorSuccessMessage] as string;
     var errorMessage = TempData[ViewConstants.VendorErrorMessage] as string;
+
+    string? query = Context.Request.Query[Html.NameFor(m => m.Keywords)];
 }
 <section class="content-title my-4 text-center">
     <h1>Nhà cung cấp</h1>
 </section>
 <section class="content-data p-4 mb-5 shadow">
-    <div class="mb-3 d-flex flex-wrap align-items-center g-3">
-        <partial name="_Search" model="@(new VendorListSearchModel { Keywords = Model.Keywords })" />
-        <div class="flex-grow-1 text-end">
+    <div class="mb-2 d-flex align-items-start">
+        <div class="d-flex flex-wrap align-items-center mb-2">
+            <partial name="_Search" model="@(new VendorListSearchModel { Keywords = Model.Keywords })" />
+            @if (!string.IsNullOrEmpty(query))
+            {
+                <a asp-action="List" class="btn btn-sm btn-link text-decoration-none text-muted">
+                    <i class="bi bi-x"></i>
+                    Xóa tìm kiếm
+                </a>
+            }
+        </div>
+        <div class="text-end mb-2 flex-grow-1">
             <a asp-action="Create" class="btn btn-outline-primary">
                 <i class="bi bi-plus"></i>
                 Thêm mới
@@ -40,7 +54,7 @@
                         <i class="bi bi-phone"></i>
                         Điện thoại
                     </th>
-                    <th>
+                    <th class="d-none d-md-table-cell">
                         <i class="bi bi-map"></i>
                         Địa chỉ
                     </th>
@@ -54,14 +68,28 @@
                     @foreach (var item in Model.Data)
                     {
                         <tr>
-                            <td class="ps-3">@item.Name</td>
+                            <td class="ps-3">
+                                @HighlighHelper.Highlight(item.Name, query)
+                            </td>
                             <td>
-                                <a href="tel:@item.PhoneNumber" class="text-decoration-none">
-                                    @item.PhoneNumber
+                                <a href="tel:@item.PhoneNumber" class="text-decoration-none text-muted">
+                                    <i class="bi bi-telephone text-dark"></i>
+                                    @HighlighHelper.Highlight(item.PhoneNumber, query)
                                 </a>
                             </td>
-                            <td>@item.Address</td>
-                            <td class="text-center">@item.DisplayOrder</td>
+                            <td class="d-none d-md-table-cell">
+                                @if (!string.IsNullOrEmpty(item.Address))
+                                {
+                                    var encodedAddress = MyUrlEncoder.Encode(item.Address);
+                                    <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank" class="text-decoration-none text-muted">
+                                        <i class="bi bi-geo-alt text-dark"></i>
+                                        @HighlighHelper.Highlight(item.Address, query)
+                                    </a>
+                                }
+                            </td>
+                            <td class="text-center text-muted">
+                                @item.DisplayOrder
+                            </td>
                             <td class="text-end pe-3">
                                 <a class="btn btn-sm btn-link" asp-action="Edit" asp-route-id="@item.Id">
                                     <span class="visually-hidden">Edit</span>

@@ -49,7 +49,7 @@ public sealed class EntityDataReaderTests
     public async Task GetByIdAsync_Found_ReturnsFoundEntity()
     {
         var id = Guid.NewGuid();
-        var entity = new Category(default, string.Empty);
+        var entity = new Category(default, "category");
         var repositoryMock = CategoryRepository.CategoryById(id, entity);
         var entityDataReader = new EntityDataReader<Category>(null!, repositoryMock.Object);
 

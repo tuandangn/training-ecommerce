@@ -10,17 +10,30 @@ public static class CategoryStubData
         var id2 = Guid.NewGuid();
         IEnumerable<CategoryAppDto> data = new[]
         {
-             new CategoryAppDto(id1, "Category test 1"),
-             new CategoryAppDto(id2, "Category test 2")
+             new CategoryAppDto(id1)
              {
+                 Name = "Category 1",
+                 ParentId = null
+             },
+             new CategoryAppDto(id2)
+             {
+                 Name = "Category 2",
                  ParentId = id1 //category 1 -> category 2
              },
-             new CategoryAppDto(Guid.NewGuid(), "Category test 3")
+             new CategoryAppDto(Guid.NewGuid())
              {
+                 Name = "Category 3",
                  ParentId = id2 // category 2 -> category 3
              },
-             new CategoryAppDto(Guid.NewGuid(), "Category test 4"),
-             new CategoryAppDto(Guid.NewGuid(), "Category test 5")
+             new CategoryAppDto(Guid.NewGuid()){
+                 Name = "Category 4",
+                 ParentId = null
+             },
+             new CategoryAppDto(Guid.NewGuid())
+             {
+                 Name = "Category 5",
+                 ParentId = null
+             }
         };
 
         Data = data;

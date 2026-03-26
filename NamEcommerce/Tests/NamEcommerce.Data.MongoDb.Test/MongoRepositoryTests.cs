@@ -18,7 +18,7 @@ public sealed class MongoRepositoryTests
     [Fact]
     public async Task DeleteAsync_EntityIsNotNull_DeleteEntity()
     {
-        var entity = new Category(default, string.Empty);
+        var entity = new Category(default, "category");
         var dbContextMock = DbContext.Create()
             .WhenCall(dbContext => dbContext.RemoveAsync(entity, default));
         var repository = new NamECommerceMongoRepository<Category>(dbContextMock.Object);
@@ -43,8 +43,8 @@ public sealed class MongoRepositoryTests
     [Fact]
     public async Task InsertAsync_EntityIsNotNull_InsertEntity()
     {
-        var entity = new Category(default, string.Empty);
-        var returnEntity = new Category(Guid.NewGuid(), string.Empty);
+        var entity = new Category(default, "category");
+        var returnEntity = new Category(Guid.NewGuid(), "category");
         var dbContextMock = DbContext.Create()
             .WhenCall(dbContext => dbContext.AddAsync(entity, default), Task.FromResult(returnEntity));
         var repository = new NamECommerceMongoRepository<Category>(dbContextMock.Object);
@@ -62,7 +62,11 @@ public sealed class MongoRepositoryTests
     [Fact]
     public async Task GetAllAsync_ReturnsAllData()
     {
-        var returnValues = new[] { new Category(default, string.Empty), new Category(default, string.Empty), new Category(default, string.Empty) };
+        var returnValues = new[] {
+            new Category(default, "category-1"),
+            new Category(default, "category-2"),
+            new Category(default, "category-3") 
+        };
         var dbContextMock = DbContext.Create()
             .WhenCall(dbContext => dbContext.GetDataAsync<Category>(), returnValues.AsQueryable());
         var repository = new NamECommerceMongoRepository<Category>(dbContextMock.Object);
@@ -97,7 +101,7 @@ public sealed class MongoRepositoryTests
     public async Task GetByIdAsync_Found_ReturnsFoundEntity()
     {
         var id = Guid.NewGuid();
-        var entity = new Category(default, string.Empty);
+        var entity = new Category(default, "category");
         var dbContextMock = DbContext.Create().WhenCall(dbContext => dbContext.FindAsync<Category>(id, default), entity);
         var repository = new NamECommerceMongoRepository<Category>(dbContextMock.Object);
 
@@ -121,8 +125,8 @@ public sealed class MongoRepositoryTests
     [Fact]
     public async Task UpdateAsync_EntityIsNotNull_UpdateEntity()
     {
-        var entity = new Category(default, string.Empty);
-        var returnEntity = new Category(Guid.NewGuid(), string.Empty);
+        var entity = new Category(default, "category");
+        var returnEntity = new Category(Guid.NewGuid(), "category");
         var dbContextMock = DbContext.Create()
             .WhenCall(dbContext => dbContext.UpdateAsync(entity, default), returnEntity);
         var repository = new NamECommerceMongoRepository<Category>(dbContextMock.Object);

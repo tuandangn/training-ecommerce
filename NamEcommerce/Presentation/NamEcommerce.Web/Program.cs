@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NamEcommerce.Application.Contracts.Catalog;
+using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Catalog;
+using NamEcommerce.Application.Services.Media;
 using NamEcommerce.Application.Services.Queries.Handlers.Catalog;
 using NamEcommerce.Application.Services.Users;
 using NamEcommerce.Data.Contracts;
@@ -16,10 +18,12 @@ using NamEcommerce.Domain.Services.Security;
 using NamEcommerce.Domain.Services.Users;
 using NamEcommerce.Domain.Shared.Services;
 using NamEcommerce.Domain.Shared.Services.Catalog;
+using NamEcommerce.Domain.Shared.Services.Media;
 using NamEcommerce.Web.Common;
 using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Web.Framework.Commands.Handlers;
 using NamEcommerce.Web.Framework.Services;
+using NamEcommerce.Web.Mvc.Binders;
 using NamEcommerce.Web.Services;
 using NamEcommerce.Web.Validators;
 using System.Reflection;
@@ -77,6 +81,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICategoryManager, CategoryManager>();
     services.AddScoped<IUnitMeasurementManager, UnitMeasurementManager>();
     services.AddScoped<IVendorManager, VendorManager>();
+    services.AddScoped<IProductManager, ProductManager>();
+    services.AddScoped<IPictureManager, PictureManager>();
 
     services.AddScoped<ISecurityService, SecurityService>();
 
@@ -84,6 +90,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IUnitMeasurementAppService, UnitMeasurementAppService>();
     services.AddScoped<IUserAppService, UserAppService>();
     services.AddScoped<IVendorAppService, VendorAppService>();
+    services.AddScoped<IProductAppService, ProductAppService>();
+    services.AddScoped<IPictureAppService, PictureAppService>();
 
     //application services
     services.AddScoped<IInformationService, InformationService>();
@@ -101,8 +109,10 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddSession();
 
     //mvc
-    services.AddMvc()
-        .AddSessionStateTempDataProvider();
+    services.AddMvc(options =>
+    {
+        options.ModelBinderProviders.Insert(0, new TrimModelBinderProvider());
+    }).AddSessionStateTempDataProvider();
 
     services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
     services.AddValidatorsFromAssemblyContaining<LoginModelValidator>();

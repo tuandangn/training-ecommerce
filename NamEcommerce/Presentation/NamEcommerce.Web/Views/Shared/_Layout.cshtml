@@ -33,12 +33,21 @@
                                 <a class="nav-link" asp-controller="Home" asp-action="Index">Trang chủ</a>
                             </li>
                             <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("Category", "Product") ? "active" : "")" href="#" id="catalogMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Hàng hóa
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                                    <li><a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Product") ? "active" : "")" asp-controller="Product" asp-action="Index">Hàng hóa</a></li>
+                                    <li><a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Category") ? "active" : "")" asp-controller="Category" asp-action="Index">Danh mục</a></li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("Vendor", "UnitMeasurement") ? "active": "")" href="#" id="otherMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     Khác
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                    <li><a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Vendor", "List") ? "active" : "")" asp-controller="Vendor" asp-action="Index">Nhà cung cấp</a></li>
-                                    <li><a class="dropdown-item @(WebHelper.IsMatchRouteInfo("UnitMeasurement", "List") ? "active" : "")" asp-controller="UnitMeasurement" asp-action="Index">Đơn vị tính</a></li>
+                                    <li><a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Vendor") ? "active" : "")" asp-controller="Vendor" asp-action="Index">Nhà cung cấp</a></li>
+                                    <li><a class="dropdown-item @(WebHelper.IsMatchRouteInfo("UnitMeasurement") ? "active" : "")" asp-controller="UnitMeasurement" asp-action="Index">Đơn vị tính</a></li>
                                 </ul>
                             </li>
                         </ul>
@@ -48,7 +57,7 @@
             </nav>
         </header>
 
-        <div class="container flex-grow-1">
+        <div class="container flex-grow-1 pb-5">
             @if (!string.IsNullOrEmpty(errorMessage))
             {
                 <div class="alert alert-warning alert-dismissible fade show" role="alert">
@@ -68,7 +77,7 @@
     </div>
     <partial name="_ReusedModals" />
 
-    <script src="~/lib/jquery/dist/jquery.min.js" defer></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="~/js/site.js" asp-append-version="true" defer></script>
     <script src="~/modules/common.js" type="module" defer asp-append-version="true"></script>

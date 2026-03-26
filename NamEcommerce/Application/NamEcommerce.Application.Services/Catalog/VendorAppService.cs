@@ -83,13 +83,61 @@ public sealed class VendorAppService : IVendorAppService
         return vendor?.ToDto();
     }
 
-    public async Task<IPagedDataDto<VendorAppDto>> GetVendorsAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue)
+    public async Task<IPagedDataAppDto<VendorAppDto>> GetVendorsAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue)
     {
         var pagedData = await _vendorManager.GetVendorsAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);
-        var result = PagedDataDto.Create(
+        var result = PagedDataAppDto.Create(
             pagedData.Select(vendor => vendor.ToDto()),
             pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
 
         return result;
+    }
+
+    public async Task<UpdateVendorResultAppDto> UpdateVendorAsync(UpdateVendorAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+        {
+            return new UpdateVendorResultAppDto
+            {
+                Success = false,
+                ErrorMessage = errorMessage
+            };
+        }
+
+        var vendor = await _vendorDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        if (vendor == null)
+        {
+            return new UpdateVendorResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Không tìm thấy nhà cung cấp"
+            };
+        }
+
+        if (await _vendorManager.DoesNameExistAsync(dto.Name, dto.Id).ConfigureAwait(false))
+        {
+            return new UpdateVendorResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Tên nhà cung cấp trùng lặp"
+            };
+        }
+
+        var result = await _vendorManager.UpdateVendorAsync(new UpdateVendorDto(dto.Id)
+        {
+            Name = dto.Name,
+            PhoneNumber = dto.PhoneNumber,
+            Address = dto.Address,
+            DisplayOrder = dto.DisplayOrder
+        }).ConfigureAwait(false);
+
+        return new UpdateVendorResultAppDto
+        {
+            Success = true,
+            UpdatedId = result.Id
+        };
     }
 }

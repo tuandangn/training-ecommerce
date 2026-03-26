@@ -16,8 +16,8 @@ public sealed record UnitMeasurement : AppAggregateEntity
         NormalizedName = TextHelper.Normalize(Name);
     }
 
-    public string Name { get; internal set; }
-    internal string NormalizedName { get; set; }
+    public string Name { get; private set; }
+    internal string NormalizedName { get; private set; }
 
     public int DisplayOrder { get; set; }
 
@@ -25,8 +25,8 @@ public sealed record UnitMeasurement : AppAggregateEntity
 
     internal async Task SetNameAsync(string name, IUnitMeasurementManager manager)
     {
-        if (string.IsNullOrEmpty(name))
-            throw new ArgumentNullException(nameof(name));
+        ArgumentNullException.ThrowIfNull(manager);
+        ArgumentException.ThrowIfNullOrEmpty(name);
 
         if (string.Equals(Name, name, StringComparison.Ordinal))
             return;

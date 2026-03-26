@@ -10,6 +10,5 @@ public sealed class PictureMapping : IEntityTypeConfiguration<Picture>
 
         builder.Property(p => p.MimeType).HasMaxLength(100).IsRequired();
         builder.Property(p => p.Extension).HasMaxLength(100).IsRequired();
-        builder.Property(p => p.SeoName).HasMaxLength(400);
     }
 }

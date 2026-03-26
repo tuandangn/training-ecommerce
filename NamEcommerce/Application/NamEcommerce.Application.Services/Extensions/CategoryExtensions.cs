@@ -6,8 +6,9 @@ namespace NamEcommerce.Application.Services.Extensions;
 public static class CategoryExtensions
 {
     public static CategoryAppDto ToDto(this Category category)
-        => new(category.Id, category.Name)
+        => new(category.Id)
         {
+            Name = category.Name,
             DisplayOrder = category.DisplayOrder,
             ParentId = category.ParentId
         };

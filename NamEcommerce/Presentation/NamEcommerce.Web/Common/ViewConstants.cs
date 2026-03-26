@@ -13,4 +13,10 @@ public static class ViewConstants
 
     public const string VendorSuccessMessage = "Messages.Vendor.Success";
     public const string VendorErrorMessage = "Messages.Vendor.Error";
+
+    public const string CategorySuccessMessage = "Messages.Category.Success";
+    public const string CategoryErrorMessage = "Messages.Category.Error";
+
+    public const string ProductSuccessMessage = "Messages.Product.Success";
+    public const string ProductErrorMessage = "Messages.Product.Error";
 }

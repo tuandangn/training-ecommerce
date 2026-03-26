@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Web.Contracts.Common;
+﻿using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Models.Catalog;
 

@@ -25,9 +25,7 @@ public sealed class UserManager : IUserManager
         if (dto is null)
             throw new ArgumentNullException(nameof(dto));
 
-        var (valid, errorMessage) = dto.Validate();
-        if (!valid)
-            throw new ArgumentException(errorMessage, nameof(dto));
+        dto.Verify();
 
         if (await DoesUsernameExistAsync(dto.Username).ConfigureAwait(false))
             throw new UsernameExistsException(dto.Username);

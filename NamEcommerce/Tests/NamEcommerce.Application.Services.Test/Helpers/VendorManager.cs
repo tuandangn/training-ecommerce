@@ -1,5 +1,6 @@
 ﻿using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Services;
 using NamEcommerce.Domain.Shared.Services.Catalog;
 
 namespace NamEcommerce.Application.Services.Test.Helpers;
@@ -22,9 +23,24 @@ public static class VendorManager
         return mock;
     }
 
+    public static Mock<IVendorManager> SetUsernameExists(string name, Guid compareId, bool exists)
+    {
+        var mock = new Mock<IVendorManager>();
+        mock.Setup(r => r.DoesNameExistAsync(name, compareId)).ReturnsAsync(exists).Verifiable();
+
+        return mock;
+    }
+
     public static Mock<IVendorManager> CreateVendorReturns(this Mock<IVendorManager> mock, CreateVendorDto dto, CreateVendorResultDto @return)
     {
         mock.Setup(r => r.CreateVendorAsync(dto)).ReturnsAsync(@return).Verifiable();
+
+        return mock;
+    }
+
+    public static Mock<IVendorManager> UpdateVendorReturns(this Mock<IVendorManager> mock, UpdateVendorDto dto, UpdateVendorResultDto @return)
+    {
+        mock.Setup(r => r.UpdateVendorAsync(dto)).ReturnsAsync(@return).Verifiable();
 
         return mock;
     }

@@ -73,7 +73,11 @@ public sealed class VendorManager : IVendorManager
         if (!string.IsNullOrEmpty(keywords))
         {
             var normizedKeywords = TextHelper.Normalize(keywords);
-            query = query.Where(c => c.NormalizedName.Contains(normizedKeywords));
+            query = query.Where(c => 
+                c.NormalizedName.Contains(normizedKeywords) 
+                || c.PhoneNumber.Contains(keywords)
+                || c.NormalizedAddress.Contains(normizedKeywords)
+            );
         }
 
         query = query.OrderBy(c => c.DisplayOrder)
@@ -89,8 +93,29 @@ public sealed class VendorManager : IVendorManager
         return Task.FromResult(data);
     }
 
-    public Task<UpdateVendorResultDto> UpdateVendorAsync(UpdateVendorDto dto)
+    public async Task<UpdateVendorResultDto> UpdateVendorAsync(UpdateVendorDto dto)
     {
-        throw new NotImplementedException();
+        ArgumentNullException.ThrowIfNull(dto);
+
+        dto.Verify();
+
+        var vendor = await _vendorDataReader.GetByIdAsync(dto.Id);
+        if (vendor is null)
+            throw new ArgumentException("Vendor  is not found", nameof(dto));
+
+        await vendor.SetNameAsync(dto.Name, this);
+        vendor.Address = dto.Address;
+        vendor.PhoneNumber = dto.PhoneNumber;
+        vendor.DisplayOrder = dto.DisplayOrder;
+
+        var result = await _vendorRepository.UpdateAsync(vendor).ConfigureAwait(false);
+
+        return new UpdateVendorResultDto(result.Id)
+        {
+            Name = result.Name,
+            PhoneNumber = result.PhoneNumber,
+            Address = result.Address,
+            DisplayOrder = result.DisplayOrder
+        };
     }
 }

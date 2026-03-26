@@ -3,7 +3,9 @@ using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Services.Catalog;
 
 namespace NamEcommerce.Application.Services.Catalog;
 
@@ -18,38 +20,180 @@ public sealed class CategoryAppService : ICategoryAppService
         _categoryDataReader = categoryDataReader;
     }
 
-    public async Task<IPagedDataDto<CategoryAppDto>> GetCategoriesAsync(int pageIndex = 0, int pageSize = int.MaxValue)
+    public async Task<CreateCategoryResultAppDto> CreateCategoryAsync(CreateCategoryAppDto dto)
     {
-        var orderedQuery = _categoryDataReader.DataSource
-            .OrderBy(c => c.DisplayOrder)
-            .ThenBy(c => c.Name);
-        var totalCount = orderedQuery.Count();
-        var pagedData = orderedQuery
-            .Skip(pageIndex * pageSize)
-            .Take(pageSize)
-            .ToList();
-        return PagedDataDto.Create(pagedData.Select(category => category.ToDto()), pageIndex, pageSize, totalCount);
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+        {
+            return new CreateCategoryResultAppDto
+            {
+                Success = false,
+                ErrorMessage = errorMessage
+            };
+        }
+
+        if (await _categoryManager.DoesNameExistAsync(dto.Name).ConfigureAwait(false))
+        {
+            return new CreateCategoryResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Name already exists."
+            };
+        }
+
+        if (dto.ParentId.HasValue)
+        {
+            var parent = await _categoryDataReader.GetByIdAsync(dto.ParentId.Value).ConfigureAwait(false);
+            if (parent is null)
+            {
+                return new CreateCategoryResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Parent category is not found."
+                };
+            }
+        }
+
+        var result = await _categoryManager.CreateCategoryAsync(new CreateCategoryDto
+        {
+            Name = dto.Name,
+            DisplayOrder = dto.DisplayOrder,
+            ParentId = dto.ParentId
+        }).ConfigureAwait(false);
+
+        return new CreateCategoryResultAppDto
+        {
+            Success = true,
+            CreatedId = result.CreatedId
+        };
     }
 
-    public async Task<IEnumerable<CategoryAppDto>> GetCategoriesByIdsAsync(IEnumerable<Guid> ids)
+    public async Task<DeleteCategoryResultAppDto> DeleteCategoryAsync(DeleteCategoryAppDto dto)
     {
-        if (ids is null)
-            throw new ArgumentNullException(nameof(ids));
+        ArgumentNullException.ThrowIfNull(dto);
 
-        if (!ids.Any())
-            return Enumerable.Empty<CategoryAppDto>();
+        var category = await _categoryDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        if (category == null)
+        {
+            return new DeleteCategoryResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Category is not found."
+            };
+        }
 
-        var query = from category in _categoryDataReader.DataSource
-                    where ids.Contains(category.Id)
-                    select category;
-        var categories = query.ToList();
+        await _categoryManager.DeleteCategoryAsync(dto.Id).ConfigureAwait(false);
 
-        return categories.Select(category => category.ToDto());
+        return new DeleteCategoryResultAppDto { Success = true };
     }
 
     public async Task<CategoryAppDto?> GetCategoryByIdAsync(Guid id)
     {
-        var category = await _categoryDataReader.GetByIdAsync(id);
+        var category = await _categoryDataReader.GetByIdAsync(id).ConfigureAwait(false);
         return category?.ToDto();
+    }
+
+    public async Task<IPagedDataAppDto<CategoryAppDto>> GetCategoriesAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue)
+    {
+        var pagedData = await _categoryManager.GetCategoriesAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);
+
+        var result = PagedDataAppDto.Create(
+            pagedData.Select(category => category.ToDto()),
+            pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
+
+        return result;
+    }
+
+    public async Task<IEnumerable<CategoryAppDto>> GetCategoryBreadcrumbAsync(Guid categoryId)
+    {
+        var allCategories = await _categoryDataReader.GetAllAsync().ConfigureAwait(false);
+
+        var breadcrumbItems = new List<Category>();
+        populateBreadcrumbItems(categoryId);
+        breadcrumbItems.Reverse();
+
+        return breadcrumbItems.Select(category => category.ToDto());
+
+        //local method
+        void populateBreadcrumbItems(Guid categoryId)
+        {
+            var category = allCategories.FirstOrDefault(category => category.Id == categoryId);
+            if (category == null)
+                return;
+            breadcrumbItems.Add(category);
+            if (!category.ParentId.HasValue)
+                return;
+            populateBreadcrumbItems(category.ParentId.Value);
+        }
+    }
+
+    public async Task<UpdateCategoryResultAppDto> UpdateCategoryAsync(UpdateCategoryAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+        {
+            return new UpdateCategoryResultAppDto
+            {
+                Success = false,
+                ErrorMessage = errorMessage
+            };
+        }
+
+        var category = await _categoryDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        if (category == null)
+        {
+            return new UpdateCategoryResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Không tìm thấy nhà cung cáp"
+            };
+        }
+
+        if (await _categoryManager.DoesNameExistAsync(dto.Name, dto.Id).ConfigureAwait(false))
+        {
+            return new UpdateCategoryResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Tên nhà cung cấp trùng lặp"
+            };
+        }
+
+        if (dto.ParentId.HasValue)
+        {
+            var parent = await _categoryDataReader.GetByIdAsync(dto.ParentId.Value);
+            if (parent is null)
+            {
+                return new UpdateCategoryResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Parent category is not found."
+                };
+            }
+            if (parent.ParentId == dto.Id)
+            {
+                return new UpdateCategoryResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = $"Category '{dto.Name}' and category '{parent.Name}' are circular relationship"
+                };
+            }
+        }
+
+        var result = await _categoryManager.UpdateCategoryAsync(new UpdateCategoryDto(dto.Id)
+        {
+            Name = dto.Name,
+            DisplayOrder = dto.DisplayOrder,
+            ParentId = dto.ParentId
+        }).ConfigureAwait(false);
+
+        return new UpdateCategoryResultAppDto
+        {
+            Success = true,
+            UpdatedId = result.Id
+        };
     }
 }

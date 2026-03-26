@@ -21,4 +21,5 @@ app.UseAuthorization();
 app.Run();
 
 
-//Update-Database AddPasswordSalt -Project NamEcommerce.Data.SqlServerMigrations -StartupProject NamEcommerce.Data.SqlServerMigrations -Context NamEcommerce.Data.SqlServer.NamEcommerceEfDbContext
+//Update-Database -Project NamEcommerce.Data.SqlServerMigrations -StartupProject NamEcommerce.Data.SqlServerMigrations -Context NamEcommerce.Data.SqlServer.NamEcommerceEfDbContext
+//Add-Migration AddPasswordSalt -Project NamEcommerce.Data.SqlServerMigrations -StartupProject NamEcommerce.Data.SqlServerMigrations -Context NamEcommerce.Data.SqlServer.NamEcommerceEfDbContext

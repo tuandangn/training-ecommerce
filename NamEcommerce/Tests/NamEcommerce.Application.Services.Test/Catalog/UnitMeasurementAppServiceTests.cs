@@ -116,7 +116,7 @@ public sealed class UnitMeasurementAppServiceTests
     }
 
     [Fact]
-    public async Task CreateUnitMeasurementAsync_DtoIsInvalid_ReturnsFalseResult()
+    public async Task CreateUnitMeasurementAsync_DataIsInvalid_ReturnsFalseResult()
     {
         var invalidDto = new CreateUnitMeasurementAppDto
         {
@@ -217,6 +217,103 @@ public sealed class UnitMeasurementAppServiceTests
         Assert.True(result.Success);
         unitMeasurementDataReaderMock.Verify();
         unitMeasurementManagerMock.Verify();
+    }
+
+    #endregion
+
+    #region UpdateUnitMeasurementAsync
+
+    [Fact]
+    public async Task UpdateUnitMeasurementAsync_DtoIsNull_ThrowsArgumentNullException()
+    {
+        var unitMeasurementAppService = new UnitMeasurementAppService(null!, null!);
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => unitMeasurementAppService.UpdateUnitMeasurementAsync(null!));
+    }
+
+    [Fact]
+    public async Task UpdateUnitMeasurementAsync_DataIsInvalid_ReturnsFalseResult()
+    {
+        var invalidDto = new UpdateUnitMeasurementAppDto(Guid.NewGuid())
+        {
+            Name = string.Empty,
+            DisplayOrder = 0
+        };
+        var unitMeasurementAppService = new UnitMeasurementAppService(null!, null!);
+        var falseResult = await unitMeasurementAppService.UpdateUnitMeasurementAsync(invalidDto);
+
+        Assert.False(falseResult.Success);
+        Assert.NotEmpty(falseResult.ErrorMessage!);
+    }
+
+    [Fact]
+    public async Task UpdateUnitMeasurementAsync_UnitMeasurementIsNotFound_ReturnsFalseResult()
+    {
+        var notFoundUnitMeasurementId = Guid.NewGuid();
+        var updateUnitMeasurementDto = new UpdateUnitMeasurementAppDto(notFoundUnitMeasurementId)
+        {
+            Name = "unit-measurement",
+            DisplayOrder = 0
+        };
+        var unitMeasurementDataReaderMock = UnitMeasurementDataReader.NotFound(notFoundUnitMeasurementId);
+        var unitMeasurementAppService = new UnitMeasurementAppService(null!, unitMeasurementDataReaderMock.Object);
+        var falseResult = await unitMeasurementAppService.UpdateUnitMeasurementAsync(updateUnitMeasurementDto);
+
+        Assert.False(falseResult.Success);
+        Assert.NotEmpty(falseResult.ErrorMessage!);
+        unitMeasurementDataReaderMock.Verify();
+    }
+
+    [Fact]
+    public async Task UpdateUnitMeasurementAsync_NameIsExists_ThrowsReturnsFalseResult()
+    {
+        var existingName = "existing-name";
+        var existingNameDto = new UpdateUnitMeasurementAppDto(Guid.NewGuid())
+        {
+            Name = existingName,
+            DisplayOrder = 0
+        };
+        var unitMeasurementManager = UnitMeasurementManager.SetUsernameExists(existingName, existingNameDto.Id, true);
+        var unitMeasurementDataReaderStub = UnitMeasurementDataReader.UnitMeasurementById(
+            existingNameDto.Id,
+            new UnitMeasurement(existingNameDto.Id, "unit-measurement")
+        );
+        var unitMeasurementAppService = new UnitMeasurementAppService(unitMeasurementManager.Object, unitMeasurementDataReaderStub.Object);
+
+        var falseResult = await unitMeasurementAppService.UpdateUnitMeasurementAsync(existingNameDto);
+
+        Assert.False(falseResult.Success);
+        Assert.NotEmpty(falseResult.ErrorMessage!);
+        unitMeasurementManager.Verify();
+    }
+
+    [Fact]
+    public async Task UpdateUnitMeasurementAsync_NameIsNotExists_ReturnsResult()
+    {
+        var dto = new UpdateUnitMeasurementAppDto(Guid.NewGuid())
+        {
+            Name = "new-unit-measurement",
+            DisplayOrder = 0
+        };
+        var updateUnitMeasurementResult = new UpdateUnitMeasurementResultDto(dto.Id)
+        {
+            Name = dto.Name,
+            DisplayOrder = dto.DisplayOrder
+        };
+        var unitMeasurementManager = UnitMeasurementManager.SetUsernameExists(dto.Name, updateUnitMeasurementResult.Id, false)
+            .UpdateUnitMeasurementReturns(new UpdateUnitMeasurementDto(dto.Id)
+            {
+                Name = dto.Name,
+                DisplayOrder = dto.DisplayOrder
+            }, updateUnitMeasurementResult);
+        var unitMeasurementDataReaderStub = UnitMeasurementDataReader.UnitMeasurementById(dto.Id, new UnitMeasurement(dto.Id, "old-unit-measurement"));
+        var unitMeasurementAppService = new UnitMeasurementAppService(unitMeasurementManager.Object, unitMeasurementDataReaderStub.Object);
+
+        var result = await unitMeasurementAppService.UpdateUnitMeasurementAsync(dto);
+
+        Assert.True(result.Success);
+        Assert.Equal(updateUnitMeasurementResult.Id, result.UpdatedId);
+        unitMeasurementManager.Verify();
     }
 
     #endregion

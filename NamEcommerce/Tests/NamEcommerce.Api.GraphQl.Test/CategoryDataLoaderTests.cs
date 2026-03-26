@@ -12,7 +12,13 @@ public sealed class CategoryDataLoaderTests
     [Fact]
     public async Task GetAllCategoriesAsync_ReturnsResult()
     {
-        var categories = new[] { new CategoryAppDto(Guid.NewGuid(), "Category 1") };
+        var categories = new[] {
+            new CategoryAppDto(Guid.NewGuid())
+            {
+                Name = "category",
+                ParentId = null
+            }
+        };
         var query = new GetAllCategories();
         var mediatorMock = new Mock<IMediator>();
         mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(categories);
@@ -32,7 +38,11 @@ public sealed class CategoryDataLoaderTests
     [Fact]
     public async Task GetCategoryByIdAsync_ReturnsResult()
     {
-        var category = new CategoryAppDto(Guid.NewGuid(), "Category 1");
+        var category = new CategoryAppDto(Guid.NewGuid())
+        {
+            Name = "category",
+            ParentId = null
+        };
         var query = new GetCategoryById(category.Id);
         var mediatorMock = new Mock<IMediator>();
         mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(category);
@@ -52,7 +62,18 @@ public sealed class CategoryDataLoaderTests
     public async Task GetCategoriesByIdsAsync_ReturnsResult()
     {
         var ids = new[] { Guid.NewGuid(), Guid.NewGuid() };
-        var categories = new[] { new CategoryAppDto(ids[0], "Category 1"), new CategoryAppDto(ids[1], "Category 2") };
+        var categories = new[] {
+            new CategoryAppDto(ids[0])
+            {
+                Name = "Category 1",
+                ParentId = null
+            },
+            new CategoryAppDto(ids[1])
+            {
+                Name = "Category 2",
+                ParentId = null
+            }
+        };
         var query = new GetCategoriesByIds(ids);
         var mediatorMock = new Mock<IMediator>();
         mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(categories);

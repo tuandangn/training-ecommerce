@@ -6,6 +6,6 @@ namespace NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 [Serializable]
 public sealed class CreateUnitMeasurementCommand : IRequest<CreateUnitMeasurementResultModel>
 {
-    public required string Name { get; set; }
+    public required string Name { get; init; }
     public int DisplayOrder { get; set; }
 }

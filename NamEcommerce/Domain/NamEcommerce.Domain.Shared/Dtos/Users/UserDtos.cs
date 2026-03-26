@@ -1,4 +1,6 @@
-﻿namespace NamEcommerce.Domain.Shared.Dtos.Users;
+﻿using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+
+namespace NamEcommerce.Domain.Shared.Dtos.Users;
 
 [Serializable]
 public abstract record BaseUserDto
@@ -8,18 +10,14 @@ public abstract record BaseUserDto
     public required string PhoneNumber { get; init; }
     public string? Address { get; set; }
 
-    public (bool valid, string? errorMessage) Validate()
+    public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Username))
-            return (false, "Username cannot be null or empty.");
-
+            throw new UserDataIsInvalidException("Username cannot be null or empty.");
         if (string.IsNullOrEmpty(FullName))
-            return (false, "Fullname cannot be null or empty.");
-
+            throw new UserDataIsInvalidException("Fullname cannot be null or empty.");
         if (string.IsNullOrEmpty(PhoneNumber))
-            return (false, "Phone number cannot be null or empty.");
-
-        return (true, null);
+            throw new UserDataIsInvalidException("Phone number cannot be null or empty.");
     }
 }
 
@@ -35,22 +33,14 @@ public sealed record CreateUserDto : BaseUserDto
     public required string PasswordHash { get; init; }
     public required string PasswordSalt { get; init; }
 
-    public (bool valid, string? errorMessage) Validate(CreateUserDto dto)
+    public override void Verify()
     {
-        if (dto is null)
-            return (false, "CreateUserDto cannot be null.");
+        base.Verify();
 
-        var baseValidateResult = base.Validate();
-        if (!baseValidateResult.valid)
-            return baseValidateResult;
-
-        if (string.IsNullOrEmpty(dto.PasswordHash))
-            return (false, "Password hash cannot be null or empty.");
-
-        if (string.IsNullOrEmpty(dto.PasswordSalt))
-            return (false, "Password salt cannot be null or empty.");
-
-        return (true, null);
+        if (string.IsNullOrEmpty(PasswordHash))
+            throw new UserDataIsInvalidException("Password hash cannot be null or empty.");
+        if (string.IsNullOrEmpty(PasswordSalt))
+            throw new UserDataIsInvalidException("Password salt cannot be null or empty.");
     }
 }
 [Serializable]

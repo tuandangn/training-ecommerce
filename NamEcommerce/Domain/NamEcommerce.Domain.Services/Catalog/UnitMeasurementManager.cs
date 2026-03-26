@@ -24,6 +24,8 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
     {
         ArgumentNullException.ThrowIfNull(dto);
 
+        dto.Verify();
+
         if (await DoesNameExistAsync(dto.Name, null).ConfigureAwait(false))
             throw new UnitMeasurementNameExistsException(dto.Name);
 
@@ -50,6 +52,8 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
     public async Task<UpdateUnitMeasurementResultDto> UpdateUnitMeasurementAsync(UpdateUnitMeasurementDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
+
+        dto.Verify();
 
         var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.Id);
         if (unitMeasurement is null)

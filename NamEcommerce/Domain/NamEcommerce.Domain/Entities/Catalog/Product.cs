@@ -1,75 +1,92 @@
 ﻿using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Helpers;
+using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Services.Catalog;
 
 namespace NamEcommerce.Domain.Entities.Catalog;
 
 [Serializable]
 public record Product : AppAggregateEntity
 {
-    internal Product(Guid id, string name, decimal price, string shortDesc)
-        : this(id, name, price, shortDesc, Array.Empty<ProductCategory>(), Array.Empty<ProductPicture>())
-    { }
+    internal Product(Guid id, string name) : base(id)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(name);
 
-    internal Product(Guid id, string name, decimal price, string shortDesc,
-        IList<ProductCategory> productCategories, IList<ProductPicture> productPictures) : base(id)
-        => (Name, Price, ShortDesc, _productCategories, _productPictures) 
-        = (name, price, shortDesc, productCategories, productPictures);
+        Name = name;
 
-    public string Name { get; init; }
-    public string NormalizedName { get; internal set; } = "";
-    public string ShortDesc { get; init; }
-    public string NormalizedShortDesc { get; internal set; } = "";
-    public string? FullDesc { get; set; }
+        NormalizedName = TextHelper.Normalize(Name);
+        CreatedOnUtc = DateTime.UtcNow;
+    }
 
-    public decimal Price { get; init; }
-    public decimal? Discount { get; set; }
-    public decimal? Tax { get; set; }
+    public string Name { get; private set; }
+    internal string NormalizedName { get; private set; } = "";
+    public string? ShortDesc
+    {
+        get;
+        internal set
+        {
+            field = value;
+            NormalizedShortDesc = TextHelper.Normalize(value);
+        }
+    }
+    internal string NormalizedShortDesc { get; private set; } = "";
 
-    public DateTime CreatedOnUtc { get; init; }
-        = DateTime.UtcNow;
-    public DateTime? UpdatedOnUtc { get; init; }
+    public DateTime CreatedOnUtc { get; set; }
+    public DateTime? UpdatedOnUtc { get; set; }
 
-    private IList<ProductCategory> _productCategories;
+    private readonly IList<ProductCategory> _productCategories = [];
     public IEnumerable<ProductCategory> ProductCategories
         => _productCategories.AsEnumerable();
 
-    private IList<ProductPicture> _productPictures;
+    private readonly IList<ProductPicture> _productPictures = [];
     public IEnumerable<ProductPicture> ProductPictures
         => _productPictures.AsEnumerable();
 
     #region Methods
 
-    internal void SetProductCategories(IList<ProductCategory> productCategories)
+    internal async Task SetNameAsync(string name, IProductManager manager)
     {
-        if (productCategories is null)
-            throw new ArgumentNullException(nameof(productCategories));
+        ArgumentNullException.ThrowIfNull(manager);
+        ArgumentException.ThrowIfNullOrEmpty(name);
 
-        _productCategories = productCategories;
+        if (string.Equals(Name, name, StringComparison.Ordinal))
+            return;
+
+        if (await manager.DoesNameExistAsync(name, Id).ConfigureAwait(false))
+            throw new ProductNameExistsException(name);
+
+        Name = name;
+        NormalizedName = TextHelper.Normalize(name);
     }
-    internal void AddToCategory(Guid categoryId, int displayOrder)
+
+    internal void ClearProductCategories() => _productCategories.Clear();
+    internal async Task AddToCategoryAsync(Guid categoryId, int displayOrder, IEntityDataReader<Category> dataReader)
     {
+        ArgumentNullException.ThrowIfNull(dataReader);
+
         if (ProductCategories.Any(pc => pc.CategoryId == categoryId))
             throw new ProductAlreadyInCategoryException(categoryId, Name);
 
-        _productCategories.Add(new ProductCategory(default, Id, categoryId)
-        {
-            DisplayOrder = displayOrder
-        });
-    }
-    internal void SetProductPictures(IList<ProductPicture> productPictues)
-    {
-        if (productPictues is null)
-            throw new ArgumentNullException(nameof(productPictues));
+        var category = await dataReader.GetByIdAsync(categoryId).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(category);
 
-        _productPictures = productPictues;
+        _productCategories.Add(new ProductCategory(default, Id, categoryId, displayOrder));
     }
-    internal void AddPicture(Guid pictureId, int displayOrder)
+
+    internal void ClearProductPictures() => _productPictures.Clear();
+    internal async Task AddPictureAsync(Guid pictureId, IEntityDataReader<Picture> dataReader)
     {
-        _productPictures.Add(new ProductPicture(default, Id, pictureId)
-        {
-            DisplayOrder = displayOrder
-        });
+        ArgumentNullException.ThrowIfNull(dataReader);
+
+        if (ProductPictures.Any(pc => pc.PictureId == pictureId))
+            return;
+
+        var picture = await dataReader.GetByIdAsync(pictureId).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(picture);
+
+        _productPictures.Add(new ProductPicture(default, Id, pictureId));
     }
 
     #endregion

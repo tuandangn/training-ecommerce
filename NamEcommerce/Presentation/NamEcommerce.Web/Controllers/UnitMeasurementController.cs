@@ -72,7 +72,10 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
     {
         var unitMeasurement = await _mediator.Send(new GetUnitMeasurementQuery { Id = id });
         if (unitMeasurement == null)
+        {
+            TempData[ViewConstants.UnitMeasurementErrorMessage] = "Không tìm thấy đơn vị tính.";
             return RedirectToAction(nameof(List));
+        }
 
         var model = new EditUnitMeasurementModel
         {
@@ -92,7 +95,10 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
 
         var unitMeasurement = await _mediator.Send(new GetUnitMeasurementQuery { Id = model.Id });
         if (unitMeasurement == null)
+        {
+            TempData[ViewConstants.UnitMeasurementErrorMessage] = "Không tìm thấy đơn vị tính.";
             return RedirectToAction(nameof(List));
+        }
 
         var updateUnitMeasurementResult = await _mediator.Send(new UpdateUnitMeasurementCommand
         {

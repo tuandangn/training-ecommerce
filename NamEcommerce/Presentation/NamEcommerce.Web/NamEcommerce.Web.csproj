@@ -30,4 +30,8 @@
 	  <ProjectReference Include="..\NamEcommerce.Web.Framework\NamEcommerce.Web.Framework.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Models\Media\" />
+	</ItemGroup>
+
 </Project>

@@ -1,4 +1,4 @@
-﻿namespace NamEcommerce.Web.Contracts.Common;
+﻿namespace NamEcommerce.Web.Contracts.Models.Common;
 
 [Serializable]
 public sealed record PaginationModel

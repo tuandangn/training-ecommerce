@@ -19,10 +19,10 @@ public sealed class UnitMeasurementAppService : IUnitMeasurementAppService
         _unitMeasurementDataReader = unitMeasurementDataReader;
     }
 
-    public async Task<IPagedDataDto<UnitMeasurementAppDto>> GetUnitMeasurementsAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue)
+    public async Task<IPagedDataAppDto<UnitMeasurementAppDto>> GetUnitMeasurementsAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue)
     {
         var pagedData = await _unitMeasurementManager.GetUnitMeasurementsAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);
-        var result = PagedDataDto.Create(
+        var result = PagedDataAppDto.Create(
             pagedData.Select(unitMeasurement => unitMeasurement.ToDto()),
             pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
 

@@ -11,7 +11,7 @@ public abstract record BaseVendorDto
     public string? Address { get; set; }
     public int DisplayOrder { get; set; }
 
-    public void Verify()
+    public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Name))
             throw new VendorDataIsInvalidException("Vendor name is not empty");

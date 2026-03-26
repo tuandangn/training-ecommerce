@@ -124,7 +124,7 @@ public sealed class UserManagerTests
     }
 
     [Fact]
-    public async Task CreateUserAsync_DataIsInvalid_ThrowsArgumentException()
+    public async Task CreateUserAsync_DataIsInvalid_ThrowsUserDataIsInvalidException()
     {
         var invalidCreateUserDto = new CreateUserDto
         {
@@ -136,7 +136,7 @@ public sealed class UserManagerTests
         };
         var userManager = new UserManager(null!, null!, null!);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => userManager.CreateUserAsync(invalidCreateUserDto));
+        await Assert.ThrowsAsync<UserDataIsInvalidException>(() => userManager.CreateUserAsync(invalidCreateUserDto));
     }
 
     [Fact]

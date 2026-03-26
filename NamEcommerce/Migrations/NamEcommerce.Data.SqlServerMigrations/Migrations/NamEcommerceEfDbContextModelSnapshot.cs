@@ -44,9 +44,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasMaxLength(400)
                         .HasColumnType("nvarchar(400)");
 
-                    b.Property<int>("OnParentDisplayOrder")
-                        .HasColumnType("int");
-
                     b.Property<Guid?>("ParentId")
                         .HasColumnType("uniqueidentifier");
 
@@ -64,12 +61,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<DateTime>("CreatedOnUtc")
                         .HasColumnType("datetime2");
 
-                    b.Property<decimal?>("Discount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("FullDesc")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -85,16 +76,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasMaxLength(1600)
                         .HasColumnType("nvarchar(1600)");
 
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("ShortDesc")
                         .IsRequired()
                         .HasMaxLength(800)
                         .HasColumnType("nvarchar(800)");
-
-                    b.Property<decimal?>("Tax")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedOnUtc")
                         .HasColumnType("datetime2");
@@ -126,6 +111,30 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("ProductCategory", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Catalog.ProductPicture", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("PictureId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PictureId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("ProductPicture", "tbl");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Catalog.UnitMeasurement", b =>
@@ -208,17 +217,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<bool>("IsNew")
-                        .HasColumnType("bit");
+                    b.Property<string>("FileName")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("MimeType")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("SeoName")
-                        .HasMaxLength(400)
-                        .HasColumnType("nvarchar(400)");
 
                     b.Property<DateTime?>("UpdatedOnUtc")
                         .HasColumnType("datetime2");
@@ -226,30 +231,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Picture", "tbl");
-                });
-
-            modelBuilder.Entity("NamEcommerce.Domain.Entities.Media.ProductPicture", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("PictureId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PictureId");
-
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("ProductPicture", "tbl");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Orders.Order", b =>
@@ -470,7 +451,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("NamEcommerce.Domain.Entities.Media.ProductPicture", b =>
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Catalog.ProductPicture", b =>
                 {
                     b.HasOne("NamEcommerce.Domain.Entities.Media.Picture", null)
                         .WithMany()

@@ -16,7 +16,6 @@ $(function() {
     });
 })
 
-/* form */
 function isFormValid(form) {
     try {
         return $(form).valid();
