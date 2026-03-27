@@ -47,7 +47,7 @@ public sealed class ProductAppService : IProductAppService
         }
 
         Guid? pictureId = null;
-        if (dto.ImageFile is not null)
+        if (dto.ImageFile is not null && dto.ImageFile.Data.Length > 0 && !string.IsNullOrEmpty(dto.ImageFile.MimeType))
         {
             var insertedPicture = await _pictureManager.CreatePictureAsync(new CreatePictureDto
             {
@@ -146,7 +146,7 @@ public sealed class ProductAppService : IProductAppService
         }
 
         Guid? pictureId = null;
-        if (dto.ImageFile is not null)
+        if (dto.ImageFile is not null && dto.ImageFile.Data.Length > 0 && !string.IsNullOrEmpty(dto.ImageFile.MimeType))
         {
             var insertedPicture = await _pictureManager.CreatePictureAsync(new CreatePictureDto
             {
