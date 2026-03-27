@@ -1,4 +1,4 @@
-﻿namespace NamEcommerce.Web.Common;
+﻿namespace NamEcommerce.Web.Contracts.Configurations;
 
 [Serializable]
 public sealed class InfoOptions

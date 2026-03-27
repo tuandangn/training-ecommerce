@@ -3,7 +3,7 @@ using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Queries.Catalog;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
-using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Common;
 
 namespace NamEcommerce.Application.Services.Queries.Handlers.Catalog;
 

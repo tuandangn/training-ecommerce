@@ -3,8 +3,8 @@ using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
-using NamEcommerce.Domain.Shared.Services;
 using NamEcommerce.Domain.Shared.Services.Catalog;
 using NamEcommerce.Domain.Shared.Services.Media;
 
@@ -104,7 +104,7 @@ public sealed class ProductAppService : IProductAppService
 
     public async Task<IPagedDataAppDto<ProductAppDto>> GetProductsAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue)
     {
-        var pagedData = await _productManager.GetProductsAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);
+        var pagedData = await _productManager.GetProductsAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
         var result = PagedDataAppDto.Create(
             pagedData.Select(product => product.ToDto()),
             pageIndex, pageSize, pagedData.PagerInfo.TotalCount);

@@ -30,17 +30,14 @@ public sealed record UserDto(Guid Id) : BaseUserDto
 [Serializable]
 public sealed record CreateUserDto : BaseUserDto
 {
-    public required string PasswordHash { get; init; }
-    public required string PasswordSalt { get; init; }
+    public required string Password { get; init; }
 
     public override void Verify()
     {
         base.Verify();
 
-        if (string.IsNullOrEmpty(PasswordHash))
-            throw new UserDataIsInvalidException("Password hash cannot be null or empty.");
-        if (string.IsNullOrEmpty(PasswordSalt))
-            throw new UserDataIsInvalidException("Password salt cannot be null or empty.");
+        if (string.IsNullOrEmpty(Password))
+            throw new UserDataIsInvalidException("Password cannot be null or empty.");
     }
 }
 [Serializable]

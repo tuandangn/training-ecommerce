@@ -13,9 +13,9 @@ public sealed record UserAppDto
 }
 
 [Serializable]
-public sealed record CreateUserDto
+public sealed record CreateUserAppDto
 {
-    public CreateUserDto(string username, string password, string fullName, string phoneNumber)
+    public CreateUserAppDto(string username, string password, string fullName, string phoneNumber)
         => (Username, Password, FullName, PhoneNumber) = (username, password, fullName, phoneNumber);
 
     public string Username { get; init; }
@@ -25,7 +25,7 @@ public sealed record CreateUserDto
 
     public string? Address { get; set; }
 
-    public static (bool valid, string? errorMessage) Validate(CreateUserDto dto)
+    public static (bool valid, string? errorMessage) Validate(CreateUserAppDto dto)
     {
         if (dto is null)
             return (false, "CreateUserDto cannot be null.");
@@ -43,7 +43,7 @@ public sealed record CreateUserDto
     }
 }
 [Serializable]
-public sealed record CreateUserResultDto
+public sealed record CreateUserResultAppDto
 {
     public bool Success { get; set; }
     public Guid? CreatedId { get; set; }

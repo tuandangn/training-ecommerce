@@ -1,6 +1,6 @@
 ﻿using Moq;
 using NamEcommerce.Domain.Shared;
-using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Common;
 using System.Linq.Expressions;
 
 namespace NamEcommerce.TestHelper;

@@ -1,13 +1,12 @@
-﻿using NamEcommerce.Domain.Shared.Dtos.Catalog;
+﻿using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 
 namespace NamEcommerce.Domain.Shared.Services.Catalog;
 
-public interface IVendorManager
+public interface IVendorManager : ICheckNameService
 {
     Task<IPagedDataDto<VendorDto>> GetVendorsAsync(string? keywords, int pageIndex, int pageSize);
-
-    Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null);
 
     Task<CreateVendorResultDto> CreateVendorAsync(CreateVendorDto dto);
 

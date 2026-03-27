@@ -49,7 +49,7 @@
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th class="text-center" style="width:120px;">Hình ảnh</th>
+                    <th class="ps-3">Hình ảnh</th>
                     <th>Tên</th>
                     <th>
                         Danh mục
@@ -63,19 +63,21 @@
                     @foreach (var item in Model.Data)
                     {
                         <tr>
-                            <td class="text-center" style="width:120px;">
-                                @if (string.IsNullOrEmpty(item.PictureUrl))
-                                {
-                                    <div class="p-2 text-muted d-flex flex-column align-items-center">
-                                        <i class="bi bi-card-image" style="font-size:2rem;"></i>
-                                        <div class="small mt-1">Chưa có hình</div>
-                                    </div>
-                                }
-                                else
-                                {
+                            <td class="ps-3">
+                                <div class="d-flex justify-content-start">
+                                    @if (string.IsNullOrEmpty(item.PictureUrl))
+                                    {
+                                        <div class="p-2 text-muted d-flex flex-column align-items-center">
+                                            <i class="bi bi-card-image" style="font-size:2rem;"></i>
+                                            <div class="small mt-1">Chưa có hình</div>
+                                        </div>
+                                    }
+                                    else
+                                    {
 
-                                    <img src="@item.PictureUrl" class="img-thumbnail img-fluid" alt="@item.Name" style="height:80px;"/>
-                                }
+                                        <img src="@item.PictureUrl" class="img-thumbnail img-fluid" alt="@item.Name" style="height: 90px;" />
+                                    }
+                                </div>
                             </td>
                             <td>
                                 @HighlighHelper.Highlight(item.Name, query)

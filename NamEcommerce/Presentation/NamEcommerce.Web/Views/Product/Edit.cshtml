@@ -45,7 +45,7 @@
                                         <input asp-for="Name" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Name)" autofocus />
                                         <span asp-validation-for="Name" class="text-danger small"></span>
                                     </div>
-                                    <div class="col-12 col-md-6 mb-3">
+                                    <div class="col-12 col-md-8 mb-3">
                                         <label asp-for="CategoryId" class="form-label"></label>
                                         <select asp-for="CategoryId" class="form-select" placeholder="@Html.DisplayNameFor(m => m.CategoryId)">
                                             <option selected="@(!Model.CategoryId.HasValue)" value="@string.Empty">(Không chọn)</option>
@@ -61,7 +61,7 @@
                                         </select>
                                         <span asp-validation-for="CategoryId" class="text-danger small"></span>
                                     </div>
-                                    <div class="col-12 col-md-6 mb-3">
+                                    <div class="col-12 col-md-4 mb-3">
                                         <label asp-for="DisplayOrder" class="form-label"></label>
                                         <input asp-for="DisplayOrder" class="form-control" placeholder="@Html.DisplayNameFor(m => m.DisplayOrder)" />
                                         <span asp-validation-for="DisplayOrder" class="text-danger small"></span>

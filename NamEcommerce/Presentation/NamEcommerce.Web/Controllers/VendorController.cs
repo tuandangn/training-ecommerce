@@ -1,7 +1,8 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Common;
+using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
+using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Models.Catalog;
 

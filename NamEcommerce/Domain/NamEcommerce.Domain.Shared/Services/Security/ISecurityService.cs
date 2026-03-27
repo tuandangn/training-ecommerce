@@ -1,6 +1,6 @@
 ﻿using NamEcommerce.Domain.Shared.Dtos.Security;
 
-namespace NamEcommerce.Domain.Shared.Services;
+namespace NamEcommerce.Domain.Shared.Services.Security;
 
 public interface ISecurityService
 {

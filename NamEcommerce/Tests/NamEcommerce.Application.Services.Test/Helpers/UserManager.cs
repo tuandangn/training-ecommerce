@@ -1,6 +1,6 @@
 ﻿using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Dtos.Users;
-using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.TestHelper;
 
 namespace NamEcommerce.Application.Services.Test.Helpers;

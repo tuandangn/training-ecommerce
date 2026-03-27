@@ -3,8 +3,9 @@ using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
-using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Services.Catalog;
 
 namespace NamEcommerce.Application.Services.Catalog;
 

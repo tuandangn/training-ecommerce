@@ -1,17 +1,18 @@
-﻿using NamEcommerce.Domain.Shared.Dtos.Catalog;
+﻿using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 
 namespace NamEcommerce.Domain.Shared.Services.Catalog;
 
-public interface IProductManager
+public interface IProductManager : ICheckNameService
 {
-    Task<IPagedDataDto<ProductDto>> GetProductsAsync(string? keywords, int pageIndex, int pageSize);
-
-    Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null);
+    Task<IPagedDataDto<ProductDto>> GetProductsAsync(int pageIndex, int pageSize, string? keywords = null, Guid? categoryId = null);
 
     Task<CreateProductResultDto> CreateProductAsync(CreateProductDto dto);
 
     Task<UpdateProductResultDto> UpdateProductAsync(UpdateProductDto dto);
+
+    Task RemoveProductFromCategoryAsync(Guid productId, Guid categoryId);
 
     Task DeleteProductAsync(Guid id);
 }

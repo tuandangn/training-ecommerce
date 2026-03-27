@@ -1,55 +1,36 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Common;
+using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Models.Catalog;
+using NamEcommerce.Web.Services.Catalog;
 
 namespace NamEcommerce.Web.Controllers;
 
 public sealed class CategoryController : BaseAuthorizedController
 {
-    private readonly AppConfig _appConfig;
     private readonly IMediator _mediator;
+    private readonly ICategoryModelFactory _categoryModelFactory;
 
-    public CategoryController(AppConfig appConfig, IMediator mediator)
+    public CategoryController(IMediator mediator, ICategoryModelFactory categoryModelFactory)
     {
-        _appConfig = appConfig;
         _mediator = mediator;
+        _categoryModelFactory = categoryModelFactory;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
-    public IActionResult List(CategoryListSearchModel searchModel)
+    public async Task<IActionResult> List(CategoryListSearchModel searchModel)
     {
-        var pageNumber = searchModel?.PageNumber ?? 1;
-        var pageSize = searchModel?.PageSize ?? 0;
-        if (pageNumber <= 0) pageNumber = 1;
-        if (pageSize <= 0) pageSize = _appConfig.DefaultPageSize;
-        if (_appConfig.PageSizeOptions.Contains(pageSize)) pageSize = _appConfig.DefaultPageSize;
-
-        var model = _mediator.Send(new GetCategoryListQuery
-        {
-            Keywords = searchModel?.Keywords,
-            PageIndex = pageNumber - 1,
-            PageSize = pageSize,
-            BreadcrumbOpts = new()
-            {
-                ExcludeCurrent = true
-            }
-        }).Result;
+        var model = await _categoryModelFactory.PrepareCategoryListModel(searchModel);
 
         return View(model);
     }
 
     public async Task<IActionResult> Create()
     {
-        var parentOptions = await _mediator.Send(new GetCategoryOptionListQuery());
-        var model = new CreateCategoryModel
-        {
-            DisplayOrder = 1,
-            Parents = parentOptions
-        };
+        var model = await _categoryModelFactory.PrepareCreateCategoryModel();
 
         return View(model);
     }
@@ -59,8 +40,7 @@ public sealed class CategoryController : BaseAuthorizedController
     {
         if (!ModelState.IsValid)
         {
-            var parentOptions = await _mediator.Send(new GetCategoryOptionListQuery());
-            model.Parents = parentOptions;
+            model = await _categoryModelFactory.PrepareCreateCategoryModel(model);
             return View(model);
         }
 
@@ -74,8 +54,7 @@ public sealed class CategoryController : BaseAuthorizedController
         {
             ModelState.AddModelError(string.Empty, createCategoryResult.ErrorMessage!);
 
-            var parentOptions = await _mediator.Send(new GetCategoryOptionListQuery());
-            model.Parents = parentOptions;
+            model = await _categoryModelFactory.PrepareCreateCategoryModel(model);
             return View(model);
         }
 
@@ -85,25 +64,12 @@ public sealed class CategoryController : BaseAuthorizedController
 
     public async Task<IActionResult> Edit(Guid id)
     {
-        var category = await _mediator.Send(new GetCategoryQuery { Id = id });
-        if (category == null)
+        var model = await _categoryModelFactory.PrepareEditCategoryModel(id);
+        if (model == null)
         {
             TempData[ViewConstants.CategoryErrorMessage] = "Không tìm thấy danh mục.";
             return RedirectToAction(nameof(List));
         }
-
-        var parentOptions = await _mediator.Send(new GetCategoryOptionListQuery
-        {
-            ExcludedCategoryId = category.Id
-        });
-        var model = new EditCategoryModel
-        {
-            Id = category.Id,
-            Name = category.Name,
-            ParentId = category.ParentId,
-            DisplayOrder = category.DisplayOrder,
-            Parents = parentOptions
-        };
 
         return View(model);
     }
@@ -113,11 +79,7 @@ public sealed class CategoryController : BaseAuthorizedController
     {
         if (!ModelState.IsValid)
         {
-            var parentOptions = await _mediator.Send(new GetCategoryOptionListQuery
-            {
-                ExcludedCategoryId = model.Id
-            });
-            model.Parents = parentOptions;
+            model = (await _categoryModelFactory.PrepareEditCategoryModel(model.Id, model))!;
             return View(model);
         }
 
@@ -139,11 +101,7 @@ public sealed class CategoryController : BaseAuthorizedController
         {
             ModelState.AddModelError(string.Empty, updateCategoryResult.ErrorMessage!);
 
-            var parentOptions = await _mediator.Send(new GetCategoryOptionListQuery
-            {
-                ExcludedCategoryId = category.Id
-            });
-            model.Parents = parentOptions;
+            model = (await _categoryModelFactory.PrepareEditCategoryModel(model.Id, model))!;
             return View(model);
         }
 

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Common;
+using NamEcommerce.Web.Constants;
 
 namespace NamEcommerce.Web.Controllers;
 

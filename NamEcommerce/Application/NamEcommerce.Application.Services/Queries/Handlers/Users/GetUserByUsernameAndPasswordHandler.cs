@@ -2,7 +2,7 @@
 using NamEcommerce.Application.Contracts.Dtos.Users;
 using NamEcommerce.Application.Contracts.Queries.Users;
 using NamEcommerce.Application.Services.Extensions;
-using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Application.Services.Queries.Handlers.Users;
 

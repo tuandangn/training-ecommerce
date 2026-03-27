@@ -6,8 +6,8 @@ namespace NamEcommerce.Domain.Shared.Dtos.Catalog;
 public abstract record BaseCategoryDto
 {
     public required string Name { get; init; }
+    public required Guid? ParentId { get; init; }
     public int DisplayOrder { get; set; }
-    public required Guid? ParentId { get; set; }
 
     public virtual void Verify()
     {

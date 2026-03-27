@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared.Services;
+﻿using NamEcommerce.Domain.Shared.Common;
 
 namespace NamEcommerce.Domain.Services.Test.Helpers;
 
@@ -13,10 +13,10 @@ public static class VendorDataReader
         => EntityDataReader.Create<Vendor>().WithData(vendor);
 
     public static Mock<IEntityDataReader<Vendor>> NotFound(Guid id)
-        => EntityDataReader.Create<Vendor>().WhenCall(reader => reader.GetByIdAsync(id, default), (Vendor?)null);
+        => EntityDataReader.Create<Vendor>().WhenCall(reader => reader.GetByIdAsync(id), (Vendor?)null);
 
     public static Mock<IEntityDataReader<Vendor>> VendorById(Guid id, Vendor vendor)
-        => EntityDataReader.Create<Vendor>().WhenCall(reader => reader.GetByIdAsync(id, default), vendor);
+        => EntityDataReader.Create<Vendor>().WhenCall(reader => reader.GetByIdAsync(id), vendor);
     public static Mock<IEntityDataReader<Vendor>> VendorById(this Mock<IEntityDataReader<Vendor>> mock, Guid id, Vendor vendor)
-        => mock.WhenCall(reader => reader.GetByIdAsync(id, default), vendor);
+        => mock.WhenCall(reader => reader.GetByIdAsync(id), vendor);
 }

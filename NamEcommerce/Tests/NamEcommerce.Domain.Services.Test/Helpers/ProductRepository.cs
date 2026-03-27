@@ -3,11 +3,29 @@
 public static class ProductRepository
 {
     public static Mock<IRepository<Product>> CreateProductWillReturns(Product @return)
-        //*TODO* check inserting data
-        => Repository.Create<Product>().WhenCall(r => 
-            r.InsertAsync(It.Is<Product>(entity => 
-                entity.Name == @return.Name && entity.ShortDesc == @return.ShortDesc))
+    {
+        return Repository.Create<Product>().WhenCall(r =>
+            r.InsertAsync(It.Is<Product>(entity =>
+                entity.Name == @return.Name && entity.ShortDesc == @return.ShortDesc
+                && entity.ProductCategories.All(pc => @return.ProductCategories.Any(i => i.CategoryId == pc.CategoryId && i.DisplayOrder == pc.DisplayOrder))
+                && entity.ProductCategories.Count() == @return.ProductCategories.Count()
+                && entity.ProductPictures.All(pp => @return.ProductPictures.Any(i => i.PictureId == pp.PictureId))
+                && entity.ProductPictures.Count() == @return.ProductPictures.Count()
+            ))
         , @return);
+    }
+    public static Mock<IRepository<Product>> UpdateProductWillReturns(Product @return)
+    {
+        return Repository.Create<Product>().WhenCall(r =>
+            r.UpdateAsync(It.Is<Product>(entity =>
+                entity.Name == @return.Name && entity.ShortDesc == @return.ShortDesc
+                && entity.ProductCategories.All(pc => @return.ProductCategories.Any(i => i.CategoryId == pc.CategoryId && i.DisplayOrder == pc.DisplayOrder))
+                && entity.ProductCategories.Count() == @return.ProductCategories.Count()
+                && entity.ProductPictures.All(pp => @return.ProductPictures.Any(i => i.PictureId == pp.PictureId))
+                && entity.ProductPictures.Count() == @return.ProductPictures.Count()
+            ))
+        , @return);
+    }
 
     public static Mock<IRepository<Product>> NotFound(Guid id)
         => Repository.Create<Product>().WhenCall(r => r.GetByIdAsync(id, default), (Product?)null);

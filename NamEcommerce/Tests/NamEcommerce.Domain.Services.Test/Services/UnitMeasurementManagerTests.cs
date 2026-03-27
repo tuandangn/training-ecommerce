@@ -1,4 +1,5 @@
 ﻿using NamEcommerce.Domain.Services.Test.Helpers;
+using NamEcommerce.Domain.Shared.Events;
 using System.Linq.Expressions;
 
 namespace NamEcommerce.Domain.Services.Test.Services;
@@ -10,7 +11,7 @@ public sealed class UnitMeasurementManagerTests
     [Fact]
     public async Task CreateUnitMeasurementAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var unitMeasurementManager = new UnitMeasurementManager(null!, null!);
+        var unitMeasurementManager = new UnitMeasurementManager(null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
             unitMeasurementManager.CreateUnitMeasurementAsync(null!)
@@ -20,7 +21,7 @@ public sealed class UnitMeasurementManagerTests
     [Fact]
     public async Task CreateUnitMeasurementAsync_DataIsInvalid_ThrowsUnitMeasurementDataIsInvalidException()
     {
-        var unitMeasurementManager = new UnitMeasurementManager(null!, null!);
+        var unitMeasurementManager = new UnitMeasurementManager(null!, null!, null!);
 
         await Assert.ThrowsAsync<UnitMeasurementDataIsInvalidException>(() =>
             unitMeasurementManager.CreateUnitMeasurementAsync(new CreateUnitMeasurementDto
@@ -35,7 +36,7 @@ public sealed class UnitMeasurementManagerTests
     {
         var testName = "existing-name";
         var unitMeasurementDataReaderMock = UnitMeasurementDataReader.HasOne(new UnitMeasurement(default, testName));
-        var unitMeasurementManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object);
+        var unitMeasurementManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object, null!);
 
         await Assert.ThrowsAsync<UnitMeasurementNameExistsException>(() =>
             unitMeasurementManager.CreateUnitMeasurementAsync(new CreateUnitMeasurementDto { Name = testName })
@@ -53,7 +54,7 @@ public sealed class UnitMeasurementManagerTests
         };
         var unitMeasurementRepositoryMock = UnitMeasurementRepository.CreateUnitMeasurementWillReturns(returnUnitMeasurement);
         var unitMeasurementDataReaderStub = UnitMeasurementDataReader.Empty();
-        var unitMeasurementManager = new UnitMeasurementManager(unitMeasurementRepositoryMock.Object, unitMeasurementDataReaderStub.Object);
+        var unitMeasurementManager = new UnitMeasurementManager(unitMeasurementRepositoryMock.Object, unitMeasurementDataReaderStub.Object, Mock.Of<IEventPublisher>());
 
         var resultDto = await unitMeasurementManager.CreateUnitMeasurementAsync(
             new CreateUnitMeasurementDto
@@ -75,7 +76,7 @@ public sealed class UnitMeasurementManagerTests
     {
         var notFoundUnitMeasurementId = Guid.NewGuid();
         var unitMeasurementDataReaderMock = UnitMeasurementDataReader.NotFound(notFoundUnitMeasurementId);
-        var unitMeasurementManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object);
+        var unitMeasurementManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object, null!);
 
         await Assert.ThrowsAsync<ArgumentException>(()
             => unitMeasurementManager.DeleteUnitMeasurementAsync(notFoundUnitMeasurementId));
@@ -89,7 +90,7 @@ public sealed class UnitMeasurementManagerTests
         var unitMeasurement = new UnitMeasurement(Guid.NewGuid(), "unit-measurement");
         var unitMeasurementDataRepositoryMock = UnitMeasurementRepository.CanDeleteUnitMeasurement(unitMeasurement);
         var unitMeasurementDataReaderMock = UnitMeasurementDataReader.UnitMeasurementById(unitMeasurement.Id, unitMeasurement);
-        var unitMeasurementManager = new UnitMeasurementManager(unitMeasurementDataRepositoryMock.Object, unitMeasurementDataReaderMock.Object);
+        var unitMeasurementManager = new UnitMeasurementManager(unitMeasurementDataRepositoryMock.Object, unitMeasurementDataReaderMock.Object, Mock.Of<IEventPublisher>());
 
         await unitMeasurementManager.DeleteUnitMeasurementAsync(unitMeasurement.Id);
 
@@ -103,7 +104,7 @@ public sealed class UnitMeasurementManagerTests
     [Fact]
     public async Task UpdateUnitMeasurementAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var unitMeasurementManager = new UnitMeasurementManager(null!, null!);
+        var unitMeasurementManager = new UnitMeasurementManager(null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => unitMeasurementManager.UpdateUnitMeasurementAsync(null!));
     }
@@ -111,7 +112,7 @@ public sealed class UnitMeasurementManagerTests
     [Fact]
     public async Task UpdateUnitMeasurementAsync_DataIsInvalid_ThrowsUnitMeasurementDataIsInvalidException()
     {
-        var unitMeasurementManager = new UnitMeasurementManager(null!, null!);
+        var unitMeasurementManager = new UnitMeasurementManager(null!, null!, null!);
 
         await Assert.ThrowsAsync<UnitMeasurementDataIsInvalidException>(() =>
             unitMeasurementManager.UpdateUnitMeasurementAsync(new UpdateUnitMeasurementDto(Guid.NewGuid())
@@ -126,7 +127,7 @@ public sealed class UnitMeasurementManagerTests
     {
         var notFoundUnitMeasurementId = Guid.NewGuid();
         var unitMeasurementDataReaderMock = UnitMeasurementDataReader.NotFound(notFoundUnitMeasurementId);
-        var unitMeasurementManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object);
+        var unitMeasurementManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object, null!);
 
         await Assert.ThrowsAsync<ArgumentException>(()
             => unitMeasurementManager.UpdateUnitMeasurementAsync(new UpdateUnitMeasurementDto(notFoundUnitMeasurementId)
@@ -145,7 +146,7 @@ public sealed class UnitMeasurementManagerTests
         var unitMeasurementDataReaderMock = UnitMeasurementDataReader
             .HasOne(new UnitMeasurement(default, updateUnitMeasurement.Name))
             .UnitMeasurementById(oldUnitMeasurement.Id, oldUnitMeasurement);
-        var unitMeasurementManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object);
+        var unitMeasurementManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object, null!);
 
         await Assert.ThrowsAsync<UnitMeasurementNameExistsException>(()
             => unitMeasurementManager.UpdateUnitMeasurementAsync(new UpdateUnitMeasurementDto(updateUnitMeasurement.Id)
@@ -174,7 +175,7 @@ public sealed class UnitMeasurementManagerTests
         var unitMeasurementRepositoryMock = Repository.Create<UnitMeasurement>()
             .WhenCall(repository => repository.UpdateAsync(It.Is(isUnitMeasurementMatch), default), updateUnitMeasurement);
         var unitMeasurementDataReaderStub = UnitMeasurementDataReader.UnitMeasurementById(oldUnitMeasurement.Id, oldUnitMeasurement);
-        var unitMeasurementManager = new UnitMeasurementManager(unitMeasurementRepositoryMock.Object, unitMeasurementDataReaderStub.Object);
+        var unitMeasurementManager = new UnitMeasurementManager(unitMeasurementRepositoryMock.Object, unitMeasurementDataReaderStub.Object, Mock.Of<IEventPublisher>());
 
         var resultUnitMeasurement = await unitMeasurementManager.UpdateUnitMeasurementAsync(
             new UpdateUnitMeasurementDto(updateUnitMeasurement.Id)
@@ -199,7 +200,7 @@ public sealed class UnitMeasurementManagerTests
     [Fact]
     public async Task DoesNameExistAsync_NameIsNull_ThrowsArgumentException()
     {
-        var unitMeasurmentManager = new UnitMeasurementManager(null!, null!);
+        var unitMeasurmentManager = new UnitMeasurementManager(null!, null!, null!);
 
         await Assert.ThrowsAnyAsync<ArgumentException>(() => unitMeasurmentManager.DoesNameExistAsync(null!));
     }
@@ -210,7 +211,7 @@ public sealed class UnitMeasurementManagerTests
         var existingName = "existing-name";
         var existingUnitMeasurement = new UnitMeasurement(Guid.NewGuid(), existingName);
         var unitMeasurementDataReaderMock = UnitMeasurementDataReader.HasOne(existingUnitMeasurement);
-        var unitMeasurmentManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object);
+        var unitMeasurmentManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object, null!);
 
         var exists = await unitMeasurmentManager.DoesNameExistAsync(existingName);
 
@@ -223,7 +224,7 @@ public sealed class UnitMeasurementManagerTests
     {
         var unitMeasurement = new UnitMeasurement(Guid.NewGuid(), "unit-measurement");
         var unitMeasurementDataReaderMock = UnitMeasurementDataReader.HasOne(unitMeasurement);
-        var unitMeasurmentManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object);
+        var unitMeasurmentManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object, null!);
 
         var @false = await unitMeasurmentManager.DoesNameExistAsync(unitMeasurement.Name, unitMeasurement.Id);
 
@@ -239,7 +240,7 @@ public sealed class UnitMeasurementManagerTests
     public async Task GetUnitMeasurementsAsync_PageIndexLessThanZero_ThrowsArgumentOutOfRangeException()
     {
         var invalidPageIndex = -1;
-        var unitMeasurementManager = new UnitMeasurementManager(null!, null!);
+        var unitMeasurementManager = new UnitMeasurementManager(null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             unitMeasurementManager.GetUnitMeasurementsAsync("keywords", invalidPageIndex, int.MaxValue));
@@ -249,7 +250,7 @@ public sealed class UnitMeasurementManagerTests
     public async Task GetUnitMeasurementsAsync_PageSizeLessThanOrEqualZero_ThrowsArgumentOutOfRangeException()
     {
         var invalidPageSize = 0;
-        var unitMeasurementManager = new UnitMeasurementManager(null!, null!);
+        var unitMeasurementManager = new UnitMeasurementManager(null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             unitMeasurementManager.GetUnitMeasurementsAsync("keywords", 0, invalidPageSize));
@@ -273,7 +274,7 @@ public sealed class UnitMeasurementManagerTests
             DisplayOrder = 1 //second
         };
         var unitMeasurementDataReaderMock = UnitMeasurementDataReader.WithData(unitMeasurement1, unitMeasurement2, unitMeasurement3);
-        var unitMeasurementManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object);
+        var unitMeasurementManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object, null!);
 
         var pagedOrderedResult = await unitMeasurementManager.GetUnitMeasurementsAsync("", pageIndex, pageSize);
 
@@ -293,7 +294,7 @@ public sealed class UnitMeasurementManagerTests
         var unitMeasurement2 = new UnitMeasurement(Guid.NewGuid(), "keywords-2");
         var unitMeasurement3 = new UnitMeasurement(Guid.NewGuid(), "unit-measurement");
         var unitMeasurementDataReaderMock = UnitMeasurementDataReader.WithData(unitMeasurement1, unitMeasurement2, unitMeasurement3);
-        var unitMeasurementManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object);
+        var unitMeasurementManager = new UnitMeasurementManager(null!, unitMeasurementDataReaderMock.Object, null!);
 
         var filteredResult = await unitMeasurementManager.GetUnitMeasurementsAsync(keywords, pageIndex, pageSize);
 

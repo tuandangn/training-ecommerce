@@ -32,7 +32,7 @@ public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, R
             };
         }
 
-        var createUserResult = await _userAppService.CreateUserAsync(new CreateUserDto(
+        var createUserResult = await _userAppService.CreateUserAsync(new CreateUserAppDto(
             request.Username, request.Password, request.FullName,
             request.PhoneNumber)
         {

@@ -8,7 +8,5 @@ public interface IPictureManager
 
     Task<CreatePictureResultDto> CreatePictureAsync(CreatePictureDto dto);
 
-    Task<UpdatePictureResultDto> UpdatePictureAsync(UpdatePictureDto dto);
-
     Task DeletePictureAsync(Guid id);
 }

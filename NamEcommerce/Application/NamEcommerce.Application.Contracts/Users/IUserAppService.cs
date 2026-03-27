@@ -8,5 +8,5 @@ public interface IUserAppService
 
     Task<UserAppDto?> GetUserByUsernameAndPasswordAsync(string username, string password);
 
-    Task<CreateUserResultDto> CreateUserAsync(CreateUserDto dto);
+    Task<CreateUserResultAppDto> CreateUserAsync(CreateUserAppDto dto);
 }

@@ -10,7 +10,7 @@ using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Domain.Services.Catalog;
 using NamEcommerce.Domain.Services.Common;
-using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Services.Catalog;
 using System.Reflection;
 #endregion

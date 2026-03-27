@@ -1,8 +1,9 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Common;
+using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models;
+using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Models.Users;
 
 namespace NamEcommerce.Web.Controllers;

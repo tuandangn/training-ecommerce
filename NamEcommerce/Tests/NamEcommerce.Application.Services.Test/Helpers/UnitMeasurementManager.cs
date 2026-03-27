@@ -1,6 +1,6 @@
 ﻿using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
-using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Services.Catalog;
 
 namespace NamEcommerce.Application.Services.Test.Helpers;
 

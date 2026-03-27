@@ -1,5 +1,5 @@
 ﻿using NamEcommerce.Domain.Shared.Dtos.Security;
-using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Services.Security;
 
 namespace NamEcommerce.Domain.Services.Security;
 

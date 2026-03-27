@@ -1,53 +1,68 @@
 ﻿using NamEcommerce.Domain.Shared;
-using NamEcommerce.Domain.Shared.Exceptions.Users;
+using NamEcommerce.Domain.Shared.Helpers;
+using NamEcommerce.Domain.Shared.Services.Security;
 
 namespace NamEcommerce.Domain.Entities.Users;
 
 [Serializable]
 public sealed record User : AppAggregateEntity
 {
-    internal User(Guid id, string username, string passwordHash, string passwordSalt,
-        string fullName, string phoneNumber) : this(id, username, passwordHash, passwordSalt, fullName, phoneNumber, Array.Empty<UserRole>())
-    { }
-
-    internal User(Guid id, string username, string passwordHash, string passwordSalt,
-        string fullName, string phoneNumber, IList<UserRole> userRoles) : base(id)
+    internal User(string username, string fullName, string phoneNumber)
+        : this(Guid.NewGuid(), username, fullName, phoneNumber)
     {
-        (Username, PasswordHash, PasswordSalt, FullName, PhoneNumber, _userRoles)
-                = (username, passwordHash, passwordSalt, fullName, phoneNumber, userRoles);
+    }
+
+    internal User(Guid id, string username, string fullName, string phoneNumber)
+        : base(id)
+    {
+        (Username, FullName, PhoneNumber)
+                = (username, fullName, phoneNumber);
+
+        NormalizedFullName = TextHelper.Normalize(FullName);
+        CreatedOnUtc = DateTime.UtcNow;
     }
 
     public string Username { get; init; }
-    public string PasswordHash { get; init; }
-    public string PasswordSalt { get; init; }
 
-    public string FullName { get; init; }
+    public string? PasswordHash { get; private set; }
+    public string? PasswordSalt { get; private set; }
+
+    public string FullName
+    {
+        get;
+        set
+        {
+            field = value;
+            NormalizedFullName = TextHelper.Normalize(value);
+        }
+    }
     public string NormalizedFullName { get; internal set; } = "";
-    public string? Address { get; set; }
+
+    public string? Address
+    {
+        get;
+        set
+        {
+            field = value;
+            NormalizedAddress = TextHelper.Normalize(value);
+        }
+    }
     public string NormalizedAddress { get; internal set; } = "";
-    public string PhoneNumber { get; init; }
 
-    public DateTime CreatedOnUtc { get; init; }
-        = DateTime.UtcNow;
+    public string PhoneNumber { get; private set; }
 
-    private IList<UserRole> _userRoles;
-    public IEnumerable<UserRole> UserRoles => _userRoles.AsEnumerable();
+    public DateTime CreatedOnUtc { get; }
 
     #region Methods
 
-    internal void SetUserRoles(IList<UserRole> userRoles)
+    internal async Task SetPasswordAsync(string password, ISecurityService securityService)
     {
-        if (userRoles is null)
-            throw new ArgumentNullException(nameof(userRoles));
+        ArgumentException.ThrowIfNullOrEmpty(password);
+        ArgumentNullException.ThrowIfNull(securityService);
 
-        _userRoles = userRoles;
-    }
-    internal void AddToRole(Guid roleId)
-    {
-        if (UserRoles.Any(ur => ur.RoleId == roleId))
-            throw new UserAlreadyHaveRoleException(roleId, Username);
-
-        _userRoles.Add(new UserRole(default, Id, roleId));
+        var (passwordHash, passwordSalt) = await securityService.HashPasswordAsync(password).ConfigureAwait(false);
+        PasswordHash = passwordHash;
+        PasswordSalt = passwordSalt;
     }
 
     #endregion

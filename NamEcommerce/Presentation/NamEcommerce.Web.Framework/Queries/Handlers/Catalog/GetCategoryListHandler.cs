@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Catalog;
+using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -11,25 +12,32 @@ public sealed class GetCategoryListHandler : IRequestHandler<GetCategoryListQuer
 {
     private readonly ICategoryAppService _categoryAppService;
     private readonly IMediator _mediator;
+    private readonly AppConfig _appConfig;
 
-    public GetCategoryListHandler(ICategoryAppService categoryAppService, IMediator mediator)
+    public GetCategoryListHandler(ICategoryAppService categoryAppService, IMediator mediator, AppConfig appConfig)
     {
         _categoryAppService = categoryAppService;
         _mediator = mediator;
+        _appConfig = appConfig;
     }
 
     public async Task<CategoryListModel> Handle(GetCategoryListQuery request, CancellationToken cancellationToken)
     {
         var pagedData = await _categoryAppService.GetCategoriesAsync(request.Keywords, request.PageIndex, request.PageSize);
 
+        var breadcrumbOptions = request.BreadcrumbOpts;
+        if (string.IsNullOrEmpty(request.BreadcrumbOpts.Separator))
+            breadcrumbOptions.Separator = _appConfig.BreadcrumbSeparator;
+
         var categories = new List<CategoryListModel.ItemModel>();
         foreach (var item in pagedData)
             categories.Add(await toListItemAsync(item));
 
+
         var model = new CategoryListModel
         {
             Keywords = request.Keywords,
-            BreadcrumbOpts = request.BreadcrumbOpts,
+            BreadcrumbOpts = breadcrumbOptions,
             Data = PagedDataModel.Create(categories, request.PageIndex, request.PageSize, pagedData.Pagination.TotalCount)
         };
 
@@ -40,7 +48,7 @@ public sealed class GetCategoryListHandler : IRequestHandler<GetCategoryListQuer
         {
             var breadcrumb = await _mediator.Send(new GetCategoryBreadcrumb
             {
-                BreadcrumbOpts = request.BreadcrumbOpts,
+                BreadcrumbOpts = breadcrumbOptions,
                 CategoryId = item.Id
             }, cancellationToken).ConfigureAwait(false);
 

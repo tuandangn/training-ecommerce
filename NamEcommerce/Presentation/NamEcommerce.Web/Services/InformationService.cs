@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
-using NamEcommerce.Web.Common;
+using NamEcommerce.Web.Contracts.Configurations;
 
 namespace NamEcommerce.Web.Services;
 

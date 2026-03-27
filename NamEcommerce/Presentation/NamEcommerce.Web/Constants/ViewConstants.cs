@@ -1,4 +1,4 @@
-﻿namespace NamEcommerce.Web.Common;
+﻿namespace NamEcommerce.Web.Constants;
 
 public static class ViewConstants
 {

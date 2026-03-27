@@ -12,6 +12,8 @@ public abstract record BasePictureDto
 
     public virtual void Verify()
     {
+        if (Data is null || Data.Length == 0)
+            throw new PictureDataIsInvalidException("Data is not empty");
         if (string.IsNullOrEmpty(MimeType))
             throw new PictureDataIsInvalidException("Mime type is not empty");
     }

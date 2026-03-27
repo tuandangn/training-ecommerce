@@ -1,8 +1,9 @@
 ﻿using NamEcommerce.Domain.Entities.Users;
+using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Services.Test.Helpers;
 using NamEcommerce.Domain.Services.Users;
-using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Dtos.Users;
+using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Users;
 
 namespace NamEcommerce.Domain.Services.Test.Services;
@@ -14,7 +15,7 @@ public sealed class UserManagerTests
     [Fact]
     public async Task DoesUsernameExistAsync_UsernameIsNull_ThrowsArgumentNullException()
     {
-        var userManager = new UserManager(null!, null!, null!);
+        var userManager = new UserManager(null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => userManager.DoesUsernameExistAsync(null!));
     }
@@ -23,8 +24,8 @@ public sealed class UserManagerTests
     public async Task DoesUsernameExistAsync_UsernameIsMatchAndCompareIdIsNotProvided_ReturnsTrue()
     {
         var testUsername = "test-username-existing";
-        var userDataReaderMock = UserDataReader.SetUsernameExists(testUsername, Guid.NewGuid());
-        var userManager = new UserManager(null!, userDataReaderMock.Object, null!);
+        var userDataReaderMock = UserDataReader.SetUsernameExists(testUsername, out _);
+        var userManager = new UserManager(null!, userDataReaderMock.Object, null!, null!);
 
         var usernameExists = await userManager.DoesUsernameExistAsync(testUsername, comparesWithCurrentId: null);
 
@@ -35,10 +36,10 @@ public sealed class UserManagerTests
     [Fact]
     public async Task DoesUsernameExistAsync_UsernameIsMatchAndCompareIdEquals_ReturnsFalse()
     {
-        var hasNameUserId = Guid.NewGuid();
+        Guid hasNameUserId;
         var testUsername = "test-username-existing";
-        var userDataReaderMock = UserDataReader.SetUsernameExists(testUsername, hasNameUserId);
-        var userManager = new UserManager(null!, userDataReaderMock.Object, null!);
+        var userDataReaderMock = UserDataReader.SetUsernameExists(testUsername, out hasNameUserId);
+        var userManager = new UserManager(null!, userDataReaderMock.Object, null!, null!);
 
         var usernameExists = await userManager.DoesUsernameExistAsync(testUsername, comparesWithCurrentId: hasNameUserId);
 
@@ -53,7 +54,7 @@ public sealed class UserManagerTests
     [Fact]
     public async Task FindUserByUserNameAndPasswordAsync_UsernameIsNull_ThrowsArgumentNullException()
     {
-        var userManager = new UserManager(null!, null!, null!);
+        var userManager = new UserManager(null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => userManager.FindUserByUserNameAndPasswordAsync(null!, "password"));
     }
@@ -61,7 +62,7 @@ public sealed class UserManagerTests
     [Fact]
     public async Task FindUserByUserNameAndPasswordAsync_PasswordIsNull_ThrowsArgumentNullException()
     {
-        var userManager = new UserManager(null!, null!, null!);
+        var userManager = new UserManager(null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => userManager.FindUserByUserNameAndPasswordAsync("username", null!));
     }
@@ -71,7 +72,7 @@ public sealed class UserManagerTests
     {
         var notFoundUserName = "not-found-username";
         var userDataReaderMock = UserDataReader.Empty();
-        var userManager = new UserManager(null!, userDataReaderMock.Object, null!);
+        var userManager = new UserManager(null!, userDataReaderMock.Object, null!, null!);
 
         var result = await userManager.FindUserByUserNameAndPasswordAsync(notFoundUserName, "password");
 
@@ -84,10 +85,9 @@ public sealed class UserManagerTests
     {
         var username = "username";
         var password = "not-match-password";
-        var user = new User(Guid.NewGuid(), username, "passwordHash", "passwordSalt", "fullName", "phoneNumber");
-        var userDataReaderMock = UserDataReader.HasOne(user);
-        var securityServiceMock = SecurityService.VerifyFalse(password, user.PasswordSalt, user.PasswordHash);
-        var userManager = new UserManager(null!, userDataReaderMock.Object, securityServiceMock.Object);
+        var securityServiceMock = SecurityService.VerifyFalse(password, It.IsAny<string>(), It.IsAny<string>());
+        var userDataReaderMock = UserDataReader.HasOne(new User(username, "fullName", "phoneNumber"));
+        var userManager = new UserManager(null!, userDataReaderMock.Object, securityServiceMock.Object, null!);
 
         var result = await userManager.FindUserByUserNameAndPasswordAsync(username, password);
 
@@ -100,10 +100,14 @@ public sealed class UserManagerTests
     {
         var username = "username";
         var password = "match-password";
-        var user = new User(Guid.NewGuid(), username, "passwordHash", "passwordSalt", "fullName", "phoneNumber");
+        var user = new User(username, "fullName", "phoneNumber");
+        var passwordHash = "password-hashed";
+        var passwordSalt = "password-salt";
         var userDataReaderMock = UserDataReader.HasOne(user);
-        var securityServiceMock = SecurityService.VerifyTrue(password, user.PasswordSalt, user.PasswordHash);
-        var userManager = new UserManager(null!, userDataReaderMock.Object, securityServiceMock.Object);
+        var securityServiceMock = SecurityService.VerifyTrue(password, passwordHash, passwordSalt)
+            .WhenHashReturns(password, (passwordHash, passwordSalt));
+        await user.SetPasswordAsync(password, securityServiceMock.Object);
+        var userManager = new UserManager(null!, userDataReaderMock.Object, securityServiceMock.Object, null!);
 
         var result = await userManager.FindUserByUserNameAndPasswordAsync(username, password);
 
@@ -118,7 +122,7 @@ public sealed class UserManagerTests
     [Fact]
     public async Task CreateUserAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var userManager = new UserManager(null!, null!, null!);
+        var userManager = new UserManager(null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => userManager.CreateUserAsync(null!));
     }
@@ -130,11 +134,10 @@ public sealed class UserManagerTests
         {
             Username = null!,
             FullName = null!,
-            PasswordHash = null!,
-            PasswordSalt = null!,
+            Password = null!,
             PhoneNumber = null!
         };
-        var userManager = new UserManager(null!, null!, null!);
+        var userManager = new UserManager(null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<UserDataIsInvalidException>(() => userManager.CreateUserAsync(invalidCreateUserDto));
     }
@@ -147,11 +150,10 @@ public sealed class UserManagerTests
             Username = "exists-username",
             FullName = "name",
             PhoneNumber = "phone",
-            PasswordHash = "hash",
-            PasswordSalt = "salt",
+            Password = "password"
         };
-        var userDataReaderMock = UserDataReader.SetUsernameExists(existsUsernameUserDto.Username, Guid.NewGuid());
-        var userManager = new UserManager(null!, userDataReaderMock.Object, null!);
+        var userDataReaderMock = UserDataReader.SetUsernameExists(existsUsernameUserDto.Username, out _);
+        var userManager = new UserManager(null!, userDataReaderMock.Object, null!, null!);
 
         await Assert.ThrowsAsync<UsernameExistsException>(() => userManager.CreateUserAsync(existsUsernameUserDto));
         userDataReaderMock.Verify();
@@ -160,29 +162,29 @@ public sealed class UserManagerTests
     [Fact]
     public async Task CreateUserAsync_UsernameIsNotExists_ReturnsCreatedUserDto()
     {
-        var usernameUserDto = new CreateUserDto
+        var userDto = new CreateUserDto
         {
             Username = "username",
             FullName = "name",
             PhoneNumber = "phone",
-            PasswordHash = "hash",
-            PasswordSalt = "salt",
+            Password = "password",
             Address = "address"
         };
-        var user = new User(Guid.NewGuid(), usernameUserDto.Username,
-            usernameUserDto.PasswordHash, usernameUserDto.PasswordSalt,
-            usernameUserDto.FullName, usernameUserDto.PhoneNumber)
-        {
-            Address = usernameUserDto.Address
-        };
-        var userRepositoryMock = UserRepository.CreateUserWillReturns(user, user);
+        var securityServiceMock = SecurityService.WhenHashReturns(userDto.Password, ("password-hash", "password-salt"));
         var userDataReaderStub = UserDataReader.Empty();
-        var userManager = new UserManager(userRepositoryMock.Object, userDataReaderStub.Object, null!);
+        var user = new User(userDto.Username, userDto.FullName, userDto.PhoneNumber)
+        {
+            Address = userDto.Address
+        };
+        await user.SetPasswordAsync(userDto.Password, securityServiceMock.Object);
+        var userRepositoryMock = UserRepository.CreateUserWillReturns(user, user);
+        var userManager = new UserManager(userRepositoryMock.Object, userDataReaderStub.Object, securityServiceMock.Object, Mock.Of<IEventPublisher>());
 
-        var result = await userManager.CreateUserAsync(usernameUserDto);
+        var result = await userManager.CreateUserAsync(userDto);
 
         Assert.Equal(user.Id, result.CreatedId);
         userRepositoryMock.Verify();
+        securityServiceMock.Verify();
     }
 
     #endregion

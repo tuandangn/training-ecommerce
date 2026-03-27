@@ -1,10 +1,12 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Common;
+using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
+using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Models.Catalog;
+using NamEcommerce.Web.Services.Catalog;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -12,41 +14,27 @@ public sealed class ProductController : BaseAuthorizedController
 {
     private readonly AppConfig _appConfig;
     private readonly IMediator _mediator;
+    private readonly IProductModelFactory _productModelFactory;
 
-    public ProductController(AppConfig appConfig, IMediator mediator)
+    public ProductController(AppConfig appConfig, IMediator mediator, IProductModelFactory productModelFactory)
     {
         _appConfig = appConfig;
         _mediator = mediator;
+        _productModelFactory = productModelFactory;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
-    public IActionResult List(ProductListSearchModel searchModel)
+    public async Task<IActionResult> List(ProductListSearchModel searchModel)
     {
-        var pageNumber = searchModel?.PageNumber ?? 1;
-        var pageSize = searchModel?.PageSize ?? 0;
-        if (pageNumber <= 0) pageNumber = 1;
-        if (pageSize <= 0) pageSize = _appConfig.DefaultPageSize;
-        if (_appConfig.PageSizeOptions.Contains(pageSize)) pageSize = _appConfig.DefaultPageSize;
-
-        var model = _mediator.Send(new GetProductListQuery
-        {
-            Keywords = searchModel?.Keywords,
-            PageIndex = pageNumber - 1,
-            PageSize = pageSize
-        }).Result;
+        var model = await _productModelFactory.PrepareProductListModel(searchModel);
 
         return View(model);
     }
 
     public async Task<IActionResult> Create()
     {
-        var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery());
-        var model = new CreateProductModel
-        {
-            Categories = categoryOptions,
-            DisplayOrder = 1
-        };
+        var model = await _productModelFactory.PrepareCreateProductModel();
         return View(model);
     }
 
@@ -54,30 +42,25 @@ public sealed class ProductController : BaseAuthorizedController
     public async Task<IActionResult> Create(CreateProductModel model)
     {
         if (!ModelState.IsValid)
-            goto ReturnToView;
-
-        FileInfoModel? imageFileInfo = null;
-        if (model.ImageFile != null)
         {
-            var imageBinaries = model.ImageFile.GetData();
-            var imageMimeType = model.ImageFile.GetMimeType();
-            if (imageBinaries is not null && imageBinaries.Length > 0 && !string.IsNullOrEmpty(imageMimeType))
-            {
-                if (imageBinaries.Length > _appConfig.UploadFileMaxSizeInBytes)
-                {
-                    ModelState.AddModelError(string.Empty, $"Kích thước hình ảnh phải nhỏ hơn {(int)Math.Floor(_appConfig.UploadFileMaxSizeInBytes / 1024m / 1024)}Mb.");
-                    goto ReturnToView;
-                }
-
-                imageFileInfo = new FileInfoModel
-                {
-                    Data = imageBinaries,
-                    MimeType = imageMimeType,
-                    Extension = model.ImageFile.Extension,
-                    FileName = model.ImageFile.FileName
-                };
-            }
+            model = await _productModelFactory.PrepareCreateProductModel(model);
+            return View(model);
         }
+
+        var imageFileInfo = model.ImageFile != null ? new FileInfoModel
+        {
+            Data = model.ImageFile.GetData() ?? [],
+            MimeType = model.ImageFile.GetMimeType() ?? string.Empty,
+            Extension = model.ImageFile.Extension,
+            FileName = model.ImageFile.FileName
+        } : null;
+        if (imageFileInfo is not null && imageFileInfo.Data.Length > _appConfig.UploadFileMaxSizeInBytes)
+        {
+            ModelState.AddModelError(string.Empty, $"Kích thước hình ảnh phải nhỏ hơn {(int)Math.Floor(_appConfig.UploadFileMaxSizeInBytes / 1024m / 1024)}Mb.");
+            model = await _productModelFactory.PrepareCreateProductModel(model);
+            return View(model);
+        }
+
         var createProductResult = await _mediator.Send(new CreateProductCommand
         {
             Name = model.Name!,
@@ -89,39 +72,22 @@ public sealed class ProductController : BaseAuthorizedController
         if (!createProductResult.Success)
         {
             ModelState.AddModelError(string.Empty, createProductResult.ErrorMessage!);
-            goto ReturnToView;
+            model = await _productModelFactory.PrepareCreateProductModel(model);
+            return View(model);
         }
 
         TempData[ViewConstants.ProductSuccessMessage] = "Thêm mới hàng hóa thành công!";
         return RedirectToAction(nameof(List));
-
-    ReturnToView:
-        var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery());
-        model.Categories = categoryOptions;
-        return View(model);
-
     }
 
     public async Task<IActionResult> Edit(Guid id)
     {
-        var product = await _mediator.Send(new GetProductQuery { Id = id });
-        if (product == null)
+        var model = await _productModelFactory.PrepareEditProductModel(id);
+        if (model == null)
         {
             TempData[ViewConstants.ProductErrorMessage] = "Không tìm thấy hàng hóa.";
             return RedirectToAction(nameof(List));
         }
-
-        var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery());
-        var model = new EditProductModel
-        {
-            Id = product.Id,
-            Name = product.Name,
-            ShortDesc = product.ShortDesc,
-            Categories = categoryOptions,
-            CategoryId = product.CategoryId,
-            DisplayOrder = product.DisplayOrder,
-            ImageFile = product.ImageFile ?? new()
-        };
 
         return View(model);
     }
@@ -130,7 +96,10 @@ public sealed class ProductController : BaseAuthorizedController
     public async Task<IActionResult> Edit(EditProductModel model)
     {
         if (!ModelState.IsValid)
-            goto ReturnToView;
+        {
+            model = (await _productModelFactory.PrepareEditProductModel(model.Id, model))!;
+            return View(model);
+        }
 
         var product = await _mediator.Send(new GetProductQuery { Id = model.Id });
         if (product == null)
@@ -139,28 +108,20 @@ public sealed class ProductController : BaseAuthorizedController
             return RedirectToAction(nameof(List));
         }
 
-        FileInfoModel? imageFileInfo = null;
-        if (model.ImageFile != null)
+        var imageFileInfo = model.ImageFile != null ? new FileInfoModel
         {
-            var imageBinaries = model.ImageFile.GetData();
-            var imageMimeType = model.ImageFile.GetMimeType();
-            if (imageBinaries is not null && imageBinaries.Length > 0 && !string.IsNullOrEmpty(imageMimeType))
-            {
-                if (imageBinaries.Length > _appConfig.UploadFileMaxSizeInBytes)
-                {
-                    ModelState.AddModelError(string.Empty, $"Kích thước hình ảnh phải nhỏ hơn {(int)Math.Floor(_appConfig.UploadFileMaxSizeInBytes / 1024m / 1024)}Mb.");
-                    goto ReturnToView;
-                }
-
-                imageFileInfo = new FileInfoModel
-                {
-                    Data = imageBinaries,
-                    MimeType = imageMimeType,
-                    Extension = model.ImageFile.Extension,
-                    FileName = model.ImageFile.FileName
-                };
-            }
+            Data = model.ImageFile.GetData() ?? [],
+            MimeType = model.ImageFile.GetMimeType() ?? string.Empty,
+            Extension = model.ImageFile.Extension,
+            FileName = model.ImageFile.FileName
+        } : null;
+        if (imageFileInfo is not null && imageFileInfo.Data.Length > _appConfig.UploadFileMaxSizeInBytes)
+        {
+            ModelState.AddModelError(string.Empty, $"Kích thước hình ảnh phải nhỏ hơn {(int)Math.Floor(_appConfig.UploadFileMaxSizeInBytes / 1024m / 1024)}Mb.");
+            model = (await _productModelFactory.PrepareEditProductModel(model.Id, model))!;
+            return View(model);
         }
+
         var updateProductResult = await _mediator.Send(new UpdateProductCommand
         {
             Id = model.Id,
@@ -173,17 +134,12 @@ public sealed class ProductController : BaseAuthorizedController
         if (!updateProductResult.Success)
         {
             ModelState.AddModelError(string.Empty, updateProductResult.ErrorMessage!);
-            goto ReturnToView;
+            model = (await _productModelFactory.PrepareEditProductModel(model.Id, model))!;
+            return View(model);
         }
 
         TempData[ViewConstants.ProductSuccessMessage] = "Chỉnh sửa hàng hóa thành công!";
         return RedirectToAction(nameof(List));
-
-    ReturnToView:
-        var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery());
-        model.Categories = categoryOptions;
-        return View(model);
-
     }
 
     [HttpPost]

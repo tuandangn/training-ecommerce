@@ -53,7 +53,7 @@ public sealed class EntityDataReaderTests
         var repositoryMock = CategoryRepository.CategoryById(id, entity);
         var entityDataReader = new EntityDataReader<Category>(null!, repositoryMock.Object);
 
-        var found = await entityDataReader.GetByIdAsync(id, default);
+        var found = await entityDataReader.GetByIdAsync(id);
 
         Assert.Equal(entity, found);
         repositoryMock.Verify();

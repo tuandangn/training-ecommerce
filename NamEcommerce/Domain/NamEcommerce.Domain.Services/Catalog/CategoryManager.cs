@@ -1,11 +1,12 @@
 ﻿using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Services.Extensions;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
-using NamEcommerce.Domain.Shared.Services;
 using NamEcommerce.Domain.Shared.Services.Catalog;
 
 namespace NamEcommerce.Domain.Services.Catalog;
@@ -14,11 +15,13 @@ public sealed class CategoryManager : ICategoryManager
 {
     private readonly IRepository<Category> _categoryRepository;
     private readonly IEntityDataReader<Category> _categoryDataReader;
+    private readonly IEventPublisher _eventPublisher;
 
-    public CategoryManager(IRepository<Category> categoryRepository, IEntityDataReader<Category> categoryDataReader)
+    public CategoryManager(IRepository<Category> categoryRepository, IEntityDataReader<Category> categoryDataReader, IEventPublisher eventPublisher)
     {
         _categoryRepository = categoryRepository;
         _categoryDataReader = categoryDataReader;
+        _eventPublisher = eventPublisher;
     }
 
     public async Task<CreateCategoryResultDto> CreateCategoryAsync(CreateCategoryDto dto)
@@ -37,6 +40,8 @@ public sealed class CategoryManager : ICategoryManager
         await category.SetParentAsync(dto.ParentId, _categoryDataReader).ConfigureAwait(false);
         var insertedCategory = await _categoryRepository.InsertAsync(category).ConfigureAwait(false);
 
+        await _eventPublisher.EntityCreated(insertedCategory).ConfigureAwait(false);
+
         return new CreateCategoryResultDto
         {
             CreatedId = insertedCategory.Id
@@ -47,7 +52,7 @@ public sealed class CategoryManager : ICategoryManager
     {
         var category = await _categoryDataReader.GetByIdAsync(id).ConfigureAwait(false);
         if (category is null)
-            throw new ArgumentException("Category is not found", nameof(id));
+            throw new CategoryIsNotFoundException(id);
 
         await _categoryRepository.DeleteAsync(category).ConfigureAwait(false);
 
@@ -58,6 +63,8 @@ public sealed class CategoryManager : ICategoryManager
             child.RemoveParent();
             await _categoryRepository.UpdateAsync(child).ConfigureAwait(false);
         }
+
+        await _eventPublisher.EntityDeleted(category).ConfigureAwait(false);
     }
 
     public Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
@@ -111,10 +118,12 @@ public sealed class CategoryManager : ICategoryManager
     {
         var child = await _categoryDataReader.GetByIdAsync(categoryId).ConfigureAwait(false);
         if (child is null)
-            throw new ArgumentException("Category is not found", nameof(categoryId));
+            throw new CategoryIsNotFoundException(categoryId);
 
         await child.SetParentAsync(parentId, _categoryDataReader).ConfigureAwait(false);
         var updatedCategory = await _categoryRepository.UpdateAsync(child).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(updatedCategory, null).ConfigureAwait(false);
 
         return updatedCategory.ToDto();
     }
@@ -127,19 +136,21 @@ public sealed class CategoryManager : ICategoryManager
 
         var category = await _categoryDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (category is null)
-            throw new ArgumentException("Category is not found", nameof(dto.Id));
+            throw new CategoryIsNotFoundException(dto.Id);
 
         if (await DoesNameExistAsync(dto.Name, dto.Id).ConfigureAwait(false))
             throw new CategoryNameExistsException(dto.Name);
 
-        await category.SetNameAsync(dto.Name, this);
+        await category.SetNameAsync(dto.Name, this).ConfigureAwait(false);
         category.DisplayOrder = dto.DisplayOrder;
         if (dto.ParentId.HasValue)
-            await category.SetParentAsync(dto.ParentId.Value, _categoryDataReader);
+            await category.SetParentAsync(dto.ParentId.Value, _categoryDataReader).ConfigureAwait(false);
         else
             category.RemoveParent();
 
         var updatedCategory = await _categoryRepository.UpdateAsync(category).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(updatedCategory).ConfigureAwait(false);
 
         return new UpdateCategoryResultDto(updatedCategory.Id)
         {

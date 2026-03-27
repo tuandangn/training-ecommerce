@@ -2,6 +2,7 @@
 using NamEcommerce.Application.Services.Test.Helpers;
 using NamEcommerce.Application.Services.Users;
 using NamEcommerce.Domain.Shared.Dtos.Security;
+using NamEcommerce.Domain.Shared.Dtos.Users;
 
 namespace NamEcommerce.Application.Services.Test.Users;
 
@@ -12,7 +13,7 @@ public sealed class UserAppServiceTests
     [Fact]
     public async Task DoesUsernameExistsAsync_UsernameIsNull_ThrowsArgumentNullException()
     {
-        var userAppService = new UserAppService(null!, null!);
+        var userAppService = new UserAppService(null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => userAppService.DoesUsernameExistsAsync(null!));
@@ -23,7 +24,7 @@ public sealed class UserAppServiceTests
     {
         var existsUsername = "exists-username";
         var userManagerMock = UserManager.SetUsernameExists(existsUsername);
-        var userAppService = new UserAppService(userManagerMock.Object, null!);
+        var userAppService = new UserAppService(userManagerMock.Object);
 
         var exists = await userAppService.DoesUsernameExistsAsync(existsUsername);
 
@@ -38,7 +39,7 @@ public sealed class UserAppServiceTests
     [Fact]
     public async Task GetUserByUsernameAndPasswordAsync_UsernameIsNull_ThrowsArgumentNullException()
     {
-        var userAppService = new UserAppService(null!, null!);
+        var userAppService = new UserAppService(null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => userAppService.GetUserByUsernameAndPasswordAsync(null!, "password"));
@@ -47,7 +48,7 @@ public sealed class UserAppServiceTests
     [Fact]
     public async Task GetUserByUsernameAndPasswordAsync_PasswordIsNull_ThrowsArgumentNullException()
     {
-        var userAppService = new UserAppService(null!, null!);
+        var userAppService = new UserAppService(null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => userAppService.GetUserByUsernameAndPasswordAsync("username", null!));
@@ -65,7 +66,7 @@ public sealed class UserAppServiceTests
             PhoneNumber = "1234567890",
         };
         var userManagerMock = UserManager.FindByUsernameAndPasswordReturns(username, password, foundData);
-        var userAppService = new UserAppService(userManagerMock.Object, null!);
+        var userAppService = new UserAppService(userManagerMock.Object);
 
         var result = await userAppService.GetUserByUsernameAndPasswordAsync(username, password);
 
@@ -80,7 +81,7 @@ public sealed class UserAppServiceTests
     [Fact]
     public async Task CreateUserAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var userAppService = new UserAppService(null!, null!);
+        var userAppService = new UserAppService(null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(
             () => userAppService.CreateUserAsync(null!));
@@ -89,8 +90,8 @@ public sealed class UserAppServiceTests
     [Fact]
     public async Task CreateUserAsync_DtoIsInvalid_ReturnsFalseResult()
     {
-        var invalidDto = new CreateUserDto(null!, null!, null!, null!);
-        var userAppService = new UserAppService(null!, null!);
+        var invalidDto = new CreateUserAppDto(null!, null!, null!, null!);
+        var userAppService = new UserAppService(null!);
 
         var falseResult = await userAppService.CreateUserAsync(invalidDto);
 
@@ -102,9 +103,9 @@ public sealed class UserAppServiceTests
     public async Task CreateUserAsync_UsernameExists_ReturnsFalseResult()
     {
         var existingUsername = "existing-username";
-        var usernameExistDto = new CreateUserDto(existingUsername, "password", "name", "phoneNumber");
+        var usernameExistDto = new CreateUserAppDto(existingUsername, "password", "name", "phoneNumber");
         var userManagerMock = UserManager.SetUsernameExists(existingUsername);
-        var userAppService = new UserAppService(userManagerMock.Object, null!);
+        var userAppService = new UserAppService(userManagerMock.Object);
 
         var falseResult = await userAppService.CreateUserAsync(usernameExistDto);
 
@@ -115,20 +116,14 @@ public sealed class UserAppServiceTests
     [Fact]
     public async Task CreateUserAsync_UsernameNotExists_ReturnsResult()
     {
-        var createUserDto = new CreateUserDto("username", "password", "fullName", "phoneNumber");
-        var passwordHashDto = new PasswordHashDto
-        {
-            PasswordHash = "hashed-password",
-            PasswordSalt =  "salt"
-        };
+        var createUserDto = new CreateUserAppDto("username", "password", "fullName", "phoneNumber");
         var createdUserId = Guid.NewGuid();
         var userManagerMock = UserManager.SetUsernameExists(createUserDto.Username, false)
             .CreateUserReturns(
-            new NamEcommerce.Domain.Shared.Dtos.Users.CreateUserDto
+            new CreateUserDto
             {
                 Username = createUserDto.Username,
-                PasswordHash = passwordHashDto.PasswordHash,
-                PasswordSalt = passwordHashDto.PasswordSalt,
+                Password = "password",
                 FullName = createUserDto.FullName,
                 PhoneNumber = createUserDto.PhoneNumber,
                 Address = createUserDto.Address
@@ -137,8 +132,7 @@ public sealed class UserAppServiceTests
             {
                 CreatedId = createdUserId
             });
-        var securityServiceStub = SecurityService.HashPassword(createUserDto.Password, passwordHashDto);
-        var userAppService = new UserAppService(userManagerMock.Object, securityServiceStub.Object);
+        var userAppService = new UserAppService(userManagerMock.Object);
 
         var createdResult = await userAppService.CreateUserAsync(createUserDto);
 

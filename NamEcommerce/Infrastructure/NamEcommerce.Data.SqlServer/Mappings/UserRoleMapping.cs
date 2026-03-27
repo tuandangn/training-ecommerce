@@ -9,6 +9,5 @@ public sealed class UserRoleMapping : IEntityTypeConfiguration<UserRole>
         builder.HasKey(ur => ur.Id);
 
         builder.HasOne<Role>().WithMany().HasForeignKey(rp => rp.RoleId);
-        builder.HasOne<User>().WithMany(u => u.UserRoles).HasForeignKey(rp => rp.UserId);
     }
 }

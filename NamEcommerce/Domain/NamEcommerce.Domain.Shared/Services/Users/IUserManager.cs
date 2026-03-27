@@ -1,6 +1,6 @@
 ﻿using NamEcommerce.Domain.Shared.Dtos.Users;
 
-namespace NamEcommerce.Domain.Shared.Services;
+namespace NamEcommerce.Domain.Shared.Services.Users;
 
 public interface IUserManager
 {

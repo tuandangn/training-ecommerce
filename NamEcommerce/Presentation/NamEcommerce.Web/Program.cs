@@ -7,6 +7,7 @@ using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Catalog;
+using NamEcommerce.Application.Services.Events;
 using NamEcommerce.Application.Services.Media;
 using NamEcommerce.Application.Services.Queries.Handlers.Catalog;
 using NamEcommerce.Application.Services.Users;
@@ -14,17 +15,23 @@ using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Domain.Services.Catalog;
 using NamEcommerce.Domain.Services.Common;
+using NamEcommerce.Domain.Services.Media;
 using NamEcommerce.Domain.Services.Security;
 using NamEcommerce.Domain.Services.Users;
-using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Services.Catalog;
 using NamEcommerce.Domain.Shared.Services.Media;
-using NamEcommerce.Web.Common;
+using NamEcommerce.Domain.Shared.Services.Security;
+using NamEcommerce.Domain.Shared.Services.Users;
+using NamEcommerce.Web.Constants;
+using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Web.Framework.Commands.Handlers;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Mvc.Binders;
 using NamEcommerce.Web.Services;
+using NamEcommerce.Web.Services.Catalog;
 using NamEcommerce.Web.Validators;
 using System.Reflection;
 
@@ -76,7 +83,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     });
     services.AddHttpContextAccessor();
 
-    //domain service
     services.AddScoped<IUserManager, UserManager>();
     services.AddScoped<ICategoryManager, CategoryManager>();
     services.AddScoped<IUnitMeasurementManager, UnitMeasurementManager>();
@@ -85,6 +91,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IPictureManager, PictureManager>();
 
     services.AddScoped<ISecurityService, SecurityService>();
+    services.AddScoped<IEventPublisher, EventPublisher>();
 
     services.AddScoped<ICategoryAppService, CategoryAppService>();
     services.AddScoped<IUnitMeasurementAppService, UnitMeasurementAppService>();
@@ -93,10 +100,12 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IProductAppService, ProductAppService>();
     services.AddScoped<IPictureAppService, PictureAppService>();
 
-    //application services
     services.AddScoped<IInformationService, InformationService>();
     services.AddScoped<ICurrentUserService, CurrentUserService>();
     services.AddScoped<IWebHelper, WebHelper>();
+
+    services.AddScoped<ICategoryModelFactory, CategoryModelFactory>();
+    services.AddScoped<IProductModelFactory, ProductModelFactory>();
 
     services.AddMediatR(config =>
     {

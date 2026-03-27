@@ -1,4 +1,5 @@
 ﻿using NamEcommerce.Domain.Services.Test.Helpers;
+using NamEcommerce.Domain.Shared.Events;
 using System.Linq.Expressions;
 
 namespace NamEcommerce.Domain.Services.Test.Services;
@@ -10,7 +11,7 @@ public sealed class VendorManagerTests
     [Fact]
     public async Task CreateVendorAsync_DtoIsNull_ThrowArgumentNullException()
     {
-        var vendorManager = new VendorManager(null!, null!);
+        var vendorManager = new VendorManager(null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => vendorManager.CreateVendorAsync(null!));
     }
@@ -23,7 +24,7 @@ public sealed class VendorManagerTests
             Name = string.Empty,
             PhoneNumber = "invalid-phone", //or empty
         };
-        var vendorManager = new VendorManager(null!, null!);
+        var vendorManager = new VendorManager(null!, null!, null!);
 
         await Assert.ThrowsAsync<VendorDataIsInvalidException>(() => vendorManager.CreateVendorAsync(invalidCreateVendorDto));
     }
@@ -38,7 +39,7 @@ public sealed class VendorManagerTests
             PhoneNumber = "0123456789"
         };
         var vendorDataReaderMock = VendorDataReader.HasOne(new Vendor(Guid.NewGuid(), existingName, "phoneNumber"));
-        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object);
+        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object, null!);
 
         await Assert.ThrowsAsync<VendorNameExistsException>(() => vendorManager.CreateVendorAsync(dto));
     }
@@ -54,7 +55,7 @@ public sealed class VendorManagerTests
         var returnVendor = new Vendor(Guid.NewGuid(), dto.Name, dto.PhoneNumber);
         var vendorRepositoryMock = VendorRepository.CreateVendorWillReturns(returnVendor);
         var vendorDataReaderStub = VendorDataReader.Empty();
-        var vendorManager = new VendorManager(vendorRepositoryMock.Object, vendorDataReaderStub.Object);
+        var vendorManager = new VendorManager(vendorRepositoryMock.Object, vendorDataReaderStub.Object, Mock.Of<IEventPublisher>());
 
         var vendorDto = await vendorManager.CreateVendorAsync(new CreateVendorDto
         {
@@ -73,7 +74,7 @@ public sealed class VendorManagerTests
     [Fact]
     public async Task DoesNameExistAsync_NameIsNull_ThrowsArgumentNullException()
     {
-        var vendorManager = new VendorManager(null!, null!);
+        var vendorManager = new VendorManager(null!, null!, null!);
 
         await Assert.ThrowsAnyAsync<ArgumentException>(() =>
             vendorManager.DoesNameExistAsync(null!)
@@ -86,7 +87,7 @@ public sealed class VendorManagerTests
         var hasNameVendorId = Guid.NewGuid();
         var testName = "test-name-existing";
         var vendorDataReaderMock = VendorDataReader.HasOne(new Vendor(hasNameVendorId, testName, "phoneNumber"));
-        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object);
+        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object, null!);
 
         var nameExists = await vendorManager.DoesNameExistAsync(testName, comparesWithCurrentId: hasNameVendorId);
 
@@ -99,7 +100,7 @@ public sealed class VendorManagerTests
     {
         var testName = "test-name-existing";
         var vendorDataReaderMock = VendorDataReader.HasOne(new Vendor(default, testName, "phoneNumber"));
-        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object);
+        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object, null!);
 
         var nameExists = await vendorManager.DoesNameExistAsync(testName, comparesWithCurrentId: null);
 
@@ -114,7 +115,7 @@ public sealed class VendorManagerTests
     [Fact]
     public async Task UpdateVendorAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var vendorManager = new VendorManager(null!, null!);
+        var vendorManager = new VendorManager(null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => vendorManager.UpdateVendorAsync(null!));
     }
@@ -122,7 +123,7 @@ public sealed class VendorManagerTests
     [Fact]
     public async Task UpdateVendorAsync_DataIsInvalid_ThrowsVendorDataIsInvalidException()
     {
-        var vendorManager = new VendorManager(null!, null!);
+        var vendorManager = new VendorManager(null!, null!, null!);
 
         await Assert.ThrowsAsync<VendorDataIsInvalidException>(() =>
             vendorManager.UpdateVendorAsync(new UpdateVendorDto(Guid.NewGuid())
@@ -138,7 +139,7 @@ public sealed class VendorManagerTests
     {
         var notFoundVendorId = Guid.NewGuid();
         var vendorDataReaderMock = VendorDataReader.NotFound(notFoundVendorId);
-        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object);
+        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object, null!);
 
         await Assert.ThrowsAsync<ArgumentException>(()
             => vendorManager.UpdateVendorAsync(new UpdateVendorDto(notFoundVendorId)
@@ -158,7 +159,7 @@ public sealed class VendorManagerTests
         var vendorDataReaderMock = VendorDataReader
             .HasOne(new Vendor(default, updateVendor.Name, "0123456789"))
             .VendorById(oldVendor.Id, oldVendor);
-        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object);
+        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object, null!);
 
         await Assert.ThrowsAsync<VendorNameExistsException>(()
             => vendorManager.UpdateVendorAsync(new UpdateVendorDto(updateVendor.Id)
@@ -188,7 +189,7 @@ public sealed class VendorManagerTests
         var vendorRepositoryMock = Repository.Create<Vendor>()
             .WhenCall(repository => repository.UpdateAsync(It.Is(isVendorMatch), default), updateVendor);
         var vendorDataReaderStub = VendorDataReader.VendorById(oldVendor.Id, oldVendor);
-        var vendorManager = new VendorManager(vendorRepositoryMock.Object, vendorDataReaderStub.Object);
+        var vendorManager = new VendorManager(vendorRepositoryMock.Object, vendorDataReaderStub.Object, Mock.Of<IEventPublisher>());
 
         var resultVendor = await vendorManager.UpdateVendorAsync(
             new UpdateVendorDto(updateVendor.Id)
@@ -216,7 +217,7 @@ public sealed class VendorManagerTests
     {
         var notFoundVendorId = Guid.NewGuid();
         var vendorDataReaderMock = VendorDataReader.NotFound(notFoundVendorId);
-        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object);
+        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object, null!);
 
         await Assert.ThrowsAsync<ArgumentException>(()
             => vendorManager.DeleteVendorAsync(notFoundVendorId));
@@ -230,7 +231,7 @@ public sealed class VendorManagerTests
         var vendor = new Vendor(Guid.NewGuid(), "vendor", "013456789");
         var vendorDataRepositoryMock = VendorRepository.CanDeleteVendor(vendor);
         var vendorDataReaderMock = VendorDataReader.VendorById(vendor.Id, vendor);
-        var vendorManager = new VendorManager(vendorDataRepositoryMock.Object, vendorDataReaderMock.Object);
+        var vendorManager = new VendorManager(vendorDataRepositoryMock.Object, vendorDataReaderMock.Object, Mock.Of<IEventPublisher>());
 
         await vendorManager.DeleteVendorAsync(vendor.Id);
 
@@ -245,7 +246,7 @@ public sealed class VendorManagerTests
     public async Task GetVendorsAsync_PageIndexLessThanZero_ThrowsArgumentOutOfRangeException()
     {
         var invalidPageIndex = -1;
-        var vendorManager = new VendorManager(null!, null!);
+        var vendorManager = new VendorManager(null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             vendorManager.GetVendorsAsync("keywords", invalidPageIndex, int.MaxValue));
@@ -255,7 +256,7 @@ public sealed class VendorManagerTests
     public async Task GetVendorsAsync_PageSizeLessThanOrEqualZero_ThrowsArgumentOutOfRangeException()
     {
         var invalidPageSize = 0;
-        var vendorManager = new VendorManager(null!, null!);
+        var vendorManager = new VendorManager(null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             vendorManager.GetVendorsAsync("keywords", 0, invalidPageSize));
@@ -279,7 +280,7 @@ public sealed class VendorManagerTests
             DisplayOrder = 1 //second
         };
         var vendorDataReaderMock = VendorDataReader.WithData(vendor1, vendor2, vendor3);
-        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object);
+        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object, null!);
 
         var pagedOrderedResult = await vendorManager.GetVendorsAsync("", pageIndex, pageSize);
 
@@ -299,7 +300,7 @@ public sealed class VendorManagerTests
         var vendor2 = new Vendor(Guid.NewGuid(), "keywords-2", "013456789");
         var vendor3 = new Vendor(Guid.NewGuid(), "vendor", "013456789");
         var vendorDataReaderMock = VendorDataReader.WithData(vendor1, vendor2, vendor3);
-        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object);
+        var vendorManager = new VendorManager(null!, vendorDataReaderMock.Object, null!);
 
         var filteredResult = await vendorManager.GetVendorsAsync(keywords, pageIndex, pageSize);
 

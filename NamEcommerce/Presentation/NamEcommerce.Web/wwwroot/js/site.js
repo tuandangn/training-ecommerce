@@ -14,6 +14,10 @@ $(function() {
     $(document).ajaxComplete(function() { 
         disabledSubmitForms.forEach(form => enableSubmitButtons(form, true));
     });
+
+    $('.alert-dismissible').each(function () {
+        setTimeout(() => $(this).slideUp(), 3000);
+    });
 })
 
 function isFormValid(form) {

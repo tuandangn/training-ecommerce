@@ -1,7 +1,7 @@
 ﻿using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
-using NamEcommerce.Domain.Shared.Services;
 
 namespace NamEcommerce.Domain.Entities.Catalog;
 
@@ -23,15 +23,15 @@ public sealed record UnitMeasurement : AppAggregateEntity
 
     #region Methods
 
-    internal async Task SetNameAsync(string name, IUnitMeasurementManager manager)
+    internal async Task SetNameAsync(string name, ICheckNameService checker)
     {
-        ArgumentNullException.ThrowIfNull(manager);
-        ArgumentException.ThrowIfNullOrEmpty(name);
-
         if (string.Equals(Name, name, StringComparison.Ordinal))
             return;
 
-        if (await manager.DoesNameExistAsync(name, Id).ConfigureAwait(false))
+        ArgumentNullException.ThrowIfNull(checker);
+        ArgumentException.ThrowIfNullOrEmpty(name);
+
+        if (await checker.DoesNameExistAsync(name, Id).ConfigureAwait(false))
             throw new UnitMeasurementNameExistsException(name);
 
         Name = name;

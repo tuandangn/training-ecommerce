@@ -1,6 +1,6 @@
 ﻿using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Shared;
-using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Common;
 
 namespace NamEcommerce.Domain.Services.Common;
 
@@ -20,8 +20,8 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
     public Task<IEnumerable<TEntity>> GetAllAsync()
         => _repository.GetAllAsync();
 
-    public Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
-        => _repository.GetByIdAsync(id, cancellationToken);
+    public Task<TEntity?> GetByIdAsync(Guid id)
+        => _repository.GetByIdAsync(id);
 
     public Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids)
     {

@@ -1,9 +1,9 @@
 ﻿using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Exceptions.Media;
 using NamEcommerce.Domain.Shared.Helpers;
-using NamEcommerce.Domain.Shared.Services;
-using NamEcommerce.Domain.Shared.Services.Catalog;
 
 namespace NamEcommerce.Domain.Entities.Catalog;
 
@@ -33,8 +33,8 @@ public record Product : AppAggregateEntity
     }
     internal string NormalizedShortDesc { get; private set; } = "";
 
-    public DateTime CreatedOnUtc { get; set; }
-    public DateTime? UpdatedOnUtc { get; set; }
+    public DateTime CreatedOnUtc { get; }
+    public DateTime? UpdatedOnUtc { get; internal set; }
 
     private readonly IList<ProductCategory> _productCategories = [];
     public IEnumerable<ProductCategory> ProductCategories
@@ -46,15 +46,15 @@ public record Product : AppAggregateEntity
 
     #region Methods
 
-    internal async Task SetNameAsync(string name, IProductManager manager)
+    internal async Task SetNameAsync(string name, ICheckNameService checker)
     {
-        ArgumentNullException.ThrowIfNull(manager);
-        ArgumentException.ThrowIfNullOrEmpty(name);
-
         if (string.Equals(Name, name, StringComparison.Ordinal))
             return;
 
-        if (await manager.DoesNameExistAsync(name, Id).ConfigureAwait(false))
+        ArgumentNullException.ThrowIfNull(checker);
+        ArgumentException.ThrowIfNullOrEmpty(name);
+
+        if (await checker.DoesNameExistAsync(name, Id).ConfigureAwait(false))
             throw new ProductNameExistsException(name);
 
         Name = name;
@@ -62,29 +62,40 @@ public record Product : AppAggregateEntity
     }
 
     internal void ClearProductCategories() => _productCategories.Clear();
-    internal async Task AddToCategoryAsync(Guid categoryId, int displayOrder, IEntityDataReader<Category> dataReader)
+    internal async Task AddToCategoryAsync(Guid categoryId, int displayOrder, IGetByIdService<Category> byIdGetter)
     {
-        ArgumentNullException.ThrowIfNull(dataReader);
+        ArgumentNullException.ThrowIfNull(byIdGetter);
 
         if (ProductCategories.Any(pc => pc.CategoryId == categoryId))
             throw new ProductAlreadyInCategoryException(categoryId, Name);
 
-        var category = await dataReader.GetByIdAsync(categoryId).ConfigureAwait(false);
-        ArgumentNullException.ThrowIfNull(category);
+        var category = await byIdGetter.GetByIdAsync(categoryId).ConfigureAwait(false);
+        if (category is null)
+            throw new CategoryIsNotFoundException(categoryId);
 
         _productCategories.Add(new ProductCategory(default, Id, categoryId, displayOrder));
     }
 
-    internal void ClearProductPictures() => _productPictures.Clear();
-    internal async Task AddPictureAsync(Guid pictureId, IEntityDataReader<Picture> dataReader)
+    internal void RemoveFromCategory(Guid categoryId)
     {
-        ArgumentNullException.ThrowIfNull(dataReader);
+        var productCategory = _productCategories.FirstOrDefault(pc => pc.CategoryId == categoryId);
+        if (productCategory is null)
+            return;
+
+        _productCategories.Remove(productCategory);
+    }
+
+    internal void ClearProductPictures() => _productPictures.Clear();
+    internal async Task AddPictureAsync(Guid pictureId, IGetByIdService<Picture> byIdGetter)
+    {
+        ArgumentNullException.ThrowIfNull(byIdGetter);
 
         if (ProductPictures.Any(pc => pc.PictureId == pictureId))
             return;
 
-        var picture = await dataReader.GetByIdAsync(pictureId).ConfigureAwait(false);
-        ArgumentNullException.ThrowIfNull(picture);
+        var picture = await byIdGetter.GetByIdAsync(pictureId).ConfigureAwait(false);
+        if (picture is null)
+            throw new PictureIsNotFoundException(pictureId);
 
         _productPictures.Add(new ProductPicture(default, Id, pictureId));
     }

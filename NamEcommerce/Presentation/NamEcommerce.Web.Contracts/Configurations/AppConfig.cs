@@ -1,4 +1,4 @@
-﻿namespace NamEcommerce.Web.Common;
+﻿namespace NamEcommerce.Web.Contracts.Configurations;
 
 [Serializable]
 public sealed class AppConfig
@@ -9,4 +9,6 @@ public sealed class AppConfig
     public int[] PageSizeOptions { get; set; } = [];
 
     public int UploadFileMaxSizeInBytes { get; set; }
+
+    public string BreadcrumbSeparator { get; set; } = ">";
 }

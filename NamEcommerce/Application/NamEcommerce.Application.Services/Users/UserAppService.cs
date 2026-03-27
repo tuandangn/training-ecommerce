@@ -1,32 +1,29 @@
-﻿using MediatR;
-using NamEcommerce.Application.Contracts.Dtos.Users;
-using NamEcommerce.Application.Contracts.Queries.Users;
+﻿using NamEcommerce.Application.Contracts.Dtos.Users;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Extensions;
-using NamEcommerce.Domain.Shared.Services;
+using NamEcommerce.Domain.Shared.Dtos.Users;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Application.Services.Users;
 
 public sealed class UserAppService : IUserAppService
 {
     private readonly IUserManager _userManager;
-    private readonly ISecurityService _securityService;
 
-    public UserAppService(IUserManager userManager, ISecurityService securityService)
+    public UserAppService(IUserManager userManager)
     {
         _userManager = userManager;
-        _securityService = securityService;
     }
 
-    public async Task<CreateUserResultDto> CreateUserAsync(CreateUserDto dto)
+    public async Task<CreateUserResultAppDto> CreateUserAsync(CreateUserAppDto dto)
     {
         if (dto is null)
             throw new ArgumentNullException(nameof(dto));
 
-        var (valid, errorMessage) = CreateUserDto.Validate(dto);
+        var (valid, errorMessage) = CreateUserAppDto.Validate(dto);
         if (!valid)
         {
-            return new CreateUserResultDto
+            return new CreateUserResultAppDto
             {
                 Success = false,
                 ErrorMessage = errorMessage
@@ -35,25 +32,23 @@ public sealed class UserAppService : IUserAppService
 
         if (await _userManager.DoesUsernameExistAsync(dto.Username).ConfigureAwait(false))
         {
-            return new CreateUserResultDto
+            return new CreateUserResultAppDto
             {
                 Success = false,
                 ErrorMessage = "Username already exists."
             };
         }
-        var (passwordHash, passwordSalt) = await _securityService.HashPasswordAsync(dto.Password);
         var user = await _userManager.CreateUserAsync(
-            new NamEcommerce.Domain.Shared.Dtos.Users.CreateUserDto
+            new CreateUserDto
             {
                 Username = dto.Username,
-                PasswordHash = passwordHash,
-                PasswordSalt = passwordSalt,
+                Password = dto.Password,
                 FullName = dto.FullName,
                 PhoneNumber = dto.PhoneNumber,
                 Address = dto.Address
             });
 
-        return new CreateUserResultDto
+        return new CreateUserResultAppDto
         {
             Success = user != null,
             CreatedId = user?.CreatedId,
