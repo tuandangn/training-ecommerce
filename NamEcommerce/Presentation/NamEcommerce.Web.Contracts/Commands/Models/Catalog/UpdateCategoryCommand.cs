@@ -1,5 +1,5 @@
 ﻿using MediatR;
-using NamEcommerce.Web.Contracts.Models.UnitMeasurements;
+using NamEcommerce.Web.Contracts.Models.Catalog;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 

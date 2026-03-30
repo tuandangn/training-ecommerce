@@ -22,7 +22,7 @@ public sealed class GetVendorListHandler : IRequestHandler<GetVendorListQuery, V
         var model = new VendorListModel
         {
             Keywords = request.Keywords,
-            Data = pagedData.MapToModel(item => new VendorListModel.ItemModel(item.Id)
+            Data = pagedData.MapToModel(item => new VendorListModel.VendorItemModel(item.Id)
             {
                 Name = item.Name,
                 PhoneNumber = item.PhoneNumber,

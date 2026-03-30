@@ -1,5 +1,4 @@
-﻿@inject IWebHelper WebHelper
-@{
+﻿@{
     var errorMessage = TempData[ViewConstants.GlobalErrorMessage] as string;
 }
 <!DOCTYPE html>
@@ -28,29 +27,7 @@
                         <span class="navbar-toggler-icon"></span>
                     </button>
                     <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                        <ul class="navbar-nav flex-grow-1">
-                            <li class="nav-item">
-                                <a class="nav-link" asp-controller="Home" asp-action="Index">Trang chủ</a>
-                            </li>
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("Category", "Product") ? "active" : "")" href="#" id="catalogMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Hàng hóa
-                                </a>
-                                <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                    <li><a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Product") ? "active" : "")" asp-controller="Product" asp-action="Index">Hàng hóa</a></li>
-                                    <li><a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Category") ? "active" : "")" asp-controller="Category" asp-action="Index">Danh mục</a></li>
-                                </ul>
-                            </li>
-                            <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("Vendor", "UnitMeasurement") ? "active": "")" href="#" id="otherMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    Khác
-                                </a>
-                                <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                    <li><a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Vendor") ? "active" : "")" asp-controller="Vendor" asp-action="Index">Nhà cung cấp</a></li>
-                                    <li><a class="dropdown-item @(WebHelper.IsMatchRouteInfo("UnitMeasurement") ? "active" : "")" asp-controller="UnitMeasurement" asp-action="Index">Đơn vị tính</a></li>
-                                </ul>
-                            </li>
-                        </ul>
+                        @await Component.InvokeAsync("MenuNavigationComponent")
                         @await Component.InvokeAsync("UserHeaderLinksComponent")
                     </div>
                 </div>

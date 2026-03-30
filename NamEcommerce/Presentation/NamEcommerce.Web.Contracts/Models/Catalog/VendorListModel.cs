@@ -7,10 +7,10 @@ public sealed class VendorListModel
 {
     public string? Keywords { get; set; }
 
-    public required IPagedDataModel<ItemModel> Data { get; init; }
+    public required IPagedDataModel<VendorItemModel> Data { get; init; }
 
     [Serializable]
-    public sealed record ItemModel(Guid Id)
+    public sealed record VendorItemModel(Guid Id)
     {
         public required string Name { get; init; }
         public required string PhoneNumber { get; init; }

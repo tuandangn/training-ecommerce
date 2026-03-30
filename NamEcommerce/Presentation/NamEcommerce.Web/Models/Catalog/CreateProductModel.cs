@@ -17,7 +17,10 @@ public sealed class CreateProductModel
     [Display(Name = "Danh mục")]
     public Guid? CategoryId { get; set; }
     [ValidateNever]
-    public required EntityOptionListModel Categories { get; set; }
+    public required EntityOptionListModel AvailableCategories { get; set; }
+
+    [Display(Name = "Quản lý kho hàng")]
+    public bool TrackInventory { get; set; }
 
     [Display(Name = "Thứ tự hiển thị")]
     public int DisplayOrder { get; set; }

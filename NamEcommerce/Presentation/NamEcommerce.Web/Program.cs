@@ -24,6 +24,10 @@ using NamEcommerce.Domain.Shared.Services.Catalog;
 using NamEcommerce.Domain.Shared.Services.Media;
 using NamEcommerce.Domain.Shared.Services.Security;
 using NamEcommerce.Domain.Shared.Services.Users;
+using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Services.Inventory;
+using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Application.Services.Inventory;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Services;
@@ -34,6 +38,7 @@ using NamEcommerce.Web.Services;
 using NamEcommerce.Web.Services.Catalog;
 using NamEcommerce.Web.Validators;
 using System.Reflection;
+using NamEcommerce.Web.Services.Inventory;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -89,6 +94,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IVendorManager, VendorManager>();
     services.AddScoped<IProductManager, ProductManager>();
     services.AddScoped<IPictureManager, PictureManager>();
+    services.AddScoped<IWarehouseManager, WarehouseManager>();
+    services.AddScoped<IInventoryStockManager, InventoryStockManager>();
 
     services.AddScoped<ISecurityService, SecurityService>();
     services.AddScoped<IEventPublisher, EventPublisher>();
@@ -99,6 +106,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IVendorAppService, VendorAppService>();
     services.AddScoped<IProductAppService, ProductAppService>();
     services.AddScoped<IPictureAppService, PictureAppService>();
+    services.AddScoped<IInventoryAppService, InventoryAppService>();
+    services.AddScoped<IWarehouseAppService, WarehouseAppService>();
 
     services.AddScoped<IInformationService, InformationService>();
     services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -106,6 +115,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddScoped<ICategoryModelFactory, CategoryModelFactory>();
     services.AddScoped<IProductModelFactory, ProductModelFactory>();
+    services.AddScoped<IWarehouseModelFactory, WarehouseModelFactory>();
 
     services.AddMediatR(config =>
     {

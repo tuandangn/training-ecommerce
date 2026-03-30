@@ -12,7 +12,8 @@ public static class ProductExtensions
             Name = product.Name,
             ShortDesc = product.ShortDesc,
             Categories = product.ProductCategories.Select(pc => new ProductCategoryAppDto(pc.CategoryId, pc.DisplayOrder)),
-            Pictures = product.ProductPictures.OrderBy(pp => pp.DisplayOrder).Select(pp => pp.PictureId)
+            Pictures = product.ProductPictures.OrderBy(pp => pp.DisplayOrder).Select(pp => pp.PictureId),
+            TrackInventory = product.TrackInventory
         };
 
     public static ProductAppDto ToDto(this ProductDto dto)
@@ -21,6 +22,7 @@ public static class ProductExtensions
             Name = dto.Name,
             ShortDesc = dto.ShortDesc,
             Categories = dto.Categories.Select(pc => new ProductCategoryAppDto(pc.CategoryId, pc.DisplayOrder)),
-            Pictures = dto.Pictures
+            Pictures = dto.Pictures,
+            TrackInventory = dto.TrackInventory
         };
 }

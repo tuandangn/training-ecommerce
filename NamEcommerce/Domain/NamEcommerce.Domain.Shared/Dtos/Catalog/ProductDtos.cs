@@ -9,6 +9,7 @@ public abstract record BaseProductDto
     public required string? ShortDesc { get; init; }
     public IEnumerable<ProductCategoryDto> Categories { get; set; } = [];
     public IEnumerable<Guid> Pictures { get; set; } = [];
+    public bool TrackInventory { get; set; }
 
     public virtual void Verify()
     {

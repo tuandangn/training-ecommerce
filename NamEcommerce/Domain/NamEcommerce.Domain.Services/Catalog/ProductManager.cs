@@ -44,6 +44,7 @@ public sealed class ProductManager : IProductManager
         {
             ShortDesc = dto.ShortDesc
         };
+        product.SetTrackInventory(dto.TrackInventory);
         foreach (var categoryInfo in dto.Categories)
             await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, _categoryDataReader).ConfigureAwait(false);
         foreach (var pictureId in dto.Pictures)
@@ -143,6 +144,8 @@ public sealed class ProductManager : IProductManager
         product.ClearProductPictures();
         foreach (var pictureId in dto.Pictures)
             await product.AddPictureAsync(pictureId, _pictureDataReader).ConfigureAwait(false);
+
+        product.SetTrackInventory(dto.TrackInventory);
 
         var result = await _productRepository.UpdateAsync(product).ConfigureAwait(false);
 

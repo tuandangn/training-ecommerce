@@ -1,4 +1,4 @@
-﻿global using Microsoft.EntityFrameworkCore;
+global using Microsoft.EntityFrameworkCore;
 global using Microsoft.EntityFrameworkCore.Metadata.Builders;
 global using NamEcommerce.Data.Contracts;
 global using NamEcommerce.Domain.Shared;
@@ -7,4 +7,5 @@ global using NamEcommerce.Domain.Entities.Users;
 global using NamEcommerce.Domain.Entities.Security;
 global using NamEcommerce.Domain.Entities.Media;
 global using NamEcommerce.Domain.Entities.Orders;
+global using NamEcommerce.Domain.Entities.Inventory;
 global using static NamEcommerce.Data.SqlServer.NamEcommerceEfDataDefaults;

@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Entities.Media;
+using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
@@ -15,8 +15,9 @@ public record Product : AppAggregateEntity
         ArgumentException.ThrowIfNullOrEmpty(name);
 
         Name = name;
-
         NormalizedName = TextHelper.Normalize(Name);
+
+        TrackInventory = true;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
@@ -32,6 +33,7 @@ public record Product : AppAggregateEntity
         }
     }
     internal string NormalizedShortDesc { get; private set; } = "";
+    public bool TrackInventory { get; private set; }
 
     public DateTime CreatedOnUtc { get; }
     public DateTime? UpdatedOnUtc { get; internal set; }
@@ -46,7 +48,9 @@ public record Product : AppAggregateEntity
 
     #region Methods
 
-    internal async Task SetNameAsync(string name, ICheckNameService checker)
+    internal void SetTrackInventory(bool trackInventory) => TrackInventory = trackInventory;
+
+    internal async Task SetNameAsync(string name, IExistCheckingService checker)
     {
         if (string.Equals(Name, name, StringComparison.Ordinal))
             return;

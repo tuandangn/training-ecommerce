@@ -65,7 +65,8 @@ public sealed class ProductAppService : IProductAppService
             Name = dto.Name,
             ShortDesc = dto.ShortDesc,
             Categories = dto.Categories.Select(item => new ProductCategoryDto(item.CategoryId, item.DisplayOrder)),
-            Pictures = pictureId.HasValue ? [pictureId.Value] : []
+            Pictures = pictureId.HasValue ? [pictureId.Value] : [],
+            TrackInventory = dto.TrackInventory
         };
         var result = await _productManager.CreateProductAsync(createDto).ConfigureAwait(false);
 
@@ -164,7 +165,8 @@ public sealed class ProductAppService : IProductAppService
             Name = dto.Name,
             ShortDesc = dto.ShortDesc,
             Categories = dto.Categories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
-            Pictures = pictureId.HasValue ? [pictureId.Value] : []
+            Pictures = pictureId.HasValue ? [pictureId.Value] : [],
+            TrackInventory = dto.TrackInventory
         }).ConfigureAwait(false);
 
         return new UpdateProductResultAppDto

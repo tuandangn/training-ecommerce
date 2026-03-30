@@ -31,7 +31,8 @@ public sealed class CreateProductHandler : IRequestHandler<CreateProductCommand,
                 MimeType = request.ImageFile.MimeType,
                 Extension = request.ImageFile.Extension,
                 FileName = request.ImageFile.FileName
-            } : null
+            } : null,
+            TrackInventory = request.TrackInventory
         };
 
         var result = await _productAppService.CreateProductAsync(dto).ConfigureAwait(false);

@@ -7,10 +7,10 @@ public sealed class ProductListModel
 {
     public string? Keywords { get; set; }
 
-    public required IPagedDataModel<ItemModel> Data { get; init; }
+    public required IPagedDataModel<ProductItemModel> Data { get; init; }
 
     [Serializable]
-    public sealed record ItemModel(Guid Id)
+    public sealed record ProductItemModel(Guid Id)
     {
         public required string Name { get; init; }
         public string? ShortDesc { get; init; }

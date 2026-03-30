@@ -36,7 +36,7 @@ public sealed record Vendor : AppAggregateEntity
 
     #region Methods
 
-    internal async Task SetNameAsync(string name, ICheckNameService checker)
+    internal async Task SetNameAsync(string name, IExistCheckingService checker)
     {
         if (string.Equals(Name, name, StringComparison.Ordinal))
             return;

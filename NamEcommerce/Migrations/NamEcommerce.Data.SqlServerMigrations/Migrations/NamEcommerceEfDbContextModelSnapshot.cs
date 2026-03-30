@@ -75,6 +75,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasMaxLength(800)
                         .HasColumnType("nvarchar(800)");
 
+                    b.Property<bool>("TrackInventory")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime?>("UpdatedOnUtc")
                         .HasColumnType("datetime2");
 
@@ -191,6 +194,144 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Vendor", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.InventoryStock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("LastStocktakeDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("MaxStockLevel")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("QuantityOnHand")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("QuantityReserved")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("ReorderLevel")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("UnitMeasurementId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UpdatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("WarehouseZoneId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId", "WarehouseId", "WarehouseZoneId")
+                        .IsUnique()
+                        .HasFilter("[WarehouseZoneId] IS NOT NULL");
+
+                    b.ToTable("InventoryStock", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.StockMovementLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MovementType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("QuantityAfter")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("QuantityBefore")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("ReferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ReferenceType")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StockMovementLog", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.Warehouse", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(800)
+                        .HasColumnType("nvarchar(800)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("ManagerUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NormalizedAddress")
+                        .IsRequired()
+                        .HasMaxLength(1600)
+                        .HasColumnType("nvarchar(1600)");
+
+                    b.Property<string>("NormalizedName")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("WarehouseType")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Warehouse", "tbl");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Media.Picture", b =>

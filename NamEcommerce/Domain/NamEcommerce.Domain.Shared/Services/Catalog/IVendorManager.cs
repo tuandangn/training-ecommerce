@@ -4,7 +4,7 @@ using NamEcommerce.Domain.Shared.Dtos.Common;
 
 namespace NamEcommerce.Domain.Shared.Services.Catalog;
 
-public interface IVendorManager : ICheckNameService
+public interface IVendorManager : IExistCheckingService
 {
     Task<IPagedDataDto<VendorDto>> GetVendorsAsync(string? keywords, int pageIndex, int pageSize);
 

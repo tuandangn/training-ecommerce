@@ -20,37 +20,39 @@ public sealed class ProductModelFactory : IProductModelFactory
 
     public async Task<CreateProductModel> PrepareCreateProductModel(CreateProductModel? oldModel = null)
     {
-        var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery());
+        var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new CreateProductModel
         {
+            TrackInventory = true,
             DisplayOrder = 1,
-            Categories = categoryOptions
+            AvailableCategories = categoryOptions
         };
         if (oldModel is not null)
-            model.Categories = categoryOptions;
+            model.AvailableCategories = categoryOptions;
 
         return model;
     }
 
     public async Task<EditProductModel?> PrepareEditProductModel(Guid id, EditProductModel? oldModel = null)
     {
-        var product = await _mediator.Send(new GetProductQuery { Id = id });
+        var product = await _mediator.Send(new GetProductQuery { Id = id }).ConfigureAwait(false);
         if (product is null && oldModel is null)
             return null;
 
-        var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery());
+        var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new EditProductModel
         {
             Id = product!.Id,
             Name = product!.Name,
             ShortDesc = product.ShortDesc,
-            Categories = categoryOptions,
+            AvailableCategories = categoryOptions,
             CategoryId = product.CategoryId,
+            TrackInventory = product.TrackInventory,
             DisplayOrder = product.DisplayOrder,
             ImageFile = product.ImageFile ?? new(),
         };
         if (oldModel is not null)
-            model.Categories = categoryOptions;
+            model.AvailableCategories = categoryOptions;
 
         return model;
     }
@@ -68,7 +70,7 @@ public sealed class ProductModelFactory : IProductModelFactory
             Keywords = searchModel?.Keywords,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
-        });
+        }).ConfigureAwait(false);
 
         return model;
     }

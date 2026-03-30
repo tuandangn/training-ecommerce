@@ -13,7 +13,7 @@ public sealed class CreateCategoryModel
     [Display(Name = "Danh mục cha")]
     public Guid? ParentId { get; set; }
     [ValidateNever]
-    public required EntityOptionListModel Parents { get; set; }
+    public required EntityOptionListModel AvailableParents { get; set; }
 
     [Display(Name = "Thứ tự hiển thị")]
     public int DisplayOrder { get; set; }

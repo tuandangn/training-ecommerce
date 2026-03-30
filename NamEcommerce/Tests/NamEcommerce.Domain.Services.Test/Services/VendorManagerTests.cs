@@ -57,11 +57,7 @@ public sealed class VendorManagerTests
         var vendorDataReaderStub = VendorDataReader.Empty();
         var vendorManager = new VendorManager(vendorRepositoryMock.Object, vendorDataReaderStub.Object, Mock.Of<IEventPublisher>());
 
-        var vendorDto = await vendorManager.CreateVendorAsync(new CreateVendorDto
-        {
-            Name = dto.Name,
-            PhoneNumber = dto.PhoneNumber
-        });
+        var vendorDto = await vendorManager.CreateVendorAsync(dto);
 
         Assert.Equal(returnVendor.Id, vendorDto.CreatedId);
         vendorRepositoryMock.Verify();

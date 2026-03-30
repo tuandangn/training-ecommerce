@@ -42,9 +42,9 @@
                             <label asp-for="ParentId" class="form-label"></label>
                             <select asp-for="ParentId" class="form-select" placeholder="@Html.DisplayNameFor(m => m.ParentId)">
                                 <option selected="@(!Model.ParentId.HasValue)" value="@string.Empty">(Không chọn)</option>
-                                @if (Model.Parents is not null)
+                                @if (Model.AvailableParents is not null)
                                 {
-                                    foreach (var parent in Model.Parents)
+                                    foreach (var parent in Model.AvailableParents)
                                     {
                                         <option value="@parent.Id" selected="@(parent.Id == Model.ParentId)">
                                             @parent.Name

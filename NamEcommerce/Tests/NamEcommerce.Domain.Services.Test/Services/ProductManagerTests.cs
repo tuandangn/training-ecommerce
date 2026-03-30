@@ -65,11 +65,7 @@ public sealed class ProductManagerTests
         var productDataReaderStub = ProductDataReader.Empty();
         var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, null!, null!, Mock.Of<IEventPublisher>());
 
-        var productDto = await productManager.CreateProductAsync(new CreateProductDto
-        {
-            Name = dto.Name,
-            ShortDesc = dto.ShortDesc
-        });
+        var productDto = await productManager.CreateProductAsync(dto);
 
         Assert.Equal(returnProduct.Id, productDto.CreatedId);
         productRepositoryMock.Verify();

@@ -28,7 +28,8 @@ public sealed class GetProductHandler : IRequestHandler<GetProductQuery, Product
         {
             Id = productInfo.Id,
             Name = productInfo.Name,
-            ShortDesc = productInfo.ShortDesc
+            ShortDesc = productInfo.ShortDesc,
+            TrackInventory = productInfo.TrackInventory
         };
 
         var productCategory = productInfo.Categories.FirstOrDefault();

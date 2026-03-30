@@ -34,46 +34,46 @@ public sealed class CategoryModelFactory : ICategoryModelFactory
             {
                 ExcludeCurrent = true
             }
-        });
+        }).ConfigureAwait(false);
 
         return model;
     }
 
     public async Task<CreateCategoryModel> PrepareCreateCategoryModel(CreateCategoryModel? oldModel = null)
     {
-        var parentOptions = await _mediator.Send(new GetCategoryOptionListQuery());
+        var parentOptions = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new CreateCategoryModel
         {
             DisplayOrder = 1,
-            Parents = parentOptions
+            AvailableParents = parentOptions
         };
         if (oldModel is not null)
-            model.Parents = parentOptions;
+            model.AvailableParents = parentOptions;
 
         return model;
     }
 
     public async Task<EditCategoryModel?> PrepareEditCategoryModel(Guid id, EditCategoryModel? oldModel = null)
     {
-        var category = await _mediator.Send(new GetCategoryQuery { Id = id });
+        var category = await _mediator.Send(new GetCategoryQuery { Id = id }).ConfigureAwait(false);
         if (category is null && oldModel is null)
             return null;
 
         var parentOptions = await _mediator.Send(new GetCategoryOptionListQuery
         {
             ExcludedCategoryId = id
-        });
+        }).ConfigureAwait(false);
         var model = oldModel ?? new EditCategoryModel
         {
             Id = category!.Id,
             Name = category.Name,
             ParentId = category.ParentId,
             DisplayOrder = category.DisplayOrder,
-            Parents = parentOptions
+            AvailableParents = parentOptions
         };
 
         if (oldModel is not null)
-            model.Parents = parentOptions;
+            model.AvailableParents = parentOptions;
 
         return model;
     }

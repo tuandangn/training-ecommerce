@@ -2,7 +2,7 @@
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
-using NamEcommerce.Web.Contracts.Models.UnitMeasurements;
+using NamEcommerce.Web.Contracts.Models.Catalog;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Catalog;
 

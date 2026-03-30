@@ -1,4 +1,4 @@
-﻿namespace NamEcommerce.Web.Contracts.Models.UnitMeasurements;
+﻿namespace NamEcommerce.Web.Contracts.Models.Catalog;
 
 [Serializable]
 public sealed record UpdateProductResultModel

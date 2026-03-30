@@ -24,10 +24,10 @@ public sealed class GetProductListHandler : IRequestHandler<GetProductListQuery,
     {
         var pagedData = await _productAppService.GetProductsAsync(request.Keywords, request.PageIndex, request.PageSize);
 
-        var productListItems = new List<ProductListModel.ItemModel>(request.PageSize);
+        var productListItems = new List<ProductListModel.ProductItemModel>(request.PageSize);
         foreach (var productInfo in pagedData)
         {
-            var productModel = new ProductListModel.ItemModel(productInfo.Id)
+            var productModel = new ProductListModel.ProductItemModel(productInfo.Id)
             {
                 Name = productInfo.Name,
                 ShortDesc = productInfo.ShortDesc

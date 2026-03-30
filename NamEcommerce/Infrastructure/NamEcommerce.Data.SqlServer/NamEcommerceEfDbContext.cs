@@ -1,4 +1,4 @@
-﻿namespace NamEcommerce.Data.SqlServer;
+namespace NamEcommerce.Data.SqlServer;
 
 public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
 {
@@ -18,7 +18,7 @@ public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
     public async Task<TEntity?> FindAsync<TEntity>(Guid key, CancellationToken cancellationToken = default) 
         where TEntity : AppAggregateEntity
     {
-        var entity = await FindAsync<TEntity>(new object[] { key }).ConfigureAwait(false);
+        var entity = await FindAsync<TEntity>([key]).ConfigureAwait(false);
         return entity;
     }
 

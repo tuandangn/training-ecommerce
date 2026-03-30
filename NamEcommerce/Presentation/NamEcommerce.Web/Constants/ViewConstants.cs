@@ -19,4 +19,7 @@ public static class ViewConstants
 
     public const string ProductSuccessMessage = "Messages.Product.Success";
     public const string ProductErrorMessage = "Messages.Product.Error";
+
+    public const string WarehouseSuccessMessage = "Messages.Warehouse.Success";
+    public const string WarehouseErrorMessage = "Messages.Warehouse.Error";
 }

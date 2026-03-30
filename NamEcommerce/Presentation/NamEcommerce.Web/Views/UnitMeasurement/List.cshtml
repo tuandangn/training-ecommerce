@@ -4,7 +4,7 @@
     var successMessage = TempData[ViewConstants.UnitMeasurementSuccessMessage] as string;
     var errorMessage = TempData[ViewConstants.UnitMeasurementErrorMessage] as string;
     
-    string? query = Context.Request.Query[Html.NameFor(m => m.Keywords)];
+    string? query = Model.Keywords;
 }
 <section class="content-title my-4 text-center">
     <h1>Đơn vị tính</h1>

@@ -48,9 +48,9 @@
                                         <label asp-for="CategoryId" class="form-label"></label>
                                         <select asp-for="CategoryId" class="form-select" placeholder="@Html.DisplayNameFor(m => m.CategoryId)">
                                             <option selected="@(!Model.CategoryId.HasValue)" value="@string.Empty">(Không chọn)</option>
-                                            @if (Model.Categories is not null)
+                                            @if (Model.AvailableCategories is not null)
                                             {
-                                                foreach (var category in Model.Categories)
+                                                foreach (var category in Model.AvailableCategories)
                                                 {
                                                     <option value="@category.Id" selected="@(category.Id == Model.CategoryId)">
                                                         @category.Name
@@ -75,6 +75,14 @@
                         </div>
                     </div>
                     <div class="tab-pane fade" id="additional" role="tabpanel" aria-labelledby="additionalTab">
+                        <div class="col-12 mb-3">
+                            <label asp-for="TrackInventory" class="form-label"></label>
+                            <div class="form-check form-switch">
+                                <input asp-for="TrackInventory" class="form-check-input" role="switch" />
+                                <label class="form-check-label" asp-for="TrackInventory">@Html.DisplayNameFor(m => m.TrackInventory)</label>
+                            </div>
+                            <span asp-validation-for="TrackInventory" class="text-danger small"></span>
+                        </div>
                         <div class="col-12 mb-3">
                             <label asp-for="DisplayOrder" class="form-label"></label>
                             <input asp-for="DisplayOrder" class="form-control w-25" placeholder="@Html.DisplayNameFor(m => m.DisplayOrder)" />

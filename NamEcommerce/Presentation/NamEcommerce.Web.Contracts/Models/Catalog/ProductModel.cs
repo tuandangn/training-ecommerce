@@ -11,4 +11,5 @@ public sealed record ProductModel
     public Guid? CategoryId { get; set; }
     public int DisplayOrder { get; set; }
     public Base64ImageModel? ImageFile { get; set; }
+    public bool TrackInventory { get; set; }
 }

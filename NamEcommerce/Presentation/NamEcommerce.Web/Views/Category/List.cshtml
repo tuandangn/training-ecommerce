@@ -4,7 +4,7 @@
     var successMessage = TempData[ViewConstants.CategorySuccessMessage] as string;
     var errorMessage = TempData[ViewConstants.CategoryErrorMessage] as string;
 
-    string? query = Context.Request.Query[Html.NameFor(m => m.Keywords)];
+    string? query = Model.Keywords;
 }
 <section class="content-title my-4 text-center">
     <h1>Danh mục</h1>

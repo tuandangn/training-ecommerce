@@ -67,7 +67,8 @@ public sealed class ProductController : BaseAuthorizedController
             ShortDesc = model.ShortDesc,
             CategoryId = model.CategoryId,
             DisplayOrder = model.DisplayOrder,
-            ImageFile = imageFileInfo
+            ImageFile = imageFileInfo,
+            TrackInventory = model.TrackInventory
         });
         if (!createProductResult.Success)
         {
@@ -129,7 +130,8 @@ public sealed class ProductController : BaseAuthorizedController
             ShortDesc = model.ShortDesc,
             CategoryId = model.CategoryId,
             DisplayOrder = model.DisplayOrder,
-            ImageFile = imageFileInfo
+            ImageFile = imageFileInfo,
+            TrackInventory = model.TrackInventory
         });
         if (!updateProductResult.Success)
         {

@@ -3,7 +3,7 @@ using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
-using NamEcommerce.Web.Contracts.Models.UnitMeasurements;
+using NamEcommerce.Web.Contracts.Models.Catalog;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Catalog;
 
@@ -31,7 +31,8 @@ public sealed class UpdateProductHandler : IRequestHandler<UpdateProductCommand,
                 MimeType = request.ImageFile.MimeType,
                 Extension = request.ImageFile.Extension,
                 FileName = request.ImageFile.FileName
-            } : null
+            } : null,
+            TrackInventory = request.TrackInventory
         });
 
         return new UpdateProductResultModel

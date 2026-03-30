@@ -12,4 +12,5 @@ public sealed class CreateProductCommand : IRequest<CreateProductResultModel>
     public Guid? CategoryId { get; set; }
     public int DisplayOrder { get; set; }
     public FileInfoModel? ImageFile { get; set; }
+    public bool TrackInventory { get; set; }
 }
