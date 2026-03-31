@@ -5,7 +5,6 @@ public sealed class WarehouseMapping : IEntityTypeConfiguration<Warehouse>
     public void Configure(EntityTypeBuilder<Warehouse> builder)
     {
         builder.ToTable(nameof(Warehouse), DbScheme);
-
         builder.HasKey(p => p.Id);
 
         builder.Property(p => p.Code).HasMaxLength(50).IsRequired();
@@ -14,5 +13,8 @@ public sealed class WarehouseMapping : IEntityTypeConfiguration<Warehouse>
         builder.Property(p => p.Address).HasMaxLength(800);
         builder.Property(p => p.NormalizedAddress).HasMaxLength(1600);
         builder.Property(p => p.PhoneNumber).HasMaxLength(20);
+        builder.Property(p => p.WarehouseType).IsRequired();
+        builder.Property(p => p.IsActive).IsRequired();
+        builder.Property(p => p.ManagerUserId);
     }
 }

@@ -5,7 +5,6 @@ public sealed class UserRoleMapping : IEntityTypeConfiguration<UserRole>
     public void Configure(EntityTypeBuilder<UserRole> builder)
     {
         builder.ToTable(nameof(UserRole), DbScheme);
-
         builder.HasKey(ur => ur.Id);
 
         builder.HasOne<Role>().WithMany().HasForeignKey(rp => rp.RoleId);

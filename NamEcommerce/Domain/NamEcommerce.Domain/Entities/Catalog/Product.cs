@@ -23,6 +23,7 @@ public record Product : AppAggregateEntity
 
     public string Name { get; private set; }
     internal string NormalizedName { get; private set; } = "";
+
     public string? ShortDesc
     {
         get;
@@ -33,6 +34,7 @@ public record Product : AppAggregateEntity
         }
     }
     internal string NormalizedShortDesc { get; private set; } = "";
+
     public bool TrackInventory { get; private set; }
 
     public DateTime CreatedOnUtc { get; }
@@ -50,7 +52,7 @@ public record Product : AppAggregateEntity
 
     internal void SetTrackInventory(bool trackInventory) => TrackInventory = trackInventory;
 
-    internal async Task SetNameAsync(string name, IExistCheckingService checker)
+    internal async Task SetNameAsync(string name, INameExistCheckingService checker)
     {
         if (string.Equals(Name, name, StringComparison.Ordinal))
             return;
@@ -105,4 +107,28 @@ public record Product : AppAggregateEntity
     }
 
     #endregion
+}
+
+[Serializable]
+public sealed record ProductCategory : AppEntity
+{
+    internal ProductCategory(Guid id, Guid productId, Guid categoryId, int displayOrder) : base(id)
+        => (ProductId, CategoryId, DisplayOrder) = (productId, categoryId, displayOrder);
+
+    public Guid ProductId { get; init; }
+    public Guid CategoryId { get; init; }
+
+    public int DisplayOrder { get; set; }
+}
+
+[Serializable]
+public sealed record ProductPicture : AppEntity
+{
+    public ProductPicture(Guid id, Guid productId, Guid pictureId) : base(id)
+        => (ProductId, PictureId) = (productId, pictureId);
+
+    public Guid ProductId { get; init; }
+    public Guid PictureId { get; init; }
+
+    public int DisplayOrder { get; set; }
 }

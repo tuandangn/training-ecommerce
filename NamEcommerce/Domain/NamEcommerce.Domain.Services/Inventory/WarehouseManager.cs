@@ -35,7 +35,7 @@ public sealed class WarehouseManager : IWarehouseManager
         if (await DoesNameExistAsync(dto.Name).ConfigureAwait(false))
             throw new WarehouseNameExistsException(dto.Name);
 
-        var warehouse = new Warehouse(dto.Code, dto.Name, (WarehouseType)dto.WarehouseType)
+        var warehouse = new Warehouse(dto.Code, dto.Name, dto.WarehouseType)
         {
             PhoneNumber = dto.PhoneNumber,
             Address = dto.Address,
@@ -131,14 +131,12 @@ public sealed class WarehouseManager : IWarehouseManager
         if (warehouse is null)
             throw new ArgumentException("Warehouse is not found", nameof(dto));
 
-        if(await DoesCodeExistAsync(dto.Code, dto.Id).ConfigureAwait(false))
-            throw new WarehouseCodeExistsException(dto.Code);
-        warehouse.Code = dto.Code;
+        await warehouse.SetCodeAsync(dto.Code, this).ConfigureAwait(false);
         await warehouse.SetNameAsync(dto.Name, this).ConfigureAwait(false);
         warehouse.Address = dto.Address;
         warehouse.PhoneNumber = dto.PhoneNumber;
         warehouse.ManagerUserId = dto.ManagerUserId;
-        warehouse.ChangeType((WarehouseType)dto.WarehouseType);
+        warehouse.ChangeType(dto.WarehouseType);
         warehouse.SetActive(dto.IsActive);
 
         var result = await _warehouseRepository.UpdateAsync(warehouse).ConfigureAwait(false);
@@ -153,7 +151,7 @@ public sealed class WarehouseManager : IWarehouseManager
             PhoneNumber = result.PhoneNumber,
             Address = result.Address,
             ManagerUserId = result.ManagerUserId,
-            WarehouseType = (int)result.WarehouseType
+            WarehouseType = result.WarehouseType
         };
     }
 }

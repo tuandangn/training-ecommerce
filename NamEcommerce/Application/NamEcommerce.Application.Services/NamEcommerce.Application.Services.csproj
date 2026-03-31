@@ -13,7 +13,13 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Domain\NamEcommerce.Domain.Shared\NamEcommerce.Domain.Shared.csproj" />
     <ProjectReference Include="..\..\Domain\NamEcommerce.Domain\NamEcommerce.Domain.csproj" />
+    <ProjectReference Include="..\..\Infrastructure\NamEcommerce.Data\NamEcommerce.Data.Contracts.csproj" />
     <ProjectReference Include="..\NamEcommerce.Application.Contracts\NamEcommerce.Application.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Commands\" />
+    <Folder Include="Queries\Handlers\" />
   </ItemGroup>
 
 </Project>

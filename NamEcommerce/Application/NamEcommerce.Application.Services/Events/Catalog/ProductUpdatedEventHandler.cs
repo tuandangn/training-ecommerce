@@ -1,16 +1,20 @@
 ﻿using MediatR;
+using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
-using NamEcommerce.Domain.Shared.Services.Media;
+using NamEcommerce.Domain.Entities.Media;
+using NamEcommerce.Domain.Shared.Common;
 
 namespace NamEcommerce.Application.Services.Events.Catalog;
 
 public sealed class ProductUpdatedEventHandler : INotificationHandler<EntityUpdatedNotification<Product>>
 {
-    private readonly IPictureManager _pictureManager;
+    private readonly IRepository<Picture> _pictureRepository;
+    private readonly IEntityDataReader<Picture> _pictureDataReader;
 
-    public ProductUpdatedEventHandler(IPictureManager pictureManager)
+    public ProductUpdatedEventHandler(IRepository<Picture> pictureRepository, IEntityDataReader<Picture> pictureDataReader)
     {
-        _pictureManager = pictureManager;
+        _pictureRepository = pictureRepository;
+        _pictureDataReader = pictureDataReader;
     }
 
     public async Task Handle(EntityUpdatedNotification<Product> notification, CancellationToken cancellationToken)
@@ -24,11 +28,11 @@ public sealed class ProductUpdatedEventHandler : INotificationHandler<EntityUpda
 
         foreach (var pictureId in deletedPictureIds)
         {
-            var picture = await _pictureManager.GetPictureByIdAsync(pictureId).ConfigureAwait(false);
+            var picture = await _pictureDataReader.GetByIdAsync(pictureId).ConfigureAwait(false);
             if (picture is null)
                 continue;
 
-            await _pictureManager.DeletePictureAsync(picture.Id).ConfigureAwait(false);
+            await _pictureRepository.DeleteAsync(picture).ConfigureAwait(false);
         }
     }
 }

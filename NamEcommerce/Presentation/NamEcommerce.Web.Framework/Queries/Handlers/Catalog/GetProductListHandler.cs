@@ -24,7 +24,7 @@ public sealed class GetProductListHandler : IRequestHandler<GetProductListQuery,
     {
         var pagedData = await _productAppService.GetProductsAsync(request.Keywords, request.PageIndex, request.PageSize);
 
-        var productListItems = new List<ProductListModel.ProductItemModel>(request.PageSize);
+        var productListItems = new List<ProductListModel.ProductItemModel>();
         foreach (var productInfo in pagedData)
         {
             var productModel = new ProductListModel.ProductItemModel(productInfo.Id)

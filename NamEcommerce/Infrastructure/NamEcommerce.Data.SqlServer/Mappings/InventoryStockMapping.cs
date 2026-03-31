@@ -5,10 +5,8 @@ public sealed class InventoryStockMapping : IEntityTypeConfiguration<InventorySt
     public void Configure(EntityTypeBuilder<InventoryStock> builder)
     {
         builder.ToTable(nameof(InventoryStock), DbScheme);
-
         builder.HasKey(p => p.Id);
 
-        // Unique constraint for Product + Warehouse
         builder.HasIndex(p => new { p.ProductId, p.WarehouseId, p.WarehouseZoneId }).IsUnique();
 
         builder.Property(p => p.QuantityOnHand).HasColumnType("decimal(18,2)");

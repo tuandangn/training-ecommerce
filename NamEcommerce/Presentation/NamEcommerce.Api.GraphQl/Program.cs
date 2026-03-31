@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Api.GraphQl.DataLoaders;
 using NamEcommerce.Api.GraphQl.Schemes;
 using NamEcommerce.Api.GraphQl.Schemes.Catalog;
-using NamEcommerce.Application.Services.Queries.Handlers.Catalog;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Domain.Services.Catalog;
@@ -51,8 +50,7 @@ var builder = WebApplication.CreateBuilder(args);
     });
     builder.Services.AddMediatR(config =>
     {
-        //*TODO*
-        config.RegisterServicesFromAssemblyContaining<GetAllUnitMeasuresHandler>();
+
     });
 }
 #endregion

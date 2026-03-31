@@ -67,4 +67,43 @@ public sealed class InventoryAppService : IInventoryAppService
             return new ResultAppDto { Success = false, ErrorMessage = ex.Message };
         }
     }
+
+    public async Task<ResultAppDto> ReserveStockAsync(ReserveStockAppDto dto)
+    {
+        try
+        {
+            var success = await _stockManager.ReserveStockAsync(dto.ProductId, dto.WarehouseId, dto.Quantity, dto.ReferenceId, dto.UserId, dto.Note);
+            return new ResultAppDto { Success = success, ErrorMessage = success ? null : "Không đủ hàng trong kho để giữ." };
+        }
+        catch (Exception ex)
+        {
+            return new ResultAppDto { Success = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    public async Task<ResultAppDto> ReleaseReservedStockAsync(ReleaseStockAppDto dto)
+    {
+        try
+        {
+            var success = await _stockManager.ReleaseReservedStockAsync(dto.ProductId, dto.WarehouseId, dto.Quantity, dto.ReferenceId, dto.UserId, dto.Note);
+            return new ResultAppDto { Success = success, ErrorMessage = success ? null : "Lỗi khi giải phóng hàng giữ." };
+        }
+        catch (Exception ex)
+        {
+            return new ResultAppDto { Success = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    public async Task<ResultAppDto> DispatchStockAsync(DispatchStockAppDto dto)
+    {
+        try
+        {
+            var result = await _stockManager.DispatchStockAsync(dto.ProductId, dto.WarehouseId, dto.Quantity, dto.ReferenceId, dto.UserId, dto.Note);
+            return new ResultAppDto { Success = result != null, ErrorMessage = result != null ? null : "Lỗi khi xuất kho." };
+        }
+        catch (Exception ex)
+        {
+            return new ResultAppDto { Success = false, ErrorMessage = ex.Message };
+        }
+    }
 }

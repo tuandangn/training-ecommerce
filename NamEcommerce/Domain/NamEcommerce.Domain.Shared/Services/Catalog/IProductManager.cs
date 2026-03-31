@@ -4,7 +4,7 @@ using NamEcommerce.Domain.Shared.Dtos.Common;
 
 namespace NamEcommerce.Domain.Shared.Services.Catalog;
 
-public interface IProductManager : IExistCheckingService
+public interface IProductManager : INameExistCheckingService
 {
     Task<IPagedDataDto<ProductDto>> GetProductsAsync(int pageIndex, int pageSize, string? keywords = null, Guid? categoryId = null);
 

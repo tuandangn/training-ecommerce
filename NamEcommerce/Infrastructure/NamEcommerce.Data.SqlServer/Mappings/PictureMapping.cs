@@ -5,7 +5,6 @@ public sealed class PictureMapping : IEntityTypeConfiguration<Picture>
     public void Configure(EntityTypeBuilder<Picture> builder)
     {
         builder.ToTable(nameof(Picture), DbScheme);
-
         builder.HasKey(p => p.Id);
 
         builder.Property(p => p.MimeType).HasMaxLength(100).IsRequired();

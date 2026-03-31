@@ -4,7 +4,7 @@ using NamEcommerce.Domain.Shared.Dtos.Common;
 
 namespace NamEcommerce.Domain.Shared.Services.Catalog;
 
-public interface IUnitMeasurementManager : IExistCheckingService
+public interface IUnitMeasurementManager : INameExistCheckingService
 {
     Task<IPagedDataDto<UnitMeasurementDto>> GetUnitMeasurementsAsync(string? keywords, int pageIndex, int pageSize);
 

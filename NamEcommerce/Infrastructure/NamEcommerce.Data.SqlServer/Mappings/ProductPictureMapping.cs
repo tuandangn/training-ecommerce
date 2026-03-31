@@ -5,7 +5,6 @@ public sealed class ProductPictureMapping : IEntityTypeConfiguration<ProductPict
     public void Configure(EntityTypeBuilder<ProductPicture> builder)
     {
         builder.ToTable(nameof(ProductPicture), DbScheme);
-
         builder.HasKey(p => p.Id);
 
         builder.HasOne<Product>().WithMany(p => p.ProductPictures).HasForeignKey(pp => pp.ProductId);

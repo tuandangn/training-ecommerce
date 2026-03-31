@@ -39,3 +39,22 @@ public sealed record StockMovementLog : AppAggregateEntity
     public Guid CreatedByUserId { get; init; }
     public DateTime CreatedOnUtc { get; init; }
 }
+
+public enum StockMovementType
+{
+    Inbound,
+    Outbound,
+    Transfer,
+    Adjustment,
+    Return
+}
+
+public enum StockReferenceType
+{
+    None,
+    PurchaseOrder,
+    SalesOrder,
+    StockIssue,
+    StockTransfer,
+    Adjustment
+}

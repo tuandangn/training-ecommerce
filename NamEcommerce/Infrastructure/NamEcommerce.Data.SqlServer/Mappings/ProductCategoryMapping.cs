@@ -5,7 +5,6 @@ public sealed class ProductCategoryMapping : IEntityTypeConfiguration<ProductCat
     public void Configure(EntityTypeBuilder<ProductCategory> builder)
     {
         builder.ToTable(nameof(ProductCategory), DbScheme);
-
         builder.HasKey(pc => pc.Id);
 
         builder.HasOne<Product>().WithMany(p => p.ProductCategories).HasForeignKey(pc => pc.ProductId);

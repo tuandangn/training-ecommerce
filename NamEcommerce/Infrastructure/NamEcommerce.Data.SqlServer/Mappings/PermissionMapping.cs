@@ -6,6 +6,7 @@ public sealed class PermissionMapping : IEntityTypeConfiguration<Permission>
     {
         builder.ToTable(nameof(Permission), DbScheme);
         builder.HasKey(p => p.Id);
+
         builder.Property(p => p.Name).HasMaxLength(200).IsRequired();
         builder.Property(p => p.NormalizedName).HasMaxLength(400);
     }

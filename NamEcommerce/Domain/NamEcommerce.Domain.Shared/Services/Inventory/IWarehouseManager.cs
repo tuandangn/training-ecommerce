@@ -4,7 +4,7 @@ using NamEcommerce.Domain.Shared.Dtos.Inventory;
 
 namespace NamEcommerce.Domain.Shared.Services.Inventory;
 
-public interface IWarehouseManager : IExistCheckingService
+public interface IWarehouseManager : INameExistCheckingService, ICodeExistCheckingService
 {
     Task<WarehouseDto?> GetWarehouseByIdAsync(Guid id);
 

@@ -1,5 +1,3 @@
-@using System.Text.Encodings.Web
-@using System.Text
 @model NamEcommerce.Web.Contracts.Models.Inventory.InventoryStockListModel
 @{
     ViewData[ViewConstants.PageTitle] = "Tồn kho";
@@ -66,16 +64,25 @@
                             <td class="text-end text-danger">
                                 @item.QuantityReserved.ToString("N0")
                             </td>
-                            <td class="text-end text-success fw-bold">
+                            <td class="text-end @(item.QuantityAvailable < 5 ? "text-danger" : "text-success") fw-bold">
                                 @item.QuantityAvailable.ToString("N0")
+                                @if (item.QuantityAvailable < 5)
+                                {
+                                    <i class="bi bi-exclamation-triangle-fill ms-1" title="Sắp hết hàng!"></i>
+                                }
                             </td>
                             <td class="text-muted">
                                 @item.UpdatedOnUtc.ToLocalTime().ToString("g")
                             </td>
                             <td class="text-end pe-3">
-                                <a class="btn btn-sm btn-primary" asp-action="AdjustStock" asp-route-productId="@item.ProductId" asp-route-warehouseId="@item.WarehouseId">
-                                    Điều chỉnh
-                                </a>
+                                <div class="btn-group" role="group">
+                                    <a class="btn btn-sm btn-outline-info" asp-action="MovementLogs" asp-route-productId="@item.ProductId" asp-route-warehouseId="@item.WarehouseId">
+                                        <i class="bi bi-clock-history"></i> Lịch sử
+                                    </a>
+                                    <a class="btn btn-sm btn-primary" asp-action="AdjustStock" asp-route-productId="@item.ProductId" asp-route-warehouseId="@item.WarehouseId">
+                                        Điều chỉnh
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                     }

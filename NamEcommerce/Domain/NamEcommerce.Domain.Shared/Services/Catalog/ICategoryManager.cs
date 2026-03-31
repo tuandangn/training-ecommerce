@@ -4,7 +4,7 @@ using NamEcommerce.Domain.Shared.Dtos.Common;
 
 namespace NamEcommerce.Domain.Shared.Services.Catalog;
 
-public interface ICategoryManager : IExistCheckingService
+public interface ICategoryManager : INameExistCheckingService
 {
     Task<CategoryDto?> GetCategoryByIdAsync(Guid id);
 

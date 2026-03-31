@@ -19,6 +19,7 @@ public sealed record Category : AppAggregateEntity
 
     public string Name { get; private set; }
     internal string NormalizedName { get; private set; } = "";
+
     public int DisplayOrder { get; set; }
 
     public Guid? ParentId { get; private set; }
@@ -27,7 +28,7 @@ public sealed record Category : AppAggregateEntity
 
     #region Methods
 
-    internal async Task SetNameAsync(string name, IExistCheckingService checker)
+    internal async Task SetNameAsync(string name, INameExistCheckingService checker)
     {
         if (string.Equals(Name, name, StringComparison.Ordinal))
             return;

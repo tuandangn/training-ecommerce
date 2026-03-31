@@ -56,6 +56,13 @@
                             <span asp-validation-for="ParentId" class="text-danger small"></span>
                         </div>
                     </div>
+                    <div class="tab-pane fade" id="additional" role="tabpanel" aria-labelledby="additionalTab">
+                        <div class="col-12 mb-3">
+                            <label asp-for="DisplayOrder" class="form-label"></label>
+                            <input asp-for="DisplayOrder" class="form-control w-50" placeholder="@Html.DisplayNameFor(m => m.DisplayOrder)" />
+                            <span asp-validation-for="DisplayOrder" class="text-danger small"></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-12">
                     <button type="submit" class="btn btn-primary">Chỉnh sửa</button>

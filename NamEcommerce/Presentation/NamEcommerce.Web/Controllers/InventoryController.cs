@@ -76,4 +76,19 @@ public sealed class InventoryController : BaseAuthorizedController
         TempData[ViewConstants.VendorSuccessMessage] = "Điều chỉnh tồn kho thành công!";
         return RedirectToAction(nameof(StockList));
     }
+
+    public async Task<IActionResult> MovementLogs(Guid productId, Guid warehouseId, int pageNumber = 1)
+    {
+        var pageSize = _appConfig.DefaultPageSize;
+
+        var model = await _mediator.Send(new GetStockMovementLogsQuery
+        {
+            ProductId = productId,
+            WarehouseId = warehouseId,
+            PageIndex = pageNumber - 1,
+            PageSize = pageSize
+        });
+
+        return View(model);
+    }
 }

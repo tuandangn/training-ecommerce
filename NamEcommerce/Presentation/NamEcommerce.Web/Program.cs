@@ -9,7 +9,6 @@ using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Catalog;
 using NamEcommerce.Application.Services.Events;
 using NamEcommerce.Application.Services.Media;
-using NamEcommerce.Application.Services.Queries.Handlers.Catalog;
 using NamEcommerce.Application.Services.Users;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
@@ -31,7 +30,6 @@ using NamEcommerce.Application.Services.Inventory;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Services;
-using NamEcommerce.Web.Framework.Commands.Handlers;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Mvc.Binders;
 using NamEcommerce.Web.Services;
@@ -39,6 +37,11 @@ using NamEcommerce.Web.Services.Catalog;
 using NamEcommerce.Web.Validators;
 using System.Reflection;
 using NamEcommerce.Web.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
+using NamEcommerce.Domain.Services.PurchaseOrders;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
+using NamEcommerce.Application.Services.PurchaseOrders;
+using NamEcommerce.Web.Framework.Commands.Handlers.Users;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -108,6 +111,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IPictureAppService, PictureAppService>();
     services.AddScoped<IInventoryAppService, InventoryAppService>();
     services.AddScoped<IWarehouseAppService, WarehouseAppService>();
+    services.AddScoped<IPurchaseOrderManager, PurchaseOrderManager>();
+    services.AddScoped<IPurchaseOrderAppService, PurchaseOrderAppService>();
 
     services.AddScoped<IInformationService, InformationService>();
     services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -119,8 +124,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddMediatR(config =>
     {
-        //NamEcommerce.Application.Services assembly
-        config.RegisterServicesFromAssemblyContaining<GetAllCategoriesHandler>();
         //NamEcommerce.Web.Framework assembly
         config.RegisterServicesFromAssemblyContaining<CookieAuthenticateUserHandler>();
     });

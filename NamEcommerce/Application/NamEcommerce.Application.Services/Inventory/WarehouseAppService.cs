@@ -5,6 +5,7 @@ using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Application.Services.Inventory;
@@ -50,7 +51,7 @@ public sealed class WarehouseAppService : IWarehouseAppService
             PhoneNumber = dto.PhoneNumber,
             Address = dto.Address,
             ManagerUserId = dto.ManagerUserId,
-            WarehouseType = dto.WarehouseType,
+            WarehouseType = (WarehouseType) dto.WarehouseType,
             IsActive = dto.IsActive
         }).ConfigureAwait(false);
 
@@ -148,7 +149,7 @@ public sealed class WarehouseAppService : IWarehouseAppService
             PhoneNumber = dto.PhoneNumber,
             Address = dto.Address,
             ManagerUserId = dto.ManagerUserId,
-            WarehouseType = dto.WarehouseType,
+            WarehouseType = (WarehouseType) dto.WarehouseType,
             IsActive = dto.IsActive
         }).ConfigureAwait(false);
 

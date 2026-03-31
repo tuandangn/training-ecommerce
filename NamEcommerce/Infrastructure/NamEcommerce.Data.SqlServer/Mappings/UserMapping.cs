@@ -5,7 +5,6 @@ public sealed class UserMapping : IEntityTypeConfiguration<User>
     public void Configure(EntityTypeBuilder<User> builder)
     {
         builder.ToTable(nameof(User), DbScheme);
-
         builder.HasKey(x => x.Id);
 
         builder.Property(u => u.Username).HasMaxLength(200).IsRequired();

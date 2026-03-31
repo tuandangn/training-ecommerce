@@ -1,6 +1,7 @@
 ﻿using NamEcommerce.Application.Contracts.Dtos.Inventory;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 
 namespace NamEcommerce.Application.Services.Extensions;
 
@@ -24,7 +25,7 @@ public static class WarehouseExtensions
         {
             Code = dto.Code,
             Name = dto.Name,
-            WarehouseType = dto.WarehouseType,
+            WarehouseType = (int) dto.WarehouseType,
             WarehouseNameKey = $"Enums.{typeof(WarehouseType).FullName}.{(WarehouseType)dto.WarehouseType}",
             PhoneNumber = dto.PhoneNumber,
             Address = dto.Address,

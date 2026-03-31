@@ -1,4 +1,5 @@
-﻿using NamEcommerce.Domain.Shared.Exceptions.Inventory;
+﻿using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using System.Text.RegularExpressions;
 
 namespace NamEcommerce.Domain.Shared.Dtos.Inventory;
@@ -9,7 +10,7 @@ public abstract record BaseWarehouseDto
     public required string Code { get; init; }
     public required string Name { get; init; }
 
-    public int WarehouseType { get; set; }
+    public WarehouseType WarehouseType { get; set; }
     public string? PhoneNumber { get; set; }
     public string? Address { get; set; }
     public Guid? ManagerUserId { get; set; }

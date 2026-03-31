@@ -1,0 +1,72 @@
+@model NamEcommerce.Web.Controllers.CreatePurchaseOrderInputModel
+@using NamEcommerce.Web.Contracts.Models.Common
+@{
+    ViewData[ViewConstants.PageTitle] = "Tạo đơn nhập hàng";
+    var vendors = ViewBag.AvailableVendors as EntityOptionListModel;
+    var warehouses = ViewBag.AvailableWarehouses as EntityOptionListModel;
+}
+
+<section class="content-title my-4 text-center">
+    <h1>Tạo đơn nhập hàng mới</h1>
+    <p class="text-muted">Mã đơn sẽ được tự động tạo sau khi lưu.</p>
+</section>
+
+<section class="content-data p-4 mb-5 shadow">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <form asp-action="Create" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nhà cung cấp <span class="text-danger">*</span></label>
+                    <select asp-for="VendorId" class="form-select" id="VendorId">
+                        <option value="">-- Chọn nhà cung cấp --</option>
+                        @if (vendors != null)
+                        {
+                            foreach (var vendor in vendors.Options)
+                            {
+                                <option value="@vendor.Id">@vendor.Name</option>
+                            }
+                        }
+                    </select>
+                    <span asp-validation-for="VendorId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Kho nhập <span class="text-danger">*</span></label>
+                    <select asp-for="WarehouseId" class="form-select" id="WarehouseId">
+                        <option value="">-- Chọn kho --</option>
+                        @if (warehouses != null)
+                        {
+                            foreach (var warehouse in warehouses.Options)
+                            {
+                                <option value="@warehouse.Id">@warehouse.Name</option>
+                            }
+                        }
+                    </select>
+                    <span asp-validation-for="WarehouseId" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ExpectedDeliveryDate" class="form-label fw-bold"></label>
+                    <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" />
+                    <span asp-validation-for="ExpectedDeliveryDate" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Note" class="form-label fw-bold"></label>
+                    <textarea asp-for="Note" class="form-control" rows="3" placeholder="Ghi chú thêm về đơn nhập..."></textarea>
+                </div>
+
+                <div class="text-end">
+                    <a asp-action="List" class="btn btn-secondary me-2">Hủy</a>
+                    <button type="submit" class="btn btn-primary">Tạo đơn nhập</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

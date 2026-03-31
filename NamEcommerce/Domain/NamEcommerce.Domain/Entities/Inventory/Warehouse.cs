@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Helpers;
 
@@ -16,13 +17,12 @@ public sealed record Warehouse : AppAggregateEntity
         Code = code;
         Name = name;
         WarehouseType = warehouseType;
-        IsActive = true;
 
         NormalizedName = TextHelper.Normalize(Name);
         NormalizedAddress = TextHelper.Normalize(Address);
     }
 
-    public string Code { get; internal set; }
+    public string Code { get; private set; }
     public string Name { get; private set; }
     internal string NormalizedName { get; private set; } = "";
 
@@ -43,7 +43,9 @@ public sealed record Warehouse : AppAggregateEntity
     public WarehouseType WarehouseType { get; private set; }
     public bool IsActive { get; private set; }
 
-    internal async Task SetNameAsync(string name, IExistCheckingService checker)
+    #region Methods
+
+    internal async Task SetNameAsync(string name, INameExistCheckingService checker)
     {
         if (string.Equals(Name, name, StringComparison.Ordinal))
             return;
@@ -58,14 +60,24 @@ public sealed record Warehouse : AppAggregateEntity
         NormalizedName = TextHelper.Normalize(name);
     }
 
+    internal async Task SetCodeAsync(string code, ICodeExistCheckingService checker)
+    {
+        if (string.Equals(Name, code, StringComparison.Ordinal))
+            return;
+
+        ArgumentNullException.ThrowIfNull(checker);
+        ArgumentException.ThrowIfNullOrEmpty(code);
+
+        if (await checker.DoesCodeExistAsync(code, Id).ConfigureAwait(false))
+            throw new WarehouseCodeExistsException(code);
+
+        Name = code;
+        NormalizedName = TextHelper.Normalize(code);
+    }
+
     internal void ChangeType(WarehouseType newType) => WarehouseType = newType;
 
     internal void SetActive(bool isActive) => IsActive = isActive;
-}
 
-public enum WarehouseType
-{
-    Main,
-    SubWarehouse,
-    ReturnWarehouse
+    #endregion
 }

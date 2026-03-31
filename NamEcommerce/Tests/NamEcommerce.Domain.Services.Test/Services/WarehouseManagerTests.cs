@@ -2,6 +2,7 @@
 using NamEcommerce.Domain.Services.Inventory;
 using NamEcommerce.Domain.Services.Test.Helpers;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 
@@ -79,7 +80,7 @@ public sealed class WarehouseManagerTests
         {
             Address = dto.Address,
             PhoneNumber = dto.PhoneNumber,
-            ManagerUserId = dto.ManagerUserId,
+            ManagerUserId = dto.ManagerUserId
         };
         var warehouseRepositoryMock = WarehouseRepository.CreateWarehouseWillReturns(returnWarehouse);
         var warehouseDataReaderStub = WarehouseDataReader.Empty();
@@ -284,7 +285,7 @@ public sealed class WarehouseManagerTests
                 Address = updatedWarehouse.Address,
                 IsActive = updatedWarehouse.IsActive,
                 ManagerUserId = updatedWarehouse.ManagerUserId,
-                WarehouseType = (int)updatedWarehouse.WarehouseType
+                WarehouseType = updatedWarehouse.WarehouseType
             });
 
         Assert.Equal(resultWarehouse, resultWarehouse with
@@ -294,7 +295,7 @@ public sealed class WarehouseManagerTests
             Name = updatedWarehouse.Name,
             IsActive = updatedWarehouse.IsActive,
             ManagerUserId = updatedWarehouse.ManagerUserId,
-            WarehouseType = (int)updatedWarehouse.WarehouseType,
+            WarehouseType = updatedWarehouse.WarehouseType,
             Address = updatedWarehouse.Address,
             PhoneNumber = updatedWarehouse.PhoneNumber
         });

@@ -28,6 +28,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("int");
 
@@ -46,6 +49,8 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ParentId");
+
                     b.ToTable("Category", "tbl");
                 });
 
@@ -54,6 +59,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -429,6 +437,99 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.ToTable("OrderItem", "tbl");
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ExpectedDeliveryDateUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<decimal>("ShippingAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TaxAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("VendorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("VendorId");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.ToTable("PurchaseOrder", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrderItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PurchaseOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("QuantityOrdered")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("QuantityReceived")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("PurchaseOrderId");
+
+                    b.ToTable("PurchaseOrderItem", "tbl");
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Security.Permission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -559,6 +660,14 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.ToTable("UserRole", "tbl");
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Catalog.Category", b =>
+                {
+                    b.HasOne("NamEcommerce.Domain.Entities.Catalog.Category", null)
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Catalog.ProductCategory", b =>
                 {
                     b.HasOne("NamEcommerce.Domain.Entities.Catalog.Category", null)
@@ -613,6 +722,46 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrder", b =>
+                {
+                    b.HasOne("NamEcommerce.Domain.Entities.Users.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NamEcommerce.Domain.Entities.Catalog.Vendor", "Vendor")
+                        .WithMany()
+                        .HasForeignKey("VendorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NamEcommerce.Domain.Entities.Inventory.Warehouse", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Vendor");
+
+                    b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrderItem", b =>
+                {
+                    b.HasOne("NamEcommerce.Domain.Entities.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrder", null)
+                        .WithMany("Items")
+                        .HasForeignKey("PurchaseOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Security.RolePermission", b =>
                 {
                     b.HasOne("NamEcommerce.Domain.Entities.Security.Permission", null)
@@ -647,6 +796,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Orders.Order", b =>
                 {
                     b.Navigation("OrderItems");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrder", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

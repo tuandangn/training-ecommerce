@@ -60,10 +60,57 @@ public sealed class InventoryStockManager : IInventoryStockManager
             Math.Abs(quantityChange),
             quantityBefore,
             stock.QuantityOnHand,
-            StockReferenceType.Adjustment,
+            (StockReferenceType)0,
             null,
             note,
             modifiedByUserId
+        );
+
+        await _dbContext.UpdateAsync(stock, CancellationToken.None);
+        await _dbContext.AddAsync(log, CancellationToken.None);
+
+        var product = (await _dbContext.GetDataAsync<Product>()).FirstOrDefault(p => p.Id == productId);
+
+        return new StockMovementLogDto(log.Id)
+        {
+            ProductId = log.ProductId,
+            ProductName = product?.Name ?? "Unknown",
+            MovementType = (int)log.MovementType,
+            Quantity = log.Quantity,
+            QuantityBefore = log.QuantityBefore,
+            QuantityAfter = log.QuantityAfter,
+            CreatedOnUtc = log.CreatedOnUtc,
+            Note = log.Note
+        };
+    }
+
+    public async Task<StockMovementLogDto?> ReceiveStockAsync(Guid productId, Guid warehouseId, decimal receivedQuantity, string? note, Guid receivedByUserId, int referenceType, Guid? referenceId)
+    {
+        if (receivedQuantity <= 0) return null;
+
+        var stockList = await _dbContext.GetDataAsync<InventoryStock>();
+        var stock = stockList.FirstOrDefault(s => s.ProductId == productId && s.WarehouseId == warehouseId);
+
+        if (stock == null)
+            stock = await InitializeStockAsync(productId, warehouseId, Guid.Empty);
+
+        var quantityBefore = stock.QuantityOnHand;
+        var quantityAfter = quantityBefore + receivedQuantity;
+        stock.QuantityOnHand = quantityAfter;
+        stock.UpdatedOnUtc = DateTime.UtcNow;
+
+        var log = new StockMovementLog(
+            Guid.NewGuid(),
+            stock.ProductId,
+            stock.WarehouseId,
+            StockMovementType.Inbound,
+            receivedQuantity,
+            quantityBefore,
+            quantityAfter,
+            (StockReferenceType)referenceType,
+            referenceId,
+            note,
+            receivedByUserId
         );
 
         await _dbContext.UpdateAsync(stock, CancellationToken.None);
@@ -125,13 +172,98 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return (total, items);
     }
 
+    public async Task<bool> ReserveStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null)
+    {
+        if (quantity <= 0) return false;
+
+        var stockList = await _dbContext.GetDataAsync<InventoryStock>();
+        var stock = stockList.FirstOrDefault(s => s.ProductId == productId && s.WarehouseId == warehouseId);
+
+        if (stock == null)
+            stock = await InitializeStockAsync(productId, warehouseId, Guid.Empty);
+
+        // Check availability
+        if (stock.QuantityAvailable < quantity)
+            return false;
+
+        stock.QuantityReserved += quantity;
+        stock.UpdatedOnUtc = DateTime.UtcNow;
+
+        await _dbContext.UpdateAsync(stock, CancellationToken.None);
+        return true;
+    }
+
+    public async Task<bool> ReleaseReservedStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null)
+    {
+        if (quantity <= 0) return false;
+
+        var stockList = await _dbContext.GetDataAsync<InventoryStock>();
+        var stock = stockList.FirstOrDefault(s => s.ProductId == productId && s.WarehouseId == warehouseId);
+
+        if (stock == null) return false;
+
+        stock.QuantityReserved = Math.Max(0, stock.QuantityReserved - quantity);
+        stock.UpdatedOnUtc = DateTime.UtcNow;
+
+        await _dbContext.UpdateAsync(stock, CancellationToken.None);
+        return true;
+    }
+
+    public async Task<StockMovementLogDto?> DispatchStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null)
+    {
+        if (quantity <= 0) return null;
+
+        var stockList = await _dbContext.GetDataAsync<InventoryStock>();
+        var stock = stockList.FirstOrDefault(s => s.ProductId == productId && s.WarehouseId == warehouseId);
+
+        if (stock == null) return null;
+
+        var quantityBefore = stock.QuantityOnHand;
+        
+        // When dispatching, we reduce both Hand and Reserved
+        stock.QuantityOnHand -= quantity;
+        stock.QuantityReserved = Math.Max(0, stock.QuantityReserved - quantity);
+        stock.UpdatedOnUtc = DateTime.UtcNow;
+
+        var log = new StockMovementLog(
+            Guid.NewGuid(),
+            stock.ProductId,
+            stock.WarehouseId,
+            StockMovementType.Outbound,
+            quantity,
+            quantityBefore,
+            stock.QuantityOnHand,
+            StockReferenceType.SalesOrder,
+            referenceId,
+            note,
+            userId
+        );
+
+        await _dbContext.UpdateAsync(stock, CancellationToken.None);
+        await _dbContext.AddAsync(log, CancellationToken.None);
+
+        var product = (await _dbContext.GetDataAsync<Product>()).FirstOrDefault(p => p.Id == productId);
+
+        return new StockMovementLogDto(log.Id)
+        {
+            ProductId = log.ProductId,
+            ProductName = product?.Name ?? "Unknown",
+            MovementType = (int)log.MovementType,
+            Quantity = log.Quantity,
+            QuantityBefore = log.QuantityBefore,
+            QuantityAfter = log.QuantityAfter,
+            CreatedOnUtc = log.CreatedOnUtc,
+            Note = log.Note
+        };
+    }
+
     public async Task<(int Total, List<StockMovementLogDto> Items)> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize)
     {
         var logQuery = _dbContext.GetDataSource<StockMovementLog>();
-        
+
         if (warehouseId.HasValue)
             logQuery = logQuery.Where(x => x.WarehouseId == warehouseId);
-            
+
         if (productId.HasValue)
             logQuery = logQuery.Where(x => x.ProductId == productId);
 
@@ -142,7 +274,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
                     select new { l, p };
 
         var total = query.Count();
-        
+
         var items = query
             .OrderByDescending(x => x.l.CreatedOnUtc)
             .Skip(pageIndex * pageSize)

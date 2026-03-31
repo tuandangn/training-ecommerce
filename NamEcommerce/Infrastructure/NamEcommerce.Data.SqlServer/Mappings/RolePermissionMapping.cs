@@ -5,7 +5,6 @@ public sealed class RolePermissionMapping : IEntityTypeConfiguration<RolePermiss
     public void Configure(EntityTypeBuilder<RolePermission> builder)
     {
         builder.ToTable(nameof(RolePermission), DbScheme);
-
         builder.HasKey(x => x.Id);
 
         builder.HasOne<Role>().WithMany().HasForeignKey(rp => rp.RoleId);
