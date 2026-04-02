@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -64,15 +65,37 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 
         var availableProducts = await _mediator.Send(new GetProductOptionListQuery
         {
-            OnlyTrackInventory = purchaseOrderInfo.WarehouseId.HasValue
+            OnlyTrackInventory = false
         }).ConfigureAwait(false);
         var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var availableVendors = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
 
         var model = new PurchaseOrderDetailsModel
         {
             Info = purchaseOrderInfo,
             AvailableWarehouses = availableWarehouses
         };
+        model.CanModifyInfo = purchaseOrderInfo.Status != (int) PurchaseOrderStatus.Submitted
+            && purchaseOrderInfo.Status != (int) PurchaseOrderStatus.Completed 
+            && purchaseOrderInfo.Status != (int) PurchaseOrderStatus.Cancelled;
+        if (model.CanModifyInfo)
+        {
+            model.ModifyInfo = new EditPurchaseOrderModel
+            {
+                Id = purchaseOrderInfo.Id,
+                VendorId = purchaseOrderInfo.VendorId,
+                VendorName = purchaseOrderInfo.VendorName,
+                Note = purchaseOrderInfo.Note,
+                AvailableVendors = availableVendors,
+                ExpectedDeliveryDate = purchaseOrderInfo.ExpectedDeliveryDate,
+                ShippingAmount = purchaseOrderInfo.ShippingAmount,
+                TaxAmount = purchaseOrderInfo.TaxAmount,
+                CanChangeVendor = purchaseOrderInfo.Status == (int) PurchaseOrderStatus.Draft,
+                CanChangeDate = purchaseOrderInfo.Status == (int) PurchaseOrderStatus.Draft,
+                TotalAmount = purchaseOrderInfo.TotalAmount,
+                CreatedOn = purchaseOrderInfo.CreatedOn
+            };
+        }
         if (model.Info.CanAddItems)
         {
             model.AddItemModel = new AddPurchaseOrderItemModel
@@ -93,7 +116,8 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                     PurchaseOrderItemId = item.Id,
                     PurchaseOrderId = purchaseOrderInfo.Id,
                     RemainingQuantity = item.RemainingQuantity,
-                    WarehouseRequired = item.TrackInventory && !purchaseOrderInfo.WarehouseId.HasValue
+                    WarehouseRequired = item.TrackInventory,
+                    WarehouseId = purchaseOrderInfo.WarehouseId,
                 });
             }
         }

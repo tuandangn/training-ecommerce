@@ -2,10 +2,7 @@ namespace NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 
 [Serializable]
 public abstract record BasePurchaseOrderAppDto
-{
-    public Guid? WarehouseId { get; set; }
-    public Guid? VendorId { get; set; }
-    public Guid? CreatedByUserId { get; set; }
+{    public Guid? VendorId { get; set; }
 
     public decimal TaxAmount { get; set; }
     public decimal ShippingAmount { get; set; }
@@ -22,7 +19,6 @@ public abstract record BasePurchaseOrderAppDto
         if (ShippingAmount < 0)
             return (false, "Shipping amount must be greater than or equal to 0");
 
-
         return (true, string.Empty);
     }
 }
@@ -30,11 +26,15 @@ public abstract record BasePurchaseOrderAppDto
 [Serializable]
 public sealed record PurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto
 {
+    public Guid? WarehouseId { get; set; }
+
     public required string Code { get; set; }
     public decimal TotalAmount { get; set; }
     public int Status { get; set; }
     public IList<PurchaseOrderItemAppDto> Items { get; } = [];
     public DateTime CreatedOnUtc { get; set; }
+
+    public Guid? CreatedByUserId { get; set; }
 
     public bool CanAddItems { get; set; }
     public bool CanReceiveGoods { get; set; }
@@ -56,11 +56,25 @@ public sealed record PurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto
 }
 
 [Serializable]
-public sealed record CreatePurchaseOrderAppDto : BasePurchaseOrderAppDto;
+public sealed record CreatePurchaseOrderAppDto : BasePurchaseOrderAppDto
+{
+    public Guid? WarehouseId { get; set; }
+    public Guid? CreatedByUserId { get; set; }
+}
 [Serializable]
 public sealed record CreatePurchaseOrderResultAppDto
 {
     public required bool Success { get; init; }
     public Guid? CreatedId { get; set; }
+    public string? ErrorMessage { get; set; }
+}
+
+[Serializable]
+public sealed record UpdatePurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto;
+[Serializable]
+public sealed record UpdatePurchaseOrderResultAppDto
+{
+    public required bool Success { get; init; }
+    public Guid? UpdatedId { get; set; }
     public string? ErrorMessage { get; set; }
 }

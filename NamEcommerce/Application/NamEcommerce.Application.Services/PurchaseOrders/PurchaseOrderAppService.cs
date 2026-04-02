@@ -131,6 +131,61 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         };
     }
 
+    public async Task<UpdatePurchaseOrderResultAppDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+        {
+            return new UpdatePurchaseOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = errorMessage
+            };
+        }
+
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(dto.Id).ConfigureAwait(false);
+        if (purchaseOrder is null)
+        {
+            return new UpdatePurchaseOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = $"Purchase order with ID {dto.Id} does not exist."
+            };
+        }
+
+        if (dto.VendorId.HasValue)
+        {
+            var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
+            if (vendor is null)
+            {
+                return new UpdatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = $"Vendor with ID {dto.VendorId.Value} does not exist."
+                };
+            }
+        }
+
+        var updatePurchaseOrderDto = new UpdatePurchaseOrderDto(dto.Id)
+        {
+            VendorId = dto.VendorId,
+            ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
+            Note = dto.Note,
+            ShippingAmount = dto.ShippingAmount,
+            TaxAmount = dto.TaxAmount
+        };
+
+        var result = await _purchaseOrderManager.UpdatePurchaseOrderAsync(updatePurchaseOrderDto).ConfigureAwait(false);
+
+        return new UpdatePurchaseOrderResultAppDto
+        {
+            Success = true,
+            UpdatedId = result.Id
+        };
+    }
+
     public async Task<AddPurchaseOrderItemResultAppDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);

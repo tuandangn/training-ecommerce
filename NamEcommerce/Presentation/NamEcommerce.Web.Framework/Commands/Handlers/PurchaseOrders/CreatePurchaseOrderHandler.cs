@@ -3,6 +3,7 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.PurchaseOrders;
 
@@ -22,7 +23,7 @@ public sealed class CreatePurchaseOrderHandler : IRequestHandler<CreatePurchaseO
             VendorId = request.VendorId,
             WarehouseId = request.WarehouseId,
             Note = request.Note,
-            ExpectedDeliveryDateUtc = request.ExpectedDeliveryDate?.ToUniversalTime(),
+            ExpectedDeliveryDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedDeliveryDate),
             CreatedByUserId = request.CreatedByUserId,
             ShippingAmount = request.ShippingAmount,
             TaxAmount = request.TaxAmount

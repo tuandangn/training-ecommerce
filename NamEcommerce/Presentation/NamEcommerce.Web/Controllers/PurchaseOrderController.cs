@@ -67,6 +67,41 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
+    [HttpPost]
+    public async Task<IActionResult> Edit(EditPurchaseOrderModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Dữ liệu không hợp lệ";
+            return RedirectToAction(nameof(Details), new { id = model.Id });
+        }
+
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.Id });
+        if (purchaseOrder is null)
+        {
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            return RedirectToAction(nameof(List));
+        }
+
+        var updatePurchaseOrderResult = await _mediator.Send(new UpdatePurchaseOrderCommand
+        {
+            Id = purchaseOrder.Id,
+            ShippingAmount = model.ShippingAmount,
+            TaxAmount = model.TaxAmount,
+            VendorId = model.VendorId,
+            ExpectedDeliveryDate = model.ExpectedDeliveryDate,
+            Note = model.Note
+        });
+
+        if (!updatePurchaseOrderResult.Success)
+        {
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = updatePurchaseOrderResult.ErrorMessage;
+            return RedirectToAction(nameof(Details), new { id = model.Id });
+        }
+        TempData[ViewConstants.PurchaseOrderSuccessMessage] = "Chỉnh sửa đơn nhập hàng thành công!";
+        return RedirectToAction(nameof(Details), new { id = model.Id });
+    }
+
     public async Task<IActionResult> Details(Guid id)
     {
         var model = await _purchaseOrderModelFactory.PreparePurchaseOrderDetailsModel(id);

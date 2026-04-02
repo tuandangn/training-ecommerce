@@ -12,6 +12,8 @@ public sealed class PurchaseOrderModel
     public int Status { get; set; }
     public string? Note { get; set; }
     public DateTime? ExpectedDeliveryDate { get; set; }
+    public decimal ShippingAmount { get; set; }
+    public decimal TaxAmount { get; set; }
     public decimal TotalAmount { get; set; }
     public DateTime CreatedOn { get; set; }
     public IList<ItemModel> Items { get; set; } = [];

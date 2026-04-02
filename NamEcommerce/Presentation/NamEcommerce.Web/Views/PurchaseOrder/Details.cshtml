@@ -47,7 +47,17 @@
             @errorMsg <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
-    <partial name="Details.Info" model="Model.Info" view-data="ViewData" />
+    <section>
+        @if (Model.CanModifyInfo)
+        {
+            <partial name="Details.InfoModify" model="Model.ModifyInfo" />
+        }
+        else
+        {
+            <partial name="Details.Info" model="Model.Info" />
+        }
+        <partial name="Details.Items" model="Model.Info" view-data="ViewData" />
+    </section>
 </section>
 @if (Model.Info.CanAddItems)
 {

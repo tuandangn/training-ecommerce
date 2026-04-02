@@ -12,6 +12,7 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task<PurchaseOrderDto?> GetPurchaseOrderByIdAsync(Guid id);
 
     Task<CreatePurchaseOrderResultDto> CreatePurchaseOrderAsync(CreatePurchaseOrderDto dto);
+    Task<UpdatePurchaseOrderResultDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderDto dto);
 
     Task ChangeStatusAsync(Guid purchaseOrderId, PurchaseOrderStatus status);
 

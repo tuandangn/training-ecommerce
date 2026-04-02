@@ -12,6 +12,7 @@ public interface IPurchaseOrderAppService
     Task<PurchaseOrderAppDto?> GetPurchaseOrderByIdAsync(Guid id);
 
     Task<CreatePurchaseOrderResultAppDto> CreatePurchaseOrderAsync(CreatePurchaseOrderAppDto dto);
+    Task<UpdatePurchaseOrderResultAppDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderAppDto dto);
 
     Task<(bool success, string? errorMessage)> SubmitsPurchaseOrderAsync(Guid id);
     Task<(bool success, string? errorMessage)> ChangeStatusAsync(Guid purchaseOrderId, int newStatus);

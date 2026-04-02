@@ -36,9 +36,11 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             WarehouseId = purchaseOrder.WarehouseId,
             Status = purchaseOrder.Status,
             Note = purchaseOrder.Note,
-            ExpectedDeliveryDate = purchaseOrder.ExpectedDeliveryDateUtc,
+            ExpectedDeliveryDate = purchaseOrder.ExpectedDeliveryDateUtc?.ToLocalTime(),
+            ShippingAmount = purchaseOrder.ShippingAmount,
+            TaxAmount = purchaseOrder.TaxAmount,
             TotalAmount = purchaseOrder.TotalAmount,
-            CreatedOn = purchaseOrder.CreatedOnUtc.ToLocalTime(),
+            CreatedOn =  purchaseOrder.CreatedOnUtc.ToLocalTime(),
             CanAddItems = purchaseOrder.CanAddItems,
             CanReceiveGoods = purchaseOrder.CanReceiveGoods
         };

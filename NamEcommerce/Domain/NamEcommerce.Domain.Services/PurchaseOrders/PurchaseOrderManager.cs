@@ -91,6 +91,43 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         };
     }
 
+    public async Task<UpdatePurchaseOrderResultDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        dto.Verify();
+
+        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            throw new PurchaseOrderIsNotFoundException(dto.Id);
+
+        if (dto.VendorId.HasValue)
+        {
+            var vendor = await _vendorOrderDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
+            if (vendor is null)
+                throw new VendorIsNotFoundException(dto.VendorId.Value);
+        }
+
+        purchaseOrder.Note = dto.Note;
+        purchaseOrder.ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc;
+        purchaseOrder.ShippingAmount = dto.ShippingAmount;
+        purchaseOrder.TaxAmount = dto.TaxAmount;
+        await purchaseOrder.ChangeVendorAsync(dto.VendorId, _vendorOrderDataReader).ConfigureAwait(false);
+
+        var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(updatedPurchaseOrder).ConfigureAwait(false);
+
+        return new UpdatePurchaseOrderResultDto(updatedPurchaseOrder.Id)
+        {
+            VendorId = updatedPurchaseOrder.VendorId,
+            TaxAmount = updatedPurchaseOrder.TaxAmount,
+            ShippingAmount = updatedPurchaseOrder.ShippingAmount,
+            Note = updatedPurchaseOrder.Note,
+            ExpectedDeliveryDateUtc = updatedPurchaseOrder.ExpectedDeliveryDateUtc
+        };
+    }
+
     public async Task<AddPurchaseOrderItemResultDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);

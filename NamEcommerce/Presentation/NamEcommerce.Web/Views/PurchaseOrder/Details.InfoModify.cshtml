@@ -1,0 +1,97 @@
+﻿@model EditPurchaseOrderModel
+<form asp-action="Edit">
+    <input type="hidden" asp-for="Id" id="modifyInfoId" />
+    <div class="row mb-3">
+        <div class="col-md-6 mb-lg-3">
+            <table class="table table-borderless mb-0">
+                <tbody>
+                    <tr>
+                        <td class="fw-bold align-middle">
+                            <label class="form-label" asp-for="VendorId"></label>
+                        </td>
+                        <td>
+                            @if (Model.CanChangeVendor)
+                            {
+                                <select asp-for="VendorId" class="form-select">
+                                    @foreach (var vendor in Model.AvailableVendors)
+                                    {
+                                        <option value="@vendor.Id" selected="@(Model.VendorId == vendor.Id)">@vendor.Name</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="VendorId" class="text-danger small"></span>
+                            }
+                            else
+                            {
+                                <input type="hidden" asp-for="VendorId" />
+                                @(Model.VendorName ?? "-")
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold align-middle">
+                            <label asp-for="ExpectedDeliveryDate" class="form-label"></label>
+                        </td>
+                        <td>
+                            @if (Model.CanChangeDate)
+                            {
+                                <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" />
+                                <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
+                            }
+                            else
+                            {
+                                <input type="hidden" asp-for="ExpectedDeliveryDate" />
+                                @(Model.ExpectedDeliveryDate?.ToString("d") ?? "-")
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold border-bottom-0 pt-1">
+                            <label asp-for="Note" class="form-label"></label>
+                        </td>
+                        <td class="border-bottom-0">
+                            <textarea asp-for="Note" class="form-control" rows="2" placeholder="@Html.DisplayNameFor(m => m.Note)"></textarea>
+                            <span asp-validation-for="Note" class="text-danger small"></span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-6 text-lg-end order-0 order-lg-1 pt-2 ps-lg-5">
+            <div class="row mb-3">
+                <div class="col-6 col-md-6">
+                    <div class="form-floating">
+                        <input asp-for="ShippingAmount" class="form-control form-control-sm" placeholder="@Html.DisplayNameFor(m => m.ShippingAmount)"
+                               min="0" type="number" value="@Model.ShippingAmount"
+                               data-val-range="Phí vận chuyển phải lớn hơn hoặc bằng 0." data-val-range-min="0"
+                               data-val-number="Phí vận chuyển không đúng." />
+                        <label asp-for="ShippingAmount" class="form-label fw-bold"></label>
+                    </div>
+                    <span asp-validation-for="ShippingAmount" class="text-danger small"></span>
+                </div>
+                <div class="col-6 col-md-6">
+                    <div class="form-floating">
+                        <input asp-for="TaxAmount" class="form-control form-control-sm" placeholder="@Html.DisplayNameFor(m => m.ShippingAmount)"
+                               min="0" type="number" value="@Model.TaxAmount"
+                               data-val-range="Tổng thuế phải lớn hơn hoặc bằng 0." data-val-range-min="0"
+                               data-val-number="Tổng thuế không đúng." />
+                        <label asp-for="TaxAmount" class="form-label fw-bold"></label>
+                    </div>
+                    <span asp-validation-for="TaxAmount" class="text-danger small"></span>
+                </div>
+            </div>
+            <p class="fs-5 fw-bold">
+                Tổng đơn: <span class="text-primary">@Model.TotalAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
+            </p>
+            <p class="text-muted">
+                Ngày tạo: @Model.CreatedOn.ToString("g")
+            </p>
+
+            <div>
+                <button type="submit" class="btn btn-outline-warning btn-sm text-dark">
+                    <i class="bi bi-pencil-square"></i>
+                    Cập nhật
+                </button>
+            </div>
+        </div>
+    </div>
+</form>

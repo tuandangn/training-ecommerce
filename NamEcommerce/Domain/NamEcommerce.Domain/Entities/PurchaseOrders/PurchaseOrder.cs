@@ -1,6 +1,5 @@
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
-using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
@@ -49,7 +48,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
     #region Methods
 
-    internal async Task ChangeVendor(Guid? vendorId, IGetByIdService<Vendor> byIdGetter)
+    internal async Task ChangeVendorAsync(Guid? vendorId, IGetByIdService<Vendor> byIdGetter)
     {
         if (VendorId == vendorId)
             return;
@@ -134,7 +133,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
         if (!CanChangeStatus())
             return false;
 
-        if (Items.All(item => item.QuantityReceived >= item.QuantityOrdered))
+        if (Items.Any() && Items.All(item => item.QuantityReceived >= item.QuantityOrdered))
         {
             ChangeStatus(PurchaseOrderStatus.Completed);
             return true;
