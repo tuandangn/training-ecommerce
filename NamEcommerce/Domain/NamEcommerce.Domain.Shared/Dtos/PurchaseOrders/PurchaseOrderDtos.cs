@@ -15,6 +15,8 @@ public abstract record BasePurchaseOrderDto
 
     public virtual void Verify()
     {
+        if (!VendorId.HasValue)
+            throw new PurchaseOrderDataIsInvalidException("Vendor is not empty");
         if (ExpectedDeliveryDateUtc.HasValue && ExpectedDeliveryDateUtc.Value < DateTime.UtcNow)
             throw new PurchaseOrderDataIsInvalidException("Expected delivery date must be in the future");
         if (TaxAmount < 0)
