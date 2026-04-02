@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -21,14 +20,19 @@ public sealed class ProductModelFactory : IProductModelFactory
     public async Task<CreateProductModel> PrepareCreateProductModel(CreateProductModel? oldModel = null)
     {
         var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
+        var unitMeasurementOptions = await _mediator.Send(new GetUnitMeasurementOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new CreateProductModel
         {
             TrackInventory = true,
             DisplayOrder = 1,
-            AvailableCategories = categoryOptions
+            AvailableCategories = categoryOptions,
+            AvailableUnitMeasurements = unitMeasurementOptions
         };
         if (oldModel is not null)
+        {
             model.AvailableCategories = categoryOptions;
+            model.AvailableUnitMeasurements = unitMeasurementOptions;
+        }
 
         return model;
     }
@@ -40,19 +44,25 @@ public sealed class ProductModelFactory : IProductModelFactory
             return null;
 
         var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
+        var unitMeasurementOptions = await _mediator.Send(new GetUnitMeasurementOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new EditProductModel
         {
             Id = product!.Id,
             Name = product!.Name,
             ShortDesc = product.ShortDesc,
-            AvailableCategories = categoryOptions,
             CategoryId = product.CategoryId,
+            AvailableCategories = categoryOptions,
+            UnitMeasurementId = product.UnitMeasurementId,
+            AvailableUnitMeasurements = unitMeasurementOptions,
             TrackInventory = product.TrackInventory,
             DisplayOrder = product.DisplayOrder,
             ImageFile = product.ImageFile ?? new(),
         };
         if (oldModel is not null)
+        {
             model.AvailableCategories = categoryOptions;
+            model.AvailableUnitMeasurements = unitMeasurementOptions;
+        }
 
         return model;
     }

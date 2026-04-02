@@ -66,6 +66,7 @@ public sealed class ProductController : BaseAuthorizedController
             Name = model.Name!,
             ShortDesc = model.ShortDesc,
             CategoryId = model.CategoryId,
+            UnitMeasurementId = model.UnitMeasurementId,
             DisplayOrder = model.DisplayOrder,
             ImageFile = imageFileInfo,
             TrackInventory = model.TrackInventory
@@ -129,6 +130,7 @@ public sealed class ProductController : BaseAuthorizedController
             Name = model.Name,
             ShortDesc = model.ShortDesc,
             CategoryId = model.CategoryId,
+            UnitMeasurementId = model.UnitMeasurementId,
             DisplayOrder = model.DisplayOrder,
             ImageFile = imageFileInfo,
             TrackInventory = model.TrackInventory

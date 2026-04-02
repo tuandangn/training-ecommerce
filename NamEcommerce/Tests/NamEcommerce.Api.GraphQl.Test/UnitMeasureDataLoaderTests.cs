@@ -1,7 +1,8 @@
 ﻿using MediatR;
 using NamEcommerce.Api.GraphQl.DataLoaders;
+using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Catalog;
-using NamEcommerce.Application.Contracts.Queries.Catalog;
+using NamEcommerce.Application.Contracts.Dtos.Common;
 
 namespace NamEcommerce.Api.GraphQl.Test;
 
@@ -17,16 +18,15 @@ public sealed class UnitMeasureDataLoaderTests
                 Name = "UnitMeasurement 1"
             }
         };
-        var query = new GetAllUnitMeasurements();
-        var mediatorMock = new Mock<IMediator>();
-        mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(unitMeasurements);
-        var unitMeasurementDataLoader = new UnitMeasurementDataLoader(mediatorMock.Object);
+        var unitMeasurementAppServiceMock = new Mock<IUnitMeasurementAppService>();
+        unitMeasurementAppServiceMock.Setup(service => service.GetUnitMeasurementsAsync()).ReturnsAsync(PagedDataAppDto.Create(unitMeasurements));
+        var unitMeasurementDataLoader = new UnitMeasurementDataLoader(unitMeasurementAppServiceMock.Object);
 
         var result = await unitMeasurementDataLoader.GetAllUnitMeasurementsAsync(default);
 
         Assert.Equal(unitMeasurements.Length, result.Count());
         Assert.Equal(unitMeasurements, result);
-        mediatorMock.Verify();
+        unitMeasurementAppServiceMock.Verify();
     }
 
     #endregion
@@ -40,15 +40,14 @@ public sealed class UnitMeasureDataLoaderTests
         {
             Name = "UnitMeasurement 1"
         };
-        var query = new GetUnitMeasurementById(unitMeasurement.Id);
-        var mediatorMock = new Mock<IMediator>();
-        mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(unitMeasurement);
-        var unitMeasurementDataLoader = new UnitMeasurementDataLoader(mediatorMock.Object);
+        var unitMeasurementAppServiceMock = new Mock<IUnitMeasurementAppService>();
+        unitMeasurementAppServiceMock.Setup(service => service.GetUnitMeasurementByIdAsync(unitMeasurement.Id)).ReturnsAsync(unitMeasurement);
+        var unitMeasurementDataLoader = new UnitMeasurementDataLoader(unitMeasurementAppServiceMock.Object);
 
         var result = await unitMeasurementDataLoader.GetUnitMeasurementByIdAsync(default, unitMeasurement.Id);
 
         Assert.Equal(unitMeasurement, result);
-        mediatorMock.Verify();
+        unitMeasurementAppServiceMock.Verify();
     }
 
     #endregion
@@ -69,17 +68,15 @@ public sealed class UnitMeasureDataLoaderTests
                 Name = "UnitMeasurement 2"
             }
         };
-        var query = new GetUnitMeasurementsByIds(ids);
-        var mediatorMock = new Mock<IMediator>();
-        mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(unitMeasurements);
-        var unitMeasurementDataLoader = new UnitMeasurementDataLoader(mediatorMock.Object);
-
+        var unitMeasurementAppServiceMock = new Mock<IUnitMeasurementAppService>();
+        unitMeasurementAppServiceMock.Setup(service => service.GetUnitMeasurementsByIdsAsync(ids)).ReturnsAsync(unitMeasurements);
+        var unitMeasurementDataLoader = new UnitMeasurementDataLoader(unitMeasurementAppServiceMock.Object);
         var result = await unitMeasurementDataLoader.GetUnitMeasurementsByIdsAsync(ids, default);
 
         Assert.Equal(2, result.Count);
         Assert.Equal(unitMeasurements[0], result[unitMeasurements[0].Id]);
         Assert.Equal(unitMeasurements[1], result[unitMeasurements[1].Id]);
-        mediatorMock.Verify();
+        unitMeasurementAppServiceMock.Verify();
     }
 
     #endregion

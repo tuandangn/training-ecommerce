@@ -19,6 +19,11 @@ public sealed class CreateProductModel
     [ValidateNever]
     public required EntityOptionListModel AvailableCategories { get; set; }
 
+    [Display(Name = "Đơn vị tính")]
+    public Guid? UnitMeasurementId { get; set; }
+    [ValidateNever]
+    public required EntityOptionListModel AvailableUnitMeasurements { get; set; }
+
     [Display(Name = "Quản lý kho hàng")]
     public bool TrackInventory { get; set; }
 

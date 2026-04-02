@@ -106,7 +106,11 @@ public sealed class WarehouseManager : IWarehouseManager
         if (!string.IsNullOrEmpty(keywords))
         {
             var normizedKeywords = TextHelper.Normalize(keywords);
-            query = query.Where(c => c.NormalizedName.Contains(normizedKeywords) || c.Code.Contains(keywords));
+            query = query.Where(c => 
+                c.Name.Contains(keywords)
+                || c.Name.Contains(normizedKeywords)
+                || c.NormalizedName.Contains(normizedKeywords) 
+                || c.Code.Contains(keywords));
         }
 
         query = query.OrderBy(c => c.Name);

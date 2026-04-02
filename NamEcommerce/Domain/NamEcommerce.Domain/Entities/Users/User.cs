@@ -1,4 +1,7 @@
 ﻿using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Exceptions.Users;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Security;
 
@@ -7,25 +10,35 @@ namespace NamEcommerce.Domain.Entities.Users;
 [Serializable]
 public sealed record User : AppAggregateEntity
 {
+    #region Ctors
+
     internal User(string username, string fullName, string phoneNumber)
         : this(Guid.NewGuid(), username, fullName, phoneNumber)
     {
     }
 
     internal User(Guid id, string username, string fullName, string phoneNumber)
+        : this(id, username, fullName, phoneNumber, string.Empty, string.Empty, null)
+    {
+    }
+
+    private User(Guid id, string username, string fullName, string phoneNumber, string passwordHash, string passwordSalt, string? address)
         : base(id)
     {
-        (Username, FullName, PhoneNumber)
-                = (username, fullName, phoneNumber);
+        (Username, FullName, PhoneNumber) = (username, fullName, phoneNumber);
+        (PasswordHash, PasswordSalt, Address) = (passwordHash, passwordSalt, address);
 
-        NormalizedFullName = TextHelper.Normalize(FullName);
         CreatedOnUtc = DateTime.UtcNow;
     }
 
+    #endregion
+
+    #region Properties
+
     public string Username { get; init; }
 
-    public string? PasswordHash { get; private set; }
-    public string? PasswordSalt { get; private set; }
+    public string PasswordHash { get; private set; }
+    public string PasswordSalt { get; private set; }
 
     public string FullName
     {
@@ -53,6 +66,8 @@ public sealed record User : AppAggregateEntity
 
     public DateTime CreatedOnUtc { get; }
 
+    #endregion
+
     #region Methods
 
     internal async Task SetPasswordAsync(string password, ISecurityService securityService)
@@ -64,6 +79,36 @@ public sealed record User : AppAggregateEntity
         PasswordHash = passwordHash;
         PasswordSalt = passwordSalt;
     }
+
+    static internal async Task<User> CreateAsync(
+        string username, string fullName, string phoneNumber, string password, string? address,
+        IUsernameExistCheckingService usernameChecker, ISecurityService securityService)
+    {
+        if (string.IsNullOrEmpty(username))
+            throw new UserDataIsInvalidException("Tên tài khoản không được để trống");
+        if (string.IsNullOrEmpty(fullName))
+            throw new UserDataIsInvalidException("Họ tên không được để trống");
+        if (string.IsNullOrEmpty(phoneNumber))
+            throw new UserDataIsInvalidException("Số điện thoại không được để trống");
+        if (string.IsNullOrEmpty(password))
+            throw new UserDataIsInvalidException("Mật khẩu không được để trống");
+
+        if (await usernameChecker.DoesUsernameExistAsync(username).ConfigureAwait(false))
+            throw new UsernameExistsException(username);
+
+        ArgumentNullException.ThrowIfNull(securityService);
+        var (passwordHash, passwordSalt) = await securityService.HashPasswordAsync(password).ConfigureAwait(false);
+
+        var user = new User(default, username, fullName, phoneNumber, passwordHash, passwordSalt, address);
+
+        return user;
+    }
+
+    #endregion
+
+    #region Factory
+
+
 
     #endregion
 }

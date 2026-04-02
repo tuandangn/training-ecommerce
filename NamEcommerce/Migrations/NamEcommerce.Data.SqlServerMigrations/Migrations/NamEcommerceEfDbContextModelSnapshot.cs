@@ -49,8 +49,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ParentId");
-
                     b.ToTable("Category", "tbl");
                 });
 
@@ -85,6 +83,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<bool>("TrackInventory")
                         .HasColumnType("bit");
+
+                    b.Property<Guid?>("UnitMeasurementId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("UpdatedOnUtc")
                         .HasColumnType("datetime2");
@@ -228,7 +229,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<decimal>("ReorderLevel")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("UnitMeasurementId")
+                    b.Property<Guid?>("UnitMeasurementId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("UpdatedOnUtc")
@@ -255,7 +256,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("CreatedByUserId")
+                    b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedOnUtc")
@@ -448,7 +449,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<Guid>("CreatedByUserId")
+                    b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedOnUtc")
@@ -483,12 +484,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("VendorId");
-
-                    b.HasIndex("WarehouseId");
 
                     b.ToTable("PurchaseOrder", "tbl");
                 });
@@ -660,14 +655,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.ToTable("UserRole", "tbl");
                 });
 
-            modelBuilder.Entity("NamEcommerce.Domain.Entities.Catalog.Category", b =>
-                {
-                    b.HasOne("NamEcommerce.Domain.Entities.Catalog.Category", null)
-                        .WithMany()
-                        .HasForeignKey("ParentId")
-                        .OnDelete(DeleteBehavior.Restrict);
-                });
-
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Catalog.ProductCategory", b =>
                 {
                     b.HasOne("NamEcommerce.Domain.Entities.Catalog.Category", null)
@@ -720,31 +707,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrder", b =>
-                {
-                    b.HasOne("NamEcommerce.Domain.Entities.Users.User", "CreatedByUser")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("NamEcommerce.Domain.Entities.Catalog.Vendor", "Vendor")
-                        .WithMany()
-                        .HasForeignKey("VendorId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("NamEcommerce.Domain.Entities.Inventory.Warehouse", "Warehouse")
-                        .WithMany()
-                        .HasForeignKey("WarehouseId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("CreatedByUser");
-
-                    b.Navigation("Vendor");
-
-                    b.Navigation("Warehouse");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.PurchaseOrders.PurchaseOrderItem", b =>

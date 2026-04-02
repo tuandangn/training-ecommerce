@@ -14,13 +14,16 @@ public sealed class ProductAppService : IProductAppService
 {
     private readonly IProductManager _productManager;
     private readonly IEntityDataReader<Product> _productDataReader;
+    private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
     private readonly IPictureManager _pictureManager;
 
-    public ProductAppService(IProductManager productManager, IEntityDataReader<Product> productDataReader, IPictureManager pictureManager)
+    public ProductAppService(IProductManager productManager, IEntityDataReader<Product> productDataReader,
+        IPictureManager pictureManager, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader)
     {
         _productManager = productManager;
         _productDataReader = productDataReader;
         _pictureManager = pictureManager;
+        _unitMeasurementDataReader = unitMeasurementDataReader;
     }
 
     public async Task<CreateProductResultAppDto> CreateProductAsync(CreateProductAppDto dto)
@@ -42,8 +45,21 @@ public sealed class ProductAppService : IProductAppService
             return new CreateProductResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Name already exists."
+                ErrorMessage = "Tên hàng hóa trùng lặp."
             };
+        }
+
+        if (dto.UnitMeasurementId.HasValue)
+        {
+            var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.UnitMeasurementId.Value).ConfigureAwait(false);
+            if (unitMeasurement is null)
+            {
+                return new CreateProductResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Không tìm thấy đơn vị tính."
+                };
+            }
         }
 
         Guid? pictureId = null;
@@ -64,6 +80,7 @@ public sealed class ProductAppService : IProductAppService
         {
             Name = dto.Name,
             ShortDesc = dto.ShortDesc,
+            UnitMeasurementId = dto.UnitMeasurementId,
             Categories = dto.Categories.Select(item => new ProductCategoryDto(item.CategoryId, item.DisplayOrder)),
             Pictures = pictureId.HasValue ? [pictureId.Value] : [],
             TrackInventory = dto.TrackInventory
@@ -88,7 +105,7 @@ public sealed class ProductAppService : IProductAppService
             return new DeleteProductResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Product is not found."
+                ErrorMessage = "Không tìm thấy hàng hóa."
             };
         }
 
@@ -103,9 +120,11 @@ public sealed class ProductAppService : IProductAppService
         return product?.ToDto();
     }
 
-    public async Task<IPagedDataAppDto<ProductAppDto>> GetProductsAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue)
+    public async Task<IPagedDataAppDto<ProductAppDto>> GetProductsAsync(
+        string? keywords = null, bool onlyTrackInventory = false,
+        int pageIndex = 0, int pageSize = int.MaxValue)
     {
-        var pagedData = await _productManager.GetProductsAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
+        var pagedData = await _productManager.GetProductsAsync(pageIndex, pageSize, keywords, onlyTrackInventory).ConfigureAwait(false);
         var result = PagedDataAppDto.Create(
             pagedData.Select(product => product.ToDto()),
             pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
@@ -142,8 +161,21 @@ public sealed class ProductAppService : IProductAppService
             return new UpdateProductResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Tên hàng hóa trùng lặp"
+                ErrorMessage = "Tên hàng hóa trùng lặp."
             };
+        }
+
+        if (dto.UnitMeasurementId.HasValue)
+        {
+            var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(dto.UnitMeasurementId.Value).ConfigureAwait(false);
+            if (unitMeasurement is null)
+            {
+                return new UpdateProductResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Không tìm thấy đơn vị tính."
+                };
+            }
         }
 
         Guid? pictureId = null;
@@ -164,6 +196,7 @@ public sealed class ProductAppService : IProductAppService
         {
             Name = dto.Name,
             ShortDesc = dto.ShortDesc,
+            UnitMeasurementId = dto.UnitMeasurementId,
             Categories = dto.Categories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
             Pictures = pictureId.HasValue ? [pictureId.Value] : [],
             TrackInventory = dto.TrackInventory

@@ -1,62 +1,55 @@
 using NamEcommerce.Application.Contracts.Dtos.Common;
-using NamEcommerce.Domain.Entities.PurchaseOrders;
-using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
-using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
-using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
-using System.Data;
-using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
-using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
+using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Users;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Services.Catalog;
+using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
+using System.Net.NetworkInformation;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
 
 public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 {
     private readonly IPurchaseOrderManager _purchaseOrderManager;
-    private readonly IEntityDataReader<PurchaseOrder> _purchaseOrderDataReader;
     private readonly IEntityDataReader<Vendor> _vendorDataReader;
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
     private readonly IEntityDataReader<User> _userDataReader;
     private readonly IEntityDataReader<Product> _productDataReader;
+    private readonly IVendorManager _vendorManager;
+    private readonly IWarehouseManager _warehouseManager;
 
-    public PurchaseOrderAppService(IPurchaseOrderManager poManager, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
+    public PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
         IEntityDataReader<Vendor> vendorDataReader, IEntityDataReader<Warehouse> warehouseDataReader,
-        IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader)
+        IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader, IVendorManager vendorManager,
+        IWarehouseManager warehouseManager)
     {
-        _purchaseOrderManager = poManager;
-        _purchaseOrderDataReader = purchaseOrderDataReader;
+        _purchaseOrderManager = purchaseOrderManager;
         _vendorDataReader = vendorDataReader;
         _warehouseDataReader = warehouseDataReader;
         _userDataReader = userDataReader;
         _productDataReader = productDataReader;
+        _vendorManager = vendorManager;
+        _warehouseManager = warehouseManager;
     }
 
     public async Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(string? keywords, int pageIndex, int pageSize)
     {
-        var query = _purchaseOrderDataReader.DataSource;
+        var pagedData = await _purchaseOrderManager.GetPurchaseOrdersAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);
 
-        if (!string.IsNullOrEmpty(keywords))
-            query = query.Where(purchaseOrder => purchaseOrder.Code.Contains(keywords));
-
-        var totalCount = query.Count();
-
-        var items = query
-            .OrderByDescending(purchaseOrder => purchaseOrder.CreatedOnUtc)
-            .Skip(pageIndex * pageSize)
-            .Take(pageSize)
-            .Select(purchaseOrder => purchaseOrder.ToDto())
-            .ToList();
-
-        return PagedDataAppDto.Create(items, pageIndex, pageSize, totalCount);
+        return PagedDataAppDto.Create(pagedData.Items.Select(item => item.ToDto()), pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
     }
 
     public async Task<PurchaseOrderAppDto?> GetPurchaseOrderByIdAsync(Guid id)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(id).ConfigureAwait(false);
         if (purchaseOrder is null)
             return null;
 
@@ -77,14 +70,17 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             };
         }
 
-        var user = await _userDataReader.GetByIdAsync(dto.CreatedByUserId).ConfigureAwait(false);
-        if (user is null)
+        if (dto.CreatedByUserId.HasValue)
         {
-            return new CreatePurchaseOrderResultAppDto
+            var user = await _userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
+            if (user is null)
             {
-                Success = false,
-                ErrorMessage = $"User with ID {dto.CreatedByUserId} does not exist."
-            };
+                return new CreatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = $"User with ID {dto.CreatedByUserId} does not exist."
+                };
+            }
         }
 
         if (dto.VendorId.HasValue)
@@ -120,7 +116,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             CreatedByUserId = dto.CreatedByUserId,
             VendorId = dto.VendorId,
             WarehouseId = dto.WarehouseId,
-            ExpectedDeliveryDate = dto.ExpectedDeliveryDateUtc,
+            ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
             Note = dto.Note,
             ShippingAmount = dto.ShippingAmount,
             TaxAmount = dto.TaxAmount
@@ -149,7 +145,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             };
         }
 
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
         {
             return new AddPurchaseOrderItemResultAppDto
@@ -158,7 +154,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 ErrorMessage = $"Purchase order with ID {dto.PurchaseOrderId} does not exist."
             };
         }
-        if (!purchaseOrder.CanAddPurchaseOrderItem())
+        if (!await _purchaseOrderManager.CanAddPurchaseOrderItemsAsync(dto.PurchaseOrderId).ConfigureAwait(false))
         {
             return new AddPurchaseOrderItemResultAppDto
             {
@@ -169,13 +165,11 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
         var product = await _productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
         if (product is null)
-        {
             return new AddPurchaseOrderItemResultAppDto
             {
                 Success = false,
                 ErrorMessage = $"Product with ID {dto.ProductId} does not exist."
             };
-        }
 
         var result = await _purchaseOrderManager.AddPurchaseOrderItemAsync(new AddPurchaseOrderItemDto
         {
@@ -195,11 +189,11 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
     public async Task<(bool success, string? errorMessage)> ChangeStatusAsync(Guid purchaseOrderId, int status)
     {
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             return (false, $"Purchase order with ID {purchaseOrderId} does not exist.");
 
-        if (!purchaseOrder.CanChangeStatusTo((PurchaseOrderStatus)status))
+        if (!await _purchaseOrderManager.CanChangeStatusToAsync(purchaseOrderId, (PurchaseOrderStatus)status))
             return (false, $"Cannot change purchase order status from {purchaseOrder.Status} to {(PurchaseOrderStatus)status}.");
 
         await _purchaseOrderManager.ChangeStatusAsync(purchaseOrderId, (PurchaseOrderStatus)status).ConfigureAwait(false);
@@ -221,7 +215,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             };
         }
 
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
         {
             return new ReceivedGoodsForItemResultAppDto
@@ -230,7 +224,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 ErrorMessage = $"Purchase order with ID {dto.PurchaseOrderId} does not exist."
             };
         }
-        if (!purchaseOrder.CanReceiveGoods())
+        if (!await _purchaseOrderManager.CanReceiveGoodsAsync(dto.PurchaseOrderId).ConfigureAwait(false))
         {
             return new ReceivedGoodsForItemResultAppDto
             {
@@ -268,20 +262,49 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             };
         }
 
-        var user = await _userDataReader.GetByIdAsync(dto.ReceivedByUserId).ConfigureAwait(false);
-        if (user is null)
+        if (dto.ReceivedByUserId.HasValue)
         {
-            return new ReceivedGoodsForItemResultAppDto
+            var user = await _userDataReader.GetByIdAsync(dto.ReceivedByUserId.Value).ConfigureAwait(false);
+            if (user is null)
             {
-                Success = false,
-                ErrorMessage = $"User with ID {dto.ReceivedByUserId} does not exist."
-            };
+                return new ReceivedGoodsForItemResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = $"User with ID {dto.ReceivedByUserId} does not exist."
+                };
+            }
+        }
+
+        Guid? warehouseId = purchaseOrder.WarehouseId ?? dto.WarehouseId ?? null;
+        if (product.TrackInventory)
+        {
+            if (!warehouseId.HasValue)
+            {
+                return new ReceivedGoodsForItemResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Warehouse is required."
+                };
+            }
+            else
+            {
+                var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+                if (warehouse is null)
+                {
+                    return new ReceivedGoodsForItemResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = $"Warehouse with ID {dto.WarehouseId} does not exist."
+                    };
+                }
+            }
         }
 
         var result = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {
             ReceivedByUserId = dto.ReceivedByUserId,
-            ReceivedQuantity = dto.ReceivedQuantity
+            ReceivedQuantity = dto.ReceivedQuantity,
+            WarehouseId = warehouseId
         });
         return new ReceivedGoodsForItemResultAppDto
         {
@@ -301,5 +324,19 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         while (await _purchaseOrderManager.DoesCodeExistAsync(code).ConfigureAwait(false));
 
         return code;
+    }
+
+    public async Task<(bool success, string? errorMessage)> SubmitsPurchaseOrderAsync(Guid id)
+    {
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(id).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            return (false, $"Purchase order with ID {id} does not exist.");
+
+        if (!await _purchaseOrderManager.CanChangeStatusToAsync(id, PurchaseOrderStatus.Submitted))
+            return (false, "Cannot submit the empty purchase order: please add item to order");
+
+        await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Submitted).ConfigureAwait(false);
+
+        return (true, null);
     }
 }

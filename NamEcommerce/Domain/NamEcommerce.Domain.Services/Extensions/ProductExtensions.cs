@@ -10,6 +10,7 @@ public static class ProductExtensions
         {
             Name = product.Name,
             ShortDesc = product.ShortDesc,
+            UnitMeasurementId = product.UnitMeasurementId,
             Categories = product.ProductCategories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
             Pictures = product.ProductPictures.OrderBy(pp => pp.DisplayOrder).Select(pp => pp.PictureId),
             TrackInventory = product.TrackInventory

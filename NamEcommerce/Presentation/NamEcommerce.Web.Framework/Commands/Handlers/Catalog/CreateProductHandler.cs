@@ -22,6 +22,7 @@ public sealed class CreateProductHandler : IRequestHandler<CreateProductCommand,
         {
             Name = request.Name,
             ShortDesc = request.ShortDesc,
+            UnitMeasurementId = request.UnitMeasurementId,
             Categories = request.CategoryId.HasValue
                 ? [new ProductCategoryAppDto(request.CategoryId.Value, request.DisplayOrder)]
                 : [],

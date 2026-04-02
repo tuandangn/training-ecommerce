@@ -20,7 +20,8 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
         var result = await _purchaseOrderAppService.ReceiveItemAsync(new ReceivedGoodsForItemAppDto(request.PurchaseOrderId, request.PurchaseOrderItemId)
         {
             ReceivedQuantity = request.ReceivedQuantity,
-            ReceivedByUserId = request.ReceivedByUserId
+            ReceivedByUserId = request.ReceivedByUserId,
+            WarehouseId = request.WarehouseId
         }).ConfigureAwait(false);
 
         return new ReceivePurchaseOrderItemResultModel

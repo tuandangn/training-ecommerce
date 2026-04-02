@@ -1,5 +1,6 @@
 ﻿using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.Extensions;
 
@@ -19,7 +20,9 @@ public static class PurchaseOrderExtensions
             ExpectedDeliveryDateUtc = purchaseOrder.ExpectedDeliveryDateUtc,
             Note = purchaseOrder.Note,
             CreatedOnUtc = purchaseOrder.CreatedOnUtc,
-            TotalAmount = purchaseOrder.TotalAmount
+            TotalAmount = purchaseOrder.TotalAmount,
+            CanAddItems = purchaseOrder.CanAddPurchaseOrderItems(),
+            CanReceiveGoods = purchaseOrder.CanReceiveGoods()
         };
 
         foreach(var item in purchaseOrder.Items)
@@ -31,7 +34,45 @@ public static class PurchaseOrderExtensions
                 Note = item.Note,
                 QuantityOrdered = item.QuantityOrdered,
                 QuantityReceived = item.QuantityReceived,
-                UnitCost = item.UnitCost
+                UnitCost = item.UnitCost,
+                TotalCost = item.TotalCost
+            });
+        }
+
+        return dto;
+    }
+
+    public static PurchaseOrderAppDto ToDto(this PurchaseOrderDto purchaseOrder)
+    {
+        var dto = new PurchaseOrderAppDto(purchaseOrder.Id)
+        {
+            Code = purchaseOrder.Code,
+            VendorId = purchaseOrder.VendorId,
+            WarehouseId = purchaseOrder.WarehouseId,
+            CreatedByUserId = purchaseOrder.CreatedByUserId,
+            TaxAmount = purchaseOrder.TaxAmount,
+            ShippingAmount = purchaseOrder.ShippingAmount,
+            Status = (int)purchaseOrder.Status,
+            ExpectedDeliveryDateUtc = purchaseOrder.ExpectedDeliveryDateUtc,
+            Note = purchaseOrder.Note,
+            CreatedOnUtc = purchaseOrder.CreatedOnUtc,
+            TotalAmount = purchaseOrder.TotalAmount,
+            CanAddItems = purchaseOrder.CanAddItems,
+            CanReceiveGoods = purchaseOrder.CanReceiveGoods
+        };
+
+        foreach (var item in purchaseOrder.Items)
+        {
+            dto.Items.Add(new PurchaseOrderItemAppDto(item.Id)
+            {
+                PurchaseOrderId = item.PurchaseOrderId,
+                ProductId = item.ProductId,
+                Note = item.Note,
+                QuantityOrdered = item.QuantityOrdered,
+                QuantityReceived = item.QuantityReceived,
+                RemainingQuantity = item.RemainingQuantity,
+                UnitCost = item.UnitCost,
+                TotalCost = item.TotalCost
             });
         }
 

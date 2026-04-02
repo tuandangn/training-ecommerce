@@ -7,7 +7,7 @@ public sealed record StockMovementLog : AppAggregateEntity
 {
     internal StockMovementLog(Guid id, Guid productId, Guid warehouseId, 
         StockMovementType movementType, decimal quantity, decimal quantityBefore, decimal quantityAfter,
-        StockReferenceType referenceType, Guid? referenceId, string? note, Guid createdByUserId) : base(id)
+        StockReferenceType referenceType, Guid? referenceId, string? note, Guid? createdByUserId) : base(id)
     {
         ProductId = productId;
         WarehouseId = warehouseId;
@@ -36,7 +36,7 @@ public sealed record StockMovementLog : AppAggregateEntity
     
     public string? Note { get; init; }
     
-    public Guid CreatedByUserId { get; init; }
+    public Guid? CreatedByUserId { get; init; }
     public DateTime CreatedOnUtc { get; init; }
 }
 

@@ -28,27 +28,3 @@ public sealed class GetVendorOptionListHandler : IRequestHandler<GetVendorOption
         };
     }
 }
-
-public sealed class GetProductOptionListHandler : IRequestHandler<GetProductOptionListQuery, EntityOptionListModel>
-{
-    private readonly IProductAppService _productAppService;
-
-    public GetProductOptionListHandler(IProductAppService productAppService)
-    {
-        _productAppService = productAppService;
-    }
-
-    public async Task<EntityOptionListModel> Handle(GetProductOptionListQuery request, CancellationToken cancellationToken)
-    {
-        var products = await _productAppService.GetProductsAsync(null, 0, int.MaxValue);
-
-        return new EntityOptionListModel
-        {
-            Options = products.Select(x => new EntityOptionListModel.EntityOptionModel
-            {
-                Id = x.Id,
-                Name = x.Name
-            })
-        };
-    }
-}

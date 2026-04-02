@@ -17,10 +17,6 @@
                 <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Inventory", "StockList") ? "active" : "")"
                    asp-controller="Inventory" asp-action="StockList">Tồn kho</a>
             </li>
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Inventory", "MovementLogs") ? "active" : "")"
-                   asp-controller="Inventory" asp-action="MovementLogs">Nhật ký</a>
-            </li>
         </ul>
     </li>
     <li class="nav-item dropdown">

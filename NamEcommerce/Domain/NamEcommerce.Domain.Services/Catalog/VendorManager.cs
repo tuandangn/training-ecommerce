@@ -80,8 +80,10 @@ public sealed class VendorManager : IVendorManager
         if (!string.IsNullOrEmpty(keywords))
         {
             var normizedKeywords = TextHelper.Normalize(keywords);
-            query = query.Where(c => 
-                c.NormalizedName.Contains(normizedKeywords) 
+            query = query.Where(c =>
+                c.Name.Contains(keywords) 
+                || c.Name.Contains(normizedKeywords) 
+                || c.NormalizedName.Contains(normizedKeywords) 
                 || c.PhoneNumber.Contains(keywords)
                 || c.NormalizedAddress.Contains(normizedKeywords)
             );

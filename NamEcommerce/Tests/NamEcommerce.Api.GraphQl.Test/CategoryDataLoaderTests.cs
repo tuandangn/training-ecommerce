@@ -1,7 +1,8 @@
 ﻿using MediatR;
 using NamEcommerce.Api.GraphQl.DataLoaders;
+using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Catalog;
-using NamEcommerce.Application.Contracts.Queries.Catalog;
+using NamEcommerce.Application.Contracts.Dtos.Common;
 
 namespace NamEcommerce.Api.GraphQl.Test;
 
@@ -19,16 +20,15 @@ public sealed class CategoryDataLoaderTests
                 ParentId = null
             }
         };
-        var query = new GetAllCategories();
-        var mediatorMock = new Mock<IMediator>();
-        mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(categories);
-        var categoryDataLoader = new CategoryDataLoader(mediatorMock.Object);
+        var categoryAppServiceMock = new Mock<ICategoryAppService>();
+        categoryAppServiceMock.Setup(service => service.GetCategoriesAsync()).ReturnsAsync(PagedDataAppDto.Create(categories));
+        var categoryDataLoader = new CategoryDataLoader(categoryAppServiceMock.Object);
 
         var result = await categoryDataLoader.GetAllCategoriesAsync(default);
 
         Assert.Equal(categories.Length, result.Count());
         Assert.Equal(categories, result);
-        mediatorMock.Verify();
+        categoryAppServiceMock.Verify();
     }
 
     #endregion
@@ -43,15 +43,14 @@ public sealed class CategoryDataLoaderTests
             Name = "category",
             ParentId = null
         };
-        var query = new GetCategoryById(category.Id);
-        var mediatorMock = new Mock<IMediator>();
-        mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(category);
-        var categoryDataLoader = new CategoryDataLoader(mediatorMock.Object);
+        var categoryAppServiceMock = new Mock<ICategoryAppService>();
+        categoryAppServiceMock.Setup(service => service.GetCategoryByIdAsync(category.Id)).ReturnsAsync(category);
+        var categoryDataLoader = new CategoryDataLoader(categoryAppServiceMock.Object);
 
         var result = await categoryDataLoader.GetCategoryByIdAsync(default, category.Id);
 
         Assert.Equal(category, result);
-        mediatorMock.Verify();
+        categoryAppServiceMock.Verify();
     }
 
     #endregion
@@ -74,17 +73,16 @@ public sealed class CategoryDataLoaderTests
                 ParentId = null
             }
         };
-        var query = new GetCategoriesByIds(ids);
-        var mediatorMock = new Mock<IMediator>();
-        mediatorMock.Setup(mediator => mediator.Send(query, default)).ReturnsAsync(categories);
-        var categoryDataLoader = new CategoryDataLoader(mediatorMock.Object);
+        var categoryAppServiceMock = new Mock<ICategoryAppService>();
+        categoryAppServiceMock.Setup(service => service.GetCategoriesAsync()).ReturnsAsync(PagedDataAppDto.Create(categories));
+        var categoryDataLoader = new CategoryDataLoader(categoryAppServiceMock.Object);
 
         var result = await categoryDataLoader.GetCategoriesByIdsAsync(ids, default);
 
         Assert.Equal(2, result.Count);
         Assert.Equal(categories[0], result[categories[0].Id]);
         Assert.Equal(categories[1], result[categories[1].Id]);
-        mediatorMock.Verify();
+        categoryAppServiceMock.Verify();
     }
 
     #endregion

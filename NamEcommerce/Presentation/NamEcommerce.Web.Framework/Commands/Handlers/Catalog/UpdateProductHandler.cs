@@ -20,8 +20,9 @@ public sealed class UpdateProductHandler : IRequestHandler<UpdateProductCommand,
     {
         var updateResult = await _productAppService.UpdateProductAsync(new UpdateProductAppDto(request.Id)
         {
-            ShortDesc = request.ShortDesc,
             Name = request.Name,
+            ShortDesc = request.ShortDesc,
+            UnitMeasurementId = request.UnitMeasurementId,
             Categories = request.CategoryId.HasValue
                 ? [new ProductCategoryAppDto(request.CategoryId.Value, request.DisplayOrder)]
                 : [],

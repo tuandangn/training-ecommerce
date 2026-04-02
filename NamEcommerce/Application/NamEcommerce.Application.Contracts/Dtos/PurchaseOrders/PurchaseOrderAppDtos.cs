@@ -5,7 +5,7 @@ public abstract record BasePurchaseOrderAppDto
 {
     public Guid? WarehouseId { get; set; }
     public Guid? VendorId { get; set; }
-    public Guid CreatedByUserId { get; set; }
+    public Guid? CreatedByUserId { get; set; }
 
     public decimal TaxAmount { get; set; }
     public decimal ShippingAmount { get; set; }
@@ -35,6 +35,9 @@ public sealed record PurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto
     public int Status { get; set; }
     public IList<PurchaseOrderItemAppDto> Items { get; } = [];
     public DateTime CreatedOnUtc { get; set; }
+
+    public bool CanAddItems { get; set; }
+    public bool CanReceiveGoods { get; set; }
 
     public override (bool valid, string? errorMessage) Validate()
     {

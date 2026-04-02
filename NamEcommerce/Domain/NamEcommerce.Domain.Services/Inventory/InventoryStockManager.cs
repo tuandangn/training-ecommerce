@@ -84,7 +84,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         };
     }
 
-    public async Task<StockMovementLogDto?> ReceiveStockAsync(Guid productId, Guid warehouseId, decimal receivedQuantity, string? note, Guid receivedByUserId, int referenceType, Guid? referenceId)
+    public async Task<StockMovementLogDto?> ReceiveStockAsync(Guid productId, Guid warehouseId, decimal receivedQuantity, string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId)
     {
         if (receivedQuantity <= 0) return null;
 

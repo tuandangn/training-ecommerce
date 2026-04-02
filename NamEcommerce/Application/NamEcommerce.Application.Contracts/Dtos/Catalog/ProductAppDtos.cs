@@ -7,6 +7,7 @@ public abstract record BaseProductAppDto
 {
     public required string Name { get; init; }
     public required string? ShortDesc { get; init; }
+    public Guid? UnitMeasurementId { get; set; }
     public IEnumerable<ProductCategoryAppDto> Categories { get; set; } = [];
     public IEnumerable<Guid> Pictures { get; set; } = [];
     public bool TrackInventory { get; set; }

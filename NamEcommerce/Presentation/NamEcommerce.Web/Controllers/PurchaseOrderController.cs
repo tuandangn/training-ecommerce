@@ -1,141 +1,178 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Constants;
-using NamEcommerce.Web.Contracts.Commands.Models.Inventory;
-using NamEcommerce.Web.Contracts.Configurations;
-using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
-using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Services;
-using NamEcommerce.Domain.Shared.Enums.Inventory;
-using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
+using NamEcommerce.Web.Services.PurchaseOrders;
+using NamEcommerce.Web.Models.Catalog;
+using NamEcommerce.Web.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Controllers;
 
 public sealed class PurchaseOrderController : BaseAuthorizedController
 {
-    private readonly AppConfig _appConfig;
     private readonly IMediator _mediator;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IPurchaseOrderModelFactory _purchaseOrderModelFactory;
 
-    public PurchaseOrderController(AppConfig appConfig, IMediator mediator, ICurrentUserService currentUserService)
+    public PurchaseOrderController(IMediator mediator, ICurrentUserService currentUserService, IPurchaseOrderModelFactory purchaseOrderModelFactory)
     {
-        _appConfig = appConfig;
         _mediator = mediator;
         _currentUserService = currentUserService;
+        _purchaseOrderModelFactory = purchaseOrderModelFactory;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
-    public async Task<IActionResult> List(string? keywords, int pageNumber = 1)
+    public async Task<IActionResult> List(PurchaseOrderListSearchModel searchModel)
     {
-        var model = await _mediator.Send(new GetPurchaseOrderListQuery
-        {
-            Keywords = keywords,
-            PageIndex = pageNumber - 1,
-            PageSize = _appConfig.DefaultPageSize
-        });
+        var model = await _purchaseOrderModelFactory.PreparePurchaseOrderListModel(searchModel);
         return View(model);
     }
 
     public async Task<IActionResult> Create()
     {
-        ViewBag.AvailableVendors = await _mediator.Send(new GetVendorOptionListQuery());
-        ViewBag.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery());
-        return View();
+        var model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel();
+        return View(model);
     }
-
     [HttpPost]
-    public async Task<IActionResult> Create(CreatePurchaseOrderInputModel input)
+    public async Task<IActionResult> Create(CreatePurchaseOrderModel model)
     {
         if (!ModelState.IsValid)
         {
-            ViewBag.AvailableVendors = await _mediator.Send(new GetVendorOptionListQuery());
-            ViewBag.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery());
-            return View(input);
+            model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
+            return View(model);
         }
 
         var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
-
         var result = await _mediator.Send(new CreatePurchaseOrderCommand
         {
-            VendorId = input.VendorId,
-            WarehouseId = input.WarehouseId,
-            Note = input.Note,
-            ExpectedDeliveryDate = input.ExpectedDeliveryDate,
-            CreatedByUserId = currentUser?.Id ?? Guid.Empty
+            VendorId = model.VendorId,
+            WarehouseId = model.WarehouseId,
+            ShippingAmount = 0,
+            TaxAmount = 0,
+            Note = model.Note,
+            ExpectedDeliveryDate = model.ExpectedDeliveryDate,
+            CreatedByUserId = currentUser?.Id
         });
 
         if (!result.Success)
         {
             ModelState.AddModelError(string.Empty, result.ErrorMessage!);
-            return View(input);
+            return View(model);
         }
 
-        TempData[ViewConstants.WarehouseSuccessMessage] = "Tạo đơn nhập hàng thành công!";
+        TempData[ViewConstants.PurchaseOrderSuccessMessage] = "Tạo đơn nhập hàng thành công!";
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
     public async Task<IActionResult> Details(Guid id)
     {
-        var model = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        var model = await _purchaseOrderModelFactory.PreparePurchaseOrderDetailsModel(id);
         if (model == null)
         {
-            TempData[ViewConstants.WarehouseErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
             return RedirectToAction(nameof(List));
         }
 
-        ViewBag.AvailableProducts = await _mediator.Send(new GetProductOptionListQuery());
         return View(model);
     }
 
     [HttpPost]
-    public async Task<IActionResult> AddItem(AddPurchaseOrderItemInputModel input)
+    public async Task<IActionResult> AddPurchaseOrderItem(AddPurchaseOrderItemModel model)
     {
         if (!ModelState.IsValid)
-            return RedirectToAction(nameof(Details), new { id = input.PurchaseOrderId });
+        {
+            TempData[ViewConstants.PurchaseOrderAddItemErrorMessage] = "Dữ liệu không hợp lệ";
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
+
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
+        if (purchaseOrder is null)
+        {
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            return RedirectToAction(nameof(List));
+        }
 
         var result = await _mediator.Send(new AddPurchaseOrderItemCommand
         {
-            PurchaseOrderId = input.PurchaseOrderId,
-            ProductId = input.ProductId,
-            Quantity = input.Quantity,
-            UnitCost = input.UnitCost,
-            Note = input.Note
+            PurchaseOrderId = model.PurchaseOrderId,
+            ProductId = model.ProductId ?? default,
+            Quantity = model.Quantity ?? 0,
+            UnitCost = model.UnitCost ?? 0,
+            Note = model.Note
         });
 
         if (!result.Success)
-            TempData[ViewConstants.WarehouseErrorMessage] = result.ErrorMessage;
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = result.ErrorMessage;
         else
-            TempData[ViewConstants.WarehouseSuccessMessage] = "Thêm sản phẩm thành công!";
+            TempData[ViewConstants.PurchaseOrderSuccessMessage] = "Thêm sản phẩm thành công!";
 
-        return RedirectToAction(nameof(Details), new { id = input.PurchaseOrderId });
+        return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+    }
+    [HttpPost]
+    public async Task<IActionResult> Receive(ReceivePurchaseOrderItemModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Dữ liệu không hợp lệ";
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
+
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
+        if (purchaseOrder is null)
+        {
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            return RedirectToAction(nameof(List));
+        }
+
+        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
+        var result = await _mediator.Send(new ReceivePurchaseOrderItemCommand
+        {
+            PurchaseOrderId = model.PurchaseOrderId,
+            PurchaseOrderItemId = model.PurchaseOrderItemId,
+            ReceivedQuantity = model.ReceivedQuantity,
+            WarehouseId = model.WarehouseId,
+            ReceivedByUserId = currentUser?.Id
+        });
+
+        if (!result.Success)
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = result.ErrorMessage;
+        else
+            TempData[ViewConstants.PurchaseOrderSuccessMessage] = $"Nhập kho {model.ReceivedQuantity.ToString(ViewConstants.NumberCustomFormat)} sản phẩm thành công!";
+
+        return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
     }
 
     [HttpPost]
-    public async Task<IActionResult> Receive(ReceivePurchaseOrderInputModel input)
+    public async Task<IActionResult> SubmitsPurchaseOrder(Guid id)
     {
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
-
-        var result = await _mediator.Send(new ReceivePurchaseOrderItemCommand
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        if (purchaseOrder is null)
         {
-            PurchaseOrderId = input.PurchaseOrderId,
-            PurchaseOrderItemId = input.PurchaseOrderItemId,
-            ReceivedQuantity = input.ReceivedQuantity,
-            ReceivedByUserId = currentUser?.Id ?? Guid.Empty
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            return RedirectToAction(nameof(List));
+        }
+
+        var (success, errorMessage) = await _mediator.Send(new SubmitsPurchaseOrderCommand
+        {
+            PurchaseOrderId = id
         });
 
-        if (!result.Success)
-            TempData[ViewConstants.WarehouseErrorMessage] = result.ErrorMessage;
-        else
-            TempData[ViewConstants.WarehouseSuccessMessage] = $"Nhập kho {input.ReceivedQuantity:N0} sản phẩm thành công!";
-
-        return RedirectToAction(nameof(Details), new { id = input.PurchaseOrderId });
+        TempData[success ? ViewConstants.PurchaseOrderSuccessMessage : ViewConstants.PurchaseOrderErrorMessage] = errorMessage;
+        return RedirectToAction(nameof(Details), new { id });
     }
-
     [HttpPost]
     public async Task<IActionResult> ChangeStatus(Guid id, int status)
     {
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        if (purchaseOrder is null)
+        {
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            return RedirectToAction(nameof(List));
+        }
+
         var result = await _mediator.Send(new ChangePurchaseOrderStatusCommand
         {
             PurchaseOrderId = id,
@@ -143,36 +180,10 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         });
 
         if (!result.Success)
-            TempData[ViewConstants.WarehouseErrorMessage] = result.ErrorMessage;
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = result.ErrorMessage;
         else
-            TempData[ViewConstants.WarehouseSuccessMessage] = "Cập nhật trạng thái thành công!";
+            TempData[ViewConstants.PurchaseOrderSuccessMessage] = "Cập nhật trạng thái thành công!";
 
         return RedirectToAction(nameof(Details), new { id });
     }
-}
-
-// Input models (not stored in DB, just for form)
-public sealed class CreatePurchaseOrderInputModel
-{
-    public required Guid VendorId { get; set; }
-    public required Guid WarehouseId { get; set; }
-    public string? Note { get; set; }
-    public DateTime? ExpectedDeliveryDate { get; set; }
-}
-
-public sealed class AddPurchaseOrderItemInputModel
-{
-    public required Guid PurchaseOrderId { get; set; }
-    public required Guid ProductId { get; set; }
-    public decimal Quantity { get; set; }
-    public decimal UnitCost { get; set; }
-    public string? Note { get; set; }
-}
-
-public sealed class ReceivePurchaseOrderInputModel
-{
-    public required Guid PurchaseOrderId { get; set; }
-    public required Guid ProductId { get; set; }
-    public required Guid PurchaseOrderItemId { get; set; }
-    public decimal ReceivedQuantity { get; set; }
 }

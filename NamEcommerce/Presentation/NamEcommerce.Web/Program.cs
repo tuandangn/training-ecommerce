@@ -42,6 +42,7 @@ using NamEcommerce.Domain.Services.PurchaseOrders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.PurchaseOrders;
 using NamEcommerce.Web.Framework.Commands.Handlers.Users;
+using NamEcommerce.Web.Services.PurchaseOrders;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -121,9 +122,12 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICategoryModelFactory, CategoryModelFactory>();
     services.AddScoped<IProductModelFactory, ProductModelFactory>();
     services.AddScoped<IWarehouseModelFactory, WarehouseModelFactory>();
+    services.AddScoped<IPurchaseOrderModelFactory, PurchaseOrderModelFactory>();
 
     services.AddMediatR(config =>
     {
+        //NamEcommerce.Web.Framework assembly
+        config.RegisterServicesFromAssemblyContaining<CategoryAppService>();
         //NamEcommerce.Web.Framework assembly
         config.RegisterServicesFromAssemblyContaining<CookieAuthenticateUserHandler>();
     });

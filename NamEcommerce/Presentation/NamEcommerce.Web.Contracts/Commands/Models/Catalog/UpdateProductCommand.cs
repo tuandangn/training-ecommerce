@@ -11,6 +11,7 @@ public sealed class UpdateProductCommand : IRequest<UpdateProductResultModel>
     public required string Name { get; init; }
     public string? ShortDesc { get; init; }
     public Guid? CategoryId { get; set; }
+    public Guid? UnitMeasurementId { get; set; }
     public int DisplayOrder { get; set; }
     public FileInfoModel? ImageFile { get; set; }
     public bool TrackInventory { get; set; }

@@ -12,7 +12,7 @@
 <section class="content-title my-4 text-center">
     <h1>Kho hàng</h1>
 </section>
-<section class="content-data p-4 mb-5 shadow">
+<section class="content-data p-4 mb-5 shadow border rounded">
     <div class="mb-2 d-flex align-items-start">
         <div class="d-flex flex-wrap align-items-center mb-2">
             <partial name="_Search" model="@(new WarehouseListSearchModel { Keywords = Model.Keywords })" />
@@ -72,7 +72,7 @@
                                 <span class="d-block">
                                     @HighlighHelper.Highlight(item.Name, query)
                                 </span>
-                                <span class="text-muted smal">
+                                <span class="text-muted small">
                                     @item.Code
                                 </span>
                             </td>

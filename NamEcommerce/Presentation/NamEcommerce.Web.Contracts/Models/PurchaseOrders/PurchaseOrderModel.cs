@@ -14,7 +14,10 @@ public sealed class PurchaseOrderModel
     public DateTime? ExpectedDeliveryDate { get; set; }
     public decimal TotalAmount { get; set; }
     public DateTime CreatedOn { get; set; }
-    public IEnumerable<ItemModel> Items { get; set; } = [];
+    public IList<ItemModel> Items { get; set; } = [];
+
+    public bool CanAddItems { get; set; }
+    public bool CanReceiveGoods { get; set; }
 
     [Serializable]
     public sealed record ItemModel(Guid Id)
@@ -24,8 +27,10 @@ public sealed class PurchaseOrderModel
         public decimal QuantityOrdered { get; set; }
         public decimal UnitCost { get; set; }
         public decimal QuantityReceived { get; set; }
+        public decimal TotalCost { get; set; }
         public string? Note { get; set; }
-        public decimal RemainingQuantity => QuantityOrdered - QuantityReceived;
+        public decimal RemainingQuantity { get; set; }
+        public bool TrackInventory { get; set; }
     }
 }
 

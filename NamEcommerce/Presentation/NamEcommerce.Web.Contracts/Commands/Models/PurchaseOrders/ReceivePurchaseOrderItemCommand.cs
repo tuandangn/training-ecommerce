@@ -8,6 +8,7 @@ public sealed class ReceivePurchaseOrderItemCommand : IRequest<ReceivePurchaseOr
 {
     public required Guid PurchaseOrderId { get; init; }
     public required Guid PurchaseOrderItemId { get; init; }
-    public Guid ReceivedByUserId { get; set; }
-    public decimal ReceivedQuantity { get; set; }
+    public required Guid? WarehouseId { get; set; }
+    public required decimal ReceivedQuantity { get; set; }
+    public Guid? ReceivedByUserId { get; set; }
 }

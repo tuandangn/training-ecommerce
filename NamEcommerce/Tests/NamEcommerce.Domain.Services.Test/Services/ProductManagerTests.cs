@@ -13,7 +13,7 @@ public sealed class ProductManagerTests
     [Fact]
     public async Task CreateProductAsync_DtoIsNull_ThrowArgumentNullException()
     {
-        var productManager = new ProductManager(null!, null!, null!, null!, null!);
+        var productManager = new ProductManager(null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => productManager.CreateProductAsync(null!));
     }
@@ -26,7 +26,7 @@ public sealed class ProductManagerTests
             Name = string.Empty,
             ShortDesc = "invalid-phone", //or empty
         };
-        var productManager = new ProductManager(null!, null!, null!, null!, null!);
+        var productManager = new ProductManager(null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ProductDataIsInvalidException>(() => productManager.CreateProductAsync(invalidCreateProductDto));
     }
@@ -44,7 +44,7 @@ public sealed class ProductManagerTests
         {
             ShortDesc = "description"
         });
-        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!);
+        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ProductNameExistsException>(() => productManager.CreateProductAsync(dto));
     }
@@ -63,7 +63,7 @@ public sealed class ProductManagerTests
         };
         var productRepositoryMock = ProductRepository.CreateProductWillReturns(returnProduct);
         var productDataReaderStub = ProductDataReader.Empty();
-        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, null!, null!, Mock.Of<IEventPublisher>());
+        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, null!, null!, Mock.Of<IEventPublisher>(), null!);
 
         var productDto = await productManager.CreateProductAsync(dto);
 
@@ -83,7 +83,7 @@ public sealed class ProductManagerTests
         };
         var categoryDataReaderMock = CategoryDataReader.NotFound(notFoundCategoryId); 
         var productDataReaderStub = ProductDataReader.Empty();
-        var productManager = new ProductManager(null!, productDataReaderStub.Object, categoryDataReaderMock.Object, null!, null!);
+        var productManager = new ProductManager(null!, productDataReaderStub.Object, categoryDataReaderMock.Object, null!, null!, null!);
 
         await Assert.ThrowsAsync<CategoryIsNotFoundException>(() => productManager.CreateProductAsync(dto));
 
@@ -109,7 +109,53 @@ public sealed class ProductManagerTests
         };
         await returnProduct.AddToCategoryAsync(categoryId, displayOrder, categoryDataReaderStub.Object);
         var productRepositoryMock = ProductRepository.CreateProductWillReturns(returnProduct);
-        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, categoryDataReaderStub.Object, null!, Mock.Of<IEventPublisher>());
+        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, categoryDataReaderStub.Object, null!, Mock.Of<IEventPublisher>(), null!);
+
+        var result = await productManager.CreateProductAsync(dto);
+
+        Assert.Equal(returnProduct.Id, result.CreatedId);
+        productRepositoryMock.Verify();
+    }
+
+    [Fact]
+    public async Task CreateProductAsync_AddingUnitMeasurementNotFound_ThrowsArgumentException()
+    {
+        var notFoundUnitMeasurementId = Guid.NewGuid();
+        var dto = new CreateProductDto
+        {
+            Name = "product-name",
+            ShortDesc = "description",
+            UnitMeasurementId = notFoundUnitMeasurementId
+        };
+        var unitMeasurementDataReaderMock = UnitMeasurementDataReader.NotFound(notFoundUnitMeasurementId);
+        var productDataReaderStub = ProductDataReader.Empty();
+        var productManager = new ProductManager(null!, productDataReaderStub.Object, null!, null!, null!, unitMeasurementDataReaderMock.Object);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => productManager.CreateProductAsync(dto));
+
+        unitMeasurementDataReaderMock.Verify();
+    }
+
+    [Fact]
+    public async Task CreateProductAsync_AddingUnitMeasurementIsFound_SetUnitMeasurementForProduct()
+    {
+        var unitMeasurementId = Guid.NewGuid();
+        var displayOrder = 1;
+        var dto = new CreateProductDto
+        {
+            Name = "product-name",
+            ShortDesc = "description",
+            UnitMeasurementId = unitMeasurementId
+        };
+        var unitMeasurementDataReaderStub = UnitMeasurementDataReader.UnitMeasurementById(unitMeasurementId, new UnitMeasurement(unitMeasurementId, "unit-measurement"));
+        var productDataReaderStub = ProductDataReader.Empty();
+        var returnProduct = new Product(Guid.NewGuid(), dto.Name)
+        {
+            ShortDesc = dto.ShortDesc
+        };
+        await returnProduct.SetUnitMeasurementAsync(unitMeasurementId, unitMeasurementDataReaderStub.Object);
+        var productRepositoryMock = ProductRepository.CreateProductWillReturns(returnProduct);
+        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, null!, null!, Mock.Of<IEventPublisher>(), unitMeasurementDataReaderStub.Object);
 
         var result = await productManager.CreateProductAsync(dto);
 
@@ -129,7 +175,7 @@ public sealed class ProductManagerTests
         };
         var pictureDataReaderMock = PictureDataReader.NotFound(notFoundPictureId);
         var productDataReaderStub = ProductDataReader.Empty();
-        var productManager = new ProductManager(null!, productDataReaderStub.Object, null!, pictureDataReaderMock.Object, null!);
+        var productManager = new ProductManager(null!, productDataReaderStub.Object, null!, pictureDataReaderMock.Object, null!, null!);
 
         await Assert.ThrowsAsync<PictureIsNotFoundException>(() => productManager.CreateProductAsync(dto));
 
@@ -155,7 +201,7 @@ public sealed class ProductManagerTests
         await returnProduct.AddPictureAsync(pictureId, pictureDataReaderStub.Object);
         var productDataReaderStub = ProductDataReader.Empty();
         var productRepositoryMock = ProductRepository.CreateProductWillReturns(returnProduct);
-        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, null!, pictureDataReaderStub.Object, Mock.Of<IEventPublisher>());
+        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, null!, pictureDataReaderStub.Object, Mock.Of<IEventPublisher>(), null!);
 
         var result = await productManager.CreateProductAsync(dto);
 
@@ -170,7 +216,7 @@ public sealed class ProductManagerTests
     [Fact]
     public async Task DoesNameExistAsync_NameIsNull_ThrowsArgumentNullException()
     {
-        var productManager = new ProductManager(null!, null!, null!, null!, null!);
+        var productManager = new ProductManager(null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAnyAsync<ArgumentException>(() =>
             productManager.DoesNameExistAsync(null!)
@@ -183,7 +229,7 @@ public sealed class ProductManagerTests
         var hasNameProductId = Guid.NewGuid();
         var testName = "test-name-existing";
         var productDataReaderMock = ProductDataReader.HasOne(new Product(hasNameProductId, testName) { ShortDesc = "short-description" });
-        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!);
+        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!, null!);
 
         var nameExists = await productManager.DoesNameExistAsync(testName, comparesWithCurrentId: hasNameProductId);
 
@@ -196,7 +242,7 @@ public sealed class ProductManagerTests
     {
         var testName = "test-name-existing";
         var productDataReaderMock = ProductDataReader.HasOne(new Product(default, testName) { ShortDesc = "short-description" });
-        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!);
+        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!, null!);
 
         var nameExists = await productManager.DoesNameExistAsync(testName, comparesWithCurrentId: null);
 
@@ -211,7 +257,7 @@ public sealed class ProductManagerTests
     [Fact]
     public async Task UpdateProductAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var productManager = new ProductManager(null!, null!, null!, null!, null!);
+        var productManager = new ProductManager(null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => productManager.UpdateProductAsync(null!));
     }
@@ -219,7 +265,7 @@ public sealed class ProductManagerTests
     [Fact]
     public async Task UpdateProductAsync_DataIsInvalid_ThrowsProductDataIsInvalidException()
     {
-        var productManager = new ProductManager(null!, null!, null!, null!, null!);
+        var productManager = new ProductManager(null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ProductDataIsInvalidException>(() =>
             productManager.UpdateProductAsync(new UpdateProductDto(Guid.NewGuid())
@@ -235,7 +281,7 @@ public sealed class ProductManagerTests
     {
         var notFoundProductId = Guid.NewGuid();
         var productDataReaderMock = ProductDataReader.NotFound(notFoundProductId);
-        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!);
+        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ProductIsNotFoundException>(()
             => productManager.UpdateProductAsync(new UpdateProductDto(notFoundProductId)
@@ -264,7 +310,7 @@ public sealed class ProductManagerTests
                 ShortDesc = "0123456789"
             })
             .ProductById(oldProduct.Id, oldProduct);
-        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!);
+        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ProductNameExistsException>(()
             => productManager.UpdateProductAsync(new UpdateProductDto(updateProduct.Id)
@@ -294,7 +340,7 @@ public sealed class ProductManagerTests
         var productRepositoryMock = Repository.Create<Product>()
             .WhenCall(repository => repository.UpdateAsync(It.Is(isProductMatch), default), updateProduct);
         var productDataReaderStub = ProductDataReader.ProductById(oldProduct.Id, oldProduct);
-        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, null!, null!, Mock.Of<IEventPublisher>());
+        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, null!, null!, Mock.Of<IEventPublisher>(), null!);
 
         var resultProduct = await productManager.UpdateProductAsync(
             new UpdateProductDto(updateProduct.Id)
@@ -313,7 +359,7 @@ public sealed class ProductManagerTests
     }
 
     [Fact]
-    public async Task UpdateProductAsync_AddingCategoryNotFound_ThrowsCategoryIsNotFoundException()
+    public async Task UpdateProductAsync_UpdatingCategoryNotFound_ThrowsCategoryIsNotFoundException()
     {
         var notFoundCategoryId = Guid.NewGuid();
         var dto = new UpdateProductDto(Guid.NewGuid())
@@ -327,7 +373,7 @@ public sealed class ProductManagerTests
         {
             ShortDesc = "old-description"
         });
-        var productManager = new ProductManager(null!, productDataReaderStub.Object, categoryDataReaderMock.Object, null!, null!);
+        var productManager = new ProductManager(null!, productDataReaderStub.Object, categoryDataReaderMock.Object, null!, null!, null!);
 
         await Assert.ThrowsAsync<CategoryIsNotFoundException>(() => productManager.UpdateProductAsync(dto));
 
@@ -335,7 +381,7 @@ public sealed class ProductManagerTests
     }
 
     [Fact]
-    public async Task UpdateProductAsync_AddingCategoryIsFound_AddProductToCategory()
+    public async Task UpdateProductAsync_UpdatingCategoryIsFound_AddProductToCategory()
     {
         var categoryId = Guid.NewGuid();
         var displayOrder = 1;
@@ -350,13 +396,59 @@ public sealed class ProductManagerTests
         var returnProduct = new Product(Guid.NewGuid(), dto.Name) { ShortDesc = dto.ShortDesc };
         await returnProduct.AddToCategoryAsync(categoryId, displayOrder, categoryDataReaderStub.Object);
         var productRepositoryMock = ProductRepository.UpdateProductWillReturns(returnProduct);
-        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, categoryDataReaderStub.Object, null!, Mock.Of<IEventPublisher>());
+        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, categoryDataReaderStub.Object, null!, Mock.Of<IEventPublisher>(), null!);
 
         var result = await productManager.UpdateProductAsync(dto);
 
         Assert.Equal(returnProduct.Id, result.Id);
         Assert.Single(result.Categories);
         Assert.Equal(categoryId, result.Categories.First().CategoryId);
+        productRepositoryMock.Verify();
+    }
+
+    [Fact]
+    public async Task UpdateProductAsync_UpdatingUnitMeasurementNotFound_ThrowsArgumentException()
+    {
+        var notFoundUnitMeasurementId = Guid.NewGuid();
+        var dto = new UpdateProductDto(Guid.NewGuid())
+        {
+            Name = "product-name",
+            ShortDesc = "description",
+            UnitMeasurementId = notFoundUnitMeasurementId
+        };
+        var unitMeasurementDataReaderMock = UnitMeasurementDataReader.NotFound(notFoundUnitMeasurementId);
+        var productDataReaderStub = ProductDataReader.ProductById(dto.Id, new Product(dto.Id, "old-product")
+        {
+            ShortDesc = "old-description"
+        });
+        var productManager = new ProductManager(null!, productDataReaderStub.Object, null!, null!, null!, unitMeasurementDataReaderMock.Object);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => productManager.UpdateProductAsync(dto));
+
+        unitMeasurementDataReaderMock.Verify();
+    }
+
+    [Fact]
+    public async Task UpdateProductAsync_UpdatingUnitMeasurementIsFound_AddProductToCategory()
+    {
+        var unitMeasurementId = Guid.NewGuid();
+        var dto = new UpdateProductDto(Guid.NewGuid())
+        {
+            Name = "product-name",
+            ShortDesc = "description",
+            UnitMeasurementId = unitMeasurementId
+        };
+        var unitMeasurementDataReaderStub = UnitMeasurementDataReader.UnitMeasurementById(unitMeasurementId, new UnitMeasurement(unitMeasurementId, "unit-measurement"));
+        var productDataReaderStub = ProductDataReader.ProductById(dto.Id, new Product(dto.Id, "old-product") { ShortDesc = "old-description" });
+        var returnProduct = new Product(Guid.NewGuid(), dto.Name) { ShortDesc = dto.ShortDesc };
+        await returnProduct.SetUnitMeasurementAsync(unitMeasurementId, unitMeasurementDataReaderStub.Object);
+        var productRepositoryMock = ProductRepository.UpdateProductWillReturns(returnProduct);
+        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, null!, null!, Mock.Of<IEventPublisher>(), unitMeasurementDataReaderStub.Object);
+
+        var result = await productManager.UpdateProductAsync(dto);
+
+        Assert.Equal(returnProduct.Id, result.Id);
+        Assert.Equal(unitMeasurementId, result.UnitMeasurementId);
         productRepositoryMock.Verify();
     }
 
@@ -372,7 +464,7 @@ public sealed class ProductManagerTests
         };
         var pictureDataReaderMock = PictureDataReader.NotFound(notFoundPictureId);
         var productDataReaderStub = ProductDataReader.ProductById(dto.Id, new Product(dto.Id, "old-product"));
-        var productManager = new ProductManager(null!, productDataReaderStub.Object, null!, pictureDataReaderMock.Object, null!);
+        var productManager = new ProductManager(null!, productDataReaderStub.Object, null!, pictureDataReaderMock.Object, null!, null!);
 
         await Assert.ThrowsAsync<PictureIsNotFoundException>(() => productManager.UpdateProductAsync(dto));
 
@@ -398,7 +490,7 @@ public sealed class ProductManagerTests
         await returnProduct.AddPictureAsync(pictureId, pictureDataReaderStub.Object);
         var productDataReaderStub = ProductDataReader.ProductById(dto.Id, new Product(dto.Id, "old-product-name"));
         var productRepositoryMock = ProductRepository.UpdateProductWillReturns(returnProduct);
-        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, null!, pictureDataReaderStub.Object, Mock.Of<IEventPublisher>());
+        var productManager = new ProductManager(productRepositoryMock.Object, productDataReaderStub.Object, null!, pictureDataReaderStub.Object, Mock.Of<IEventPublisher>(), null!);
 
         var result = await productManager.UpdateProductAsync(dto);
 
@@ -417,7 +509,7 @@ public sealed class ProductManagerTests
     {
         var notFoundProductId = Guid.NewGuid();
         var productDataReaderMock = ProductDataReader.NotFound(notFoundProductId);
-        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!);
+        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ProductIsNotFoundException>(()
             => productManager.DeleteProductAsync(notFoundProductId));
@@ -434,7 +526,7 @@ public sealed class ProductManagerTests
         };
         var productDataRepositoryMock = ProductRepository.CanDeleteProduct(product);
         var productDataReaderMock = ProductDataReader.ProductById(product.Id, product);
-        var productManager = new ProductManager(productDataRepositoryMock.Object, productDataReaderMock.Object, null!, null!, Mock.Of<IEventPublisher>());
+        var productManager = new ProductManager(productDataRepositoryMock.Object, productDataReaderMock.Object, null!, null!, Mock.Of<IEventPublisher>(), null!);
 
         await productManager.DeleteProductAsync(product.Id);
 
@@ -449,7 +541,7 @@ public sealed class ProductManagerTests
     public async Task GetProductsAsync_PageIndexLessThanZero_ThrowsArgumentOutOfRangeException()
     {
         var invalidPageIndex = -1;
-        var productManager = new ProductManager(null!, null!, null!, null!, null!);
+        var productManager = new ProductManager(null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             productManager.GetProductsAsync(invalidPageIndex, int.MaxValue, "keywords"));
@@ -459,7 +551,7 @@ public sealed class ProductManagerTests
     public async Task GetProductsAsync_PageSizeLessThanOrEqualZero_ThrowsArgumentOutOfRangeException()
     {
         var invalidPageSize = 0;
-        var productManager = new ProductManager(null!, null!, null!, null!, null!);
+        var productManager = new ProductManager(null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             productManager.GetProductsAsync(0, invalidPageSize, "keywords"));
@@ -483,7 +575,7 @@ public sealed class ProductManagerTests
             ShortDesc = "short-description"
         };
         var productDataReaderMock = ProductDataReader.WithData(product1, product2, product3);
-        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!);
+        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!, null!);
 
         var pagedOrderedResult = await productManager.GetProductsAsync(pageIndex, pageSize, "");
 
@@ -512,7 +604,7 @@ public sealed class ProductManagerTests
             ShortDesc = "short-description"
         };
         var productDataReaderMock = ProductDataReader.WithData(product1, product2, product3);
-        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!);
+        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!, null!);
 
         var filteredResult = await productManager.GetProductsAsync(pageIndex, pageSize, keywords);
 
@@ -530,7 +622,7 @@ public sealed class ProductManagerTests
     {
         var notFoundProductId = Guid.NewGuid();
         var productDataReaderMock = ProductDataReader.NotFound(notFoundProductId);
-        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!);
+        var productManager = new ProductManager(null!, productDataReaderMock.Object, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ProductIsNotFoundException>(()
             => productManager.RemoveProductFromCategoryAsync(notFoundProductId, default));
@@ -552,7 +644,7 @@ public sealed class ProductManagerTests
             p.Id == product.Id && p.Name == p.Name
             && p.ProductCategories.Count() == 0
         ))).ReturnsAsync(product);
-        var productManager = new ProductManager(productDataRepositoryMock.Object, productDataReaderMock.Object, null!, null!, Mock.Of<IEventPublisher>());
+        var productManager = new ProductManager(productDataRepositoryMock.Object, productDataReaderMock.Object, null!, null!, Mock.Of<IEventPublisher>(), null!);
 
         await productManager.RemoveProductFromCategoryAsync(product.Id, categoryId);
 

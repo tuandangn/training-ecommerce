@@ -1,0 +1,10 @@
+﻿@model PurchaseOrderListSearchModel
+<form method="get">
+    <div class="input-group">
+        <input asp-for="Keywords" class="form-control" placeholder="Tìm kiếm" aria-label="Tìm kiếm" aria-describedby="btnSearch" autofocus/>
+        <button class="btn btn-outline-secondary" type="submit" id="btnSearch">
+            <i class="bi bi-search"></i>
+            <span class="visually-hidden"></span>
+        </button>
+    </div>
+</form>

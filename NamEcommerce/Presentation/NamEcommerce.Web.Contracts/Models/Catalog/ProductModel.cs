@@ -9,6 +9,7 @@ public sealed record ProductModel
     public required string Name { get; init; }
     public string? ShortDesc { get; init; }
     public Guid? CategoryId { get; set; }
+    public Guid? UnitMeasurementId { get; set; }
     public int DisplayOrder { get; set; }
     public Base64ImageModel? ImageFile { get; set; }
     public bool TrackInventory { get; set; }

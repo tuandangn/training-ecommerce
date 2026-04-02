@@ -12,7 +12,7 @@
 <section class="content-title my-4 text-center">
     <h1>Hàng hóa</h1>
 </section>
-<section class="content-data p-4 mb-5 shadow">
+<section class="content-data p-4 mb-5 shadow border rounded">
     <div class="mb-2 d-flex align-items-start">
         <div class="d-flex flex-wrap align-items-center mb-2">
             <partial name="_Search" model="@(new ProductListSearchModel { Keywords = Model.Keywords })" />
@@ -75,7 +75,9 @@
                                     else
                                     {
 
-                                        <img src="@item.PictureUrl" class="img-thumbnail img-fluid" alt="@item.Name" style="height: 90px;" />
+                                        <a href="@item.PictureUrl" target="_blank" title="@item.Name" data-lightbox="image-1">
+                                            <img src="@item.PictureUrl" class="img-thumbnail img-fluid" alt="@item.Name" style="height: 50px;" />
+                                        </a>
                                     }
                                 </div>
                             </td>

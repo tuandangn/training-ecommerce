@@ -18,16 +18,18 @@ public sealed class ProductManager : IProductManager
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<Category> _categoryDataReader;
     private readonly IEntityDataReader<Picture> _pictureDataReader;
+    private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
     private readonly IEventPublisher _eventPublisher;
 
     public ProductManager(IRepository<Product> productRepository,
         IEntityDataReader<Product> productEntityDataReader, IEntityDataReader<Category> categoryDataReader,
-        IEntityDataReader<Picture> pictureDataReader, IEventPublisher eventPublisher)
+        IEntityDataReader<Picture> pictureDataReader, IEventPublisher eventPublisher, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader)
     {
         _productRepository = productRepository;
         _productDataReader = productEntityDataReader;
         _categoryDataReader = categoryDataReader;
         _pictureDataReader = pictureDataReader;
+        _unitMeasurementDataReader = unitMeasurementDataReader;
         _eventPublisher = eventPublisher;
     }
 
@@ -44,6 +46,9 @@ public sealed class ProductManager : IProductManager
         {
             ShortDesc = dto.ShortDesc
         };
+
+        await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, _unitMeasurementDataReader).ConfigureAwait(false);
+
         product.SetTrackInventory(dto.TrackInventory);
         foreach (var categoryInfo in dto.Categories)
             await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, _categoryDataReader).ConfigureAwait(false);
@@ -83,7 +88,10 @@ public sealed class ProductManager : IProductManager
         return Task.FromResult(sameNameExists);
     }
 
-    public Task<IPagedDataDto<ProductDto>> GetProductsAsync(int pageIndex, int pageSize, string? keywords = null, Guid? categoryId = null)
+    public Task<IPagedDataDto<ProductDto>> GetProductsAsync(
+        int pageIndex, int pageSize,
+        string? keywords = null, bool onlyTrackInventory = false,
+        Guid? categoryId = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
@@ -93,8 +101,11 @@ public sealed class ProductManager : IProductManager
         if (!string.IsNullOrEmpty(keywords))
         {
             var normizedKeywords = TextHelper.Normalize(keywords);
-            query = query.Where(c => c.NormalizedName.Contains(normizedKeywords));
+            query = query.Where(c => c.Name.Contains(keywords) || c.Name.Contains(normizedKeywords) || c.NormalizedName.Contains(normizedKeywords));
         }
+
+        if (onlyTrackInventory)
+            query = query.Where(c => c.TrackInventory);
 
         if (categoryId.HasValue)
             query = query.Where(c => c.ProductCategories.Any(pc => pc.CategoryId == categoryId));
@@ -135,6 +146,8 @@ public sealed class ProductManager : IProductManager
         product.UpdatedOnUtc = DateTime.UtcNow;
 
         await product.SetNameAsync(dto.Name, this).ConfigureAwait(false);
+        await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, _unitMeasurementDataReader).ConfigureAwait(false);
+        product.SetTrackInventory(dto.TrackInventory);
 
         product.ClearProductCategories();
         foreach (var categoryInfo in dto.Categories)
@@ -145,8 +158,6 @@ public sealed class ProductManager : IProductManager
         foreach (var pictureId in dto.Pictures)
             await product.AddPictureAsync(pictureId, _pictureDataReader).ConfigureAwait(false);
 
-        product.SetTrackInventory(dto.TrackInventory);
-
         var result = await _productRepository.UpdateAsync(product).ConfigureAwait(false);
 
         await _eventPublisher.EntityUpdated(result, deletedPictureIds).ConfigureAwait(false);
@@ -156,7 +167,9 @@ public sealed class ProductManager : IProductManager
             Name = result.Name,
             ShortDesc = result.ShortDesc,
             Categories = result.ProductCategories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
-            Pictures = result.ProductPictures.Select(pp => pp.PictureId)
+            Pictures = result.ProductPictures.Select(pp => pp.PictureId),
+            TrackInventory = result.TrackInventory,
+            UnitMeasurementId = result.UnitMeasurementId
         };
     }
 }

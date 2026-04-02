@@ -26,6 +26,8 @@ public abstract record BasePurchaseOrderItemAppDto
 public sealed record PurchaseOrderItemAppDto(Guid Id) : BasePurchaseOrderItemAppDto
 {
     public decimal QuantityReceived { get; set; }
+    public decimal RemainingQuantity { get; set; }
+    public decimal TotalCost { get; set; }
 }
 
 [Serializable]
@@ -43,12 +45,13 @@ public sealed record AddPurchaseOrderItemResultAppDto
 public sealed record ReceivedGoodsForItemAppDto(Guid PurchaseOrderId, Guid PurchaseOrderItemId)
 {
     public decimal ReceivedQuantity { get; set; }
-    public Guid ReceivedByUserId { get; set; }
+    public Guid? ReceivedByUserId { get; set; }
+    public Guid? WarehouseId { get; set; }
 
     public (bool valid, string? errorMessage) Validate()
     {
-        if (ReceivedQuantity < 0)
-            return (false, "Received quantity must be greater than or equal to 0");
+        if (ReceivedQuantity <= 0)
+            return (false, "Received quantity must be greater than 0.");
 
         return (true, string.Empty);
     }

@@ -11,10 +11,5 @@ public sealed class CategoryMapping : IEntityTypeConfiguration<Category>
         builder.Property(c => c.NormalizedName).HasMaxLength(400); 
         builder.Property(c => c.DisplayOrder).IsRequired();
         builder.Property(c => c.CreatedOnUtc).IsRequired();
-
-        builder.HasOne<Category>()
-            .WithMany()
-            .HasForeignKey(c => c.ParentId)
-            .OnDelete(DeleteBehavior.Restrict);
     }
 }

@@ -19,26 +19,15 @@ public sealed class PurchaseOrderMapping : IEntityTypeConfiguration<PurchaseOrde
         builder.Property(p => p.CreatedOnUtc).IsRequired();
         builder.Property(p => p.UpdatedOnUtc);
 
-        builder.HasOne(p => p.Vendor)
-            .WithMany()
-            .HasForeignKey(p => p.VendorId)
-            .OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne(p => p.Warehouse)
-            .WithMany()
-            .HasForeignKey(p => p.WarehouseId)
-            .OnDelete(DeleteBehavior.Restrict);
-        builder.HasOne(p => p.CreatedByUser)
-            .WithMany()
-            .HasForeignKey(p => p.CreatedByUserId)
-            .OnDelete(DeleteBehavior.Restrict);
+        builder.Property(p => p.VendorId);
+        builder.Property(p => p.WarehouseId);
+        builder.Property(p => p.CreatedByUserId);
+
         builder.HasMany(p => p.Items)
             .WithOne()
             .HasForeignKey(i => i.PurchaseOrderId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Navigation(p => p.CreatedByUser).AutoInclude();
-        builder.Navigation(p => p.Vendor).AutoInclude();
-        builder.Navigation(p => p.Warehouse).AutoInclude();
         builder.Navigation(p => p.Items).AutoInclude();
     }
 }

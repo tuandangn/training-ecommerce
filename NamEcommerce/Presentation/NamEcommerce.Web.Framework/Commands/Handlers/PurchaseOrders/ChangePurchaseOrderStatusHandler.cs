@@ -16,12 +16,12 @@ public sealed class ChangePurchaseOrderStatusHandler : IRequestHandler<ChangePur
 
     public async Task<ChangePurchaseOrderStatusResultModel> Handle(ChangePurchaseOrderStatusCommand request, CancellationToken cancellationToken)
     {
-        var result = await _purchaseOrderAppService.ChangeStatusAsync(request.PurchaseOrderId, request.Status).ConfigureAwait(false);
+        var (success, errorMessage) = await _purchaseOrderAppService.ChangeStatusAsync(request.PurchaseOrderId, request.Status).ConfigureAwait(false);
 
         return new ChangePurchaseOrderStatusResultModel
         {
-            Success = result.success,
-            ErrorMessage = result.errorMessage
+            Success = success,
+            ErrorMessage = errorMessage
         };
     }
 }

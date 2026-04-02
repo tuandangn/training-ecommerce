@@ -22,4 +22,11 @@ public static class ViewConstants
 
     public const string WarehouseSuccessMessage = "Messages.Warehouse.Success";
     public const string WarehouseErrorMessage = "Messages.Warehouse.Error";
+
+    public const string PurchaseOrderSuccessMessage = "Messages.PurchaseOrder.Success";
+    public const string PurchaseOrderErrorMessage = "Messages.PurchaseOrder.Error";
+    public const string PurchaseOrderAddItemErrorMessage = "Messages.PurchaseOrder.AddItem.Error";
+
+    public const string NumberCustomFormat = "#,##0.##";
+    public const string DefaultCurrencySymbol = "đ";
 }

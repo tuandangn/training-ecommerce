@@ -3,7 +3,12 @@
     ViewData[ViewConstants.PageTitle] = "Lịch sử biến động kho";
 }
 <section class="content-title my-4 text-center">
-    <h1>Lịch sử thay đổi: @Model.Data.FirstOrDefault()?.ProductName</h1>
+    <h1>
+        Lịch sử thay đổi
+        <span class="text-muted d-block fs-3 ps-2">
+            @Model.Data.FirstOrDefault()?.ProductName
+        </span>
+    </h1>
 </section>
 
 <section class="content-data p-4 mb-5 shadow">
@@ -39,15 +44,26 @@
                             <td>
                                 @switch (item.MovementType)
                                 {
-                                    case 10: <span class="badge bg-success">Nhập kho</span> break;
-                                    case 20: <span class="badge bg-warning text-dark">Xuất kho</span> break;
-                                    case 30: <span class="badge bg-info text-dark">Kiểm kê / Điều chỉnh</span> break;
-                                    default: <span class="badge bg-secondary">Khác</span> break;
+                                    case 10:
+                                        <span class="badge bg-success">Nhập kho</span>
+                                        break;
+                                    case 20:
+
+                                        <span class="badge bg-warning text-dark">Xuất kho</span>
+                                        break;
+                                    case 30:
+
+                                        <span class="badge bg-info text-dark">Kiểm kê / Điều chỉnh</span>
+                                        break;
+                                    default:
+
+                                        <span class="badge bg-secondary">Khác</span>
+                                        break;
                                 }
                             </td>
-                            <td class="text-end">@item.QuantityBefore.ToString("N0")</td>
-                            <td class="text-end fw-bold @colorClass">@sign@item.Quantity.ToString("N0")</td>
-                            <td class="text-end fw-bold">@item.QuantityAfter.ToString("N0")</td>
+                            <td class="text-end">@item.QuantityBefore.ToString(ViewConstants.NumberCustomFormat)</td>
+                            <td class="text-end fw-bold @colorClass">@sign@item.Quantity.ToString(ViewConstants.NumberCustomFormat)</td>
+                            <td class="text-end fw-bold">@item.QuantityAfter.ToString(ViewConstants.NumberCustomFormat)</td>
                             <td class="text-muted"><small>@item.Note</small></td>
                         </tr>
                     }

@@ -1,12 +1,11 @@
-@model PurchaseOrderModel
-@using NamEcommerce.Web.Contracts.Models.Common
+@model PurchaseOrderDetailsModel
 @{
-    ViewData[ViewConstants.PageTitle] = $"Đơn nhập hàng - {Model.Code}";
-    var successMsg = TempData[ViewConstants.WarehouseSuccessMessage] as string;
-    var errorMsg = TempData[ViewConstants.WarehouseErrorMessage] as string;
-    var products = ViewBag.AvailableProducts as EntityOptionListModel;
+    ViewData[ViewConstants.PageTitle] = $"Đơn nhập hàng - {Model.Info.Code}";
 
-    var (badgeClass, statusLabel) = (PurchaseOrderStatus)Model.Status switch
+    var successMsg = TempData[ViewConstants.PurchaseOrderSuccessMessage] as string;
+    var errorMsg = TempData[ViewConstants.PurchaseOrderErrorMessage] as string;
+
+    var (badgeClass, statusLabel) = (PurchaseOrderStatus)Model.Info.Status switch
     {
         PurchaseOrderStatus.Draft => ("secondary", "Nháp"),
         PurchaseOrderStatus.Submitted => ("primary", "Đã gửi"),
@@ -17,42 +16,25 @@
         _ => ("light", "?")
     };
 
-    bool canAddItems = (PurchaseOrderStatus)Model.Status == PurchaseOrderStatus.Draft;
-    bool canReceive = (PurchaseOrderStatus)Model.Status == PurchaseOrderStatus.Approved || (PurchaseOrderStatus)Model.Status == PurchaseOrderStatus.Receiving;
+    ViewData["AvailableWarehouses"] = Model.AvailableWarehouses;
+    ViewData["ReceiveItemModels"] = Model.ReceiveItemModels;
 }
-
-<section class="content-title my-4 d-flex align-items-center justify-content-between">
+<section class="content-title px-3 my-4 d-flex align-items-center justify-content-between">
     <div>
-        <h1>@Model.Code</h1>
+        <h1>
+            @Model.Info.Code
+        </h1>
         <span class="badge bg-@badgeClass fs-6">@statusLabel</span>
     </div>
-    <div class="d-flex gap-2">
-        @if ((PurchaseOrderStatus)Model.Status == PurchaseOrderStatus.Draft)
-        {
-            <form asp-action="ChangeStatus" method="post">
-                <input type="hidden" name="id" value="@Model.Id" />
-                <input type="hidden" name="status" value="@((int)PurchaseOrderStatus.Submitted)" />
-                <button type="submit" class="btn btn-primary">Gửi duyệt</button>
-            </form>
-        }
-        @if ((PurchaseOrderStatus)Model.Status == PurchaseOrderStatus.Submitted)
-        {
-            <form asp-action="ChangeStatus" method="post">
-                <input type="hidden" name="id" value="@Model.Id" />
-                <input type="hidden" name="status" value="@((int)PurchaseOrderStatus.Approved)" />
-                <button type="submit" class="btn btn-success">Phê duyệt</button>
-            </form>
-            <form asp-action="ChangeStatus" method="post">
-                <input type="hidden" name="id" value="@Model.Id" />
-                <input type="hidden" name="status" value="@((int)PurchaseOrderStatus.Cancelled)" />
-                <button type="submit" class="btn btn-danger">Hủy đơn</button>
-            </form>
-        }
-        <a asp-action="List" class="btn btn-outline-secondary">Quay lại</a>
+    <div class="d-flex flex-column gap-2 align-items-end">
+        <partial name="Details.ChangeStatus" model="Model.Info" />
+        <a asp-action="List" class="text-muted small text-decoration-none">
+            <i class="bi bi-arrow-90deg-left"></i>
+            Trở lại
+        </a>
     </div>
 </section>
-
-<section class="content-data p-4 mb-4 shadow">
+<section class="content-data p-4 mb-4 shadow border rounded">
     @if (!string.IsNullOrEmpty(successMsg))
     {
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -65,116 +47,14 @@
             @errorMsg <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
-
-    <div class="row">
-        <div class="col-md-6">
-            <dl class="row">
-                <dt class="col-sm-4">Nhà cung cấp</dt>
-                <dd class="col-sm-8">@Model.VendorName</dd>
-                <dt class="col-sm-4">Kho nhập</dt>
-                <dd class="col-sm-8">@Model.WarehouseName</dd>
-                <dt class="col-sm-4">Ngày giao dự kiến</dt>
-                <dd class="col-sm-8">@(Model.ExpectedDeliveryDate?.ToLocalTime().ToString("d") ?? "-")</dd>
-                <dt class="col-sm-4">Ghi chú</dt>
-                <dd class="col-sm-8">@(Model.Note ?? "-")</dd>
-            </dl>
-        </div>
-        <div class="col-md-6 text-end">
-            <p class="fs-5 fw-bold">Tổng giá trị: <span class="text-primary">@Model.TotalAmount.ToString("##") đ</span></p>
-            <p class="text-muted small">Ngày tạo: @Model.CreatedOn.ToString("g")</p>
-        </div>
-    </div>
+    <partial name="Details.Info" model="Model.Info" view-data="ViewData" />
 </section>
-
-<section class="content-data p-4 mb-5 shadow">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">Danh sách sản phẩm</h5>
-    </div>
-
-    <div class="table-responsive">
-        <table class="table table-bordered">
-            <thead class="table-light">
-                <tr>
-                    <th>Sản phẩm</th>
-                    <th class="text-end">SL đặt</th>
-                    <th class="text-end">Giá nhập</th>
-                    <th class="text-end">Thành tiền</th>
-                    <th class="text-end">Đã nhận</th>
-                    <th class="text-end">Còn lại</th>
-                    @if (canReceive)
-                    {
-                        <th></th>
-                    }
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model.Items)
-                {
-                    <tr>
-                        <td>@item.ProductName</td>
-                        <td class="text-end">@item.QuantityOrdered.ToString("N0")</td>
-                        <td class="text-end">@item.UnitCost.ToString("N0") đ</td>
-                        <td class="text-end">@((item.QuantityOrdered * item.UnitCost).ToString("N0")) đ</td>
-                        <td class="text-end text-success fw-bold">@item.QuantityReceived.ToString("N0")</td>
-                        <td class="text-end @(item.RemainingQuantity > 0 ? "text-warning" : "text-muted")">
-                            @item.RemainingQuantity.ToString("##")
-                        </td>
-                        @if (canReceive && item.RemainingQuantity > 0)
-                        {
-                            <td class="text-end">
-                                <form asp-action="Receive" method="post" class="d-inline-flex align-items-center gap-1">
-                                    <input type="hidden" name="PurchaseOrderId" value="@Model.Id" />
-                                    <input type="hidden" name="ProductId" value="@item.ProductId" />
-                                    <input type="number" name="ReceivedQuantity" class="form-control form-control-sm"
-                                           style="width:90px" value="@item.RemainingQuantity" min="1" max="@item.RemainingQuantity" step="0.01" />
-                                    <button type="submit" class="btn btn-sm btn-success">Nhập</button>
-                                </form>
-                            </td>
-                        }
-                        else if (canReceive)
-                        {
-                            <td class="text-center text-muted"><i class="bi bi-check-circle-fill text-success"></i></td>
-                        }
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-
-    @if (canAddItems)
-    {
-        <hr />
-        <h6>Thêm sản phẩm vào đơn</h6>
-        <form asp-action="AddItem" method="post" class="row g-2 align-items-end">
-            <input type="hidden" name="PurchaseOrderId" value="@Model.Id" />
-            <div class="col-md-4">
-                <label class="form-label">Sản phẩm</label>
-                <select name="ProductId" class="form-select form-select-sm">
-                    <option value="">-- Chọn sản phẩm --</option>
-                    @if (products != null)
-                    {
-                        foreach (var product in products.Options)
-                        {
-                            <option value="@product.Id">@product.Name</option>
-                        }
-                    }
-                </select>
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Số lượng</label>
-                <input type="number" name="Quantity" class="form-control form-control-sm" min="1" step="0.01" value="1" />
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Giá nhập (đ)</label>
-                <input type="number" name="UnitCost" class="form-control form-control-sm" min="0" step="1000" value="0" />
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Ghi chú</label>
-                <input type="text" name="Note" class="form-control form-control-sm" />
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-sm btn-primary w-100">Thêm</button>
-            </div>
-        </form>
-    }
-</section>
+@if (Model.Info.CanAddItems)
+{
+    <section class="content-data p-4 mb-5 shadow border rounded">
+        <partial name="Details.AddItem" model="Model.AddItemModel" />
+    </section>
+}
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

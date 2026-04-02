@@ -13,7 +13,7 @@ namespace NamEcommerce.Domain.Entities.PurchaseOrders;
 [Serializable]
 public sealed record PurchaseOrder : AppAggregateEntity
 {
-    internal PurchaseOrder(string code, Guid? vendorId, Guid? warehouseId, Guid createdByUserId) : base(Guid.NewGuid())
+    internal PurchaseOrder(string code, Guid? vendorId, Guid? warehouseId, Guid? createdByUserId) : base(Guid.NewGuid())
     {
         Code = code;
         VendorId = vendorId;
@@ -27,13 +27,8 @@ public sealed record PurchaseOrder : AppAggregateEntity
     public string Code { get; }
 
     public Guid? VendorId { get; private set; }
-    public Vendor? Vendor { get; }
-
     public Guid? WarehouseId { get; private set; }
-    public Warehouse? Warehouse { get; }
-
-    public Guid CreatedByUserId { get; }
-    public User? CreatedByUser { get; }
+    public Guid? CreatedByUserId { get; }
 
     public PurchaseOrderStatus Status { get; private set; }
 
@@ -96,18 +91,34 @@ public sealed record PurchaseOrder : AppAggregateEntity
     }
     internal void RemoveWarehouse() => WarehouseId = null;
 
-    internal void AddPurchaseOrderItem(PurchaseOrderItem item)
+    internal async Task AddPurchaseOrderItemAsync(PurchaseOrderItem item, IGetByIdService<Product> byIdGetter)
     {
         if (item.PurchaseOrderId != Id)
             throw new InvalidOperationException("The item does not belong to this purchase order.");
 
+        ArgumentNullException.ThrowIfNull(byIdGetter);
+
+        var product = await byIdGetter.GetByIdAsync(item.ProductId).ConfigureAwait(false);
+        if (product is null)
+            throw new ProductIsNotFoundException(item.ProductId);
+
         _items.Add(item);
     }
 
-    public bool CanAddPurchaseOrderItem() => Status == PurchaseOrderStatus.Draft;
+    public bool CanAddPurchaseOrderItems() => Status == PurchaseOrderStatus.Draft;
     public bool CanChangeStatus() => Status != PurchaseOrderStatus.Completed && Status != PurchaseOrderStatus.Cancelled;
-    public bool CanChangeStatusTo(PurchaseOrderStatus toStatus) 
-        => (Status != PurchaseOrderStatus.Completed && Status != PurchaseOrderStatus.Cancelled) || Status == toStatus;
+    public bool CanChangeStatusTo(PurchaseOrderStatus toStatus)
+    {
+        if (Status == PurchaseOrderStatus.Draft && toStatus == PurchaseOrderStatus.Submitted)
+            return Items.Any();
+
+        if (!CanChangeStatus())
+            return false;
+
+        var subtract = (int)toStatus - (int)Status;
+        return new[] { 0, 10, 20, 40 }.Contains(subtract);
+    }
+
     public bool CanReceiveGoods() => Status == PurchaseOrderStatus.Approved || Status == PurchaseOrderStatus.Receiving;
 
     internal void ChangeStatus(PurchaseOrderStatus status)

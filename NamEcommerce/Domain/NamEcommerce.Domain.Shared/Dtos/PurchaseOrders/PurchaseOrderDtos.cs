@@ -9,10 +9,9 @@ public abstract record BasePurchaseOrderDto
     public required string Code { get; init; }
     public required Guid? VendorId { get; init; }
     public required Guid? WarehouseId { get; init; }
-    public required Guid CreatedByUserId { get; init; }
-    public PurchaseOrderStatus Status { get; set; }
+    public required Guid? CreatedByUserId { get; init; }
 
-    public DateTime? ExpectedDeliveryDate { get; set; }
+    public DateTime? ExpectedDeliveryDateUtc { get; set; }
     public string? Note { get; set; }
     public decimal TaxAmount { get; set; }
     public decimal ShippingAmount { get; set; }
@@ -23,7 +22,7 @@ public abstract record BasePurchaseOrderDto
     {
         if (string.IsNullOrEmpty(Code))
             throw new PurchaseOrderDataIsInvalidException("Code is not empty");
-        if (ExpectedDeliveryDate.HasValue && ExpectedDeliveryDate.Value < DateTime.UtcNow)
+        if (ExpectedDeliveryDateUtc.HasValue && ExpectedDeliveryDateUtc.Value < DateTime.UtcNow)
             throw new PurchaseOrderDataIsInvalidException("Expected delivery date must be in the future");
         if (TaxAmount < 0)
             throw new PurchaseOrderDataIsInvalidException("Tax amount must be greater than or equal to 0");
@@ -36,7 +35,14 @@ public abstract record BasePurchaseOrderDto
 }
 
 [Serializable]
-public sealed record PurchaseOrderDto(Guid Id) : BasePurchaseOrderDto;
+public sealed record PurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
+{
+    public PurchaseOrderStatus Status { get; set; }
+    public DateTime CreatedOnUtc { get; set; }
+    public decimal TotalAmount { get; set; }
+    public bool CanAddItems { get; set; }
+    public bool CanReceiveGoods { get; set; }
+}
 
 [Serializable]
 public sealed record CreatePurchaseOrderDto : BasePurchaseOrderDto;
@@ -47,6 +53,12 @@ public sealed record CreatePurchaseOrderResultDto
 }
 
 [Serializable]
-public sealed record UpdatePurchaseOrderDto(Guid Id) : BasePurchaseOrderDto;
+public sealed record UpdatePurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
+{
+    public PurchaseOrderStatus Status { get; set; }
+}
 [Serializable]
-public sealed record UpdatePurchaseOrderResultDto(Guid Id) : BasePurchaseOrderDto;
+public sealed record UpdatePurchaseOrderResultDto(Guid Id) : BasePurchaseOrderDto
+{
+    public PurchaseOrderStatus Status { get; set; }
+}

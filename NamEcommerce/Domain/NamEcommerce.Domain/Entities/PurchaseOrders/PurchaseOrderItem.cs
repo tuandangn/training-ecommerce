@@ -5,7 +5,7 @@ namespace NamEcommerce.Domain.Entities.PurchaseOrders;
 [Serializable]
 public record PurchaseOrderItem : AppEntity
 {
-    internal PurchaseOrderItem(Guid purchaseOrderId, Guid productId, decimal quantityOrdered, decimal unitCost) : base(Guid.NewGuid())
+    internal PurchaseOrderItem(Guid purchaseOrderId, Guid productId, decimal quantityOrdered, decimal unitCost) : base(Guid.Empty)
     {
         PurchaseOrderId = purchaseOrderId;
         ProductId = productId;

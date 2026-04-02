@@ -12,12 +12,15 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
     private readonly IPurchaseOrderAppService _purchaseOrderAppService;
     private readonly IVendorAppService _vendorAppService;
     private readonly IWarehouseAppService _warehouseAppService;
+    private readonly IProductAppService _productAppService;
 
-    public GetPurchaseOrderHandler(IPurchaseOrderAppService appService, IVendorAppService vendorAppService, IWarehouseAppService warehouseAppService)
+    public GetPurchaseOrderHandler(IPurchaseOrderAppService appService, IVendorAppService vendorAppService,
+        IWarehouseAppService warehouseAppService, IProductAppService productAppService)
     {
         _purchaseOrderAppService = appService;
         _vendorAppService = vendorAppService;
         _warehouseAppService = warehouseAppService;
+        _productAppService = productAppService;
     }
 
     public async Task<PurchaseOrderModel?> Handle(GetPurchaseOrderQuery request, CancellationToken cancellationToken)
@@ -36,15 +39,28 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             ExpectedDeliveryDate = purchaseOrder.ExpectedDeliveryDateUtc,
             TotalAmount = purchaseOrder.TotalAmount,
             CreatedOn = purchaseOrder.CreatedOnUtc.ToLocalTime(),
-            Items = purchaseOrder.Items.Select(item => new PurchaseOrderModel.ItemModel(item.Id)
+            CanAddItems = purchaseOrder.CanAddItems,
+            CanReceiveGoods = purchaseOrder.CanReceiveGoods
+        };
+
+        foreach (var item in purchaseOrder.Items)
+        {
+            var itemModel = new PurchaseOrderModel.ItemModel(item.Id)
             {
                 ProductId = item.ProductId,
+                Note = item.Note,
                 QuantityOrdered = item.QuantityOrdered,
-                UnitCost = item.UnitCost,
                 QuantityReceived = item.QuantityReceived,
-                Note = item.Note
-            }).ToList()
-        };
+                RemainingQuantity = item.RemainingQuantity,
+                UnitCost = item.UnitCost,
+                TotalCost = item.TotalCost
+            };
+            var product = await _productAppService.GetProductByIdAsync(item.ProductId).ConfigureAwait(false);
+            itemModel.ProductName = product?.Name ?? string.Empty;
+            itemModel.TrackInventory = product?.TrackInventory ?? false;
+
+            model.Items.Add(itemModel);
+        }
 
         if (model.VendorId.HasValue)
         {

@@ -39,10 +39,10 @@
                 <tr>
                     <th class="ps-3">Sản phẩm</th>
                     <th>Kho</th>
-                    <th class="text-end">Tồn thực tế</th>
-                    <th class="text-end">Đã giữ</th>
-                    <th class="text-end">Có sẵn</th>
-                    <th>Cập nhật lúc</th>
+                    <th class="text-end">Đang tồn</th>
+                    <th class="text-end">Chờ giao</th>
+                    <th class="text-end">Còn lại</th>
+                    <th class="text-center">Cập nhật lúc</th>
                     <th></th>
                 </tr>
             </thead>
@@ -59,19 +59,19 @@
                                 @item.WarehouseName
                             </td>
                             <td class="text-end">
-                                @item.QuantityOnHand.ToString("N0")
+                                @item.QuantityOnHand.ToString(ViewConstants.NumberCustomFormat)
                             </td>
                             <td class="text-end text-danger">
-                                @item.QuantityReserved.ToString("N0")
+                                @item.QuantityReserved.ToString(ViewConstants.NumberCustomFormat)
                             </td>
                             <td class="text-end @(item.QuantityAvailable < 5 ? "text-danger" : "text-success") fw-bold">
-                                @item.QuantityAvailable.ToString("N0")
+                                @item.QuantityAvailable.ToString(ViewConstants.NumberCustomFormat)
                                 @if (item.QuantityAvailable < 5)
                                 {
                                     <i class="bi bi-exclamation-triangle-fill ms-1" title="Sắp hết hàng!"></i>
                                 }
                             </td>
-                            <td class="text-muted">
+                            <td class="text-muted text-center">
                                 @item.UpdatedOnUtc.ToLocalTime().ToString("g")
                             </td>
                             <td class="text-end pe-3">

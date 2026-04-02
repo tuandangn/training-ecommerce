@@ -71,8 +71,7 @@ public sealed record Warehouse : AppAggregateEntity
         if (await checker.DoesCodeExistAsync(code, Id).ConfigureAwait(false))
             throw new WarehouseCodeExistsException(code);
 
-        Name = code;
-        NormalizedName = TextHelper.Normalize(code);
+        Code = code;
     }
 
     internal void ChangeType(WarehouseType newType) => WarehouseType = newType;

@@ -17,7 +17,6 @@ public record Product : AppAggregateEntity
         Name = name;
         NormalizedName = TextHelper.Normalize(Name);
 
-        TrackInventory = true;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
@@ -34,6 +33,8 @@ public record Product : AppAggregateEntity
         }
     }
     internal string NormalizedShortDesc { get; private set; } = "";
+
+    public Guid? UnitMeasurementId { get; private set; }
 
     public bool TrackInventory { get; private set; }
 
@@ -65,6 +66,26 @@ public record Product : AppAggregateEntity
 
         Name = name;
         NormalizedName = TextHelper.Normalize(name);
+    }
+
+    internal async Task SetUnitMeasurementAsync(Guid? unitMeasurementId, IGetByIdService<UnitMeasurement> byIdGetter)
+    {
+        if (UnitMeasurementId == unitMeasurementId)
+            return;
+
+        if (!unitMeasurementId.HasValue)
+        {
+            UnitMeasurementId = null;
+            return;
+        }
+
+        ArgumentNullException.ThrowIfNull(byIdGetter);
+
+        var unitMeassurement = await byIdGetter.GetByIdAsync(unitMeasurementId.Value).ConfigureAwait(false);
+        if (unitMeassurement is null)
+            throw new ArgumentException($"Cannot found unit mesuarement with id {unitMeasurementId}", nameof(unitMeasurementId));
+
+        UnitMeasurementId = unitMeasurementId;
     }
 
     internal void ClearProductCategories() => _productCategories.Clear();

@@ -10,7 +10,7 @@
 </section>
 <section class="content-data">
     <div>
-        <div class="p-4 shadow offset-lg-2 col-lg-8">
+        <div class="p-4 shadow border rounded offset-lg-2 col-lg-8">
             <div class="d-flex justify-content-end mb-2">
                 <a asp-action="List" class="text-muted small text-decoration-none">
                     <i class="bi bi-arrow-90deg-left"></i>
@@ -39,10 +39,26 @@
                             </div>
                             <div class="col-12 col-lg-8 order-1">
                                 <div class="row">
-                                    <div class="col-12 mb-3">
+                                    <div class="col-12 col-md-6 col-lg-8 mb-3">
                                         <label asp-for="Name" class="form-label"></label>
                                         <input asp-for="Name" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Name)" autofocus />
                                         <span asp-validation-for="Name" class="text-danger small"></span>
+                                    </div>
+                                    <div class="col-12 col-md-6 col-lg-4 mb-3">
+                                        <label asp-for="UnitMeasurementId" class="form-label"></label>
+                                        <select asp-for="UnitMeasurementId" class="form-select" placeholder="@Html.DisplayNameFor(m => m.UnitMeasurementId)">
+                                            <option selected="@(!Model.UnitMeasurementId.HasValue)" value="@string.Empty">(Không chọn)</option>
+                                            @if (Model.AvailableUnitMeasurements is not null)
+                                            {
+                                                foreach (var unitMeasurement in Model.AvailableUnitMeasurements)
+                                                {
+                                                    <option value="@unitMeasurement.Id" selected="@(unitMeasurement.Id == Model.UnitMeasurementId)">
+                                                        @unitMeasurement.Name
+                                                    </option>
+                                                }
+                                            }
+                                        </select>
+                                        <span asp-validation-for="UnitMeasurementId" class="text-danger small"></span>
                                     </div>
                                     <div class="col-12 mb-3">
                                         <label asp-for="CategoryId" class="form-label"></label>
