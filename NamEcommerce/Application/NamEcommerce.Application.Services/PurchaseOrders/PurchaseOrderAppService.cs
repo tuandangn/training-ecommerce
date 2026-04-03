@@ -155,6 +155,57 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             };
         }
 
+        if (purchaseOrder.Status == PurchaseOrderStatus.Submitted
+            || purchaseOrder.Status == PurchaseOrderStatus.Cancelled
+            || purchaseOrder.Status == PurchaseOrderStatus.Completed)
+        {
+                return new UpdatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = $"Purchase order in status cannot change info"
+                };
+        }
+
+        if (purchaseOrder.Status != PurchaseOrderStatus.Draft)
+        {
+            if (dto.VendorId != purchaseOrder.VendorId)
+            {
+                return new UpdatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = $"Purchase order in status cannot change vendor"
+                };
+            }
+            if (dto.ExpectedDeliveryDateUtc?.Date != purchaseOrder.ExpectedDeliveryDateUtc?.Date)
+            {
+                return new UpdatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = $"Purchase order in status cannot change date"
+                };
+            }
+        }
+
+        if (purchaseOrder.Items.Count == 0)
+        {
+            if (dto.ShippingAmount > 0)
+            {
+                return new UpdatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = $"Purchase order cannot set shipping amount"
+                };
+            }
+            if (dto.TaxAmount > 0)
+            {
+                return new UpdatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = $"Purchase order cannot set tax amount"
+                };
+            }
+        }
+
         if (dto.VendorId.HasValue)
         {
             var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);

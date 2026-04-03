@@ -1,0 +1,122 @@
+@using System.Text.Encodings.Web
+@using NamEcommerce.Web.Contracts.Models.Customers
+@using NamEcommerce.Web.Models.Customers
+@inject UrlEncoder MyUrlEncoder
+@model CustomerListModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Khách hàng";
+    var successMessage = TempData[ViewConstants.CustomerSuccessMessage] as string;
+    var errorMessage = TempData[ViewConstants.CustomerErrorMessage] as string;
+
+    string? query = Model.Keywords;
+}
+
+<section class="content-title my-4 text-center">
+    <h1 class="display-6 fw-bold">Quản lý Khách hàng</h1>
+</section>
+
+<section class="content-data p-4 mb-5 shadow-sm border rounded bg-white">
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+            <partial name="_Search" model="@(new CustomerListSearchModel { Keywords = query })" />
+            @if (!string.IsNullOrEmpty(query))
+            {
+                <a asp-action="List" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-x-lg"></i> Xóa lọc
+                </a>
+            }
+        </div>
+        <div>
+            <a asp-action="Create" class="btn btn-primary shadow-sm">
+                <i class="bi bi-person-plus-fill me-1"></i> Thêm mới
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @successMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @errorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3" style="width: 40%">Họ tên</th>
+                    <th style="width: 25%">Số điện thoại</th>
+                    <th class="text-end pe-3">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Data.Pagination.TotalCount > 0)
+                {
+                    @foreach (var item in Model.Data)
+                    {
+                        <tr>
+                            <td class="ps-3 fw-medium">@item.FullName</td>
+                            <td>
+                                <a href="tel:@item.PhoneNumber" class="text-decoration-none text-secondary">
+                                    <i class="bi bi-telephone-fill me-1 small"></i> @item.PhoneNumber
+                                </a>
+                            </td>
+                            <td class="text-end pe-3">
+                                <a class="btn btn-sm btn-light border" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                    <i class="bi bi-pencil-square text-primary"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-light border btnDelete" 
+                                        data-id="@item.Id" data-name="@item.FullName" title="Xóa">
+                                    <i class="bi bi-trash3-fill text-danger"></i>
+                                </button>
+                                <form id="deleteForm@(item.Id)" asp-action="Delete" asp-route-id="@item.Id" method="post" style="display:none;"></form>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="3" class="text-center py-5 text-muted italic">
+                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            Chưa có dữ liệu khách hàng
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.Data.Pagination.TotalCount > 0)
+    {
+        <div class="mt-4">
+            <partial name="_Pager" model="Model.Data.Pagination" />
+        </div>
+    }
+</section>
+
+@section Scripts {
+    <script type="module">
+        import { confirm } from "/modules/modals.js";
+
+        (function() {
+            $('.btnDelete').on('click', async function(e) {
+                const name = $(this).data('name');
+                const id = $(this).data('id');
+                
+                const confirmed = await confirm('Xác nhận xóa', `Bạn có chắc chắn muốn xóa khách hàng <strong>${name}</strong>?`);
+                if (confirmed) {
+                    $(`#deleteForm${id}`).submit();
+                }
+            });
+        })();
+    </script>
+}

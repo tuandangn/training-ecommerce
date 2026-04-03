@@ -92,6 +92,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 TaxAmount = purchaseOrderInfo.TaxAmount,
                 CanChangeVendor = purchaseOrderInfo.Status == (int) PurchaseOrderStatus.Draft,
                 CanChangeDate = purchaseOrderInfo.Status == (int) PurchaseOrderStatus.Draft,
+                CanChangeFees = purchaseOrderInfo.Items.Count > 0,
                 TotalAmount = purchaseOrderInfo.TotalAmount,
                 CreatedOn = purchaseOrderInfo.CreatedOn
             };

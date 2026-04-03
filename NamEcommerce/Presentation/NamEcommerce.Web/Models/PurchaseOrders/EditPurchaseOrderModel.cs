@@ -30,7 +30,10 @@ public sealed class EditPurchaseOrderModel
 
     [ValidateNever]
     public bool CanChangeVendor { get; set; }
+    [ValidateNever]
     public bool CanChangeDate { get; set; }
+    [ValidateNever]
+    public bool CanChangeFees { get; set; }
 
     [ValidateNever]
     public decimal TotalAmount { get; set; }

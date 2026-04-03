@@ -1,4 +1,4 @@
-﻿namespace NamEcommerce.Web.Constants;
+namespace NamEcommerce.Web.Constants;
 
 public static class ViewConstants
 {
@@ -13,6 +13,9 @@ public static class ViewConstants
 
     public const string VendorSuccessMessage = "Messages.Vendor.Success";
     public const string VendorErrorMessage = "Messages.Vendor.Error";
+
+    public const string CustomerSuccessMessage = "Messages.Customer.Success";
+    public const string CustomerErrorMessage = "Messages.Customer.Error";
 
     public const string CategorySuccessMessage = "Messages.Category.Success";
     public const string CategoryErrorMessage = "Messages.Category.Error";

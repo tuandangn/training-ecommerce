@@ -74,6 +74,18 @@ public sealed record DispatchStockAppDto
 }
 
 [Serializable]
+public sealed record ReceiveStockAppDto
+{
+    public required Guid ProductId { get; init; }
+    public required Guid WarehouseId { get; init; }
+    public required decimal Quantity { get; init; }
+    public int ReferenceType { get; init; }
+    public Guid? ReferenceId { get; init; }
+    public required Guid UserId { get; init; }
+    public string? Note { get; init; }
+}
+
+[Serializable]
 public sealed class ResultAppDto
 {
     public required bool Success { get; init; }

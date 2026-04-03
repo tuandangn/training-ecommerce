@@ -6,6 +6,7 @@ using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Models.Inventory;
 using NamEcommerce.Web.Contracts.Services;
+using NamEcommerce.Web.Contracts.Models.Inventory;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -91,4 +92,174 @@ public sealed class InventoryController : BaseAuthorizedController
 
         return View(model);
     }
+
+    #region Reserve Stock
+
+    public async Task<IActionResult> ReserveStock(Guid productId, Guid warehouseId)
+    {
+        var model = new ReserveStockModel
+        {
+            ProductId = productId,
+            WarehouseId = warehouseId
+        };
+        return View(model);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ReserveStock(ReserveStockModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
+
+        var result = await _mediator.Send(new ReserveStockCommand
+        {
+            ProductId = model.ProductId,
+            WarehouseId = model.WarehouseId,
+            Quantity = model.Quantity,
+            ReferenceId = model.ReferenceId,
+            UserId = currentUser?.Id ?? Guid.Empty,
+            Note = model.Note
+        });
+
+        if (!result.Success)
+        {
+            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            return View(model);
+        }
+
+        TempData[ViewConstants.VendorSuccessMessage] = "Giữ hàng thành công!";
+        return RedirectToAction(nameof(StockList));
+    }
+
+    #endregion
+
+    #region Release Reserved Stock
+
+    public async Task<IActionResult> ReleaseReservedStock(Guid productId, Guid warehouseId)
+    {
+        var model = new ReleaseReservedStockModel
+        {
+            ProductId = productId,
+            WarehouseId = warehouseId
+        };
+        return View(model);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ReleaseReservedStock(ReleaseReservedStockModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
+
+        var result = await _mediator.Send(new ReleaseReservedStockCommand
+        {
+            ProductId = model.ProductId,
+            WarehouseId = model.WarehouseId,
+            Quantity = model.Quantity,
+            ReferenceId = model.ReferenceId,
+            UserId = currentUser?.Id ?? Guid.Empty,
+            Note = model.Note
+        });
+
+        if (!result.Success)
+        {
+            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            return View(model);
+        }
+
+        TempData[ViewConstants.VendorSuccessMessage] = "Giải phóng hàng giữ thành công!";
+        return RedirectToAction(nameof(StockList));
+    }
+
+    #endregion
+
+    #region Dispatch Stock
+
+    public async Task<IActionResult> DispatchStock(Guid productId, Guid warehouseId)
+    {
+        var model = new DispatchStockModel
+        {
+            ProductId = productId,
+            WarehouseId = warehouseId
+        };
+        return View(model);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> DispatchStock(DispatchStockModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
+
+        var result = await _mediator.Send(new DispatchStockCommand
+        {
+            ProductId = model.ProductId,
+            WarehouseId = model.WarehouseId,
+            Quantity = model.Quantity,
+            ReferenceId = model.ReferenceId,
+            UserId = currentUser?.Id ?? Guid.Empty,
+            Note = model.Note
+        });
+
+        if (!result.Success)
+        {
+            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            return View(model);
+        }
+
+        TempData[ViewConstants.VendorSuccessMessage] = "Xuất kho thành công!";
+        return RedirectToAction(nameof(StockList));
+    }
+
+    #endregion
+
+    #region Receive Stock
+
+    public async Task<IActionResult> ReceiveStock(Guid productId, Guid warehouseId)
+    {
+        var model = new ReceiveStockModel
+        {
+            ProductId = productId,
+            WarehouseId = warehouseId,
+            ReferenceType = 0
+        };
+        return View(model);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ReceiveStock(ReceiveStockModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
+
+        var result = await _mediator.Send(new ReceiveStockCommand
+        {
+            ProductId = model.ProductId,
+            WarehouseId = model.WarehouseId,
+            Quantity = model.Quantity,
+            ReferenceType = model.ReferenceType,
+            ReferenceId = model.ReferenceId,
+            UserId = currentUser?.Id ?? Guid.Empty,
+            Note = model.Note
+        });
+
+        if (!result.Success)
+        {
+            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            return View(model);
+        }
+
+        TempData[ViewConstants.VendorSuccessMessage] = "Nhập kho thành công!";
+        return RedirectToAction(nameof(StockList));
+    }
+
+    #endregion
 }

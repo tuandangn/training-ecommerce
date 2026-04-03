@@ -1,0 +1,393 @@
+@model NamEcommerce.Web.Models.Orders.CreateOrderModel
+@{
+    ViewData["Title"] = "Tạo Đơn hàng mới";
+}
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-1">
+                            <li class="breadcrumb-item"><a asp-action="List" class="text-decoration-none">Đơn hàng</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Tạo mới</li>
+                        </ol>
+                    </nav>
+                    <h1 class="h3 mb-0 fw-bold">Tạo Đơn hàng mới</h1>
+                </div>
+                <a asp-action="List" class="btn btn-outline-secondary px-4 rounded-3">
+                    <i class="bi bi-x-lg me-1"></i> Hủy bỏ
+                </a>
+            </div>
+
+            <form asp-action="Create" method="post" id="createOrderForm">
+                <div class="row g-4">
+                    <!-- Left: Order Info & Items -->
+                    <div class="col-md-8">
+                        <!-- Customer Selection -->
+                        <div class="card border-0 shadow-sm rounded-4 mb-4">
+                            <div class="card-header bg-white border-0 py-3">
+                                <h5 class="mb-0 fw-bold"><i class="bi bi-person-plus me-2 text-primary"></i>Thông tin Khách hàng</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="position-relative mb-3">
+                                    <label class="form-label small fw-bold text-muted uppercase">Tìm kiếm khách hàng</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                        <input type="text" id="customerSearch" class="form-control border-start-0 ps-0" placeholder="Nhập tên hoặc số điện thoại..." autocomplete="off">
+                                    </div>
+                                    <input type="hidden" asp-for="CustomerId" required />
+                                    <div id="customerSuggestions" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1050; display: none;"></div>
+                                </div>
+                                <div id="selectedCustomerDisplay" class="alert alert-primary d-none border-0 rounded-3 d-flex align-items-center mb-0">
+                                    <i class="bi bi-person-check-fill fs-4 me-3"></i>
+                                    <div>
+                                        <div class="fw-bold" id="displayName">Customer Name</div>
+                                        <div class="small" id="displayPhone">0123456789</div>
+                                    </div>
+                                    <button type="button" class="btn-close ms-auto" id="resetCustomer"></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Order Items -->
+                        <div class="card border-0 shadow-sm rounded-4 mb-4">
+                            <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-success"></i>Danh sách Sản phẩm</h5>
+                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                                    <i class="bi bi-plus-lg me-1"></i> Thêm sản phẩm
+                                </button>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle mb-0" id="orderItemsTable">
+                                        <thead class="bg-light text-muted small text-uppercase">
+                                            <tr>
+                                                <th class="ps-4">Sản phẩm</th>
+                                                <th class="text-center" style="width: 100px">Số lượng</th>
+                                                <th class="text-end" style="width: 150px">Đơn giá</th>
+                                                <th class="text-end" style="width: 150px">Thành tiền</th>
+                                                <th class="text-end pe-4" style="width: 50px"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="itemsTableBody">
+                                            <!-- Items will be added here dynamically -->
+                                        </tbody>
+                                        <tfoot class="bg-light d-none" id="tableFooter">
+                                            <tr>
+                                                <td colspan="3" class="text-end fw-bold py-2 border-0">TẠM TÍNH:</td>
+                                                <td class="text-end fw-bold py-2 border-0" id="subTotal">0 đ</td>
+                                                <td></td>
+                                            </tr>
+                                            <tr>
+                                                <td colspan="3" class="text-end fw-bold py-2 border-0">GIẢM GIÁ:</td>
+                                                <td class="text-end fw-bold py-2 border-0 text-danger" id="discountDisplay">- 0 đ</td>
+                                                <td></td>
+                                            </tr>
+                                            <tr class="border-top">
+                                                <td colspan="3" class="text-end fw-bold py-3">TỔNG CỘNG:</td>
+                                                <td class="text-end fw-bold py-3 text-primary fs-5" id="grandTotal">0 đ</td>
+                                                <td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                    <div id="noItemsMessage" class="py-5 text-center text-muted italic">
+                                        Chưa có sản phẩm nào được chọn.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Summary & Action -->
+                    <div class="col-md-4">
+                        <div class="card border-0 shadow-sm rounded-4 mb-4">
+                            <div class="card-header bg-white border-0 py-3 text-center">
+                                <h5 class="mb-0 fw-bold">Thông tin bổ sung</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-muted uppercase">Kho xuất hàng</label>
+                                    <select asp-for="WarehouseId" class="form-select border-0 bg-light rounded-3 py-2" required>
+                                        <option value="">-- Chọn kho hàng --</option>
+                                        @if (ViewBag.AvailableWarehouses != null)
+                                        {
+                                            foreach (var w in (IEnumerable<NamEcommerce.Web.Contracts.Models.Inventory.WarehouseListModel.WarehouseItemModel>)ViewBag.AvailableWarehouses)
+                                            {
+                                                <option value="@w.Id">@w.Name (@w.Code)</option>
+                                            }
+                                        }
+                                    </select>
+                                    <span asp-validation-for="WarehouseId" class="text-danger small"></span>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label small fw-bold text-muted uppercase">Giảm giá đơn hàng (đ)</label>
+                                    <input type="number" asp-for="OrderDiscount" class="form-control border-0 bg-light rounded-3 py-2" step="any" min="0" placeholder="0" />
+                                </div>
+                                <div class="mb-4">
+                                    <label class="form-label small fw-bold text-muted uppercase">Ghi chú đơn hàng</label>
+                                    <textarea asp-for="Note" class="form-control border-0 bg-light rounded-3" rows="3" placeholder="Nhập ghi chú (nếu có)..."></textarea>
+                                </div>
+                                <hr class="border-light my-4">
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary py-3 rounded-3 shadow-sm fw-bold">
+                                        <i class="bi bi-check2-circle me-2"></i> HOÀN TẤT TẠO ĐƠN
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Thêm sản phẩm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted uppercase">Tìm kiếm sản phẩm</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-box text-muted"></i></span>
+                        <input type="text" id="productSearch" class="form-control border-start-0 ps-0" placeholder="Nhập tên sản phẩm..." autocomplete="off">
+                    </div>
+                    <div id="productSuggestions" class="list-group shadow-lg mt-1" style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                </div>
+                
+                <div id="modalProductInfo" class="d-none">
+                    <div class="alert alert-light border-0 rounded-3 mb-3 d-flex align-items-center">
+                        <i class="bi bi-info-circle-fill text-primary me-2 fs-5"></i>
+                        <div>
+                            <div class="fw-bold" id="itemProductName">Product Name</div>
+                            <div class="text-muted small">Tồn kho: <span id="itemProductStock">0</span></div>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">SỐ LƯỢNG</label>
+                            <input type="number" id="itemQuantity" class="form-control rounded-3" value="1" min="0.01" step="any" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">ĐƠN GIÁ (Đ)</label>
+                            <input type="number" id="itemUnitPrice" class="form-control rounded-3" step="any" min="0" required />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-4">
+                <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="addItemToTable" class="btn btn-success px-4 rounded-3 shadow-sm d-none">
+                    <i class="bi bi-plus-lg me-1"></i> Thêm vào
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script type="module">
+        import { toast } from "/modules/modals.js";
+
+        (function() {
+            let itemIndex = 0;
+            const itemsTableBody = document.getElementById('itemsTableBody');
+            const noItemsMessage = document.getElementById('noItemsMessage');
+            const tableFooter = document.getElementById('tableFooter');
+            const grandTotalLabel = document.getElementById('grandTotal');
+            const addProductModal = new bootstrap.Modal('#addProductModal');
+
+            // --- Customer Picker ---
+            const customerSearch = document.getElementById('customerSearch');
+            const customerHidden = document.getElementById('CustomerId');
+            const customerSuggestions = document.getElementById('customerSuggestions');
+            const customerDisplay = document.getElementById('selectedCustomerDisplay');
+            let customerTimer;
+
+            customerSearch.addEventListener('input', function() {
+                const q = this.value;
+                if (customerTimer) clearTimeout(customerTimer);
+                if (!q) { customerSuggestions.style.display = 'none'; return; }
+                
+                customerTimer = setTimeout(async () => {
+                    const res = await fetch(`/Customer/Search?q=${encodeURIComponent(q)}`);
+                    const data = await res.json();
+                    renderCustomerSuggestions(data);
+                }, 300);
+            });
+
+            function renderCustomerSuggestions(items) {
+                customerSuggestions.innerHTML = '';
+                if (!items || items.length === 0) { customerSuggestions.style.display = 'none'; return; }
+                items.forEach(it => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'list-group-item list-group-item-action border-0 py-3';
+                    btn.innerHTML = `<div class="fw-bold">${it.name}</div><div class="small text-muted">${it.phone}</div>`;
+                    btn.onclick = () => {
+                        customerHidden.value = it.id;
+                        document.getElementById('displayName').innerText = it.name;
+                        document.getElementById('displayPhone').innerText = it.phone;
+                        customerDisplay.classList.remove('d-none');
+                        customerSearch.parentElement.parentElement.classList.add('d-none');
+                        customerSuggestions.style.display = 'none';
+                    };
+                    customerSuggestions.appendChild(btn);
+                });
+                customerSuggestions.style.display = 'block';
+            }
+
+            document.getElementById('resetCustomer').onclick = () => {
+                customerHidden.value = '';
+                customerDisplay.classList.add('d-none');
+                customerSearch.parentElement.parentElement.classList.remove('d-none');
+                customerSearch.value = '';
+                customerSearch.focus();
+            };
+
+            // --- Product Picker (Modal) ---
+            const productSearch = document.getElementById('productSearch');
+            const productSuggestions = document.getElementById('productSuggestions');
+            const modalProductInfo = document.getElementById('modalProductInfo');
+            const addItemButton = document.getElementById('addItemToTable');
+            let productTimer;
+            let currentProduct = null;
+
+            productSearch.addEventListener('input', function() {
+                const q = this.value;
+                if (productTimer) clearTimeout(productTimer);
+                if (!q) { productSuggestions.style.display = 'none'; return; }
+                
+                productTimer = setTimeout(async () => {
+                    const res = await fetch(`/Product/Search?q=${encodeURIComponent(q)}`);
+                    const data = await res.json();
+                    renderProductSuggestions(data);
+                }, 300);
+            });
+
+            function renderProductSuggestions(items) {
+                productSuggestions.innerHTML = '';
+                if (!items || items.length === 0) { productSuggestions.style.display = 'none'; return; }
+                items.forEach(it => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'list-group-item list-group-item-action border-0 py-3';
+                    btn.innerHTML = `<div class="fw-bold">${it.name}</div><div class="small text-muted">${it.price.toLocaleString()} đ | Tồn: ${it.inventoryQuantity}</div>`;
+                    btn.onclick = () => {
+                        currentProduct = it;
+                        document.getElementById('itemProductName').innerText = it.name;
+                        document.getElementById('itemProductStock').innerText = it.inventoryQuantity;
+                        document.getElementById('itemUnitPrice').value = it.price;
+                        productSuggestions.style.display = 'none';
+                        modalProductInfo.classList.remove('d-none');
+                        addItemButton.classList.remove('d-none');
+                        productSearch.value = it.name;
+                    };
+                    productSuggestions.appendChild(btn);
+                });
+                productSuggestions.style.display = 'block';
+            }
+
+            addItemButton.onclick = () => {
+                const qty = parseFloat(document.getElementById('itemQuantity').value);
+                const price = parseFloat(document.getElementById('itemUnitPrice').value);
+                
+                if (qty <= 0 || isNaN(qty)) { toast('Lỗi', 'Số lượng không hợp lệ', 'error'); return; }
+
+                addItemRow(currentProduct.id, currentProduct.name, qty, price);
+                
+                // Clear modal
+                productSearch.value = '';
+                modalProductInfo.classList.add('d-none');
+                addItemButton.classList.add('d-none');
+                currentProduct = null;
+                addProductModal.hide();
+            };
+
+            function addItemRow(pid, name, qty, price) {
+                const row = document.createElement('tr');
+                row.id = `row-${itemIndex}`;
+                row.innerHTML = `
+                    <td class="ps-4">
+                        <input type="hidden" name="Items[${itemIndex}].ProductId" value="${pid}" />
+                        <div class="fw-bold text-dark">${name}</div>
+                        <div class="small text-muted">${pid.substring(0,8)}...</div>
+                    </td>
+                    <td class="text-center">
+                        <input type="number" name="Items[${itemIndex}].Quantity" value="${qty}" class="form-control form-control-sm text-center row-qty" step="any" min="0.01" />
+                    </td>
+                    <td class="text-end">
+                        <input type="number" name="Items[${itemIndex}].UnitPrice" value="${price}" class="form-control form-control-sm text-end row-price" step="any" min="0" />
+                    </td>
+                    <td class="text-end fw-bold text-primary px-3 row-total">
+                        ${(qty * price).toLocaleString()} đ
+                    </td>
+                    <td class="text-end pe-4">
+                        <button type="button" class="btn btn-link link-danger p-0 border-0" onclick="this.closest('tr').remove(); window.updateGrandTotal();">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                `;
+                itemsTableBody.appendChild(row);
+                itemIndex++;
+                updateGrandTotal();
+                
+                // Add event listeners for recalculation
+                row.querySelector('.row-qty').addEventListener('input', updateGrandTotal);
+                row.querySelector('.row-price').addEventListener('input', updateGrandTotal);
+            }
+
+            const orderDiscountInput = document.getElementById('OrderDiscount');
+            const subTotalLabel = document.getElementById('subTotal');
+            const discountDisplay = document.getElementById('discountDisplay');
+
+            orderDiscountInput.addEventListener('input', () => updateGrandTotal());
+
+            window.updateGrandTotal = function() {
+                let subTotal = 0;
+                const rows = itemsTableBody.querySelectorAll('tr');
+                rows.forEach(r => {
+                    const qInput = r.querySelector('.row-qty');
+                    const pInput = r.querySelector('.row-price');
+                    if (!qInput || !pInput) return;
+                    
+                    const q = parseFloat(qInput.value) || 0;
+                    const p = parseFloat(pInput.value) || 0;
+                    const lineTotal = q * p;
+                    r.querySelector('.row-total').innerText = lineTotal.toLocaleString() + ' đ';
+                    subTotal += lineTotal;
+                });
+
+                const discount = parseFloat(orderDiscountInput.value) || 0;
+                const grandTotal = Math.max(0, subTotal - discount);
+
+                subTotalLabel.innerText = subTotal.toLocaleString() + ' đ';
+                discountDisplay.innerText = '- ' + discount.toLocaleString() + ' đ';
+                grandTotalLabel.innerText = grandTotal.toLocaleString() + ' đ';
+                if (rows.length > 0) {
+                    noItemsMessage.style.display = 'none';
+                    tableFooter.classList.remove('d-none');
+                } else {
+                    noItemsMessage.style.display = 'block';
+                    tableFooter.classList.add('d-none');
+                }
+            };
+        })();
+    </script>
+}
+
+<style>
+    .letter-spacing-1 { letter-spacing: 1px; }
+    .uppercase { text-transform: uppercase; }
+    .italic { font-style: italic; }
+    .list-group-item { cursor: pointer; }
+    .list-group-item:hover { background-color: var(--bs-light); color: var(--bs-primary); }
+    .bg-light { background-color: #f8f9fa !important; }
+</style>

@@ -43,6 +43,10 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.PurchaseOrders;
 using NamEcommerce.Web.Framework.Commands.Handlers.Users;
 using NamEcommerce.Web.Services.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Services.Orders;
+using NamEcommerce.Domain.Services.Orders;
+using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Application.Services.Orders;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -77,7 +81,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     //infrastructure services
     services.AddDbContext<NamEcommerceEfDbContext>(opts =>
         opts.UseSqlServer(configuration.GetConnectionString(nameof(NamEcommerceEfDbContext)),
-            opt => opt.MigrationsAssembly(Assembly.GetExecutingAssembly().GetName().Name))
+            opt => opt.MigrationsAssembly("NamEcommerce.Data.SqlServer"))
     );
     services.AddScoped<IDbContext, NamEcommerceEfDbContext>();
     services.AddScoped(typeof(IRepository<>), typeof(NamEcommerceEfRepository<>));
@@ -100,6 +104,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IPictureManager, PictureManager>();
     services.AddScoped<IWarehouseManager, WarehouseManager>();
     services.AddScoped<IInventoryStockManager, InventoryStockManager>();
+    services.AddScoped<IInventoryValidator, InventoryValidator>();
+    services.AddScoped<IStockAuditLogger, StockAuditLogger>();
+    services.AddScoped<ICustomerManager, CustomerManager>();
 
     services.AddScoped<ISecurityService, SecurityService>();
     services.AddScoped<IEventPublisher, EventPublisher>();
@@ -114,6 +121,10 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IWarehouseAppService, WarehouseAppService>();
     services.AddScoped<IPurchaseOrderManager, PurchaseOrderManager>();
     services.AddScoped<IPurchaseOrderAppService, PurchaseOrderAppService>();
+    services.AddScoped<ICustomerAppService, CustomerAppService>();
+    // Orders
+    services.AddScoped<IOrderManager, OrderManager>();
+    services.AddScoped<IOrderAppService, OrderAppService>();
 
     services.AddScoped<IInformationService, InformationService>();
     services.AddScoped<ICurrentUserService, CurrentUserService>();

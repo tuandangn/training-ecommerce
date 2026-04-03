@@ -1,0 +1,482 @@
+@model NamEcommerce.Web.Models.Orders.OrderDetailsModel
+@{
+    ViewData["Title"] = $"Đơn hàng #{Model.Id.ToString()[..8].ToUpper()}";
+    
+    string GetStatusBadgeClass(int status) => status switch
+    {
+        0 => "bg-secondary",   // Pending
+        1 => "bg-primary",     // Processing
+        2 => "bg-success",     // Completed
+        3 => "bg-danger",      // Cancelled
+        _ => "bg-dark"
+    };
+
+    string GetStatusText(int status) => status switch
+    {
+        0 => "Đang chờ",
+        1 => "Đang xử lý",
+        2 => "Hoàn thành",
+        3 => "Đã hủy",
+        _ => "Không xác định"
+    };
+}
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a asp-action="List" class="text-decoration-none">Đơn hàng</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Chi tiết</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-0 fw-bold">Chi tiết Đơn hàng <span class="text-primary">#@Model.Id.ToString()[..8].ToUpper()</span></h1>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-action="List" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Quay lại
+            </a>
+            <button type="button" class="btn btn-outline-primary" onclick="window.print()">
+                <i class="bi bi-printer me-1"></i> In hóa đơn
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Items Card -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Danh sách Sản phẩm</h5>
+                    <span class="badge bg-light text-dark border fw-normal">@Model.Items.Count sản phẩm</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="bg-light text-muted small text-uppercase">
+                                <tr>
+                                    <th class="ps-4" style="width: 40%">Sản phẩm</th>
+                                    <th class="text-center" style="width: 15%">Số lượng</th>
+                                    <th class="text-end" style="width: 20%">Đơn giá</th>
+                                    <th class="text-end" style="width: 20%">Thành tiền</th>
+                                    <th class="text-end pe-4" style="width: 5%"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsTableBody">
+                                @foreach (var item in Model.Items)
+                                {
+                                    <tr data-item-id="@item.Id">
+                                        <td class="ps-4">
+                                            <div class="d-flex align-items-center">
+                                                <div class="product-icon-placeholder me-3 rounded-3 bg-light d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                                    <i class="bi bi-image text-muted fs-4"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold text-dark">@item.ProductName</div>
+                                                    <div class="text-muted small">ID: @item.ProductId.ToString()[..8]...</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="fw-semibold quantity-text">@item.Quantity.ToString("G29")</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="unit-price-text">@item.UnitPrice.ToString("N0") đ</span>
+                                        </td>
+                                        <td class="text-end fw-bold text-primary">
+                                            <span class="total-price-text">@((item.Quantity * item.UnitPrice).ToString("N0")) đ</span>
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-light border-0" type="button" data-bs-toggle="dropdown">
+                                                    <i class="bi bi-three-dots-vertical"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                                    <li>
+                                                        <button class="dropdown-item btnEditItem" 
+                                                                data-id="@item.Id" 
+                                                                data-product="@item.ProductName"
+                                                                data-qty="@item.Quantity" 
+                                                                data-price="@item.UnitPrice">
+                                                            <i class="bi bi-pencil me-2 text-primary"></i> Chỉnh sửa
+                                                        </button>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <button class="dropdown-item text-danger btnRemoveItem" data-id="@item.Id" data-name="@item.ProductName">
+                                                            <i class="bi bi-trash me-2"></i> Xóa
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="bg-light">
+                                <tr>
+                                    <td colspan="3" class="text-end ps-4 py-2 text-muted small">Tạm tính:</td>
+                                    <td class="text-end py-2 fw-semibold">@((Model.TotalAmount + Model.OrderDiscount).ToString("N0")) đ</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end ps-4 py-2 text-muted small">
+                                        Giảm giá:
+                                        <button type="button" class="btn btn-sm btn-link p-0 ms-1" data-bs-toggle="modal" data-bs-target="#editDiscountModal">
+                                            <i class="bi bi-pencil-square text-primary"></i>
+                                        </button>
+                                    </td>
+                                    <td class="text-end py-2 text-danger">- @Model.OrderDiscount.ToString("N0") đ</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end ps-4 py-3 fw-bold fs-5">TỔNG CỘNG:</td>
+                                    <td class="text-end py-3 fw-bold fs-5 text-primary">@Model.TotalAmount.ToString("N0") đ</td>
+                                    <td class="pe-4 py-3"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Item Card -->
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2 text-success"></i>Thêm Sản phẩm</h5>
+                </div>
+                <div class="card-body">
+                    <form id="addItemForm" method="post" action="@Url.Action("AddItem")" class="row g-3">
+                        <input type="hidden" name="OrderId" value="@Model.Id" />
+                        <input type="hidden" id="productId" name="ProductId" required />
+                        
+                        <div class="col-md-6 position-relative">
+                            <label class="form-label small fw-bold text-muted uppercase">Tìm kiếm sản phẩm</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                <input id="productPickerDisplay" class="form-control border-start-0 ps-0" placeholder="Nhập tên sản phẩm..." autocomplete="off" />
+                            </div>
+                            <div id="productSuggestions" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1050; max-height: 250px; overflow-y: auto; display: none;"></div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted uppercase">Số lượng</label>
+                            <input type="number" id="quantityInput" name="Quantity" class="form-control" value="1" min="1" step="any" required />
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold text-muted uppercase">Đơn giá</label>
+                            <div class="input-group">
+                                <input type="number" id="unitPriceInput" name="UnitPrice" class="form-control border-end-0" placeholder="0" min="0" step="any" required />
+                                <span class="input-group-text bg-white border-start-0 text-muted small">đ</span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 mt-4 text-end">
+                            <button type="submit" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm">
+                                <i class="bi bi-plus-lg me-1"></i> Thêm vào đơn hàng
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Order Status Card -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+                <div class="card-body p-0">
+                    <div class="p-4 text-center @GetStatusBadgeClass(Model.Status) text-white bg-gradient">
+                        <div class="small fw-normal mb-1 opacity-75 text-uppercase letter-spacing-1">Trạng thái đơn hàng</div>
+                        <div class="fs-3 fw-bold">@GetStatusText(Model.Status)</div>
+                    </div>
+                    <div class="p-4">
+                        <form asp-action="ChangeStatus" method="post">
+                            <input type="hidden" name="OrderId" value="@Model.Id" />
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">Cập nhật trạng thái</label>
+                                <select name="Status" class="form-select border-0 bg-light rounded-3" onchange="this.form.submit()">
+                                    <option value="0" selected="@(Model.Status == 0)">Đang chờ</option>
+                                    <option value="1" selected="@(Model.Status == 1)">Đang xử lý</option>
+                                    <option value="2" selected="@(Model.Status == 2)">Hoàn thành</option>
+                                    <option value="3" selected="@(Model.Status == 3)">Đã hủy</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer Card -->
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-header bg-white border-0 py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-circle me-2 text-primary"></i>Khách hàng</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="bg-primary bg-opacity-10 text-primary rounded-circle p-3 me-3">
+                            <i class="bi bi-person-fill fs-3"></i>
+                        </div>
+                        <div>
+                            <div class="fs-5 fw-bold">@Model.CustomerName</div>
+                            <div class="text-muted small">ID: @Model.CustomerId.ToString()[..8]...</div>
+                        </div>
+                    </div>
+                    <a asp-controller="Customer" asp-action="Edit" asp-route-id="@Model.CustomerId" class="btn btn-sm btn-outline-primary w-100 rounded-3">
+                        <i class="bi bi-eye me-1"></i> Xem thông tin khách hàng
+                    </a>
+                </div>
+            </div>
+
+            <!-- Note Card -->
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-sticky me-2 text-warning"></i>Ghi chú</h5>
+                    <button type="button" class="btn btn-sm btn-link p-0" onclick="editNote()">
+                         <i class="bi bi-pencil small"></i>
+                    </button>
+                </div>
+                <div class="card-body bg-light border-radius-bottom-4">
+                    <p class="mb-0 text-muted italic" id="orderNoteText">
+                        @(string.IsNullOrEmpty(Model.Note) ? "Không có ghi chú cho đơn hàng này." : Model.Note)
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Item Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Chỉnh sửa sản phẩm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4">
+                <div id="modalProductDisplay" class="alert alert-light border-0 rounded-3 mb-4 d-flex align-items-center">
+                    <i class="bi bi-box-seam me-3 fs-4 text-primary"></i>
+                    <div>
+                        <div class="small text-muted mb-1 text-uppercase fw-bold letter-spacing-1">Sản phẩm đang chọn</div>
+                        <div id="editProductName" class="fw-bold fs-5">Product Name</div>
+                    </div>
+                </div>
+                
+                <form id="editItemForm">
+                    <input type="hidden" id="editItemId" name="ItemId" />
+                    <input type="hidden" name="OrderId" value="@Model.Id" />
+                    
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-muted small">SỐ LƯỢNG</label>
+                            <input type="number" id="editQuantity" name="Quantity" class="form-control rounded-3" step="any" min="0" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-muted small">ĐƠN GIÁ (Đ)</label>
+                            <input type="number" id="editUnitPrice" name="UnitPrice" class="form-control rounded-3" step="any" min="0" required />
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-4">
+                <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy bỏ</button>
+                <button type="button" id="submitEditItem" class="btn btn-primary px-4 rounded-3 shadow-sm">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Discount Modal -->
+<div class="modal fade" id="editDiscountModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Giảm giá đơn hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <form id="editDiscountForm">
+                    <input type="hidden" name="Id" value="@Model.Id" />
+                    <label class="form-label small fw-bold text-muted">MỨC GIẢM GIÁ (Đ)</label>
+                    <input type="number" name="OrderDiscount" class="form-control rounded-3" value="@Model.OrderDiscount" min="0" step="any" required />
+                </form>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-4">
+                <button type="button" id="submitDiscount" class="btn btn-primary w-100 rounded-3 shadow-sm">Cập nhật</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script type="module">
+        import { confirm, toast } from "/modules/modals.js";
+
+        (function() {
+            // Product Picker
+            const display = document.getElementById('productPickerDisplay');
+            const hiddenId = document.getElementById('productId');
+            const suggestions = document.getElementById('productSuggestions');
+            const addItemForm = document.getElementById('addItemForm');
+            const qtyInput = document.getElementById('quantityInput');
+            const priceInput = document.getElementById('unitPriceInput');
+            let timer;
+
+            function renderSuggestions(items) {
+                suggestions.innerHTML = '';
+                if (!items || items.length === 0) { suggestions.style.display = 'none'; return; }
+                
+                items.forEach(it => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'list-group-item list-group-item-action border-0 py-3 d-flex align-items-center gap-3';
+                    btn.innerHTML = `
+                        <div class="rounded-2 bg-light p-2"><i class="bi bi-box text-primary"></i></div>
+                        <div>
+                            <div class="fw-bold text-dark">${it.name}</div>
+                            <div class="small text-muted">${it.price.toLocaleString()} đ | Kho: ${it.inventoryQuantity}</div>
+                        </div>
+                    `;
+                    btn.onclick = () => {
+                        display.value = it.name;
+                        hiddenId.value = it.id;
+                        priceInput.value = it.price;
+                        suggestions.style.display = 'none';
+                        qtyInput.focus();
+                    };
+                    suggestions.appendChild(btn);
+                });
+                suggestions.style.display = 'block';
+            }
+
+            display.addEventListener('input', function() {
+                const q = this.value;
+                hiddenId.value = '';
+                if (timer) clearTimeout(timer);
+                if (!q) { suggestions.style.display = 'none'; return; }
+                
+                timer = setTimeout(async () => {
+                    try {
+                        const res = await fetch(`/Product/Search?q=${encodeURIComponent(q)}`);
+                        if (res.ok) {
+                            const data = await res.json();
+                            renderSuggestions(data);
+                        }
+                    } catch (err) { console.error(err); }
+                }, 300);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!suggestions.contains(e.target) && e.target !== display) {
+                    suggestions.style.display = 'none';
+                }
+            });
+
+            // Edit Item
+            const editModal = new bootstrap.Modal('#editItemModal');
+            
+            $('.btnEditItem').on('click', function() {
+                const data = $(this).data();
+                $('#editItemId').val(data.id);
+                $('#editProductName').text(data.product);
+                $('#editQuantity').val(data.qty);
+                $('#editUnitPrice').val(data.price);
+                editModal.show();
+            });
+
+            $('#submitEditItem').on('click', async function() {
+                const data = $('#editItemForm').serialize();
+                try {
+                    const res = await fetch('/Order/UpdateItem', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: data
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        toast('Thành công', 'Đã cập nhật sản phẩm.', 'success');
+                        location.reload();
+                    } else {
+                        toast('Lỗi', result.message || 'Không thể cập nhật sản phẩm.', 'error');
+                    }
+                } catch (err) {
+                    toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
+                }
+            });
+
+            // Update Discount
+            $('#submitDiscount').on('click', async function() {
+                const data = $('#editDiscountForm').serialize();
+                try {
+                    const res = await fetch('/Order/UpdateOrder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: data
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        toast('Thành công', 'Đã cập nhật giảm giá.', 'success');
+                        location.reload();
+                    } else {
+                        toast('Lỗi', result.message || 'Lỗi cập nhật.', 'error');
+                    }
+                } catch (err) {
+                    toast('Lỗi', 'Lỗi hệ thống.', 'error');
+                }
+            });
+
+            window.editNote = async () => {
+                const newNote = prompt("Nhập ghi chú mới:", "@Model.Note");
+                if (newNote !== null) {
+                    const res = await fetch('/Order/UpdateOrder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `Id=@Model.Id&Note=${encodeURIComponent(newNote)}`
+                    });
+                    if ((await res.json()).success) location.reload();
+                }
+            };
+
+            // Remove Item
+            $('.btnRemoveItem').on('click', async function() {
+                const id = $(this).data('id');
+                const name = $(this).data('name');
+                const orderId = '@Model.Id';
+
+                const confirmed = await confirm('Xác nhận xóa', `Bạn có chắc chắn muốn xóa <strong>${name}</strong> khỏi đơn hàng không?`);
+                if (confirmed) {
+                    try {
+                        const res = await fetch('/Order/RemoveItem', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: `OrderId=${orderId}&ItemId=${id}`
+                        });
+                        const result = await res.json();
+                        if (result.success) {
+                            toast('Thành công', 'Đã xóa sản phẩm khỏi đơn hàng.', 'success');
+                            location.reload();
+                        } else {
+                            toast('Lỗi', result.message || 'Không thể xóa sản phẩm.', 'error');
+                        }
+                    } catch (err) {
+                        toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
+                    }
+                }
+            });
+        })();
+    </script>
+}
+
+<style>
+    .letter-spacing-1 { letter-spacing: 1px; }
+    .product-icon-placeholder { transition: all 0.3s ease; }
+    tr:hover .product-icon-placeholder { background-color: var(--bs-primary-bg-subtle) !important; transform: scale(1.05); }
+    .card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .card:hover { box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.08) !important; }
+    .bg-gradient { background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.1) 100%); }
+    .table thead th { border-top: 0; }
+    .italic { font-style: italic; }
+</style>

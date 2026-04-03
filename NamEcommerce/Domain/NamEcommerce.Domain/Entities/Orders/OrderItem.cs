@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared;
 
 namespace NamEcommerce.Domain.Entities.Orders;
 
@@ -10,8 +10,14 @@ public sealed record OrderItem : AppEntity
 
     public Guid OrderId { get; init; }
     public Guid ProductId { get; init; }
-    public decimal UnitPrice { get; init; }
-    public decimal Discount { get; init; }
-    public decimal Quantity { get; init; }
+    public decimal UnitPrice { get; internal set; }
+    public decimal Discount { get; internal set; }
+    public decimal Quantity { get; internal set; }
     public decimal Price => (UnitPrice - Discount) * Quantity;
+
+    internal void Update(decimal quantity, decimal unitPrice)
+    {
+        Quantity = quantity;
+        UnitPrice = unitPrice;
+    }
 }

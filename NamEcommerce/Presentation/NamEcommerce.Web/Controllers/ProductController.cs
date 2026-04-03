@@ -94,6 +94,22 @@ public sealed class ProductController : BaseAuthorizedController
         return View(model);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Search(string q)
+    {
+        // simple search endpoint for product picker (returns id and name)
+        var model = await _mediator.Send(new GetProductListQuery
+        {
+            Keywords = q,
+            PageIndex = 0,
+            PageSize = 10
+        });
+
+        if (model?.Data?.Items == null) return Json(Array.Empty<object>());
+        var items = model.Data.Items.Select(i => new { id = i.Id, name = i.Name, picture = i.PictureUrl }).ToList();
+        return Json(items);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Edit(EditProductModel model)
     {

@@ -11,4 +11,5 @@ public interface IInventoryAppService
     Task<ResultAppDto> ReserveStockAsync(ReserveStockAppDto dto);
     Task<ResultAppDto> ReleaseReservedStockAsync(ReleaseStockAppDto dto);
     Task<ResultAppDto> DispatchStockAsync(DispatchStockAppDto dto);
+    Task<ResultAppDto> ReceiveStockAsync(ReceiveStockAppDto dto);
 }

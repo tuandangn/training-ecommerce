@@ -229,6 +229,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<decimal>("ReorderLevel")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime?>("ReservedUntilUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<Guid?>("UnitMeasurementId")
                         .HasColumnType("uniqueidentifier");
 
@@ -371,6 +374,42 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.ToTable("Picture", "tbl");
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Orders.Customer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("PhoneNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Customer", "tbl");
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Orders.Order", b =>
                 {
                     b.Property<Guid>("Id")
@@ -379,6 +418,12 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<DateTime>("CreatedOnUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("OrderDiscount")
                         .HasColumnType("decimal(18,2)");
@@ -398,12 +443,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<DateTime?>("UpdatedOnUtc")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("CustomerId");
 
                     b.ToTable("Order", "tbl");
                 });
@@ -619,7 +661,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("PasswordSalt")
-                        .HasColumnType("nvarchar(max)");
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
@@ -687,9 +731,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Orders.Order", b =>
                 {
-                    b.HasOne("NamEcommerce.Domain.Entities.Users.User", null)
+                    b.HasOne("NamEcommerce.Domain.Entities.Orders.Customer", null)
                         .WithMany()
-                        .HasForeignKey("UserId")
+                        .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

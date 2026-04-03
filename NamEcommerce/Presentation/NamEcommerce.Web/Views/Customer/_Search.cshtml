@@ -1,0 +1,10 @@
+@model NamEcommerce.Web.Models.Customers.CustomerListSearchModel
+
+<form asp-action="List" method="get" class="d-flex gap-2">
+    <div class="input-group input-group-sm">
+        <input type="text" asp-for="Keywords" class="form-control" placeholder="Tìm kiếm khách hàng..." value="@ViewBag.Keywords" />
+        <button class="btn btn-primary" type="submit">
+            <i class="bi bi-search"></i>
+        </button>
+    </div>
+</form>

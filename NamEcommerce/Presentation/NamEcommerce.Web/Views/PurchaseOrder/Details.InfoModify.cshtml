@@ -53,31 +53,60 @@
                             <span asp-validation-for="Note" class="text-danger small"></span>
                         </td>
                     </tr>
+                    <tr class="d-none d-md-table-row">
+                        <td></td>
+                        <td>
+                            <div>
+                                <button type="submit" class="btn btn-outline-warning text-dark bg-light">
+                                    <i class="bi bi-pencil-square"></i>
+                                    Cập nhật
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
         <div class="col-md-6 text-lg-end order-0 order-lg-1 pt-2 ps-lg-5">
             <div class="row mb-3">
-                <div class="col-6 col-md-6">
-                    <div class="form-floating">
-                        <input asp-for="ShippingAmount" class="form-control form-control-sm" placeholder="@Html.DisplayNameFor(m => m.ShippingAmount)"
-                               min="0" type="number" value="@Model.ShippingAmount"
-                               data-val-range="Phí vận chuyển phải lớn hơn hoặc bằng 0." data-val-range-min="0"
-                               data-val-number="Phí vận chuyển không đúng." />
-                        <label asp-for="ShippingAmount" class="form-label fw-bold"></label>
+                @if (Model.CanChangeFees)
+                {
+                    <div class="col-6 col-md-6">
+                        <div class="form-floating">
+                            <input asp-for="ShippingAmount" class="form-control form-control-sm" placeholder="@Html.DisplayNameFor(m => m.ShippingAmount)"
+                                   min="0" step="1" type="number" value="@decimal.Round(Model.ShippingAmount)"
+                                   data-val-range="Phí vận chuyển phải lớn hơn hoặc bằng 0." data-val-range-min="0"
+                                   data-val-number="Phí vận chuyển không đúng." />
+                            <label asp-for="ShippingAmount" class="form-label fw-bold"></label>
+                        </div>
+                        <span asp-validation-for="ShippingAmount" class="text-danger small"></span>
                     </div>
-                    <span asp-validation-for="ShippingAmount" class="text-danger small"></span>
-                </div>
-                <div class="col-6 col-md-6">
-                    <div class="form-floating">
-                        <input asp-for="TaxAmount" class="form-control form-control-sm" placeholder="@Html.DisplayNameFor(m => m.ShippingAmount)"
-                               min="0" type="number" value="@Model.TaxAmount"
-                               data-val-range="Tổng thuế phải lớn hơn hoặc bằng 0." data-val-range-min="0"
-                               data-val-number="Tổng thuế không đúng." />
-                        <label asp-for="TaxAmount" class="form-label fw-bold"></label>
+                    <div class="col-6 col-md-6">
+                        <div class="form-floating">
+                            <input asp-for="TaxAmount" class="form-control form-control-sm" placeholder="@Html.DisplayNameFor(m => m.ShippingAmount)"
+                                   min="0" step="1" type="number" value="@decimal.Round(Model.TaxAmount)"
+                                   data-val-range="Tổng thuế phải lớn hơn hoặc bằng 0." data-val-range-min="0"
+                                   data-val-number="Tổng thuế không đúng." />
+                            <label asp-for="TaxAmount" class="form-label fw-bold"></label>
+                        </div>
+                        <span asp-validation-for="TaxAmount" class="text-danger small"></span>
                     </div>
-                    <span asp-validation-for="TaxAmount" class="text-danger small"></span>
-                </div>
+                }
+                else
+                {
+                    <div class="col-6 col-md-6">
+                        <div class="d-flex flex-column border rounded p-2 bg-light">
+                            <label asp-for="ShippingAmount" class="form-label fw-bold"></label>
+                            <span>@Model.ShippingAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-6">
+                        <div class="d-flex flex-column border rounded p-2 bg-light">
+                            <label asp-for="TaxAmount" class="form-label fw-bold"></label>
+                            <span>@Model.TaxAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
+                        </div>
+                    </div>
+                }
             </div>
             <p class="fs-5 fw-bold">
                 Tổng đơn: <span class="text-primary">@Model.TotalAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
@@ -85,9 +114,8 @@
             <p class="text-muted">
                 Ngày tạo: @Model.CreatedOn.ToString("g")
             </p>
-
-            <div>
-                <button type="submit" class="btn btn-outline-warning btn-sm text-dark">
+            <div class="d-block d-md-none">
+                <button type="submit" class="btn btn-outline-warning text-dark bg-light">
                     <i class="bi bi-pencil-square"></i>
                     Cập nhật
                 </button>
