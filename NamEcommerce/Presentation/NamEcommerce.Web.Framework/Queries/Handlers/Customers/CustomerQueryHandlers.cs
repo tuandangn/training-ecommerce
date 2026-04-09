@@ -1,8 +1,8 @@
 using MediatR;
-using NamEcommerce.Application.Contracts.Orders;
-using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
 using NamEcommerce.Web.Contracts.Models.Customers;
+using NamEcommerce.Web.Contracts.Models.Common;
+using NamEcommerce.Application.Contracts.Customers;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Customers;
 
@@ -21,13 +21,14 @@ public sealed class GetCustomerListHandler : IRequestHandler<GetCustomerListQuer
         var items = paged.Items.Select(c => new CustomerListModel.CustomerItemModel(c.Id)
         {
             FullName = c.FullName,
-            PhoneNumber = c.PhoneNumber
+            PhoneNumber = c.PhoneNumber,
+            Address = c.Address
         }).ToList();
 
         return new CustomerListModel
         {
             Keywords = request.Keywords,
-            Data = NamEcommerce.Web.Contracts.Models.Common.PagedDataModel.Create(items, paged.Pagination.PageIndex, paged.Pagination.PageSize, paged.Pagination.TotalCount)
+            Data = PagedDataModel.Create(items, paged.Pagination.PageIndex, paged.Pagination.PageSize, paged.Pagination.TotalCount)
         };
     }
 }

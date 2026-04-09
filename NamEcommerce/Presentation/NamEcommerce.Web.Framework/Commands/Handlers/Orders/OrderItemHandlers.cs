@@ -17,8 +17,19 @@ public sealed class UpdateOrderItemHandler : IRequestHandler<UpdateOrderItemComm
 
     public async Task<CommonResultModel> Handle(UpdateOrderItemCommand request, CancellationToken cancellationToken)
     {
-        var result = await _orderAppService.UpdateOrderItemAsync(new UpdateOrderItemAppDto(request.OrderId, request.ItemId, request.Quantity, request.UnitPrice)).ConfigureAwait(false);
-        return new CommonResultModel { Success = result.Success, ErrorMessage = result.ErrorMessage };
+        var result = await _orderAppService.UpdateOrderItemAsync(new UpdateOrderItemAppDto
+        {
+            OrderId = request.OrderId,
+            OrderItemId = request.ItemId,
+            Quantity = request.Quantity,
+            UnitPrice = request.UnitPrice
+        }).ConfigureAwait(false);
+
+        return new CommonResultModel
+        {
+            Success = result.Success,
+            ErrorMessage = result.ErrorMessage
+        };
     }
 }
 
@@ -34,6 +45,11 @@ public sealed class DeleteOrderItemHandler : IRequestHandler<DeleteOrderItemComm
     public async Task<CommonResultModel> Handle(DeleteOrderItemCommand request, CancellationToken cancellationToken)
     {
         var result = await _orderAppService.DeleteOrderItemAsync(new DeleteOrderItemAppDto(request.OrderId, request.ItemId)).ConfigureAwait(false);
-        return new CommonResultModel { Success = result.Success, ErrorMessage = result.ErrorMessage };
+
+        return new CommonResultModel
+        {
+            Success = result.Success,
+            ErrorMessage = result.ErrorMessage
+        };
     }
 }

@@ -105,17 +105,23 @@ public sealed record PurchaseOrder : AppAggregateEntity
     }
 
     public bool CanAddPurchaseOrderItems() => Status == PurchaseOrderStatus.Draft;
-    public bool CanChangeStatus() => Status != PurchaseOrderStatus.Completed && Status != PurchaseOrderStatus.Cancelled;
+    private bool CanUpdateStatus() => Status != PurchaseOrderStatus.Completed && Status != PurchaseOrderStatus.Cancelled;
     public bool CanChangeStatusTo(PurchaseOrderStatus toStatus)
     {
-        if (Status == PurchaseOrderStatus.Draft && toStatus == PurchaseOrderStatus.Submitted)
-            return Items.Any();
+        if (Status == PurchaseOrderStatus.Draft && toStatus == PurchaseOrderStatus.Submitted && !Items.Any())
+            return false;
 
-        if (!CanChangeStatus())
+        if (!CanUpdateStatus())
+            return false;
+
+        if (toStatus == PurchaseOrderStatus.Cancelled && Items.Any(item => item.QuantityReceived > 0))
             return false;
 
         var subtract = (int)toStatus - (int)Status;
-        return new[] { 0, 10, 20, 40 }.Contains(subtract);
+        if (subtract < 0)
+            return false;
+
+        return Enum.IsDefined(toStatus);
     }
 
     public bool CanReceiveGoods() => Status == PurchaseOrderStatus.Approved || Status == PurchaseOrderStatus.Receiving;
@@ -130,16 +136,16 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
     internal bool VerifyStatus()
     {
-        if (!CanChangeStatus())
+        if (!CanUpdateStatus())
             return false;
 
-        if (Items.Any() && Items.All(item => item.QuantityReceived >= item.QuantityOrdered))
+        if (Status != PurchaseOrderStatus.Completed && Items.Any() && Items.All(item => item.QuantityReceived >= item.QuantityOrdered))
         {
             ChangeStatus(PurchaseOrderStatus.Completed);
             return true;
         }
 
-        if (Items.Any(item => item.QuantityReceived > 0))
+        if (Status != PurchaseOrderStatus.Receiving && Items.Any(item => item.QuantityReceived > 0))
         {
             ChangeStatus(PurchaseOrderStatus.Receiving);
             return true;

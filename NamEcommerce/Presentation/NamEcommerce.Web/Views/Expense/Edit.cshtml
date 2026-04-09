@@ -1,0 +1,89 @@
+@model NamEcommerce.Application.Contracts.Dtos.Finance.UpdateExpenseAppDto
+
+@{
+    ViewData["Title"] = "Chỉnh sửa Chi phí";
+    var expenseTypes = new List<SelectListItem>
+    {
+        new SelectListItem { Value = "1", Text = "Lương thưởng (Payroll)" },
+        new SelectListItem { Value = "2", Text = "Mặt bằng (Rent)" },
+        new SelectListItem { Value = "3", Text = "Tiếp thị (Marketing)" },
+        new SelectListItem { Value = "4", Text = "Điện nước (Utilities)" },
+        new SelectListItem { Value = "5", Text = "Khác (General)" }
+    };
+}
+
+<div class="row min-vh-100 justify-content-center pt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-5">
+                <h3 class="fw-bold mb-4">Cập nhật Chi phí</h3>
+                
+                <form asp-action="Edit" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Title" class="form-label text-muted fw-semibold">Khoản chi</label>
+                        <input asp-for="Title" class="form-control form-control-lg bg-light" />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Amount" class="form-label text-muted fw-semibold">Số tiền (₫)</label>
+                        <input asp-for="Amount" type="number" class="form-control form-control-lg bg-light" />
+                        <span asp-validation-for="Amount" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ExpenseType" class="form-label text-muted fw-semibold">Loại phí</label>
+                        <select asp-for="ExpenseType" asp-items="expenseTypes" class="form-select form-select-lg bg-light"></select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="IncurredDate" class="form-label text-muted fw-semibold">Ngày thanh toán / Hóa đơn</label>
+                        <input asp-for="IncurredDate" type="date" class="form-control form-control-lg bg-light" value="@Model.IncurredDate.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Description" class="form-label text-muted fw-semibold">Ghi chú thêm</label>
+                        <textarea asp-for="Description" class="form-control bg-light" rows="3"></textarea>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-between align-items-center">
+                        <button type="button" class="btn btn-outline-danger px-3 btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal">Xóa Phiếu</button>
+                        <div>
+                            <a asp-action="Index" class="btn btn-light px-4">Hủy bỏ</a>
+                            <button type="submit" class="btn btn-primary px-4 fw-bold">Lưu Thay Đổi</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-0 bg-danger text-white">
+        <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Xác nhận xóa</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Bạn có chắc chắn muốn xóa vĩnh viễn khoản chi phí <strong>@Model.Title</strong> với số tiền <strong>@Model.Amount.ToString("N0") ₫</strong> không? Thông số tính toán Gross Profit sẽ bị ảnh hưởng.
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+        <form asp-action="Delete" method="post">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <button type="submit" class="btn btn-danger fw-bold">Vâng, hãy xóa!</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

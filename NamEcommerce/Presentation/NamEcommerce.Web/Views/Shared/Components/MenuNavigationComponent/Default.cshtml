@@ -1,4 +1,4 @@
-﻿@inject IWebHelper WebHelper
+@inject IWebHelper WebHelper
 <ul class="navbar-nav flex-grow-1">
     <li class="nav-item">
         <a class="nav-link @(WebHelper.IsMatchRouteInfo("Home", "Index") ? "active" : "")" asp-controller="Home"
@@ -57,6 +57,22 @@
             <li>
                 <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Vendor") ? "active" : "")" asp-controller="Vendor"
                    asp-action="Index">Nhà cung cấp</a>
+            </li>
+        </ul>
+    </li>
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("Report") || WebHelper.IsHasController("Expense") ? "active" : "")" href="#"
+               id="reportMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Tài chính & Báo cáo
+        </a>
+        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <li>
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Report", "Financial") ? "active" : "")"
+                   asp-controller="Report" asp-action="Financial">Báo cáo Mua Bán</a>
+            </li>
+            <li>
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Expense") ? "active" : "")"
+                   asp-controller="Expense" asp-action="Index">Quản lý Chi phí (OPEX)</a>
             </li>
         </ul>
     </li>

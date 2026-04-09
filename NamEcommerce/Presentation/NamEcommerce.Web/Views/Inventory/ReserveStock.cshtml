@@ -1,4 +1,4 @@
-@model NamEcommerce.Web.Contracts.Models.Inventory.ReserveStockModel
+@model ReserveStockModel
 @{
     ViewData[ViewConstants.PageTitle] = "Giữ hàng";
 }
@@ -16,7 +16,7 @@
 
                 <div class="mb-3">
                     <label asp-for="Quantity" class="form-label fw-bold"></label>
-                    <input asp-for="Quantity" class="form-control" type="number" step="0.01" placeholder="Nhập số lượng" />
+                    <input asp-for="Quantity" class="form-control" type="number" step="any" min="0.000000001" placeholder="Nhập số lượng" />
                     <span asp-validation-for="Quantity" class="text-danger"></span>
                     <div class="form-text">Số lượng sản phẩm cần giữ</div>
                 </div>

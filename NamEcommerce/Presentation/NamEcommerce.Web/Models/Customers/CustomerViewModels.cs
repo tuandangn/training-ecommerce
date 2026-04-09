@@ -11,15 +11,12 @@ public sealed class CustomerListSearchModel
 
 public sealed class CreateCustomerModel
 {
-    [Required(ErrorMessage = "Vui lòng nhập họ tên")]
     [Display(Name = "Họ tên")]
     public string? FullName { get; set; }
 
-    [Required(ErrorMessage = "Vui lòng nhập số điện thoại")]
     [Display(Name = "Số điện thoại")]
     public string? PhoneNumber { get; set; }
 
-    [EmailAddress(ErrorMessage = "Email không hợp lệ")]
     [Display(Name = "Email")]
     public string? Email { get; set; }
 
@@ -34,15 +31,12 @@ public sealed class EditCustomerModel
 {
     public Guid Id { get; set; }
 
-    [Required(ErrorMessage = "Vui lòng nhập họ tên")]
     [Display(Name = "Họ tên")]
     public string? FullName { get; set; }
 
-    [Required(ErrorMessage = "Vui lòng nhập số điện thoại")]
     [Display(Name = "Số điện thoại")]
     public string? PhoneNumber { get; set; }
 
-    [EmailAddress(ErrorMessage = "Email không hợp lệ")]
     [Display(Name = "Email")]
     public string? Email { get; set; }
 

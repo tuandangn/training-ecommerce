@@ -7,8 +7,8 @@ namespace NamEcommerce.Web.Contracts.Commands.Models.Orders;
 public sealed class CreateOrderCommand : IRequest<CreateOrderResultModel>
 {
     public required Guid CustomerId { get; init; }
-    public Guid? WarehouseId { get; init; }
     public string? Note { get; init; }
     public decimal? OrderDiscount { get; init; }
+    public DateTime ExpectedShippingDate { get; set; }
     public IList<OrderItemModel> Items { get; init; } = [];
 }

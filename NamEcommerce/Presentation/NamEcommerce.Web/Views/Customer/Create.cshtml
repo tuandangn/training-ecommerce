@@ -4,79 +4,65 @@
     ViewData[ViewConstants.PageTitle] = "Thêm mới Khách hàng";
 }
 
-<section class="content-header my-4">
-    <div class="row align-items-center">
-        <div class="col">
-            <h1 class="h3 mb-0 text-gray-800">Thêm mới Khách hàng</h1>
-        </div>
-        <div class="col text-end">
-            <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> Quay lại
-            </a>
-        </div>
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Thêm mới Khách hàng</h1>
+        <p class="page-header-subtitle">Tạo hồ sơ khách hàng mới</p>
     </div>
-</section>
+</div>
 
-<section class="content-data">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow border-0 overflow-hidden">
-                <div class="card-header bg-primary py-3">
-                    <h6 class="m-0 font-weight-bold text-white"><i class="bi bi-person-fill-add me-2"></i>Thông tin Khách hàng</h6>
+<div class="form-card">
+    <div class="form-card-header">
+        <h2 class="form-card-title"><i class="bi bi-person-circle me-2" style="color: #7c3aed;"></i>Thông tin khách hàng</h2>
+        <a asp-action="List" class="form-card-breadcrumb">
+            <i class="bi bi-arrow-left"></i> Trở về danh sách
+        </a>
+    </div>
+    <div class="form-card-body">
+        <form method="post">
+            <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global mb-3"></div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="FullName" class="form-label"></label>
+                    <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên đầy đủ" autofocus />
+                    <span asp-validation-for="FullName" class="text-danger small"></span>
                 </div>
-                <div class="card-body p-4">
-                    <form asp-action="Create" method="post">
-                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-                        
-                        <div class="row g-3">
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="FullName" class="form-label fw-bold"></label>
-                                <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên đầy đủ" />
-                                <span asp-validation-for="FullName" class="text-danger small"></span>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label asp-for="PhoneNumber" class="form-label fw-bold"></label>
-                                <input asp-for="PhoneNumber" class="form-control" placeholder="Số điện thoại liên lạc" />
-                                <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
-                            </div>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-md-12 mb-3">
-                                <label asp-for="Email" class="form-label fw-bold"></label>
-                                <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email cá nhân" />
-                                <span asp-validation-for="Email" class="text-danger small"></span>
-                            </div>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-md-12 mb-3">
-                                <label asp-for="Address" class="form-label fw-bold"></label>
-                                <textarea asp-for="Address" class="form-control" rows="2" placeholder="Địa chỉ thường trú"></textarea>
-                                <span asp-validation-for="Address" class="text-danger small"></span>
-                            </div>
-                        </div>
-
-                        <div class="row g-3">
-                            <div class="col-md-12 mb-4">
-                                <label asp-for="Note" class="form-label fw-bold"></label>
-                                <textarea asp-for="Note" class="form-control" rows="3" placeholder="Ghi chú thêm về khách hàng này..."></textarea>
-                                <span asp-validation-for="Note" class="text-danger small"></span>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-end gap-2 border-top pt-3">
-                            <a asp-action="Index" class="btn btn-light border px-4">Hủy</a>
-                            <button type="submit" class="btn btn-primary px-4 shadow-sm">
-                                <i class="bi bi-save me-1"></i> Lưu thông tin
-                            </button>
-                        </div>
-                    </form>
+                <div class="col-md-6">
+                    <label asp-for="PhoneNumber" class="form-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-telephone text-muted"></i></span>
+                        <input asp-for="PhoneNumber" class="form-control" placeholder="Số điện thoại liên lạc" />
+                    </div>
+                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Address" class="form-label"></label>
+                    <textarea asp-for="Address" class="form-control" rows="2" placeholder="Địa chỉ thường trú"></textarea>
+                    <span asp-validation-for="Address" class="text-danger small"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Email" class="form-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-envelope text-muted"></i></span>
+                        <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" />
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+                <div class="col-12">
+                    <label asp-for="Note" class="form-label"></label>
+                    <textarea asp-for="Note" class="form-control" rows="3" placeholder="Ghi chú thêm về khách hàng..."></textarea>
+                    <span asp-validation-for="Note" class="text-danger small"></span>
                 </div>
             </div>
-        </div>
+            <div class="form-card-footer" style="margin: 1.5rem -1.5rem -1.5rem; border-radius: 0 0 var(--card-radius) var(--card-radius);">
+                <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>Thêm mới
+                </button>
+            </div>
+        </form>
     </div>
-</section>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

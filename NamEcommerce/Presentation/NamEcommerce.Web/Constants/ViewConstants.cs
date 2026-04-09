@@ -30,6 +30,9 @@ public static class ViewConstants
     public const string PurchaseOrderErrorMessage = "Messages.PurchaseOrder.Error";
     public const string PurchaseOrderAddItemErrorMessage = "Messages.PurchaseOrder.AddItem.Error";
 
+    public const string OrderSuccessMessage = "Messages.Order.Success";
+    public const string OrderErrorMessage = "Messages.Order.Error";
+
     public const string NumberCustomFormat = "#,##0.##";
     public const string DefaultCurrencySymbol = "đ";
 }

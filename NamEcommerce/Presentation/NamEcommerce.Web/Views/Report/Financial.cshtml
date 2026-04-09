@@ -1,0 +1,239 @@
+@model NamEcommerce.Application.Contracts.Dtos.Report.ProfitLossSummaryAppDto
+@using NamEcommerce.Domain.Shared.Common;
+
+@{
+    ViewData[ViewConstants.PageTitle] = "Financial Dashboard";
+}
+
+@section Styles {
+    <style>
+        .dashboard-header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .stat-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+        .table-custom {
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+        .table-custom tr {
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            transition: all 0.2s ease;
+        }
+        .table-custom tr:hover {
+            transform: scale(1.01);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+        .table-custom td, .table-custom th {
+            border: none;
+            padding: 1rem;
+        }
+        .table-custom th {
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            color: #6c757d;
+            background: transparent;
+            box-shadow: none;
+        }
+        .profit-pos { color: #198754; font-weight: 600; }
+        .profit-neg { color: #dc3545; font-weight: 600; }
+    </style>
+}
+
+<div class="container-fluid py-4">
+    <div class="dashboard-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h1 class="mb-1 text-white fw-bold"><i class="bi bi-graph-up-arrow me-2"></i>Financial Dashboard</h1>
+            <p class="mb-0 opacity-75">Track your profit, revenue, and best selling products (Circular 200 Standard).</p>
+        </div>
+        <form method="get" class="d-flex gap-2 bg-white bg-opacity-25 p-2 rounded-3 pb-2 pt-2 align-items-center" id="filterForm">
+            <input type="date" name="fromDate" id="fromDate" class="form-control form-control-sm border-0" value="@ViewData["FromDate"]" />
+            <span class="text-white align-self-center">-</span>
+            <input type="date" name="toDate" id="toDate" class="form-control form-control-sm border-0" value="@ViewData["ToDate"]" />
+            <button type="submit" class="btn btn-light btn-sm fw-bold"><i class="bi bi-funnel"></i> Lọc</button>
+            <button type="button" onclick="exportExcel()" class="btn btn-success btn-sm fw-bold ms-2">
+                <i class="bi bi-file-earmark-excel"></i> Xuất Excel (B02-DN)
+            </button>
+        </form>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card border-top border-4 border-primary">
+                <p class="text-muted mb-1 fw-semibold text-uppercase" style="font-size:0.75rem;">Total Revenue</p>
+                <h4 class="fw-bold mb-0">@Model.TotalRevenue.ToString("N0") ₫</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-top border-4 border-warning">
+                <p class="text-muted mb-1 fw-semibold text-uppercase" style="font-size:0.75rem;">Cost of Goods Sold (COGS)</p>
+                <h4 class="fw-bold mb-0">@Model.TotalCogs.ToString("N0") ₫</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-top border-4 border-danger">
+                <p class="text-muted mb-1 fw-semibold text-uppercase" style="font-size:0.75rem;">Operating Expenses (OPEX)</p>
+                <h4 class="fw-bold mb-0">@Model.TotalOperatingExpenses.ToString("N0") ₫</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-top border-4 border-success">
+                <p class="text-muted mb-1 fw-semibold text-uppercase" style="font-size:0.75rem;">Net Profit (Lãi Ròng)</p>
+                <h4 class="fw-bold mb-0 @(Model.NetProfit >= 0 ? "profit-pos" : "profit-neg")">
+                    @Model.NetProfit.ToString("N0") ₫
+                </h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="chart-container">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-secondary">Xu hướng Doanh thu &amp; Lợi nhuận</h5>
+                        <small class="text-muted"><i class="bi bi-info-circle me-1"></i>Lợi nhuận gộp (Gross Profit) chưa trừ chi phí vận hành (OPEX). Xem “Lãi Ròng” trên thẻ tổng quan.</small>
+                    </div>
+                </div>
+                <canvas id="financialChart" height="100"></canvas>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="chart-container">
+                <h5 class="fw-bold mb-4 text-secondary">Top Products by Volume</h5>
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Qty</th>
+                                <th>Revenue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in Model.TopProducts)
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@p.ProductName</td>
+                                    <td><span class="badge bg-secondary rounded-pill">@p.QuantitySold</span></td>
+                                    <td class="fw-bold">@p.Revenue.ToString("N0") ₫</td>
+                                </tr>
+                            }
+                            @if (!Model.TopProducts.Any())
+                            {
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">No data available</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        function exportExcel() {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+            let url = '@Url.Action("ExportIncomeStatementExcel", "Report")' + `?fromDate=${fromDate}&toDate=${toDate}`;
+            window.location.href = url;
+        }
+
+        const ctx = document.getElementById('financialChart').getContext('2d');
+        
+        const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RevenueTrend.Select(x => x.DateLabel)));
+        const revenueData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RevenueTrend.Select(x => x.Revenue)));
+        const profitData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RevenueTrend.Select(x => x.Profit)));
+
+        const gradientRevenue = ctx.createLinearGradient(0, 0, 0, 400);
+        gradientRevenue.addColorStop(0, 'rgba(54, 162, 235, 0.5)');
+        gradientRevenue.addColorStop(1, 'rgba(54, 162, 235, 0.05)');
+
+        const gradientProfit = ctx.createLinearGradient(0, 0, 0, 400);
+        gradientProfit.addColorStop(0, 'rgba(75, 192, 192, 0.5)');
+        gradientProfit.addColorStop(1, 'rgba(75, 192, 192, 0.05)');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Doanh thu (₫)',
+                        data: revenueData,
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        backgroundColor: gradientRevenue,
+                        borderWidth: 3,
+                        pointBackgroundColor: 'white',
+                        pointBorderColor: 'rgba(54, 162, 235, 1)',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.4
+                    },
+                    {
+                        label: 'Lợi nhuận gộp - Gross Profit (₫)',
+                        data: profitData,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: gradientProfit,
+                        borderWidth: 3,
+                        pointBackgroundColor: 'white',
+                        pointBorderColor: 'rgba(75, 192, 192, 1)',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8 } },
+                    tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 12, titleFont: { size: 14 } }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { borderDash: [5, 5], color: 'rgba(0,0,0,0.05)' },
+                        ticks: {
+                            callback: function(value) { return value.toLocaleString() + ' ₫'; }
+                        }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    </script>
+}

@@ -1,12 +1,22 @@
 using NamEcommerce.Data.Contracts;
+using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.Orders;
-using NamEcommerce.Domain.Shared.Dtos.Orders;
-using NamEcommerce.Domain.Shared.Services.Orders;
-using NamEcommerce.Domain.Shared.Dtos.Common;
-using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Domain.Shared.Enums.Inventory;
-using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Services.Extensions;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Dtos.Orders;
+using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Events;
+using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Exceptions.Customers;
+using NamEcommerce.Domain.Shared.Exceptions.Orders;
+using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Exceptions.Users;
+using NamEcommerce.Domain.Shared.Helpers;
+using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.Orders;
 
 namespace NamEcommerce.Domain.Services.Orders;
 
@@ -15,82 +25,108 @@ public sealed class OrderManager : IOrderManager
     private readonly IRepository<Order> _orderRepository;
     private readonly IEntityDataReader<Order> _orderDataReader;
     private readonly IInventoryStockManager _stockManager;
+    private readonly IEntityDataReader<Product> _productDataReader;
+    private readonly IEntityDataReader<Customer> _customerDataReader;
+    private readonly IEventPublisher _eventPublisher;
+    private readonly IEntityDataReader<User> _userDataReader;
 
-    public OrderManager(IRepository<Order> orderRepository, IEntityDataReader<Order> orderDataReader, IInventoryStockManager stockManager)
+    public OrderManager(IRepository<Order> orderRepository, IEntityDataReader<Order> orderDataReader,
+        IInventoryStockManager stockManager, IEntityDataReader<Product> productDataReader,
+        IEntityDataReader<Customer> customerDataReader, IEventPublisher eventPublisher,
+        IEntityDataReader<User> userDataReader)
     {
         _orderRepository = orderRepository;
         _orderDataReader = orderDataReader;
         _stockManager = stockManager;
+        _productDataReader = productDataReader;
+        _customerDataReader = customerDataReader;
+        _eventPublisher = eventPublisher;
+        _userDataReader = userDataReader;
     }
 
     public async Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var (valid, err) = dto.Items.Select(i => i.Validate()).FirstOrDefault(r => !r.valid) is var invalid && invalid.valid == false
-            ? (false, invalid.message)
-            : (true, (string?)null);
+        dto.Verify();
 
-        if (!valid)
-            throw new ArgumentException(err);
+        if (await DoesCodeExistAsync(dto.Code).ConfigureAwait(false))
+            throw new PurchaseOrderCodeExistsException(dto.Code);
 
-        var items = dto.Items.Select(i => new OrderItem(Guid.NewGuid(), Guid.Empty, i.ProductId, i.UnitPrice, i.Quantity)).ToList();
-        var total = items.Sum(i => i.Price);
-        var order = new Order(Guid.NewGuid(), dto.CustomerId ?? Guid.Empty, dto.WarehouseId, total, 0, 0, items)
+        var customer = await _customerDataReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        if (customer is null)
+            throw new CustomerIsNotFoundException(dto.CustomerId);
+
+        if (dto.CreatedByUserId.HasValue)
         {
-            OrderDiscount = dto.OrderDiscount ?? 0,
-            Note = dto.Note
-        };
-
-        var inserted = await _orderRepository.InsertAsync(order).ConfigureAwait(false);
-
-        // Reserve Stock if warehouse is specified
-        if (order.WarehouseId.HasValue)
-        {
-            foreach (var item in order.OrderItems)
-            {
-                 // ReferenceId is order.Id, userId is Guid.Empty (system) for now
-                 await _stockManager.ReserveStockAsync(item.ProductId, order.WarehouseId.Value, item.Quantity, order.Id, Guid.Empty, "Sales Order Reservation").ConfigureAwait(false);
-            }
+            var user = await _userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
+            if (user is null)
+                throw new UserIsNotFoundException(dto.CreatedByUserId.Value);
         }
 
-        return new CreateOrderResultDto { CreatedId = inserted.Id };
+        var orderTotal = dto.Items.Sum(item => item.UnitPrice * item.Quantity);
+        var order = new Order(dto.Code, dto.CustomerId, orderTotal, dto.CreatedByUserId)
+        {
+            OrderDiscount = dto.OrderDiscount ?? 0,
+            Note = dto.Note,
+            ShippingAddress = customer.Address,
+            ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc
+        };
+
+        foreach (var item in dto.Items)
+            await order.AddOrderItemAsync(item.ProductId, item.UnitPrice, item.Quantity, _productDataReader).ConfigureAwait(false);
+
+        var insertedOrder = await _orderRepository.InsertAsync(order).ConfigureAwait(false);
+
+        await _eventPublisher.EntityCreated(insertedOrder).ConfigureAwait(false);
+
+        return new CreateOrderResultDto { CreatedId = insertedOrder.Id };
     }
 
     public async Task<UpdateOrderResultDto> UpdateOrderAsync(UpdateOrderDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
+        dto.Verify();
+
         var order = await _orderDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (order is null)
-            throw new ArgumentException("Order is not found", nameof(dto));
+            throw new OrderIsNotFoundException(dto.Id);
 
-        if (dto.OrderDiscount.HasValue)
-            order.OrderDiscount = dto.OrderDiscount.Value;
-            
+        order.ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc;
+        order.OrderDiscount = dto.OrderDiscount ?? 0;
         order.Note = dto.Note;
+
         order.UpdatedOnUtc = DateTime.UtcNow;
 
-        var updated = await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
-        return new UpdateOrderResultDto { UpdatedId = updated.Id };
+        var updatedOrder = await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
+
+        return new UpdateOrderResultDto { UpdatedId = updatedOrder.Id };
     }
 
-    public async Task AddOrderItemAsync(AddOrderItemDto dto)
+    public async Task AddOrderItemAsync(Guid orderId, AddOrderItemDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        if (dto.Quantity <= 0)
-            throw new ArgumentException("Quantity must be greater than 0", nameof(dto));
+        dto.Verify();
 
-        var order = await _orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await _orderDataReader.GetByIdAsync(orderId).ConfigureAwait(false);
         if (order is null)
-            throw new ArgumentException("Order is not found", nameof(dto.OrderId));
+            throw new OrderIsNotFoundException(orderId);
 
-        var item = new OrderItem(Guid.NewGuid(), dto.OrderId, dto.ProductId, dto.UnitPrice, dto.Quantity);
-        order.AddOrderItem(item);
+        var product = await _productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
+        if (product is null)
+            throw new ProductIsNotFoundException(dto.ProductId);
+
+        await order.AddOrderItemAsync(dto.ProductId, dto.UnitPrice, dto.Quantity, _productDataReader).ConfigureAwait(false);
+
         order.UpdatedOnUtc = DateTime.UtcNow;
 
-        await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
+        var updatedOrder = await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
     }
 
     public async Task UpdateOrderItemAsync(UpdateOrderItemDto dto)
@@ -98,12 +134,15 @@ public sealed class OrderManager : IOrderManager
         ArgumentNullException.ThrowIfNull(dto);
 
         var order = await _orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
-        if (order is null) throw new ArgumentException("Order not found");
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
 
-        order.UpdateOrderItem(dto.ItemId, dto.Quantity, dto.UnitPrice);
+        order.UpdateOrderItem(dto.OrderItemId, dto.Quantity, dto.UnitPrice);
         order.UpdatedOnUtc = DateTime.UtcNow;
 
-        await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
+        var updatedOrder = await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
     }
 
     public async Task DeleteOrderItemAsync(DeleteOrderItemDto dto)
@@ -111,69 +150,193 @@ public sealed class OrderManager : IOrderManager
         ArgumentNullException.ThrowIfNull(dto);
 
         var order = await _orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
-        if (order is null) throw new ArgumentException("Order not found");
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
 
-        order.RemoveOrderItem(dto.ItemId);
+        order.RemoveOrderItem(dto.OrderItemId);
         order.UpdatedOnUtc = DateTime.UtcNow;
 
-        await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
+        var updatedOrder = await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
     }
 
-    public async Task ChangeOrderStatusAsync(Guid orderId, int status)
+    public async Task ChangeOrderStatusAsync(Guid orderId, OrderStatus status)
     {
         var order = await _orderDataReader.GetByIdAsync(orderId).ConfigureAwait(false);
         if (order is null)
-            throw new ArgumentException("Order is not found", nameof(orderId));
+            throw new OrderIsNotFoundException(orderId);
 
-        if (!Enum.IsDefined(typeof(OrderStatus), status))
-            throw new ArgumentException("Invalid status", nameof(status));
-
-        var fromStatus = order.OrderStatus;
-        var toStatus = (OrderStatus)status;
-        
-        if (fromStatus == toStatus) return;
-
-        order.ChangeStatus(toStatus);
+        order.ChangeStatus(status);
         order.UpdatedOnUtc = DateTime.UtcNow;
 
-        // Inventory Integration
-        if (order.WarehouseId.HasValue)
-        {
-            if (toStatus == OrderStatus.Completed)
-            {
-                // Dispatch stock (Deduct)
-                foreach (var item in order.OrderItems)
-                {
-                    await _stockManager.DispatchStockAsync(item.ProductId, order.WarehouseId.Value, item.Quantity, order.Id, Guid.Empty, $"Sales Order {order.Id} Completed").ConfigureAwait(false);
-                }
-            }
-            else if (toStatus == OrderStatus.Cancelled && fromStatus != OrderStatus.Completed)
-            {
-                // Release reservation
-                foreach (var item in order.OrderItems)
-                {
-                    await _stockManager.ReleaseReservedStockAsync(item.ProductId, order.WarehouseId.Value, item.Quantity, order.Id, Guid.Empty, "Sales Order Cancelled").ConfigureAwait(false);
-                }
-            }
-        }
+        //*TODO*
+        //// Inventory Integration
+        //if (order.WarehouseId.HasValue)
+        //{
+        //    if (toStatus == OrderStatus.Completed)
+        //    {
+        //        // Dispatch stock (Deduct)
+        //        foreach (var item in order.OrderItems)
+        //        {
+        //            await _stockManager.DispatchStockAsync(item.ProductId, order.WarehouseId.Value, item.Quantity, order.Id, Guid.Empty, $"Sales Order {order.Id} Completed").ConfigureAwait(false);
+        //        }
+        //    }
+        //    else if (toStatus == OrderStatus.Cancelled && fromStatus != OrderStatus.Completed)
+        //    {
+        //        // Release reservation
+        //        foreach (var item in order.OrderItems)
+        //        {
+        //            await _stockManager.ReleaseReservedStockAsync(item.ProductId, order.WarehouseId.Value, item.Quantity, order.Id, Guid.Empty, "Sales Order Cancelled").ConfigureAwait(false);
+        //        }
+        //    }
+        //}
 
+        var updatedOrder = await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
+    }
+
+    public async Task VerifyStatusAsync(Guid orderId)
+    {
+        var order = await _orderDataReader.GetByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
+        var hasChanged = order.VerifyStatus();
+
+        if (!hasChanged)
+            return;
+
+        order.UpdatedOnUtc = DateTime.UtcNow;
         await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
+    }
+
+    public async Task MarkAsPaidAsync(MarkAsPaidDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var order = await _orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        order.MarkAsPaid(dto.PaymentMethod, dto.Note);
+        order.UpdatedOnUtc = DateTime.UtcNow;
+
+        var updatedOrder = await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
+    }
+
+    public async Task UpdateShippingAsync(UpdateShippingDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var order = await _orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        order.UpdateShipping(dto.ShippingStatus, dto.Address, dto.Note);
+        order.UpdatedOnUtc = DateTime.UtcNow;
+
+        //*TODO*
+        //if (order.OrderStatus == OrderStatus.Completed && order.WarehouseId.HasValue)
+        //{
+        //    // Only if it wasn't already completed
+        //    // Wait, UpdateShipping internally calls ChangeStatus(Completed) if Shipped.
+        //    // But we need to check if the old status was not Completed to dispatch stock.
+        //    // Let's rely on the fact that if it transitions to completed, we dispatch it.
+        //    // Actually Order.UpdateShipping already changed it. We don't have the old status nicely here, 
+        //    // but we know it throws if already completed or cancelled, so this is the exact transition point.
+        //    foreach (var item in order.OrderItems)
+        //    {
+        //        await _stockManager.DispatchStockAsync(item.ProductId, order.WarehouseId.Value, item.Quantity, order.Id, Guid.Empty, $"Sales Order {order.Id} Completed on Shipping").ConfigureAwait(false);
+        //    }
+        //}
+
+        var updatedOrder = await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
+    }
+
+    public async Task CancelOrderAsync(CancelOrderDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var order = await _orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        order.Cancel(dto.Reason);
+        order.UpdatedOnUtc = DateTime.UtcNow;
+
+        //*TODO*
+        //if (order.WarehouseId.HasValue)
+        //{
+        //    // Release reservation
+        //    foreach (var item in order.OrderItems)
+        //    {
+        //        await _stockManager.ReleaseReservedStockAsync(item.ProductId, order.WarehouseId.Value, item.Quantity, order.Id, Guid.Empty, "Sales Order Cancelled").ConfigureAwait(false);
+        //    }
+        //}
+
+        var updatedOrder = await _orderRepository.UpdateAsync(order).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
     }
 
     public async Task<OrderDto?> GetOrderByIdAsync(Guid id)
     {
         var order = await _orderDataReader.GetByIdAsync(id).ConfigureAwait(false);
-        if (order is null) return null;
+
+        if (order is null)
+            return null;
         return order.ToDto();
     }
 
-    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, int pageIndex, int pageSize)
+    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, OrderStatus? status, int pageIndex, int pageSize)
     {
         var query = _orderDataReader.DataSource;
-        var items = query.Select(o => o.ToDto());
-        var total = items.Count();
-        var paged = items.Skip(pageIndex * pageSize).Take(pageSize).ToList();
-        var result = NamEcommerce.Domain.Shared.Dtos.Common.PagedDataDto.Create(paged, pageIndex, pageSize, total);
-        return result;
+
+        if (status.HasValue)
+            query = query.Where(order => order.OrderStatus == status);
+
+        if (!string.IsNullOrEmpty(keywords))
+        {
+            var normalizedKeywords = TextHelper.Normalize(keywords);
+
+            var customerIds = _customerDataReader.DataSource
+                .Where(c => c.FullName.Contains(keywords) || c.FullName.Contains(normalizedKeywords) || c.NormalizedFullName.Contains(normalizedKeywords)
+                    || c.Address.Contains(keywords) || c.Address.Contains(normalizedKeywords) || c.NormalizedAddress.Contains(normalizedKeywords)
+                    || c.PhoneNumber.Contains(keywords))
+                .Select(v => v.Id)
+                .ToList()
+                .OfType<Guid?>()
+                .ToList();
+            IList<Guid?> userIds = [];
+
+            query = query.Where(order => order.Code.Contains(keywords) || order.Code.Contains(normalizedKeywords)
+                || (order.ShippingAddress != null && (order.ShippingAddress.Contains(keywords) || order.ShippingAddress.Contains(normalizedKeywords) || order.NormalizedShippingAddress.Contains(normalizedKeywords)))
+                || customerIds.Contains(order.CustomerId)
+                || userIds.Contains(order.CreatedByUserId));
+        }
+
+        var total = query.Count();
+        var data = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
+
+        var pagedData = PagedDataDto.Create(data.Select(order => order.ToDto()), pageIndex, pageSize, total);
+        return pagedData;
+    }
+
+    public Task<bool> DoesCodeExistAsync(string code, Guid? comparesWithCurrentId = null)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(code);
+
+        var query = from purchaseOrder in _orderDataReader.DataSource
+                    where purchaseOrder.Code == code && (comparesWithCurrentId == null || purchaseOrder.Id != comparesWithCurrentId)
+                    select purchaseOrder;
+
+        var sameNameExists = query.FirstOrDefault() != null;
+        return Task.FromResult(sameNameExists);
     }
 }

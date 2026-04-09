@@ -17,6 +17,19 @@ public sealed record InventoryStockAppDto
 }
 
 [Serializable]
+public sealed record ProductInventoryStockInfoAppDto
+{
+    public required Guid ProductId { get; init; }
+    public Guid? WarehouseId { get; init; }
+    public string? WarehouseName { get; set; }
+    public required decimal QuantityOnHand { get; init; }
+    public required decimal QuantityReserved { get; init; }
+    public required decimal QuantityAvailable { get; init; }
+    public DateTime UpdatedOnUtc { get; init; }
+}
+
+
+[Serializable]
 public sealed record StockMovementLogAppDto
 {
     public required Guid Id { get; init; }

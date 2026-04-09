@@ -8,7 +8,7 @@
     <div class="d-flex align-items-start gap-2 w-100 text-start">
         <div class="flex-grow-1">
             <input type="number" asp-for="ReceivedQuantity" class="form-control form-control-sm"
-                   min="0" max="@Model.RemainingQuantity" step="0.01"
+                   min="0" max="@Model.RemainingQuantity" step="any"
                    data-val-required="Vui lòng nhập số lượng"
                    data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001" data-val-range-max="@Model.RemainingQuantity"
                    data-val-number="Số lượng không đúng." />

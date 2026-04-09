@@ -8,9 +8,9 @@ public sealed class CreateCustomerCommand : IRequest<CreateCustomerResultModel>
 {
     public required string FullName { get; init; }
     public required string PhoneNumber { get; init; }
-    public string? Email { get; init; }
-    public string? Address { get; init; }
-    public string? Note { get; init; }
+    public required string Address { get; init; }
+    public string? Email { get; set; }
+    public string? Note { get; set; }
 }
 
 [Serializable]
@@ -19,9 +19,9 @@ public sealed class UpdateCustomerCommand : IRequest<UpdateCustomerResultModel>
     public required Guid Id { get; init; }
     public required string FullName { get; init; }
     public required string PhoneNumber { get; init; }
-    public string? Email { get; init; }
-    public string? Address { get; init; }
-    public string? Note { get; init; }
+    public required string Address { get; init; }
+    public string? Email { get; set; }
+    public string? Note { get; set; }
 }
 
 [Serializable]

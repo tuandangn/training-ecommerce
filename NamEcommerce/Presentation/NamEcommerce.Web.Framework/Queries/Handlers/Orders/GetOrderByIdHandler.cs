@@ -1,50 +1,64 @@
 using MediatR;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Application.Contracts.Orders;
-using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Web.Contracts.Models.Orders;
+using NamEcommerce.Application.Contracts.Customers;
+using NamEcommerce.Application.Contracts.Catalog;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Orders;
 
 public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, OrderDetailsModel?>
 {
     private readonly IOrderAppService _orderAppService;
-    private readonly IProductAppService _productAppService;
     private readonly ICustomerAppService _customerAppService;
+    private readonly IProductAppService _productAppService;
 
-    public GetOrderByIdHandler(IOrderAppService orderAppService, IProductAppService productAppService, ICustomerAppService customerAppService)
+    public GetOrderByIdHandler(IOrderAppService orderAppService, ICustomerAppService customerAppService, IProductAppService productAppService)
     {
         _orderAppService = orderAppService;
-        _productAppService = productAppService;
         _customerAppService = customerAppService;
+        _productAppService = productAppService;
     }
 
     public async Task<OrderDetailsModel?> Handle(GetOrderByIdQuery request, CancellationToken cancellationToken)
     {
-        var dto = await _orderAppService.GetOrderByIdAsync(request.Id).ConfigureAwait(false);
-        if (dto is null) return null;
+        var order = await _orderAppService.GetOrderByIdAsync(request.Id).ConfigureAwait(false);
+        if (order is null) return null;
 
-        var customer = await _customerAppService.GetCustomerByIdAsync(dto.CustomerId).ConfigureAwait(false);
-
+        var customer = await _customerAppService.GetCustomerByIdAsync(order.CustomerId).ConfigureAwait(false);
         var model = new OrderDetailsModel
         {
-            Id = dto.Id,
-            CustomerId = dto.CustomerId,
-            CustomerName = customer?.FullName ?? "Unknown Customer",
-            TotalAmount = dto.TotalAmount,
-            Status = dto.Status,
-            Note = dto.Note
+            Id = order.Id,
+            Code = order.Code,
+            CustomerId = order.CustomerId,
+            CustomerName = customer?.FullName ?? "N/A",
+            CustomerAddress = customer?.Address,
+            CustomerPhoneNumber = customer?.PhoneNumber,
+            TotalAmount = order.TotalAmount,
+            OrderDiscount = order.OrderDiscount ?? 0,
+            Status = order.Status,
+            Note = order.Note,
+            PaymentStatus = order.PaymentStatus,
+            PaymentMethod = order.PaymentMethod,
+            PaidOnUtc = order.PaidOnUtc,
+            PaymentNote = order.PaymentNote,
+            ShippingStatus = order.ShippingStatus,
+            ShippingAddress = order.ShippingAddress,
+            ShippedOnUtc = order.ShippedOnUtc,
+            ShippingNote = order.ShippingNote,
+            CancellationReason = order.CancellationReason
         };
-        foreach (var it in dto.Items)
+        var products = await _productAppService.GetProductsByIdsAsync(order.Items.Select(i => i.ProductId)).ConfigureAwait(false);
+        foreach (var orderItem in order.Items)
         {
-            var product = await _productAppService.GetProductByIdAsync(it.ProductId).ConfigureAwait(false);
+            var product = products.FirstOrDefault(p => p.Id == orderItem.ProductId);
             model.Items.Add(new OrderDetailsItemModel 
             { 
-                ItemId = it.ItemId, 
-                ProductId = it.ProductId, 
-                ProductName = product?.Name ?? "Unknown Product",
-                Quantity = it.Quantity, 
-                UnitPrice = it.UnitPrice 
+                ItemId = orderItem.Id, 
+                ProductId = orderItem.ProductId, 
+                ProductName = product?.Name,
+                Quantity = orderItem.Quantity, 
+                UnitPrice = orderItem.UnitPrice 
             });
         }
         return model;

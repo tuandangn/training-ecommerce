@@ -1,0 +1,83 @@
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using MediatR;
+using NamEcommerce.Web.Contracts.Configurations;
+using NamEcommerce.Web.Contracts.Models.Orders;
+using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Queries.Models.Customers;
+using NamEcommerce.Web.Contracts.Queries.Models.Orders;
+using NamEcommerce.Web.Models.Orders;
+
+namespace NamEcommerce.Web.Services.Orders;
+
+public sealed class OrderModelFactory : IOrderModelFactory
+{
+    private readonly AppConfig _appConfig;
+    private readonly IMediator _mediator;
+
+    public OrderModelFactory(AppConfig appConfig, IMediator mediator)
+    {
+        _appConfig = appConfig;
+        _mediator = mediator;
+    }
+
+    public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? model = null)
+    {
+        model = model ?? new CreateOrderModel();
+
+        if (model.CustomerId.HasValue)
+        {
+            var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = model.CustomerId.Value }).ConfigureAwait(false);
+            if (customer is null)
+                model.CustomerId = null;
+            else
+            {
+                model.CustomerDisplayName = customer.FullName;
+                model.CustomerDisplayPhone = customer.PhoneNumber;
+                model.CustomerDisplayAddress = customer.Address;
+            }
+        }
+
+        if (model.Items.Count > 0)
+        {
+            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().ToList();
+            if (productIds.Count > 0)
+            {
+                var products = await _mediator.Send(new GetProductsByIdsForOrderQuery
+                {
+                    Ids = productIds
+                }).ConfigureAwait(false);
+
+                model.Items = model.Items.Where(i => products.Any(p => p.Id == i.ProductId)).ToList();
+
+                foreach(var item in model.Items)
+                {
+                    var product = products.First(p => p.Id == item.ProductId);
+                    item.ProductDisplayName = product.Name;
+                    item.ProductDisplayQty = product.QuantityAvailable;
+                    item.ProductDisplayPicture = product.PictureUrl;
+                }
+            }
+        }
+
+        return model;
+    }
+
+    public async Task<OrderListModel> PrepareOrderListModel(OrderListSearchModel searchModel)
+    {
+        var pageNumber = searchModel?.PageNumber ?? 1;
+        var pageSize = searchModel?.PageSize ?? 0;
+        if (pageNumber <= 0) pageNumber = 1;
+        if (pageSize <= 0) pageSize = _appConfig.DefaultPageSize;
+        if (_appConfig.PageSizeOptions.Contains(pageSize)) pageSize = _appConfig.DefaultPageSize;
+
+        var model = await _mediator.Send(new GetOrderListQuery
+        {
+            Keywords = searchModel?.Keywords,
+            Status = searchModel?.Status,
+            PageIndex = pageNumber - 1,
+            PageSize = pageSize
+        });
+
+        return model;
+    }
+}

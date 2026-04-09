@@ -4,15 +4,11 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
-using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
-using NamEcommerce.Domain.Shared.Services.Catalog;
-using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
-using System.Net.NetworkInformation;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
 
@@ -23,21 +19,16 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
     private readonly IEntityDataReader<User> _userDataReader;
     private readonly IEntityDataReader<Product> _productDataReader;
-    private readonly IVendorManager _vendorManager;
-    private readonly IWarehouseManager _warehouseManager;
 
     public PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
         IEntityDataReader<Vendor> vendorDataReader, IEntityDataReader<Warehouse> warehouseDataReader,
-        IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader, IVendorManager vendorManager,
-        IWarehouseManager warehouseManager)
+        IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader)
     {
         _purchaseOrderManager = purchaseOrderManager;
         _vendorDataReader = vendorDataReader;
         _warehouseDataReader = warehouseDataReader;
         _userDataReader = userDataReader;
         _productDataReader = productDataReader;
-        _vendorManager = vendorManager;
-        _warehouseManager = warehouseManager;
     }
 
     public async Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(string? keywords, int pageIndex, int pageSize)
@@ -109,7 +100,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             }
         }
 
-        var code = await NextPurchaseOrderCode().ConfigureAwait(false);
+        var code = await NextPurchaseOrderCodeAsync().ConfigureAwait(false);
         var createPurchaseOrderDto = new CreatePurchaseOrderDto
         {
             Code = code,
@@ -159,11 +150,11 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             || purchaseOrder.Status == PurchaseOrderStatus.Cancelled
             || purchaseOrder.Status == PurchaseOrderStatus.Completed)
         {
-                return new UpdatePurchaseOrderResultAppDto
-                {
-                    Success = false,
-                    ErrorMessage = $"Purchase order in status cannot change info"
-                };
+            return new UpdatePurchaseOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = $"Purchase order in status cannot change info"
+            };
         }
 
         if (purchaseOrder.Status != PurchaseOrderStatus.Draft)
@@ -419,7 +410,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         };
     }
 
-    public async Task<string> NextPurchaseOrderCode()
+    public async Task<string> NextPurchaseOrderCodeAsync()
     {
         var now = DateTime.UtcNow;
         var code = string.Empty;
@@ -439,9 +430,23 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return (false, $"Purchase order with ID {id} does not exist.");
 
         if (!await _purchaseOrderManager.CanChangeStatusToAsync(id, PurchaseOrderStatus.Submitted))
-            return (false, "Cannot submit the empty purchase order: please add item to order");
+            return (false, "Cannot submit this purchase order");
 
         await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Submitted).ConfigureAwait(false);
+
+        return (true, null);
+    }
+
+    public async Task<(bool success, string? errorMessage)> CancelPurchaseOrderAsync(Guid id)
+    {
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(id).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            return (false, $"Purchase order with ID {id} does not exist.");
+
+        if (!await _purchaseOrderManager.CanChangeStatusToAsync(id, PurchaseOrderStatus.Cancelled))
+            return (false, "Cannot cancel this purchase order");
+
+        await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Cancelled).ConfigureAwait(false);
 
         return (true, null);
     }

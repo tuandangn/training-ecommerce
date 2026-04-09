@@ -29,10 +29,13 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IInventoryStockManager _stockManager;
     private readonly IEventPublisher _eventPublisher;
+    private readonly IEntityDataReader<InventoryStock> _stockDataReader;
+    private readonly IRepository<Product> _productRepository;
 
     public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IInventoryStockManager stockManager, IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
-        IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader, IEventPublisher eventPublisher)
+        IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader, IEventPublisher eventPublisher,
+        IEntityDataReader<InventoryStock> stockDataReader, IRepository<Product> productRepository)
     {
         _purchaseOrderRepository = poRepository;
         _stockManager = stockManager;
@@ -42,6 +45,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         _userDataReader = userDataReader;
         _productDataReader = productDataReader;
         _eventPublisher = eventPublisher;
+        _stockDataReader = stockDataReader;
+        _productRepository = productRepository;
     }
 
     public async Task<CreatePurchaseOrderResultDto> CreatePurchaseOrderAsync(CreatePurchaseOrderDto dto)
@@ -253,6 +258,22 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
+        // Calculate Weighted Average Cost Price
+        var allStocks = _stockDataReader.DataSource.Where(s => s.ProductId == product.Id).ToList();
+        var currentTotalStock = allStocks.Sum(s => s.QuantityOnHand);
+
+        var currentTotalValue = product.CostPrice * currentTotalStock;
+        var receivedValue = dto.ReceivedQuantity * purchaseOrderItem.UnitCost;
+        var newTotalStock = currentTotalStock + dto.ReceivedQuantity;
+
+        if (newTotalStock > 0)
+        {
+            var newCostPrice = (currentTotalValue + receivedValue) / newTotalStock;
+            product.SetCostPrice(newCostPrice);
+            product.UpdatedOnUtc = DateTime.UtcNow;
+            await _productRepository.UpdateAsync(product).ConfigureAwait(false);
+        }
+
         if (product.TrackInventory)
         {
             await _stockManager.ReceiveStockAsync(purchaseOrderItem.ProductId,
@@ -310,9 +331,9 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             IList<Guid?> userIds = [];
 
             query = query.Where(c => c.Code.Contains(keywords)
-                || vendorIds.OfType<Guid?>().Contains(c.VendorId)
-                || warehouseIds.OfType<Guid?>().Contains(c.WarehouseId)
-                || userIds.OfType<Guid?>().Contains(c.CreatedByUserId));
+                || vendorIds.Contains(c.VendorId)
+                || warehouseIds.Contains(c.WarehouseId)
+                || userIds.Contains(c.CreatedByUserId));
         }
 
         query = query.OrderByDescending(c => c.CreatedOnUtc);

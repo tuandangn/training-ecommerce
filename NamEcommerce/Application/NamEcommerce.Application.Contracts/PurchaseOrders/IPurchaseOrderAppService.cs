@@ -7,7 +7,7 @@ public interface IPurchaseOrderAppService
 {
     Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(string? keywords, int pageIndex, int pageSize);
 
-    Task<string> NextPurchaseOrderCode();
+    Task<string> NextPurchaseOrderCodeAsync();
 
     Task<PurchaseOrderAppDto?> GetPurchaseOrderByIdAsync(Guid id);
 
@@ -15,6 +15,7 @@ public interface IPurchaseOrderAppService
     Task<UpdatePurchaseOrderResultAppDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderAppDto dto);
 
     Task<(bool success, string? errorMessage)> SubmitsPurchaseOrderAsync(Guid id);
+    Task<(bool success, string? errorMessage)> CancelPurchaseOrderAsync(Guid id);
     Task<(bool success, string? errorMessage)> ChangeStatusAsync(Guid purchaseOrderId, int newStatus);
 
     Task<AddPurchaseOrderItemResultAppDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemAppDto dto);

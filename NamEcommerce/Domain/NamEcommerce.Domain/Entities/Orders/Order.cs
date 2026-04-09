@@ -1,66 +1,115 @@
+using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Exceptions.Customers;
+using NamEcommerce.Domain.Shared.Exceptions.Orders;
+using NamEcommerce.Domain.Shared.Helpers;
 
 namespace NamEcommerce.Domain.Entities.Orders;
 
 [Serializable]
 public sealed record Order : AppAggregateEntity
 {
-    public Order(Guid id, Guid customerId, Guid? warehouseId, decimal orderTotal, PaymentStatus paymentStatus, OrderStatus orderStatus)
-        : this(id, customerId, warehouseId, orderTotal, paymentStatus, orderStatus, Array.Empty<OrderItem>())
-    { }
-
-    public Order(Guid id, Guid customerId, Guid? warehouseId, decimal orderTotal, PaymentStatus paymentStatus, OrderStatus orderStatus, IList<OrderItem> orderItems) 
-        : base(id)
+    public Order(string code, Guid customerId, decimal orderTotal, Guid? createdByUserId) : base(Guid.NewGuid())
     {
-        CustomerId = customerId;
-        WarehouseId = warehouseId;
-        OrderTotal = orderTotal;
-        PaymentStatus = paymentStatus;
-        OrderStatus = orderStatus;
-        _orderItems = orderItems.ToList();
+        (Code, CustomerId, OrderTotal, CreatedByUserId) = (code, customerId, orderTotal, createdByUserId);
+
+        CreatedOnUtc = DateTime.UtcNow;
     }
 
-    public Guid CustomerId { get; init; }
-    public Guid? WarehouseId { get; internal set; }
-    public decimal OrderTotal { get; internal set; }
+    public string Code { get; }
+    public Guid CustomerId { get; private set; }
+    public Guid? CreatedByUserId { get; }
+
+    public decimal OrderTotal { get; private set; }
     public decimal OrderDiscount { get; internal set; }
 
-    public PaymentStatus PaymentStatus { get; internal set; }
-    public ShippingStatus ShippingStatus { get; internal set; }
-    public OrderStatus OrderStatus { get; internal set; }
+    public DateTime ExpectedShippingDateUtc { get; set; }
 
-    private readonly List<OrderItem> _orderItems = new();
+    public PaymentStatus PaymentStatus { get; private set; }
+    public PaymentMethod? PaymentMethod { get; private set; }
+    public DateTime? PaidOnUtc { get; private set; }
+    public string? PaymentNote { get; private set; }
+
+    public ShippingStatus ShippingStatus { get; private set; }
+    public string? ShippingAddress
+    {
+        get;
+        internal set
+        {
+            field = value;
+            NormalizedShippingAddress = TextHelper.Normalize(ShippingAddress);
+        }
+    }
+    internal string NormalizedShippingAddress { get; private set; } = "";
+    public DateTime? ShippedOnUtc { get; private set; }
+    public string? ShippingNote { get; private set; }
+
+    public OrderStatus OrderStatus { get; private set; }
+    public string? CancellationReason { get; private set; }
+
+
+    private readonly List<OrderItem> _orderItems = [];
     public IEnumerable<OrderItem> OrderItems => _orderItems.AsReadOnly();
-
-    public DateTime CreatedOnUtc { get; init; } = DateTime.UtcNow;
-    public DateTime? UpdatedOnUtc { get; internal set; }
 
     public string? Note { get; internal set; }
 
-    internal void AddOrderItem(OrderItem item)
-    {
-        if (item.OrderId != Id)
-            throw new InvalidOperationException("Item does not belong to this order");
+    public DateTime CreatedOnUtc { get; }
+    public DateTime? UpdatedOnUtc { get; internal set; }
 
-        _orderItems.Add(item);
+    #region Methods
+
+    internal async Task SetCustomerAsync(Guid customerId, IGetByIdService<Customer> byIdGetter)
+    {
+        ArgumentNullException.ThrowIfNull(byIdGetter);
+
+        var customer = await byIdGetter.GetByIdAsync(customerId).ConfigureAwait(false);
+        if (customer is null)
+            throw new CustomerIsNotFoundException(customerId);
+
+        CustomerId = customerId;
+    }
+
+    internal async Task AddOrderItemAsync(Guid productId, decimal unitPrice, decimal quantity, IGetByIdService<Product> byIdGetter)
+    {
+        ArgumentNullException.ThrowIfNull(byIdGetter);
+
+        var product = await byIdGetter.GetByIdAsync(productId).ConfigureAwait(false);
+        if (product is null)
+            throw new ProductIsNotFoundException(productId);
+
+        var orderItem = new OrderItem(Id, productId, unitPrice, quantity)
+        {
+            //*TODO*
+            CostPrice = product.CostPrice
+        };
+        _orderItems.Add(orderItem);
+
         RecalculateTotal();
     }
 
-    internal void UpdateOrderItem(Guid itemId, decimal quantity, decimal unitPrice)
+    internal void UpdateOrderItem(Guid orderItemId, decimal quantity, decimal unitPrice)
     {
-        var item = _orderItems.FirstOrDefault(i => i.Id == itemId);
-        if (item == null) throw new ArgumentException("Order item not found");
+        var orderItem = _orderItems.FirstOrDefault(item => item.Id == orderItemId);
+        if (orderItem is null)
+            throw new OrderItemIsNotFoundException(orderItemId);
 
-        item.Update(quantity, unitPrice);
+        orderItem.Update(quantity, unitPrice);
+
         RecalculateTotal();
     }
 
     internal void RemoveOrderItem(Guid itemId)
     {
         var item = _orderItems.FirstOrDefault(i => i.Id == itemId);
-        if (item == null) return;
+        if (item is null)
+            return;
 
         _orderItems.Remove(item);
+
         RecalculateTotal();
     }
 
@@ -69,21 +118,101 @@ public sealed record Order : AppAggregateEntity
         OrderTotal = _orderItems.Sum(i => i.Price) - OrderDiscount;
     }
 
+    private bool CanUpdateStatus() => OrderStatus != OrderStatus.Completed && OrderStatus != OrderStatus.Cancelled;
     public bool CanChangeStatusTo(OrderStatus toStatus)
     {
-        if (OrderStatus == OrderStatus.Completed || OrderStatus == OrderStatus.Cancelled)
+        if (!CanUpdateStatus())
             return false;
 
-        // simple flow: Pending -> Processing -> Completed
+        if (toStatus == OrderStatus.Cancelled && (PaymentStatus != PaymentStatus.Pending || ShippingStatus != ShippingStatus.Pending))
+            return false;
+
         var subtract = (int)toStatus - (int)OrderStatus;
-        return new[] { 0, 1, 2 }.Contains(subtract);
+        if (subtract < 0)
+            return false;
+
+        return Enum.IsDefined(toStatus);
     }
 
     internal void ChangeStatus(OrderStatus status)
     {
         if (!CanChangeStatusTo(status))
-            throw new InvalidOperationException("Cannot change order status to the specified status");
+            throw new OrderCannotChangeStatusException();
 
         OrderStatus = status;
     }
+
+    internal void MarkAsPaid(PaymentMethod method, string? note)
+    {
+        if (OrderStatus == OrderStatus.Cancelled)
+            throw new OrderCancelledException();
+
+        if (OrderStatus == OrderStatus.Completed)
+            throw new OrderCompletedException();
+
+        if (!Enum.IsDefined(method))
+            throw new OrderDataIsInvalidException("Payment method is not allowed.");
+
+        PaymentStatus = PaymentStatus.Paid;
+        PaymentMethod = method;
+        PaymentNote = note;
+
+        PaidOnUtc = DateTime.UtcNow;
+    }
+
+    internal void UpdateShipping(ShippingStatus status, string? address, string? note)
+    {
+        if (OrderStatus == OrderStatus.Cancelled)
+            throw new OrderCancelledException();
+
+        if (OrderStatus == OrderStatus.Completed)
+            throw new OrderCompletedException();
+
+        if (!Enum.IsDefined(status))
+            throw new OrderDataIsInvalidException("Shipping status is not allowed.");
+
+        ShippingStatus = status;
+        ShippingNote = note;
+        if (address is not null)
+            ShippingAddress = address;
+
+        if (status == ShippingStatus.Shipped)
+            ShippedOnUtc = DateTime.UtcNow;
+    }
+
+    internal bool VerifyStatus()
+    {
+        if (!CanUpdateStatus())
+            return false;
+
+        if (PaymentStatus == PaymentStatus.Paid && ShippingStatus == ShippingStatus.Shipped)
+        {
+            ChangeStatus(OrderStatus.Completed);
+            return true;
+        }
+
+        if (OrderStatus == OrderStatus.Pending && OrderItems.Any() && ShippingStatus == ShippingStatus.Shipping)
+        {
+            ChangeStatus(OrderStatus.Processing);
+            return true;
+        }
+        if (OrderStatus == OrderStatus.Pending && PaymentStatus == PaymentStatus.Paid)
+        {
+            ChangeStatus(OrderStatus.Processing);
+            return true;
+        }
+
+        return false;
+    }
+
+    internal void Cancel(string? reason)
+    {
+        if (!CanChangeStatusTo(OrderStatus.Cancelled))
+            throw new OrderCannotBeCancelledException();
+
+        ChangeStatus(OrderStatus.Cancelled);
+        CancellationReason = reason;
+    }
+
+    #endregion
 }

@@ -11,7 +11,7 @@ public sealed class PurchaseOrderDetailsModel
     public required PurchaseOrderModel Info { get; init; }
 
     public bool CanModifyInfo { get; set; }
-    public EditPurchaseOrderModel ModifyInfo { get; set; }
+    public EditPurchaseOrderModel? ModifyInfo { get; set; }
 
     [ValidateNever]
     public AddPurchaseOrderItemModel? AddItemModel { get; set; }

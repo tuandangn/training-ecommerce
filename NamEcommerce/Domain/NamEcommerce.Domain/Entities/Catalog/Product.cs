@@ -36,6 +36,8 @@ public record Product : AppAggregateEntity
 
     public Guid? UnitMeasurementId { get; private set; }
 
+    public decimal CostPrice { get; private set; }
+
     public bool TrackInventory { get; private set; }
 
     public DateTime CreatedOnUtc { get; }
@@ -43,13 +45,19 @@ public record Product : AppAggregateEntity
 
     private readonly IList<ProductCategory> _productCategories = [];
     public IEnumerable<ProductCategory> ProductCategories
-        => _productCategories.AsEnumerable();
+        => _productCategories.AsReadOnly();
 
     private readonly IList<ProductPicture> _productPictures = [];
     public IEnumerable<ProductPicture> ProductPictures
-        => _productPictures.AsEnumerable();
+        => _productPictures.AsReadOnly();
 
     #region Methods
+
+    internal void SetCostPrice(decimal costPrice)
+    {
+        if (costPrice < 0) throw new ArgumentOutOfRangeException(nameof(costPrice), "Cost price cannot be less than 0");
+        CostPrice = costPrice;
+    }
 
     internal void SetTrackInventory(bool trackInventory) => TrackInventory = trackInventory;
 
@@ -100,7 +108,7 @@ public record Product : AppAggregateEntity
         if (category is null)
             throw new CategoryIsNotFoundException(categoryId);
 
-        _productCategories.Add(new ProductCategory(default, Id, categoryId, displayOrder));
+        _productCategories.Add(new ProductCategory(Id, categoryId, displayOrder));
     }
 
     internal void RemoveFromCategory(Guid categoryId)
@@ -124,7 +132,7 @@ public record Product : AppAggregateEntity
         if (picture is null)
             throw new PictureIsNotFoundException(pictureId);
 
-        _productPictures.Add(new ProductPicture(default, Id, pictureId));
+        _productPictures.Add(new ProductPicture(Id, pictureId));
     }
 
     #endregion
@@ -133,7 +141,7 @@ public record Product : AppAggregateEntity
 [Serializable]
 public sealed record ProductCategory : AppEntity
 {
-    internal ProductCategory(Guid id, Guid productId, Guid categoryId, int displayOrder) : base(id)
+    internal ProductCategory(Guid productId, Guid categoryId, int displayOrder) : base(Guid.Empty)
         => (ProductId, CategoryId, DisplayOrder) = (productId, categoryId, displayOrder);
 
     public Guid ProductId { get; init; }
@@ -145,7 +153,7 @@ public sealed record ProductCategory : AppEntity
 [Serializable]
 public sealed record ProductPicture : AppEntity
 {
-    public ProductPicture(Guid id, Guid productId, Guid pictureId) : base(id)
+    public ProductPicture(Guid productId, Guid pictureId) : base(Guid.Empty)
         => (ProductId, PictureId) = (productId, pictureId);
 
     public Guid ProductId { get; init; }

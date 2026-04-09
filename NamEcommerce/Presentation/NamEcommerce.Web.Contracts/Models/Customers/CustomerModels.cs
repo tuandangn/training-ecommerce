@@ -25,6 +25,7 @@ public sealed class CustomerListModel
     {
         public required string FullName { get; init; }
         public required string PhoneNumber { get; init; }
+        public required string Address { get; set; }
     }
 }
 

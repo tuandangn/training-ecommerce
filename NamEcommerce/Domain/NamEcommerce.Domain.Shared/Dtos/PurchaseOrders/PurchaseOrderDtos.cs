@@ -17,7 +17,7 @@ public abstract record BasePurchaseOrderDto
     {
         if (!VendorId.HasValue)
             throw new PurchaseOrderDataIsInvalidException("Vendor is not empty");
-        if (ExpectedDeliveryDateUtc.HasValue && ExpectedDeliveryDateUtc.Value < DateTime.UtcNow)
+        if (ExpectedDeliveryDateUtc.HasValue && ExpectedDeliveryDateUtc.Value < DateTime.UtcNow.Date)
             throw new PurchaseOrderDataIsInvalidException("Expected delivery date must be in the future");
         if (TaxAmount < 0)
             throw new PurchaseOrderDataIsInvalidException("Tax amount must be greater than or equal to 0");
@@ -68,10 +68,6 @@ public sealed record CreatePurchaseOrderResultDto
 }
 
 [Serializable]
-public sealed record UpdatePurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
-{
-}
+public sealed record UpdatePurchaseOrderDto(Guid Id) : BasePurchaseOrderDto;
 [Serializable]
-public sealed record UpdatePurchaseOrderResultDto(Guid Id) : BasePurchaseOrderDto
-{
-}
+public sealed record UpdatePurchaseOrderResultDto(Guid Id) : BasePurchaseOrderDto;

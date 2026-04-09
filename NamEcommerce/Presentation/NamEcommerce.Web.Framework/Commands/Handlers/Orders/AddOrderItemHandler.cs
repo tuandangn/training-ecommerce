@@ -1,6 +1,7 @@
 using MediatR;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Application.Contracts.Dtos.Orders;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 
@@ -15,17 +16,18 @@ public sealed class AddOrderItemHandler : IRequestHandler<AddOrderItemCommand, A
 
     public async Task<AddOrderItemResultModel> Handle(AddOrderItemCommand request, CancellationToken cancellationToken)
     {
-        if (request.Quantity <= 0 || request.UnitPrice < 0)
-            return new AddOrderItemResultModel { Success = false, ErrorMessage = "Invalid quantity or price" };
+        var addOrderItemResult = await _orderAppService.AddOrderItemAsync(new AddOrderItemAppDto
+        {
+            OrderId = request.OrderId,
+            ProductId = request.ProductId,
+            Quantity = request.Quantity,
+            UnitPrice = request.UnitPrice
+        }).ConfigureAwait(false);
 
-        try
+        return new AddOrderItemResultModel
         {
-            await _orderAppService.AddOrderItemAsync(new NamEcommerce.Application.Contracts.Dtos.Orders.AddOrderItemAppDto(request.OrderId, request.ProductId, request.Quantity, request.UnitPrice)).ConfigureAwait(false);
-            return new AddOrderItemResultModel { Success = true };
-        }
-        catch (Exception ex)
-        {
-            return new AddOrderItemResultModel { Success = false, ErrorMessage = ex.Message };
-        }
+            Success = addOrderItemResult.Success,
+            ErrorMessage = addOrderItemResult.ErrorMessage
+        };
     }
 }

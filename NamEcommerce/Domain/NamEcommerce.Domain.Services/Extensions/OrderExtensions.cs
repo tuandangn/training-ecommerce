@@ -9,14 +9,35 @@ public static class OrderExtensions
     {
         var dto = new OrderDto(order.Id)
         {
+            Code = order.Code,
             TotalAmount = order.OrderTotal,
-            Status = (int)order.OrderStatus,
+            OrderDiscount = order.OrderDiscount, // Important to map discount too
+            Status = order.OrderStatus,
             CustomerId = order.CustomerId,
-            Note = order.Note
+            CreatedByUserId = order.CreatedByUserId,
+            Note = order.Note,
+            PaymentStatus = order.PaymentStatus,
+            PaymentMethod = order.PaymentMethod,
+            PaidOnUtc = order.PaidOnUtc,
+            PaymentNote = order.PaymentNote,
+            ShippingStatus = order.ShippingStatus,
+            ShippingAddress = order.ShippingAddress,
+            ShippedOnUtc = order.ShippedOnUtc,
+            ShippingNote = order.ShippingNote,
+            CancellationReason = order.CancellationReason,
+            ExpectedShippingDateUtc = order.ExpectedShippingDateUtc
         };
 
-        foreach (var i in order.OrderItems)
-            dto.Items.Add(new OrderItemDto(i.Id, i.ProductId, i.Quantity, i.UnitPrice));
+        foreach (var orderItem in order.OrderItems)
+        {
+            dto.Items.Add(new OrderItemDto(orderItem.Id)
+            {
+                OrderId = order.Id,
+                ProductId = orderItem.ProductId,
+                Quantity = orderItem.Quantity,
+                UnitPrice = orderItem.UnitPrice
+            });
+        }
 
         return dto;
     }

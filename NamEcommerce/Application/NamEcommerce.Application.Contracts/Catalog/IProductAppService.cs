@@ -10,6 +10,7 @@ public interface IProductAppService
         int pageIndex = 0, int pageSize = int.MaxValue);
 
     Task<ProductAppDto?> GetProductByIdAsync(Guid id);
+    Task<IEnumerable<ProductAppDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids);
 
     Task<CreateProductResultAppDto> CreateProductAsync(CreateProductAppDto dto);
 

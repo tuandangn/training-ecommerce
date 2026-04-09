@@ -245,7 +245,7 @@
             <div class="card border-0 shadow-sm rounded-4 overflow-hidden bg-white p-4">
                  @if (Model.Info.Status != (int)PurchaseOrderStatus.Completed && Model.Info.Status != (int)PurchaseOrderStatus.Cancelled)
                  {
-                    <form asp-action="ChangeStatus" asp-route-id="@Model.Info.Id" asp-route-status="@((int)PurchaseOrderStatus.Cancelled)" method="post">
+                    <form asp-action="CancelPurchaseOrder" asp-route-id="@Model.Info.Id" method="post">
                         <button type="submit" class="btn btn-outline-danger w-100 rounded-3 py-2" onclick="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')">
                             <i class="bi bi-x-circle me-1"></i> Hủy bỏ đơn nhập
                         </button>
@@ -279,7 +279,7 @@
 
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted uppercase">Số lượng nhận thực tế</label>
-                            <input type="number" name="ReceivedQuantity" id="modalReceivedQty" class="form-control form-control-lg rounded-3" value="0.0" min="0.01" step="0.01" required />
+                            <input type="number" name="ReceivedQuantity" id="modalReceivedQty" class="form-control form-control-lg rounded-3" value="0.0" min="0.01" step="any" required />
                         </div>
 
                         <div class="mb-3">
@@ -326,13 +326,14 @@
         });
     </script>
 }
-
-<style>
-    .bg-primary-light { background-color: rgba(13, 110, 253, 0.1); }
-    .bg-info-light { background-color: rgba(13, 202, 240, 0.1); }
-    .bg-success-light { background-color: rgba(25, 135, 84, 0.1); }
-    .bg-warning-light { background-color: rgba(255, 193, 7, 0.1); }
-    .italic { font-style: italic; }
-    .uppercase { text-transform: uppercase; }
-    .icon-box { min-width: 48px; }
-</style>
+@section Styles {
+    <style>
+        .bg-primary-light { background-color: rgba(13, 110, 253, 0.1); }
+        .bg-info-light { background-color: rgba(13, 202, 240, 0.1); }
+        .bg-success-light { background-color: rgba(25, 135, 84, 0.1); }
+        .bg-warning-light { background-color: rgba(255, 193, 7, 0.1); }
+        .italic { font-style: italic; }
+        .uppercase { text-transform: uppercase; }
+        .icon-box { min-width: 48px; }
+    </style>
+}

@@ -39,6 +39,23 @@ public sealed class InventoryAppService : IInventoryAppService
         return PagedDataAppDto.Create(items, pageIndex, pageSize, total);
     }
 
+    public async Task<IEnumerable<ProductInventoryStockInfoAppDto>> GetInventoryStocksForProductAsync(Guid productId, Guid? warehouseId)
+    {
+        var stockItems = await _stockManager.GetInventoryStocksForProductAsync(productId, warehouseId);
+
+        var productStockInfoDtos = stockItems.Select(stockItem => new ProductInventoryStockInfoAppDto
+        {
+            ProductId = productId,
+            WarehouseId = stockItem.WarehouseId,
+            QuantityOnHand = stockItem.QuantityOnHand,
+            QuantityReserved = stockItem.QuantityReserved,
+            QuantityAvailable = stockItem.QuantityAvailable,
+            UpdatedOnUtc = stockItem.UpdatedOnUtc
+        });
+
+        return productStockInfoDtos;
+    }
+
     public async Task<IPagedDataAppDto<StockMovementLogAppDto>> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize)
     {
         var (total, dataItems) = await _stockManager.GetStockMovementLogsAsync(productId, warehouseId, pageIndex, pageSize);

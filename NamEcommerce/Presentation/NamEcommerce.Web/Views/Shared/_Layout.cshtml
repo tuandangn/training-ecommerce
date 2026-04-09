@@ -1,14 +1,15 @@
-﻿@{
+@{
     var errorMessage = TempData[ViewConstants.GlobalErrorMessage] as string;
 }
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>@ViewData[ViewConstants.PageTitle] - @Information.Name</title>
 
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/lib/bootstrap-icons-1.13.1/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/lib/lightbox/css/lightbox.min.css" />
@@ -17,17 +18,20 @@
 
     @await RenderSectionAsync("Styles", required: false)
 </head>
-<body class="vh-100">
-    <div class="d-flex flex-column h-100">
+<body>
+    <div class="d-flex flex-column min-vh-100">
         <header>
-            <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-                <div class="container-fluid">
-                    <a class="navbar-brand" asp-controller="Home" asp-action="Index">@Information.Name</a>
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+            <nav class="navbar navbar-expand-lg navbar-main navbar-light">
+                <div class="container-fluid px-3 px-lg-4">
+                    <a class="navbar-brand navbar-brand-custom" asp-controller="Home" asp-action="Index">
+                        <i class="bi bi-bag-heart-fill me-1"></i>@Information.Name
+                    </a>
+                    <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#mainNavbar" aria-controls="mainNavbar"
                             aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
                     </button>
-                    <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <div class="collapse navbar-collapse" id="mainNavbar">
                         @await Component.InvokeAsync("MenuNavigationComponent")
                         @await Component.InvokeAsync("UserHeaderLinksComponent")
                     </div>
@@ -35,11 +39,12 @@
             </nav>
         </header>
 
-        <div class="container flex-grow-1 pb-5">
+        <div class="container-fluid px-3 px-lg-4 flex-grow-1 page-wrapper">
             @if (!string.IsNullOrEmpty(errorMessage))
             {
-                <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                    @errorMessage
+                <div class="alert alert-warning alert-dismissible fade show alert-global mb-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             }
             <main role="main">
@@ -47,16 +52,16 @@
             </main>
         </div>
 
-        <footer class="border-top footer text-muted py-2">
-            <div class="container">
-                &copy; 2026 - @Information.Name
+        <footer class="footer-main">
+            <div class="container-fluid px-3 px-lg-4 text-center">
+                &copy; 2026 @Information.Name &mdash; Hệ thống quản lý bán hàng
             </div>
         </footer>
     </div>
     <partial name="_ReusedModals" />
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/lib/lightbox/js/lightbox.min.js" defer></script>
     <script src="~/js/site.js" type="module" asp-append-version="true" defer></script>
 

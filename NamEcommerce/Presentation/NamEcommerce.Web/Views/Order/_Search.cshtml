@@ -1,0 +1,32 @@
+﻿@model OrderListSearchModel
+<form method="get" class="row g-3 align-items-center">
+    <div class="col-md-5">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+                <i class="bi bi-search text-muted"></i>
+            </span>
+            <input asp-for="Keywords" class="form-control border-start-0 ps-0" placeholder="Tìm theo mã đơn, tên khách..." />
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="form-floating">
+            <select asp-for="Status" class="form-select border-0 bg-light rounded-3">
+                <option value="" selected="@(!Model.Status.HasValue)">Tất cả trạng thái</option>
+                <option value="0" selected="@(Model.Status == 0)">Đang chờ</option>
+                <option value="1" selected="@(Model.Status == 1)">Đang xử lý</option>
+                <option value="2" selected="@(Model.Status == 2)">Hoàn thành</option>
+                <option value="3" selected="@(Model.Status == 3)">Đã hủy</option>
+            </select>
+            <label class="form-label" asp-for="Status">Trạng thái</label>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-dark w-100 rounded-3">Lọc</button>
+    </div>
+    @if (!string.IsNullOrEmpty(Model.Keywords) || Model.Status.HasValue)
+    {
+        <div class="col-md-2">
+            <a asp-action="List" class="btn btn-outline-secondary w-100 rounded-3">Xóa lọc</a>
+        </div>
+    }
+</form>

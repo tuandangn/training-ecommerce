@@ -1,4 +1,4 @@
-@model NamEcommerce.Web.Models.Inventory.AdjustStockModel
+@model AdjustStockModel
 @{
     ViewData[ViewConstants.PageTitle] = "Điều chỉnh tồn kho";
 }
@@ -16,7 +16,7 @@
 
                 <div class="mb-3">
                     <label asp-for="NewQuantity" class="form-label fw-bold"></label>
-                    <input asp-for="NewQuantity" class="form-control" type="number" step="0.01" />
+                    <input asp-for="NewQuantity" class="form-control" type="number" step="any" min="0.00000000001" />
                     <span asp-validation-for="NewQuantity" class="text-danger"></span>
                     <div class="form-text">Nhập số lượng tồn kho mới thực tế (thay thế số lượng hiện tại)</div>
                 </div>

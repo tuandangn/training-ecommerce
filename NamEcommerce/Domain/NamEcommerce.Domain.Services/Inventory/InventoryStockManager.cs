@@ -206,6 +206,39 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return (total, items);
     }
 
+    public async Task<IEnumerable<InventoryStockDto>> GetInventoryStocksForProductAsync(Guid productId, Guid? warehouseId)
+    {
+        var stockQuery = _dbContext.GetDataSource<InventoryStock>();
+        stockQuery = stockQuery.Where(x => x.ProductId == productId);
+        if (warehouseId.HasValue)
+            stockQuery = stockQuery.Where(x => x.WarehouseId == warehouseId);
+
+        var productQuery = _dbContext.GetDataSource<Product>();
+        var warehouseQuery = _dbContext.GetDataSource<Warehouse>();
+
+        var query = from s in stockQuery
+                    join p in productQuery on s.ProductId equals p.Id
+                    join w in warehouseQuery on s.WarehouseId equals w.Id
+                    select new { s, p, w };
+        var items = query
+            .OrderBy(x => x.p.Name)
+            .Select(x => new InventoryStockDto(x.s.Id)
+            {
+                ProductId = x.s.ProductId,
+                ProductName = x.p.Name,
+                WarehouseId = x.s.WarehouseId,
+                WarehouseName = x.w.Name,
+                QuantityOnHand = x.s.QuantityOnHand,
+                QuantityReserved = x.s.QuantityReserved,
+                QuantityAvailable = x.s.QuantityOnHand - x.s.QuantityReserved,
+                UpdatedOnUtc = x.s.UpdatedOnUtc
+            })
+            .ToList();
+
+        return items;
+    }
+
+
     public async Task<bool> ReserveStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, int? reservationDaysValid = null)
     {
         if (quantity <= 0)

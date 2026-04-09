@@ -1,3 +1,5 @@
+@using System.Text.Encodings.Web
+@inject UrlEncoder MyUrlEncoder
 @model NamEcommerce.Web.Contracts.Models.Orders.OrderListModel
 @{
     ViewData["Title"] = "Quản lý Đơn hàng";
@@ -19,6 +21,45 @@
         3 => "Đã hủy",
         _ => "Không xác định"
     };
+
+    string GetPaymentStatusBadgeClass(int status) => status switch
+    {
+        0 => "bg-warning",   // Pending
+        1 => "bg-success",   // Paid
+        2 => "bg-info",      // Refunded
+        _ => "bg-dark"
+    };
+
+    string GetPaymentStatusText(int status) => status switch
+    {
+        0 => "Chưa Thu",
+        1 => "Đã Thu",
+        2 => "Hoàn Tiền",
+        _ => "KXĐ"
+    };
+
+    string GetShippingStatusBadgeClass(int status) => status switch
+    {
+        0 => "bg-secondary", // Pending
+        1 => "bg-primary",   // Shipping
+        2 => "bg-success",   // Delivered
+        3 => "bg-danger",    // Returned
+        _ => "bg-dark"
+    };
+
+    string GetShippingStatusText(int status) => status switch
+    {
+        0 => "Chưa Giao",
+        1 => "Đang Giao",
+        2 => "Đã Giao",
+        3 => "Trả Lại",
+        _ => "KXĐ"
+    };
+
+    var query = Model.Keywords;
+    
+    var successMessage = TempData[ViewConstants.OrderSuccessMessage] as string;
+    var errorMessage = TempData[ViewConstants.OrderErrorMessage] as string;
 }
 
 <div class="container py-4">
@@ -32,32 +73,25 @@
         </a>
     </div>
 
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show alert-global mb-3" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>@successMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-warning alert-dismissible fade show alert-global mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
     <!-- Filters & Search -->
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-3">
-            <form id="filterForm" method="get" class="row g-3 align-items-center">
-                <div class="col-md-5">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" name="keywords" class="form-control border-start-0 ps-0" placeholder="Tìm theo mã đơn, tên khách..." value="@Context.Request.Query["keywords"]">
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <select name="status" class="form-select border-0 bg-light rounded-3">
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="0" selected="@(Context.Request.Query["status"] == "0")">Đang chờ</option>
-                        <option value="1" selected="@(Context.Request.Query["status"] == "1")">Đang xử lý</option>
-                        <option value="2" selected="@(Context.Request.Query["status"] == "2")">Hoàn thành</option>
-                        <option value="3" selected="@(Context.Request.Query["status"] == "3")">Đã hủy</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-dark w-100 rounded-3">Lọc</button>
-                </div>
-                <div class="col-md-2">
-                    <a asp-action="List" class="btn btn-outline-secondary w-100 rounded-3">Xóa lọc</a>
-                </div>
-            </form>
+            <partial name="_Search" model="@(new OrderListSearchModel { Keywords = Model.Keywords, Status = Model.Status })" />
         </div>
     </div>
 
@@ -68,52 +102,99 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light text-muted small text-uppercase">
                         <tr>
-                            <th class="ps-4" style="width: 15%">Mã đơn hàng</th>
-                            <th style="width: 30%">Khách hàng</th>
-                            <th class="text-end" style="width: 20%">Tổng tiền</th>
-                            <th class="text-center" style="width: 20%">Trạng thái</th>
-                            <th class="text-end pe-4" style="width: 15%">Thao tác</th>
+                            <th class="ps-3" style="width: 15%">
+                                <span class="d-none d-lg-inline">Mã đơn hàng</span>
+                                <span class="d-inline d-lg-none">Mã</span>
+                            </th>
+                            <th>Khách hàng</th>
+                            <th class="text-end">Tổng tiền</th>
+                            <th class="text-center">Trạng thái</th>
+                            <th class="text-end pe-3"></th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (Model.Items != null && Model.Items.Any())
+                        @if (Model.Data.Pagination.TotalCount > 0)
                         {
-                            @foreach (var item in Model.Items)
+                            @foreach (var item in Model.Data)
                             {
                                 <tr>
                                     <td class="ps-4">
-                                        <span class="fw-bold text-primary">#@item.Id.ToString()[..8].ToUpper()</span>
+                                        <span class="fw-bold text-primary">@HighlighHelper.Highlight(item.Code, query)</span>
                                     </td>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <div class="bg-light rounded-circle p-2 me-2">
+                                            <div class="bg-light rounded-circle p-2 me-2 d-none d-lg-block">
                                                 <i class="bi bi-person text-primary"></i>
                                             </div>
                                             <div>
-                                                <div class="fw-bold text-dark">@item.CustomerName</div>
-                                                <div class="text-muted small">ID: @item.CustomerId.ToString()[..8]...</div>
+                                                <div class="fw-bold text-dark text-nowrap">
+                                                    @HighlighHelper.Highlight(item.CustomerName, query)
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(item.CustomerPhone))
+                                                {
+                                                    <div>
+                                                        <a href="tel:@item.CustomerPhone" class="text-muted small text-decoration-none text-nowrap">
+                                                            <i class="bi bi-telephone me-1"></i> @HighlighHelper.Highlight(item.CustomerPhone, query)
+                                                        </a>
+                                                    </div>
+                                                }
+                                                @if (!string.IsNullOrEmpty(item.CustomerAddress))
+                                                {
+                                                    var encodedAddress = MyUrlEncoder.Encode(item.CustomerAddress);
+                                                    <div>
+                                                        <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank" class="text-muted small text-decoration-none">
+                                                            <span class="d-none d-lg-inline">
+                                                                <i class="bi bi-geo-alt me-1"></i>
+                                                                @HighlighHelper.Highlight(item.CustomerAddress, query)
+                                                            </span>
+                                                            <span class="text-nowrap d-inline d-lg-none">
+                                                                <i class="bi bi-geo-alt me-1"></i>
+                                                                @HighlighHelper.Highlight(item.CustomerAddress.Substring(0, int.Min(30, item.CustomerAddress.Length)), query)
+                                                                @if (item.CustomerAddress.Length > 30)
+                                                                {
+                                                                    @:...
+                                                                }
+                                                            </span>
+                                                        </a>
+                                                    </div>
+                                                }
                                             </div>
                                         </div>
                                     </td>
-                                    <td class="text-end fw-bold">
+                                    <td class="text-end fw-bold text-nowrap">
                                         @item.TotalAmount.ToString("N0") đ
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge rounded-pill @GetStatusBadgeClass(item.Status) px-3 py-2 fw-normal">
-                                            @GetStatusText(item.Status)
-                                        </span>
+                                        <div class="d-flex justify-content-center gap-1 flex-wrap">
+                                            <span class="badge rounded-pill @GetStatusBadgeClass(item.Status) px-2 py-1 fw-normal" title="Đơn hàng">
+                                                <i class="bi bi-box-seam me-1"></i> @GetStatusText(item.Status)
+                                            </span>
+                                            <span class="badge rounded-pill @GetPaymentStatusBadgeClass(item.PaymentStatus) px-2 py-1 fw-normal d-none d-lg-inline" title="Thanh toán">
+                                                <i class="bi bi-wallet2 me-1"></i> @GetPaymentStatusText(item.PaymentStatus)
+                                            </span>
+                                            <span class="badge rounded-pill @GetShippingStatusBadgeClass(item.ShippingStatus) px-2 py-1 fw-normal d-none d-lg-inline" title="Vận chuyển">
+                                                <i class="bi bi-truck me-1"></i> @GetShippingStatusText(item.ShippingStatus)
+                                            </span>
+                                        </div>
                                     </td>
                                     <td class="text-end pe-4">
-                                        <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-outline-primary rounded-pill px-3">
-                                            Chi tiết
-                                        </a>
                                         <button class="btn btn-sm btn-light border-0 ms-1 rounded-circle" type="button" data-bs-toggle="dropdown">
                                             <i class="bi bi-three-dots"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                                            <li><a class="dropdown-item" asp-action="Details" asp-route-id="@item.Id"><i class="bi bi-pencil-square me-2"></i> Chỉnh sửa</a></li>
+                                            <li>
+                                                <a class="dropdown-item" asp-action="Details" asp-route-id="@item.Id">
+                                                    <i class="bi bi-pencil-square me-2"></i>
+                                                    Chỉnh sửa
+                                                </a>
+                                            </li>
                                             <li><hr class="dropdown-divider"></li>
-                                            <li><button class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i> Xóa đơn</button></li>
+                                            <li>
+                                                <button class="dropdown-item text-danger btnDelete" data-code="@item.Code">
+                                                    <i class="bi bi-trash me-2"></i>
+                                                    Xóa đơn
+                                                </button>
+                                            </li>
                                         </ul>
                                     </td>
                                 </tr>
@@ -129,22 +210,34 @@
                             </tr>
                         }
                     </tbody>
+
                 </table>
             </div>
+            @if (Model.Data.Pagination.TotalCount > 0)
+            {
+                <partial name="_Pager" model="Model.Data.Pagination" />
+            }
+
         </div>
     </div>
-    
-    <!-- Placeholder for Pagination -->
-    <div class="mt-4 d-flex justify-content-center">
-        @* Pager logic can go here *@
-    </div>
 </div>
+@foreach (var item in Model.Data)
+{
+    <partial name="_DeleteForm" model="@item.Id" />
+}
+@section Scripts {
+    <script type="module" defer>
+        import { confirm } from "/modules/modals.js";
+        (function () {
+        $('.btnDelete').on('click', async function (e) {
+        e.preventDefault();
+        const code = $(this).data('code');
+        $(this).prop('disabled', true);
+        const confirmed = await confirm('Xóa đơn hàng', `Bạn muốn xóa đơn hàng <strong>${code}</strong>?`);
+        if (!confirmed) { $(this).prop('disabled', false); return; }
+        $(`#deleteForm${$(this).data('id')}`).submit();
+        });
+        })();
+    </script>
+}
 
-<style>
-    .card { transition: box-shadow 0.2s ease; }
-    .card:hover { box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.08) !important; }
-    .table thead th { border-top: 0; padding-top: 1rem; padding-bottom: 1rem; }
-    .table tbody td { padding-top: 1rem; padding-bottom: 1rem; }
-    .badge { letter-spacing: 0.3px; }
-    .dropdown-item { font-size: 0.9rem; padding: 0.6rem 1rem; }
-</style>

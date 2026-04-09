@@ -1,4 +1,4 @@
-@model NamEcommerce.Web.Models.Orders.OrderDetailsModel
+@model OrderDetailsModel
 @{
     ViewData["Title"] = $"Đơn hàng #{Model.Id.ToString()[..8].ToUpper()}";
     
@@ -19,9 +19,49 @@
         3 => "Đã hủy",
         _ => "Không xác định"
     };
+
+    string GetPaymentStatusText(int status) => status switch
+    {
+        0 => "Chưa thanh toán",
+        1 => "Đã thanh toán",
+        2 => "Đã hoàn tiền",
+        _ => "Không xác định"
+    };
+
+    string GetPaymentMethodText(int? method) => method switch
+    {
+        0 => "Tiền mặt",
+        1 => "Chuyển khoản",
+        2 => "COD",
+        3 => "Khác",
+        _ => "Chưa có"
+    };
+
+    string GetShippingStatusText(int status) => status switch
+    {
+        0 => "Chưa giao",
+        1 => "Đang giao",
+        2 => "Đã giao",
+        3 => "Bị trả lại",
+        _ => "Không xác định"
+    };
 }
 
 <div class="container py-4">
+    @if (TempData["OrderSuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-4 rounded-3 shadow-sm" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @TempData["OrderSuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (TempData["OrderErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mb-4 rounded-3 shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["OrderErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <nav aria-label="breadcrumb">
@@ -66,7 +106,7 @@
                             <tbody id="itemsTableBody">
                                 @foreach (var item in Model.Items)
                                 {
-                                    <tr data-item-id="@item.Id">
+                                    <tr data-item-id="@item.ItemId">
                                         <td class="ps-4">
                                             <div class="d-flex align-items-center">
                                                 <div class="product-icon-placeholder me-3 rounded-3 bg-light d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
@@ -95,7 +135,7 @@
                                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
                                                     <li>
                                                         <button class="dropdown-item btnEditItem" 
-                                                                data-id="@item.Id" 
+                                                                data-id="@item.ItemId" 
                                                                 data-product="@item.ProductName"
                                                                 data-qty="@item.Quantity" 
                                                                 data-price="@item.UnitPrice">
@@ -104,7 +144,7 @@
                                                     </li>
                                                     <li><hr class="dropdown-divider"></li>
                                                     <li>
-                                                        <button class="dropdown-item text-danger btnRemoveItem" data-id="@item.Id" data-name="@item.ProductName">
+                                                        <button class="dropdown-item text-danger btnRemoveItem" data-id="@item.ItemId" data-name="@item.ProductName">
                                                             <i class="bi bi-trash me-2"></i> Xóa
                                                         </button>
                                                     </li>
@@ -244,6 +284,88 @@
                     </p>
                 </div>
             </div>
+
+            <!-- Payment Card -->
+            <div class="card border-0 shadow-sm rounded-4 mt-4">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-wallet2 me-2 text-success"></i>Thanh toán</h5>
+                    @if (Model.PaymentStatus == 0 && Model.Status != 3) {
+                        <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#paymentModal">
+                            Xác nhận thanh toán
+                        </button>
+                    }
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Trạng thái:</span>
+                        <span class="fw-bold @(Model.PaymentStatus == 1 ? "text-success" : (Model.PaymentStatus == 0 ? "text-warning" : "text-danger"))">@GetPaymentStatusText(Model.PaymentStatus)</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Phương thức:</span>
+                        <span class="fw-medium">@GetPaymentMethodText(Model.PaymentMethod)</span>
+                    </div>
+                    @if (Model.PaidOnUtc.HasValue) {
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Ngày trả:</span>
+                            <span class="fw-medium">@Model.PaidOnUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.PaymentNote)) {
+                        <div class="mt-3 p-3 bg-light rounded-3">
+                            <p class="small mb-0 italic">"@Model.PaymentNote"</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Shipping Card -->
+            <div class="card border-0 shadow-sm rounded-4 mt-4">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-truck me-2 text-info"></i>Vận chuyển</h5>
+                    @if (Model.Status != 3 && Model.ShippingStatus != 2) {
+                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#shippingModal">
+                            Cập nhật
+                        </button>
+                    }
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Trạng thái:</span>
+                        <span class="fw-bold @(Model.ShippingStatus == 2 ? "text-success" : "text-info")">@GetShippingStatusText(Model.ShippingStatus)</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="text-muted d-block mb-1">Địa chỉ giao hàng:</span>
+                        <span class="fw-medium">@(string.IsNullOrEmpty(Model.ShippingAddress) ? "Chưa có địa chỉ" : Model.ShippingAddress)</span>
+                    </div>
+                    @if (Model.ShippedOnUtc.HasValue) {
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Ngày giao:</span>
+                            <span class="fw-medium">@Model.ShippedOnUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.ShippingNote)) {
+                        <div class="mt-3 p-3 bg-light rounded-3">
+                            <p class="small mb-0 italic">"@Model.ShippingNote"</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Cancellation -->
+            @if (Model.Status == 3) {
+            <div class="card border-0 shadow-sm rounded-4 mt-4 border-danger border border-2">
+                <div class="card-body">
+                    <h5 class="text-danger fw-bold"><i class="bi bi-x-circle-fill me-2"></i>Đơn hàng đã hủy</h5>
+                    <p class="mb-0 mt-2"><strong>Lý do:</strong> @Model.CancellationReason</p>
+                </div>
+            </div>
+            } else if (Model.Status != 2) {
+            <div class="mt-4 text-end">
+                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                    <i class="bi bi-trash"></i> Hủy đơn hàng này
+                </button>
+            </div>
+            }
         </div>
     </div>
 </div>
@@ -306,6 +428,115 @@
             </div>
             <div class="modal-footer border-0 pt-0 pb-4">
                 <button type="button" id="submitDiscount" class="btn btn-primary w-100 rounded-3 shadow-sm">Cập nhật</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Xác nhận thanh toán</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4">
+                <form id="paymentForm" method="post" action="@Url.Action("MarkAsPaid")">
+                    <input type="hidden" name="OrderId" value="@Model.Id" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">PHƯƠNG THỨC THANH TOÁN</label>
+                        <select name="PaymentMethod" class="form-select rounded-3" required>
+                            <option value="0">Tiền mặt</option>
+                            <option value="1">Chuyển khoản</option>
+                            <option value="2">COD</option>
+                            <option value="3">Khác</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">MÃ GIAO DỊCH / GHI CHÚ</label>
+                        <input type="text" name="Note" class="form-control rounded-3" placeholder="Ví dụ: CK VCB 123456" />
+                    </div>
+                    
+                    <div class="text-end mt-4">
+                        <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-success px-4 rounded-3 shadow-sm">Xác nhận đã thu tiền</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shipping Modal -->
+<div class="modal fade" id="shippingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Cập nhật Vận chuyển</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4">
+                <form id="shippingForm" method="post" action="@Url.Action("UpdateShipping")">
+                    <input type="hidden" name="OrderId" value="@Model.Id" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">TRẠNG THÁI GIAO HÀNG</label>
+                        <select name="ShippingStatus" class="form-select rounded-3" required>
+                            <option value="0" selected="@(Model.ShippingStatus == 0)">Chưa giao</option>
+                            <option value="1" selected="@(Model.ShippingStatus == 1)">Đang giao</option>
+                            <option value="2" selected="@(Model.ShippingStatus == 2)">Đã giao hàng (Hoàn tất)</option>
+                            <option value="3" selected="@(Model.ShippingStatus == 3)">Bị trả lại / Không nhận</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">ĐỊA CHỈ GIAO HÀNG</label>
+                        <textarea name="Address" class="form-control rounded-3" rows="2">@Model.ShippingAddress</textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">MÃ VẬN ĐƠN / GHI CHÚ VẬN CHUYỂN</label>
+                        <input type="text" name="Note" class="form-control rounded-3" value="@Model.ShippingNote" placeholder="Ví dụ: GHTK 9999123" />
+                    </div>
+                    
+                    <div class="text-end mt-4">
+                        <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-info text-white px-4 rounded-3 shadow-sm">Lưu cập nhật</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-danger">Xác nhận hủy đơn hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="alert alert-warning m-3 border-0 rounded-3 small">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i> Hệ thống sẽ tự động hoàn trả số lượng vào Tồn kho (trạng thái Available).
+            </div>
+            <div class="modal-body py-2">
+                <form id="cancelForm" method="post" action="@Url.Action("CancelOrder")">
+                    <input type="hidden" name="OrderId" value="@Model.Id" />
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">LÝ DO HỦY ĐƠN HÀNG</label>
+                        <textarea name="Reason" class="form-control rounded-3" rows="3" required placeholder="Vui lòng nhập lý do hủy..."></textarea>
+                    </div>
+                    
+                    <div class="text-end mt-4 text-end">
+                        <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
+                        <button type="submit" class="btn btn-danger px-4 rounded-3 shadow-sm">Xác nhận Hủy đơn</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

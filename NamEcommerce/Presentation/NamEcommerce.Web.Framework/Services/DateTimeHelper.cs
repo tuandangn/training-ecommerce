@@ -4,6 +4,9 @@ namespace NamEcommerce.Web.Framework.Services;
 
 public sealed class DateTimeHelper
 {
+    public static DateTime ToUniversalTime(DateTime localTime)
+        => ToUniversalTime((DateTime?)localTime)!.Value;
+
     public static DateTime? ToUniversalTime(DateTime? localTime)
     {
         DateTime? universalTime = localTime;

@@ -41,18 +41,22 @@ public sealed class CustomerController : BaseAuthorizedController
     [HttpGet]
     public async Task<IActionResult> Search(string q)
     {
+        var pageIndex = 0;
+        var pageSize = int.MaxValue;
+
         var result = await _mediator.Send(new GetCustomerListQuery
         {
             Keywords = q,
-            PageIndex = 0,
-            PageSize = 10
+            PageIndex = pageIndex,
+            PageSize = pageSize
         });
 
         return Json(result.Data.Items.Select(it => new 
         { 
             id = it.Id, 
             name = it.FullName, 
-            phone = it.PhoneNumber 
+            phone = it.PhoneNumber,
+            address = it.Address
         }));
     }
 

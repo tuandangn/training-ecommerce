@@ -37,7 +37,7 @@ function confirm(title, body) {
 
             resolve(isConfirmed);
         });
-    }).catch(function() {
+    }).catch(function () {
         confirmModal.hide();
         return Promise.resolve(false);
     });
@@ -47,4 +47,6 @@ function confirm(title, body) {
     return promise;
 }
 
-export { confirm };
+function toast() { }
+
+export { confirm, toast };

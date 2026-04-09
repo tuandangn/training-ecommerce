@@ -5,12 +5,22 @@ namespace NamEcommerce.Application.Contracts.Orders;
 
 public interface IOrderAppService
 {
+    Task<OrderAppDto?> GetOrderByIdAsync(Guid id);
+    Task<IPagedDataAppDto<OrderAppDto>> GetOrdersAsync(string? keywords, int? status, int pageIndex, int pageSize);
+
     Task<CreateOrderResultAppDto> CreateOrderAsync(CreateOrderAppDto dto);
     Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto);
+    Task<CancelOrderResultAppDto> CancelOrderAsync(CancelOrderAppDto dto);
+
     Task<AddOrderItemResultAppDto> AddOrderItemAsync(AddOrderItemAppDto dto);
     Task<UpdateOrderItemResultAppDto> UpdateOrderItemAsync(UpdateOrderItemAppDto dto);
     Task<DeleteOrderItemResultAppDto> DeleteOrderItemAsync(DeleteOrderItemAppDto dto);
-    Task ChangeOrderStatusAsync(Guid orderId, int status);
-    Task<OrderAppDto?> GetOrderByIdAsync(Guid id);
-    Task<IPagedDataAppDto<OrderAppDto>> GetOrdersAsync(string? keywords, int pageIndex, int pageSize);
+
+    Task<(bool success, string? errorMessage)> ChangeOrderStatusAsync(Guid orderId, int status);
+
+    Task<MarkOrderAsPaidResultAppDto> MarkAsPaidAsync(MarkOrderAsPaidAppDto dto);
+    Task<UpdateOrderShippingResultAppDto> UpdateShippingAsync(UpdateOrderShippingAppDto dto);
+
+
+    Task<string> NextOrderCodeAsync();
 }

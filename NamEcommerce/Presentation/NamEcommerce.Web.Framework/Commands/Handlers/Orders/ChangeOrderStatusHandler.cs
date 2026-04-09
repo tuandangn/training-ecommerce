@@ -15,14 +15,12 @@ public sealed class ChangeOrderStatusHandler : IRequestHandler<ChangeOrderStatus
 
     public async Task<ChangeOrderStatusResultModel> Handle(ChangeOrderStatusCommand request, CancellationToken cancellationToken)
     {
-        try
+        var result = await _orderAppService.ChangeOrderStatusAsync(request.OrderId, request.Status).ConfigureAwait(false);
+
+        return new ChangeOrderStatusResultModel
         {
-            await _orderAppService.ChangeOrderStatusAsync(request.OrderId, request.Status).ConfigureAwait(false);
-            return new ChangeOrderStatusResultModel { Success = true };
-        }
-        catch (Exception ex)
-        {
-            return new ChangeOrderStatusResultModel { Success = false, ErrorMessage = ex.Message };
-        }
+            Success = result.success,
+            ErrorMessage = result.errorMessage
+        };
     }
 }

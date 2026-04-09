@@ -1,59 +1,69 @@
-﻿@model CreateUnitMeasurementModel
+@model CreateUnitMeasurementModel
 @{
     ViewData[ViewConstants.PageTitle] = "Thêm mới Đơn vị tính";
 }
-<section class="content-title my-4 text-center">
-    <h1>
-        Thêm mới
-        <a asp-action="List" class="text-muted d-block fs-3 ps-2 text-decoration-none">Đơn vị tính</a>
-    </h1>
-</section>
-<section class="content-data">
+
+<div class="page-header">
     <div>
-        <div class="p-4 shadow border rounded offset-lg-3 col-lg-6 offset-md-2 col-md-8">
-            <div class="d-flex justify-content-end mb-2">
-                <a asp-action="List" class="text-muted small text-decoration-none">
-                    <i class="bi bi-arrow-90deg-left"></i>
-                    Trở lại
-                </a>
-            </div>
-            <div asp-validation-summary="ModelOnly" class="alert alert-warning"></div>
-            <form class="row g-3" method="post" asp-antiforgery="true">
-                <ul class="nav nav-tabs" id="unitMeasurementTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="infoTab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab" aria-controls="info" aria-selected="true">
-                            Thông tin
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="additionalTab" data-bs-toggle="tab" data-bs-target="#additional" type="button" role="tab" aria-controls="additional" aria-selected="false">
-                            Cài đặt
-                        </button>
-                    </li>
-                </ul>
-                <div class="tab-content" id="unitMeasurementContent">
-                    <div class="tab-pane fade show active" id="info" role="tabpanel" aria-labelledby="infoTab">
-                        <div class="col-12 mb-3">
+        <h1 class="page-header-title">Thêm mới Đơn vị tính</h1>
+        <p class="page-header-subtitle">Tạo đơn vị đo lường mới</p>
+    </div>
+</div>
+
+<div class="form-card" style="max-width: 600px;">
+    <div class="form-card-header">
+        <h2 class="form-card-title"><i class="bi bi-rulers me-2 text-primary"></i>Thông tin đơn vị tính</h2>
+        <a asp-action="List" class="form-card-breadcrumb">
+            <i class="bi bi-arrow-left"></i> Trở về danh sách
+        </a>
+    </div>
+    <div class="form-card-body">
+        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
+        <form class="row g-3" method="post" asp-antiforgery="true">
+            <ul class="nav nav-tabs" id="unitMeasurementTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="infoTab" data-bs-toggle="tab" data-bs-target="#info"
+                            type="button" role="tab" aria-selected="true">
+                        <i class="bi bi-info-circle me-1"></i>Thông tin
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="additionalTab" data-bs-toggle="tab" data-bs-target="#additional"
+                            type="button" role="tab" aria-selected="false">
+                        <i class="bi bi-sliders me-1"></i>Cài đặt
+                    </button>
+                </li>
+            </ul>
+            <div class="tab-content pt-3" id="unitMeasurementContent">
+                <div class="tab-pane fade show active" id="info" role="tabpanel">
+                    <div class="row g-3">
+                        <div class="col-12">
                             <label asp-for="Name" class="form-label"></label>
-                            <input asp-for="Name" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Name)" autofocus />
+                            <input asp-for="Name" class="form-control" placeholder="VD: Cái, Hộp, Kg..." autofocus />
                             <span asp-validation-for="Name" class="text-danger small"></span>
                         </div>
                     </div>
-                    <div class="tab-pane fade" id="additional" role="tabpanel" aria-labelledby="additionalTab">
-                        <div class="col-12 mb-3">
+                </div>
+                <div class="tab-pane fade" id="additional" role="tabpanel">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
                             <label asp-for="DisplayOrder" class="form-label"></label>
-                            <input asp-for="DisplayOrder" class="form-control w-50" placeholder="@Html.DisplayNameFor(m => m.DisplayOrder)" />
+                            <input asp-for="DisplayOrder" class="form-control" placeholder="0" />
                             <span asp-validation-for="DisplayOrder" class="text-danger small"></span>
                         </div>
                     </div>
                 </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary">Thêm mới</button>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div class="form-card-footer" style="margin: 0 -1.5rem -1.5rem; border-radius: 0 0 var(--card-radius) var(--card-radius);">
+                <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>Thêm mới
+                </button>
+            </div>
+        </form>
     </div>
-</section>
+</div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 }

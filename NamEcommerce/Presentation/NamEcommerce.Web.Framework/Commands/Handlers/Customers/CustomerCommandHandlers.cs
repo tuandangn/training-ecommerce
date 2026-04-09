@@ -1,8 +1,9 @@
 using MediatR;
-using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Web.Contracts.Commands.Models.Customers;
 using NamEcommerce.Web.Contracts.Models.Customers;
+using NamEcommerce.Application.Contracts.Customers;
+using NamEcommerce.Application.Contracts.Dtos.Customers;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Customers;
 

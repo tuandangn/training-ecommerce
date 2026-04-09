@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Constants;
-using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Models.Catalog;
@@ -13,13 +12,11 @@ namespace NamEcommerce.Web.Controllers;
 public sealed class PurchaseOrderController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;
-    private readonly ICurrentUserService _currentUserService;
     private readonly IPurchaseOrderModelFactory _purchaseOrderModelFactory;
 
-    public PurchaseOrderController(IMediator mediator, ICurrentUserService currentUserService, IPurchaseOrderModelFactory purchaseOrderModelFactory)
+    public PurchaseOrderController(IMediator mediator, IPurchaseOrderModelFactory purchaseOrderModelFactory)
     {
         _mediator = mediator;
-        _currentUserService = currentUserService;
         _purchaseOrderModelFactory = purchaseOrderModelFactory;
     }
 
@@ -45,7 +42,6 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return View(model);
         }
 
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
         var result = await _mediator.Send(new CreatePurchaseOrderCommand
         {
             VendorId = model.VendorId,
@@ -53,8 +49,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             ShippingAmount = 0,
             TaxAmount = 0,
             Note = model.Note,
-            ExpectedDeliveryDate = model.ExpectedDeliveryDate,
-            CreatedByUserId = currentUser?.Id
+            ExpectedDeliveryDate = model.ExpectedDeliveryDate
         });
 
         if (!result.Success)
@@ -62,8 +57,6 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             ModelState.AddModelError(string.Empty, result.ErrorMessage!);
             return View(model);
         }
-
-        TempData[ViewConstants.PurchaseOrderSuccessMessage] = "Tạo đơn nhập hàng thành công!";
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
@@ -162,14 +155,12 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return RedirectToAction(nameof(List));
         }
 
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
         var result = await _mediator.Send(new ReceivePurchaseOrderItemCommand
         {
             PurchaseOrderId = model.PurchaseOrderId,
             PurchaseOrderItemId = model.PurchaseOrderItemId,
             ReceivedQuantity = model.ReceivedQuantity,
-            WarehouseId = model.WarehouseId,
-            ReceivedByUserId = currentUser?.Id
+            WarehouseId = model.WarehouseId
         });
 
         if (!result.Success)
@@ -191,6 +182,24 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         }
 
         var (success, errorMessage) = await _mediator.Send(new SubmitsPurchaseOrderCommand
+        {
+            PurchaseOrderId = id
+        });
+
+        TempData[success ? ViewConstants.PurchaseOrderSuccessMessage : ViewConstants.PurchaseOrderErrorMessage] = errorMessage;
+        return RedirectToAction(nameof(Details), new { id });
+    }
+    [HttpPost]
+    public async Task<IActionResult> CancelPurchaseOrder(Guid id)
+    {
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
+        if (purchaseOrder is null)
+        {
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            return RedirectToAction(nameof(List));
+        }
+
+        var (success, errorMessage) = await _mediator.Send(new CancelPurchaseOrderCommand
         {
             PurchaseOrderId = id
         });

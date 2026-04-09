@@ -120,6 +120,12 @@ public sealed class ProductAppService : IProductAppService
         return product?.ToDto();
     }
 
+    public async Task<IEnumerable<ProductAppDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids)
+    {
+        var products = await _productDataReader.GetByIdsAsync(ids).ConfigureAwait(false);
+        return products.Select(p => p.ToDto());
+    }
+
     public async Task<IPagedDataAppDto<ProductAppDto>> GetProductsAsync(
         string? keywords = null, bool onlyTrackInventory = false,
         int pageIndex = 0, int pageSize = int.MaxValue)

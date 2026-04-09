@@ -10,5 +10,4 @@ public sealed class ReceivePurchaseOrderItemCommand : IRequest<ReceivePurchaseOr
     public required Guid PurchaseOrderItemId { get; init; }
     public required Guid? WarehouseId { get; set; }
     public required decimal ReceivedQuantity { get; set; }
-    public Guid? ReceivedByUserId { get; set; }
 }

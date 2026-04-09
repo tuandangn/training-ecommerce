@@ -12,7 +12,7 @@ public abstract record BasePurchaseOrderAppDto
 
     public virtual (bool valid, string? errorMessage) Validate()
     {
-        if (ExpectedDeliveryDateUtc.HasValue && ExpectedDeliveryDateUtc.Value < DateTime.UtcNow)
+        if (ExpectedDeliveryDateUtc.HasValue && ExpectedDeliveryDateUtc.Value < DateTime.UtcNow.Date)
             return (false, "Expected delivery date must be in the future");
         if (TaxAmount < 0)
             return (false, "Tax amount must be greater than or equal to 0");
@@ -38,21 +38,6 @@ public sealed record PurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto
 
     public bool CanAddItems { get; set; }
     public bool CanReceiveGoods { get; set; }
-
-    public override (bool valid, string? errorMessage) Validate()
-    {
-        if (string.IsNullOrWhiteSpace(Code))
-            return (false, "Code is required");
-        if (TotalAmount < 0)
-            return (false, "Total amount must be greater than or equal to 0");
-        foreach (var item in Items)
-        {
-            var itemValidationResult = item.Validate();
-            if (!itemValidationResult.valid)
-                return itemValidationResult;
-        }
-        return base.Validate();
-    }
 }
 
 [Serializable]
