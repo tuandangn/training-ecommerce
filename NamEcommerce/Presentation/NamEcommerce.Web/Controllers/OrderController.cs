@@ -44,7 +44,7 @@ public sealed class OrderController : BaseAuthorizedController
             return View(model);
         }
 
-        if(model.Items.Count == 0)
+        if (model.Items.Count == 0)
         {
             ModelState.AddModelError(string.Empty, "Vui lòng chọn hàng hóa.");
             model = await _orderModelFactory.PrepareCreateOrderModel(model);
@@ -72,47 +72,18 @@ public sealed class OrderController : BaseAuthorizedController
             return View(model);
         }
 
+        TempData[ViewConstants.OrderSuccessMessage] = "Tạo đơn hàng thành công!";
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
     public async Task<IActionResult> Details(Guid id)
     {
-        var dto = await _mediator.Send(new GetOrderByIdQuery { Id = id });
-        if (dto == null)
+        var model = await _orderModelFactory.PrepareOrderDetailsModel(id);
+        if (model is null)
         {
-            TempData["OrderErrorMessage"] = "Order not found";
+            TempData[ViewConstants.OrderErrorMessage] = "Order is not found.";
             return RedirectToAction(nameof(List));
         }
-
-        var model = new OrderDetailsModel
-        {
-            Id = dto.Id,
-            Code = dto.Code,
-            CustomerId = dto.CustomerId,
-            CustomerName = dto.CustomerName,
-            TotalAmount = dto.TotalAmount,
-            OrderDiscount = dto.OrderDiscount,
-            Status = dto.Status,
-            Note = dto.Note,
-            PaymentStatus = dto.PaymentStatus,
-            PaymentMethod = dto.PaymentMethod,
-            PaidOnUtc = dto.PaidOnUtc,
-            PaymentNote = dto.PaymentNote,
-            ShippingStatus = dto.ShippingStatus,
-            ShippingAddress = dto.ShippingAddress,
-            ShippedOnUtc = dto.ShippedOnUtc,
-            ShippingNote = dto.ShippingNote,
-            CancellationReason = dto.CancellationReason
-        };
-        foreach (var it in dto.Items)
-            model.Items.Add(new OrderDetailsItemModel
-            {
-                ItemId = it.ItemId,
-                ProductId = it.ProductId,
-                ProductName = it.ProductName,
-                Quantity = it.Quantity,
-                UnitPrice = it.UnitPrice
-            });
 
         return View(model);
     }

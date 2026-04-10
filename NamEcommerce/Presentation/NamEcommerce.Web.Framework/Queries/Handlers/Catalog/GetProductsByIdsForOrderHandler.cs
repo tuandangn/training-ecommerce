@@ -22,6 +22,9 @@ public sealed class GetProductsByIdsForOrderHandler : IRequestHandler<GetProduct
 
     public async Task<IEnumerable<ProductForOrderModel>> Handle(GetProductsByIdsForOrderQuery request, CancellationToken cancellationToken)
     {
+        if (!request.Ids.Any())
+            return [];
+
         var products = await _productAppService.GetProductsByIdsAsync(request.Ids);
 
         var model = new List<ProductForOrderModel>(products.Count());

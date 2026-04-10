@@ -22,5 +22,8 @@ public sealed class OrderListModel
         public int Status { get; init; }
         public int PaymentStatus { get; init; }
         public int ShippingStatus { get; init; }
+        public DateTime ExpectedShippingDate { get; set; }
+        public DateTime CreatedOn { get; set; }
+        public bool CanUpdateInfo { get; set; }
     }
 }

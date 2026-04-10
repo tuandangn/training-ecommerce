@@ -1,6 +1,7 @@
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.Users;
@@ -50,6 +51,15 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
+        if (!order.CanUpdateInfo)
+        {
+            return new UpdateOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order cannot update info."
+            };
+        }
+
         var updateResultDto = await _orderManager.UpdateOrderAsync(new UpdateOrderDto(dto.Id)
         {
             Note = dto.Note,
@@ -85,6 +95,15 @@ public sealed class OrderAppService : IOrderAppService
             {
                 Success = false,
                 ErrorMessage = "Order is not found."
+            };
+        }
+
+        if (!order.CanUpdateOrderItems)
+        {
+            return new AddOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order cannot add items."
             };
         }
 
@@ -136,6 +155,15 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
+        if (!order.CanUpdateOrderItems)
+        {
+            return new UpdateOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order cannot update items."
+            };
+        }
+
         var orderItem = order.Items.FirstOrDefault(item => item.Id == dto.OrderItemId);
         if (orderItem is null)
         {
@@ -176,6 +204,15 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
+        if (!order.CanUpdateOrderItems)
+        {
+            return new DeleteOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order cannot delete items."
+            };
+        }
+
         var orderItem = order.Items.FirstOrDefault(item => item.Id == dto.OrderItemId);
         if (orderItem is null)
         {
@@ -200,7 +237,7 @@ public sealed class OrderAppService : IOrderAppService
         if (order is null)
             return (false, "Order is not found.");
 
-        if (order.Status == OrderStatus.Cancelled || order.Status == OrderStatus.Completed)
+        if (!order.CanUpdateInfo)
             return (false, "Order status cannot changed.");
 
         var orderStatus = (OrderStatus)status;
@@ -226,12 +263,21 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        if (order.Status == OrderStatus.Cancelled || order.Status == OrderStatus.Completed)
+        if (!order.CanUpdateInfo)
         {
             return new MarkOrderAsPaidResultAppDto
             {
                 Success = false,
                 ErrorMessage = "Order cannot be set to paid."
+            };
+        }
+
+        if (order.PaymentStatus == PaymentStatus.Paid)
+        {
+            return new MarkOrderAsPaidResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order is already marked as paid."
             };
         }
 
@@ -271,7 +317,16 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        if (order.Status == OrderStatus.Cancelled || order.Status == OrderStatus.Completed)
+        if (!order.CanUpdateInfo)
+        {
+            return new UpdateOrderShippingResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order cannot be change shipping status."
+            };
+        }
+
+        if (order.ShippingStatus == ShippingStatus.Shipped)
         {
             return new UpdateOrderShippingResultAppDto
             {
@@ -318,7 +373,7 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        if (order.Status == OrderStatus.Cancelled || order.Status == OrderStatus.Completed)
+        if (!order.CanUpdateInfo)
         {
             return new CancelOrderResultAppDto
             {
@@ -346,38 +401,7 @@ public sealed class OrderAppService : IOrderAppService
         if (order is null)
             return null;
 
-        var dto = new OrderAppDto(order.Id)
-        {
-            Code = order.Code,
-            CustomerId = order.CustomerId,
-            TotalAmount = order.TotalAmount,
-            OrderDiscount = order.OrderDiscount ?? 0,
-            Status = (int)order.Status,
-            Note = order.Note,
-            PaymentStatus = (int)order.PaymentStatus,
-            PaymentMethod = order.PaymentMethod.HasValue ? (int)order.PaymentMethod : null,
-            PaidOnUtc = order.PaidOnUtc,
-            PaymentNote = order.PaymentNote,
-            ShippingStatus = (int)order.ShippingStatus,
-            ShippingAddress = order.ShippingAddress,
-            ShippedOnUtc = order.ShippedOnUtc,
-            ShippingNote = order.ShippingNote,
-            CancellationReason = order.CancellationReason,
-            CreatedByUserId = order.CreatedByUserId,
-            ExpectedShippingDateUtc = order.ExpectedShippingDateUtc
-        };
-        foreach (var orderItem in order.Items)
-        {
-            dto.Items.Add(new OrderItemAppDto(orderItem.Id)
-            {
-                OrderId = order.Id,
-                ProductId = orderItem.ProductId,
-                Quantity = orderItem.Quantity,
-                UnitPrice = orderItem.UnitPrice
-            });
-        }
-
-        return dto;
+        return order.ToDto();
     }
 
     public async Task<IPagedDataAppDto<OrderAppDto>> GetOrdersAsync(string? keywords, int? status, int pageIndex, int pageSize)
@@ -385,43 +409,7 @@ public sealed class OrderAppService : IOrderAppService
         OrderStatus? orderStatus = status.HasValue ? (OrderStatus)status : null;
         var pagedData = await _orderManager.GetOrdersAsync(keywords, orderStatus, pageIndex, pageSize).ConfigureAwait(false);
 
-        var orderItemModels = new List<OrderAppDto>();
-        foreach (var order in pagedData)
-        {
-            var orderModel = new OrderAppDto(order.Id)
-            {
-                Code = order.Code,
-                ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
-                CustomerId = order.CustomerId,
-                TotalAmount = order.TotalAmount,
-                OrderDiscount = order.OrderDiscount ?? 0,
-                Status = (int)order.Status,
-                Note = order.Note,
-                PaymentStatus = (int)order.PaymentStatus,
-                PaymentMethod = order.PaymentMethod.HasValue ? (int)order.PaymentMethod : null,
-                PaidOnUtc = order.PaidOnUtc,
-                PaymentNote = order.PaymentNote,
-                ShippingStatus = (int)order.ShippingStatus,
-                ShippingAddress = order.ShippingAddress,
-                ShippedOnUtc = order.ShippedOnUtc,
-                ShippingNote = order.ShippingNote,
-                CancellationReason = order.CancellationReason,
-                CreatedByUserId = order.CreatedByUserId
-            };
-            foreach (var orderItem in order.Items)
-            {
-                orderModel.Items.Add(new OrderItemAppDto(orderItem.Id)
-                {
-                    OrderId = order.Id,
-                    ProductId = orderItem.ProductId,
-                    Quantity = orderItem.Quantity,
-                    UnitPrice = orderItem.UnitPrice
-                });
-            }
-            orderItemModels.Add(orderModel);
-        }
-
-        return PagedDataAppDto.Create(orderItemModels, pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
+        return PagedDataAppDto.Create(pagedData.Select(order => order.ToDto()), pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
     }
 
     public async Task<CreateOrderResultAppDto> CreateOrderAsync(CreateOrderAppDto dto)

@@ -57,6 +57,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             ModelState.AddModelError(string.Empty, result.ErrorMessage!);
             return View(model);
         }
+        TempData[ViewConstants.PurchaseOrderSuccessMessage] = "Thêm mới đơn nhập thành công!";
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 

@@ -4,6 +4,7 @@ using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Application.Contracts.Customers;
 using NamEcommerce.Application.Contracts.Catalog;
+using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Orders;
 
@@ -12,12 +13,14 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
     private readonly IOrderAppService _orderAppService;
     private readonly ICustomerAppService _customerAppService;
     private readonly IProductAppService _productAppService;
+    private readonly IMediator _mediator;
 
-    public GetOrderByIdHandler(IOrderAppService orderAppService, ICustomerAppService customerAppService, IProductAppService productAppService)
+    public GetOrderByIdHandler(IOrderAppService orderAppService, ICustomerAppService customerAppService, IProductAppService productAppService, IMediator mediator)
     {
         _orderAppService = orderAppService;
         _customerAppService = customerAppService;
         _productAppService = productAppService;
+        _mediator = mediator;
     }
 
     public async Task<OrderDetailsModel?> Handle(GetOrderByIdQuery request, CancellationToken cancellationToken)
@@ -48,17 +51,21 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             ShippingNote = order.ShippingNote,
             CancellationReason = order.CancellationReason
         };
-        var products = await _productAppService.GetProductsByIdsAsync(order.Items.Select(i => i.ProductId)).ConfigureAwait(false);
+        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery
+        {
+            Ids = order.Items.Select(i => i.ProductId)
+        }, cancellationToken).ConfigureAwait(false);
         foreach (var orderItem in order.Items)
         {
             var product = products.FirstOrDefault(p => p.Id == orderItem.ProductId);
-            model.Items.Add(new OrderDetailsItemModel 
-            { 
-                ItemId = orderItem.Id, 
-                ProductId = orderItem.ProductId, 
+            model.Items.Add(new OrderDetailsItemModel(orderItem.Id)
+            {
+                ProductId = orderItem.ProductId,
                 ProductName = product?.Name,
-                Quantity = orderItem.Quantity, 
-                UnitPrice = orderItem.UnitPrice 
+                Quantity = orderItem.Quantity,
+                ProductPicture = product?.PictureUrl,
+                ProductAvailableQty = product?.QuantityAvailable,
+                UnitPrice = orderItem.UnitPrice
             });
         }
         return model;

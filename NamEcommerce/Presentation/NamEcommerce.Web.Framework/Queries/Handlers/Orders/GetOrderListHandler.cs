@@ -4,6 +4,7 @@ using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Orders;
 
@@ -38,7 +39,10 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
                 TotalAmount = order.TotalAmount,
                 Status = order.Status,
                 PaymentStatus = order.PaymentStatus,
-                ShippingStatus = order.ShippingStatus
+                ShippingStatus = order.ShippingStatus,
+                ExpectedShippingDate = order.ExpectedShippingDateUtc.ToLocalTime(),
+                CreatedOn = order.CreatedOnUtc.ToLocalTime(),
+                CanUpdateInfo = order.CanUpdateInfo
             });
         }
 

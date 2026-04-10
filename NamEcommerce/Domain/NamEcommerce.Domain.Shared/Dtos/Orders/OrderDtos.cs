@@ -28,23 +28,25 @@ public sealed record OrderDto(Guid Id) : BaseOrderDto
 
     public required decimal TotalAmount { get; init; }
     public required OrderStatus Status { get; init; }
+    public string? CancellationReason { get; set; }
 
-    // Payment
     public PaymentStatus PaymentStatus { get; set; }
     public PaymentMethod? PaymentMethod { get; set; }
     public DateTime? PaidOnUtc { get; set; }
     public string? PaymentNote { get; set; }
 
-    // Shipping
     public ShippingStatus ShippingStatus { get; set; }
     public string? ShippingAddress { get; set; }
     public DateTime? ShippedOnUtc { get; set; }
     public string? ShippingNote { get; set; }
 
-    // Cancellation
-    public string? CancellationReason { get; set; }
+    public DateTime CreatedOnUtc { get; set; }
+
+    public bool CanUpdateInfo { get; init; }
+    public bool CanUpdateOrderItems { get; init; }
 
     public IList<OrderItemDto> Items { get; } = [];
+
 }
 
 [Serializable]

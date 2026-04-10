@@ -27,21 +27,22 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
 
     public required decimal TotalAmount { get; init; }
     public required int Status { get; init; }
+    public string? CancellationReason { get; set; }
 
-    // Payment
     public int PaymentStatus { get; set; }
     public int? PaymentMethod { get; set; }
     public DateTime? PaidOnUtc { get; set; }
     public string? PaymentNote { get; set; }
 
-    // Shipping
     public int ShippingStatus { get; set; }
     public string? ShippingAddress { get; set; }
     public DateTime? ShippedOnUtc { get; set; }
     public string? ShippingNote { get; set; }
 
-    // Cancellation
-    public string? CancellationReason { get; set; }
+    public bool CanUpdateInfo { get; set; }
+    public bool CanUpdateOrderItems { get; set; }
+
+    public DateTime CreatedOnUtc { get; set; }
 
     public IList<OrderItemAppDto> Items { get; } = [];
 }

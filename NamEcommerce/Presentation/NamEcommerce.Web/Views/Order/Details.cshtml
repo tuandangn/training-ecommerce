@@ -1,7 +1,7 @@
 @model OrderDetailsModel
 @{
     ViewData["Title"] = $"Đơn hàng #{Model.Id.ToString()[..8].ToUpper()}";
-    
+
     string GetStatusBadgeClass(int status) => status switch
     {
         0 => "bg-secondary",   // Pending
@@ -48,17 +48,19 @@
 }
 
 <div class="container py-4">
-    @if (TempData["OrderSuccessMessage"] != null)
+    @if (TempData[ViewConstants.OrderSuccessMessage] != null)
     {
         <div class="alert alert-success alert-dismissible fade show mb-4 rounded-3 shadow-sm" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i> @TempData["OrderSuccessMessage"]
+            <i class="bi bi-check-circle-fill me-2"></i> 
+            @TempData[ViewConstants.OrderSuccessMessage]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
-    @if (TempData["OrderErrorMessage"] != null)
+    @if (TempData[ViewConstants.OrderErrorMessage] != null)
     {
         <div class="alert alert-danger alert-dismissible fade show mb-4 rounded-3 shadow-sm" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["OrderErrorMessage"]
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> 
+            @TempData[ViewConstants.OrderErrorMessage]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
@@ -70,7 +72,7 @@
                     <li class="breadcrumb-item active" aria-current="page">Chi tiết</li>
                 </ol>
             </nav>
-            <h1 class="h3 mb-0 fw-bold">Chi tiết Đơn hàng <span class="text-primary">#@Model.Id.ToString()[..8].ToUpper()</span></h1>
+            <h1 class="h3 mb-0 fw-bold">Chi tiết Đơn hàng <span class="text-primary">@Model.Code</span></h1>
         </div>
         <div class="d-flex gap-2">
             <a asp-action="List" class="btn btn-outline-secondary">
@@ -81,11 +83,8 @@
             </button>
         </div>
     </div>
-
     <div class="row g-4">
-        <!-- Main Content -->
         <div class="col-lg-8">
-            <!-- Items Card -->
             <div class="card border-0 shadow-sm rounded-4 mb-4">
                 <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Danh sách Sản phẩm</h5>
@@ -106,26 +105,37 @@
                             <tbody id="itemsTableBody">
                                 @foreach (var item in Model.Items)
                                 {
-                                    <tr data-item-id="@item.ItemId">
+                                    <tr data-item-id="@item.Id">
                                         <td class="ps-4">
-                                            <div class="d-flex align-items-center">
-                                                <div class="product-icon-placeholder me-3 rounded-3 bg-light d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                                                    <i class="bi bi-image text-muted fs-4"></i>
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div>
+                                                    @if (string.IsNullOrEmpty(item.ProductPicture))
+                                                    {
+                                                        <div class="product-icon-placeholder me-3 rounded-3 bg-light d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                                            <i class="bi bi-image text-muted fs-4"></i>
+                                                        </div>
+                                                    }
+                                                    else
+                                                    {
+                                                        <div>
+                                                            <img src="@item.ProductPicture" class="img-fluid img-thumbnail item-product-img" style="width:45px;"/>
+                                                        </div>
+                                                    }
                                                 </div>
                                                 <div>
                                                     <div class="fw-bold text-dark">@item.ProductName</div>
-                                                    <div class="text-muted small">ID: @item.ProductId.ToString()[..8]...</div>
+                                                    <div class="text-muted small">Tồn kho: @item.ProductAvailableQty</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="text-center">
-                                            <span class="fw-semibold quantity-text">@item.Quantity.ToString("G29")</span>
+                                            <span class="fw-semibold quantity-text">@item.Quantity.ToString(ViewConstants.NumberCustomFormat)</span>
                                         </td>
                                         <td class="text-end">
-                                            <span class="unit-price-text">@item.UnitPrice.ToString("N0") đ</span>
+                                            <span class="unit-price-text">@item.UnitPrice.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol</span>
                                         </td>
                                         <td class="text-end fw-bold text-primary">
-                                            <span class="total-price-text">@((item.Quantity * item.UnitPrice).ToString("N0")) đ</span>
+                                            <span class="total-price-text">@(item.SubTotal.ToString(ViewConstants.NumberCustomFormat)) đ</span>
                                         </td>
                                         <td class="text-end pe-4">
                                             <div class="dropdown">
@@ -134,17 +144,16 @@
                                                 </button>
                                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
                                                     <li>
-                                                        <button class="dropdown-item btnEditItem" 
-                                                                data-id="@item.ItemId" 
-                                                                data-product="@item.ProductName"
-                                                                data-qty="@item.Quantity" 
-                                                                data-price="@item.UnitPrice">
-                                                            <i class="bi bi-pencil me-2 text-primary"></i> Chỉnh sửa
+                                                        <button class="dropdown-item btnEditItem" data-id="@item.Id" 
+                                                            data-product="@item.ProductName" data-availableQty="@item.ProductAvailableQty?.ToString(ViewConstants.NumberCustomFormat)"
+                                                            data-qty="@item.Quantity" data-price="@item.UnitPrice">
+                                                            <i class="bi bi-pencil me-2 text-primary"></i> 
+                                                            Chỉnh sửa
                                                         </button>
                                                     </li>
                                                     <li><hr class="dropdown-divider"></li>
                                                     <li>
-                                                        <button class="dropdown-item text-danger btnRemoveItem" data-id="@item.ItemId" data-name="@item.ProductName">
+                                                        <button class="dropdown-item text-danger btnRemoveItem" data-id="@item.Id" data-name="@item.ProductName">
                                                             <i class="bi bi-trash me-2"></i> Xóa
                                                         </button>
                                                     </li>
@@ -387,18 +396,38 @@
                     </div>
                 </div>
                 
-                <form id="editItemForm">
+                <form id="editItemForm" method="post" action="#">
                     <input type="hidden" id="editItemId" name="ItemId" />
                     <input type="hidden" name="OrderId" value="@Model.Id" />
                     
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <label class="form-label fw-bold text-muted small">SỐ LƯỢNG</label>
-                            <input type="number" id="editQuantity" name="Quantity" class="form-control rounded-3" step="any" min="0" required />
+                    <div id="modalProductInfo" class="d-none">
+                        <div class="alert alert-light border-0 rounded-3 mb-3 d-flex align-items-start gap-3">
+                            <img class="img-fluid img-thumbnail d-none" style="width: 70px;" id="editProductHasPicture" alt="Product image" />
+                            <i class="bi bi-box-seam-fill text-primary me-2 fs-5" id="editProductNoPicture"></i>
+                            <div>
+                                <div class="fw-bold" id="editProductName"></div>
+                                <div class="text-muted small">Tồn kho: <span id="editProductStock"></span></div>
+                            </div>
                         </div>
-                        <div class="col-6">
-                            <label class="form-label fw-bold text-muted small">ĐƠN GIÁ (Đ)</label>
-                            <input type="number" id="editUnitPrice" name="UnitPrice" class="form-control rounded-3" step="any" min="0" required />
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted" for="editQuantity">Số lượng</label>
+                                <input type="number" id="editQuantity" name="Quantity" class="form-control rounded-3"
+                                       value="1" min="0.01" step="any" data-val="true"
+                                       placeholder="0"
+                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
+                                       data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
+                                <span class="small text-danger field-validation-valid" data-valmsg-for="Quantity" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted noRefill" for="editUnitPrice">Đơn giá</label>
+                                <input type="number" id="editUnitPrice" name="UnitPrice" class="form-control rounded-3"
+                                       step="any" min="0" data-val="true"
+                                       placeholder="0"
+                                       data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
+                                       data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
+                                <span class="small text-danger field-validation-valid" data-valmsg-for="UnitPrice" data-valmsg-replace="true"></span>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -407,6 +436,70 @@
                 <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy bỏ</button>
                 <button type="button" id="submitEditItem" class="btn btn-primary px-4 rounded-3 shadow-sm">Lưu thay đổi</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Thêm sản phẩm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="#" method="post">
+                <div class="modal-body py-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted uppercase">Tìm kiếm sản phẩm</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-box text-muted"></i></span>
+                            <input type="text" id="productSearch" class="form-control border-start-0 ps-0"
+                                   placeholder="Nhập tên sản phẩm..." autocomplete="off">
+                        </div>
+                        <div id="productSuggestions" class="list-group shadow-lg mt-1"
+                             style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+
+                    <div id="modalProductInfo" class="d-none">
+                        <div class="alert alert-light border-0 rounded-3 mb-3 d-flex align-items-start gap-3">
+                            <img class="img-fluid img-thumbnail d-none" style="width: 70px;" id="itemProductHasPicture" alt="Product image" />
+                            <i class="bi bi-box-seam-fill text-primary me-2 fs-5" id="itemProductNoPicture"></i>
+                            <div>
+                                <div class="fw-bold" id="itemProductName"></div>
+                                <div class="text-muted small">Tồn kho: <span id="itemProductStock"></span></div>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted" for="itemQuantity">Số lượng</label>
+                                <input type="number" id="itemQuantity" name="itemProductQuantity" class="form-control rounded-3"
+                                       value="1" min="0.01" step="any" data-val="true"
+                                       placeholder="0"
+                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
+                                       data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
+                                <span class="small text-danger field-validation-valid" data-valmsg-for="itemProductQuantity" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted noRefill" for="itemUnitPrice">Đơn giá</label>
+                                <input type="number" id="itemUnitPrice" name="itemProductUnitPrice" class="form-control rounded-3"
+                                       step="any" min="0" data-val="true"
+                                       placeholder="0"
+                                       data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
+                                       data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
+                                <span class="small text-danger field-validation-valid" data-valmsg-for="itemProductUnitPrice" data-valmsg-replace="true"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-4">
+                    <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" id="addItemToTable" class="btn btn-success px-4 rounded-3 shadow-sm d-none noDisabled">
+                        <i class="bi bi-plus-lg me-1"></i>
+                        Thêm vào
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -541,173 +634,19 @@
         </div>
     </div>
 </div>
-
 @section Scripts {
-    <script type="module">
-        import { confirm, toast } from "/modules/modals.js";
-
-        (function() {
-            // Product Picker
-            const display = document.getElementById('productPickerDisplay');
-            const hiddenId = document.getElementById('productId');
-            const suggestions = document.getElementById('productSuggestions');
-            const addItemForm = document.getElementById('addItemForm');
-            const qtyInput = document.getElementById('quantityInput');
-            const priceInput = document.getElementById('unitPriceInput');
-            let timer;
-
-            function renderSuggestions(items) {
-                suggestions.innerHTML = '';
-                if (!items || items.length === 0) { suggestions.style.display = 'none'; return; }
-                
-                items.forEach(it => {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'list-group-item list-group-item-action border-0 py-3 d-flex align-items-center gap-3';
-                    btn.innerHTML = `
-                        <div class="rounded-2 bg-light p-2"><i class="bi bi-box text-primary"></i></div>
-                        <div>
-                            <div class="fw-bold text-dark">${it.name}</div>
-                            <div class="small text-muted">${it.price.toLocaleString()} đ | Kho: ${it.inventoryQuantity}</div>
-                        </div>
-                    `;
-                    btn.onclick = () => {
-                        display.value = it.name;
-                        hiddenId.value = it.id;
-                        priceInput.value = it.price;
-                        suggestions.style.display = 'none';
-                        qtyInput.focus();
-                    };
-                    suggestions.appendChild(btn);
-                });
-                suggestions.style.display = 'block';
-            }
-
-            display.addEventListener('input', function() {
-                const q = this.value;
-                hiddenId.value = '';
-                if (timer) clearTimeout(timer);
-                if (!q) { suggestions.style.display = 'none'; return; }
-                
-                timer = setTimeout(async () => {
-                    try {
-                        const res = await fetch(`/Product/Search?q=${encodeURIComponent(q)}`);
-                        if (res.ok) {
-                            const data = await res.json();
-                            renderSuggestions(data);
-                        }
-                    } catch (err) { console.error(err); }
-                }, 300);
-            });
-
-            document.addEventListener('click', (e) => {
-                if (!suggestions.contains(e.target) && e.target !== display) {
-                    suggestions.style.display = 'none';
-                }
-            });
-
-            // Edit Item
-            const editModal = new bootstrap.Modal('#editItemModal');
-            
-            $('.btnEditItem').on('click', function() {
-                const data = $(this).data();
-                $('#editItemId').val(data.id);
-                $('#editProductName').text(data.product);
-                $('#editQuantity').val(data.qty);
-                $('#editUnitPrice').val(data.price);
-                editModal.show();
-            });
-
-            $('#submitEditItem').on('click', async function() {
-                const data = $('#editItemForm').serialize();
-                try {
-                    const res = await fetch('/Order/UpdateItem', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: data
-                    });
-                    const result = await res.json();
-                    if (result.success) {
-                        toast('Thành công', 'Đã cập nhật sản phẩm.', 'success');
-                        location.reload();
-                    } else {
-                        toast('Lỗi', result.message || 'Không thể cập nhật sản phẩm.', 'error');
-                    }
-                } catch (err) {
-                    toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
-                }
-            });
-
-            // Update Discount
-            $('#submitDiscount').on('click', async function() {
-                const data = $('#editDiscountForm').serialize();
-                try {
-                    const res = await fetch('/Order/UpdateOrder', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: data
-                    });
-                    const result = await res.json();
-                    if (result.success) {
-                        toast('Thành công', 'Đã cập nhật giảm giá.', 'success');
-                        location.reload();
-                    } else {
-                        toast('Lỗi', result.message || 'Lỗi cập nhật.', 'error');
-                    }
-                } catch (err) {
-                    toast('Lỗi', 'Lỗi hệ thống.', 'error');
-                }
-            });
-
-            window.editNote = async () => {
-                const newNote = prompt("Nhập ghi chú mới:", "@Model.Note");
-                if (newNote !== null) {
-                    const res = await fetch('/Order/UpdateOrder', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: `Id=@Model.Id&Note=${encodeURIComponent(newNote)}`
-                    });
-                    if ((await res.json()).success) location.reload();
-                }
-            };
-
-            // Remove Item
-            $('.btnRemoveItem').on('click', async function() {
-                const id = $(this).data('id');
-                const name = $(this).data('name');
-                const orderId = '@Model.Id';
-
-                const confirmed = await confirm('Xác nhận xóa', `Bạn có chắc chắn muốn xóa <strong>${name}</strong> khỏi đơn hàng không?`);
-                if (confirmed) {
-                    try {
-                        const res = await fetch('/Order/RemoveItem', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: `OrderId=${orderId}&ItemId=${id}`
-                        });
-                        const result = await res.json();
-                        if (result.success) {
-                            toast('Thành công', 'Đã xóa sản phẩm khỏi đơn hàng.', 'success');
-                            location.reload();
-                        } else {
-                            toast('Lỗi', result.message || 'Không thể xóa sản phẩm.', 'error');
-                        }
-                    } catch (err) {
-                        toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
-                    }
-                }
-            });
-        })();
-    </script>
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/modules/order.details.js" type="module"></script>
 }
-
-<style>
-    .letter-spacing-1 { letter-spacing: 1px; }
-    .product-icon-placeholder { transition: all 0.3s ease; }
-    tr:hover .product-icon-placeholder { background-color: var(--bs-primary-bg-subtle) !important; transform: scale(1.05); }
-    .card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-    .card:hover { box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.08) !important; }
-    .bg-gradient { background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.1) 100%); }
-    .table thead th { border-top: 0; }
-    .italic { font-style: italic; }
-</style>
+@section Styles {
+    <style>
+        .letter-spacing-1 { letter-spacing: 1px; }
+        .product-icon-placeholder { transition: all 0.3s ease; }
+        tr:hover .product-icon-placeholder { background-color: var(--bs-primary-bg-subtle) !important; transform: scale(1.05); }
+        .card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .card:hover { box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.08) !important; }
+        .bg-gradient { background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.1) 100%); }
+        .table thead th { border-top: 0; }
+        .italic { font-style: italic; }
+    </style>
+}

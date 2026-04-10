@@ -93,6 +93,9 @@ public sealed class OrderManager : IOrderManager
         if (order is null)
             throw new OrderIsNotFoundException(dto.Id);
 
+        if (!order.CanUpdateInfo())
+            throw new OrderCannotUpdateInfoException();
+
         order.ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc;
         order.OrderDiscount = dto.OrderDiscount ?? 0;
         order.Note = dto.Note;
@@ -152,6 +155,9 @@ public sealed class OrderManager : IOrderManager
         var order = await _orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
+
+        if (!order.CanUpdateOrderItems())
+            throw new OrderCannotUpdateOrderItemsException();
 
         order.RemoveOrderItem(dto.OrderItemId);
         order.UpdatedOnUtc = DateTime.UtcNow;
@@ -322,7 +328,11 @@ public sealed class OrderManager : IOrderManager
         }
 
         var total = query.Count();
-        var data = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
+        var data = query
+            .OrderByDescending(o => o.CreatedOnUtc)
+            .ThenByDescending(o => o.ExpectedShippingDateUtc)
+            .Skip(pageIndex * pageSize).Take(pageSize)
+            .ToList();
 
         var pagedData = PagedDataDto.Create(data.Select(order => order.ToDto()), pageIndex, pageSize, total);
         return pagedData;

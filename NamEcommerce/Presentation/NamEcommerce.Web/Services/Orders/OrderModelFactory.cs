@@ -49,7 +49,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
 
                 model.Items = model.Items.Where(i => products.Any(p => p.Id == i.ProductId)).ToList();
 
-                foreach(var item in model.Items)
+                foreach (var item in model.Items)
                 {
                     var product = products.First(p => p.Id == item.ProductId);
                     item.ProductDisplayName = product.Name;
@@ -57,6 +57,52 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     item.ProductDisplayPicture = product.PictureUrl;
                 }
             }
+        }
+
+        return model;
+    }
+
+    public async Task<OrderDetailsModel?> PrepareOrderDetailsModel(Guid orderId)
+    {
+        var order = await _mediator.Send(new GetOrderByIdQuery { Id = orderId }).ConfigureAwait(false);
+        if (order is null)
+            return null;
+
+        var model = new OrderDetailsModel
+        {
+            Id = order.Id,
+            Code = order.Code,
+            CustomerId = order.CustomerId,
+            CustomerName = order.CustomerName,
+            TotalAmount = order.TotalAmount,
+            OrderDiscount = order.OrderDiscount,
+            Status = order.Status,
+            Note = order.Note,
+            PaymentStatus = order.PaymentStatus,
+            PaymentMethod = order.PaymentMethod,
+            PaidOnUtc = order.PaidOnUtc,
+            PaymentNote = order.PaymentNote,
+            ShippingStatus = order.ShippingStatus,
+            ShippingAddress = order.ShippingAddress,
+            ShippedOnUtc = order.ShippedOnUtc,
+            ShippingNote = order.ShippingNote,
+            CancellationReason = order.CancellationReason,
+            CustomerAddress = order.CustomerAddress,
+            CustomerPhoneNumber = order.CustomerPhoneNumber,
+            CanUpdateInfo = order.CanUpdateInfo,
+            CanUpdateOrderItems = order.CanUpdateOrderItems
+        };
+        foreach (var it in order.Items)
+        {
+            model.Items.Add(new OrderDetailsItemModel(it.Id)
+            {
+                ProductId = it.ProductId,
+                ProductName = it.ProductName,
+                ProductPicture = it.ProductPicture,
+                ProductAvailableQty = it.ProductAvailableQty,
+                Quantity = it.Quantity,
+                UnitPrice = it.UnitPrice
+            });
         }
 
         return model;

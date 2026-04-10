@@ -16,6 +16,9 @@ public sealed class CreateOrderValidator : AbstractValidator<CreateOrderModel>
         RuleFor(p => p.ExpectedShippingDate)
             .NotEmpty().WithMessage("Vui lòng nhập ngày giao dự kiến.")
             .GreaterThanOrEqualTo(DateTime.Now.Date).WithMessage("Ngày giao dự kiến phải lớn hơn hiện tại.");
+
+        RuleFor(p => p.Items)
+            .NotEmpty().WithMessage("Vui lòng nhập hàng hóa.");
     }
 }
 public sealed class CreateOrderItemValidator : AbstractValidator<CreateOrderItemModel>

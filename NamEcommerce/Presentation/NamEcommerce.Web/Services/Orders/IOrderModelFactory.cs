@@ -7,4 +7,5 @@ public interface IOrderModelFactory
 {
     Task<OrderListModel> PrepareOrderListModel(OrderListSearchModel searchModel);
     Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? model = null);
+    Task<OrderDetailsModel?> PrepareOrderDetailsModel(Guid orderId);
 }

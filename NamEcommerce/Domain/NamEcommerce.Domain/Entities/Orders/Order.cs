@@ -77,6 +77,9 @@ public sealed record Order : AppAggregateEntity
     {
         ArgumentNullException.ThrowIfNull(byIdGetter);
 
+        if (!CanUpdateOrderItems())
+            throw new OrderCannotUpdateOrderItemsException();
+
         var product = await byIdGetter.GetByIdAsync(productId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
@@ -93,6 +96,9 @@ public sealed record Order : AppAggregateEntity
 
     internal void UpdateOrderItem(Guid orderItemId, decimal quantity, decimal unitPrice)
     {
+        if (!CanUpdateOrderItems())
+            throw new OrderCannotUpdateOrderItemsException();
+
         var orderItem = _orderItems.FirstOrDefault(item => item.Id == orderItemId);
         if (orderItem is null)
             throw new OrderItemIsNotFoundException(orderItemId);
@@ -104,6 +110,9 @@ public sealed record Order : AppAggregateEntity
 
     internal void RemoveOrderItem(Guid itemId)
     {
+        if (!CanUpdateOrderItems())
+            throw new OrderCannotUpdateOrderItemsException();
+
         var item = _orderItems.FirstOrDefault(i => i.Id == itemId);
         if (item is null)
             return;
@@ -118,10 +127,10 @@ public sealed record Order : AppAggregateEntity
         OrderTotal = _orderItems.Sum(i => i.Price) - OrderDiscount;
     }
 
-    private bool CanUpdateStatus() => OrderStatus != OrderStatus.Completed && OrderStatus != OrderStatus.Cancelled;
-    public bool CanChangeStatusTo(OrderStatus toStatus)
+    internal bool CanUpdateInfo() => OrderStatus != OrderStatus.Completed && OrderStatus != OrderStatus.Cancelled;
+    internal bool CanChangeStatusTo(OrderStatus toStatus)
     {
-        if (!CanUpdateStatus())
+        if (!CanUpdateInfo())
             return false;
 
         if (toStatus == OrderStatus.Cancelled && (PaymentStatus != PaymentStatus.Pending || ShippingStatus != ShippingStatus.Pending))
@@ -132,6 +141,19 @@ public sealed record Order : AppAggregateEntity
             return false;
 
         return Enum.IsDefined(toStatus);
+    }
+    internal bool CanUpdateOrderItems()
+    {
+        if (!CanUpdateInfo())
+            return false;
+
+        if (PaymentStatus == PaymentStatus.Paid)
+            return false;
+
+        if (ShippingStatus == ShippingStatus.Shipped)
+            return false;
+
+        return true;
     }
 
     internal void ChangeStatus(OrderStatus status)
@@ -144,14 +166,14 @@ public sealed record Order : AppAggregateEntity
 
     internal void MarkAsPaid(PaymentMethod method, string? note)
     {
-        if (OrderStatus == OrderStatus.Cancelled)
+        if (!CanUpdateInfo())
             throw new OrderCancelledException();
-
-        if (OrderStatus == OrderStatus.Completed)
-            throw new OrderCompletedException();
 
         if (!Enum.IsDefined(method))
             throw new OrderDataIsInvalidException("Payment method is not allowed.");
+
+        if (PaymentStatus == PaymentStatus.Paid)
+            throw new OrderIsAlreadyPaidException();
 
         PaymentStatus = PaymentStatus.Paid;
         PaymentMethod = method;
@@ -162,14 +184,14 @@ public sealed record Order : AppAggregateEntity
 
     internal void UpdateShipping(ShippingStatus status, string? address, string? note)
     {
-        if (OrderStatus == OrderStatus.Cancelled)
-            throw new OrderCancelledException();
-
-        if (OrderStatus == OrderStatus.Completed)
-            throw new OrderCompletedException();
+        if (!CanUpdateInfo())
+            throw new OrderCannotUpdateInfoException();
 
         if (!Enum.IsDefined(status))
             throw new OrderDataIsInvalidException("Shipping status is not allowed.");
+
+        if (ShippingStatus == ShippingStatus.Shipped)
+            throw new OrderIsAlreadyShippedException();
 
         ShippingStatus = status;
         ShippingNote = note;
@@ -182,7 +204,7 @@ public sealed record Order : AppAggregateEntity
 
     internal bool VerifyStatus()
     {
-        if (!CanUpdateStatus())
+        if (!CanUpdateInfo())
             return false;
 
         if (PaymentStatus == PaymentStatus.Paid && ShippingStatus == ShippingStatus.Shipped)
@@ -207,6 +229,9 @@ public sealed record Order : AppAggregateEntity
 
     internal void Cancel(string? reason)
     {
+        if (OrderStatus == OrderStatus.Cancelled)
+            throw new OrderCancelledException();
+
         if (!CanChangeStatusTo(OrderStatus.Cancelled))
             throw new OrderCannotBeCancelledException();
 

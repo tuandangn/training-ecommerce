@@ -25,7 +25,10 @@ public static class OrderExtensions
             ShippedOnUtc = order.ShippedOnUtc,
             ShippingNote = order.ShippingNote,
             CancellationReason = order.CancellationReason,
-            ExpectedShippingDateUtc = order.ExpectedShippingDateUtc
+            ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
+            CreatedOnUtc = order.CreatedOnUtc,
+            CanUpdateOrderItems = order.CanUpdateOrderItems(),
+            CanUpdateInfo = order.CanUpdateInfo()
         };
 
         foreach (var orderItem in order.OrderItems)

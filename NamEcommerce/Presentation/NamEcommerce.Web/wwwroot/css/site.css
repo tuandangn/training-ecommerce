@@ -594,3 +594,6 @@ body {
     transition: all 0.3s ease;
 }
 
+.fw-600{
+    font-weight:600;
+}

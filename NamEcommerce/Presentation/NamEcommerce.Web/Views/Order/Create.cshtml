@@ -148,7 +148,7 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="bg-light @(Model.Items.Count > 0 ? "" : "d-none") d-flex flex-column" id="tableFooter">
+                                <div class="bg-light @(Model.Items.Count > 0 ? "" : "d-none") d-flex flex-column px-4" id="tableFooter">
                                     <div class="d-flex justify-content-end gap-4">
                                         <div class="text-end fw-bold py-2 border-0">TẠM TÍNH</div>
                                         <div class="text-end fw-bold py-2 border-0" id="subTotal">@Model.OrderSubTotal @ViewConstants.DefaultCurrencySymbol</div>
@@ -167,7 +167,10 @@
                                     </div>
                                 </div>
                                 <div id="noItemsMessage" class="py-5 text-center text-muted italic" style="display:@(Model.Items.Count == 0 ? "block" : "none")">
-                                    Chưa có sản phẩm nào được chọn.
+                                    <div>
+                                        Chưa có sản phẩm nào được chọn.
+                                    </div>
+                                    <span asp-validation-for="Items" class="text-danger small"></span>
                                 </div>
                             </div>
                         </div>

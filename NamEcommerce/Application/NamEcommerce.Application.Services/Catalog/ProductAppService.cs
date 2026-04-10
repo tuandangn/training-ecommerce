@@ -122,6 +122,9 @@ public sealed class ProductAppService : IProductAppService
 
     public async Task<IEnumerable<ProductAppDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids)
     {
+        if (!ids.Any())
+            return [];
+
         var products = await _productDataReader.GetByIdsAsync(ids).ConfigureAwait(false);
         return products.Select(p => p.ToDto());
     }
