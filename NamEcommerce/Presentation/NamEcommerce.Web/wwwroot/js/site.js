@@ -22,14 +22,11 @@ $(function () {
     $(document).on('focus', 'form input', function (e) {
         if (this.type != 'number')
             return;
-        var oldValue = this.value;
-        if (oldValue.match('^0+$'))
-            oldValue = '0';
         if (this.value.match('^\\s*0+\\s*$'))
             this.value = '';
         $(this).on('blur', function onBlur() {
             if (this.value == '')
-                this.value = oldValue;
+                this.value = '0';
             $(this).off('blur', onBlur);
         });
     });
@@ -47,7 +44,24 @@ function enableSubmitButtons(form, enabled) {
     $(form).find('[type=submit]').each(btn => {
         if ($(btn).hasClass('noDisabled'))
             return;
-        $(btn).prop('disabled', !enabled);
+        $(btn).toggleClass('disabled', !enabled).prop('disabled', !enabled);
     });
 }
 
+$.fn.focusEnd = function () {
+    return this.each(function () {
+        var el = this;
+        var len = el.value.length;
+
+        // Focus trước
+        el.focus();
+
+        // Nếu trình duyệt hỗ trợ setSelectionRange
+        if (el.setSelectionRange) {
+            el.setSelectionRange(len, len);
+        } else {
+            // Support cho các trình duyệt cũ hoặc các trường hợp đặc biệt
+            $(el).val($(el).val());
+        }
+    });
+};

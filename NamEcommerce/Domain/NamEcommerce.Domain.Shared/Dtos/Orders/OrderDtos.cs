@@ -14,8 +14,6 @@ public abstract record BaseOrderDto
     {
         if (OrderDiscount.HasValue && OrderDiscount < 0)
             throw new OrderDataIsInvalidException("Order discount cannot less than 0");
-        if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
-            throw new OrderDataIsInvalidException("Expected shipping date is invalid");
     }
 }
 
@@ -43,6 +41,7 @@ public sealed record OrderDto(Guid Id) : BaseOrderDto
     public DateTime CreatedOnUtc { get; set; }
 
     public bool CanUpdateInfo { get; init; }
+    public bool CanCancelOrder { get; init; }
     public bool CanUpdateOrderItems { get; init; }
 
     public IList<OrderItemDto> Items { get; } = [];
@@ -59,6 +58,9 @@ public sealed record CreateOrderDto : BaseOrderDto
 
     public override void Verify()
     {
+        if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
+            throw new OrderDataIsInvalidException("Expected shipping date is invalid");
+
         foreach (var item in Items)
             item.Verify();
 

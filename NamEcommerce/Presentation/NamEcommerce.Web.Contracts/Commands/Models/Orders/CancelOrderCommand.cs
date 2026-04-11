@@ -1,7 +1,6 @@
 using MediatR;
+using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Orders;
 
-public sealed record CancelOrderResultModel(bool Success, string? ErrorMessage);
-
-public sealed record CancelOrderCommand(Guid OrderId, string Reason) : IRequest<CancelOrderResultModel>;
+public sealed record CancelOrderCommand(Guid OrderId, string Reason) : IRequest<CommonResultModel>;

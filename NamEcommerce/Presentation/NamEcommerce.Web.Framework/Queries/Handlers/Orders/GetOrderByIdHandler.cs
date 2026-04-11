@@ -8,7 +8,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Orders;
 
-public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, OrderDetailsModel?>
+public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, OrderModel?>
 {
     private readonly IOrderAppService _orderAppService;
     private readonly ICustomerAppService _customerAppService;
@@ -23,13 +23,13 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
         _mediator = mediator;
     }
 
-    public async Task<OrderDetailsModel?> Handle(GetOrderByIdQuery request, CancellationToken cancellationToken)
+    public async Task<OrderModel?> Handle(GetOrderByIdQuery request, CancellationToken cancellationToken)
     {
         var order = await _orderAppService.GetOrderByIdAsync(request.Id).ConfigureAwait(false);
         if (order is null) return null;
 
         var customer = await _customerAppService.GetCustomerByIdAsync(order.CustomerId).ConfigureAwait(false);
-        var model = new OrderDetailsModel
+        var model = new OrderModel
         {
             Id = order.Id,
             Code = order.Code,
@@ -43,13 +43,16 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             Note = order.Note,
             PaymentStatus = order.PaymentStatus,
             PaymentMethod = order.PaymentMethod,
-            PaidOnUtc = order.PaidOnUtc,
+            PaidOn = order.PaidOnUtc?.ToLocalTime(),
             PaymentNote = order.PaymentNote,
             ShippingStatus = order.ShippingStatus,
             ShippingAddress = order.ShippingAddress,
-            ShippedOnUtc = order.ShippedOnUtc,
+            ShippedOn = order.ShippedOnUtc?.ToLocalTime(),
             ShippingNote = order.ShippingNote,
-            CancellationReason = order.CancellationReason
+            CancellationReason = order.CancellationReason,
+            CanUpdateInfo = order.CanUpdateInfo,
+            CanUpdateOrderItems = order.CanUpdateOrderItems,
+            CanCancelOrder = order.CanCancelOrder
         };
         var products = await _mediator.Send(new GetProductsByIdsForOrderQuery
         {
@@ -58,7 +61,7 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
         foreach (var orderItem in order.Items)
         {
             var product = products.FirstOrDefault(p => p.Id == orderItem.ProductId);
-            model.Items.Add(new OrderDetailsItemModel(orderItem.Id)
+            model.Items.Add(new OrderModel.OrderItemModel(orderItem.Id)
             {
                 ProductId = orderItem.ProductId,
                 ProductName = product?.Name,

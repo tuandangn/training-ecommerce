@@ -1,8 +1,10 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Web.Contracts.Models.Orders;
+using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Models.Orders;
 using NamEcommerce.Web.Services.Orders;
@@ -89,100 +91,224 @@ public sealed class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> UpdateOrder(UpdateOrderCommand command)
+    public async Task<IActionResult> CancelOrder(CancelOrderModel model)
     {
-        var result = await _mediator.Send(command);
+        if (!ModelState.IsValid)
+            return Json(new { success = false, message = GetErrorMessage() });
+
+        var order = await _mediator.Send(new GetOrderByIdQuery
+        {
+            Id = model.OrderId
+        });
+        if (order is null)
+            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+
+        if (!order.CanCancelOrder)
+            return Json(new { success = false, message = "Đơn hàng không thể hủy lúc này." });
+
+        var result = await _mediator.Send(new CancelOrderCommand(model.OrderId, model.Reason!));
+
         if (!result.Success)
             return Json(new { success = false, message = result.ErrorMessage });
 
-        return Json(new { success = true });
+        return Json(new { success = true, message = string.Empty });
     }
 
     [HttpPost]
-    public async Task<IActionResult> AddItem(Guid orderId, Guid productId, decimal quantity, decimal unitPrice)
+    public async Task<IActionResult> AddOrderItem(AddOrderItemModel model)
     {
+        if (!ModelState.IsValid)
+            return Json(new { success = false, message = GetErrorMessage() });
+
+        var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
+        if (order is null)
+            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+
+        if (!order.CanUpdateOrderItems)
+            return Json(new { success = false, message = "Không thể cập nhật hàng hóa." });
+
+        var product = await _mediator.Send(new GetProductByIdQuery { Id = model.ProductId });
+        if (product is null)
+            return Json(new { success = false, message = "Không tìm thấy hàng hóa." });
+
         var result = await _mediator.Send(new AddOrderItemCommand
         {
-            OrderId = orderId,
-            ProductId = productId,
-            Quantity = quantity,
-            UnitPrice = unitPrice
+            OrderId = model.OrderId,
+            ProductId = model.ProductId,
+            Quantity = model.Quantity,
+            UnitPrice = model.UnitPrice
         });
 
         if (!result.Success)
-            TempData["OrderErrorMessage"] = result.ErrorMessage;
-        else
-            TempData["OrderSuccessMessage"] = "Item added";
+            return Json(new { success = false, message = result.ErrorMessage });
 
-        return RedirectToAction(nameof(Details), new { id = orderId });
+        return Json(new { success = true, message = string.Empty });
     }
 
     [HttpPost]
-    public async Task<IActionResult> ChangeStatus(Guid orderId, int status)
+    public async Task<IActionResult> UpdateOrderItem(EditOrderItemModel model)
     {
-        var result = await _mediator.Send(new ChangeOrderStatusCommand { OrderId = orderId, Status = status });
-        if (!result.Success)
-            TempData["OrderErrorMessage"] = result.ErrorMessage;
-        else
-            TempData["OrderSuccessMessage"] = "Status changed";
+        if (!ModelState.IsValid)
+            return Json(new { success = false, message = GetErrorMessage() });
 
-        return RedirectToAction(nameof(Details), new { id = orderId });
-    }
+        var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
+        if (order is null)
+            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
 
-    [HttpPost]
-    public async Task<IActionResult> UpdateItem(UpdateOrderItemCommand command)
-    {
-        var result = await _mediator.Send(command);
+        var orderItem = order.Items.FirstOrDefault(orderItem => orderItem.Id == model.ItemId);
+        if (orderItem is null)
+            return Json(new { success = false, message = "Không tìm thấy hàng hóa." });
+
+        if (!order.CanUpdateOrderItems)
+            return Json(new { success = false, message = "Không thể cập nhật hàng hóa." });
+
+        var result = await _mediator.Send(new UpdateOrderItemCommand
+        {
+            OrderId = model.OrderId,
+            ItemId = model.ItemId,
+            Quantity = model.Quantity,
+            UnitPrice = model.UnitPrice
+        });
         if (!result.Success)
             return Json(new { success = false, message = result.ErrorMessage });
 
+        return Json(new { success = true, message = string.Empty });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> RemoveOrderItem(DeleteOrderItemModel model)
+    {
+        if (!ModelState.IsValid)
+            return Json(new { success = false, message = GetErrorMessage() });
+
+        var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
+        if (order is null)
+            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+
+        var orderItem = order.Items.FirstOrDefault(orderItem => orderItem.Id == model.ItemId);
+        if (orderItem is null)
+            return Json(new { success = false, message = "Không tìm thấy hàng hóa." });
+
+        if (!order.CanUpdateOrderItems)
+            return Json(new { success = false, message = "Không thể cập nhật hàng hóa." });
+
+        var result = await _mediator.Send(new DeleteOrderItemCommand
+        {
+            OrderId = model.OrderId,
+            ItemId = model.ItemId
+        });
+
+        if (!result.Success)
+            return Json(new { success = false, message = result.ErrorMessage });
         return Json(new { success = true });
     }
 
     [HttpPost]
-    public async Task<IActionResult> RemoveItem(DeleteOrderItemCommand command)
+    public async Task<IActionResult> UpdateOrderNote(EditOrderNoteModel model)
     {
-        var result = await _mediator.Send(command);
+        if (!ModelState.IsValid)
+            return Json(new { success = false, message = GetErrorMessage() });
+
+        var order = await _mediator.Send(new GetOrderByIdQuery
+        {
+            Id = model.OrderId
+        });
+        if (order is null)
+            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+
+        if (!order.CanUpdateInfo)
+            return Json(new { success = false, message = "Đơn hàng không thể thay đổi lúc này." });
+
+        var result = await _mediator.Send(new UpdateOrderNoteCommand(model.OrderId, model.Note!));
+
         if (!result.Success)
             return Json(new { success = false, message = result.ErrorMessage });
 
-        return Json(new { success = true });
+        return Json(new { success = true, message = string.Empty });
+    }
+    [HttpPost]
+    public async Task<IActionResult> UpdateOrderDiscount(EditOrderDiscountModel model)
+    {
+        if (!ModelState.IsValid)
+            return Json(new { success = false, message = GetErrorMessage() });
+
+        var order = await _mediator.Send(new GetOrderByIdQuery
+        {
+            Id = model.OrderId
+        });
+        if (order is null)
+            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+
+        if (!order.CanUpdateInfo)
+            return Json(new { success = false, message = "Đơn hàng không thể thay đổi lúc này." });
+
+        if (order.PaymentStatus == (int)PaymentStatus.Paid)
+            return Json(new { success = false, message = "Đơn hàng đã được thanh toán trước đó." });
+
+        if ((model.OrderDiscount ?? 0) > order.TotalAmount)
+            return Json(new { success = false, message = "Giảm giá không được lớn hơn tổng đơn." });
+
+        var result = await _mediator.Send(new UpdateOrderDiscountCommand(model.OrderId, model.OrderDiscount));
+
+        if (!result.Success)
+            return Json(new { success = false, message = result.ErrorMessage });
+
+        return Json(new { success = true, message = string.Empty });
     }
 
     [HttpPost]
-    public async Task<IActionResult> MarkAsPaid(MarkOrderAsPaidCommand command)
+    public async Task<IActionResult> MarkAsPaid(MarkOrderAsPaidModel model)
     {
-        var result = await _mediator.Send(command);
-        if (!result.Success)
-            TempData["OrderErrorMessage"] = result.ErrorMessage;
-        else
-            TempData["OrderSuccessMessage"] = "Payment recorded successfully.";
+        if (!ModelState.IsValid)
+            return Json(new { success = false, message = GetErrorMessage() });
 
-        return RedirectToAction(nameof(Details), new { id = command.OrderId });
+        var order = await _mediator.Send(new GetOrderByIdQuery
+        {
+            Id = model.OrderId
+        });
+        if (order is null)
+            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+
+        if (!order.CanUpdateInfo)
+            return Json(new { success = false, message = "Đơn hàng không thể thay đổi lúc này." });
+
+        if (order.PaymentStatus == (int)PaymentStatus.Paid)
+            return Json(new { success = false, message = "Đơn hàng đã được thanh toán trước đó." });
+
+        var result = await _mediator.Send(new MarkOrderAsPaidCommand(model.OrderId, model.PaymentMethod ?? default, model.Note));
+
+        if (!result.Success)
+            return Json(new { success = false, message = result.ErrorMessage });
+
+        return Json(new { success = true, message = string.Empty });
     }
 
     [HttpPost]
-    public async Task<IActionResult> UpdateShipping(UpdateOrderShippingCommand command)
+    public async Task<IActionResult> UpdateShipping(EditOrderShippingModel model)
     {
-        var result = await _mediator.Send(command);
-        if (!result.Success)
-            TempData["OrderErrorMessage"] = result.ErrorMessage;
-        else
-            TempData["OrderSuccessMessage"] = "Shipping status updated successfully.";
+        if (!ModelState.IsValid)
+            return Json(new { success = false, message = GetErrorMessage() });
 
-        return RedirectToAction(nameof(Details), new { id = command.OrderId });
+        var order = await _mediator.Send(new GetOrderByIdQuery
+        {
+            Id = model.OrderId
+        });
+        if (order is null)
+            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+
+        if (!order.CanUpdateInfo)
+            return Json(new { success = false, message = "Đơn hàng không thể thay đổi lúc này." });
+
+        if (order.ShippingStatus == (int)ShippingStatus.Shipped)
+            return Json(new { success = false, message = "Đơn hàng đã được giao trước đó." });
+
+        var result = await _mediator.Send(new UpdateOrderShippingCommand(model.OrderId, model.ShippingStatus, model.Address, model.Note));
+
+        if (!result.Success)
+            return Json(new { success = false, message = result.ErrorMessage });
+
+        return Json(new { success = true, message = string.Empty });
     }
 
-    [HttpPost]
-    public async Task<IActionResult> CancelOrder(CancelOrderCommand command)
-    {
-        var result = await _mediator.Send(command);
-        if (!result.Success)
-            TempData["OrderErrorMessage"] = result.ErrorMessage;
-        else
-            TempData["OrderSuccessMessage"] = "Order has been cancelled.";
-
-        return RedirectToAction(nameof(Details), new { id = command.OrderId });
-    }
 }
 

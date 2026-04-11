@@ -123,7 +123,7 @@ public sealed class ProductController : BaseAuthorizedController
             return View(model);
         }
 
-        var product = await _mediator.Send(new GetProductQuery { Id = model.Id });
+        var product = await _mediator.Send(new GetProductByIdQuery { Id = model.Id });
         if (product == null)
         {
             TempData[ViewConstants.ProductErrorMessage] = "Không tìm thấy hàng hóa.";

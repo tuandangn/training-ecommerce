@@ -39,7 +39,7 @@ public sealed class ProductModelFactory : IProductModelFactory
 
     public async Task<EditProductModel?> PrepareEditProductModel(Guid id, EditProductModel? oldModel = null)
     {
-        var product = await _mediator.Send(new GetProductQuery { Id = id }).ConfigureAwait(false);
+        var product = await _mediator.Send(new GetProductByIdQuery { Id = id }).ConfigureAwait(false);
         if (product is null && oldModel is null)
             return null;
 

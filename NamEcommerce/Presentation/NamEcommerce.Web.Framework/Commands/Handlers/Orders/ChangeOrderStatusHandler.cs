@@ -1,10 +1,11 @@
 using MediatR;
-using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Web.Contracts.Commands.Models.Orders;
+using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 
-public sealed class ChangeOrderStatusHandler : IRequestHandler<ChangeOrderStatusCommand, ChangeOrderStatusResultModel>
+public sealed class ChangeOrderStatusHandler : IRequestHandler<ChangeOrderStatusCommand, CommonResultModel>
 {
     private readonly IOrderAppService _orderAppService;
 
@@ -13,11 +14,11 @@ public sealed class ChangeOrderStatusHandler : IRequestHandler<ChangeOrderStatus
         _orderAppService = orderAppService;
     }
 
-    public async Task<ChangeOrderStatusResultModel> Handle(ChangeOrderStatusCommand request, CancellationToken cancellationToken)
+    public async Task<CommonResultModel> Handle(ChangeOrderStatusCommand request, CancellationToken cancellationToken)
     {
         var result = await _orderAppService.ChangeOrderStatusAsync(request.OrderId, request.Status).ConfigureAwait(false);
 
-        return new ChangeOrderStatusResultModel
+        return new CommonResultModel
         {
             Success = result.success,
             ErrorMessage = result.errorMessage

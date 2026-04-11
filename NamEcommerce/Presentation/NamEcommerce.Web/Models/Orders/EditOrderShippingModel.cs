@@ -1,0 +1,10 @@
+﻿namespace NamEcommerce.Web.Models.Orders;
+
+[Serializable]
+public sealed class EditOrderShippingModel
+{
+    public Guid OrderId { get; set; }
+    public int ShippingStatus { get; set; }
+    public string Address { get; set; }
+    public string? Note { get; set; }
+}

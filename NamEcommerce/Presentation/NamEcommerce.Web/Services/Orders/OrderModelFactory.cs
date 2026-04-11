@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using MediatR;
+﻿using MediatR;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -80,21 +79,22 @@ public sealed class OrderModelFactory : IOrderModelFactory
             Note = order.Note,
             PaymentStatus = order.PaymentStatus,
             PaymentMethod = order.PaymentMethod,
-            PaidOnUtc = order.PaidOnUtc,
+            PaidOn = order.PaidOn,
             PaymentNote = order.PaymentNote,
             ShippingStatus = order.ShippingStatus,
             ShippingAddress = order.ShippingAddress,
-            ShippedOnUtc = order.ShippedOnUtc,
+            ShippedOn = order.ShippedOn,
             ShippingNote = order.ShippingNote,
             CancellationReason = order.CancellationReason,
             CustomerAddress = order.CustomerAddress,
             CustomerPhoneNumber = order.CustomerPhoneNumber,
             CanUpdateInfo = order.CanUpdateInfo,
-            CanUpdateOrderItems = order.CanUpdateOrderItems
+            CanUpdateOrderItems = order.CanUpdateOrderItems,
+            CanCancelOrder = order.CanCancelOrder
         };
         foreach (var it in order.Items)
         {
-            model.Items.Add(new OrderDetailsItemModel(it.Id)
+            model.Items.Add(new OrderDetailsModel.OrderItemModel(it.Id)
             {
                 ProductId = it.ProductId,
                 ProductName = it.ProductName,

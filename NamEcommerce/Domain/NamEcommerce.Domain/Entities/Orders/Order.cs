@@ -25,7 +25,7 @@ public sealed record Order : AppAggregateEntity
     public Guid? CreatedByUserId { get; }
 
     public decimal OrderTotal { get; private set; }
-    public decimal OrderDiscount { get; internal set; }
+    public decimal OrderDiscount { get; private set; }
 
     public DateTime ExpectedShippingDateUtc { get; set; }
 
@@ -122,6 +122,25 @@ public sealed record Order : AppAggregateEntity
         RecalculateTotal();
     }
 
+    internal void SetOrderDiscount(decimal? orderDiscount)
+    {
+        if(!orderDiscount.HasValue)
+        {
+            OrderDiscount = 0;
+            RecalculateTotal();
+            return;
+        }
+
+        if (orderDiscount.Value < 0)
+            throw new OrderDiscountIsInvalidException("Order discount must greater than or equal to 0.");
+
+        if (orderDiscount.Value > OrderTotal)
+            throw new OrderDiscountIsInvalidException("Order discount cannot exceed order total.");
+
+        OrderDiscount = orderDiscount.Value;
+        RecalculateTotal();
+    }
+
     private void RecalculateTotal()
     {
         OrderTotal = _orderItems.Sum(i => i.Price) - OrderDiscount;
@@ -150,7 +169,17 @@ public sealed record Order : AppAggregateEntity
         if (PaymentStatus == PaymentStatus.Paid)
             return false;
 
-        if (ShippingStatus == ShippingStatus.Shipped)
+        if (ShippingStatus != ShippingStatus.Pending)
+            return false;
+
+        return true;
+    }
+    internal bool CanCancelOrder()
+    {
+        if (!CanUpdateInfo())
+            return false;
+
+        if (PaymentStatus != PaymentStatus.Pending || ShippingStatus != ShippingStatus.Pending)
             return false;
 
         return true;

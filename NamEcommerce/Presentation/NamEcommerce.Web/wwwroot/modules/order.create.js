@@ -1,5 +1,4 @@
-﻿
-import { toast } from "/modules/modals.js";
+﻿import { toast } from "/modules/modals.js";
 
 (function ($) {
     let itemIndex = 0;
@@ -254,4 +253,13 @@ import { toast } from "/modules/modals.js";
         $(addProductForm).valid();
     });
     addProductForm.addEventListener('submit', (e) => e.preventDefault());
+
+    document.addEventListener('click', (e) => {
+        if (!customerSuggestions.contains(e.target) && e.target !== customerSearch) {
+            customerSuggestions.style.display = 'none';
+        }
+        if (!productSuggestions.contains(e.target) && e.target !== productSearch) {
+            productSuggestions.style.display = 'none';
+        }
+    });
 })($);

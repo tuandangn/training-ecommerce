@@ -56,7 +56,7 @@ using NamEcommerce.Web.Services.Catalog;
 using NamEcommerce.Web.Services.Inventory;
 using NamEcommerce.Web.Services.Orders;
 using NamEcommerce.Web.Services.PurchaseOrders;
-using NamEcommerce.Web.Validators;
+using NamEcommerce.Web.Validators.Users;
 using System.Reflection;
 
 //services

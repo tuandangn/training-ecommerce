@@ -67,11 +67,11 @@ public sealed class OrderManager : IOrderManager
         var orderTotal = dto.Items.Sum(item => item.UnitPrice * item.Quantity);
         var order = new Order(dto.Code, dto.CustomerId, orderTotal, dto.CreatedByUserId)
         {
-            OrderDiscount = dto.OrderDiscount ?? 0,
             Note = dto.Note,
             ShippingAddress = customer.Address,
             ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc
         };
+        order.SetOrderDiscount(dto.OrderDiscount);
 
         foreach (var item in dto.Items)
             await order.AddOrderItemAsync(item.ProductId, item.UnitPrice, item.Quantity, _productDataReader).ConfigureAwait(false);
@@ -97,7 +97,7 @@ public sealed class OrderManager : IOrderManager
             throw new OrderCannotUpdateInfoException();
 
         order.ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc;
-        order.OrderDiscount = dto.OrderDiscount ?? 0;
+        order.SetOrderDiscount(dto.OrderDiscount);
         order.Note = dto.Note;
 
         order.UpdatedOnUtc = DateTime.UtcNow;

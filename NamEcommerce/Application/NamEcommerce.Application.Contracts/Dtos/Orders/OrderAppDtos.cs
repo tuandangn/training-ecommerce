@@ -11,8 +11,6 @@ public abstract record BaseOrderAppDto
     {
         if (OrderDiscount.HasValue && OrderDiscount < 0)
             return (false, "Order discount cannot less than 0");
-        if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
-            return (false, "Expected shipping date is invalid");
 
         return (true, string.Empty);
     }
@@ -39,8 +37,9 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
     public DateTime? ShippedOnUtc { get; set; }
     public string? ShippingNote { get; set; }
 
-    public bool CanUpdateInfo { get; set; }
-    public bool CanUpdateOrderItems { get; set; }
+    public bool CanUpdateInfo { get; init; }
+    public bool CanCancelOrder { get; init; }
+    public bool CanUpdateOrderItems { get; init; }
 
     public DateTime CreatedOnUtc { get; set; }
 
@@ -56,6 +55,9 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
 
     public override (bool valid, string? errorMessage) Validate()
     {
+        if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
+            return (false, "Expected shipping date is invalid");
+
         foreach (var item in Items)
         {
             var validateResult = item.Validate();

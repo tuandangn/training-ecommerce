@@ -1,6 +1,10 @@
 @model OrderDetailsModel
+@using System.Text.Encodings.Web
+@using System.Text
+@using NamEcommerce.Domain.Shared.Enums.Orders
+@inject UrlEncoder MyUrlEncoder
 @{
-    ViewData["Title"] = $"Đơn hàng #{Model.Id.ToString()[..8].ToUpper()}";
+    ViewData["Title"] = $"Đơn hàng {Model.Code}";
 
     string GetStatusBadgeClass(int status) => status switch
     {
@@ -64,17 +68,20 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div class="mb-3">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-1">
                     <li class="breadcrumb-item"><a asp-action="List" class="text-decoration-none">Đơn hàng</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Chi tiết</li>
                 </ol>
             </nav>
-            <h1 class="h3 mb-0 fw-bold">Chi tiết Đơn hàng <span class="text-primary">@Model.Code</span></h1>
+            <h1 class="h3 mb-0 fw-bold">
+                Chi tiết Đơn hàng 
+                <span class="text-muted text-nowrap small">@Model.Code</span>
+            </h1>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 justify-content-between flex-grow-1 flex-lg-grow-0">
             <a asp-action="List" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i> Quay lại
             </a>
@@ -84,7 +91,7 @@
         </div>
     </div>
     <div class="row g-4">
-        <div class="col-lg-8">
+        <div class="col-lg-8 order-1 order-lg-0">
             <div class="card border-0 shadow-sm rounded-4 mb-4">
                 <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Danh sách Sản phẩm</h5>
@@ -95,11 +102,14 @@
                         <table class="table table-hover align-middle mb-0">
                             <thead class="bg-light text-muted small text-uppercase">
                                 <tr>
-                                    <th class="ps-4" style="width: 40%">Sản phẩm</th>
+                                    <th class="ps-4">Sản phẩm</th>
                                     <th class="text-center" style="width: 15%">Số lượng</th>
                                     <th class="text-end" style="width: 20%">Đơn giá</th>
-                                    <th class="text-end" style="width: 20%">Thành tiền</th>
-                                    <th class="text-end pe-4" style="width: 5%"></th>
+                                    <th class="text-end d-none d-lg-table-cell pe-4 pe-lg-0" style="width: 20%">Thành tiền</th>
+                                    @if (Model.CanUpdateOrderItems)
+                                    {
+                                        <th class="text-end pe-4" style="width: 5%"></th>
+                                    }
                                 </tr>
                             </thead>
                             <tbody id="itemsTableBody">
@@ -108,7 +118,7 @@
                                     <tr data-item-id="@item.Id">
                                         <td class="ps-4">
                                             <div class="d-flex align-items-center gap-3">
-                                                <div>
+                                                <div class="d-none d-lg-block">
                                                     @if (string.IsNullOrEmpty(item.ProductPicture))
                                                     {
                                                         <div class="product-icon-placeholder me-3 rounded-3 bg-light d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
@@ -134,134 +144,160 @@
                                         <td class="text-end">
                                             <span class="unit-price-text">@item.UnitPrice.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol</span>
                                         </td>
-                                        <td class="text-end fw-bold text-primary">
-                                            <span class="total-price-text">@(item.SubTotal.ToString(ViewConstants.NumberCustomFormat)) đ</span>
+                                        <td class="text-end fw-bold text-primary d-none d-lg-table-cell pe-4 pe-lg-0">
+                                            <span class="total-price-text">@(item.SubTotal.ToString(ViewConstants.NumberCustomFormat)) @ViewConstants.DefaultCurrencySymbol</span>
                                         </td>
-                                        <td class="text-end pe-4">
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm btn-light border-0" type="button" data-bs-toggle="dropdown">
-                                                    <i class="bi bi-three-dots-vertical"></i>
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                                                    <li>
-                                                        <button class="dropdown-item btnEditItem" data-id="@item.Id" 
-                                                            data-product="@item.ProductName" data-availableQty="@item.ProductAvailableQty?.ToString(ViewConstants.NumberCustomFormat)"
-                                                            data-qty="@item.Quantity" data-price="@item.UnitPrice">
-                                                            <i class="bi bi-pencil me-2 text-primary"></i> 
-                                                            Chỉnh sửa
-                                                        </button>
-                                                    </li>
-                                                    <li><hr class="dropdown-divider"></li>
-                                                    <li>
-                                                        <button class="dropdown-item text-danger btnRemoveItem" data-id="@item.Id" data-name="@item.ProductName">
-                                                            <i class="bi bi-trash me-2"></i> Xóa
-                                                        </button>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </td>
+                                        @if (Model.CanUpdateOrderItems) {
+                                            <td class="text-end pe-4">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-light border-0" type="button" data-bs-toggle="dropdown">
+                                                        <i class="bi bi-three-dots-vertical"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                                        <li>
+                                                            <button class="dropdown-item btnEditItem" data-id="@item.Id" 
+                                                                data-product="@item.ProductName" data-availableQty="@item.ProductAvailableQty?.ToString(ViewConstants.NumberCustomFormat)"
+                                                                data-qty="@item.Quantity.ToString("#")" data-price="@item.UnitPrice.ToString("#")">
+                                                                <i class="bi bi-pencil me-2 text-primary"></i> 
+                                                                Chỉnh sửa
+                                                            </button>
+                                                        </li>
+                                                        @if(Model.Items.Count > 1){
+                                                            <li><hr class="dropdown-divider"></li>
+                                                            <li>
+                                                                <button class="dropdown-item text-danger btnRemoveItem" data-id="@item.Id" data-order="@Model.Id" data-name="@item.ProductName">
+                                                                    <i class="bi bi-trash me-2"></i> 
+                                                                    Xóa
+                                                                </button>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        }
                                     </tr>
                                 }
                             </tbody>
-                            <tfoot class="bg-light">
-                                <tr>
-                                    <td colspan="3" class="text-end ps-4 py-2 text-muted small">Tạm tính:</td>
-                                    <td class="text-end py-2 fw-semibold">@((Model.TotalAmount + Model.OrderDiscount).ToString("N0")) đ</td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td colspan="3" class="text-end ps-4 py-2 text-muted small">
-                                        Giảm giá:
-                                        <button type="button" class="btn btn-sm btn-link p-0 ms-1" data-bs-toggle="modal" data-bs-target="#editDiscountModal">
-                                            <i class="bi bi-pencil-square text-primary"></i>
-                                        </button>
-                                    </td>
-                                    <td class="text-end py-2 text-danger">- @Model.OrderDiscount.ToString("N0") đ</td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td colspan="3" class="text-end ps-4 py-3 fw-bold fs-5">TỔNG CỘNG:</td>
-                                    <td class="text-end py-3 fw-bold fs-5 text-primary">@Model.TotalAmount.ToString("N0") đ</td>
-                                    <td class="pe-4 py-3"></td>
-                                </tr>
-                            </tfoot>
                         </table>
+                    </div>
+                    <div class="bg-light @(Model.Items.Count > 0 ? "" : "d-none") d-flex flex-column px-4" id="tableFooter">
+                        <div class="d-flex justify-content-end gap-4">
+                            <div class="text-end fw-bold py-2 border-0">Tạm tính</div>
+                            <div class="text-end fw-bold py-2 border-0" id="subTotal">@((Model.TotalAmount + Model.OrderDiscount).ToString(ViewConstants.NumberCustomFormat)) @ViewConstants.DefaultCurrencySymbol</div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-4">
+                            <div colspan="3" class="text-end fw-bold py-2 border-0">
+                                Giảm giá
+                            </div>
+                            <div class="text-end fw-bold py-2 border-0" id="discountDisplay">
+                                @if (Model.CanUpdateInfo && Model.PaymentStatus != (int) PaymentStatus.Paid)
+                                {
+                                    <a href="#" class="text-decoration-none text-danger" role="button" data-bs-toggle="modal" data-bs-target="#editDiscountModal">
+                                        -@Model.OrderDiscount.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol
+                                        <i class="bi bi-pencil-square"></i>
+                                        <span class="visually-hidden">Thay đổi</span>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-danger">
+                                        -@Model.OrderDiscount.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                        <div class="border-top d-flex justify-content-end gap-4">
+                            <div colspan="3" class="text-end fw-bold py-3">Tổng cộng</div>
+                            <div class="text-end fw-bold py-3 text-primary fs-5" id="grandTotal">
+                                @Model.TotalAmount.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Add Item Card -->
-            <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-header bg-white border-0 py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2 text-success"></i>Thêm Sản phẩm</h5>
-                </div>
-                <div class="card-body">
-                    <form id="addItemForm" method="post" action="@Url.Action("AddItem")" class="row g-3">
-                        <input type="hidden" name="OrderId" value="@Model.Id" />
-                        <input type="hidden" id="productId" name="ProductId" required />
-                        
-                        <div class="col-md-6 position-relative">
-                            <label class="form-label small fw-bold text-muted uppercase">Tìm kiếm sản phẩm</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                                <input id="productPickerDisplay" class="form-control border-start-0 ps-0" placeholder="Nhập tên sản phẩm..." autocomplete="off" />
+            @if (Model.CanUpdateOrderItems)
+            {
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white border-0 py-3">
+                        <h5 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2 text-success"></i>Thêm Sản phẩm</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="addItemForm" method="post" asp-action="AddOrderItem" class="row g-3">
+                            <input type="hidden" name="OrderId" value="@Model.Id" />
+                            <input type="text" id="productId" name="ProductId" class="visually-hidden" 
+                                data-val="true" data-val-required="Vui lòng chọn hàng hóa."/>
+                            <div class="col-md-6 position-relative">
+                                <label class="form-label small fw-bold text-muted uppercase">Tìm kiếm sản phẩm</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                                    <input id="productPickerDisplay" class="form-control border-start-0 ps-0" placeholder="Nhập tên sản phẩm..." autocomplete="off" />
+                                </div>
+                                <div id="productSuggestions" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1050; max-height: 250px; overflow-y: auto; display: none;"></div>
+                                <span class="small text-danger field-validation-valid" data-valmsg-for="ProductId" data-valmsg-replace="true"></span>
                             </div>
-                            <div id="productSuggestions" class="list-group position-absolute w-100 shadow-lg mt-1" style="z-index: 1050; max-height: 250px; overflow-y: auto; display: none;"></div>
-                        </div>
-                        
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold text-muted uppercase">Số lượng</label>
-                            <input type="number" id="quantityInput" name="Quantity" class="form-control" value="1" min="1" step="any" required />
-                        </div>
-                        
-                        <div class="col-md-3">
-                            <label class="form-label small fw-bold text-muted uppercase">Đơn giá</label>
-                            <div class="input-group">
-                                <input type="number" id="unitPriceInput" name="UnitPrice" class="form-control border-end-0" placeholder="0" min="0" step="any" required />
-                                <span class="input-group-text bg-white border-start-0 text-muted small">đ</span>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-muted uppercase" for="quantityInput">Số lượng</label>
+                                <input type="number" id="quantityInput" name="Quantity" class="form-control" value="" min="1" step="any" 
+                                       placeholder="0" data-val="true" disabled
+                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
+                                       data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng."/>
+                                <span class="small text-danger field-validation-valid" data-valmsg-for="Quantity" data-valmsg-replace="true"></span>
                             </div>
-                        </div>
-                        
-                        <div class="col-12 mt-4 text-end">
-                            <button type="submit" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm">
-                                <i class="bi bi-plus-lg me-1"></i> Thêm vào đơn hàng
-                            </button>
-                        </div>
-                    </form>
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold text-muted uppercase" for="unitPriceInput">Đơn giá</label>
+                                <div class="input-group">
+                                    <input type="number" id="unitPriceInput" name="UnitPrice" class="form-control border-end-0"
+                                        placeholder="0" min="0" step="any" data-val="true" disabled
+                                        data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
+                                        data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
+                                    <span class="input-group-text bg-white border-start-0 text-muted small">@ViewConstants.DefaultCurrencySymbol</span>
+                                </div>
+                                <span class="small text-danger field-validation-valid" data-valmsg-for="UnitPrice" data-valmsg-replace="true"></span>
+                            </div>
+                            <div class="col-12 mt-4 text-end">
+                                <button type="submit" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm" id="btnAddItemSubmit" disabled>
+                                    <i class="bi bi-plus-lg me-1"></i> 
+                                    Thêm vào đơn hàng
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-            </div>
+            }
         </div>
 
         <!-- Sidebar -->
-        <div class="col-lg-4">
+        <div class="col-lg-4 order-0 order-lg-1">
             <!-- Order Status Card -->
             <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
                 <div class="card-body p-0">
                     <div class="p-4 text-center @GetStatusBadgeClass(Model.Status) text-white bg-gradient">
                         <div class="small fw-normal mb-1 opacity-75 text-uppercase letter-spacing-1">Trạng thái đơn hàng</div>
                         <div class="fs-3 fw-bold">@GetStatusText(Model.Status)</div>
-                    </div>
-                    <div class="p-4">
-                        <form asp-action="ChangeStatus" method="post">
-                            <input type="hidden" name="OrderId" value="@Model.Id" />
-                            <div class="mb-3">
-                                <label class="form-label small fw-bold text-muted">Cập nhật trạng thái</label>
-                                <select name="Status" class="form-select border-0 bg-light rounded-3" onchange="this.form.submit()">
-                                    <option value="0" selected="@(Model.Status == 0)">Đang chờ</option>
-                                    <option value="1" selected="@(Model.Status == 1)">Đang xử lý</option>
-                                    <option value="2" selected="@(Model.Status == 2)">Hoàn thành</option>
-                                    <option value="3" selected="@(Model.Status == 3)">Đã hủy</option>
-                                </select>
+                        @if (Model.Status == (int) OrderStatus.Cancelled) {
+                            <div class="text-warning opacity-75 italic">
+                                <span class="fw-medium">Lý do:</span> "@Model.CancellationReason"
                             </div>
-                        </form>
+                        } 
                     </div>
                 </div>
             </div>
+            
+            @if (Model.CanCancelOrder) {
+                <div class="mb-4 d-grid d-lg-none">
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                        <i class="bi bi-trash"></i> Hủy đơn hàng này
+                    </button>
+                </div>
+            }
 
             <!-- Customer Card -->
             <div class="card border-0 shadow-sm rounded-4 mb-4">
                 <div class="card-header bg-white border-0 py-3">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-person-circle me-2 text-primary"></i>Khách hàng</h5>
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-person-circle me-2 text-primary"></i>
+                        Khách hàng
+                    </h5>
                 </div>
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-4">
@@ -270,11 +306,31 @@
                         </div>
                         <div>
                             <div class="fs-5 fw-bold">@Model.CustomerName</div>
-                            <div class="text-muted small">ID: @Model.CustomerId.ToString()[..8]...</div>
+                            <div>
+                                @if (!string.IsNullOrEmpty(Model.CustomerPhoneNumber))
+                                {
+                                    <a href="tel:@Model.CustomerPhoneNumber" class="text-decoration-none text-muted small">
+                                        <i class="bi bi-telephone me-1"></i>
+                                        @Model.CustomerPhoneNumber
+                                    </a>
+                                }
+                            </div>
+                            <div>
+                                @if (!string.IsNullOrEmpty(Model.CustomerAddress))
+                                {
+                                    var encodedAddress = MyUrlEncoder.Encode(Model.CustomerAddress);
+                                    <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank"
+                                       class="text-decoration-none text-muted small">
+                                        <i class="bi bi-geo-alt me-1"></i>
+                                        @Model.CustomerAddress
+                                    </a>
+                                }
+                            </div>
                         </div>
                     </div>
-                    <a asp-controller="Customer" asp-action="Edit" asp-route-id="@Model.CustomerId" class="btn btn-sm btn-outline-primary w-100 rounded-3">
-                        <i class="bi bi-eye me-1"></i> Xem thông tin khách hàng
+                    <a asp-controller="Customer" asp-action="Edit" asp-route-id="@Model.CustomerId" class="btn btn-sm btn-outline-secondary w-100 rounded-3">
+                        <i class="bi bi-eye me-1"></i> 
+                        Xem thông tin
                     </a>
                 </div>
             </div>
@@ -282,14 +338,18 @@
             <!-- Note Card -->
             <div class="card border-0 shadow-sm rounded-4">
                 <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-sticky me-2 text-warning"></i>Ghi chú</h5>
-                    <button type="button" class="btn btn-sm btn-link p-0" onclick="editNote()">
-                         <i class="bi bi-pencil small"></i>
-                    </button>
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-sticky me-2 text-info"></i>Ghi chú</h5>
+                    @if (Model.CanUpdateInfo)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#changeNoteModal">
+                            <i class="bi bi-pencil small"></i>
+                            Cập nhật
+                        </button>
+                    }
                 </div>
                 <div class="card-body bg-light border-radius-bottom-4">
                     <p class="mb-0 text-muted italic" id="orderNoteText">
-                        @(string.IsNullOrEmpty(Model.Note) ? "Không có ghi chú cho đơn hàng này." : Model.Note)
+                        @(string.IsNullOrEmpty(Model.Note) ? "-" : Model.Note)
                     </p>
                 </div>
             </div>
@@ -298,30 +358,33 @@
             <div class="card border-0 shadow-sm rounded-4 mt-4">
                 <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-wallet2 me-2 text-success"></i>Thanh toán</h5>
-                    @if (Model.PaymentStatus == 0 && Model.Status != 3) {
+                    @if (Model.CanUpdateInfo && Model.PaymentStatus == (int) PaymentStatus.Pending) {
                         <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#paymentModal">
-                            Xác nhận thanh toán
+                            <i class="bi bi-pencil small"></i>
+                            Cập nhật
                         </button>
                     }
                 </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Trạng thái:</span>
-                        <span class="fw-bold @(Model.PaymentStatus == 1 ? "text-success" : (Model.PaymentStatus == 0 ? "text-warning" : "text-danger"))">@GetPaymentStatusText(Model.PaymentStatus)</span>
+                        <span class="fw-bold @(Model.PaymentStatus == 1 ? "text-success" : (Model.PaymentStatus == 0 ? "text-warning" : "text-danger"))">
+                            @GetPaymentStatusText(Model.PaymentStatus)
+                        </span>
                     </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Phương thức:</span>
-                        <span class="fw-medium">@GetPaymentMethodText(Model.PaymentMethod)</span>
-                    </div>
-                    @if (Model.PaidOnUtc.HasValue) {
+                    @if (Model.PaidOn.HasValue) {
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Phương thức:</span>
+                            <span class="fw-medium">@GetPaymentMethodText(Model.PaymentMethod)</span>
+                        </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span class="text-muted">Ngày trả:</span>
-                            <span class="fw-medium">@Model.PaidOnUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                            <span class="fw-medium">@Model.PaidOn.Value.ToString(ViewConstants.DefaultDateTimeFormat)</span>
                         </div>
                     }
                     @if (!string.IsNullOrEmpty(Model.PaymentNote)) {
-                        <div class="mt-3 p-3 bg-light rounded-3">
-                            <p class="small mb-0 italic">"@Model.PaymentNote"</p>
+                        <div class="alert alert-info p-2 mt-2 text-muted italic">
+                            @Model.PaymentNote
                         </div>
                     }
                 </div>
@@ -330,9 +393,10 @@
             <!-- Shipping Card -->
             <div class="card border-0 shadow-sm rounded-4 mt-4">
                 <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-truck me-2 text-info"></i>Vận chuyển</h5>
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-truck me-2 text-warning"></i>Vận chuyển</h5>
                     @if (Model.Status != 3 && Model.ShippingStatus != 2) {
-                        <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#shippingModal">
+                        <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#shippingModal">
+                            <i class="bi bi-pencil small"></i>
                             Cập nhật
                         </button>
                     }
@@ -342,298 +406,354 @@
                         <span class="text-muted">Trạng thái:</span>
                         <span class="fw-bold @(Model.ShippingStatus == 2 ? "text-success" : "text-info")">@GetShippingStatusText(Model.ShippingStatus)</span>
                     </div>
+                    @if (Model.ShippedOn.HasValue) {
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Ngày giao:</span>
+                                <span class="fw-medium">@Model.ShippedOn.Value.ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                            </div>
+                            @if (!string.IsNullOrEmpty(Model.ShippingNote)) {
+                                <div class="alert alert-info p-2 mt-2 text-muted italic">
+                                    @Model.ShippingNote
+                                </div>
+                            }
+                        </div>
+                    }
                     <div class="mb-2">
-                        <span class="text-muted d-block mb-1">Địa chỉ giao hàng:</span>
-                        <span class="fw-medium">@(string.IsNullOrEmpty(Model.ShippingAddress) ? "Chưa có địa chỉ" : Model.ShippingAddress)</span>
+                        <div class="mb-1">
+                            <span class="text-muted">
+                                Địa chỉ giao hàng
+                            </span>
+                        </div>
+                        <span class="fw-medium">
+                            @if (!string.IsNullOrEmpty(Model.ShippingAddress))
+                            {
+                                var encodedAddress = MyUrlEncoder.Encode(Model.ShippingAddress);
+                                @Model.ShippingAddress
+                                <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank" class="ps-2 text-muted text-decoration-none small">
+                                    <i class="bi bi-geo-alt me-1"></i> Xem
+                                </a>
+                            }
+                            else
+                            {
+                                @:Chưa có địa chỉ
+                            }
+                        </span>
                     </div>
-                    @if (Model.ShippedOnUtc.HasValue) {
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Ngày giao:</span>
-                            <span class="fw-medium">@Model.ShippedOnUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
-                        </div>
-                    }
-                    @if (!string.IsNullOrEmpty(Model.ShippingNote)) {
-                        <div class="mt-3 p-3 bg-light rounded-3">
-                            <p class="small mb-0 italic">"@Model.ShippingNote"</p>
-                        </div>
-                    }
                 </div>
             </div>
 
-            <!-- Cancellation -->
-            @if (Model.Status == 3) {
-            <div class="card border-0 shadow-sm rounded-4 mt-4 border-danger border border-2">
-                <div class="card-body">
-                    <h5 class="text-danger fw-bold"><i class="bi bi-x-circle-fill me-2"></i>Đơn hàng đã hủy</h5>
-                    <p class="mb-0 mt-2"><strong>Lý do:</strong> @Model.CancellationReason</p>
+            @if (Model.CanCancelOrder) {
+                <div class="mt-4 d-none d-lg-grid">
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                        <i class="bi bi-trash"></i> Hủy đơn hàng này
+                    </button>
                 </div>
-            </div>
-            } else if (Model.Status != 2) {
-            <div class="mt-4 text-end">
-                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal">
-                    <i class="bi bi-trash"></i> Hủy đơn hàng này
-                </button>
-            </div>
             }
         </div>
     </div>
 </div>
 
-<!-- Edit Item Modal -->
-<div class="modal fade" id="editItemModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Chỉnh sửa sản phẩm</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body py-4">
-                <div id="modalProductDisplay" class="alert alert-light border-0 rounded-3 mb-4 d-flex align-items-center">
-                    <i class="bi bi-box-seam me-3 fs-4 text-primary"></i>
-                    <div>
-                        <div class="small text-muted mb-1 text-uppercase fw-bold letter-spacing-1">Sản phẩm đang chọn</div>
-                        <div id="editProductName" class="fw-bold fs-5">Product Name</div>
-                    </div>
+@if (Model.CanUpdateOrderItems)
+{
+    <!-- Edit item modal -->
+    <div class="modal fade" id="editItemModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Chỉnh sửa sản phẩm</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                
-                <form id="editItemForm" method="post" action="#">
-                    <input type="hidden" id="editItemId" name="ItemId" />
-                    <input type="hidden" name="OrderId" value="@Model.Id" />
-                    
-                    <div id="modalProductInfo" class="d-none">
-                        <div class="alert alert-light border-0 rounded-3 mb-3 d-flex align-items-start gap-3">
-                            <img class="img-fluid img-thumbnail d-none" style="width: 70px;" id="editProductHasPicture" alt="Product image" />
+                <form id="editItemForm" method="post" asp-action="UpdateOrderItem">
+                    <div class="modal-body py-4">
+                        <div id="modalProductDisplay" class="mb-3 d-flex align-items-center gap-3">
+                            <img class="img-fluid img-thumbnail d-none" style="width: 70px;" id="editProductHasPicture" alt="" />
                             <i class="bi bi-box-seam-fill text-primary me-2 fs-5" id="editProductNoPicture"></i>
-                            <div>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="small text-muted">Sản phẩm đang chọn</div>
                                 <div class="fw-bold" id="editProductName"></div>
                                 <div class="text-muted small">Tồn kho: <span id="editProductStock"></span></div>
                             </div>
                         </div>
+                        <input type="hidden" id="editItemId" name="ItemId" />
+                        <input type="hidden" name="OrderId" value="@Model.Id" />
                         <div class="row g-3">
                             <div class="col-6">
                                 <label class="form-label small fw-bold text-muted" for="editQuantity">Số lượng</label>
                                 <input type="number" id="editQuantity" name="Quantity" class="form-control rounded-3"
-                                       value="1" min="0.01" step="any" data-val="true"
-                                       placeholder="0"
-                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
-                                       data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
+                                value="1" min="0.01" step="any" data-val="true"
+                                placeholder="0"
+                                data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
+                                data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
                                 <span class="small text-danger field-validation-valid" data-valmsg-for="Quantity" data-valmsg-replace="true"></span>
                             </div>
                             <div class="col-6">
                                 <label class="form-label small fw-bold text-muted noRefill" for="editUnitPrice">Đơn giá</label>
                                 <input type="number" id="editUnitPrice" name="UnitPrice" class="form-control rounded-3"
-                                       step="any" min="0" data-val="true"
-                                       placeholder="0"
-                                       data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
-                                       data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
+                                step="any" min="0" data-val="true"
+                                placeholder="0"
+                                data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
+                                data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
                                 <span class="small text-danger field-validation-valid" data-valmsg-for="UnitPrice" data-valmsg-replace="true"></span>
                             </div>
                         </div>
                     </div>
+                    <div class="modal-footer border-0 pt-0 pb-4">
+                        <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" id="submitEditItem" class="btn btn-primary px-4 rounded-3 shadow-sm">Lưu thay đổi</button>
+                    </div>
                 </form>
-            </div>
-            <div class="modal-footer border-0 pt-0 pb-4">
-                <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy bỏ</button>
-                <button type="button" id="submitEditItem" class="btn btn-primary px-4 rounded-3 shadow-sm">Lưu thay đổi</button>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Add Product Modal -->
-<div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Thêm sản phẩm</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="#" method="post">
-                <div class="modal-body py-4">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted uppercase">Tìm kiếm sản phẩm</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-box text-muted"></i></span>
-                            <input type="text" id="productSearch" class="form-control border-start-0 ps-0"
-                                   placeholder="Nhập tên sản phẩm..." autocomplete="off">
+    <!-- Add product modal -->
+    <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Thêm sản phẩm</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="#" method="post">
+                    <div class="modal-body py-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted uppercase">Tìm kiếm sản phẩm</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0"><i class="bi bi-box text-muted"></i></span>
+                                <input type="text" id="productSearch" class="form-control border-start-0 ps-0"
+                                placeholder="Nhập tên sản phẩm..." autocomplete="off">
+                            </div>
+                            <div id="productSuggestions" class="list-group shadow-lg mt-1"
+                            style="display: none; max-height: 200px; overflow-y: auto;"></div>
                         </div>
-                        <div id="productSuggestions" class="list-group shadow-lg mt-1"
-                             style="display: none; max-height: 200px; overflow-y: auto;"></div>
+
+                        <div id="modalProductInfo" class="d-none">
+                            <div class="alert alert-light border-0 rounded-3 mb-3 d-flex align-items-start gap-3">
+                                <img class="img-fluid img-thumbnail d-none" style="width: 70px;" id="itemProductHasPicture" alt="Product image" />
+                                <i class="bi bi-box-seam-fill text-primary me-2 fs-5" id="itemProductNoPicture"></i>
+                                <div>
+                                    <div class="fw-bold" id="itemProductName"></div>
+                                    <div class="text-muted small">Tồn kho: <span id="itemProductStock"></span></div>
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold text-muted" for="itemQuantity">Số lượng</label>
+                                    <input type="number" id="itemQuantity" name="itemProductQuantity" class="form-control rounded-3"
+                                    value="1" min="0.01" step="any" data-val="true"
+                                    placeholder="0"
+                                    data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
+                                    data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
+                                    <span class="small text-danger field-validation-valid" data-valmsg-for="itemProductQuantity" data-valmsg-replace="true"></span>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold text-muted noRefill" for="itemUnitPrice">Đơn giá</label>
+                                    <input type="number" id="itemUnitPrice" name="itemProductUnitPrice" class="form-control rounded-3"
+                                    step="any" min="0" data-val="true"
+                                    placeholder="0"
+                                    data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
+                                    data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
+                                    <span class="small text-danger field-validation-valid" data-valmsg-for="itemProductUnitPrice" data-valmsg-replace="true"></span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                    <div class="modal-footer border-0 pt-0 pb-4">
+                        <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" id="addItemToTable" class="btn btn-success px-4 rounded-3 shadow-sm d-none noDisabled">
+                            <i class="bi bi-plus-lg me-1"></i>
+                            Thêm vào
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
 
-                    <div id="modalProductInfo" class="d-none">
-                        <div class="alert alert-light border-0 rounded-3 mb-3 d-flex align-items-start gap-3">
-                            <img class="img-fluid img-thumbnail d-none" style="width: 70px;" id="itemProductHasPicture" alt="Product image" />
-                            <i class="bi bi-box-seam-fill text-primary me-2 fs-5" id="itemProductNoPicture"></i>
-                            <div>
-                                <div class="fw-bold" id="itemProductName"></div>
-                                <div class="text-muted small">Tồn kho: <span id="itemProductStock"></span></div>
+@if (Model.CanUpdateInfo) {
+    if (Model.PaymentStatus != (int)PaymentStatus.Paid) {
+        <!-- Payment modal -->
+        <div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold text-success">Xác nhận thanh toán</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-4">
+                        <form id="paymentForm" method="post" asp-action="MarkAsPaid">
+                            <input type="hidden" name="OrderId" value="@Model.Id" />
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted small" for="paymentMethod">Phương thức thanh toán</label>
+                                <select id="paymentMethod" name="PaymentMethod" class="form-select rounded-3">
+                                    @foreach(var method in Enum.GetValues<PaymentMethod>().OfType<int>())
+                                    {
+                                        <option value="@method">@GetPaymentMethodText(method)</option>
+                                    }
+                                </select>
                             </div>
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-muted" for="itemQuantity">Số lượng</label>
-                                <input type="number" id="itemQuantity" name="itemProductQuantity" class="form-control rounded-3"
-                                       value="1" min="0.01" step="any" data-val="true"
-                                       placeholder="0"
-                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
-                                       data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
-                                <span class="small text-danger field-validation-valid" data-valmsg-for="itemProductQuantity" data-valmsg-replace="true"></span>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted small" for="paymentNote">Mã giao dịch / Ghi chú</label>
+                                <input type="text" id="paymentNote" name="Note" class="form-control rounded-3" placeholder="Nhập mã giao dịch hoặc ghi chú" />
                             </div>
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-muted noRefill" for="itemUnitPrice">Đơn giá</label>
-                                <input type="number" id="itemUnitPrice" name="itemProductUnitPrice" class="form-control rounded-3"
-                                       step="any" min="0" data-val="true"
-                                       placeholder="0"
-                                       data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
-                                       data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
-                                <span class="small text-danger field-validation-valid" data-valmsg-for="itemProductUnitPrice" data-valmsg-replace="true"></span>
+                            <div class="text-end mt-4">
+                                <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
+                                <button type="submit" class="btn btn-success px-4 rounded-3 shadow-sm">Xác nhận đã thanh toán</button>
                             </div>
-                        </div>
+                        </form>
                     </div>
                 </div>
-                <div class="modal-footer border-0 pt-0 pb-4">
-                    <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" id="addItemToTable" class="btn btn-success px-4 rounded-3 shadow-sm d-none noDisabled">
-                        <i class="bi bi-plus-lg me-1"></i>
-                        Thêm vào
-                    </button>
+            </div>
+        </div>
+    }
+
+    if (Model.ShippingStatus != (int) ShippingStatus.Shipped) {
+        <!-- Shipping modal -->
+        <div class="modal fade" id="shippingModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold text-warning">Cập nhật Vận chuyển</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-4">
+                        <form id="shippingForm" method="post" asp-action="UpdateShipping">
+                            <input type="hidden" name="OrderId" value="@Model.Id" />
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted small" for="shippingStatus">Trạng thái giao hàng</label>
+                                <select id="shippingStatus" name="ShippingStatus" class="form-select rounded-3">
+                                    @foreach(var status in Enum.GetValues<ShippingStatus>().OfType<int>())
+                                    {
+                                        <option value="@status" selected="@(Model.ShippingStatus == status)">@GetShippingStatusText(status)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted small" for="shippingAddress">Địa chỉ giao hàng</label>
+                                <textarea id="shippingAddress" name="Address" class="form-control rounded-3" rows="2"
+                                    data-val="true" data-val-required="Vui lòng nhập địa chỉ giao hàng.">@Model.ShippingAddress</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-muted small" for="shippingNote">Mã vận chuyển / Ghi chú</label>
+                                <input type="text" id="shippingNote" name="Note" class="form-control rounded-3" value="@Model.ShippingNote" placeholder="Nhập mã vận chuyển hoặc ghi chú" />
+                            </div>
+                            <div class="text-end mt-4">
+                                <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
+                                <button type="submit" class="btn btn-warning px-4 rounded-3 shadow-sm">Cập nhật</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Discount Modal -->
-<div class="modal fade" id="editDiscountModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Giảm giá đơn hàng</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body py-3">
-                <form id="editDiscountForm">
-                    <input type="hidden" name="Id" value="@Model.Id" />
-                    <label class="form-label small fw-bold text-muted">MỨC GIẢM GIÁ (Đ)</label>
-                    <input type="number" name="OrderDiscount" class="form-control rounded-3" value="@Model.OrderDiscount" min="0" step="any" required />
-                </form>
-            </div>
-            <div class="modal-footer border-0 pt-0 pb-4">
-                <button type="button" id="submitDiscount" class="btn btn-primary w-100 rounded-3 shadow-sm">Cập nhật</button>
             </div>
         </div>
-    </div>
-</div>
+    }
 
-<!-- Payment Modal -->
-<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Xác nhận thanh toán</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body py-4">
-                <form id="paymentForm" method="post" action="@Url.Action("MarkAsPaid")">
-                    <input type="hidden" name="OrderId" value="@Model.Id" />
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-muted small">PHƯƠNG THỨC THANH TOÁN</label>
-                        <select name="PaymentMethod" class="form-select rounded-3" required>
-                            <option value="0">Tiền mặt</option>
-                            <option value="1">Chuyển khoản</option>
-                            <option value="2">COD</option>
-                            <option value="3">Khác</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-muted small">MÃ GIAO DỊCH / GHI CHÚ</label>
-                        <input type="text" name="Note" class="form-control rounded-3" placeholder="Ví dụ: CK VCB 123456" />
-                    </div>
-                    
-                    <div class="text-end mt-4">
-                        <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-success px-4 rounded-3 shadow-sm">Xác nhận đã thu tiền</button>
-                    </div>
-                </form>
+    <!-- Change order note modal -->
+    <div class="modal fade" id="changeNoteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-info">Cập nhật ghi chú</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="changeNoteForm" method="post" asp-action="UpdateOrderNote">
+                        <input type="hidden" name="OrderId" value="@Model.Id" />
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small" for="orderNote">Ghi chú</label>
+                            <textarea id="orderNote" name="Note" class="form-control rounded-3" rows="3"
+                            placeholder="Nhập ghi chú cho đơn hàng"
+                            data-val-maxlength="Lý do hủy đơn tối đa 1000 ký tự." data-val-maxlength-max="1000">@Model.Note</textarea>
+                            <span class="small text-danger field-validation-valid" data-valmsg-for="Note" data-valmsg-replace="true"></span>
+                        </div>
+                        <div class="text-end mt-4 text-end">
+                            <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
+                            <button type="submit" class="btn btn-info px-4 rounded-3 shadow-sm">
+                                Cập nhật
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
+    if (Model.PaymentStatus != (int)PaymentStatus.Paid)
+    {
+        <!-- Edit discount modal -->
+        <div class="modal fade" id="editDiscountModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold">Giảm giá đơn hàng</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="editDiscountForm" method="post" asp-action="UpdateOrderDiscount">
+                        <div class="modal-body">
+                            <input type="hidden" name="OrderId" value="@Model.Id" />
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted" for="orderDiscount">Giảm giá</label>
+                                <input type="number" id="orderDiscount" name="OrderDiscount" class="form-control rounded-3" 
+                                value="@Model.OrderDiscount.ToString("#")" min="0" step="any" data-val="true"
+                                placeholder="0"
+                                data-val-range="Giảm giá phải lớn hơn hoặc bằng 0." data-val-range-min="0"
+                                data-val-number="Giảm giá không đúng." data-val-required="Vui lòng nhập giảm giá." />
+                                <span class="small text-danger field-validation-valid" data-valmsg-for="Reason" data-valmsg-replace="true"></span>
+                            </div>
 
-<!-- Shipping Modal -->
-<div class="modal fade" id="shippingModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Cập nhật Vận chuyển</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <div class="text-end mt-4 text-end">
+                                <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
+                                <button type="submit" class="btn btn-danger px-4 rounded-3 shadow-sm">
+                                    Lưu lại
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="modal-body py-4">
-                <form id="shippingForm" method="post" action="@Url.Action("UpdateShipping")">
-                    <input type="hidden" name="OrderId" value="@Model.Id" />
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-muted small">TRẠNG THÁI GIAO HÀNG</label>
-                        <select name="ShippingStatus" class="form-select rounded-3" required>
-                            <option value="0" selected="@(Model.ShippingStatus == 0)">Chưa giao</option>
-                            <option value="1" selected="@(Model.ShippingStatus == 1)">Đang giao</option>
-                            <option value="2" selected="@(Model.ShippingStatus == 2)">Đã giao hàng (Hoàn tất)</option>
-                            <option value="3" selected="@(Model.ShippingStatus == 3)">Bị trả lại / Không nhận</option>
-                        </select>
-                    </div>
+        </div>
+    }
+}
 
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-muted small">ĐỊA CHỈ GIAO HÀNG</label>
-                        <textarea name="Address" class="form-control rounded-3" rows="2">@Model.ShippingAddress</textarea>
+<!-- Cancel modal -->
+@if (Model.CanCancelOrder)
+{
+    <div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-danger">Xác nhận hủy đơn hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning mb-3 border-0 rounded-3 small">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i> 
+                        Hệ thống sẽ tự động hoàn trả số lượng vào Tồn kho (trạng thái Available).
                     </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-muted small">MÃ VẬN ĐƠN / GHI CHÚ VẬN CHUYỂN</label>
-                        <input type="text" name="Note" class="form-control rounded-3" value="@Model.ShippingNote" placeholder="Ví dụ: GHTK 9999123" />
-                    </div>
-                    
-                    <div class="text-end mt-4">
-                        <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-info text-white px-4 rounded-3 shadow-sm">Lưu cập nhật</button>
-                    </div>
-                </form>
+                    <form id="cancelForm" method="post" asp-action="CancelOrder">
+                        <input type="hidden" name="OrderId" value="@Model.Id" />
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small" for="cancelReason">Lý do hủy đơn</label>
+                            <textarea id="cancelReason" name="Reason" class="form-control rounded-3" rows="3"
+                            placeholder="Nhập lý do hủy đơn"
+                            data-val="true" data-val-required="Vui nhập lý do hủy đơn."
+                            data-val-maxlength="Lý do hủy đơn tối đa 1000 ký tự." data-val-maxlength-max="1000"></textarea>
+                            <span class="small text-danger field-validation-valid" data-valmsg-for="Reason" data-valmsg-replace="true"></span>
+                        </div>
+                        <div class="text-end mt-4 text-end">
+                            <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
+                            <button type="submit" class="btn btn-danger px-4 rounded-3 shadow-sm">
+                                Hủy đơn
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
-<!-- Cancel Modal -->
-<div class="modal fade" id="cancelModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold text-danger">Xác nhận hủy đơn hàng</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="alert alert-warning m-3 border-0 rounded-3 small">
-                <i class="bi bi-exclamation-triangle-fill me-2"></i> Hệ thống sẽ tự động hoàn trả số lượng vào Tồn kho (trạng thái Available).
-            </div>
-            <div class="modal-body py-2">
-                <form id="cancelForm" method="post" action="@Url.Action("CancelOrder")">
-                    <input type="hidden" name="OrderId" value="@Model.Id" />
-                    
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-muted small">LÝ DO HỦY ĐƠN HÀNG</label>
-                        <textarea name="Reason" class="form-control rounded-3" rows="3" required placeholder="Vui lòng nhập lý do hủy..."></textarea>
-                    </div>
-                    
-                    <div class="text-end mt-4 text-end">
-                        <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
-                        <button type="submit" class="btn btn-danger px-4 rounded-3 shadow-sm">Xác nhận Hủy đơn</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/modules/order.details.js" type="module"></script>

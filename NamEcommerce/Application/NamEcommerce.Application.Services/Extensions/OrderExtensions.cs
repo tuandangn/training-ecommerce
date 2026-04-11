@@ -28,7 +28,8 @@ public static class OrderExtensions
             CreatedByUserId = order.CreatedByUserId,
             CreatedOnUtc = order.CreatedOnUtc,
             CanUpdateInfo = order.CanUpdateInfo,
-            CanUpdateOrderItems = order.CanUpdateOrderItems
+            CanUpdateOrderItems = order.CanUpdateOrderItems,
+            CanCancelOrder = order.CanCancelOrder
         };
         foreach (var orderItem in order.Items)
         {

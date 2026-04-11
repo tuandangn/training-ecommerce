@@ -294,7 +294,8 @@ public sealed class OrderAppService : IOrderAppService
         await _orderManager.MarkAsPaidAsync(new MarkAsPaidDto
         {
             OrderId = dto.OrderId,
-            PaymentMethod = paymentMethod
+            PaymentMethod = paymentMethod,
+            Note = dto.Note
         }).ConfigureAwait(false);
 
         return new MarkOrderAsPaidResultAppDto

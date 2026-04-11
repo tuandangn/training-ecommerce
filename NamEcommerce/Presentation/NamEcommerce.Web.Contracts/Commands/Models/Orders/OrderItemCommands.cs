@@ -11,10 +11,3 @@ public sealed record UpdateOrderItemCommand : IRequest<CommonResultModel>
     public required decimal Quantity { get; init; }
     public required decimal UnitPrice { get; init; }
 }
-
-[Serializable]
-public sealed record DeleteOrderItemCommand : IRequest<CommonResultModel>
-{
-    public required Guid OrderId { get; init; }
-    public required Guid ItemId { get; init; }
-}

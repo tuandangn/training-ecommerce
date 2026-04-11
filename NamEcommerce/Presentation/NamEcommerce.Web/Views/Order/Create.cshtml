@@ -69,7 +69,7 @@
                                     <i class="bi bi-box-seam me-2 text-success"></i>
                                     Danh sách hàng hóa
                                 </h5>
-                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill"
+                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill"
                                         data-bs-toggle="modal" data-bs-target="#addProductModal">
                                     <i class="bi bi-plus-lg"></i>
                                     <span class="d-none d-lg-inline ms-1">
@@ -150,19 +150,21 @@
                                 </div>
                                 <div class="bg-light @(Model.Items.Count > 0 ? "" : "d-none") d-flex flex-column px-4" id="tableFooter">
                                     <div class="d-flex justify-content-end gap-4">
-                                        <div class="text-end fw-bold py-2 border-0">TẠM TÍNH</div>
-                                        <div class="text-end fw-bold py-2 border-0" id="subTotal">@Model.OrderSubTotal @ViewConstants.DefaultCurrencySymbol</div>
+                                        <div class="text-end fw-bold py-2 border-0">Tạm tính</div>
+                                        <div class="text-end fw-bold py-2 border-0" id="subTotal">
+                                            @Model.OrderSubTotal.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol
+                                        </div>
                                     </div>
                                     <div class="d-flex justify-content-end gap-4">
-                                        <div colspan="3" class="text-end fw-bold py-2 border-0">GIẢM GIÁ</div>
+                                        <div colspan="3" class="text-end fw-bold py-2 border-0">Giảm giá</div>
                                         <div class="text-end fw-bold py-2 border-0 text-danger" id="discountDisplay">
-                                            - @(Model.OrderDiscount ?? 0) đ
+                                            - @((Model.OrderDiscount ?? 0).ToString(ViewConstants.NumberCustomFormat)) @ViewConstants.DefaultCurrencySymbol
                                         </div>
                                     </div>
                                     <div class="border-top d-flex justify-content-end gap-4">
-                                        <div colspan="3" class="text-end fw-bold py-3">TỔNG CỘNG</div>
+                                        <div colspan="3" class="text-end fw-bold py-3">Tổng cộng</div>
                                         <div class="text-end fw-bold py-3 text-primary fs-5" id="grandTotal">
-                                            @Model.OrderTotal @ViewConstants.DefaultCurrencySymbol
+                                            @Model.OrderTotal.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol
                                         </div>
                                     </div>
                                 </div>

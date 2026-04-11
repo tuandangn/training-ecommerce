@@ -5,11 +5,15 @@ function createModal(id, title, body) {
     const modalElement = document.getElementById(id);
     const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
 
-    const titleElement = modalElement.querySelector('.modal-header .modal-title');
-    if (titleElement) titleElement.innerHTML = title;
+    if (title) {
+        const titleElement = modalElement.querySelector('.modal-header .modal-title');
+        if (titleElement) titleElement.innerHTML = title;
+    }
 
-    const bodyElement = modalElement.querySelector('.modal-body');
-    if (bodyElement) bodyElement.innerHTML = body;
+    if (body) {
+        const bodyElement = modalElement.querySelector('.modal-body');
+        if (bodyElement) bodyElement.innerHTML = body;
+    }
 
     return [modal, modalElement];
 }
@@ -47,6 +51,9 @@ function confirm(title, body) {
     return promise;
 }
 
-function toast() { }
+const toast = function (...args) {
+    var pm = Swal.fire(...args);
+    return pm;
+}
 
-export { confirm, toast };
+export { confirm, toast, createModal }
