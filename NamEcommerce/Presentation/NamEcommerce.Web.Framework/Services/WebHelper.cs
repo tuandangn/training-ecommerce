@@ -1,21 +1,19 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using NamEcommerce.Web.Contracts.Services;
+using System.Text.Encodings.Web;
 
 namespace NamEcommerce.Web.Framework.Services;
 
-public sealed class WebHelper : IWebHelper
+public sealed class WebHelper(IHttpContextAccessor httpContextAccessor, UrlEncoder urlEncoder) : IWebHelper
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-
-    public WebHelper(IHttpContextAccessor httpContextAccessor)
-    {
-        _httpContextAccessor = httpContextAccessor;
-    }
+    public string EncodeUrlComponent(string? urlComponent)
+        => string.IsNullOrEmpty(urlComponent) ? string.Empty : urlEncoder.Encode(urlComponent);
+    
 
     public bool IsMatchRouteInfo(string controller, string? action = null)
     {
-        var httpContext = _httpContextAccessor.HttpContext;
+        var httpContext = httpContextAccessor.HttpContext;
         if (httpContext is null)
             return false;
 

@@ -59,6 +59,7 @@ public sealed class OrderController : BaseAuthorizedController
             OrderDiscount = model.OrderDiscount,
             Note = model.Note,
             ExpectedShippingDate = model.ExpectedShippingDate!.Value,
+            ShippingAddress = model.ShippingAddress!,
             Items = model.Items.Select(item => new OrderItemModel
             {
                 ProductId = item.ProductId ?? default,
@@ -91,7 +92,7 @@ public sealed class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> CancelOrder(CancelOrderModel model)
+    public async Task<IActionResult> LockOrder(LockOrderModel model)
     {
         if (!ModelState.IsValid)
             return Json(new { success = false, message = GetErrorMessage() });
@@ -103,10 +104,10 @@ public sealed class OrderController : BaseAuthorizedController
         if (order is null)
             return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
 
-        if (!order.CanCancelOrder)
-            return Json(new { success = false, message = "Đơn hàng không thể hủy lúc này." });
+        if (!order.CanLockOrder)
+            return Json(new { success = false, message = "Đơn hàng không thể khóa lúc này." });
 
-        var result = await _mediator.Send(new CancelOrderCommand(model.OrderId, model.Reason!));
+        var result = await _mediator.Send(new LockOrderCommand(model.OrderId, model.Reason!));
 
         if (!result.Success)
             return Json(new { success = false, message = result.ErrorMessage });
@@ -242,40 +243,10 @@ public sealed class OrderController : BaseAuthorizedController
         if (!order.CanUpdateInfo)
             return Json(new { success = false, message = "Đơn hàng không thể thay đổi lúc này." });
 
-        if (order.PaymentStatus == (int)PaymentStatus.Paid)
-            return Json(new { success = false, message = "Đơn hàng đã được thanh toán trước đó." });
-
         if ((model.OrderDiscount ?? 0) > order.TotalAmount)
             return Json(new { success = false, message = "Giảm giá không được lớn hơn tổng đơn." });
 
         var result = await _mediator.Send(new UpdateOrderDiscountCommand(model.OrderId, model.OrderDiscount));
-
-        if (!result.Success)
-            return Json(new { success = false, message = result.ErrorMessage });
-
-        return Json(new { success = true, message = string.Empty });
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> MarkAsPaid(MarkOrderAsPaidModel model)
-    {
-        if (!ModelState.IsValid)
-            return Json(new { success = false, message = GetErrorMessage() });
-
-        var order = await _mediator.Send(new GetOrderByIdQuery
-        {
-            Id = model.OrderId
-        });
-        if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
-
-        if (!order.CanUpdateInfo)
-            return Json(new { success = false, message = "Đơn hàng không thể thay đổi lúc này." });
-
-        if (order.PaymentStatus == (int)PaymentStatus.Paid)
-            return Json(new { success = false, message = "Đơn hàng đã được thanh toán trước đó." });
-
-        var result = await _mediator.Send(new MarkOrderAsPaidCommand(model.OrderId, model.PaymentMethod ?? default, model.Note));
 
         if (!result.Success)
             return Json(new { success = false, message = result.ErrorMessage });
@@ -299,16 +270,11 @@ public sealed class OrderController : BaseAuthorizedController
         if (!order.CanUpdateInfo)
             return Json(new { success = false, message = "Đơn hàng không thể thay đổi lúc này." });
 
-        if (order.ShippingStatus == (int)ShippingStatus.Shipped)
-            return Json(new { success = false, message = "Đơn hàng đã được giao trước đó." });
-
-        var result = await _mediator.Send(new UpdateOrderShippingCommand(model.OrderId, model.ShippingStatus, model.Address, model.Note));
+        var result = await _mediator.Send(new UpdateOrderShippingCommand(model.OrderId, model.Address));
 
         if (!result.Success)
             return Json(new { success = false, message = result.ErrorMessage });
 
         return Json(new { success = true, message = string.Empty });
     }
-
 }
-

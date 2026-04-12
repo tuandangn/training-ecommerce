@@ -6,7 +6,7 @@ namespace NamEcommerce.Domain.Entities.Customers;
 [Serializable]
 public sealed record Customer : AppAggregateEntity
 {
-    public Customer(Guid id, string fullName, string phoneNumber, string address)
+    internal Customer(Guid id, string fullName, string phoneNumber, string address)
         : base(id)
     {
         FullName = fullName;

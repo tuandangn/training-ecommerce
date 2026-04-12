@@ -8,28 +8,22 @@ public sealed record OrderModel
     public required decimal TotalAmount { get; init; }
     public required Guid CustomerId { get; init; }
 
+    public DateTime? ExpectedShippingDate { get; set; }
+
     public string? CustomerName { get; set; }
     public string? CustomerAddress { get; set; }
     public string? CustomerPhoneNumber { get; set; }
 
     public decimal OrderDiscount { get; set; }
     public int Status { get; set; }
-    public string? CancellationReason { get; set; }
+    public string? LockOrderReason { get; set; }
 
     public string? Note { get; set; }
 
-    public int PaymentStatus { get; set; }
-    public int? PaymentMethod { get; set; }
-    public DateTime? PaidOn { get; set; }
-    public string? PaymentNote { get; set; }
-
-    public int ShippingStatus { get; set; }
     public string? ShippingAddress { get; set; }
-    public DateTime? ShippedOn { get; set; }
-    public string? ShippingNote { get; set; }
 
     public bool CanUpdateInfo { get; init; }
-    public bool CanCancelOrder { get; init; }
+    public bool CanLockOrder { get; init; }
     public bool CanUpdateOrderItems { get; init; }
 
     public IList<OrderItemModel> Items { get; init; } = [];

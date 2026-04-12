@@ -23,7 +23,7 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
 
     public Task<ProfitLossSummaryAppDto> GetProfitLossSummaryAsync(DateTime? fromDate, DateTime? toDate)
     {
-        var ordersQuery = _orderDataReader.DataSource.Where(o => o.OrderStatus == OrderStatus.Completed);
+        var ordersQuery = _orderDataReader.DataSource;
 
         if (fromDate.HasValue)
             ordersQuery = ordersQuery.Where(o => o.CreatedOnUtc >= fromDate.Value.ToUniversalTime());

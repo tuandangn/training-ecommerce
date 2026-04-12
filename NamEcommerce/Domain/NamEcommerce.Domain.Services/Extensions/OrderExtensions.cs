@@ -11,25 +11,18 @@ public static class OrderExtensions
         {
             Code = order.Code,
             TotalAmount = order.OrderTotal,
-            OrderDiscount = order.OrderDiscount, // Important to map discount too
+            OrderDiscount = order.OrderDiscount,
             Status = order.OrderStatus,
             CustomerId = order.CustomerId,
             CreatedByUserId = order.CreatedByUserId,
             Note = order.Note,
-            PaymentStatus = order.PaymentStatus,
-            PaymentMethod = order.PaymentMethod,
-            PaidOnUtc = order.PaidOnUtc,
-            PaymentNote = order.PaymentNote,
-            ShippingStatus = order.ShippingStatus,
-            ShippingAddress = order.ShippingAddress,
-            ShippedOnUtc = order.ShippedOnUtc,
-            ShippingNote = order.ShippingNote,
-            CancellationReason = order.CancellationReason,
+            LockOrderReason = order.LockOrderReason,
             ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
+            ShippingAddress = order.ShippingAddress,
             CreatedOnUtc = order.CreatedOnUtc,
             CanUpdateOrderItems = order.CanUpdateOrderItems(),
             CanUpdateInfo = order.CanUpdateInfo(),
-            CanCancelOrder = order.CanCancelOrder()
+            CanLockOrder = order.CanLockOrder()
         };
 
         foreach (var orderItem in order.OrderItems)

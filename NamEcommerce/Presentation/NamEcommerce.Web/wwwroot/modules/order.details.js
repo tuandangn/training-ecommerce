@@ -186,15 +186,15 @@ import PromiseModal from "/modules/PromiseModal.js";
         }
     });
 
-    // Cancel
-    $('#cancelForm').on('submit', async function (e) {
+    // Lock
+    $('#lockForm').on('submit', async function (e) {
         e.preventDefault();
 
         if (!$(this).valid())
             return;
 
-        const cancelModal = new PromiseModal('#cancelModal');
-        await cancelModal.hide();
+        const lockModal = new PromiseModal('#lockModal');
+        await lockModal.hide();
 
         const data = $(this).serialize();
         try {
@@ -206,10 +206,10 @@ import PromiseModal from "/modules/PromiseModal.js";
             const result = await res.json();
 
             if (result.success) {
-                await toast('Thành công', 'Đã hủy đơn hàng.', 'success');
+                await toast('Thành công', 'Đã khóa đơn hàng này.', 'success');
                 location.reload();
             } else {
-                toast('Lỗi', result.message || 'Không thể hủy đơn hàng.', 'error');
+                toast('Lỗi', result.message || 'Không thể khóa đơn hàng.', 'error');
             }
         } catch (err) {
             toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
@@ -263,38 +263,7 @@ import PromiseModal from "/modules/PromiseModal.js";
             const changeNoteModal = new PromiseModal('#changeNoteModal');
             await changeNoteModal.hide();
 
-            const data = $(this).serialize();
-            try {
-                const res = await fetch(this.action, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: data
-                });
-                const result = await res.json();
-
-                if (result.success) {
-                    await toast('Thành công', 'Đã cập nhật ghi chú cho đơn hàng.', 'success');
-                    location.reload();
-                } else {
-                    toast('Lỗi', result.message || 'Không thể cập nhật ghi chú cho đơn hàng.', 'error');
-                }
-            } catch (err) {
-                toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
-            }
-        });
-    }
-
-    // Payment
-    const paymentModalElement = document.getElementById('paymentModal');
-    if (paymentModalElement) {
-        $('#paymentForm').on('submit', async function (e) {
-            e.preventDefault();
-
-            if (!$(this).valid())
-                return;
-
-            const paymentModal = new PromiseModal('#paymentModal');
-            await paymentModal.hide();
+            var note = $(this).find('[name="Note"]');
 
             const data = $(this).serialize();
             try {
@@ -306,10 +275,13 @@ import PromiseModal from "/modules/PromiseModal.js";
                 const result = await res.json();
 
                 if (result.success) {
-                    await toast('Thành công', 'Đã cập nhật thanh toán cho đơn hàng.', 'success');
+                    if (note)
+                        await toast('Thành công', 'Đã cập nhật ghi chú đơn hàng.', 'success');
+                    else
+                        await toast('Thành công', 'Đã xóa ghi chú đơn hàng.', 'success');
                     location.reload();
                 } else {
-                    toast('Lỗi', result.message || 'Không thể cập nhật thanh toán cho đơn hàng.', 'error');
+                    toast('Lỗi', result.message || 'Không thể cập nhật ghi chú đơn hàng.', 'error');
                 }
             } catch (err) {
                 toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');

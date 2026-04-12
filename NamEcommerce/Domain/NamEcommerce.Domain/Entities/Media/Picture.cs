@@ -5,7 +5,7 @@ namespace NamEcommerce.Domain.Entities.Media;
 [Serializable]
 public sealed record Picture : AppAggregateEntity
 {
-    public Picture(byte[] data, string mimeType) : base(Guid.NewGuid())
+    internal Picture(byte[] data, string mimeType) : base(Guid.NewGuid())
     {
         (Data, MimeType) = (data, mimeType);
 

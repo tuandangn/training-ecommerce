@@ -4,7 +4,6 @@ using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
-using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Orders;
 
@@ -24,11 +23,11 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
         var pagedData = await _orderAppService.GetOrdersAsync(request.Keywords, request.Status, request.PageIndex, request.PageSize).ConfigureAwait(false);
 
         var customers = await _customerAppService.GetCustomersByIdsAsync(pagedData.Select(o => o.CustomerId)).ConfigureAwait(false);
-        var orderItemModels = new List<OrderListModel.ItemModel>();
+        var orderItemModels = new List<OrderListModel.OrderModel>();
         foreach (var order in pagedData.Items)
         {
             var customer = customers.FirstOrDefault(cust => cust.Id == order.CustomerId);
-            orderItemModels.Add(new OrderListModel.ItemModel
+            orderItemModels.Add(new OrderListModel.OrderModel
             {
                 Id = order.Id,
                 Code = order.Code,
@@ -38,9 +37,7 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
                 CustomerAddress = customer?.Address,
                 TotalAmount = order.TotalAmount,
                 Status = order.Status,
-                PaymentStatus = order.PaymentStatus,
-                ShippingStatus = order.ShippingStatus,
-                ExpectedShippingDate = order.ExpectedShippingDateUtc.ToLocalTime(),
+                ExpectedShippingDate = order.ExpectedShippingDateUtc?.ToLocalTime(),
                 CreatedOn = order.CreatedOnUtc.ToLocalTime(),
                 CanUpdateInfo = order.CanUpdateInfo
             });

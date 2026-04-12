@@ -3,9 +3,9 @@ using NamEcommerce.Web.Models.Orders;
 
 namespace NamEcommerce.Web.Validators.Orders;
 
-public sealed class CancelOrderValidator : AbstractValidator<CancelOrderModel>
+public sealed class LockOrderValidator : AbstractValidator<LockOrderModel>
 {
-    public CancelOrderValidator()
+    public LockOrderValidator()
     {
         RuleFor(m => m.OrderId)
             .NotEmpty().WithMessage("Không tìm thấy ID đơn hàng.");

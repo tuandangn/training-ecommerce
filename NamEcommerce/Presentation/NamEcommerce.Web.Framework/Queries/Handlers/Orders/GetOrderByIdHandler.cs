@@ -5,6 +5,7 @@ using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Application.Contracts.Customers;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Orders;
 
@@ -34,25 +35,19 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             Id = order.Id,
             Code = order.Code,
             CustomerId = order.CustomerId,
-            CustomerName = customer?.FullName ?? "N/A",
+            CustomerName = customer?.FullName ?? string.Empty,
             CustomerAddress = customer?.Address,
             CustomerPhoneNumber = customer?.PhoneNumber,
             TotalAmount = order.TotalAmount,
             OrderDiscount = order.OrderDiscount ?? 0,
             Status = order.Status,
             Note = order.Note,
-            PaymentStatus = order.PaymentStatus,
-            PaymentMethod = order.PaymentMethod,
-            PaidOn = order.PaidOnUtc?.ToLocalTime(),
-            PaymentNote = order.PaymentNote,
-            ShippingStatus = order.ShippingStatus,
+            ExpectedShippingDate = order.ExpectedShippingDateUtc?.ToLocalTime(),
             ShippingAddress = order.ShippingAddress,
-            ShippedOn = order.ShippedOnUtc?.ToLocalTime(),
-            ShippingNote = order.ShippingNote,
-            CancellationReason = order.CancellationReason,
+            LockOrderReason = order.LockOrderReason,
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
-            CanCancelOrder = order.CanCancelOrder
+            CanLockOrder = order.CanCancelOrder
         };
         var products = await _mediator.Send(new GetProductsByIdsForOrderQuery
         {

@@ -18,9 +18,7 @@ public sealed class UpdateOrderShippingHandler : IRequestHandler<UpdateOrderShip
         var result = await _orderAppService.UpdateShippingAsync(new UpdateOrderShippingAppDto
         {
             OrderId = request.OrderId,
-            ShippingStatus = request.ShippingStatus,
-            Address = request.Address,
-            Note = request.Note
+            Address = request.Address
         });
 
         return new CommonResultModel

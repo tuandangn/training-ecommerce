@@ -3,7 +3,7 @@ namespace NamEcommerce.Application.Contracts.Dtos.Orders;
 [Serializable]
 public abstract record BaseOrderAppDto
 {
-    public DateTime ExpectedShippingDateUtc { get; set; }
+    public DateTime? ExpectedShippingDateUtc { get; set; }
     public string? Note { get; init; }
     public decimal? OrderDiscount { get; init; }
 
@@ -25,17 +25,9 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
 
     public required decimal TotalAmount { get; init; }
     public required int Status { get; init; }
-    public string? CancellationReason { get; set; }
+    public string? LockOrderReason { get; set; }
 
-    public int PaymentStatus { get; set; }
-    public int? PaymentMethod { get; set; }
-    public DateTime? PaidOnUtc { get; set; }
-    public string? PaymentNote { get; set; }
-
-    public int ShippingStatus { get; set; }
     public string? ShippingAddress { get; set; }
-    public DateTime? ShippedOnUtc { get; set; }
-    public string? ShippingNote { get; set; }
 
     public bool CanUpdateInfo { get; init; }
     public bool CanCancelOrder { get; init; }
@@ -51,6 +43,7 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
 {
     public required Guid CustomerId { get; init; }
     public required Guid? CreatedByUserId { get; init; }
+    public string? ShippingAddress { get; set; }
     public IList<OrderItemAppDto> Items { get; } = [];
 
     public override (bool valid, string? errorMessage) Validate()
@@ -87,7 +80,6 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
         }
     }
 }
-
 [Serializable]
 public sealed record CreateOrderResultAppDto
 {
@@ -98,7 +90,6 @@ public sealed record CreateOrderResultAppDto
 
 [Serializable]
 public sealed record UpdateOrderAppDto(Guid Id) : BaseOrderAppDto;
-
 [Serializable]
 public sealed record UpdateOrderResultAppDto
 {
@@ -108,26 +99,10 @@ public sealed record UpdateOrderResultAppDto
 }
 
 [Serializable]
-public sealed record MarkOrderAsPaidAppDto
-{
-    public required Guid OrderId { get; init; }
-    public required int PaymentMethod { get; init; }
-    public string? Note { get; set; }
-}
-[Serializable]
-public sealed record MarkOrderAsPaidResultAppDto
-{
-    public required bool Success { get; init; }
-    public string? ErrorMessage { get; set; }
-}
-
-[Serializable]
 public sealed record UpdateOrderShippingAppDto
 {
     public required Guid OrderId { get; init; }
-    public required int ShippingStatus { get; init; }
     public string? Address { get; set; }
-    public string? Note { get; set; }
 }
 [Serializable]
 public sealed record UpdateOrderShippingResultAppDto
@@ -137,13 +112,13 @@ public sealed record UpdateOrderShippingResultAppDto
 }
 
 [Serializable]
-public sealed record CancelOrderAppDto
+public sealed record LockOrderAppDto
 {
     public required Guid OrderId { get; init; }
     public required string? Reason { get; init; }
 }
 [Serializable]
-public sealed record CancelOrderResultAppDto
+public sealed record LockOrderResultAppDto
 {
     public required bool Success { get; init; }
     public string? ErrorMessage { get; set; }

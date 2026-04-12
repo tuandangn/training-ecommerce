@@ -1,89 +1,34 @@
-@using System.Text.Encodings.Web
-@inject UrlEncoder MyUrlEncoder
-@model NamEcommerce.Web.Contracts.Models.Orders.OrderListModel
+@model OrderListModel
+@inject IWebHelper WebHelper
 @{
-    ViewData["Title"] = "Quản lý Đơn hàng";
-    
-    string GetStatusBadgeClass(int status) => status switch
-    {
-        0 => "bg-secondary",   // Pending
-        1 => "bg-primary",     // Processing
-        2 => "bg-success",     // Completed
-        3 => "bg-danger",      // Cancelled
-        _ => "bg-dark"
-    };
-
-    string GetStatusText(int status) => status switch
-    {
-        0 => "Đang chờ",
-        1 => "Đang xử lý",
-        2 => "Hoàn thành",
-        3 => "Đã hủy",
-        _ => "Không xác định"
-    };
-
-    string GetPaymentStatusBadgeClass(int status) => status switch
-    {
-        0 => "bg-warning",   // Pending
-        1 => "bg-success",   // Paid
-        2 => "bg-info",      // Refunded
-        _ => "bg-dark"
-    };
-
-    string GetPaymentStatusText(int status) => status switch
-    {
-        0 => "Chưa Thu",
-        1 => "Đã Thu",
-        2 => "Hoàn Tiền",
-        _ => "KXĐ"
-    };
-
-    string GetShippingStatusBadgeClass(int status) => status switch
-    {
-        0 => "bg-secondary", // Pending
-        1 => "bg-primary",   // Shipping
-        2 => "bg-success",   // Delivered
-        3 => "bg-danger",    // Returned
-        _ => "bg-dark"
-    };
-
-    string GetShippingStatusText(int status) => status switch
-    {
-        0 => "Chưa Giao",
-        1 => "Đang Giao",
-        2 => "Đã Giao",
-        3 => "Trả Lại",
-        _ => "KXĐ"
-    };
-
-    var query = Model.Keywords;
-    
-    var successMessage = TempData[ViewConstants.OrderSuccessMessage] as string;
-    var errorMessage = TempData[ViewConstants.OrderErrorMessage] as string;
+    ViewData["Title"] = "Đơn hàng";
 }
 
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-0 fw-bold text-dark">Quản lý Đơn hàng</h1>
-            <p class="text-muted small mb-0">Theo dõi và quản lý các đơn hàng của khách hàng.</p>
+            <h1 class="h3 mb-0 fw-bold text-dark">Đơn hàng</h1>
+            <p class="text-muted small mb-0">Theo dõi và quản lý đơn hàng.</p>
         </div>
         <a asp-action="Create" class="btn btn-primary px-4 py-2 rounded-3 shadow-sm">
-            <i class="bi bi-plus-lg me-1"></i> Tạo đơn hàng mới
+            <i class="bi bi-plus-lg me-1"></i> 
+            Tạo mới
         </a>
     </div>
 
-    @if (!string.IsNullOrEmpty(successMessage))
+    @if (TempData[ViewConstants.OrderSuccessMessage] != null)
     {
         <div class="alert alert-success alert-dismissible fade show alert-global mb-3" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i>@successMessage
+            <i class="bi bi-check-circle-fill me-2"></i>
+            @TempData[ViewConstants.OrderSuccessMessage]
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
-    @if (!string.IsNullOrEmpty(errorMessage))
+    @if (TempData[ViewConstants.OrderErrorMessage] != null)
     {
         <div class="alert alert-warning alert-dismissible fade show alert-global mb-3" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            @TempData[ViewConstants.OrderErrorMessage]
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
@@ -109,7 +54,7 @@
                             <th>Khách hàng</th>
                             <th class="text-end">Tổng tiền</th>
                             <th class="text-center">Ngày giao</th>
-                            <th class="text-center">Trạng thái</th>
+                            <th>Trạng thái</th>
                             <th class="text-end pe-3"></th>
                         </tr>
                     </thead>
@@ -120,47 +65,43 @@
                             {
                                 <tr>
                                     <td class="ps-4">
-                                        <span class="fw-600 text-primary d-block text-nowrap">@HighlighHelper.Highlight(item.Code, query)</span>
+                                        <span class="fw-600 text-primary d-block text-nowrap">@HighlighHelper.Highlight(item.Code, Model.Keywords)</span>
                                         <span class="small text-muted">@item.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
                                     </td>
                                     <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="bg-light rounded-circle p-2 me-2 d-none d-lg-block">
+                                        <div>
+                                            <div class="fw-600 text-nowrap">
                                                 <i class="bi bi-person"></i>
+                                                @HighlighHelper.Highlight(item.CustomerName, Model.Keywords)
                                             </div>
-                                            <div>
-                                                <div class="fw-600 text-nowrap">
-                                                    @HighlighHelper.Highlight(item.CustomerName, query)
+                                            @if (!string.IsNullOrEmpty(item.CustomerPhone))
+                                            {
+                                                <div>
+                                                    <a href="tel:@item.CustomerPhone" class="text-muted small text-decoration-none text-nowrap">
+                                                        <i class="bi bi-telephone me-1"></i> @HighlighHelper.Highlight(item.CustomerPhone, Model.Keywords)
+                                                    </a>
                                                 </div>
-                                                @if (!string.IsNullOrEmpty(item.CustomerPhone))
-                                                {
-                                                    <div>
-                                                        <a href="tel:@item.CustomerPhone" class="text-muted small text-decoration-none text-nowrap">
-                                                            <i class="bi bi-telephone me-1"></i> @HighlighHelper.Highlight(item.CustomerPhone, query)
-                                                        </a>
-                                                    </div>
-                                                }
-                                                @if (!string.IsNullOrEmpty(item.CustomerAddress))
-                                                {
-                                                    var encodedAddress = MyUrlEncoder.Encode(item.CustomerAddress);
-                                                    <div>
-                                                        <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank" class="text-muted small text-decoration-none">
-                                                            <span class="d-none d-lg-inline">
-                                                                <i class="bi bi-geo-alt me-1"></i>
-                                                                @HighlighHelper.Highlight(item.CustomerAddress, query)
-                                                            </span>
-                                                            <span class="text-nowrap d-inline d-lg-none">
-                                                                <i class="bi bi-geo-alt me-1"></i>
-                                                                @HighlighHelper.Highlight(item.CustomerAddress.Substring(0, int.Min(30, item.CustomerAddress.Length)), query)
-                                                                @if (item.CustomerAddress.Length > 30)
-                                                                {
-                                                                    @:...
-                                                                }
-                                                            </span>
-                                                        </a>
-                                                    </div>
-                                                }
-                                            </div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(item.CustomerAddress))
+                                            {
+                                                var encodedAddress = WebHelper.EncodeUrlComponent(item.CustomerAddress);
+                                                <div>
+                                                    <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank" class="text-muted small text-decoration-none">
+                                                        <span class="d-none d-lg-inline">
+                                                            <i class="bi bi-geo-alt me-1"></i>
+                                                            @HighlighHelper.Highlight(item.CustomerAddress, Model.Keywords)
+                                                        </span>
+                                                        <span class="text-nowrap d-inline d-lg-none">
+                                                            <i class="bi bi-geo-alt me-1"></i>
+                                                            @HighlighHelper.Highlight(item.CustomerAddress.Substring(0, int.Min(30, item.CustomerAddress.Length)), Model.Keywords)
+                                                            @if (item.CustomerAddress.Length > 30)
+                                                            {
+                                                                @:...
+                                                            }
+                                                        </span>
+                                                    </a>
+                                                </div>
+                                            }
                                         </div>
                                     </td>
                                     <td class="text-end text-nowrap">
@@ -168,21 +109,16 @@
                                     </td>
                                     <td class="text-center text-muted">
                                         <span class="text-nowrap">
-                                            @item.ExpectedShippingDate.ToString(ViewConstants.DefaultDateFormat)
+                                            @item.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat)
                                         </span>
                                     </td>
-                                    <td class="text-center">
-                                        <div class="d-flex justify-content-center gap-1 flex-wrap">
-                                            <span class="badge rounded-pill @GetStatusBadgeClass(item.Status) px-2 py-1 fw-normal" title="Đơn hàng">
-                                                <i class="bi bi-box-seam me-1"></i> @GetStatusText(item.Status)
-                                            </span>
-                                            <span class="badge rounded-pill @GetPaymentStatusBadgeClass(item.PaymentStatus) px-2 py-1 fw-normal d-none d-lg-inline" title="Thanh toán">
-                                                <i class="bi bi-wallet2 me-1"></i> @GetPaymentStatusText(item.PaymentStatus)
-                                            </span>
-                                            <span class="badge rounded-pill @GetShippingStatusBadgeClass(item.ShippingStatus) px-2 py-1 fw-normal d-none d-lg-inline" title="Vận chuyển">
-                                                <i class="bi bi-truck me-1"></i> @GetShippingStatusText(item.ShippingStatus)
-                                            </span>
-                                        </div>
+                                    <td>
+                                        @{
+                                            var itemOrderStatus = (OrderStatus)item.Status;
+                                        }
+                                        <span class="badge rounded-pill @itemOrderStatus.GetDisplayColor() px-2 py-1 fw-normal">
+                                            @itemOrderStatus.GetDisplayText()
+                                        </span>
                                     </td>
                                     <td class="text-end pe-4">
                                         <button class="btn btn-sm btn-light border-0 ms-1 rounded-circle" type="button" data-bs-toggle="dropdown">

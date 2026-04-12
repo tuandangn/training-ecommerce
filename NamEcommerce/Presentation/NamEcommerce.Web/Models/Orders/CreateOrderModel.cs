@@ -18,6 +18,9 @@ public sealed class CreateOrderModel
     [Display(Name = "Ngày giao dự kiến")]
     public DateTime? ExpectedShippingDate { get; set; }
 
+    [Display(Name = "Địa chỉ giao hàng")]
+    public string? ShippingAddress { get; set; }
+
     [Display(Name = "Giảm giá")]
     public decimal? OrderDiscount { get; set; }
 

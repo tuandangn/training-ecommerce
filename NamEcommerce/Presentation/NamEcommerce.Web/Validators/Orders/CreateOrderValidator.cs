@@ -14,8 +14,10 @@ public sealed class CreateOrderValidator : AbstractValidator<CreateOrderModel>
             .GreaterThanOrEqualTo(0).WithMessage("Giảm giá phải lớn hơn hoặc bằng 0.");
 
         RuleFor(p => p.ExpectedShippingDate)
-            .NotEmpty().WithMessage("Vui lòng nhập ngày giao dự kiến.")
             .GreaterThanOrEqualTo(DateTime.Now.Date).WithMessage("Ngày giao dự kiến phải lớn hơn hiện tại.");
+        RuleFor(p => p.ShippingAddress)
+            .NotEmpty().WithMessage("Vui lòng nhập địa chỉ giao hàng.")
+            .MaximumLength(1000).WithMessage("Địa chỉ giao hàng tối đa 1000 ký tự.");
 
         RuleFor(p => p.Items)
             .NotEmpty().WithMessage("Vui lòng nhập hàng hóa.");

@@ -77,20 +77,14 @@ public sealed class OrderModelFactory : IOrderModelFactory
             OrderDiscount = order.OrderDiscount,
             Status = order.Status,
             Note = order.Note,
-            PaymentStatus = order.PaymentStatus,
-            PaymentMethod = order.PaymentMethod,
-            PaidOn = order.PaidOn,
-            PaymentNote = order.PaymentNote,
-            ShippingStatus = order.ShippingStatus,
+            ExpectedShippingDate = order.ExpectedShippingDate,
             ShippingAddress = order.ShippingAddress,
-            ShippedOn = order.ShippedOn,
-            ShippingNote = order.ShippingNote,
-            CancellationReason = order.CancellationReason,
+            LockOrderReason = order.LockOrderReason,
             CustomerAddress = order.CustomerAddress,
             CustomerPhoneNumber = order.CustomerPhoneNumber,
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
-            CanCancelOrder = order.CanCancelOrder
+            CanLockOrder = order.CanLockOrder
         };
         foreach (var it in order.Items)
         {

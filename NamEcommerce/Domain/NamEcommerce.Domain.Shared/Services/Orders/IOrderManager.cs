@@ -13,14 +13,10 @@ public interface IOrderManager : ICodeExistCheckingService
     Task AddOrderItemAsync(Guid orderId, AddOrderItemDto dto);
     Task UpdateOrderItemAsync(UpdateOrderItemDto dto);
     Task DeleteOrderItemAsync(DeleteOrderItemDto dto);
-    Task ChangeOrderStatusAsync(Guid orderId, OrderStatus status);
-    
-    Task MarkAsPaidAsync(MarkAsPaidDto dto);
+
     Task UpdateShippingAsync(UpdateShippingDto dto);
-    Task CancelOrderAsync(CancelOrderDto dto);
+    Task LockOrderAsync(LockOrderDto dto);
 
     Task<OrderDto?> GetOrderByIdAsync(Guid id);
     Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, OrderStatus? status, int pageIndex, int pageSize);
-
-    Task VerifyStatusAsync(Guid id);
 }

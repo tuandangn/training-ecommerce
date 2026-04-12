@@ -4,4 +4,6 @@
 public interface IWebHelper
 {
     bool IsMatchRouteInfo(string controller, string? action = null);
+
+    string EncodeUrlComponent(string urlComponent);
 }

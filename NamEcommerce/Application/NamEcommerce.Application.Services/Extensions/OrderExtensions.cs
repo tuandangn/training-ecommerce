@@ -16,20 +16,13 @@ public static class OrderExtensions
             OrderDiscount = order.OrderDiscount ?? 0,
             Status = (int)order.Status,
             Note = order.Note,
-            PaymentStatus = (int)order.PaymentStatus,
-            PaymentMethod = order.PaymentMethod.HasValue ? (int)order.PaymentMethod : null,
-            PaidOnUtc = order.PaidOnUtc,
-            PaymentNote = order.PaymentNote,
-            ShippingStatus = (int)order.ShippingStatus,
             ShippingAddress = order.ShippingAddress,
-            ShippedOnUtc = order.ShippedOnUtc,
-            ShippingNote = order.ShippingNote,
-            CancellationReason = order.CancellationReason,
+            LockOrderReason = order.LockOrderReason,
             CreatedByUserId = order.CreatedByUserId,
             CreatedOnUtc = order.CreatedOnUtc,
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
-            CanCancelOrder = order.CanCancelOrder
+            CanCancelOrder = order.CanLockOrder
         };
         foreach (var orderItem in order.Items)
         {

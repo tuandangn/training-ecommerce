@@ -28,6 +28,7 @@ public sealed class CreateOrderHandler : IRequestHandler<CreateOrderCommand, Cre
             OrderDiscount = request.OrderDiscount,
             Note = request.Note,
             ExpectedShippingDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedShippingDate),
+            ShippingAddress = request.ShippingAddress,
             CreatedByUserId = currentUser?.Id
         };
         foreach (var item in request.Items)

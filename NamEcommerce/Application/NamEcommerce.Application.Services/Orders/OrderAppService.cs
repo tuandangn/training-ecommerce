@@ -12,20 +12,12 @@ using NamEcommerce.Domain.Shared.Services.Orders;
 
 namespace NamEcommerce.Application.Services.Orders;
 
-public sealed class OrderAppService : IOrderAppService
+public sealed class OrderAppService(
+    IOrderManager orderManager,
+    IEntityDataReader<Product> productDataReader,
+    IEntityDataReader<Customer> customerDataReader,
+    IEntityDataReader<User> userDataReader) : IOrderAppService
 {
-    private readonly IOrderManager _orderManager;
-    private readonly IEntityDataReader<Product> _productDataReader;
-    private readonly IEntityDataReader<Customer> _customerDataReader;
-    private readonly IEntityDataReader<User> _userDataReader;
-
-    public OrderAppService(IOrderManager orderManager, IEntityDataReader<Product> productDataReader, IEntityDataReader<Customer> customerDataReader, IEntityDataReader<User> userDataReader)
-    {
-        _orderManager = orderManager;
-        _productDataReader = productDataReader;
-        _customerDataReader = customerDataReader;
-        _userDataReader = userDataReader;
-    }
 
     public async Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto)
     {
@@ -41,7 +33,7 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        var order = await _orderManager.GetOrderByIdAsync(dto.Id).ConfigureAwait(false);
+        var order = await orderManager.GetOrderByIdAsync(dto.Id).ConfigureAwait(false);
         if (order is null)
         {
             return new UpdateOrderResultAppDto
@@ -60,7 +52,7 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        var updateResultDto = await _orderManager.UpdateOrderAsync(new UpdateOrderDto(dto.Id)
+        var updateResultDto = await orderManager.UpdateOrderAsync(new UpdateOrderDto(dto.Id)
         {
             Note = dto.Note,
             OrderDiscount = dto.OrderDiscount,
@@ -88,7 +80,7 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        var order = await _orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
         {
             return new AddOrderItemResultAppDto
@@ -107,7 +99,7 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        var product = await _productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
+        var product = await productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
         if (product is null)
         {
             return new AddOrderItemResultAppDto
@@ -117,7 +109,7 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        await _orderManager.AddOrderItemAsync(dto.OrderId, new AddOrderItemDto
+        await orderManager.AddOrderItemAsync(dto.OrderId, new AddOrderItemDto
         {
             ProductId = dto.ProductId,
             Quantity = dto.Quantity,
@@ -145,7 +137,7 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        var order = await _orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
         {
             return new UpdateOrderItemResultAppDto
@@ -174,7 +166,7 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        await _orderManager.UpdateOrderItemAsync(new UpdateOrderItemDto
+        await orderManager.UpdateOrderItemAsync(new UpdateOrderItemDto
         {
             OrderId = dto.OrderId,
             OrderItemId = dto.OrderItemId,
@@ -194,7 +186,7 @@ public sealed class OrderAppService : IOrderAppService
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var order = await _orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
         {
             return new DeleteOrderItemResultAppDto
@@ -223,82 +215,9 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        await _orderManager.DeleteOrderItemAsync(new DeleteOrderItemDto(dto.OrderId, dto.OrderItemId)).ConfigureAwait(false);
+        await orderManager.DeleteOrderItemAsync(new DeleteOrderItemDto(dto.OrderId, dto.OrderItemId)).ConfigureAwait(false);
 
         return new DeleteOrderItemResultAppDto
-        {
-            Success = true
-        };
-    }
-
-    public async Task<(bool success, string? errorMessage)> ChangeOrderStatusAsync(Guid orderId, int status)
-    {
-        var order = await _orderManager.GetOrderByIdAsync(orderId).ConfigureAwait(false);
-        if (order is null)
-            return (false, "Order is not found.");
-
-        if (!order.CanUpdateInfo)
-            return (false, "Order status cannot changed.");
-
-        var orderStatus = (OrderStatus)status;
-        if (!Enum.IsDefined(orderStatus))
-            return (false, "Status is invalid.");
-
-        await _orderManager.ChangeOrderStatusAsync(orderId, orderStatus).ConfigureAwait(false);
-
-        return (true, string.Empty);
-    }
-
-    public async Task<MarkOrderAsPaidResultAppDto> MarkAsPaidAsync(MarkOrderAsPaidAppDto dto)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-
-        var order = await _orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
-        if (order is null)
-        {
-            return new MarkOrderAsPaidResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Order is not found."
-            };
-        }
-
-        if (!order.CanUpdateInfo)
-        {
-            return new MarkOrderAsPaidResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Order cannot be set to paid."
-            };
-        }
-
-        if (order.PaymentStatus == PaymentStatus.Paid)
-        {
-            return new MarkOrderAsPaidResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Order is already marked as paid."
-            };
-        }
-
-        var paymentMethod = (PaymentMethod)dto.PaymentMethod;
-        if (!Enum.IsDefined(paymentMethod))
-        {
-            return new MarkOrderAsPaidResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Payment method is invalid."
-            };
-        }
-
-        await _orderManager.MarkAsPaidAsync(new MarkAsPaidDto
-        {
-            OrderId = dto.OrderId,
-            PaymentMethod = paymentMethod,
-            Note = dto.Note
-        }).ConfigureAwait(false);
-
-        return new MarkOrderAsPaidResultAppDto
         {
             Success = true
         };
@@ -308,7 +227,7 @@ public sealed class OrderAppService : IOrderAppService
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var order = await _orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
         {
             return new UpdateOrderShippingResultAppDto
@@ -327,31 +246,10 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        if (order.ShippingStatus == ShippingStatus.Shipped)
-        {
-            return new UpdateOrderShippingResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Order cannot be change shipping status."
-            };
-        }
-
-        var shippingStatus = (ShippingStatus)dto.ShippingStatus;
-        if (!Enum.IsDefined(shippingStatus))
-        {
-            return new UpdateOrderShippingResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Payment method is invalid."
-            };
-        }
-
-        await _orderManager.UpdateShippingAsync(new UpdateShippingDto
+        await orderManager.UpdateShippingAsync(new UpdateShippingDto
         {
             OrderId = dto.OrderId,
-            ShippingStatus = shippingStatus,
-            Address = dto.Address,
-            Note = dto.Note
+            Address = dto.Address
         }).ConfigureAwait(false);
 
         return new UpdateOrderShippingResultAppDto
@@ -360,14 +258,14 @@ public sealed class OrderAppService : IOrderAppService
         };
     }
 
-    public async Task<CancelOrderResultAppDto> CancelOrderAsync(CancelOrderAppDto dto)
+    public async Task<LockOrderResultAppDto> LockOrderAsync(LockOrderAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        var order = await _orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
+        var order = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
         {
-            return new CancelOrderResultAppDto
+            return new LockOrderResultAppDto
             {
                 Success = false,
                 ErrorMessage = "Order is not found."
@@ -376,20 +274,20 @@ public sealed class OrderAppService : IOrderAppService
 
         if (!order.CanUpdateInfo)
         {
-            return new CancelOrderResultAppDto
+            return new LockOrderResultAppDto
             {
                 Success = false,
                 ErrorMessage = "Order cannot be change shipping status."
             };
         }
 
-        await _orderManager.CancelOrderAsync(new CancelOrderDto
+        await orderManager.LockOrderAsync(new LockOrderDto
         {
             OrderId = dto.OrderId,
             Reason = dto.Reason
         }).ConfigureAwait(false);
 
-        return new CancelOrderResultAppDto
+        return new LockOrderResultAppDto
         {
             Success = true
         };
@@ -397,7 +295,7 @@ public sealed class OrderAppService : IOrderAppService
 
     public async Task<OrderAppDto?> GetOrderByIdAsync(Guid id)
     {
-        var order = await _orderManager.GetOrderByIdAsync(id).ConfigureAwait(false);
+        var order = await orderManager.GetOrderByIdAsync(id).ConfigureAwait(false);
 
         if (order is null)
             return null;
@@ -408,7 +306,7 @@ public sealed class OrderAppService : IOrderAppService
     public async Task<IPagedDataAppDto<OrderAppDto>> GetOrdersAsync(string? keywords, int? status, int pageIndex, int pageSize)
     {
         OrderStatus? orderStatus = status.HasValue ? (OrderStatus)status : null;
-        var pagedData = await _orderManager.GetOrdersAsync(keywords, orderStatus, pageIndex, pageSize).ConfigureAwait(false);
+        var pagedData = await orderManager.GetOrdersAsync(keywords, orderStatus, pageIndex, pageSize).ConfigureAwait(false);
 
         return PagedDataAppDto.Create(pagedData.Select(order => order.ToDto()), pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
     }
@@ -427,7 +325,7 @@ public sealed class OrderAppService : IOrderAppService
             };
         }
 
-        var customer = await _customerDataReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        var customer = await customerDataReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
         if (customer is null)
         {
             return new CreateOrderResultAppDto
@@ -439,7 +337,7 @@ public sealed class OrderAppService : IOrderAppService
 
         if (dto.CreatedByUserId.HasValue)
         {
-            var user = await _userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
+            var user = await userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
             if (user is null)
             {
                 return new CreateOrderResultAppDto
@@ -458,7 +356,8 @@ public sealed class OrderAppService : IOrderAppService
             Note = dto.Note,
             OrderDiscount = dto.OrderDiscount,
             CreatedByUserId = dto.CreatedByUserId,
-            ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc
+            ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc,
+            ShippingAddress = dto.ShippingAddress
         };
         foreach (var orderItem in dto.Items)
         {
@@ -470,7 +369,7 @@ public sealed class OrderAppService : IOrderAppService
             });
         }
 
-        var createOrderResult = await _orderManager.CreateOrderAsync(createOrderDto).ConfigureAwait(false);
+        var createOrderResult = await orderManager.CreateOrderAsync(createOrderDto).ConfigureAwait(false);
 
         return new CreateOrderResultAppDto
         {
@@ -487,7 +386,7 @@ public sealed class OrderAppService : IOrderAppService
         {
             code = $"O-{now:yyyyMM}-{Random.Shared.Next(1000, 9999)}";
         }
-        while (await _orderManager.DoesCodeExistAsync(code).ConfigureAwait(false));
+        while (await orderManager.DoesCodeExistAsync(code).ConfigureAwait(false));
 
         return code;
     }

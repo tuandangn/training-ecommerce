@@ -6,16 +6,16 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 
-public sealed class CancelOrderHandler : IRequestHandler<CancelOrderCommand, CommonResultModel>
+public sealed class LockOrderHandler : IRequestHandler<LockOrderCommand, CommonResultModel>
 {
     private readonly IOrderAppService _orderAppService;
 
-    public CancelOrderHandler(IOrderAppService orderAppService) 
+    public LockOrderHandler(IOrderAppService orderAppService) 
         => _orderAppService = orderAppService;
 
-    public async Task<CommonResultModel> Handle(CancelOrderCommand request, CancellationToken cancellationToken)
+    public async Task<CommonResultModel> Handle(LockOrderCommand request, CancellationToken cancellationToken)
     {
-        var result = await _orderAppService.CancelOrderAsync(new CancelOrderAppDto
+        var result = await _orderAppService.LockOrderAsync(new LockOrderAppDto
         {
             OrderId = request.OrderId,
             Reason = request.Reason

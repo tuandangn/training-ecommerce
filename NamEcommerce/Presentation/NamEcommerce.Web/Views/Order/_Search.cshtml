@@ -12,21 +12,21 @@
         <div class="form-floating">
             <select asp-for="Status" class="form-select border-0 bg-light rounded-3">
                 <option value="" selected="@(!Model.Status.HasValue)">Tất cả trạng thái</option>
-                <option value="0" selected="@(Model.Status == 0)">Đang chờ</option>
-                <option value="1" selected="@(Model.Status == 1)">Đang xử lý</option>
-                <option value="2" selected="@(Model.Status == 2)">Hoàn thành</option>
-                <option value="3" selected="@(Model.Status == 3)">Đã hủy</option>
+                @foreach (var (value, text) in OrderStatus.GetOptions())
+                {
+                    <option value="@value" selected="@(Model.Status == value)">@text</option>
+                }
             </select>
             <label class="form-label" asp-for="Status">Trạng thái</label>
         </div>
     </div>
     <div class="col-md-2">
-        <button type="submit" class="btn btn-dark w-100 rounded-3">Lọc</button>
+        <button type="submit" class="btn btn-dark w-100 rounded-3">Tìm kiếm</button>
     </div>
     @if (!string.IsNullOrEmpty(Model.Keywords) || Model.Status.HasValue)
     {
         <div class="col-md-2">
-            <a asp-action="List" class="btn btn-outline-secondary w-100 rounded-3">Xóa lọc</a>
+            <a asp-action="List" class="btn btn-outline-secondary w-100 rounded-3">Bỏ lọc</a>
         </div>
     }
 </form>

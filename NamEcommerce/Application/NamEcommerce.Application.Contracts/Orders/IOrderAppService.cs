@@ -10,17 +10,13 @@ public interface IOrderAppService
 
     Task<CreateOrderResultAppDto> CreateOrderAsync(CreateOrderAppDto dto);
     Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto);
-    Task<CancelOrderResultAppDto> CancelOrderAsync(CancelOrderAppDto dto);
+    Task<LockOrderResultAppDto> LockOrderAsync(LockOrderAppDto dto);
 
     Task<AddOrderItemResultAppDto> AddOrderItemAsync(AddOrderItemAppDto dto);
     Task<UpdateOrderItemResultAppDto> UpdateOrderItemAsync(UpdateOrderItemAppDto dto);
     Task<DeleteOrderItemResultAppDto> DeleteOrderItemAsync(DeleteOrderItemAppDto dto);
 
-    Task<(bool success, string? errorMessage)> ChangeOrderStatusAsync(Guid orderId, int status);
-
-    Task<MarkOrderAsPaidResultAppDto> MarkAsPaidAsync(MarkOrderAsPaidAppDto dto);
     Task<UpdateOrderShippingResultAppDto> UpdateShippingAsync(UpdateOrderShippingAppDto dto);
-
 
     Task<string> NextOrderCodeAsync();
 }

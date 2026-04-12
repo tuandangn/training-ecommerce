@@ -13,28 +13,23 @@ namespace NamEcommerce.Domain.Entities.Orders;
 [Serializable]
 public sealed record Order : AppAggregateEntity
 {
-    public Order(string code, Guid customerId, decimal orderTotal, Guid? createdByUserId) : base(Guid.NewGuid())
+    internal Order(string code) : base(Guid.NewGuid())
     {
-        (Code, CustomerId, OrderTotal, CreatedByUserId) = (code, customerId, orderTotal, createdByUserId);
-
+        Code = code;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
     public string Code { get; }
     public Guid CustomerId { get; private set; }
-    public Guid? CreatedByUserId { get; }
+    public Guid? CreatedByUserId { get; init; }
 
     public decimal OrderTotal { get; private set; }
     public decimal OrderDiscount { get; private set; }
+    public OrderStatus OrderStatus { get; private set; }
+    public string? LockOrderReason { get; private set; }
+    public string? Note { get; internal set; }
 
-    public DateTime ExpectedShippingDateUtc { get; set; }
-
-    public PaymentStatus PaymentStatus { get; private set; }
-    public PaymentMethod? PaymentMethod { get; private set; }
-    public DateTime? PaidOnUtc { get; private set; }
-    public string? PaymentNote { get; private set; }
-
-    public ShippingStatus ShippingStatus { get; private set; }
+    public DateTime? ExpectedShippingDateUtc { get; set; }
     public string? ShippingAddress
     {
         get;
@@ -45,17 +40,9 @@ public sealed record Order : AppAggregateEntity
         }
     }
     internal string NormalizedShippingAddress { get; private set; } = "";
-    public DateTime? ShippedOnUtc { get; private set; }
-    public string? ShippingNote { get; private set; }
-
-    public OrderStatus OrderStatus { get; private set; }
-    public string? CancellationReason { get; private set; }
-
 
     private readonly List<OrderItem> _orderItems = [];
     public IEnumerable<OrderItem> OrderItems => _orderItems.AsReadOnly();
-
-    public string? Note { get; internal set; }
 
     public DateTime CreatedOnUtc { get; }
     public DateTime? UpdatedOnUtc { get; internal set; }
@@ -71,6 +58,8 @@ public sealed record Order : AppAggregateEntity
             throw new CustomerIsNotFoundException(customerId);
 
         CustomerId = customerId;
+        if (string.IsNullOrEmpty(ShippingAddress))
+            ShippingAddress = customer.Address;
     }
 
     internal async Task AddOrderItemAsync(Guid productId, decimal unitPrice, decimal quantity, IGetByIdService<Product> byIdGetter)
@@ -146,17 +135,10 @@ public sealed record Order : AppAggregateEntity
         OrderTotal = _orderItems.Sum(i => i.Price) - OrderDiscount;
     }
 
-    internal bool CanUpdateInfo() => OrderStatus != OrderStatus.Completed && OrderStatus != OrderStatus.Cancelled;
+    internal bool CanUpdateInfo() => OrderStatus != OrderStatus.Locked;
     internal bool CanChangeStatusTo(OrderStatus toStatus)
     {
         if (!CanUpdateInfo())
-            return false;
-
-        if (toStatus == OrderStatus.Cancelled && (PaymentStatus != PaymentStatus.Pending || ShippingStatus != ShippingStatus.Pending))
-            return false;
-
-        var subtract = (int)toStatus - (int)OrderStatus;
-        if (subtract < 0)
             return false;
 
         return Enum.IsDefined(toStatus);
@@ -166,20 +148,11 @@ public sealed record Order : AppAggregateEntity
         if (!CanUpdateInfo())
             return false;
 
-        if (PaymentStatus == PaymentStatus.Paid)
-            return false;
-
-        if (ShippingStatus != ShippingStatus.Pending)
-            return false;
-
         return true;
     }
-    internal bool CanCancelOrder()
+    internal bool CanLockOrder()
     {
         if (!CanUpdateInfo())
-            return false;
-
-        if (PaymentStatus != PaymentStatus.Pending || ShippingStatus != ShippingStatus.Pending)
             return false;
 
         return true;
@@ -193,79 +166,13 @@ public sealed record Order : AppAggregateEntity
         OrderStatus = status;
     }
 
-    internal void MarkAsPaid(PaymentMethod method, string? note)
+    internal void LockOrder(string? reason)
     {
-        if (!CanUpdateInfo())
-            throw new OrderCancelledException();
+        if (OrderStatus == OrderStatus.Locked)
+            throw new OrderLockedException();
 
-        if (!Enum.IsDefined(method))
-            throw new OrderDataIsInvalidException("Payment method is not allowed.");
-
-        if (PaymentStatus == PaymentStatus.Paid)
-            throw new OrderIsAlreadyPaidException();
-
-        PaymentStatus = PaymentStatus.Paid;
-        PaymentMethod = method;
-        PaymentNote = note;
-
-        PaidOnUtc = DateTime.UtcNow;
-    }
-
-    internal void UpdateShipping(ShippingStatus status, string? address, string? note)
-    {
-        if (!CanUpdateInfo())
-            throw new OrderCannotUpdateInfoException();
-
-        if (!Enum.IsDefined(status))
-            throw new OrderDataIsInvalidException("Shipping status is not allowed.");
-
-        if (ShippingStatus == ShippingStatus.Shipped)
-            throw new OrderIsAlreadyShippedException();
-
-        ShippingStatus = status;
-        ShippingNote = note;
-        if (address is not null)
-            ShippingAddress = address;
-
-        if (status == ShippingStatus.Shipped)
-            ShippedOnUtc = DateTime.UtcNow;
-    }
-
-    internal bool VerifyStatus()
-    {
-        if (!CanUpdateInfo())
-            return false;
-
-        if (PaymentStatus == PaymentStatus.Paid && ShippingStatus == ShippingStatus.Shipped)
-        {
-            ChangeStatus(OrderStatus.Completed);
-            return true;
-        }
-
-        if (OrderStatus == OrderStatus.Pending && OrderItems.Any() && ShippingStatus == ShippingStatus.Shipping)
-        {
-            ChangeStatus(OrderStatus.Processing);
-            return true;
-        }
-        if (OrderStatus == OrderStatus.Pending && PaymentStatus == PaymentStatus.Paid)
-        {
-            ChangeStatus(OrderStatus.Processing);
-            return true;
-        }
-
-        return false;
-    }
-
-    internal void Cancel(string? reason)
-    {
-        if (OrderStatus == OrderStatus.Cancelled)
-            throw new OrderCancelledException();
-
-        if (!CanChangeStatusTo(OrderStatus.Cancelled))
-            throw new OrderCannotBeCancelledException();
-
-        ChangeStatus(OrderStatus.Cancelled);
-        CancellationReason = reason;
+        ChangeStatus(OrderStatus.Locked);
+        LockOrderReason = reason;
     }
 
     #endregion

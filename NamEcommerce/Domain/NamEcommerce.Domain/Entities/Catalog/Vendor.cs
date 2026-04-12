@@ -8,7 +8,7 @@ namespace NamEcommerce.Domain.Entities.Catalog;
 [Serializable]
 public sealed record Vendor : AppAggregateEntity
 {
-    public Vendor(Guid id, string name, string phoneNumber) : base(id)
+    internal Vendor(Guid id, string name, string phoneNumber) : base(id)
     {
         ArgumentException.ThrowIfNullOrEmpty(name);
         ArgumentException.ThrowIfNullOrEmpty(phoneNumber);

@@ -11,11 +11,11 @@ public sealed class OrderMapping : IEntityTypeConfiguration<Order>
 
         builder.Property(p => p.Code).HasMaxLength(50).IsRequired();
         builder.HasIndex(p => p.Code).IsUnique();
-        builder.Property(o => o.PaymentNote).HasMaxLength(1000);
+
         builder.Property(o => o.ShippingAddress).HasMaxLength(1000);
         builder.Property(o => o.NormalizedShippingAddress).HasMaxLength(1000);
-        builder.Property(o => o.ShippingNote).HasMaxLength(1000);
-        builder.Property(o => o.CancellationReason).HasMaxLength(1000);
+
+        builder.Property(o => o.LockOrderReason).HasMaxLength(1000);
 
         builder.Property(p => p.CreatedByUserId);
         builder.Property(p => p.OrderTotal);
