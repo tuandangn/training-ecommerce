@@ -53,6 +53,14 @@ public sealed class OrderController : BaseAuthorizedController
             return View(model);
         }
 
+        var orderSubTotal = model.Items.Sum(item => item.ItemSubTotal);
+        if ((model.OrderDiscount ?? 0) > orderSubTotal)
+        {
+            ModelState.AddModelError(nameof(model.OrderDiscount), $"Giảm giá tối đa không quá {orderSubTotal.ToString(ViewConstants.NumberCustomFormat)}");
+            model = await _orderModelFactory.PrepareCreateOrderModel(model);
+            return View(model);
+        }
+
         var result = await _mediator.Send(new CreateOrderCommand
         {
             CustomerId = model.CustomerId!.Value,

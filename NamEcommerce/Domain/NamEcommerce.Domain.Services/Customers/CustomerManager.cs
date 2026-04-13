@@ -95,19 +95,20 @@ public sealed class CustomerManager : ICustomerManager
         }
 
         var total = query.Count();
-        var paged = query.OrderByDescending(c => c.CreatedOnUtc)
-                        .Skip(pageIndex * pageSize)
-                        .Take(pageSize)
-                        .ToList()
-                        .Select(c => new CustomerDto(c.Id)
-                        {
-                            FullName = c.FullName,
-                            PhoneNumber = c.PhoneNumber,
-                            Email = c.Email,
-                            Address = c.Address,
-                            Note = c.Note,
-                            CreatedOnUtc = c.CreatedOnUtc
-                        }).ToList();
+        var paged = query
+            .OrderBy(c => c.FullName)
+            .ThenByDescending(c => c.CreatedOnUtc)
+            .Skip(pageIndex * pageSize).Take(pageSize)
+            .ToList()
+            .Select(c => new CustomerDto(c.Id)
+            {
+                FullName = c.FullName,
+                PhoneNumber = c.PhoneNumber,
+                Email = c.Email,
+                Address = c.Address,
+                Note = c.Note,
+                CreatedOnUtc = c.CreatedOnUtc
+            }).ToList();
 
         return PagedDataDto.Create(paged, pageIndex, pageSize, total);
     }

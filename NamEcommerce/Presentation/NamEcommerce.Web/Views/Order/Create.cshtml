@@ -1,4 +1,5 @@
 @model CreateOrderModel
+@using System.Text.Json
 @{
     ViewData["Title"] = "Tạo Đơn hàng mới";
 }
@@ -33,31 +34,8 @@
                                     Thông tin Khách hàng
                                 </h5>
                             </div>
-                            <div class="card-body">
-                                <div class="position-relative mb-3 @(Model.CustomerId.HasValue ? "d-none" : "")">
-                                    <label class="form-label small fw-bold text-muted" for="customerSearch">
-                                        Tìm kiếm khách hàng
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-white border-end-0">
-                                            <i class="bi bi-search text-muted"></i>
-                                        </span>
-                                        <input type="text" id="customerSearch" class="form-control border-start-0 ps-0"
-                                               placeholder="Nhập tên, số điện thoại hoặc địa chỉ" autocomplete="off" />
-                                    </div>
-                                    <div id="customerSuggestions"
-                                         class="list-group position-absolute w-100 shadow-lg mt-1"
-                                         style="z-index: 1050; display: none;"></div>
-                                </div>
-                                <div id="selectedCustomerDisplay" class="alert alert-primary @(Model.CustomerId.HasValue ? "" : "d-none") border-0 rounded-3 d-flex align-items-center mb-0">
-                                    <i class="bi bi-person-check-fill fs-4 me-3"></i>
-                                    <div>
-                                        <div class="fw-bold" id="displayName">@Model.CustomerDisplayName</div>
-                                        <div class="small text-muted" id="displayPhone">@Model.CustomerDisplayPhone</div>
-                                        <div class="small text-muted" id="displayAddress">@Model.CustomerDisplayAddress</div>
-                                    </div>
-                                    <button type="button" class="btn-close ms-auto" id="resetCustomer"></button>
-                                </div>
+                            <div class="card-body mb-2">
+                                <div id="customerPicker"></div>
                                 <input type="text" class="visually-hidden" asp-for="CustomerId" />
                                 <span asp-validation-for="CustomerId" class="small text-danger"></span>
                             </div>
@@ -195,16 +173,19 @@
                                 <div class="mb-4">
                                     <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted"></label>
                                     <div class="input-group">
-                                        <input asp-for="ShippingAddress" class="form-control border-end-0" placeholder="Địa chỉ của khách hàng" readonly/>
-                                        <button type="button" class="btn btn-link border border-start-0 rounded-3 bg-light" id="btnEditShippingAddress">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                    </div>
+                                        <input asp-for="ShippingAddress" class="form-control border-end-0" placeholder="Địa chỉ của khách hàng" readonly="@(Model.CustomerDisplayAddress == Model.ShippingAddress)" />
+                                            @if (Model.CustomerDisplayAddress == Model.ShippingAddress)
+                                            {
+                                                <button type="button" class="btn btn-link border border-start-0 rounded-3 bg-light" id="btnEditShippingAddress">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                            }
+                                        </div>
                                     <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
                                 </div>
                                 <div class="mb-4">
                                     <label asp-for="OrderDiscount" class="form-label small fw-bold text-muted"></label>
-                                    <input type="number" asp-for="OrderDiscount" class="form-control" min="0" placeholder="0" disabled/>
+                                    <input type="number" asp-for="OrderDiscount" class="form-control" min="0" placeholder="0" disabled />
                                     <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
                                 </div>
                                 <div class="mb-4">
@@ -239,25 +220,10 @@
             <form action="#" method="post" id="addProductForm">
                 <div class="modal-body py-4">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted uppercase">Tìm kiếm sản phẩm</label>
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-box text-muted"></i></span>
-                            <input type="text" id="productSearch" class="form-control border-start-0 ps-0"
-                                   placeholder="Nhập tên sản phẩm..." autocomplete="off">
-                        </div>
-                        <div id="productSuggestions" class="list-group shadow-lg mt-1"
-                             style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                        <div id="productPicker"></div>
                     </div>
 
                     <div id="modalProductInfo" class="d-none">
-                        <div class="alert alert-light border-0 rounded-3 mb-3 d-flex align-items-start gap-3">
-                            <img class="img-fluid img-thumbnail d-none" style="width: 70px;" id="itemProductHasPicture" alt="Product image" />
-                            <i class="bi bi-box-seam-fill text-primary me-2 fs-5" id="itemProductNoPicture"></i>
-                            <div>
-                                <div class="fw-bold" id="itemProductName"></div>
-                                <div class="text-muted small">Tồn kho: <span id="itemProductStock"></span></div>
-                            </div>
-                        </div>
                         <div class="row g-3">
                             <div class="col-6">
                                 <label class="form-label small fw-bold text-muted" for="itemQuantity">Số lượng</label>
@@ -293,5 +259,42 @@
 </div>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script src="~/modules/order.create.js" type="module"></script>
+    <script src="~/modules/OrderController.js" type="module"></script>
+    <script type="module">
+        import OrderController from "/modules/OrderController.js";
+
+        const initialState = {
+            items: @Html.Raw(JsonSerializer.Serialize(Model.Items.Select(item => new {
+                productInfo = new
+                {
+                    id = item.ProductId,
+                    name = item.ProductDisplayName,
+                    availableQty = item.ProductDisplayQty,
+                    picture = item.ProductDisplayPicture
+                },
+                quantity = item.Quantity,
+                unitPrice = item.UnitPrice
+            }))),
+            discount: @(Model.OrderDiscount ?? 0)
+        };
+        @if (Model.CustomerId.HasValue)
+        {
+            <text>
+                initialState.customer = {
+                    id: '@Html.Raw(Model.CustomerId)',
+                    name: '@Html.Raw(Model.CustomerDisplayName)',
+                    phone: '@Html.Raw(Model.CustomerDisplayPhone)',
+                    address: '@Html.Raw(Model.CustomerDisplayAddress)'
+                };
+            </text>
+        }
+        @if (Model.ExpectedShippingDate.HasValue)
+        {
+            <text>
+            initialState.expectedDate =  @Html.Raw(Model.ExpectedShippingDate.HasValue ? $"new Date('{Model.ExpectedShippingDate.Value.ToString("yyyy-MM-dd")}')" : "null");
+            </text>
+        }
+
+        new OrderController(initialState);
+    </script>
 }
