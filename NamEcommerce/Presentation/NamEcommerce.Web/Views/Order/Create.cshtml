@@ -194,12 +194,17 @@
                                 </div>
                                 <div class="mb-4">
                                     <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted"></label>
-                                    <input asp-for="ShippingAddress" class="form-control" />
+                                    <div class="input-group">
+                                        <input asp-for="ShippingAddress" class="form-control border-end-0" placeholder="Địa chỉ của khách hàng" readonly/>
+                                        <button type="button" class="btn btn-link border border-start-0 rounded-3 bg-light" id="btnEditShippingAddress">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </div>
                                     <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
                                 </div>
                                 <div class="mb-4">
                                     <label asp-for="OrderDiscount" class="form-label small fw-bold text-muted"></label>
-                                    <input type="number" asp-for="OrderDiscount" class="form-control" min="0" placeholder="0" />
+                                    <input type="number" asp-for="OrderDiscount" class="form-control" min="0" placeholder="0" disabled/>
                                     <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
                                 </div>
                                 <div class="mb-4">
@@ -209,7 +214,7 @@
                                 </div>
                                 <hr class="border-light my-4">
                                 <div class="d-grid gap-2">
-                                    <button type="submit" class="btn btn-primary py-3 rounded-3 shadow-sm fw-bold">
+                                    <button type="submit" class="btn btn-primary py-3 rounded-3 shadow-sm fw-bold" disabled>
                                         <i class="bi bi-check2-circle me-2"></i>
                                         Tạo đơn
                                     </button>
@@ -289,32 +294,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/modules/order.create.js" type="module"></script>
-}
-@section Styles {
-    <style>
-        .letter-spacing-1 {
-            letter-spacing: 1px;
-        }
-
-        .uppercase {
-            text-transform: uppercase;
-        }
-
-        .italic {
-            font-style: italic;
-        }
-
-        .list-group-item {
-            cursor: pointer;
-        }
-
-            .list-group-item:hover {
-                background-color: var(--bs-light);
-                color: var(--bs-primary);
-            }
-
-        .bg-light {
-            background-color: #f8f9fa !important;
-        }
-    </style>
 }

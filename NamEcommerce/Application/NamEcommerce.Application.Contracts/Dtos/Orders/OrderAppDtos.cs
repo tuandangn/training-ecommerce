@@ -23,6 +23,7 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
     public required Guid CustomerId { get; init; }
     public required Guid? CreatedByUserId { get; init; }
 
+    public required decimal OrderSubTotal { get; init; }
     public required decimal TotalAmount { get; init; }
     public required int Status { get; init; }
     public string? LockOrderReason { get; set; }

@@ -136,7 +136,7 @@
                     <div class="bg-light @(Model.Items.Count > 0 ? "" : "d-none") d-flex flex-column px-4" id="tableFooter">
                         <div class="d-flex justify-content-end gap-4">
                             <div class="text-end fw-bold py-2 border-0">Tạm tính</div>
-                            <div class="text-end fw-bold py-2 border-0" id="subTotal">@((Model.TotalAmount + Model.OrderDiscount).ToString(ViewConstants.NumberCustomFormat)) @ViewConstants.DefaultCurrencySymbol</div>
+                            <div class="text-end fw-bold py-2 border-0" id="subTotal">@Model.OrderSubTotal.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol</div>
                         </div>
                         <div class="d-flex justify-content-end gap-4">
                             <div colspan="3" class="text-end fw-bold py-2 border-0">

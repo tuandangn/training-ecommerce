@@ -24,6 +24,7 @@ public sealed record Order : AppAggregateEntity
     public Guid? CreatedByUserId { get; init; }
 
     public decimal OrderTotal { get; private set; }
+    public decimal OrderSubTotal { get; private set; }
     public decimal OrderDiscount { get; private set; }
     public OrderStatus OrderStatus { get; private set; }
     public string? LockOrderReason { get; private set; }
@@ -123,8 +124,8 @@ public sealed record Order : AppAggregateEntity
         if (orderDiscount.Value < 0)
             throw new OrderDiscountIsInvalidException("Order discount must greater than or equal to 0.");
 
-        if (orderDiscount.Value > OrderTotal)
-            throw new OrderDiscountIsInvalidException("Order discount cannot exceed order total.");
+        if (orderDiscount.Value > OrderSubTotal)
+            throw new OrderDiscountIsInvalidException("Order discount cannot exceed order sub total.");
 
         OrderDiscount = orderDiscount.Value;
         RecalculateTotal();
@@ -132,7 +133,8 @@ public sealed record Order : AppAggregateEntity
 
     private void RecalculateTotal()
     {
-        OrderTotal = _orderItems.Sum(i => i.Price) - OrderDiscount;
+        OrderSubTotal = _orderItems.Sum(i => i.SubTotal);
+        OrderTotal = OrderSubTotal - OrderDiscount;
     }
 
     internal bool CanUpdateInfo() => OrderStatus != OrderStatus.Locked;

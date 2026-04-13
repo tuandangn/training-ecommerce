@@ -38,6 +38,7 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             CustomerName = customer?.FullName ?? string.Empty,
             CustomerAddress = customer?.Address,
             CustomerPhoneNumber = customer?.PhoneNumber,
+            OrderSubTotal = order.OrderSubTotal,
             TotalAmount = order.TotalAmount,
             OrderDiscount = order.OrderDiscount ?? 0,
             Status = order.Status,

@@ -39,7 +39,7 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
             o.Id,
             o.CreatedOnUtc,
             o.OrderTotal,
-            Items = o.OrderItems.Select(i => new { i.ProductId, i.Quantity, i.Price, i.CostPrice }).ToList()
+            Items = o.OrderItems.Select(i => new { i.ProductId, i.Quantity, i.SubTotal, i.CostPrice }).ToList()
         }).ToList();
         
         var dto = new ProfitLossSummaryAppDto();
@@ -77,7 +77,7 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
                 
                 var topProd = productDict[item.ProductId];
                 topProd.QuantitySold += (int)item.Quantity;
-                topProd.Revenue += item.Price;
+                topProd.Revenue += item.SubTotal;
             }
             
             totalCogs += orderCogs;

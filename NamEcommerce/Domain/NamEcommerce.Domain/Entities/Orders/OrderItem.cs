@@ -21,14 +21,14 @@ public sealed record OrderItem : AppEntity
     public decimal Discount { get; internal set; }
     public decimal Quantity { get; internal set; }
 
-    public decimal Price => (UnitPrice - Discount) * Quantity;
+    public decimal SubTotal => (UnitPrice - Discount) * Quantity;
 
     internal void Update(decimal quantity, decimal unitPrice)
     {
         if (quantity <= 0)
             throw new OrderItemDataIsInvalidException("Quantity must be greather than 0.");
 
-        if (unitPrice <= 0)
+        if (unitPrice < 0)
             throw new OrderItemDataIsInvalidException("Unit price must be greather than or equal to 0.");
 
         Quantity = quantity;

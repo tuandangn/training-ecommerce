@@ -17,8 +17,10 @@ public sealed class OrderMapping : IEntityTypeConfiguration<Order>
 
         builder.Property(o => o.LockOrderReason).HasMaxLength(1000);
 
-        builder.Property(p => p.CreatedByUserId);
+        builder.Property(p => p.OrderSubTotal);
         builder.Property(p => p.OrderTotal);
+
+        builder.Property(p => p.CreatedByUserId);
         builder.Property(p => p.CreatedOnUtc);
         builder.Property(p => p.ExpectedShippingDateUtc);
         builder.Property(p => p.OrderDiscount);

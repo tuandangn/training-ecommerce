@@ -10,6 +10,7 @@ public static class OrderExtensions
         var dto = new OrderDto(order.Id)
         {
             Code = order.Code,
+            OrderSubTotal = order.OrderSubTotal,
             TotalAmount = order.OrderTotal,
             OrderDiscount = order.OrderDiscount,
             Status = order.OrderStatus,

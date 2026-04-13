@@ -12,6 +12,7 @@ public static class OrderExtensions
             Code = order.Code,
             ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
             CustomerId = order.CustomerId,
+            OrderSubTotal = order.OrderSubTotal,
             TotalAmount = order.TotalAmount,
             OrderDiscount = order.OrderDiscount ?? 0,
             Status = (int)order.Status,

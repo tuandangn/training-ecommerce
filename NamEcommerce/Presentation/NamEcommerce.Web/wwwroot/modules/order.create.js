@@ -1,87 +1,192 @@
 ﻿import { toast } from "/modules/modals.js";
 
+class OrderState {
+    items;
+    discount;
+    customer;
+    expectedDate;
+
+    constructor() {
+        this.items = [];
+        this.discount = 0;
+        this.customer = null;
+    }
+
+    subTotal() {
+        return this.items.reduce((subTotal, item) => subTotal += item.quantity * item.unitPrice, 0)
+    }
+    total() {
+        return Math.max(0, this.subTotal() - this.discount);
+    }
+
+}
+class Customer {
+    constructor(id, phone, name, address) {
+        this.id = id;
+        this.phone = phone;
+        this.name = name;
+        this.address = address;
+    }
+}
+class OrderItem {
+    constructor(productInfo, quantity, unitPrice) {
+        this.productInfo = productInfo;
+        this.quantity = quantity;
+        this.unitPrice = unitPrice;
+    }
+}
+class ProductInfo {
+    constructor(id, name, availableQty, picture) {
+        this.id = id;
+        this.name = name;
+        this.availableQty = availableQty;
+        this.picture = picture;
+    }
+}
+
 (function ($) {
-    let createOrderState = {
-        customer: null,
-        items: [],
-        discount: 0,
-        subTotal() {
-            return this.items.reduce((subTotal, item) => subTotal += item.qty * item.unitPrice, 0);
-        },
-        total() {
-            return Math.max(0, this.subTotal() - this.discount);
-        }
-    };
+    let createOrderState = new OrderState();
     function setOrderState(orderState) {
-        createOrderState = orderState;
+        createOrderState = Object.assign(new OrderState(), createOrderState, orderState);
         renderOrderState();
     }
+    function onItemRemoved(index) {
+        const items = createOrderState.items.filter((_, i) => index !== i);
+        setOrderState({ items });
+    }
+    function onItemQuantityChanged(index, quantity) {
+        const items = Array.from(createOrderState.items);
+        const changedItem = Object.assign(new OrderItem(), items[index], { quantity });
+        items[index] = changedItem;
+        setOrderState({ items });
+    }
+    function onItemUnitPriceChanged(index, unitPrice) {
+        const items = Array.from(createOrderState.items);
+        const changedItem = Object.assign(new OrderItem(), items[index], { unitPrice });
+        items[index] = changedItem;
+        setOrderState({ items });
+    }
     function renderOrderState() {
-        const subTotalLabel = document.getElementById('subTotal');
-        const discountDisplay = document.getElementById('discountDisplay');
-        const grandTotalLabel = document.getElementById('grandTotal');
+        //summary
+        const orderSubTotal = document.getElementById('subTotal');
+        const orderDiscount = document.getElementById('discountDisplay');
+        const orderTotal = document.getElementById('grandTotal');
         const noItemsMessage = document.getElementById('noItemsMessage');
-        const tableFooter = document.getElementById('tableFooter');
-        subTotalLabel.innerText = createOrderState.subTotal().toLocaleString() + ' đ';
-        discountDisplay.innerText = '- ' + createOrderState.discount.toLocaleString() + ' đ';
-        grandTotalLabel.innerText = createOrderState.total().toLocaleString() + ' đ';
+        const orderSummary = document.getElementById('tableFooter');
+
+        orderSubTotal.innerText = createOrderState.subTotal().toLocaleString() + ' đ';
+        orderDiscount.innerText = '- ' + createOrderState.discount.toLocaleString() + ' đ';
+        orderTotal.innerText = createOrderState.total().toLocaleString() + ' đ';
+
         if (createOrderState.items.length > 0) {
             noItemsMessage.style.display = 'none';
-            tableFooter.classList.remove('d-none');
+            orderSummary.classList.remove('d-none');
         } else {
             noItemsMessage.style.display = 'block';
-            tableFooter.classList.add('d-none');
+            orderSummary.classList.add('d-none');
         }
 
-        const customerHidden = document.getElementById('CustomerId');
+        //customer
+        const customerId = document.getElementById('CustomerId');
         const customerDisplay = document.getElementById('displayName');
         const customerSearch = document.getElementById('customerSearch');
-        const selectedCustomerDisplay = document.getElementById('selectedCustomerDisplay');
-        customerHidden.value = createOrderState.customer?.id ?? '';
-        customerDisplay.innerText = createOrderState.customer?.name ?? '';
-        document.getElementById('displayPhone').innerText = createOrderState.customer?.phone ?? '';
-        document.getElementById('displayAddress').innerText = createOrderState.customer?.address ?? '';
-        if (createOrderState.customer) {
-            selectedCustomerDisplay.classList.remove('d-none');
+        const customerPhone = document.getElementById('displayPhone');
+        const customerAddress = document.getElementById('displayAddress');
+        const shippingAddress = document.getElementById('ShippingAddress');
+        const selectedCustomerContainer = document.getElementById('selectedCustomerDisplay');
+        const customerSuggestions = document.getElementById('customerSuggestions');
+        const customerValidator = document.querySelector('[data-valmsg-for="CustomerId"]');
+
+        const customer = createOrderState.customer;
+
+        customerId.value = customer?.id ?? '';
+        customerDisplay.innerText = customer?.name ?? '';
+        customerPhone.innerText = customer?.phone ?? '';
+        customerAddress.innerText = customer?.address ?? '';
+        if (shippingAddress.hasAttribute('readonly') || !shippingAddress.value)
+            shippingAddress.value = customer?.address ?? '';
+        if (customer) {
+            selectedCustomerContainer.classList.remove('d-none');
             customerSearch.parentElement.parentElement.classList.add('d-none');
-            document.getElementById('customerSuggestions').style.display = 'none';
-            document.querySelector('[data-valmsg-for="CustomerId"]').innerText = '';
+
+            customerSuggestions.style.display = 'none';
+            customerValidator.innerText = '';
         } else {
-            customerHidden.value = '';
-            selectedCustomerDisplay.classList.add('d-none');
+            selectedCustomerContainer.classList.add('d-none');
             customerSearch.parentElement.parentElement.classList.remove('d-none');
-            customerSearch.value = '';
+            customerValidator.innerText = 'Vui lòng chọn khách hàng.';
         }
 
-        const itemsTableBody = document.getElementById('itemsTableBody');
-        itemsTableBody.innerHTML = '';
+        //order items
+        const orderItemContainer = document.getElementById('itemsTableBody');
+        orderItemContainer.innerHTML = '';
         for (let i = 0; i < createOrderState.items.length; i++) {
-            const item = createOrderState.items[i];
-            const info = item.info;
-            const row = renderOrderItem(i, info.id, item.qty, item.unitPrice, info.name, info.picture, info.availableQty);
+            const orderItem = createOrderState.items[i];
+            const productInfo = orderItem.productInfo;
+            const row = renderOrderItem(i,
+                productInfo.id, orderItem.quantity, orderItem.unitPrice,
+                productInfo.name, productInfo.picture, productInfo.availableQty);
 
             // Add event listeners for recalculation
-            row.querySelector('.orderItemRemove').addEventListener('click', function () {
-                const items = createOrderState.items.filter((_, index) => index !== i);
-                const state = Object.assign(createOrderState, { items });
-                setOrderState(state);
+            $('.orderItemRemove', row).click(() => onItemRemoved(i));
+
+            let _itemQuantityTimer;
+            $('.row-qty', row).on('input', function () {
+                clearTimeout(_itemQuantityTimer);
+                _itemQuantityTimer = setTimeout(() => {
+                    let quantity = parseFloat(this.value);
+                    if (Number.isNaN(quantity))
+                        quantity = 0;
+                    onItemQuantityChanged(i, quantity);
+                    this.focus();
+                }, 500);
             });
-            row.querySelector('.row-qty').addEventListener('input', function() {
-                item.qty = parseFloat(this.value);
-                setOrderState(createOrderState);
-            });
+            let _itemUnitPriceTimer;
             row.querySelector('.row-price').addEventListener('input', function () {
-                item.unitPrice = parseFloat(this.value);
-                setOrderState(createOrderState);
+                clearTimeout(_itemUnitPriceTimer);
+                _itemUnitPriceTimer = setTimeout(() => {
+                    let unitPrice = parseFloat(this.value);
+                    if (Number.isNaN(unitPrice))
+                        unitPrice = 0;
+                    onItemUnitPriceChanged(i, unitPrice);
+                }, 700);
             });
 
-            itemsTableBody.appendChild(row);
+            orderItemContainer.appendChild(row);
+        }
+        if (createOrderState.items.length) {
+            $('#OrderDiscount')
+                .attr('disabled', false)
+                .attr('data-val-range', `Giảm giá tối đa không quá ${createOrderState.subTotal().toLocaleString()} đ.`)
+                .attr('data-val-range-max', createOrderState.subTotal());
+        } else {
+            $('#OrderDiscount')
+                .attr('disabled', true)
+                .attr('data-val-range', false)
+                .attr('data-val-range-max', false);
         }
 
+        //validate
         var $form = $("#createOrderForm");
         $form.removeData("validator").removeData("unobtrusiveValidation");
         $.validator.unobtrusive.parse($form);
 
+        let validExpectedDate = true;
+        if (createOrderState.expectedDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (createOrderState.expectedDate.getTime() < today.getTime()) {
+                document.querySelector('[data-valmsg-for="ExpectedShippingDate"]').innerText = 'Ngày giao dự kiến phải lớn hơn hiện tại.';
+                validExpectedDate = false;
+            }
+        }
+        if (validExpectedDate)
+            document.querySelector('[data-valmsg-for="ExpectedShippingDate"]').innerText = '';
+
+        //submit
+        $('#createOrderForm :submit').attr('disabled', !createOrderState.customer || !createOrderState.items.length || !validExpectedDate);
+
+        //helpers
         function renderOrderItem(itemIndex, pid, qty, price, name, picture, stockQty) {
             const row = document.createElement('tr');
             row.id = `row-${itemIndex}`;
@@ -126,28 +231,51 @@
         }
     }
 
-    const orderDiscountInput = document.getElementById('OrderDiscount');
-    orderDiscountInput.addEventListener('input', () => {
-        const orderState = Object.assign(createOrderState, { discount: parseFloat(orderDiscountInput.value) });
-        setOrderState(orderState);
+    // discount
+    let _discountTimer;
+    $('#OrderDiscount').on('input blur', function () {
+        clearTimeout(_discountTimer);
+        _discountTimer = setTimeout(() => {
+            let discount = parseFloat(this.value);
+
+            if (Number.isNaN(discount) || discount < 0)
+                discount = 0;
+
+            setOrderState({ discount: Math.min(createOrderState.subTotal(), discount) });
+        }, 300);
     });
 
-    // --- Customer Picker ---
+    $('#ExpectedShippingDate').on('change', function () {
+        setOrderState({ expectedDate: this.value ? new Date(this.value) : null });
+    });
+
+    // customer
     let customerPickerState = {
-        items: []
+        customers: []
     };
+    function onCustomerSelect(customer) {
+        setOrderState({
+            customer: customer ? new Customer(customer.id, customer.name, customer.phone, customer.address) : null
+        });
+    }
     function setCustomerPickerState(state) {
-        customerPickerState = state;
+        customerPickerState = Object.assign({}, customerPickerState, state);
         renderCustomerPickerState();
     }
     function renderCustomerPickerState() {
+        const customers = customerPickerState.customers;
+
         const customerSuggestions = document.getElementById('customerSuggestions');
-        customerSuggestions.innerHTML = '';
-        if (!customerPickerState.items || customerPickerState.items.length === 0) {
-            customerSuggestions.style.display = 'none';
+        customerSuggestions.style.display = 'block';
+
+        if (!customers || customers.length === 0) {
+            customerSuggestions.innerHTML = '<div class="text-muted text-center list-group-item p-4 small">Không tìm thấy khách hàng nào.</div>';
+            onCustomerSelect(null);
             return;
         }
-        customerPickerState.items.forEach(it => {
+
+        customerSuggestions.innerHTML = '';
+        customers.forEach(customer => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'list-group-item list-group-item-action border-0 py-3';
@@ -155,62 +283,53 @@
                 <div class="d-flex">
                     <div><i class="bi bi-person fs-4 me-3"></i></div>
                     <div>
-                        <div class="fw-bold">${it.name}</div>
-                        <div class="small text-muted">${it.phone}</div>
-                        <div class="small text-muted">${it.address}</div>
+                        <div class="fw-bold">${customer.name}</div>
+                        <div class="small text-muted">${customer.phone}</div>
+                        <div class="small text-muted">${customer.address}</div>
                     </div>
                 </div>`;
             customerSuggestions.appendChild(btn);
             btn.onclick = () => {
-                const orderState = Object.assign(createOrderState, {
-                    customer: {
-                        id: it.id,
-                        name: it.name,
-                        phone: it.phone,
-                        address: it.address
-                    }
-                });
-                setOrderState(orderState);
+                onCustomerSelect(customer);
             };
         });
-        customerSuggestions.style.display = 'block';
     }
 
-    customerSearch.addEventListener('input', customerSearchHandler);
-    customerSearch.addEventListener('focus', customerSearchHandler);
-    let customerTimer;
-    function customerSearchHandler() {
+    let _customerTimer;
+    $('#customerSearch').on('input focus', function () {
         const q = this.value;
-        if (customerTimer) clearTimeout(customerTimer);
-        customerTimer = setTimeout(async () => {
+        if (_customerTimer) clearTimeout(_customerTimer);
+        _customerTimer = setTimeout(async () => {
             const res = await fetch(`/Customer/Search?q=${encodeURIComponent(q)}`);
             const data = await res.json();
 
-            var customerState = Object.assign(customerPickerState, { items: data});
-            setCustomerPickerState(customerState);
+            setCustomerPickerState({ customers: data });
         }, 300);
-    }
+    });
+
     document.getElementById('resetCustomer').onclick = () => {
-        var orderState = Object.assign(createOrderState, { customer: null });
-        setOrderState(orderState);
+        setOrderState({ customer: null });
     };
 
+    // item
     let addOrderItemState = {
         productInfo: null,
         quantity: 1,
         unitPrice: 0
     };
     function setAddOrderItemState(state) {
-        addOrderItemState = state;
+        addOrderItemState = Object.assign({}, addOrderItemState, state);
         renderAddOrderItemState();
     }
     function renderAddOrderItemState() {
-        const productInfo = addOrderItemState.productInfo;
         document.getElementById('itemQuantity').value = addOrderItemState.quantity;
         document.getElementById('itemUnitPrice').value = addOrderItemState.unitPrice;
+
+        const productInfo = addOrderItemState.productInfo;
         if (productInfo) {
             document.getElementById('itemProductName').innerText = productInfo.name;
             document.getElementById('itemProductStock').innerText = productInfo.availableQty;
+
             const itemProductHasPicture = document.getElementById('itemProductHasPicture');
             const itemProductNoPicture = document.getElementById('itemProductNoPicture');
             if (productInfo.picture) {
@@ -222,27 +341,33 @@
                 itemProductHasPicture.classList.add('d-none');
                 itemProductNoPicture.classList.remove('d-none');
             }
+
             document.getElementById('productSuggestions').style.display = 'none';
+
             document.getElementById('modalProductInfo').classList.remove('d-none');
             document.getElementById('addItemToTable').classList.remove('d-none');
-            document.getElementById('productSearch').value = productInfo.name;
         } else {
-            document.getElementById('productSearch').value = '';
             document.getElementById('modalProductInfo').classList.add('d-none');
             document.getElementById('addItemToTable').classList.add('d-none');
         }
     }
     document.getElementById('itemQuantity').addEventListener('input', function () {
-        const quantity = parseFloat(this.value);
-        if (Number.isNaN(quantity)) return;
+        let quantity = parseFloat(this.value);
+
+        if (Number.isNaN(quantity) || quantity < 0)
+            quantity = 0;
+
         addOrderItemState.quantity = quantity;
     });
     document.getElementById('itemUnitPrice').addEventListener('input', function () {
-        const unitPrice = parseFloat(this.value);
-        if (Number.isNaN(unitPrice)) return;
+        let unitPrice = parseFloat(this.value);
+
+        if (Number.isNaN(unitPrice) || unitPrice < 0)
+            unitPrice = 0;
+
         addOrderItemState.unitPrice = unitPrice;
     });
-    $('#addProductForm').on('submit', function(e) {
+    $('#addProductForm').on('submit', function (e) {
         e.preventDefault();
 
         if (!$(this).valid())
@@ -254,19 +379,13 @@
             return;
         }
 
-        const items = Array.from(createOrderState.items);
-        items.push({
-            info: addOrderItemState.productInfo,
-            qty: addOrderItemState.quantity,
-            unitPrice: addOrderItemState.unitPrice
+        const orderItems = Array.from(createOrderState.items);
+        orderItems.push(new OrderItem(addOrderItemState.productInfo, addOrderItemState.quantity, addOrderItemState.unitPrice));
+        setOrderState({
+            items: orderItems
         });
-        const state = Object.assign(createOrderState, {
-            items
-        });
-        setOrderState(state);
 
-        const addProductModalElement = document.getElementById('addProductModal');
-        const addProductModal = bootstrap.Modal.getOrCreateInstance(addProductModalElement);
+        const addProductModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('addProductModal'));
         addProductModal.hide();
 
         setAddOrderItemState({
@@ -276,75 +395,87 @@
         });
     });
 
-    // --- Product Picker (Modal) ---
+    // product picker
     let productPickerState = {
-        items: [],
-        selectedProduct: null
+        products: []
     };
+    function onProductSelect(product) {
+        const productInfo = product ? new ProductInfo(product.id, product.name, product.availableQty, product.picture) : null;
+        setAddOrderItemState({ productInfo });
+    }
     function setProductPickerState(state) {
-        productPickerState = state;
+        productPickerState = Object.assign({}, productPickerState, state);
         renderProductPickerState();
     }
     function renderProductPickerState() {
-        const items = productPickerState.items;
+        const products = productPickerState.products;
+
+        const productSuggestions = document.getElementById('productSuggestions');
+        productSuggestions.style.display = 'block';
+
+        if (!products || products.length === 0) {
+            productSuggestions.innerHTML = '<div class="text-muted text-center list-group-item p-4 small">Không tìm thấy hàng hóa nào.</div>';
+            onProductSelect(null);
+            return;
+        }
 
         productSuggestions.innerHTML = '';
-        if (!items || items.length === 0) { productSuggestions.style.display = 'none'; return; }
-        items.forEach(it => {
+        products.forEach(product => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'list-group-item list-group-item-action border-0 py-3';
             btn.innerHTML = `
                 <div class="d-flex align-items-start gap-3">
                     <div class="text-center" style="min-width:45px;">
-                        ${it.picture ? `<img src="${it.picture}" class="img-fluid img-thumbnail" style="width:45px;"/>` : '<i class="bi bi-image fs-4"></i>'}
+                        ${product.picture ? `<img src="${product.picture}" class="img-fluid img-thumbnail" style="width:45px;"/>` : '<i class="bi bi-image fs-4"></i>'}
                     </div>
                     <div>
-                        <div class="fw-bold">${it.name}</div>
-                        <div class="small text-muted">Tồn: ${it.availableQty}</div>
+                        <div class="fw-bold">${product.name}</div>
+                        <div class="small text-muted">Tồn: ${product.availableQty}</div>
                     </div>
                 </div>
             `;
-            btn.onclick = () => {
-                const productInfo = {
-                    id: it.id,
-                    name: it.name,
-                    availableQty: it.availableQty,
-                    picture: it.picture
-                };
-                const addItemState = Object.assign(addOrderItemState, { productInfo });
-                setAddOrderItemState(addItemState);
-
-            };
+            btn.onclick = () => onProductSelect(product);
             productSuggestions.appendChild(btn);
         });
-        productSuggestions.style.display = 'block';
     }
 
-    const productSearch = document.getElementById('productSearch');
-    productSearch.addEventListener('input', productSearchHandler);
-    productSearch.addEventListener('focus', productSearchHandler);
-    let productTimer;
-    function productSearchHandler() {
+    let _productTimer;
+    $('#productSearch').on('input focus', function () {
         const q = this.value;
-        if (productTimer) clearTimeout(productTimer);
+        if (_productTimer) clearTimeout(_productTimer);
 
-        productTimer = setTimeout(async () => {
+        _productTimer = setTimeout(async () => {
             const res = await fetch(`/Product/Search?q=${encodeURIComponent(q)}`);
             const data = await res.json();
-            var state = Object.assign(productPickerState, { items: data });
-            setProductPickerState(state);
-        }, 300);
-    }
 
-    document.addEventListener('click', (e) => {
-        const productSuggestions = document.getElementById('productSuggestions');
+            setProductPickerState({ products: data });
+        }, 300);
+    })
+
+    // misc
+    $(document).on('click', function (e) {
         const customerSuggestions = document.getElementById('customerSuggestions');
+        const customerSearch = document.getElementById('customerSearch');
         if (!customerSuggestions.contains(e.target) && e.target !== customerSearch) {
             customerSuggestions.style.display = 'none';
         }
+
+        const productSuggestions = document.getElementById('productSuggestions');
+        const productSearch = document.getElementById('productSearch');
         if (!productSuggestions.contains(e.target) && e.target !== productSearch) {
             productSuggestions.style.display = 'none';
         }
+    });
+
+    $('#btnEditShippingAddress').on('click', function () {
+        const shippingAddress = document.getElementById('ShippingAddress');
+
+        $(shippingAddress).attr('readonly', false)
+            .attr('placeholder', 'Vui lòng nhập địa chỉ giao hàng.')
+            .removeClass('border-end-0')
+            .focus();
+
+        $(this).remove();
     });
 })($);

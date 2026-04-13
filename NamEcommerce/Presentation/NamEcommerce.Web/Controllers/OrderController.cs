@@ -58,7 +58,7 @@ public sealed class OrderController : BaseAuthorizedController
             CustomerId = model.CustomerId!.Value,
             OrderDiscount = model.OrderDiscount,
             Note = model.Note,
-            ExpectedShippingDate = model.ExpectedShippingDate!.Value,
+            ExpectedShippingDate = model.ExpectedShippingDate,
             ShippingAddress = model.ShippingAddress!,
             Items = model.Items.Select(item => new OrderItemModel
             {
@@ -243,7 +243,7 @@ public sealed class OrderController : BaseAuthorizedController
         if (!order.CanUpdateInfo)
             return Json(new { success = false, message = "Đơn hàng không thể thay đổi lúc này." });
 
-        if ((model.OrderDiscount ?? 0) > order.TotalAmount)
+        if ((model.OrderDiscount ?? 0) > order.OrderSubTotal)
             return Json(new { success = false, message = "Giảm giá không được lớn hơn tổng đơn." });
 
         var result = await _mediator.Send(new UpdateOrderDiscountCommand(model.OrderId, model.OrderDiscount));

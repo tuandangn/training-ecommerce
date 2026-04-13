@@ -5,6 +5,7 @@ public sealed record OrderModel
 {
     public required Guid Id { get; init; }
     public required string Code { get; init; }
+    public required decimal OrderSubTotal { get; init; }
     public required decimal TotalAmount { get; init; }
     public required Guid CustomerId { get; init; }
 

@@ -25,7 +25,7 @@ public sealed class UpdateOrderDiscountHandler : IRequestHandler<UpdateOrderDisc
             };
         }
 
-        if((request.Discount ?? 0) > order.TotalAmount)
+        if((request.Discount ?? 0) > order.OrderSubTotal)
         {
             return new CommonResultModel
             {

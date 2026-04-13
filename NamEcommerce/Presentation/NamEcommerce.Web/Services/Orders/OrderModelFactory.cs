@@ -73,6 +73,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
             Code = order.Code,
             CustomerId = order.CustomerId,
             CustomerName = order.CustomerName,
+            OrderSubTotal = order.OrderSubTotal,
             TotalAmount = order.TotalAmount,
             OrderDiscount = order.OrderDiscount,
             Status = order.Status,

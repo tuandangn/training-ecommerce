@@ -56,10 +56,9 @@ public sealed class OrderManager(
             ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc
         };
         await order.SetCustomerAsync(dto.CustomerId, customerDataReader).ConfigureAwait(false);
-        order.SetOrderDiscount(dto.OrderDiscount);
-
         foreach (var item in dto.Items)
             await order.AddOrderItemAsync(item.ProductId, item.UnitPrice, item.Quantity, productDataReader).ConfigureAwait(false);
+        order.SetOrderDiscount(dto.OrderDiscount);
 
         var insertedOrder = await orderRepository.InsertAsync(order).ConfigureAwait(false);
 
