@@ -23,6 +23,8 @@ public record BaseOrderItemAppDto
 public sealed record OrderItemAppDto(Guid Id) : BaseOrderItemAppDto
 {
     public required Guid OrderId { get; init; }
+
+    public string? ProductName { get; set; }
 }
 
 [Serializable]

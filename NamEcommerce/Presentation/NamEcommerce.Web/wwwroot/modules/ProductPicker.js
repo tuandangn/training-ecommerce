@@ -36,6 +36,7 @@ class ProductApi {
 
 class ProductPickerView {
     constructor(target) {
+        this.target = target;
         target.innerHTML = ProductPickerView.#template();
         target.classList.add('position-relative');
 
@@ -76,10 +77,12 @@ class ProductPickerView {
 
     showProduct(product) {
         const nameField = this.displayInfo.querySelector('.name-field');
+        const stockField = this.displayInfo.querySelector('.stock-field');
         const pictureField = this.displayInfo.querySelector('.picture-field');
         const pictureFieldIcon = this.displayInfo.querySelector('.picture-field-icon');
 
         nameField.textContent = product.name;
+        stockField.textContent = product.availableQty.toLocaleString();
 
         const hasPicture = Boolean(product.picture);
         pictureField.alt = product.name;
@@ -88,14 +91,16 @@ class ProductPickerView {
         pictureFieldIcon.classList.toggle('d-none', hasPicture);
 
         this.inputGroup.classList.add('d-none');
+        this.inputGroup.classList.add('d-none');
+        this.target.querySelector(`label[for="${this.input.id}"]`)?.classList.add('d-none');
         this.displayInfo.classList.remove('d-none');
         this.hideSuggestion();
-        this.input.value = '';
     }
 
     clearProduct() {
         this.inputGroup.classList.remove('d-none');
         this.displayInfo.classList.add('d-none');
+        this.target.querySelector(`label[for="${this.input.id}"]`)?.classList.remove('d-none');
     }
 
     hideSuggestion() {
@@ -114,18 +119,18 @@ class ProductPickerView {
         btn.className = 'list-group-item list-group-item-action border-0 py-2';
         btn.innerHTML = `
             <div class="d-flex align-items-center gap-3">
-                <div class="flex-shrink-0">
+                <div class="flex-shrink-0 text-center" style="width:70px;">
                     ${product.picture
-                ? `<img class="img-fluid img-thumbnail" style="width:70px;"
+                ? `<img class="img-fluid img-thumbnail"
                                 src="${product.picture}" alt="${product.name}" />`
-                : `<i class="bi bi-box-seam-fill text-primary fs-5"></i>`
+                : `<i class="bi bi-box-seam text-muted fs-5"></i>`
             }
                 </div>
                 <div class="flex-grow-1 overflow-hidden">
                     <div class="fw-bold text-truncate">${highlight(product.name, query)}</div>
-                    <div class="small text-muted">
-                        Tồn kho: <span>${product.availableQty.toLocaleString()}</span>
-                    </div>
+                    ${product.availableQty > 0 ? `<div class="small text-muted">
+                            Tồn kho: <span>${product.availableQty.toLocaleString()}</span>
+                        </div>`: ''}
                 </div>
             </div>`;
 
@@ -149,15 +154,14 @@ class ProductPickerView {
 
     static #template() {
         return `
-        <label class="form-label small fw-bold text-muted">Tìm kiếm hàng hóa</label>
-
+        <label class="form-label small fw-bold text-muted" for="productSearch">Tìm kiếm hàng hóa</label>
         <div class="input-group-container">
             <div class="input-group">
                 <span class="input-group-text bg-white border-end-0">
                     <span class="spinner-border spinner-border-sm text-secondary d-none searchSpinner" role="status"></span>
                     <i class="bi bi-search text-muted searchIcon"></i>
                 </span>
-                <input type="text" class="form-control border-start-0 ps-0 productSearch"
+                <input type="text" class="form-control border-start-0 ps-0 productSearch" id="productSearch"
                     placeholder="Nhập tên hàng hóa..." autocomplete="off"
                     aria-label="Tìm kiếm hàng hóa" aria-autocomplete="list" />
             </div>
@@ -173,8 +177,14 @@ class ProductPickerView {
             <i class="bi bi-box-seam-fill text-primary fs-5 picture-field-icon"></i>
             <div class="flex-grow-1 overflow-hidden">
                 <div class="fw-bold text-truncate name-field"></div>
+                <div class="mb-2 small">
+                    Tồn kho: <span class="text-muted stock-field"></span>
+                </div>
+                <button type="button" class="btn btn-light btn-sm clearProduct" aria-label="Thay đổi hàng hóa">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    Thay đổi
+                </button>
             </div>
-            <button type="button" class="btn-close ms-auto clearProduct" aria-label="Xóa hàng hóa"></button>
         </div>`;
     }
 }
@@ -185,7 +195,7 @@ export default class ProductPicker {
     #selected = null;
     #debounceTimer = null;
 
-    static #DEBOUNCE_MS = 300;
+    static #DEBOUNCE_MS = 500;
     static #MIN_QUERY_LEN = 0;
 
     constructor(target) {
@@ -232,7 +242,9 @@ export default class ProductPicker {
         });
 
         // Nút xóa
-        view.clearBtn.addEventListener('click', () => this.clear());
+        view.clearBtn.addEventListener('click', () => {
+            this.clear()
+        });
 
         // Click ngoài → đóng
         document.addEventListener('click', (e) => {

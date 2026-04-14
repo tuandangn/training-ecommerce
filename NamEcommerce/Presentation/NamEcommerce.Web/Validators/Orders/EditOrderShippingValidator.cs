@@ -10,6 +10,9 @@ public sealed class EditOrderShippingValidator : AbstractValidator<EditOrderShip
         RuleFor(m => m.OrderId)
             .NotEmpty().WithMessage("Không tìm thấy ID đơn hàng.");
 
+        RuleFor(p => p.ExpectedShippingDate)
+            .GreaterThanOrEqualTo(DateTime.Now.Date).WithMessage("Ngày giao dự kiến phải lớn hơn hiện tại.");
+
         RuleFor(m => m.Address)
             .NotEmpty().WithMessage("Vui lòng nhập địa chỉ giao hàng.")
             .MaximumLength(1000).WithMessage("Địa chỉ giao hàng có độ dài không quá 1000 ký tự.");

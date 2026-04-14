@@ -21,7 +21,12 @@ public sealed record Order : AppAggregateEntity
 
     public string Code { get; }
     public Guid CustomerId { get; private set; }
+    internal string? CustomerName { get; private set; }
+    internal string? CustomerPhone { get; private set; }
+    internal string? CustomerAddress { get; private set; }
+
     public Guid? CreatedByUserId { get; init; }
+    internal string? CreatedByUsername { get; set; }
 
     public decimal OrderTotal { get; private set; }
     public decimal OrderSubTotal { get; private set; }
@@ -59,6 +64,9 @@ public sealed record Order : AppAggregateEntity
             throw new CustomerIsNotFoundException(customerId);
 
         CustomerId = customerId;
+        CustomerName = customer.FullName;
+        CustomerPhone = customer.PhoneNumber;
+        CustomerAddress = customer.Address;
         if (string.IsNullOrEmpty(ShippingAddress))
             ShippingAddress = customer.Address;
     }
@@ -76,8 +84,8 @@ public sealed record Order : AppAggregateEntity
 
         var orderItem = new OrderItem(Id, productId, unitPrice, quantity)
         {
-            //*TODO*
-            CostPrice = product.CostPrice
+            CostPrice = product.CostPrice,
+            ProductName = product.Name
         };
         _orderItems.Add(orderItem);
 
@@ -93,6 +101,10 @@ public sealed record Order : AppAggregateEntity
         if (orderItem is null)
             throw new OrderItemIsNotFoundException(orderItemId);
 
+        var calculatedSubTotal = OrderSubTotal - orderItem.SubTotal + quantity * unitPrice;
+        if (OrderDiscount > calculatedSubTotal)
+            throw new OrderDiscountIsInvalidException("Order discount cannot exceed order sub total.");
+
         orderItem.Update(quantity, unitPrice);
 
         RecalculateTotal();
@@ -103,18 +115,22 @@ public sealed record Order : AppAggregateEntity
         if (!CanUpdateOrderItems())
             throw new OrderCannotUpdateOrderItemsException();
 
-        var item = _orderItems.FirstOrDefault(i => i.Id == itemId);
-        if (item is null)
+        var orderItem = _orderItems.FirstOrDefault(i => i.Id == itemId);
+        if (orderItem is null)
             return;
 
-        _orderItems.Remove(item);
+        var calculatedSubTotal = OrderSubTotal - orderItem.SubTotal;
+        if (OrderDiscount > calculatedSubTotal)
+            throw new OrderDiscountIsInvalidException("Order discount cannot exceed order sub total.");
+
+        _orderItems.Remove(orderItem);
 
         RecalculateTotal();
     }
 
     internal void SetOrderDiscount(decimal? orderDiscount)
     {
-        if(!orderDiscount.HasValue)
+        if (!orderDiscount.HasValue)
         {
             OrderDiscount = 0;
             RecalculateTotal();

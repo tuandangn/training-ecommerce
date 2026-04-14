@@ -30,7 +30,7 @@
                         <div class="card border-0 shadow-sm rounded-4 mb-4">
                             <div class="card-header bg-white border-0 py-3">
                                 <h5 class="mb-0 fw-bold">
-                                    <i class="bi bi-person-plus me-2 text-primary"></i>
+                                    <i class="bi bi-person me-2 text-primary"></i>
                                     Thông tin Khách hàng
                                 </h5>
                             </div>
@@ -63,8 +63,8 @@
                             </div>
                             <div class="card-body p-0">
                                 <div class="table-responsive">
-                                    <table class="table table-hover align-middle mb-0" id="orderItemsTable">
-                                        <thead class="bg-light text-muted small text-uppercase">
+                                    <table class="table align-middle mb-0" id="orderItemsTable">
+                                        <thead class="text-muted">
                                             <tr>
                                                 <th class="ps-4">Sản phẩm</th>
                                                 <th class="text-center" style="width: 100px">Số lượng</th>
@@ -92,9 +92,6 @@
                                                             </div>
                                                             <div>
                                                                 <div class="fw-bold text-dark text-nowrap product-name">@item.ProductDisplayName</div>
-                                                                <div class="small text-muted">
-                                                                    Tồn kho: <span class="product-stock" data-value="@item.ProductDisplayQty">@item.ProductDisplayQty?.ToString(ViewConstants.NumberCustomFormat)</span>
-                                                                </div>
                                                             </div>
                                                         </div>
                                                         <input type="text" class="visually-hidden product-id" name="Items[@i].ProductId" value="@item.ProductId"
@@ -128,7 +125,7 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="bg-light @(Model.Items.Count > 0 ? "" : "d-none") d-flex flex-column px-4" id="tableFooter">
+                                <div class="@(Model.Items.Count > 0 ? "" : "d-none") d-flex flex-column px-4" id="tableFooter">
                                     <div class="d-flex justify-content-end gap-4">
                                         <div class="text-end fw-bold py-2 border-0">Tạm tính</div>
                                         <div class="text-end fw-bold py-2 border-0" id="subTotal">
@@ -175,7 +172,9 @@
                                 <div class="mb-4">
                                     <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted"></label>
                                     <div class="input-group">
-                                        <input asp-for="ShippingAddress" class="form-control border-end-0" placeholder="Địa chỉ của khách hàng" readonly="@(Model.CustomerDisplayAddress == Model.ShippingAddress)" />
+                                        <input asp-for="ShippingAddress" class="form-control border-end-0" 
+                                        placeholder="@(Model.CustomerDisplayAddress == Model.ShippingAddress ? "[Địa chỉ của khách hàng]" : "Nhập địa chỉ giao hàng")"
+                                        readonly="@(Model.CustomerDisplayAddress == Model.ShippingAddress)" />
                                             @if (Model.CustomerDisplayAddress == Model.ShippingAddress)
                                             {
                                                 <button type="button" class="btn btn-link border border-start-0 rounded-3 bg-light" id="btnEditShippingAddress">
@@ -262,6 +261,18 @@
     <script src="~/modules/OrderController.js" type="module"></script>
     <script type="module">
         import OrderController from "/modules/OrderController.js";
+
         new OrderController();
+
+        const addProductContainer = getEl('addProductModal');
+        const addProductModal = bootstrap.Modal.getOrCreateInstance(addProductContainer);
+
+        addProductContainer.addEventListener('hidden.bs.modal', () => {
+            addProductContainer.querySelector('.productSearch').value = '';
+        });
+
+        document.addEventListener('order:itemAdded', () => {
+            addProductModal.hide();
+        })
     </script>
 }

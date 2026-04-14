@@ -25,6 +25,11 @@ public sealed class OrderMapping : IEntityTypeConfiguration<Order>
         builder.Property(p => p.ExpectedShippingDateUtc);
         builder.Property(p => p.OrderDiscount);
 
+        builder.Property(o => o.CustomerName).HasMaxLength(1000);
+        builder.Property(o => o.CustomerPhone).HasMaxLength(1000);
+        builder.Property(o => o.CustomerAddress).HasMaxLength(1000);
+        builder.Property(o => o.CreatedByUsername).HasMaxLength(1000);
+
         builder.HasOne<Customer>().WithMany().HasForeignKey(o => o.CustomerId);
         builder.HasMany(o => o.OrderItems).WithOne().HasForeignKey(oi => oi.OrderId);
 

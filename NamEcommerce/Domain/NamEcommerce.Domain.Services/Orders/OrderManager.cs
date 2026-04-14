@@ -20,7 +20,7 @@ using NamEcommerce.Domain.Shared.Services.Orders;
 namespace NamEcommerce.Domain.Services.Orders;
 
 public sealed class OrderManager(
-    IRepository<Order> orderRepository, 
+    IRepository<Order> orderRepository,
     IEntityDataReader<Order> orderDataReader,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
@@ -41,9 +41,10 @@ public sealed class OrderManager(
         if (customer is null)
             throw new CustomerIsNotFoundException(dto.CustomerId);
 
+        User? user = null;
         if (dto.CreatedByUserId.HasValue)
         {
-            var user = await userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
+            user = await userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
             if (user is null)
                 throw new UserIsNotFoundException(dto.CreatedByUserId.Value);
         }
@@ -51,6 +52,7 @@ public sealed class OrderManager(
         var order = new Order(dto.Code)
         {
             CreatedByUserId = dto.CreatedByUserId,
+            CreatedByUsername = user?.Username,
             Note = dto.Note,
             ShippingAddress = string.IsNullOrEmpty(dto.ShippingAddress) ? customer.Address : dto.ShippingAddress,
             ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc
@@ -119,6 +121,8 @@ public sealed class OrderManager(
     public async Task UpdateOrderItemAsync(UpdateOrderItemDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
+
+        dto.Verify();
 
         var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
@@ -230,10 +234,14 @@ public sealed class OrderManager(
     {
         ArgumentNullException.ThrowIfNull(dto);
 
+        dto.Verify();
+
         var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
+        if (dto.ExpectedShippingDateUtc.HasValue)
+            order.ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc.Value;
         order.ShippingAddress = dto.Address;
         order.UpdatedOnUtc = DateTime.UtcNow;
 

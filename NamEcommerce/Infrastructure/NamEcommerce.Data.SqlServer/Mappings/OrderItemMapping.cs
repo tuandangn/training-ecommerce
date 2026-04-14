@@ -12,6 +12,8 @@ public sealed class OrderItemMapping : IEntityTypeConfiguration<OrderItem>
         builder.Property(oi => oi.Quantity).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(oi => oi.Discount).HasColumnType("decimal(18,2)").IsRequired();
 
+        builder.Property(o => o.ProductName).HasMaxLength(1000);
+
         builder.HasOne<Product>().WithMany().HasForeignKey(oi => oi.ProductId);
     }
 }

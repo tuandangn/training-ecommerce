@@ -3,6 +3,7 @@ using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Web.Contracts.Models.Common;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 
@@ -18,6 +19,7 @@ public sealed class UpdateOrderShippingHandler : IRequestHandler<UpdateOrderShip
         var result = await _orderAppService.UpdateShippingAsync(new UpdateOrderShippingAppDto
         {
             OrderId = request.OrderId,
+            ExpectedShippingDateUtc = request.ExpectedShippingDate.HasValue ? DateTimeHelper.ToUniversalTime(request.ExpectedShippingDate.Value) : null,
             Address = request.Address
         });
 

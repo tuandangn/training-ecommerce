@@ -21,8 +21,14 @@ public abstract record BaseOrderDto
 public sealed record OrderDto(Guid Id) : BaseOrderDto
 {
     public required string Code { get; init; }
+
     public required Guid CustomerId { get; init; }
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
+    public string? CustomerAddress { get; set; }
+
     public required Guid? CreatedByUserId { get; init; }
+    public string? CreatedByUsername { get; set; }
 
     public required decimal OrderSubTotal { get; init; }
     public required decimal TotalAmount { get; init; }
@@ -80,7 +86,14 @@ public sealed record UpdateOrderResultDto
 public sealed record UpdateShippingDto
 {
     public required Guid OrderId { get; init; }
+    public DateTime? ExpectedShippingDateUtc { get; set; }
     public string? Address { get; set; }
+
+    public void Verify()
+    {
+        if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
+            throw new OrderDataIsInvalidException("Expected shipping date is invalid");
+    }
 }
 
 [Serializable]

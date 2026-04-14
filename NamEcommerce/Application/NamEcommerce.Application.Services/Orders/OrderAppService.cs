@@ -52,6 +52,15 @@ public sealed class OrderAppService(
             };
         }
 
+        if ((dto.OrderDiscount ?? 0) > order.OrderSubTotal)
+        {
+            return new UpdateOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order discount cannot exceed order sub total."
+            };
+        }
+
         var updateResultDto = await orderManager.UpdateOrderAsync(new UpdateOrderDto(dto.Id)
         {
             Note = dto.Note,
@@ -166,6 +175,16 @@ public sealed class OrderAppService(
             };
         }
 
+        var calculatedOrderSubTotal = order.OrderSubTotal - orderItem.SubTotal + dto.Quantity * dto.UnitPrice;
+        if ((order.OrderDiscount ?? 0) > calculatedOrderSubTotal)
+        {
+            return new UpdateOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order discount cannot exceed order sub total."
+            };
+        }
+
         await orderManager.UpdateOrderItemAsync(new UpdateOrderItemDto
         {
             OrderId = dto.OrderId,
@@ -215,6 +234,16 @@ public sealed class OrderAppService(
             };
         }
 
+        var calculatedOrderSubTotal = order.OrderSubTotal - orderItem.SubTotal;
+        if ((order.OrderDiscount ?? 0) > calculatedOrderSubTotal)
+        {
+            return new DeleteOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order discount cannot exceed order sub total."
+            };
+        }
+
         await orderManager.DeleteOrderItemAsync(new DeleteOrderItemDto(dto.OrderId, dto.OrderItemId)).ConfigureAwait(false);
 
         return new DeleteOrderItemResultAppDto
@@ -226,6 +255,16 @@ public sealed class OrderAppService(
     public async Task<UpdateOrderShippingResultAppDto> UpdateShippingAsync(UpdateOrderShippingAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
+
+        var validateResult = dto.Validate();
+        if (!validateResult.valid)
+        {
+            return new UpdateOrderShippingResultAppDto
+            {
+                Success = false,
+                ErrorMessage = validateResult.errorMessage
+            };
+        }
 
         var order = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
@@ -249,6 +288,7 @@ public sealed class OrderAppService(
         await orderManager.UpdateShippingAsync(new UpdateShippingDto
         {
             OrderId = dto.OrderId,
+            ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc,
             Address = dto.Address
         }).ConfigureAwait(false);
 
@@ -391,4 +431,3 @@ public sealed class OrderAppService(
         return code;
     }
 }
-

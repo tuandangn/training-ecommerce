@@ -21,7 +21,12 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
 {
     public required string Code { get; init; }
     public required Guid CustomerId { get; init; }
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
+    public string? CustomerAddress { get; set; }
+
     public required Guid? CreatedByUserId { get; init; }
+    public string? CreatedByUsername { get; set; }
 
     public required decimal OrderSubTotal { get; init; }
     public required decimal TotalAmount { get; init; }
@@ -58,6 +63,9 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
             if (!validateResult.valid)
                 return validateResult;
         }
+
+        if (OrderDiscount > Items.Sum(item => item.Quantity * item.UnitPrice))
+            return (false, "Order discount cannot exceed order sub total.");
 
         return base.Validate();
     }
@@ -103,7 +111,16 @@ public sealed record UpdateOrderResultAppDto
 public sealed record UpdateOrderShippingAppDto
 {
     public required Guid OrderId { get; init; }
+    public DateTime? ExpectedShippingDateUtc { get; set; }
     public string? Address { get; set; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
+            return (false, "Expected shipping date is invalid");
+
+        return (true, string.Empty);
+    }
 }
 [Serializable]
 public sealed record UpdateOrderShippingResultAppDto

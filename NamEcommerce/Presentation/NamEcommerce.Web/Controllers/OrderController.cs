@@ -278,7 +278,7 @@ public sealed class OrderController : BaseAuthorizedController
         if (!order.CanUpdateInfo)
             return Json(new { success = false, message = "Đơn hàng không thể thay đổi lúc này." });
 
-        var result = await _mediator.Send(new UpdateOrderShippingCommand(model.OrderId, model.Address));
+        var result = await _mediator.Send(new UpdateOrderShippingCommand(model.OrderId, model.ExpectedShippingDate, model.Address));
 
         if (!result.Success)
             return Json(new { success = false, message = result.ErrorMessage });

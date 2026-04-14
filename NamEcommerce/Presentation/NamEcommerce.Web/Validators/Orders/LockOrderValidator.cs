@@ -11,7 +11,6 @@ public sealed class LockOrderValidator : AbstractValidator<LockOrderModel>
             .NotEmpty().WithMessage("Không tìm thấy ID đơn hàng.");
 
         RuleFor(m => m.Reason)
-            .NotEmpty().WithMessage("Vui lòng nhập lý do hủy đơn.")
             .MaximumLength(1000).WithMessage("Lý do hủy đơn có độ dài không quá 1000 ký tự.");
     }
 }

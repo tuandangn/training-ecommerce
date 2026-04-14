@@ -15,6 +15,7 @@ public sealed record OrderItem : AppEntity
 
     public Guid OrderId { get; init; }
     public Guid ProductId { get; init; }
+    internal string? ProductName { get; set; }
 
     public decimal UnitPrice { get; internal set; }
     public decimal CostPrice { get; internal set; }

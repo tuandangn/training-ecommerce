@@ -23,6 +23,8 @@ public record BaseOrderItemDto
 public sealed record OrderItemDto(Guid Id) : BaseOrderItemDto
 {
     public required Guid OrderId { get; init; }
+    public string? ProductName { get; set; }
+    public decimal SubTotal { get; set; }
 }
 
 [Serializable]

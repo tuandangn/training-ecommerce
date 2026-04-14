@@ -12,6 +12,9 @@ public static class OrderExtensions
             Code = order.Code,
             ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
             CustomerId = order.CustomerId,
+            CustomerName = order.CustomerName,
+            CustomerAddress = order.CustomerAddress,
+            CustomerPhone = order.CustomerPhone,
             OrderSubTotal = order.OrderSubTotal,
             TotalAmount = order.TotalAmount,
             OrderDiscount = order.OrderDiscount ?? 0,
@@ -20,6 +23,7 @@ public static class OrderExtensions
             ShippingAddress = order.ShippingAddress,
             LockOrderReason = order.LockOrderReason,
             CreatedByUserId = order.CreatedByUserId,
+            CreatedByUsername = order.CreatedByUsername,
             CreatedOnUtc = order.CreatedOnUtc,
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
@@ -31,6 +35,7 @@ public static class OrderExtensions
             {
                 OrderId = order.Id,
                 ProductId = orderItem.ProductId,
+                ProductName = orderItem.ProductName,
                 Quantity = orderItem.Quantity,
                 UnitPrice = orderItem.UnitPrice
             });

@@ -13,7 +13,7 @@ export default class CustomerPicker {
     #debounceTimer = null;
     #abortController = null;
 
-    static #DEBOUNCE_DELAY = 300;
+    static #DEBOUNCE_DELAY = 500;
     static #MIN_QUERY_LENGTH = 0;
 
     constructor(target) {
@@ -100,6 +100,7 @@ export default class CustomerPicker {
     }
 
     async #fetchCustomers(query) {
+        console.trace('CustomerPicker.fetch');
         this.#abortController = new AbortController();
 
         try {
@@ -148,8 +149,8 @@ export default class CustomerPicker {
             btn.innerHTML = `
                 <div class="fw-bold">${this.#highlight(customer.name, query)}</div>
                 <div class="small text-muted">
-                    <i class="bi bi-telephone me-1"></i>${customer.phone}
-                    ${customer.address ? `· <i class="bi bi-geo-alt me-1"></i>${customer.address}` : ''}
+                    <div><i class="bi bi-telephone me-1"></i>${customer.phone}</div>
+                    ${customer.address ? `<div><i class="bi bi-geo-alt me-1"></i>${customer.address}</div>` : ''}
                 </div>`;
 
             btn.addEventListener('click', () => this.selectCustomer(customer));
@@ -233,7 +234,7 @@ export default class CustomerPicker {
     // ─── Template HTML ───────────────────────────────────────────────────────────
     #template() {
         return `
-        <label class="form-label small fw-bold text-muted">Tìm kiếm khách hàng</label>
+        <label class="form-label small fw-bold text-muted" for="customerSearch">Tìm kiếm khách hàng</label>
 
         <div class="input-group-container">
             <div class="input-group">
@@ -242,7 +243,7 @@ export default class CustomerPicker {
                     <i class="bi bi-search text-muted searchSpinner d-none"></i>
                     <i class="bi bi-search text-muted searchIcon"></i>
                 </span>
-                <input type="text" class="form-control border-start-0 ps-0 customerSearch"
+                <input type="text" class="form-control border-start-0 ps-0 customerSearch" id="customerSearch"
                     placeholder="Nhập tên, số điện thoại..." autocomplete="off"
                     aria-label="Tìm kiếm khách hàng" aria-autocomplete="list" />
             </div>

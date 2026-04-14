@@ -9,7 +9,7 @@
     @if (TempData[ViewConstants.OrderSuccessMessage] != null)
     {
         <div class="alert alert-success alert-dismissible fade show mb-4 rounded-3 shadow-sm" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i> 
+            <i class="bi bi-check-circle-fill me-2"></i>
             @TempData[ViewConstants.OrderSuccessMessage]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
@@ -17,7 +17,7 @@
     @if (TempData[ViewConstants.OrderErrorMessage] != null)
     {
         <div class="alert alert-danger alert-dismissible fade show mb-4 rounded-3 shadow-sm" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i> 
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
             @TempData[ViewConstants.OrderErrorMessage]
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
@@ -31,7 +31,7 @@
                 </ol>
             </nav>
             <h1 class="h3 mb-0 fw-bold">
-                Chi tiết Đơn hàng 
+                Chi tiết Đơn hàng
                 <span class="text-muted text-nowrap small">@Model.Code</span>
             </h1>
         </div>
@@ -53,16 +53,16 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="bg-light text-muted small text-uppercase">
+                        <table class="table align-middle mb-0">
+                            <thead class="text-muted">
                                 <tr>
-                                    <th class="ps-4">Sản phẩm</th>
+                                    <th class="ps-3">Sản phẩm</th>
                                     <th class="text-center" style="width: 15%">Số lượng</th>
                                     <th class="text-end" style="width: 20%">Đơn giá</th>
-                                    <th class="text-end d-none d-lg-table-cell pe-4 pe-lg-0" style="width: 20%">Thành tiền</th>
+                                    <th class="text-end d-none d-lg-table-cell @(Model.CanUpdateOrderItems ? "" : "pe-3")" style="width: 20%">Thành tiền</th>
                                     @if (Model.CanUpdateOrderItems)
                                     {
-                                        <th class="text-end pe-4" style="width: 5%"></th>
+                                        <th class="text-end pe-3" style="width: 5%"></th>
                                     }
                                 </tr>
                             </thead>
@@ -70,7 +70,7 @@
                                 @foreach (var item in Model.Items)
                                 {
                                     <tr data-item-id="@item.Id">
-                                        <td class="ps-4">
+                                        <td class="ps-3">
                                             <div class="d-flex align-items-center gap-3">
                                                 <div class="d-none d-lg-block">
                                                     @if (string.IsNullOrEmpty(item.ProductPicture))
@@ -82,7 +82,7 @@
                                                     else
                                                     {
                                                         <div>
-                                                            <img src="@item.ProductPicture" class="img-fluid img-thumbnail item-product-img" style="width:45px;"/>
+                                                            <img src="@item.ProductPicture" class="img-fluid img-thumbnail item-product-img" style="width:45px;" />
                                                         </div>
                                                     }
                                                 </div>
@@ -95,31 +95,33 @@
                                             <span class="fw-semibold quantity-text">@item.Quantity.ToString(ViewConstants.NumberCustomFormat)</span>
                                         </td>
                                         <td class="text-end">
-                                            <span class="unit-price-text">@item.UnitPrice.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol</span>
+                                            <span class="unit-price-text text-nowrap">@item.UnitPrice.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol</span>
                                         </td>
-                                        <td class="text-end fw-bold text-primary d-none d-lg-table-cell pe-4 pe-lg-0">
+                                        <td class="text-end fw-bold text-primary d-none d-lg-table-cell @(Model.CanUpdateOrderItems ? "" : "pe-3")">
                                             <span class="total-price-text">@(item.SubTotal.ToString(ViewConstants.NumberCustomFormat)) @ViewConstants.DefaultCurrencySymbol</span>
                                         </td>
-                                        @if (Model.CanUpdateOrderItems) {
-                                            <td class="text-end pe-4">
+                                        @if (Model.CanUpdateOrderItems)
+                                        {
+                                            <td class="text-end pe-3">
                                                 <div class="dropdown">
                                                     <button class="btn btn-sm btn-light border-0" type="button" data-bs-toggle="dropdown">
                                                         <i class="bi bi-three-dots-vertical"></i>
                                                     </button>
                                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
                                                         <li>
-                                                            <button class="dropdown-item btnEditItem" data-id="@item.Id" 
-                                                                data-product="@item.ProductName" data-availableQty="@item.ProductAvailableQty?.ToString(ViewConstants.NumberCustomFormat)"
-                                                                data-qty="@item.Quantity.ToString("#")" data-price="@item.UnitPrice.ToString("#")">
-                                                                <i class="bi bi-pencil me-2 text-primary"></i> 
+                                                            <button class="dropdown-item btnEditItem" data-id="@item.Id"
+                                                                    data-product="@item.ProductName" data-availableQty="@item.ProductAvailableQty?.ToString(ViewConstants.NumberCustomFormat)"
+                                                                    data-qty="@item.Quantity.ToString("#")" data-price="@item.UnitPrice.ToString("#")">
+                                                                <i class="bi bi-pencil me-2 text-primary"></i>
                                                                 Chỉnh sửa
                                                             </button>
                                                         </li>
-                                                        @if(Model.Items.Count > 1){
+                                                        @if (Model.Items.Count > 1)
+                                                        {
                                                             <li><hr class="dropdown-divider"></li>
                                                             <li>
                                                                 <button class="dropdown-item text-danger btnRemoveItem" data-id="@item.Id" data-order="@Model.Id" data-name="@item.ProductName">
-                                                                    <i class="bi bi-trash me-2"></i> 
+                                                                    <i class="bi bi-trash me-2"></i>
                                                                     Xóa
                                                                 </button>
                                                             </li>
@@ -133,7 +135,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="bg-light @(Model.Items.Count > 0 ? "" : "d-none") d-flex flex-column px-4" id="tableFooter">
+                    <div class="@(Model.Items.Count > 0 ? "" : "d-none") d-flex flex-column px-4" id="tableFooter">
                         <div class="d-flex justify-content-end gap-4">
                             <div class="text-end fw-bold py-2 border-0">Tạm tính</div>
                             <div class="text-end fw-bold py-2 border-0" id="subTotal">@Model.OrderSubTotal.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol</div>
@@ -177,8 +179,8 @@
                     <div class="card-body">
                         <form id="addItemForm" method="post" asp-action="AddOrderItem" class="row g-3">
                             <input type="hidden" name="OrderId" value="@Model.Id" />
-                            <input type="text" id="productId" name="ProductId" class="visually-hidden" 
-                                data-val="true" data-val-required="Vui lòng chọn hàng hóa."/>
+                            <input type="text" id="productId" name="ProductId" class="visually-hidden"
+                                   data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
                             <div class="col-md-6 position-relative">
                                 <label class="form-label small fw-bold text-muted uppercase">Tìm kiếm sản phẩm</label>
                                 <div class="input-group">
@@ -190,38 +192,37 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small fw-bold text-muted uppercase" for="quantityInput">Số lượng</label>
-                                <input type="number" id="quantityInput" name="Quantity" class="form-control" value="" min="1" step="any" 
+                                <input type="number" id="quantityInput" name="Quantity" class="form-control" value="" min="1" step="any"
                                        placeholder="0" data-val="true" disabled
                                        data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
-                                       data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng."/>
+                                       data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
                                 <span class="small text-danger field-validation-valid" data-valmsg-for="Quantity" data-valmsg-replace="true"></span>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small fw-bold text-muted uppercase" for="unitPriceInput">Đơn giá</label>
                                 <div class="input-group">
                                     <input type="number" id="unitPriceInput" name="UnitPrice" class="form-control border-end-0"
-                                        placeholder="0" min="0" step="any" data-val="true" disabled
-                                        data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
-                                        data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
+                                           placeholder="0" min="0" step="any" data-val="true" disabled
+                                           data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
+                                           data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
                                     <span class="input-group-text bg-white border-start-0 text-muted small">@ViewConstants.DefaultCurrencySymbol</span>
                                 </div>
                                 <span class="small text-danger field-validation-valid" data-valmsg-for="UnitPrice" data-valmsg-replace="true"></span>
                             </div>
                             <div class="col-12 mt-4 text-end">
-                                <button type="submit" class="btn btn-outline-primary px-4 py-2 rounded-3 shadow-sm" id="btnAddItemSubmit" disabled>
-                                    <i class="bi bi-plus-lg me-1"></i> 
-                                    Thêm vào đơn hàng
-                                </button>
+                                <div class="text-lg-end d-grid d-lg-block">
+                                    <button type="submit" class="btn btn-outline-primary px-4 py-2 rounded-3 shadow-sm" id="btnAddItemSubmit" disabled>
+                                        <i class="bi bi-plus-lg me-1"></i>
+                                        Thêm vào đơn hàng
+                                    </button>
+                                </div>
                             </div>
                         </form>
                     </div>
                 </div>
             }
         </div>
-
-        <!-- Sidebar -->
         <div class="col-lg-4 order-0 order-lg-1">
-            <!-- Order Status Card -->
             @{
                 var orderStatus = (OrderStatus)Model.Status;
             }
@@ -230,16 +231,18 @@
                     <div class="p-4 text-center @orderStatus.GetDisplayColor() text-white bg-gradient">
                         <div class="small fw-normal mb-1 opacity-75 text-uppercase letter-spacing-1">Trạng thái đơn hàng</div>
                         <div class="fs-3 fw-bold">@orderStatus.GetDisplayText()</div>
-                        @if (Model.Status == (int) OrderStatus.Locked) {
+                        @if (Model.Status == (int)OrderStatus.Locked && !string.IsNullOrEmpty(Model.LockOrderReason))
+                        {
                             <div class="text-warning opacity-75 italic">
-                                 "@Model.LockOrderReason"
+                                "@Model.LockOrderReason"
                             </div>
-                        } 
+                        }
                     </div>
                 </div>
             </div>
             
-            @if (Model.CanLockOrder) {
+            @if (Model.CanLockOrder)
+            {
                 <div class="mb-4 d-grid d-lg-none">
                     <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#lockModal">
                         <i class="bi bi-lock-fill"></i> Khóa đơn hàng này
@@ -276,7 +279,7 @@
                                 {
                                     var encodedAddress = WebHelper.EncodeUrlComponent(Model.CustomerAddress);
                                     <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank"
-                                       class="text-decoration-none text-muted small">
+                                           class="text-decoration-none text-muted small">
                                         <i class="bi bi-geo-alt me-1"></i>
                                         @Model.CustomerAddress
                                     </a>
@@ -284,10 +287,13 @@
                             </div>
                         </div>
                     </div>
-                    <a asp-controller="Customer" asp-action="Edit" asp-route-id="@Model.CustomerId" class="btn btn-sm btn-outline-success w-100 rounded-3">
-                        <i class="bi bi-eye me-1"></i> 
-                        Xem thông tin
-                    </a>
+                    @if (Model.CanUpdateInfo)
+                    {
+                        <a asp-controller="Customer" asp-action="Edit" asp-route-id="@Model.CustomerId" class="btn btn-sm btn-outline-success w-100 rounded-3">
+                            <i class="bi bi-eye me-1"></i>
+                            Xem thông tin
+                        </a>
+                    }
                 </div>
             </div>
 
@@ -325,7 +331,8 @@
             <div class="card border-0 shadow-sm rounded-4 mt-4">
                 <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold"><i class="bi bi-truck me-2 text-warning"></i>Vận chuyển</h5>
-                    @if (Model.CanUpdateInfo) {
+                    @if (Model.CanUpdateInfo)
+                    {
                         <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#shippingModal">
                             <i class="bi bi-pencil small"></i>
                             Cập nhật
@@ -348,7 +355,7 @@
                             {
                                 var encodedAddress = WebHelper.EncodeUrlComponent(Model.ShippingAddress);
                                 @Model.ShippingAddress
-                                <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank" class="ps-2 text-muted text-decoration-none small">
+                                <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank" class="d-block py-2 text-muted text-decoration-none small">
                                     <i class="bi bi-geo-alt me-1"></i> Xem
                                 </a>
                             }
@@ -361,7 +368,8 @@
                 </div>
             </div>
 
-            @if (Model.CanLockOrder) {
+            @if (Model.CanLockOrder)
+            {
                 <div class="mt-4 d-none d-lg-grid">
                     <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#lockModal">
                         <i class="bi bi-shield-lock-fill"></i> Khóa đơn hàng này
@@ -399,19 +407,19 @@
                             <div class="col-6">
                                 <label class="form-label small fw-bold text-muted" for="editQuantity">Số lượng</label>
                                 <input type="number" id="editQuantity" name="Quantity" class="form-control rounded-3"
-                                value="1" min="0.01" step="any" data-val="true"
-                                placeholder="0"
-                                data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
-                                data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
+                                       value="1" min="0.01" step="any" data-val="true"
+                                       placeholder="0"
+                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
+                                       data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
                                 <span class="small text-danger field-validation-valid" data-valmsg-for="Quantity" data-valmsg-replace="true"></span>
                             </div>
                             <div class="col-6">
                                 <label class="form-label small fw-bold text-muted noRefill" for="editUnitPrice">Đơn giá</label>
                                 <input type="number" id="editUnitPrice" name="UnitPrice" class="form-control rounded-3"
-                                step="any" min="0" data-val="true"
-                                placeholder="0"
-                                data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
-                                data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
+                                       step="any" min="0" data-val="true"
+                                       placeholder="0"
+                                       data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
+                                       data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
                                 <span class="small text-danger field-validation-valid" data-valmsg-for="UnitPrice" data-valmsg-replace="true"></span>
                             </div>
                         </div>
@@ -440,10 +448,10 @@
                             <div class="input-group">
                                 <span class="input-group-text bg-white border-end-0"><i class="bi bi-box text-muted"></i></span>
                                 <input type="text" id="productSearch" class="form-control border-start-0 ps-0"
-                                placeholder="Nhập tên sản phẩm..." autocomplete="off">
+                                       placeholder="Nhập tên sản phẩm..." autocomplete="off">
                             </div>
                             <div id="productSuggestions" class="list-group shadow-lg mt-1"
-                            style="display: none; max-height: 200px; overflow-y: auto;"></div>
+                                 style="display: none; max-height: 200px; overflow-y: auto;"></div>
                         </div>
 
                         <div id="modalProductInfo" class="d-none">
@@ -459,19 +467,19 @@
                                 <div class="col-6">
                                     <label class="form-label small fw-bold text-muted" for="itemQuantity">Số lượng</label>
                                     <input type="number" id="itemQuantity" name="itemProductQuantity" class="form-control rounded-3"
-                                    value="1" min="0.01" step="any" data-val="true"
-                                    placeholder="0"
-                                    data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
-                                    data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
+                                           value="1" min="0.01" step="any" data-val="true"
+                                           placeholder="0"
+                                           data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
+                                           data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
                                     <span class="small text-danger field-validation-valid" data-valmsg-for="itemProductQuantity" data-valmsg-replace="true"></span>
                                 </div>
                                 <div class="col-6">
                                     <label class="form-label small fw-bold text-muted noRefill" for="itemUnitPrice">Đơn giá</label>
                                     <input type="number" id="itemUnitPrice" name="itemProductUnitPrice" class="form-control rounded-3"
-                                    step="any" min="0" data-val="true"
-                                    placeholder="0"
-                                    data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
-                                    data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
+                                           step="any" min="0" data-val="true"
+                                           placeholder="0"
+                                           data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
+                                           data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
                                     <span class="small text-danger field-validation-valid" data-valmsg-for="itemProductUnitPrice" data-valmsg-replace="true"></span>
                                 </div>
                             </div>
@@ -490,7 +498,7 @@
     </div>
 }
 
-@if (Model.CanUpdateInfo) 
+@if (Model.CanUpdateInfo)
 {
     <!-- Change order note modal -->
     <div class="modal fade" id="changeNoteModal" tabindex="-1" aria-hidden="true">
@@ -506,8 +514,8 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold text-muted small" for="orderNote">Ghi chú</label>
                             <textarea id="orderNote" name="Note" class="form-control rounded-3" rows="3"
-                            placeholder="Viết ghi chú cho đơn hàng"
-                            data-val-maxlength="Lý do hủy đơn tối đa 1000 ký tự." data-val-maxlength-max="1000">@Model.Note</textarea>
+                                      placeholder="Viết ghi chú cho đơn hàng"
+                                      data-val-maxlength="Lý do hủy đơn tối đa 1000 ký tự." data-val-maxlength-max="1000">@Model.Note</textarea>
                             <span class="small text-danger field-validation-valid" data-valmsg-for="Note" data-valmsg-replace="true"></span>
                         </div>
                         <div class="text-end mt-4 text-end">
@@ -535,11 +543,11 @@
                         <input type="hidden" name="OrderId" value="@Model.Id" />
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted" for="orderDiscount">Giảm giá</label>
-                            <input type="number" id="orderDiscount" name="OrderDiscount" class="form-control rounded-3" 
-                            value="@Model.OrderDiscount.ToString("#")" min="0" step="any" data-val="true"
-                            placeholder="0"
-                            data-val-range="Giảm giá phải lớn hơn hoặc bằng 0." data-val-range-min="0"
-                            data-val-number="Giảm giá không đúng." data-val-required="Vui lòng nhập giảm giá." />
+                            <input type="number" id="orderDiscount" name="OrderDiscount" class="form-control rounded-3"
+                                   value="@Model.OrderDiscount.ToString("#")" min="0" step="any" data-val="true"
+                                   placeholder="0"
+                                   data-val-range="Giảm giá phải lớn hơn hoặc bằng 0." data-val-range-min="0"
+                                   data-val-number="Giảm giá không đúng." data-val-required="Vui lòng nhập giảm giá." />
                             <span class="small text-danger field-validation-valid" data-valmsg-for="Reason" data-valmsg-replace="true"></span>
                         </div>
 
@@ -555,35 +563,47 @@
         </div>
     </div>
 
+    <!-- Shipping -->
     <div class="modal fade" id="shippingModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow rounded-4">
-                    <div class="modal-header border-0 pb-0">
-                        <h5 class="modal-title fw-bold text-warning">Cập nhật vận chuyển</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body py-4">
-                        <form id="shippingForm" method="post" asp-action="UpdateShipping">
-                            <input type="hidden" name="OrderId" value="@Model.Id" />
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-muted small" for="shippingExpectedDate">Ngày giao dự kiến</label>
-                                <input type="date" id="shippingExpectedDate" name="ExpectedShippingDate" class="form-control"/>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-warning">Cập nhật vận chuyển</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <form id="shippingForm" method="post" asp-action="UpdateShipping">
+                        <input type="hidden" name="OrderId" value="@Model.Id" />
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small" for="shippingExpectedDate">
+                                Ngày giao dự kiến
+                                @if (Model.ExpectedShippingDate.HasValue)
+                                {
+                                    <span class="fw-medium">
+                                        (@Model.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat))
+                                    </span>
+                                }
+                            </label>
+                            <input type="date" id="shippingExpectedDate" name="ExpectedShippingDate" class="form-control" />
                             <span class="small text-danger field-validation-valid" data-valmsg-for="ExpectedShippingDate" data-valmsg-replace="true"></span>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold text-muted small" for="shippingAddress">Địa chỉ giao hàng</label>
-                                <input id="shippingAddress" name="Address" class="form-control" data-val="true" data-val-required="Vui lòng nhập địa chỉ giao hàng."/>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-muted small" for="shippingAddress">Địa chỉ giao hàng</label>
+                            <input id="shippingAddress" name="Address" class="form-control"
+                                   value="@Model.ShippingAddress" placeholder="Nhập địa chỉ giao hàng"
+                                   data-val="true" data-val-required="Vui lòng nhập địa chỉ giao hàng." 
+                                   data-val-maxlength="Địa chỉ giao hàng tối đa 1000 ký tự." data-val-maxlength-max="1000" />
                             <span class="small text-danger field-validation-valid" data-valmsg-for="Address" data-valmsg-replace="true"></span>
-                            </div>
-                            <div class="text-end mt-4">
-                                <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
-                                <button type="submit" class="btn btn-warning px-4 rounded-3 shadow-sm">Cập nhật</button>
-                            </div>
-                        </form>
-                    </div>
+                        </div>
+                        <div class="text-end mt-4">
+                            <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-warning px-4 rounded-3 shadow-sm">Cập nhật</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
+    </div>
 }
 
 <!-- Lock modal -->
@@ -602,9 +622,9 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold text-muted small" for="cancelReason">Lý do khóa đơn</label>
                             <textarea id="cancelReason" name="Reason" class="form-control rounded-3" rows="3"
-                            placeholder="Nhập lý do khóa đơn"
-                            data-val="true" 
-                            data-val-maxlength="Lý do khóa đơn tối đa 1000 ký tự." data-val-maxlength-max="1000"></textarea>
+                                      placeholder="Nhập lý do khóa đơn"
+                                      data-val="true"
+                                      data-val-maxlength="Lý do khóa đơn tối đa 1000 ký tự." data-val-maxlength-max="1000"></textarea>
                             <span class="small text-danger field-validation-valid" data-valmsg-for="Reason" data-valmsg-replace="true"></span>
                         </div>
                         <div class="text-end mt-4 text-end">
@@ -623,16 +643,4 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/modules/order.details.js" type="module"></script>
-}
-@section Styles {
-    <style>
-        .letter-spacing-1 { letter-spacing: 1px; }
-        .product-icon-placeholder { transition: all 0.3s ease; }
-        tr:hover .product-icon-placeholder { background-color: var(--bs-primary-bg-subtle) !important; transform: scale(1.05); }
-        .card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .card:hover { box-shadow: 0 .5rem 1.5rem rgba(0,0,0,.08) !important; }
-        .bg-gradient { background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.1) 100%); }
-        .table thead th { border-top: 0; }
-        .italic { font-style: italic; }
-    </style>
 }

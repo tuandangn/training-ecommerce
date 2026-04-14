@@ -136,7 +136,6 @@ export default class OrderController {
             orderItem.productInfo.id = row.querySelector('.product-id').value;
             orderItem.productInfo.name = row.querySelector('.product-name').textContent;
             orderItem.productInfo.picture = row.querySelector('.product-picture')?.src;
-            orderItem.productInfo.availableQty = parseNumber(row.querySelector('.product-stock').dataset['value']);
             orderItem.quantity = parseNumber(row.querySelector('.row-qty').value);
             orderItem.unitPrice = parseNumber(row.querySelector('.row-price').value);
 
@@ -178,7 +177,6 @@ export default class OrderController {
                     </div>
                     <div>
                         <div class="fw-bold text-dark text-nowrap product-name">${p.name}</div>
-                        <div class="small text-muted">Tồn kho: <span class="product-stock">${p.availableQty.toLocaleString()}</span></div>
                     </div>
                 </div>
                 <input type="text" class="visually-hidden product-id" name="Items[${index}].ProductId" value="${p.id}"
@@ -373,9 +371,10 @@ export default class OrderController {
                 items: [...this.#state.items, new OrderItem(productInfo, quantity, unitPrice)],
             });
 
-            bootstrap.Modal.getOrCreateInstance(getEl('addProductModal')).hide();
             this.#productPicker.clear();
             this.#addItemController.reset();
+
+            this.#dispatch('order:itemAdded');
         });
     }
 
@@ -383,11 +382,15 @@ export default class OrderController {
         document.getElementById('btnEditShippingAddress')?.addEventListener('click', function () {
             const addr = getEl('ShippingAddress');
             addr.removeAttribute('readonly');
-            addr.placeholder = 'Vui lòng nhập địa chỉ giao hàng.';
+            addr.placeholder = 'Nhập địa chỉ giao hàng';
             addr.classList.remove('border-end-0');
             addr.focus();
             this.remove();
         });
+    }
+
+    #dispatch(name, detail = {}) {
+        document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
     }
 }
 
