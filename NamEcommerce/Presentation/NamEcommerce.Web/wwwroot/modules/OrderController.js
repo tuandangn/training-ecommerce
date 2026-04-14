@@ -51,52 +51,36 @@ class OrderState {
     }
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Trả về số hợp lệ, fallback về defaultVal nếu không parse được */
-function parseNumber(value, defaultVal = 0) {
-    const n = parseFloat(value);
-    return Number.isFinite(n) && n >= 0 ? n : defaultVal;
-}
-
-/** Debounce đơn giản, trả về hàm wrapper */
-function debounce(fn, ms) {
-    let timer;
-    return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => fn(...args), ms);
-    };
-}
-
-/** Lấy element, throw nếu không tìm thấy */
-function getEl(id) {
-    const el = document.getElementById(id);
-    if (!el) throw new Error(`Element #${id} không tồn tại`);
-    return el;
-}
 
 // ─── OrderController ──────────────────────────────────────────────────────────
 
 export default class OrderController {
-    #state = new OrderState();
+    #state;
     #addItemController = new AddItemController();
-    #productPicker;
 
-    constructor(initialState) {
-        this.#bindCustomerPicker(initialState?.customer);
+    #productPicker;
+    #customerPicker;
+
+    constructor() {
+
         this.#bindProductPicker();
-        this.#bindDiscount();
-        this.#bindExpectedDate();
         this.#bindAddItemForm();
         this.#bindShippingAddressEdit();
 
-        let items = initialState?.items ?? [];
-        initialState.items = items.map(item => Object.assign(new OrderItem(), item));
-        this.#setState(initialState);
+        const initialCustomer = this.#bindCustomerPicker();
+        const initialDiscount = this.#bindDiscount();
+        const initialExpectedDate = this.#bindExpectedDate();
+        const initialItems = this.#getItems();
+
+        this.#state = Object.assign(new OrderState(),{
+            customer: initialCustomer,
+            discount: initialDiscount,
+            expectedDate: initialExpectedDate,
+            items: initialItems
+        });
     }
 
     // ─── State ────────────────────────────────────────────────────────────────
-
     #setState(patch) {
         Object.assign(this.#state, patch);
         this.#render();
@@ -104,13 +88,12 @@ export default class OrderController {
 
     // ─── Render ───────────────────────────────────────────────────────────────
 
-    #render(initial) {
+    #render() {
         this.#renderSummary();
         this.#renderCustomer();
         this.#renderItems();
         this.#renderDiscount();
-        if (!initial)
-            this.#validateForm();
+        this.#validateForm();
     }
 
     #renderSummary() {
@@ -144,6 +127,23 @@ export default class OrderController {
         });
     }
 
+    #getItems() {
+        const container = getEl('itemsTableBody');
+        const rows = Array.from(container.querySelectorAll('tr'));
+        return rows.map(row => {
+            const orderItem = new OrderItem({}, 0, 0);
+
+            orderItem.productInfo.id = row.querySelector('.product-id').value;
+            orderItem.productInfo.name = row.querySelector('.product-name').textContent;
+            orderItem.productInfo.picture = row.querySelector('.product-picture')?.src;
+            orderItem.productInfo.availableQty = parseNumber(row.querySelector('.product-stock').dataset['value']);
+            orderItem.quantity = parseNumber(row.querySelector('.row-qty').value);
+            orderItem.unitPrice = parseNumber(row.querySelector('.row-price').value);
+
+            return orderItem;
+        });
+    }
+
     #renderDiscount() {
         const discountInput = getEl('OrderDiscount');
         const hasItems = this.#state.items.length > 0;
@@ -172,20 +172,20 @@ export default class OrderController {
                 <div class="d-flex gap-3">
                     <div class="text-center d-none d-lg-block" style="min-width:45px;">
                         ${p.picture
-                ? `<img src="${p.picture}" class="img-fluid img-thumbnail" style="width:45px;" alt="${p.name}" />`
+                ? `<img src="${p.picture}" class="img-fluid img-thumbnail product-picture" style="width:45px;" alt="${p.name}" />`
                 : '<i class="bi bi-image fs-4 text-muted"></i>'
             }
                     </div>
                     <div>
-                        <div class="fw-bold text-dark text-nowrap">${p.name}</div>
-                        <div class="small text-muted">Tồn kho: ${p.availableQty.toLocaleString()}</div>
-                        <span class="small text-danger field-validation-valid"
-                            data-valmsg-for="Items[${index}].ProductId"
-                            data-valmsg-replace="true"></span>
+                        <div class="fw-bold text-dark text-nowrap product-name">${p.name}</div>
+                        <div class="small text-muted">Tồn kho: <span class="product-stock">${p.availableQty.toLocaleString()}</span></div>
                     </div>
                 </div>
-                <input type="hidden" name="Items[${index}].ProductId" value="${p.id}"
+                <input type="text" class="visually-hidden product-id" name="Items[${index}].ProductId" value="${p.id}"
                     data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
+                <span class="small text-danger field-validation-valid"
+                    data-valmsg-for="Items[${index}].ProductId"
+                    data-valmsg-replace="true"></span>
             </td>
             <td class="text-center">
                 <input type="number" name="Items[${index}].Quantity" value="${quantity}"
@@ -300,9 +300,9 @@ export default class OrderController {
 
     // ─── Event bindings ───────────────────────────────────────────────────────
 
-    #bindCustomerPicker(selectedCustomer) {
+    #bindCustomerPicker() {
         const el = getEl('customerPicker');
-        const customerPicker = new CustomerPicker(el);
+        this.#customerPicker = new CustomerPicker(el);
 
         el.addEventListener('select', (e) => {
             this.#setState({ customer: e.detail?.customer ? new Customer(e.detail.customer) : null });
@@ -311,8 +311,13 @@ export default class OrderController {
             this.#setState({ customer: null });
         });
 
-        if (selectedCustomer)
-            customerPicker.selectCustomer(selectedCustomer);
+        const initialCustomer = el.dataset;
+        if (initialCustomer.id) {
+            var customer = new Customer(initialCustomer);
+            this.#customerPicker.displayCustomer(customer);
+            return customer;
+        }
+        return null;
     }
 
     #bindProductPicker() {
@@ -328,19 +333,26 @@ export default class OrderController {
     }
 
     #bindDiscount() {
-        getEl('OrderDiscount').addEventListener('input', debounce((e) => {
+        const el = getEl('OrderDiscount');
+        el.addEventListener('input', debounce((e) => {
             const raw = parseNumber(e.target.value);
             const discount = Math.min(this.#state.subTotal, raw);
             this.#setState({ discount });
         }, 300));
+
+        return parseNumber(el.value);
     }
 
     #bindExpectedDate() {
-        getEl('ExpectedShippingDate').addEventListener('change', (e) => {
+        const el = getEl('ExpectedShippingDate');
+        el.addEventListener('change', (e) => {
             this.#setState({
                 expectedDate: e.target.value ? new Date(e.target.value) : null,
             });
         });
+
+        const initialExpectedDate = el.value ? new Date(el.value) : null;
+        return initialExpectedDate;
     }
 
     #bindAddItemForm() {

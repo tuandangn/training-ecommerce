@@ -65,3 +65,22 @@ $.fn.focusEnd = function () {
         }
     });
 };
+
+function parseNumber(value, defaultVal = 0) {
+    const n = parseFloat(value);
+    return Number.isFinite(n) ? n : defaultVal;
+}
+
+function debounce(fn, ms) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), ms);
+    };
+}
+
+function getEl(id) {
+    const el = document.getElementById(id);
+    if (!el) throw new Error(`Element #${id} không tồn tại`);
+    return el;
+}

@@ -195,18 +195,21 @@ export default class CustomerPicker {
 
     // ─── Chọn / Xóa khách hàng ──────────────────────────────────────────────────
 
-    selectCustomer(customer) {
-        this.#selectedCustomer = customer instanceof Customer ? customer : new Customer(customer);
-
-        this.displayInfo.querySelector('.name-field').textContent = this.#selectedCustomer.name;
-        this.displayInfo.querySelector('.phone-field').textContent = this.#selectedCustomer.phone;
-        this.displayInfo.querySelector('.address-field').textContent = this.#selectedCustomer.address;
+    displayCustomer(customer) {
+        this.displayInfo.querySelector('.name-field').textContent = customer.name;
+        this.displayInfo.querySelector('.phone-field').textContent = customer.phone;
+        this.displayInfo.querySelector('.address-field').textContent = customer.address;
 
         this.inputGroup.classList.add('d-none');
         this.displayInfo.classList.remove('d-none');
         this.#hideSuggestion();
-        this.input.value = '';
+    }
+    selectCustomer(customer) {
+        this.#selectedCustomer = customer instanceof Customer ? customer : new Customer(customer);
 
+        this.displayCustomer(this.#selectedCustomer);
+
+        this.input.value = '';
         this.#dispatch('select', { customer: this.#selectedCustomer });
     }
 

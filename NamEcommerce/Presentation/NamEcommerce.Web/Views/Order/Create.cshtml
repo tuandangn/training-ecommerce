@@ -16,7 +16,7 @@
                             <li class="breadcrumb-item active" aria-current="page">Tạo mới</li>
                         </ol>
                     </nav>
-                    <h1 class="h3 mb-0 fw-bold">Tạo Đơn hàng mới</h1>
+                    <h1 class="h3 mb-0 fw-bold">Tạo đơn hàng mới</h1>
                 </div>
                 <a asp-action="List" class="btn btn-outline-secondary px-4 rounded-3">
                     <i class="bi bi-x-lg me-1"></i>
@@ -35,7 +35,10 @@
                                 </h5>
                             </div>
                             <div class="card-body mb-2">
-                                <div id="customerPicker"></div>
+                                <div id="customerPicker" data-id="@Model.CustomerId" 
+                                    data-name="@Model.CustomerDisplayName"
+                                    data-phone="@Model.CustomerDisplayPhone"
+                                    data-address="@Model.CustomerDisplayAddress"></div>
                                 <input type="text" class="visually-hidden" asp-for="CustomerId" />
                                 <span asp-validation-for="CustomerId" class="small text-danger"></span>
                             </div>
@@ -80,7 +83,7 @@
                                                             <div class="text-center d-none d-lg-block" style="min-width:45px;">
                                                                 @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))
                                                                 {
-                                                                    <img src="@item.ProductDisplayPicture" class="img-fluid img-thumbnail" style="width:45px;" />
+                                                                    <img src="@item.ProductDisplayPicture" class="img-fluid img-thumbnail product-picture" style="width:45px;" />
                                                                 }
                                                                 else
                                                                 {
@@ -88,14 +91,13 @@
                                                                 }
                                                             </div>
                                                             <div>
-                                                                <div class="fw-bold text-dark text-nowrap">@item.ProductDisplayName</div>
+                                                                <div class="fw-bold text-dark text-nowrap product-name">@item.ProductDisplayName</div>
                                                                 <div class="small text-muted">
-                                                                    Tồn kho: @item.ProductDisplayQty?.ToString(ViewConstants.NumberCustomFormat)
+                                                                    Tồn kho: <span class="product-stock" data-value="@item.ProductDisplayQty">@item.ProductDisplayQty?.ToString(ViewConstants.NumberCustomFormat)</span>
                                                                 </div>
-                                                                <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].ProductId" data-valmsg-replace="true"></span>
                                                             </div>
                                                         </div>
-                                                        <input type="text" class="visually-hidden" name="Items[@i].ProductId" value="@item.ProductId"
+                                                        <input type="text" class="visually-hidden product-id" name="Items[@i].ProductId" value="@item.ProductId"
                                                                data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
                                                         <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].ProductId" data-valmsg-replace="true"></span>
                                                     </td>
@@ -208,7 +210,6 @@
         </div>
     </div>
 </div>
-
 <!-- Add Product Modal -->
 <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -222,7 +223,6 @@
                     <div class="mb-3">
                         <div id="productPicker"></div>
                     </div>
-
                     <div id="modalProductInfo" class="d-none">
                         <div class="row g-3">
                             <div class="col-6">
@@ -262,39 +262,6 @@
     <script src="~/modules/OrderController.js" type="module"></script>
     <script type="module">
         import OrderController from "/modules/OrderController.js";
-
-        const initialState = {
-            items: @Html.Raw(JsonSerializer.Serialize(Model.Items.Select(item => new {
-                productInfo = new
-                {
-                    id = item.ProductId,
-                    name = item.ProductDisplayName,
-                    availableQty = item.ProductDisplayQty,
-                    picture = item.ProductDisplayPicture
-                },
-                quantity = item.Quantity,
-                unitPrice = item.UnitPrice
-            }))),
-            discount: @(Model.OrderDiscount ?? 0)
-        };
-        @if (Model.CustomerId.HasValue)
-        {
-            <text>
-                initialState.customer = {
-                    id: '@Html.Raw(Model.CustomerId)',
-                    name: '@Html.Raw(Model.CustomerDisplayName)',
-                    phone: '@Html.Raw(Model.CustomerDisplayPhone)',
-                    address: '@Html.Raw(Model.CustomerDisplayAddress)'
-                };
-            </text>
-        }
-        @if (Model.ExpectedShippingDate.HasValue)
-        {
-            <text>
-            initialState.expectedDate =  @Html.Raw(Model.ExpectedShippingDate.HasValue ? $"new Date('{Model.ExpectedShippingDate.Value.ToString("yyyy-MM-dd")}')" : "null");
-            </text>
-        }
-
-        new OrderController(initialState);
+        new OrderController();
     </script>
 }
