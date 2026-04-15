@@ -1,4 +1,4 @@
-﻿namespace NamEcommerce.Application.Contracts.Dtos.Orders;
+namespace NamEcommerce.Application.Contracts.Dtos.Orders;
 
 [Serializable]
 public record BaseOrderItemAppDto
@@ -25,6 +25,8 @@ public sealed record OrderItemAppDto(Guid Id) : BaseOrderItemAppDto
     public required Guid OrderId { get; init; }
 
     public string? ProductName { get; set; }
+    public bool IsDelivered { get; set; }
+    public DateTime? DeliveredOnUtc { get; set; }
 }
 
 [Serializable]

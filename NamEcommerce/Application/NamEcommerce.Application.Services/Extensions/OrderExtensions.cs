@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Application.Contracts.Dtos.Orders;
+using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 
 namespace NamEcommerce.Application.Services.Extensions;
@@ -37,7 +37,9 @@ public static class OrderExtensions
                 ProductId = orderItem.ProductId,
                 ProductName = orderItem.ProductName,
                 Quantity = orderItem.Quantity,
-                UnitPrice = orderItem.UnitPrice
+                UnitPrice = orderItem.UnitPrice,
+                IsDelivered = orderItem.IsDelivered,
+                DeliveredOnUtc = orderItem.DeliveredOnUtc
             });
         }
 

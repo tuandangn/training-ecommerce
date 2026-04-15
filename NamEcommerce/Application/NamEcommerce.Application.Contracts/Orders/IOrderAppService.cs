@@ -18,5 +18,7 @@ public interface IOrderAppService
 
     Task<UpdateOrderShippingResultAppDto> UpdateShippingAsync(UpdateOrderShippingAppDto dto);
 
+    Task<MarkOrderItemDeliveredResultAppDto> MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredAppDto dto);
+
     Task<string> NextOrderCodeAsync();
 }

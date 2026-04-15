@@ -5,7 +5,7 @@
            asp-action="Index">Trang chủ</a>
     </li>
     <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("Order", "Customer") ? "active" : "")" href="#"
+        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("Order", "Preparation", "DeliveryNote") ? "active" : "")" href="#"
                id="orderMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Bán hàng
         </a>
@@ -15,8 +15,12 @@
                    asp-controller="Order" asp-action="List">Đơn hàng</a>
             </li>
             <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Customer", "List") ? "active" : "")"
-                   asp-controller="Customer" asp-action="List">Khách hàng</a>
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("DeliveryNote", "List") ? "active" : "")"
+                   asp-controller="DeliveryNote" asp-action="List">Phiếu xuất kho</a>
+            </li>
+            <li>
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Preparation", "List") ? "active" : "")"
+                   asp-controller="Preparation" asp-action="List">Chuẩn bị hàng</a>
             </li>
         </ul>
     </li>
@@ -33,6 +37,18 @@
             <li>
                 <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Inventory", "StockList") ? "active" : "")"
                    asp-controller="Inventory" asp-action="StockList">Tồn kho</a>
+            </li>
+        </ul>
+    </li>
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("Customer") ? "active" : "")" href="#"
+               id="customerMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Khách hàng
+        </a>
+        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <li>
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Customer", "List") ? "active" : "")"
+                   asp-controller="Customer" asp-action="List">Khách hàng</a>
             </li>
         </ul>
     </li>

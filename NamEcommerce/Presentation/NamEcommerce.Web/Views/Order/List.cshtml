@@ -143,7 +143,13 @@
                                             </li>
                                             <li><hr class="dropdown-divider"></li>
                                             <li>
-                                                <button class="dropdown-item text-danger btnDelete" data-code="@item.Code">
+                                                <a class="dropdown-item" asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@item.Id">
+                                                    <i class="bi bi-box-seam me-2"></i>
+                                                    Tạo phiếu xuất
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <button class="dropdown-item text-danger btnDelete" data-id="@item.Id" data-code="@item.Code">
                                                     <i class="bi bi-trash me-2"></i>
                                                     Xóa đơn
                                                 </button>
@@ -170,7 +176,6 @@
             {
                 <partial name="_Pager" model="Model.Data.Pagination" />
             }
-
         </div>
     </div>
 </div>

@@ -193,5 +193,32 @@ public sealed record Order : AppAggregateEntity
         LockOrderReason = reason;
     }
 
+    internal bool AllItemsDelivered => _orderItems.Count > 0 && _orderItems.All(i => i.IsDelivered);
+
+    internal void MarkOrderItemDelivered(Guid orderItemId, Guid pictureId)
+    {
+        var orderItem = _orderItems.FirstOrDefault(i => i.Id == orderItemId);
+        if (orderItem is null)
+            throw new OrderItemIsNotFoundException(orderItemId);
+
+        orderItem.MarkDelivered(pictureId);
+    }
+
+    /// <summary>
+    /// Automatically locks the order if all items have been delivered.
+    /// Returns true if the order was locked.
+    /// </summary>
+    internal bool TryAutoLock()
+    {
+        if (OrderStatus == OrderStatus.Locked)
+            return false;
+
+        if (!AllItemsDelivered)
+            return false;
+
+        LockOrder("Tất cả hàng hóa đã được giao.");
+        return true;
+    }
+
     #endregion
 }

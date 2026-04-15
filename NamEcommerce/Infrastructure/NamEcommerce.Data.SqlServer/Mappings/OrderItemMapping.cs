@@ -14,6 +14,10 @@ public sealed class OrderItemMapping : IEntityTypeConfiguration<OrderItem>
 
         builder.Property(o => o.ProductName).HasMaxLength(1000);
 
+        builder.Property(o => o.IsDelivered).IsRequired().HasDefaultValue(false);
+        builder.Property(o => o.DeliveredOnUtc).IsRequired(false);
+        builder.Property(o => o.DeliveryProofPictureId).IsRequired(false);
+
         builder.HasOne<Product>().WithMany().HasForeignKey(oi => oi.ProductId);
     }
 }

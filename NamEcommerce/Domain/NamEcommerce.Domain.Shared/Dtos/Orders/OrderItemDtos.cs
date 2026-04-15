@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared.Exceptions.Orders;
+using NamEcommerce.Domain.Shared.Exceptions.Orders;
 
 namespace NamEcommerce.Domain.Shared.Dtos.Orders;
 
@@ -25,6 +25,8 @@ public sealed record OrderItemDto(Guid Id) : BaseOrderItemDto
     public required Guid OrderId { get; init; }
     public string? ProductName { get; set; }
     public decimal SubTotal { get; set; }
+    public bool IsDelivered { get; set; }
+    public DateTime? DeliveredOnUtc { get; set; }
 }
 
 [Serializable]
@@ -50,3 +52,11 @@ public sealed record UpdateOrderItemDto
 
 [Serializable]
 public sealed record DeleteOrderItemDto(Guid OrderId, Guid OrderItemId);
+
+[Serializable]
+public sealed record MarkOrderItemDeliveredDto
+{
+    public required Guid OrderId { get; init; }
+    public required Guid OrderItemId { get; init; }
+    public required Guid PictureId { get; init; }
+}

@@ -5,21 +5,25 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Customers;
+using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Finance;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Application.Contracts.Preparation;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Report;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Catalog;
 using NamEcommerce.Application.Services.Customers;
+using NamEcommerce.Application.Services.DeliveryNotes;
 using NamEcommerce.Application.Services.Events;
 using NamEcommerce.Application.Services.Finance;
 using NamEcommerce.Application.Services.Inventory;
 using NamEcommerce.Application.Services.Media;
 using NamEcommerce.Application.Services.Orders;
 using NamEcommerce.Application.Services.PurchaseOrders;
+using NamEcommerce.Application.Services.Preparation;
 using NamEcommerce.Application.Services.Report;
 using NamEcommerce.Application.Services.Users;
 using NamEcommerce.Data.Contracts;
@@ -27,6 +31,7 @@ using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Domain.Services.Catalog;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Customers;
+using NamEcommerce.Domain.Services.DeliveryNotes;
 using NamEcommerce.Domain.Services.Finance;
 using NamEcommerce.Domain.Services.Inventory;
 using NamEcommerce.Domain.Services.Media;
@@ -38,6 +43,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Services.Catalog;
 using NamEcommerce.Domain.Shared.Services.Customers;
+using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Media;
@@ -53,11 +59,13 @@ using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Mvc.Binders;
 using NamEcommerce.Web.Services;
 using NamEcommerce.Web.Services.Catalog;
+using NamEcommerce.Web.Services.DeliveryNotes;
 using NamEcommerce.Web.Services.Inventory;
 using NamEcommerce.Web.Services.Orders;
 using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Validators.Users;
 using System.Reflection;
+using NamEcommerce.Web.Services.Preparations;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -141,6 +149,13 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IOrderManager, OrderManager>();
     services.AddScoped<IOrderAppService, OrderAppService>();
 
+    // Preparation
+    services.AddScoped<IPreparationAppService, PreparationAppService>();
+
+    // Delivery Notes
+    services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();
+    services.AddScoped<IDeliveryNoteAppService, DeliveryNoteAppService>();
+
     services.AddScoped<IInformationService, InformationService>();
     services.AddScoped<ICurrentUserService, CurrentUserService>();
     services.AddScoped<IWebHelper, WebHelper>();
@@ -150,6 +165,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IWarehouseModelFactory, WarehouseModelFactory>();
     services.AddScoped<IPurchaseOrderModelFactory, PurchaseOrderModelFactory>();
     services.AddScoped<IOrderModelFactory, OrderModelFactory>();
+    services.AddScoped<IPreparationModelFactory, PreparationModelFactory>();
+    services.AddScoped<IDeliveryNoteModelFactory, DeliveryNoteModelFactory>();
 
     services.AddMediatR(config =>
     {

@@ -418,6 +418,56 @@ public sealed class OrderAppService(
         };
     }
 
+    public async Task<MarkOrderItemDeliveredResultAppDto> MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var order = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+        {
+            return new MarkOrderItemDeliveredResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Không tìm thấy đơn hàng."
+            };
+        }
+
+        var orderItem = order.Items.FirstOrDefault(item => item.Id == dto.OrderItemId);
+        if (orderItem is null)
+        {
+            return new MarkOrderItemDeliveredResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Không tìm thấy hàng hóa trong đơn."
+            };
+        }
+
+        if (orderItem.IsDelivered)
+        {
+            return new MarkOrderItemDeliveredResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Hàng hóa đã được đánh dấu giao rồi."
+            };
+        }
+
+        await orderManager.MarkOrderItemDeliveredAsync(new Domain.Shared.Dtos.Orders.MarkOrderItemDeliveredDto
+        {
+            OrderId = dto.OrderId,
+            OrderItemId = dto.OrderItemId,
+            PictureId = dto.PictureId
+        }).ConfigureAwait(false);
+
+        // Re-fetch to check if order was auto-locked
+        var updatedOrder = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
+
+        return new MarkOrderItemDeliveredResultAppDto
+        {
+            Success = true,
+            OrderAutoLocked = updatedOrder?.Status == OrderStatus.Locked
+        };
+    }
+
     public async Task<string> NextOrderCodeAsync()
     {
         var now = DateTime.UtcNow;

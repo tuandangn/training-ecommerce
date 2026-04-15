@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Application.Contracts.Dtos.Media;
+using NamEcommerce.Application.Contracts.Dtos.Media;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Domain.Shared.Services.Media;
 
@@ -30,5 +30,18 @@ public sealed class PictureAppService : IPictureAppService
             Extension = picture.Extension,
             FileName = picture.FileName
         };
+    }
+
+    public async Task<Guid> CreatePictureAsync(CreatePictureAppDto dto)
+    {
+        var result = await _pictureManager.CreatePictureAsync(new Domain.Shared.Dtos.Catalog.CreatePictureDto
+        {
+            Data = dto.Data,
+            MimeType = dto.MimeType,
+            FileName = dto.FileName,
+            Extension = dto.Extension
+        }).ConfigureAwait(false);
+
+        return result.CreatedId;
     }
 }

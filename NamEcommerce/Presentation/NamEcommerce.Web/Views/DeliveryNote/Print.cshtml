@@ -1,0 +1,210 @@
+@model NamEcommerce.Web.Contracts.Models.DeliveryNotes.DeliveryNoteDetailsModel
+@{
+    Layout = null; // No standard layout for print
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phiếu Xuất Kho - @Model.Code</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            color: #000;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f0f0;
+        }
+        .print-page {
+            width: 210mm; /* A4 width */
+            min-height: 297mm; /* A4 height */
+            padding: 20mm;
+            margin: 10mm auto;
+            border: 1px #D3D3D3 solid;
+            background: white;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+        }
+        .header p {
+            margin: 5px 0 0 0;
+            font-style: italic;
+        }
+        .info-table {
+            width: 100%;
+            margin-bottom: 20px;
+            border-collapse: collapse;
+        }
+        .info-table td {
+            vertical-align: top;
+            padding: 3px;
+        }
+        .info-title {
+            width: 120px;
+            font-weight: bold;
+        }
+        .item-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .item-table th, .item-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+        .item-table th {
+            background-color: #f2f2f2;
+        }
+        .text-right { text-align: right !important; }
+        .text-center { text-align: center !important; }
+        
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 50px;
+        }
+        .footer-sig {
+            text-align: center;
+            width: 200px;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+
+        @@media print {
+            body { 
+                background: white; 
+                margin: 0;
+                padding: 0;
+            }
+            .print-page {
+                margin: 0;
+                border: initial;
+                border-radius: initial;
+                width: initial;
+                min-height: initial;
+                box-shadow: initial;
+                background: initial;
+                page-break-after: always;
+            }
+            .page-break {
+                page-break-before: auto;
+            }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+
+    @for (int copy = 1; copy <= 2; copy++)
+    {
+        <div class="print-page @(copy == 2 ? "page-break" : "")">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                <div>
+                    <strong>CỬA HÀNG VLXD TUẤN KHÔI</strong><br />
+                    Địa chỉ: Số 123 Đường ABCD, Quận XYZ, TP.HCM<br />
+                    Điện thoại: 0909.123.456
+                </div>
+                <div class="text-right">
+                    <strong>Bản @(copy == 1 ? "1 (Giao khách hàng)" : "2 (Lưu tại cửa hàng)")</strong>
+                </div>
+            </div>
+
+            <div class="header">
+                <h1>PHIẾU XUẤT KHO</h1>
+                <p>Số: @Model.Code</p>
+                <p>Ngày @Model.CreatedOnUtc.ToLocalTime().ToString("dd") tháng @Model.CreatedOnUtc.ToLocalTime().ToString("MM") năm @Model.CreatedOnUtc.ToLocalTime().ToString("yyyy")</p>
+            </div>
+
+            <table class="info-table">
+                <tr>
+                    <td class="info-title">Người mua hàng:</td>
+                    <td>@Model.CustomerName</td>
+                </tr>
+                <tr>
+                    <td class="info-title">Điện thoại:</td>
+                    <td>@Model.CustomerPhone</td>
+                </tr>
+                <tr>
+                    <td class="info-title">Địa chỉ giao:</td>
+                    <td>@Model.ShippingAddress</td>
+                </tr>
+                @if (!string.IsNullOrEmpty(Model.Note))
+                {
+                    <tr>
+                        <td class="info-title">Ghi chú:</td>
+                        <td>@Model.Note</td>
+                    </tr>
+                }
+            </table>
+
+            <table class="item-table">
+                <thead>
+                    <tr>
+                        <th class="text-center" style="width: 50px;">STT</th>
+                        <th>Tên hàng hóa</th>
+                        <th class="text-right" style="width: 100px;">Số lượng</th>
+                        @if (Model.ShowPrice)
+                        {
+                            <th class="text-right" style="width: 120px;">Đơn giá</th>
+                            <th class="text-right" style="width: 120px;">Thành tiền</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Items.Any())
+                    {
+                        var idx = 1;
+                        foreach (var item in Model.Items)
+                        {
+                            <tr>
+                                <td class="text-center">@(idx++)</td>
+                                <td>@item.ProductName</td>
+                                <td class="text-right">@item.Quantity.ToString("N2")</td>
+                                @if (Model.ShowPrice)
+                                {
+                                    <td class="text-right">@item.UnitPrice.ToString("N0")</td>
+                                    <td class="text-right">@item.SubTotal.ToString("N0")</td>
+                                }
+                            </tr>
+                        }
+                        @if (Model.ShowPrice)
+                        {
+                            <tr>
+                                <td colspan="4" class="text-right"><strong>Tổng cộng:</strong></td>
+                                <td class="text-right"><strong>@Model.TotalAmount.ToString("N0")</strong></td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+
+            <div class="footer">
+                <div class="footer-sig">
+                    <strong>Người Lập Phiếu</strong><br />
+                    <span style="font-style: italic; font-size: 12px;">(Ký, họ tên)</span>
+                </div>
+                <div class="footer-sig">
+                    <strong>Người Giao Hàng</strong><br />
+                    <span style="font-style: italic; font-size: 12px;">(Ký, họ tên)</span>
+                </div>
+                <div class="footer-sig">
+                    <strong>Người Nhận Hàng</strong><br />
+                    <span style="font-style: italic; font-size: 12px;">(Ký, họ tên)</span>
+                </div>
+            </div>
+        </div>
+    }
+
+</body>
+</html>

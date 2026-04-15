@@ -180,12 +180,15 @@ public sealed class OrderManager(
         return order.ToDto();
     }
 
-    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, OrderStatus? status, int pageIndex, int pageSize)
+    public Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, OrderStatus? status, int pageIndex, int pageSize)
+        => GetOrdersAsync(keywords, status.HasValue ? [status.Value] : [], pageIndex, pageSize);
+
+    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, IEnumerable<OrderStatus> status, int pageIndex, int pageSize)
     {
         var query = orderDataReader.DataSource;
 
-        if (status.HasValue)
-            query = query.Where(order => order.OrderStatus == status);
+        if (status != null && status.Any())
+            query = query.Where(order => status.Contains(order.OrderStatus));
 
         if (!string.IsNullOrEmpty(keywords))
         {
@@ -243,6 +246,23 @@ public sealed class OrderManager(
         if (dto.ExpectedShippingDateUtc.HasValue)
             order.ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc.Value;
         order.ShippingAddress = dto.Address;
+        order.UpdatedOnUtc = DateTime.UtcNow;
+
+        var updatedOrder = await orderRepository.UpdateAsync(order).ConfigureAwait(false);
+
+        await eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
+    }
+
+    public async Task MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        order.MarkOrderItemDelivered(dto.OrderItemId, dto.PictureId);
+        order.TryAutoLock();
         order.UpdatedOnUtc = DateTime.UtcNow;
 
         var updatedOrder = await orderRepository.UpdateAsync(order).ConfigureAwait(false);

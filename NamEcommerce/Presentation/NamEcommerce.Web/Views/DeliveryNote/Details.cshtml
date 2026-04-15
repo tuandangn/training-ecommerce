@@ -1,0 +1,170 @@
+@model NamEcommerce.Web.Contracts.Models.DeliveryNotes.DeliveryNoteDetailsModel
+@{
+    ViewBag.PageTitle = "Chi tiết phiếu xuất kho " + Model.Code;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0 text-gray-800">Chi tiết: @Model.Code</h1>
+    <div>
+        <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-primary me-2"><i class="bi bi-printer"></i> In phiếu</a>
+        <a asp-action="List" class="btn btn-outline-secondary">Trở về</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Thông tin phiếu</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless table-sm">
+                    <tbody>
+                        <tr>
+                            <td class="text-muted" style="width: 120px;">Trạng thái:</td>
+                            <td>
+                                @{
+                                    string badgeClass = Model.Status switch
+                                    {
+                                        10 => "bg-secondary", // Draft
+                                        20 => "bg-info", // Confirmed
+                                        30 => "bg-warning", // Delivering
+                                        40 => "bg-success", // Delivered
+                                        50 => "bg-danger", // Cancelled
+                                        _ => "bg-secondary"
+                                    };
+                                }
+                                <span class="badge @badgeClass">@Model.StatusName</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Ngày lập:</td>
+                            <td>@Model.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Đơn hàng:</td>
+                            <td><a asp-controller="Order" asp-action="Edit" asp-route-id="@Model.OrderId">@Model.OrderCode</a></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Khách hàng:</td>
+                            <td>
+                                <strong>@Model.CustomerName</strong><br/>
+                                @Model.CustomerPhone
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Địa chỉ xuất:</td>
+                            <td>@Model.ShippingAddress</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Ghi chú:</td>
+                            <td>@Model.Note</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Hiển thị giá:</td>
+                            <td>@(Model.ShowPrice ? "Có" : "Không")</td>
+                        </tr>
+                        @if (Model.Status == 40 && Model.DeliveredOnUtc.HasValue)
+                        {
+                            <tr>
+                                <td colspan="2"><hr/></td>
+                            </tr>
+                            <tr>
+                                <td class="text-muted">Đã giao lúc:</td>
+                                <td>@Model.DeliveredOnUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            </tr>
+                            @if (!string.IsNullOrEmpty(Model.DeliveryReceiverName))
+                            {
+                                <tr>
+                                    <td class="text-muted">Người nhận:</td>
+                                    <td>@Model.DeliveryReceiverName</td>
+                                </tr>
+                            }
+                            @if (!string.IsNullOrEmpty(Model.DeliveryProofPictureUrl))
+                            {
+                                <tr>
+                                    <td class="text-muted">Bằng chứng:</td>
+                                    <td>
+                                        <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal">
+                                            <img src="data:image/jpeg;base64,@Model.DeliveryProofPictureUrl" class="img-thumbnail" style="max-height: 100px;" alt="Bằng chứng giao hàng" />
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Danh sách hàng hóa</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Tên hàng hóa</th>
+                                <th class="text-end">Số lượng</th>
+                                @if (Model.ShowPrice)
+                                {
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Items.Any())
+                            {
+                                int idx = 1;
+                                foreach (var item in Model.Items)
+                                {
+                                    <tr>
+                                        <td>@(idx++)</td>
+                                        <td>@item.ProductName</td>
+                                        <td class="text-end">@item.Quantity.ToString("N2")</td>
+                                        @if (Model.ShowPrice)
+                                        {
+                                            <td class="text-end">@item.UnitPrice.ToString("N0")</td>
+                                            <td class="text-end">@item.SubTotal.ToString("N0")</td>
+                                        }
+                                    </tr>
+                                }
+                                @if (Model.ShowPrice)
+                                {
+                                    <tr class="fw-bold">
+                                        <td colspan="4" class="text-end">Tổng cộng:</td>
+                                        <td class="text-end">@Model.TotalAmount.ToString("N0")</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Modal -->
+@if (!string.IsNullOrEmpty(Model.DeliveryProofPictureUrl))
+{
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Bằng chứng giao hàng</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <img src="data:image/jpeg;base64,@Model.DeliveryProofPictureUrl" class="img-fluid" alt="Bằng chứng giao hàng" />
+          </div>
+        </div>
+      </div>
+    </div>
+}

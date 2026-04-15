@@ -16,7 +16,9 @@ public interface IOrderManager : ICodeExistCheckingService
 
     Task UpdateShippingAsync(UpdateShippingDto dto);
     Task LockOrderAsync(LockOrderDto dto);
+    Task MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredDto dto);
 
     Task<OrderDto?> GetOrderByIdAsync(Guid id);
     Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, OrderStatus? status, int pageIndex, int pageSize);
+    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, IEnumerable<OrderStatus> status, int pageIndex, int pageSize);
 }

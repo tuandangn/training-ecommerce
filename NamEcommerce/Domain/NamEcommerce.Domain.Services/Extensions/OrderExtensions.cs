@@ -39,7 +39,9 @@ public static class OrderExtensions
                 ProductName = orderItem.ProductName,
                 Quantity = orderItem.Quantity,
                 UnitPrice = orderItem.UnitPrice,
-                SubTotal = orderItem.SubTotal
+                SubTotal = orderItem.SubTotal,
+                IsDelivered = orderItem.IsDelivered,
+                DeliveredOnUtc = orderItem.DeliveredOnUtc
             });
         }
 

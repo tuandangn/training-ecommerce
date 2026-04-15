@@ -141,3 +141,18 @@ public sealed record LockOrderResultAppDto
     public required bool Success { get; init; }
     public string? ErrorMessage { get; set; }
 }
+
+[Serializable]
+public sealed record MarkOrderItemDeliveredAppDto
+{
+    public required Guid OrderId { get; init; }
+    public required Guid OrderItemId { get; init; }
+    public required Guid PictureId { get; init; }
+}
+[Serializable]
+public sealed record MarkOrderItemDeliveredResultAppDto
+{
+    public required bool Success { get; init; }
+    public string? ErrorMessage { get; set; }
+    public bool OrderAutoLocked { get; set; }
+}

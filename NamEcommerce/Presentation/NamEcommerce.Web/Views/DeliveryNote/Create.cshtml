@@ -1,0 +1,148 @@
+@model NamEcommerce.Web.Contracts.Models.DeliveryNotes.CreateDeliveryNoteModel
+@{
+    ViewBag.PageTitle = "Tạo phiếu xuất kho";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0 text-gray-800">Tạo phiếu xuất kho</h1>
+    <a asp-action="List" asp-controller="Order" class="btn btn-outline-secondary">Quay lại Đơn hàng</a>
+</div>
+
+<form asp-action="Create" method="post">
+    <input type="hidden" asp-for="OrderId" />
+    <input type="hidden" asp-for="OrderCode" />
+    <input type="hidden" asp-for="CustomerName" />
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Thông tin phiếu</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Đơn hàng tham chiếu</label>
+                        <input type="text" class="form-control" value="@Model.OrderCode" disabled />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Khách hàng</label>
+                        <input type="text" class="form-control" value="@Model.CustomerName" disabled />
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="ShippingAddress" class="form-label"></label>
+                        <textarea asp-for="ShippingAddress" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="ShippingAddress" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Note" class="form-label"></label>
+                        <textarea asp-for="Note" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" asp-for="ShowPrice">
+                        <label class="form-check-label" asp-for="ShowPrice">
+                            Hiển thị giá trên phiếu in (Mặc định ẩn)
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Danh sách hàng hóa cần xuất</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">
+                                        <input type="checkbox" id="selectAll" checked />
+                                    </th>
+                                    <th>Mặt hàng</th>
+                                    <th class="text-end">Đã đặt</th>
+                                    <th class="text-end">Đã giao</th>
+                                    <th class="text-end" style="width: 150px;">SL xuất đợt này</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Items.Any())
+                                {
+                                    for (int i = 0; i < Model.Items.Count; i++)
+                                    {
+                                        <tr>
+                                            <td class="align-middle">
+                                                <input type="checkbox" asp-for="Items[i].Selected" class="item-checkbox" />
+                                                <input type="hidden" asp-for="Items[i].OrderItemId" />
+                                                <input type="hidden" asp-for="Items[i].ProductName" />
+                                                <input type="hidden" asp-for="Items[i].OrderedQuantity" />
+                                                <input type="hidden" asp-for="Items[i].PreviouslyDeliveredQuantity" />
+                                                <input type="hidden" asp-for="Items[i].UnitPrice" />
+                                            </td>
+                                            <td class="align-middle">@Model.Items[i].ProductName</td>
+                                            <td class="text-end align-middle">@Model.Items[i].OrderedQuantity.ToString("N2")</td>
+                                            <td class="text-end align-middle">@Model.Items[i].PreviouslyDeliveredQuantity.ToString("N2")</td>
+                                            <td>
+                                                <input type="number" asp-for="Items[i].Quantity" class="form-control text-end quantity-input" step="0.01" min="0.01" max="@Model.Items[i].OrderedQuantity" />
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center">Tất cả hàng hóa trong đơn này đã được xuất/giao đủ.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="card-footer text-end">
+                    <button type="submit" class="btn btn-primary" @(Model.Items.Any() ? "" : "disabled")>Tạo phiếu xuất</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function() {
+            // Select all
+            $('#selectAll').change(function() {
+                var checked = $(this).is(':checked');
+                $('.item-checkbox').prop('checked', checked);
+            });
+
+            // Handle individual checkbox change to uncheck selectAll
+            $('.item-checkbox').change(function() {
+                var allChecked = $('.item-checkbox').length === $('.item-checkbox:checked').length;
+                $('#selectAll').prop('checked', allChecked);
+            });
+            
+            // Validation on submit
+            $('form').submit(function(e) {
+                var hasSelected = false;
+                $('.item-checkbox:checked').each(function() {
+                    hasSelected = true;
+                    var row = $(this).closest('tr');
+                    var qty = parseFloat(row.find('.quantity-input').val());
+                    if (isNaN(qty) || qty <= 0) {
+                        alert('Vui lòng nhập số lượng hợp lệ cho các mặt hàng được chọn.');
+                        e.preventDefault();
+                        return false; // break loop
+                    }
+                });
+
+                if (!hasSelected) {
+                    alert('Vui lòng chọn ít nhất một mặt hàng để xuất kho.');
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        });
+    </script>
+}
