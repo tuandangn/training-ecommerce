@@ -3,212 +3,179 @@
 @{
     ViewData["Title"] = "Tạo Đơn hàng mới";
 }
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-10">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb mb-1">
-                            <li class="breadcrumb-item">
-                                <a asp-action="List" class="text-decoration-none">Đơn hàng</a>
-                            </li>
-                            <li class="breadcrumb-item active" aria-current="page">Tạo mới</li>
-                        </ol>
-                    </nav>
-                    <h1 class="h3 mb-0 fw-bold">Tạo đơn hàng mới</h1>
-                </div>
-                <a asp-action="List" class="btn btn-outline-secondary px-4 rounded-3">
-                    <i class="bi bi-x-lg me-1"></i>
-                    Hủy bỏ
-                </a>
-            </div>
-            <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
-            <form method="post" id="createOrderForm">
-                <div class="row g-4">
-                    <div class="col-md-8">
-                        <div class="card border-0 shadow-sm rounded-4 mb-4">
-                            <div class="card-header bg-white border-0 py-3">
-                                <h5 class="mb-0 fw-bold">
-                                    <i class="bi bi-person me-2 text-primary"></i>
-                                    Thông tin Khách hàng
-                                </h5>
-                            </div>
-                            <div class="card-body mb-2">
-                                <div id="customerPicker" data-id="@Model.CustomerId" 
-                                    data-name="@Model.CustomerDisplayName"
-                                    data-phone="@Model.CustomerDisplayPhone"
-                                    data-address="@Model.CustomerDisplayAddress"></div>
-                                <input type="text" class="visually-hidden" asp-for="CustomerId" />
-                                <span asp-validation-for="CustomerId" class="small text-danger"></span>
-                            </div>
-                        </div>
-
-                        <div class="card border-0 shadow-sm rounded-4">
-                            <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0 fw-bold">
-                                    <i class="bi bi-box-seam me-2 text-success"></i>
-                                    Danh sách hàng hóa
-                                </h5>
-                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill"
-                                        data-bs-toggle="modal" data-bs-target="#addProductModal">
-                                    <i class="bi bi-plus-lg"></i>
-                                    <span class="d-none d-lg-inline ms-1">
-                                        Thêm sản phẩm
-                                    </span>
-                                    <span class="d-inline d-lg-none ms-1">
-                                        Thêm
-                                    </span>
-                                </button>
-                            </div>
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table align-middle mb-0" id="orderItemsTable">
-                                        <thead class="text-muted">
-                                            <tr>
-                                                <th class="ps-4">Sản phẩm</th>
-                                                <th class="text-center" style="width: 100px">Số lượng</th>
-                                                <th class="text-end" style="width: 150px">Đơn giá</th>
-                                                <th class="text-end d-none d-lg-table-cell" style="width: 150px">Thành tiền</th>
-                                                <th class="text-end pe-2 pe-lg-4 w-auto"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="itemsTableBody">
-                                            @for (var i = 0; i < Model.Items.Count; i++)
-                                            {
-                                                var item = Model.Items[i];
-                                                <tr id="row-@i" class="align-top">
-                                                    <td class="ps-4">
-                                                        <div class="d-flex gap-3">
-                                                            <div class="text-center d-none d-lg-block" style="min-width:45px;">
-                                                                @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))
-                                                                {
-                                                                    <img src="@item.ProductDisplayPicture" class="img-fluid img-thumbnail product-picture" style="width:45px;" />
-                                                                }
-                                                                else
-                                                                {
-                                                                    <i class="bi bi-image fs-4 text-muted"></i>
-                                                                }
-                                                            </div>
-                                                            <div>
-                                                                <div class="fw-bold text-dark text-nowrap product-name">@item.ProductDisplayName</div>
-                                                            </div>
-                                                        </div>
-                                                        <input type="text" class="visually-hidden product-id" name="Items[@i].ProductId" value="@item.ProductId"
-                                                               data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
-                                                        <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].ProductId" data-valmsg-replace="true"></span>
-                                                    </td>
-                                                    <td class="text-center">
-                                                        <input type="number" name="Items[@i].Quantity" value="@item.Quantity" class="form-control form-control-sm text-center row-qty"
-                                                               step="any" min="0.00000001" data-val="true" data-val-required="Vui lòng nhập số lượng."
-                                                               placeholder="0"
-                                                               data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001" data-val-number="Số lượng không đúng." />
-                                                        <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].Quantity" data-valmsg-replace="true"></span>
-                                                    </td>
-                                                    <td class="text-end">
-                                                        <input type="number" name="Items[@i].UnitPrice" value="@item.UnitPrice" style="min-width:80px;"
-                                                               class="form-control form-control-sm text-end row-price" min="0" data-val="true" data-val-required="Vui lòng nhập đơn giá."
-                                                               placeholder="0"
-                                                               data-val-range="Đơn giá phải lớn hơn hoặc bằng 0." data-val-range-min="0" data-val-number="Đơn giá không đúng." />
-                                                        <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].UnitPrice" data-valmsg-replace="true"></span>
-                                                    </td>
-                                                    <td class="text-end fw-bold text-primary px-3 row-total text-nowrap d-none d-lg-table-cell">
-                                                        @item.ItemSubTotal.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol
-                                                    </td>
-                                                    <td class="text-end pe-2 pe-lg-4 w-auto">
-                                                        <button type="button" class="btn btn-link link-danger p-0 border-0" onclick="this.closest('tr').remove(); window.updateGrandTotal();">
-                                                            <i class="bi bi-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            }
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <div class="@(Model.Items.Count > 0 ? "" : "d-none") d-flex flex-column px-4" id="tableFooter">
-                                    <div class="d-flex justify-content-end gap-4">
-                                        <div class="text-end fw-bold py-2 border-0">Tạm tính</div>
-                                        <div class="text-end fw-bold py-2 border-0" id="subTotal">
-                                            @Model.OrderSubTotal.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol
-                                        </div>
-                                    </div>
-                                    <div class="d-flex justify-content-end gap-4">
-                                        <div colspan="3" class="text-end fw-bold py-2 border-0">Giảm giá</div>
-                                        <div class="text-end fw-bold py-2 border-0 text-danger" id="discountDisplay">
-                                            - @((Model.OrderDiscount ?? 0).ToString(ViewConstants.NumberCustomFormat)) @ViewConstants.DefaultCurrencySymbol
-                                        </div>
-                                    </div>
-                                    <div class="border-top d-flex justify-content-end gap-4">
-                                        <div colspan="3" class="text-end fw-bold py-3">Tổng cộng</div>
-                                        <div class="text-end fw-bold py-3 text-primary fs-5" id="grandTotal">
-                                            @Model.OrderTotal.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="noItemsMessage" class="py-5 text-center text-muted italic" style="display:@(Model.Items.Count == 0 ? "block" : "none")">
-                                    <div>
-                                        Chưa có sản phẩm nào được chọn.
-                                    </div>
-                                    <span asp-validation-for="Items" class="text-danger small"></span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <div class="card border-0 shadow-sm rounded-4 mb-4">
-                            <div class="card-header bg-white border-0 py-3">
-                                <h5 class="mb-0 fw-bold">
-                                    <i class="bi bi-info-circle"></i>
-                                    Thông tin bổ sung
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-4">
-                                    <label asp-for="ExpectedShippingDate" class="form-label small fw-bold text-muted"></label>
-                                    <input type="date" asp-for="ExpectedShippingDate" class="form-control" />
-                                    <span asp-validation-for="ExpectedShippingDate" class="small text-danger"></span>
-                                </div>
-                                <div class="mb-4">
-                                    <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted"></label>
-                                    <div class="input-group">
-                                        <input asp-for="ShippingAddress" class="form-control border-end-0" 
-                                        placeholder="@(Model.CustomerDisplayAddress == Model.ShippingAddress ? "[Địa chỉ của khách hàng]" : "Nhập địa chỉ giao hàng")"
-                                        readonly="@(Model.CustomerDisplayAddress == Model.ShippingAddress)" />
-                                            @if (Model.CustomerDisplayAddress == Model.ShippingAddress)
-                                            {
-                                                <button type="button" class="btn btn-link border border-start-0 rounded-3 bg-light" id="btnEditShippingAddress">
-                                                    <i class="bi bi-pencil"></i>
-                                                </button>
-                                            }
-                                        </div>
-                                    <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
-                                </div>
-                                <div class="mb-4">
-                                    <label asp-for="OrderDiscount" class="form-label small fw-bold text-muted"></label>
-                                    <input type="number" asp-for="OrderDiscount" class="form-control" min="0" placeholder="0" disabled />
-                                    <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
-                                </div>
-                                <div class="mb-4">
-                                    <label asp-for="Note" class="form-label small fw-bold text-muted"></label>
-                                    <textarea asp-for="Note" class="form-control" rows="3" placeholder="Nhập ghi chú (nếu có)..."></textarea>
-                                    <span asp-validation-for="Note" class="small text-danger"></span>
-                                </div>
-                                <hr class="border-light my-4">
-                                <div class="d-grid gap-2">
-                                    <button type="submit" class="btn btn-primary py-3 rounded-3 shadow-sm fw-bold" disabled>
-                                        <i class="bi bi-check2-circle me-2"></i>
-                                        Tạo đơn
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Tạo Đơn hàng mới</h1>
+        <p class="page-header-subtitle">Thêm mới đơn bán hàng vào hệ thống</p>
     </div>
 </div>
+
+<div class="form-card" style="max-width: 1200px;">
+    <div class="form-card-header">
+        <h2 class="form-card-title"><i class="bi bi-cart me-2 text-primary"></i>Thông tin đơn hàng</h2>
+        <a asp-action="List" class="form-card-breadcrumb">
+            <i class="bi bi-arrow-left"></i> Trở về danh sách
+        </a>
+    </div>
+    <div class="form-card-body">
+        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
+        <form method="post" id="createOrderForm" asp-antiforgery="true">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <!-- Customer Section -->
+                    <div class="mb-4">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-person text-muted me-2"></i>Khách hàng</h5>
+                        <div id="customerPicker" data-id="@Model.CustomerId" 
+                             data-name="@Model.CustomerDisplayName"
+                             data-phone="@Model.CustomerDisplayPhone"
+                             data-address="@Model.CustomerDisplayAddress"></div>
+                        <input type="text" class="visually-hidden" asp-for="CustomerId" />
+                        <span asp-validation-for="CustomerId" class="small text-danger"></span>
+                    </div>
+
+                    <!-- Items Section -->
+                    <div>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="fw-bold mb-0"><i class="bi bi-box-seam text-muted me-2"></i>Sản phẩm</h5>
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                                <i class="bi bi-plus-lg me-1"></i> Thêm sản phẩm
+                            </button>
+                        </div>
+                        
+                        <div class="table-responsive border rounded bg-white">
+                            <table class="table data-table mb-0" id="orderItemsTable">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-3">Sản phẩm</th>
+                                        <th class="text-center" style="width: 100px">Số lượng</th>
+                                        <th class="text-end" style="width: 130px">Đơn giá</th>
+                                        <th class="text-end d-none d-lg-table-cell" style="width: 130px">Thành tiền</th>
+                                        <th style="width: 50px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsTableBody">
+                                    @for (var i = 0; i < Model.Items.Count; i++)
+                                    {
+                                        var item = Model.Items[i];
+                                        <tr id="row-@i">
+                                            <td class="ps-3">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))
+                                                    {
+                                                        <img src="@item.ProductDisplayPicture" class="rounded product-picture" style="width:40px; height:40px; object-fit:cover;" />
+                                                    }
+                                                    else
+                                                    {
+                                                        <div class="d-flex align-items-center justify-content-center rounded bg-light" style="width: 40px; height: 40px;">
+                                                            <i class="bi bi-image text-muted"></i>
+                                                        </div>
+                                                    }
+                                                    <div class="fw-medium product-name">@item.ProductDisplayName</div>
+                                                </div>
+                                                <input type="text" class="visually-hidden product-id" name="Items[@i].ProductId" value="@item.ProductId"
+                                                       data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
+                                                <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].ProductId" data-valmsg-replace="true"></span>
+                                            </td>
+                                            <td class="text-center">
+                                                <input type="number" name="Items[@i].Quantity" value="@item.Quantity" class="form-control form-control-sm text-center row-qty"
+                                                       step="any" min="0.00000001" data-val="true" data-val-required="Vui lòng nhập số lượng."
+                                                       placeholder="0" />
+                                                <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].Quantity" data-valmsg-replace="true"></span>
+                                            </td>
+                                            <td class="text-end">
+                                                <input type="number" name="Items[@i].UnitPrice" value="@item.UnitPrice"
+                                                       class="form-control form-control-sm text-end row-price" min="0" data-val="true" data-val-required="Vui lòng nhập đơn giá."
+                                                       placeholder="0" />
+                                                <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].UnitPrice" data-valmsg-replace="true"></span>
+                                            </td>
+                                            <td class="text-end fw-bold text-danger row-total text-nowrap d-none d-lg-table-cell">
+                                                @item.ItemSubTotal.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol
+                                            </td>
+                                            <td class="text-end pe-3">
+                                                <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none" onclick="this.closest('tr').remove(); window.updateGrandTotal();">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="@(Model.Items.Count > 0 ? "" : "d-none") bg-light rounded p-3 mt-3" id="tableFooter">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Tạm tính</span>
+                                <span class="fw-bold" id="subTotal">@Model.OrderSubTotal.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Giảm giá</span>
+                                <span class="fw-bold text-danger" id="discountDisplay">- @((Model.OrderDiscount ?? 0).ToString(ViewConstants.NumberCustomFormat)) @ViewConstants.DefaultCurrencySymbol</span>
+                            </div>
+                            <hr class="my-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold text-uppercase">Tổng cộng</span>
+                                <span class="fw-bold text-primary fs-5" id="grandTotal">@Model.OrderTotal.ToString(ViewConstants.NumberCustomFormat) @ViewConstants.DefaultCurrencySymbol</span>
+                            </div>
+                        </div>
+                        <div id="noItemsMessage" class="py-4 text-center text-muted" style="display:@(Model.Items.Count == 0 ? "block" : "none")">
+                            <i class="bi bi-box-seam me-1"></i> Chưa có sản phẩm nào được chọn.
+                            <div class="mt-1"><span asp-validation-for="Items" class="text-danger small"></span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card bg-light border-0">
+                        <div class="card-body">
+                            <h5 class="fw-bold mb-3"><i class="bi bi-truck text-muted me-2"></i>Giao hàng & Khác</h5>
+                            
+                            <div class="mb-3">
+                                <label asp-for="ExpectedShippingDate" class="form-label text-muted small fw-medium"></label>
+                                <input type="date" asp-for="ExpectedShippingDate" class="form-control" />
+                                <span asp-validation-for="ExpectedShippingDate" class="small text-danger"></span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label asp-for="ShippingAddress" class="form-label text-muted small fw-medium"></label>
+                                <div class="input-group">
+                                    <input asp-for="ShippingAddress" class="form-control text-sm" 
+                                           placeholder="Nhập địa chỉ giao hàng"
+                                           readonly="@(Model.CustomerDisplayAddress == Model.ShippingAddress)" />
+                                    @if (Model.CustomerDisplayAddress == Model.ShippingAddress)
+                                    {
+                                        <button type="button" class="btn btn-outline-secondary" id="btnEditShippingAddress" title="Chỉnh sửa địa chỉ">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    }
+                                </div>
+                                <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label asp-for="OrderDiscount" class="form-label text-muted small fw-medium"></label>
+                                <input type="number" asp-for="OrderDiscount" class="form-control" min="0" placeholder="0" disabled />
+                                <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label asp-for="Note" class="form-label text-muted small fw-medium"></label>
+                                <textarea asp-for="Note" class="form-control" rows="3" placeholder="Nhập ghi chú..."></textarea>
+                                <span asp-validation-for="Note" class="small text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-card-footer mt-4" style="margin: 0 -1.5rem -1.5rem; border-radius: 0 0 var(--card-radius) var(--card-radius);">
+                <a asp-action="List" class="btn btn-outline-secondary">Hủy bỏ</a>
+                <button type="submit" class="btn btn-primary" disabled id="btnSubmitOrder">
+                    <i class="bi bi-check2 me-1"></i>Tạo đơn
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Add Product Modal -->
 <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -218,61 +185,60 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form action="#" method="post" id="addProductForm">
-                <div class="modal-body py-4">
+                <div class="modal-body py-3">
                     <div class="mb-3">
                         <div id="productPicker"></div>
                     </div>
                     <div id="modalProductInfo" class="d-none">
-                        <div class="row g-3">
+                        <div class="row g-2">
                             <div class="col-6">
-                                <label class="form-label small fw-bold text-muted" for="itemQuantity">Số lượng</label>
-                                <input type="number" id="itemQuantity" name="itemProductQuantity" class="form-control rounded-3"
+                                <label class="form-label small fw-medium text-muted" for="itemQuantity">Số lượng</label>
+                                <input type="number" id="itemQuantity" name="itemProductQuantity" class="form-control"
                                        value="1" min="0.01" step="any" data-val="true"
-                                       placeholder="0"
-                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.000000000000000001"
-                                       data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
-                                <span class="small text-danger field-validation-valid" data-valmsg-for="itemProductQuantity" data-valmsg-replace="true"></span>
+                                       data-val-required="Vui lòng nhập số lượng." />
                             </div>
                             <div class="col-6">
-                                <label class="form-label small fw-bold text-muted noRefill" for="itemUnitPrice">Đơn giá</label>
-                                <input type="number" id="itemUnitPrice" name="itemProductUnitPrice" class="form-control rounded-3"
+                                <label class="form-label small fw-medium text-muted noRefill" for="itemUnitPrice">Đơn giá</label>
+                                <input type="number" id="itemUnitPrice" name="itemProductUnitPrice" class="form-control"
                                        step="any" min="0" data-val="true"
-                                       placeholder="0"
-                                       data-val-range="Đơn giá phải lớn hơn 0." data-val-range-min="0"
-                                       data-val-number="Đơn giá không đúng." data-val-required="Vui lòng nhập đơn giá." />
-                                <span class="small text-danger field-validation-valid" data-valmsg-for="itemProductUnitPrice" data-valmsg-replace="true"></span>
+                                       data-val-required="Vui lòng nhập đơn giá." />
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 pt-0 pb-4">
-                    <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" id="addItemToTable" class="btn btn-success px-4 rounded-3 shadow-sm d-none noDisabled">
-                        <i class="bi bi-plus-lg me-1"></i>
-                        Thêm vào
+                <div class="modal-footer border-0 pt-0 pb-3">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" id="addItemToTable" class="btn btn-success d-none noDisabled">
+                        <i class="bi bi-plus-lg me-1"></i>Thêm vào
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/modules/OrderController.js" type="module"></script>
     <script type="module">
         import OrderController from "/modules/OrderController.js";
-
         new OrderController();
-
-        const addProductContainer = getEl('addProductModal');
+        const addProductContainer = document.getElementById('addProductModal');
         const addProductModal = bootstrap.Modal.getOrCreateInstance(addProductContainer);
-
         addProductContainer.addEventListener('hidden.bs.modal', () => {
-            addProductContainer.querySelector('.productSearch').value = '';
+            const searchInput = addProductContainer.querySelector('.productSearch');
+            if (searchInput) searchInput.value = '';
         });
-
         document.addEventListener('order:itemAdded', () => {
             addProductModal.hide();
-        })
+        });
+        
+        // Remove disabled dynamically if customer & items exist (handled by OrderController.js logic mostly, but let's ensure the selector works)
+        const checkEnableSubmit = () => {
+           let customerId = document.querySelector('input[name="CustomerId"]').value;
+           let itemRows = document.querySelectorAll('#itemsTableBody tr').length;
+           document.getElementById('btnSubmitOrder').disabled = !(customerId && itemRows > 0);
+        };
+        setInterval(checkEnableSubmit, 1000);
     </script>
 }

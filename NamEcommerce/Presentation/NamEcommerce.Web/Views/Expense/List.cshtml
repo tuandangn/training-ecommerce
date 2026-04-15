@@ -1,0 +1,192 @@
+@model NamEcommerce.Application.Contracts.Dtos.Common.IPagedDataAppDto<NamEcommerce.Application.Contracts.Dtos.Finance.ExpenseAppDto>
+@{
+    ViewData[ViewConstants.PageTitle] = "Quản lý Chi phí";
+    var successMessage = TempData[ViewConstants.GlobalSuccessMessage] as string;
+    var errorMessage = TempData[ViewConstants.GlobalErrorMessage] as string;
+
+    string? kwValue = ViewData["Keywords"] as string;
+    string? fromValue = ViewData["FromDate"] as string;
+    string? toValue = ViewData["ToDate"] as string;
+    int? typeValue = ViewData["ExpenseType"] as int?;
+    bool hasFilter = !string.IsNullOrEmpty(kwValue) || !string.IsNullOrEmpty(fromValue) || !string.IsNullOrEmpty(toValue) || typeValue.HasValue;
+
+    string TypeLabel(int t) => t switch
+    {
+        1 => "Lương thưởng",
+        2 => "Mặt bằng",
+        3 => "Tiếp thị",
+        4 => "Điện nước",
+        _ => "Khác"
+    };
+
+    string TypeBadgeClass(int t) => t switch
+    {
+        1 => "status-badge info",
+        2 => "status-badge warning",
+        3 => "status-badge primary",
+        4 => "status-badge secondary",
+        _ => "status-badge secondary"
+    };
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Chi phí Vận hành (OPEX)</h1>
+        <p class="page-header-subtitle">Theo dõi các khoản chi phí hoạt động kinh doanh</p>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Thêm Mới
+    </a>
+</div>
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show alert-global mb-3" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>@successMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-warning alert-dismissible fade show alert-global mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="content-card mb-4">
+    <div class="action-toolbar">
+        <form method="get" class="row g-2 align-items-end w-100 m-0">
+            <div class="col-12 col-md-3">
+                <label class="form-label text-muted fw-semibold small mb-1">Tìm kiếm</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="keywords" class="form-control border-start-0 ps-0" placeholder="Tên khoản chi..." value="@kwValue" />
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label text-muted fw-semibold small mb-1">Từ ngày</label>
+                <input type="date" name="fromDate" class="form-control" value="@fromValue" />
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label text-muted fw-semibold small mb-1">Đến ngày</label>
+                <input type="date" name="toDate" class="form-control" value="@toValue" />
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label text-muted fw-semibold small mb-1">Loại phí</label>
+                <select name="expenseType" class="form-select">
+                    <option value="">-- Tất cả --</option>
+                    <option value="1" selected="@(typeValue == 1)">Lương thưởng</option>
+                    <option value="2" selected="@(typeValue == 2)">Mặt bằng</option>
+                    <option value="3" selected="@(typeValue == 3)">Tiếp thị</option>
+                    <option value="4" selected="@(typeValue == 4)">Điện nước</option>
+                    <option value="5" selected="@(typeValue == 5)">Khác</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    Lọc
+                </button>
+                @if (hasFilter)
+                {
+                    <a asp-action="List" class="btn btn-outline-secondary px-3" title="Xóa lọc">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="table data-table">
+            <thead>
+                <tr>
+                    <th class="ps-4" style="width:120px;">Ngày</th>
+                    <th>Khoản chi</th>
+                    <th>Loại phí</th>
+                    <th class="text-end">Số tiền</th>
+                    <th style="width: 100px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Pagination.TotalCount > 0)
+                {
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="ps-4">@item.IncurredDate.ToLocalTime().ToString("dd/MM/yyyy")</td>
+                            <td>
+                                <div>@item.Title</div>
+                                @if (!string.IsNullOrEmpty(item.Description))
+                                {
+                                    <div class="text-muted small">@item.Description</div>
+                                }
+                            </td>
+                            <td><span class="@TypeBadgeClass(item.ExpenseType)">@TypeLabel(item.ExpenseType)</span></td>
+                            <td class="text-end fw-bold text-danger">@item.Amount.ToString("N0") ₫</td>
+                            <td class="text-end pe-3">
+                                <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn-table-action danger btnDelete" 
+                                        data-id="@item.Id" data-name="@item.Title" title="Xóa">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
+                                <h5>Chưa có chi phí nào</h5>
+                                <p>Tạo khoản chi phí đầu tiên của bạn.</p>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.Pagination.TotalCount > 0)
+            {
+                <tfoot class="table-light">
+                    <tr>
+                        <td colspan="3" class="fw-bold text-end text-uppercase small text-muted">Tổng trang này:</td>
+                        <td class="fw-bold text-danger fs-6 text-end pe-4">@Model.Sum(x => x.Amount).ToString("N0") ₫</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+
+    @if (Model.Pagination.TotalCount > 0)
+    {
+        <partial name="_Pager" model="Model.Pagination" />
+    }
+</div>
+
+@foreach (var item in Model)
+{
+    <partial name="_DeleteForm" model="@item.Id" />
+}
+
+@section Scripts {
+    <script type="module" defer>
+        import { confirm } from "/modules/modals.js";
+        (function () {
+            $('.btnDelete').on('click', async function (e) {
+                e.preventDefault();
+                const name = $(this).data('name');
+                $(this).prop('disabled', true);
+                const confirmed = await confirm('Xóa khoản chi phí', `Bạn muốn xóa khoản chi phí <strong>${name}</strong>?`);
+                if (!confirmed) { $(this).prop('disabled', false); return; }
+                $(`#deleteForm${$(this).data('id')}`).submit();
+            });
+        })();
+    </script>
+}

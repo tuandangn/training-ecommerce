@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NamEcommerce.Data.SqlServer;
 
@@ -11,9 +12,11 @@ using NamEcommerce.Data.SqlServer;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     [DbContext(typeof(NamEcommerceEfDbContext))]
-    partial class NamEcommerceEfDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260415171326_Update1604")]
+    partial class Update1604
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -326,7 +329,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.ToTable("DeliveryNote", "tbl");
+                    b.ToTable("DeliveryNote", (string)null);
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNoteItem", b =>
@@ -359,7 +362,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.HasIndex("DeliveryNoteId");
 
-                    b.ToTable("DeliveryNoteItem", "tbl");
+                    b.ToTable("DeliveryNoteItem", (string)null);
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Finance.Expense", b =>
@@ -397,7 +400,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Expenses", "tbl");
+                    b.ToTable("Expenses", (string)null);
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.InventoryStock", b =>

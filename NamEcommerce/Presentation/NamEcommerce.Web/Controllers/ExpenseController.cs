@@ -13,7 +13,7 @@ public class ExpenseController : BaseAuthorizedController
         _expenseAppService = expenseAppService;
     }
 
-    public async Task<IActionResult> Index(int page = 1, string? keywords = null, DateTime? fromDate = null, DateTime? toDate = null, int? expenseType = null)
+    public async Task<IActionResult> List(int page = 1, string? keywords = null, DateTime? fromDate = null, DateTime? toDate = null, int? expenseType = null)
     {
         const int pageSize = 20;
         var result = await _expenseAppService.GetExpensesAsync(
@@ -56,7 +56,7 @@ public class ExpenseController : BaseAuthorizedController
 
         var result = await _expenseAppService.CreateExpenseAsync(dto);
         if (result.Success)
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(List));
 
         ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "Thêm mới thất bại.");
         return View(dto);
@@ -98,7 +98,7 @@ public class ExpenseController : BaseAuthorizedController
 
         var result = await _expenseAppService.UpdateExpenseAsync(dto);
         if (result.Success)
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction(nameof(List));
 
         ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "Mã lỗi cập nhật.");
         return View(dto);
@@ -109,6 +109,6 @@ public class ExpenseController : BaseAuthorizedController
     public async Task<IActionResult> Delete(Guid id)
     {
         await _expenseAppService.DeleteExpenseAsync(id);
-        return RedirectToAction(nameof(Index));
+        return RedirectToAction(nameof(List));
     }
 }

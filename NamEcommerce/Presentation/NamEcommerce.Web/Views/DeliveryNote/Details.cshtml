@@ -1,120 +1,139 @@
 @model NamEcommerce.Web.Contracts.Models.DeliveryNotes.DeliveryNoteDetailsModel
 @{
     ViewBag.PageTitle = "Chi tiết phiếu xuất kho " + Model.Code;
+
+    var statusTuple = Model.Status switch
+    {
+        10 => ("secondary", "Bản nháp", "bi-pencil"),
+        20 => ("info text-white", "Đã xác nhận", "bi-check-all"),
+        30 => ("warning", "Đang giao", "bi-truck"),
+        40 => ("success", "Đã giao", "bi-check-circle-fill"),
+        50 => ("danger", "Đã hủy", "bi-x-circle"),
+        _ => ("secondary", "Không rõ", "bi-question-circle")
+    };
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3 mb-0 text-gray-800">Chi tiết: @Model.Code</h1>
+<div class="page-header">
     <div>
-        <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-primary me-2"><i class="bi bi-printer"></i> In phiếu</a>
-        <a asp-action="List" class="btn btn-outline-secondary">Trở về</a>
+        <h1 class="page-header-title d-flex align-items-center gap-2">
+            @Model.Code
+            <span class="status-badge @statusTuple.Item1"><i class="bi @statusTuple.Item3"></i>@Model.StatusName</span>
+        </h1>
+        <p class="page-header-subtitle">
+            <a asp-action="List" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Trở về danh sách</a>
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-primary d-flex align-items-center">
+            <i class="bi bi-printer me-2"></i> In phiếu
+        </a>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Thông tin phiếu</h6>
+<div class="row g-4">
+    <!-- Cột trái: Thông tin phiếu (col-md-4) -->
+    <div class="col-lg-4 order-lg-2">
+        <div class="content-card mb-4 h-100">
+            <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2 text-primary"></i>Thông tin phiếu</h5>
             </div>
             <div class="card-body">
-                <table class="table table-borderless table-sm">
-                    <tbody>
-                        <tr>
-                            <td class="text-muted" style="width: 120px;">Trạng thái:</td>
-                            <td>
-                                @{
-                                    string badgeClass = Model.Status switch
-                                    {
-                                        10 => "bg-secondary", // Draft
-                                        20 => "bg-info", // Confirmed
-                                        30 => "bg-warning", // Delivering
-                                        40 => "bg-success", // Delivered
-                                        50 => "bg-danger", // Cancelled
-                                        _ => "bg-secondary"
-                                    };
-                                }
-                                <span class="badge @badgeClass">@Model.StatusName</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Ngày lập:</td>
-                            <td>@Model.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Đơn hàng:</td>
-                            <td><a asp-controller="Order" asp-action="Edit" asp-route-id="@Model.OrderId">@Model.OrderCode</a></td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Khách hàng:</td>
-                            <td>
-                                <strong>@Model.CustomerName</strong><br/>
-                                @Model.CustomerPhone
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Địa chỉ xuất:</td>
-                            <td>@Model.ShippingAddress</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Ghi chú:</td>
-                            <td>@Model.Note</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">Hiển thị giá:</td>
-                            <td>@(Model.ShowPrice ? "Có" : "Không")</td>
-                        </tr>
-                        @if (Model.Status == 40 && Model.DeliveredOnUtc.HasValue)
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Khách hàng</label>
+                    <div class="fw-bold text-dark fs-6">@Model.CustomerName</div>
+                    <div class="text-muted small"><i class="bi bi-telephone me-1"></i>@Model.CustomerPhone</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Đơn hàng tham chiếu</label>
+                    <div><a asp-controller="Order" asp-action="Edit" asp-route-id="@Model.OrderId" class="fw-bold text-decoration-none">@Model.OrderCode</a></div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Ngày lập</label>
+                    <div class="text-dark">@Model.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Địa chỉ xuất</label>
+                    <div class="text-dark">@Model.ShippingAddress</div>
+                </div>
+                
+                @if (!string.IsNullOrEmpty(Model.Note))
+                {
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Ghi chú</label>
+                        <div class="text-dark bg-light p-2 rounded border">@Model.Note</div>
+                    </div>
+                }
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Hiển thị giá</label>
+                    <div>
+                        @if (Model.ShowPrice)
                         {
-                            <tr>
-                                <td colspan="2"><hr/></td>
-                            </tr>
-                            <tr>
-                                <td class="text-muted">Đã giao lúc:</td>
-                                <td>@Model.DeliveredOnUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                            </tr>
-                            @if (!string.IsNullOrEmpty(Model.DeliveryReceiverName))
-                            {
-                                <tr>
-                                    <td class="text-muted">Người nhận:</td>
-                                    <td>@Model.DeliveryReceiverName</td>
-                                </tr>
-                            }
-                            @if (!string.IsNullOrEmpty(Model.DeliveryProofPictureUrl))
-                            {
-                                <tr>
-                                    <td class="text-muted">Bằng chứng:</td>
-                                    <td>
-                                        <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal">
-                                            <img src="data:image/jpeg;base64,@Model.DeliveryProofPictureUrl" class="img-thumbnail" style="max-height: 100px;" alt="Bằng chứng giao hàng" />
-                                        </a>
-                                    </td>
-                                </tr>
-                            }
+                            <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-eye me-1"></i>Có hiển thị</span>
                         }
-                    </tbody>
-                </table>
+                        else
+                        {
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-eye-slash me-1"></i>Ẩn</span>
+                        }
+                    </div>
+                </div>
+
+                @if (Model.Status == 40 && Model.DeliveredOnUtc.HasValue)
+                {
+                    <hr class="border-light my-4">
+                    
+                    <h6 class="fw-bold mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Thông tin nhận hàng</h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Đã giao lúc</label>
+                        <div class="text-dark">@Model.DeliveredOnUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(Model.DeliveryReceiverName))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Người nhận</label>
+                            <div class="text-dark fw-bold">@Model.DeliveryReceiverName</div>
+                        </div>
+                    }
+                    
+                    @if (!string.IsNullOrEmpty(Model.DeliveryProofPictureUrl))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Bằng chứng giao hàng</label>
+                            <div>
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal">
+                                    <img src="data:image/jpeg;base64,@Model.DeliveryProofPictureUrl" class="img-fluid rounded border shadow-sm" style="max-height: 120px; object-fit: cover; width:100%;" alt="Bằng chứng" />
+                                </a>
+                            </div>
+                        </div>
+                    }
+                }
             </div>
         </div>
     </div>
 
-    <div class="col-md-8">
-        <div class="card shadow mb-4">
-            <div class="card-header py-3">
-                <h6 class="m-0 font-weight-bold text-primary">Danh sách hàng hóa</h6>
+    <!-- Cột phải: Danh sách hàng hóa (col-md-8) -->
+    <div class="col-lg-8 order-lg-1">
+        <div class="content-card h-100 d-flex flex-column">
+            <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Danh sách hàng hóa</h5>
             </div>
-            <div class="card-body p-0">
+            <div class="card-body p-0 mt-3 flex-grow-1">
                 <div class="table-responsive">
-                    <table class="table table-striped mb-0">
+                    <table class="table data-table mb-0">
                         <thead>
                             <tr>
-                                <th>#</th>
+                                <th class="ps-4" style="width: 50px;">#</th>
                                 <th>Tên hàng hóa</th>
                                 <th class="text-end">Số lượng</th>
                                 @if (Model.ShowPrice)
                                 {
                                     <th class="text-end">Đơn giá</th>
-                                    <th class="text-end">Thành tiền</th>
+                                    <th class="text-end pe-4">Thành tiền</th>
                                 }
                             </tr>
                         </thead>
@@ -125,23 +144,31 @@
                                 foreach (var item in Model.Items)
                                 {
                                     <tr>
-                                        <td>@(idx++)</td>
-                                        <td>@item.ProductName</td>
-                                        <td class="text-end">@item.Quantity.ToString("N2")</td>
+                                        <td class="ps-4">@(idx++)</td>
+                                        <td class="fw-medium text-dark">@item.ProductName</td>
+                                        <td class="text-end fw-bold">@item.Quantity.ToString("N2")</td>
                                         @if (Model.ShowPrice)
                                         {
-                                            <td class="text-end">@item.UnitPrice.ToString("N0")</td>
-                                            <td class="text-end">@item.SubTotal.ToString("N0")</td>
+                                            <td class="text-end text-muted">@item.UnitPrice.ToString("N0") <span class="small">đ</span></td>
+                                            <td class="text-end pe-4 fw-bold text-primary">@item.SubTotal.ToString("N0") <span class="small">đ</span></td>
                                         }
                                     </tr>
                                 }
                                 @if (Model.ShowPrice)
                                 {
-                                    <tr class="fw-bold">
-                                        <td colspan="4" class="text-end">Tổng cộng:</td>
-                                        <td class="text-end">@Model.TotalAmount.ToString("N0")</td>
+                                    <tr class="fw-bold bg-light border-top border-2">
+                                        <td colspan="4" class="text-end py-3 text-dark">TỔNG CỘNG:</td>
+                                        <td class="text-end pe-4 py-3 fs-5 text-primary">@Model.TotalAmount.ToString("N0") <span class="small">đ</span></td>
                                     </tr>
                                 }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="@(Model.ShowPrice ? 5 : 3)" class="text-center py-4">
+                                        Không có hàng hóa
+                                    </td>
+                                </tr>
                             }
                         </tbody>
                     </table>
@@ -156,13 +183,13 @@
 {
     <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Bằng chứng giao hàng</h5>
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title fw-bold">Bằng chứng giao hàng</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
-          <div class="modal-body text-center">
-            <img src="data:image/jpeg;base64,@Model.DeliveryProofPictureUrl" class="img-fluid" alt="Bằng chứng giao hàng" />
+          <div class="modal-body text-center py-4">
+            <img src="data:image/jpeg;base64,@Model.DeliveryProofPictureUrl" class="img-fluid rounded shadow-sm" alt="Bằng chứng giao hàng" />
           </div>
         </div>
       </div>

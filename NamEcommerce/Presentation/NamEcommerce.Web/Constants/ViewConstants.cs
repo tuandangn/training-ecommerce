@@ -4,6 +4,7 @@ public static class ViewConstants
 {
     public const string PageTitle = "Title";
 
+    public const string GlobalSuccessMessage = "Messages.Global.Success";
     public const string GlobalErrorMessage = "Messages.Global.Error";
 
     public const string LoginErrorMessage = "Messages.Login.Error";

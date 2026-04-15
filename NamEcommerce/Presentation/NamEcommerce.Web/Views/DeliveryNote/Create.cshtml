@@ -3,67 +3,74 @@
     ViewBag.PageTitle = "Tạo phiếu xuất kho";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3 mb-0 text-gray-800">Tạo phiếu xuất kho</h1>
-    <a asp-action="List" asp-controller="Order" class="btn btn-outline-secondary">Quay lại Đơn hàng</a>
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Tạo phiếu xuất kho</h1>
+        <p class="page-header-subtitle">Xuất kho cho đơn hàng @Model.OrderCode</p>
+    </div>
+    <a asp-action="Details" asp-controller="Order" asp-route-id="@Model.OrderId" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Quay lại Đơn hàng
+    </a>
 </div>
 
-<form asp-action="Create" method="post">
+<form asp-action="Create" method="post" id="createDeliveryForm">
     <input type="hidden" asp-for="OrderId" />
     <input type="hidden" asp-for="OrderCode" />
     <input type="hidden" asp-for="CustomerName" />
 
-    <div class="row">
+    <div class="row g-4">
+        <!-- Thông tin phiếu -->
         <div class="col-md-4">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Thông tin phiếu</h6>
+            <div class="content-card h-100">
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2 text-primary"></i>Thông tin phiếu</h5>
                 </div>
                 <div class="card-body">
                     <div class="mb-3">
-                        <label class="form-label">Đơn hàng tham chiếu</label>
-                        <input type="text" class="form-control" value="@Model.OrderCode" disabled />
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Đơn hàng tham chiếu</label>
+                        <input type="text" class="form-control bg-light" value="@Model.OrderCode" disabled />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Khách hàng</label>
-                        <input type="text" class="form-control" value="@Model.CustomerName" disabled />
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Khách hàng</label>
+                        <input type="text" class="form-control bg-light" value="@Model.CustomerName" disabled />
                     </div>
                     <div class="mb-3">
-                        <label asp-for="ShippingAddress" class="form-label"></label>
+                        <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
                         <textarea asp-for="ShippingAddress" class="form-control" rows="3"></textarea>
-                        <span asp-validation-for="ShippingAddress" class="text-danger"></span>
+                        <span asp-validation-for="ShippingAddress" class="text-danger small"></span>
                     </div>
-                    <div class="mb-3">
-                        <label asp-for="Note" class="form-label"></label>
+                    <div class="mb-4">
+                        <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
                         <textarea asp-for="Note" class="form-control" rows="2"></textarea>
                     </div>
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="checkbox" asp-for="ShowPrice">
-                        <label class="form-check-label" asp-for="ShowPrice">
-                            Hiển thị giá trên phiếu in (Mặc định ẩn)
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" asp-for="ShowPrice" role="switch">
+                        <label class="form-check-label ms-2" asp-for="ShowPrice">
+                            Hiển thị giá trên phiếu in
                         </label>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Danh sách hàng hóa -->
         <div class="col-md-8">
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">Danh sách hàng hóa cần xuất</h6>
+            <div class="content-card h-100 d-flex flex-column">
+                <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Hàng hóa cần xuất</h5>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body p-0 mt-3 flex-grow-1">
                     <div class="table-responsive">
-                        <table class="table table-striped mb-0">
+                        <table class="table data-table mb-0">
                             <thead>
                                 <tr>
-                                    <th style="width: 50px;">
-                                        <input type="checkbox" id="selectAll" checked />
+                                    <th style="width: 50px;" class="text-center ps-4">
+                                        <input type="checkbox" id="selectAll" class="form-check-input" checked />
                                     </th>
                                     <th>Mặt hàng</th>
                                     <th class="text-end">Đã đặt</th>
                                     <th class="text-end">Đã giao</th>
-                                    <th class="text-end" style="width: 150px;">SL xuất đợt này</th>
+                                    <th class="text-end pe-4" style="width: 150px;">SL xuất đợt này</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -72,19 +79,19 @@
                                     for (int i = 0; i < Model.Items.Count; i++)
                                     {
                                         <tr>
-                                            <td class="align-middle">
-                                                <input type="checkbox" asp-for="Items[i].Selected" class="item-checkbox" />
+                                            <td class="align-middle text-center ps-4">
+                                                <input type="checkbox" asp-for="Items[i].Selected" class="form-check-input item-checkbox" />
                                                 <input type="hidden" asp-for="Items[i].OrderItemId" />
                                                 <input type="hidden" asp-for="Items[i].ProductName" />
                                                 <input type="hidden" asp-for="Items[i].OrderedQuantity" />
                                                 <input type="hidden" asp-for="Items[i].PreviouslyDeliveredQuantity" />
                                                 <input type="hidden" asp-for="Items[i].UnitPrice" />
                                             </td>
-                                            <td class="align-middle">@Model.Items[i].ProductName</td>
+                                            <td class="align-middle fw-medium">@Model.Items[i].ProductName</td>
                                             <td class="text-end align-middle">@Model.Items[i].OrderedQuantity.ToString("N2")</td>
-                                            <td class="text-end align-middle">@Model.Items[i].PreviouslyDeliveredQuantity.ToString("N2")</td>
-                                            <td>
-                                                <input type="number" asp-for="Items[i].Quantity" class="form-control text-end quantity-input" step="0.01" min="0.01" max="@Model.Items[i].OrderedQuantity" />
+                                            <td class="text-end align-middle text-success">@Model.Items[i].PreviouslyDeliveredQuantity.ToString("N2")</td>
+                                            <td class="pe-4">
+                                                <input type="number" asp-for="Items[i].Quantity" class="form-control text-end quantity-input fw-bold" step="0.01" min="0.01" max="@Model.Items[i].OrderedQuantity" />
                                             </td>
                                         </tr>
                                     }
@@ -92,15 +99,23 @@
                                 else
                                 {
                                     <tr>
-                                        <td colspan="5" class="text-center">Tất cả hàng hóa trong đơn này đã được xuất/giao đủ.</td>
+                                        <td colspan="5" class="text-center py-5">
+                                            <div class="empty-state">
+                                                <div class="empty-icon"><i class="bi bi-check-circle text-success"></i></div>
+                                                <h5>Hàng hóa đã giao đủ</h5>
+                                                <p>Tất cả hàng hóa trong đơn này đã được xuất và giao đầy đủ.</p>
+                                            </div>
+                                        </td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
                     </div>
                 </div>
-                <div class="card-footer text-end">
-                    <button type="submit" class="btn btn-primary" @(Model.Items.Any() ? "" : "disabled")>Tạo phiếu xuất</button>
+                <div class="card-footer bg-light border-top p-3 text-end" style="border-radius: 0 0 var(--card-radius) var(--card-radius);">
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm" @(Model.Items.Any() ? "" : "disabled")>
+                        <i class="bi bi-box-arrow-right me-1"></i> Tạo phiếu xuất
+                    </button>
                 </div>
             </div>
         </div>
@@ -124,7 +139,7 @@
             });
             
             // Validation on submit
-            $('form').submit(function(e) {
+            $('#createDeliveryForm').submit(function(e) {
                 var hasSelected = false;
                 $('.item-checkbox:checked').each(function() {
                     hasSelected = true;

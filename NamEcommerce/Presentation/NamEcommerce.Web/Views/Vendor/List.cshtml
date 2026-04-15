@@ -36,18 +36,7 @@
 
 <div class="content-card">
     <div class="action-toolbar">
-        <div class="search-group">
-            <div class="search-input-group input-group">
-                <span class="input-group-text"><i class="bi bi-search text-muted"></i></span>
-                <partial name="_Search" model="@(new VendorListSearchModel { Keywords = Model.Keywords })" />
-            </div>
-            @if (!string.IsNullOrEmpty(query))
-            {
-                <a asp-action="List" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-x"></i> Xóa lọc
-                </a>
-            }
-        </div>
+        <partial name="_Search" model="@(new VendorListSearchModel { Keywords = Model.Keywords })" />
     </div>
 
     <div class="table-responsive">

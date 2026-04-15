@@ -1,64 +1,75 @@
 @model NamEcommerce.Application.Contracts.Dtos.Finance.CreateExpenseAppDto
 
 @{
-    ViewData["Title"] = "Thêm mới Chi phí";
-    // Setup select list for ExpenseType enum (1=Payroll, 2=Rent, 3=Marketing, 4=Utilities, 5=General)
+    ViewData[ViewConstants.PageTitle] = "Thêm mới Chi phí";
     var expenseTypes = new List<SelectListItem>
     {
-        new SelectListItem { Value = "1", Text = "Lương thưởng (Payroll)" },
-        new SelectListItem { Value = "2", Text = "Mặt bằng (Rent)" },
-        new SelectListItem { Value = "3", Text = "Tiếp thị (Marketing)" },
-        new SelectListItem { Value = "4", Text = "Điện nước (Utilities)" },
-        new SelectListItem { Value = "5", Text = "Khác (General)" }
+        new SelectListItem { Value = "1", Text = "Lương thưởng" },
+        new SelectListItem { Value = "2", Text = "Mặt bằng" },
+        new SelectListItem { Value = "3", Text = "Tiếp thị" },
+        new SelectListItem { Value = "4", Text = "Điện nước" },
+        new SelectListItem { Value = "5", Text = "Khác" }
     };
 }
 
-<div class="row min-vh-100 justify-content-center pt-5">
-    <div class="col-md-6 col-lg-5">
-        <div class="card shadow-sm border-0 rounded-4">
-            <div class="card-body p-5">
-                <h3 class="fw-bold mb-4">Ghi nhận Chi phí mới</h3>
-                
-                <form asp-action="Create" method="post">
-                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Thêm mới Chi phí</h1>
+        <p class="page-header-subtitle">Ghi nhận khoản chi hoạt động mới vào hệ thống</p>
+    </div>
+</div>
 
-                    <div class="mb-3">
-                        <label asp-for="Title" class="form-label text-muted fw-semibold">Khoản chi</label>
-                        <input asp-for="Title" class="form-control form-control-lg bg-light" placeholder="VD: Lương tháng 4/2026..." />
-                        <span asp-validation-for="Title" class="text-danger small"></span>
-                    </div>
-
-                    <div class="mb-3">
-                        <label asp-for="Amount" class="form-label text-muted fw-semibold">Số tiền (₫)</label>
-                        <input asp-for="Amount" type="number" class="form-control form-control-lg bg-light" placeholder="0" />
-                        <span asp-validation-for="Amount" class="text-danger small"></span>
-                    </div>
-
-                    <div class="mb-3">
-                        <label asp-for="ExpenseType" class="form-label text-muted fw-semibold">Loại phí</label>
-                        <select asp-for="ExpenseType" asp-items="expenseTypes" class="form-select form-select-lg bg-light"></select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label asp-for="IncurredDate" class="form-label text-muted fw-semibold">Ngày thanh toán / Hóa đơn</label>
-                        <input asp-for="IncurredDate" type="date" class="form-control form-control-lg bg-light" />
-                    </div>
-
-                    <div class="mb-4">
-                        <label asp-for="Description" class="form-label text-muted fw-semibold">Ghi chú thêm</label>
-                        <textarea asp-for="Description" class="form-control bg-light" rows="3" placeholder="(Không bắt buộc)"></textarea>
-                    </div>
-
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a asp-action="Index" class="btn btn-light px-4">Hủy bỏ</a>
-                        <button type="submit" class="btn btn-primary px-4 fw-bold">Lưu Thông Tin</button>
-                    </div>
-                </form>
+<div class="form-card">
+    <div class="form-card-header">
+        <h2 class="form-card-title"><i class="bi bi-wallet2 me-2 text-primary"></i>Thông tin chi phí</h2>
+        <a asp-action="List" class="form-card-breadcrumb">
+            <i class="bi bi-arrow-left"></i> Trở về danh sách
+        </a>
+    </div>
+    <div class="form-card-body">
+        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
+        <form class="row g-3" asp-action="Create" method="post" asp-antiforgery="true">
+            
+            <div class="col-md-6">
+                <label asp-for="Title" class="form-label">Khoản chi</label>
+                <input asp-for="Title" class="form-control" placeholder="VD: Lương tháng 4/2026..." autofocus />
+                <span asp-validation-for="Title" class="text-danger small"></span>
             </div>
-        </div>
+
+            <div class="col-md-6">
+                <label asp-for="Amount" class="form-label">Số tiền (₫)</label>
+                <input asp-for="Amount" type="number" class="form-control" placeholder="0" />
+                <span asp-validation-for="Amount" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="ExpenseType" class="form-label">Loại phí</label>
+                <select asp-for="ExpenseType" asp-items="expenseTypes" class="form-select"></select>
+                <span asp-validation-for="ExpenseType" class="text-danger small"></span>
+            </div>
+
+            <div class="col-md-6">
+                <label asp-for="IncurredDate" class="form-label">Ngày thanh toán / Hóa đơn</label>
+                <input asp-for="IncurredDate" type="date" class="form-control" />
+                <span asp-validation-for="IncurredDate" class="text-danger small"></span>
+            </div>
+
+            <div class="col-12">
+                <label asp-for="Description" class="form-label">Ghi chú thêm</label>
+                <textarea asp-for="Description" class="form-control" rows="3" placeholder="(Không bắt buộc)"></textarea>
+                <span asp-validation-for="Description" class="text-danger small"></span>
+            </div>
+
+            <div class="form-card-footer" style="margin: 0 -1.5rem -1.5rem; border-radius: 0 0 var(--card-radius) var(--card-radius);">
+                <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>Thêm mới
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <partial name="_ValidationScriptsPartial" />
 }

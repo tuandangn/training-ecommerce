@@ -1,14 +1,12 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 
-namespace NamEcommerce.Data.SqlServer.Mappings.DeliveryNotes;
+namespace NamEcommerce.Data.SqlServer.Mappings;
 
 public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
 {
     public void Configure(EntityTypeBuilder<DeliveryNote> builder)
     {
-        builder.ToTable("DeliveryNote");
+        builder.ToTable("DeliveryNote", DbScheme);
 
         builder.HasKey(d => d.Id);
 

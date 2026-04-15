@@ -1,10 +1,18 @@
-﻿@model PurchaseOrderListSearchModel
-<form method="get">
-    <div class="input-group">
-        <input asp-for="Keywords" class="form-control" placeholder="Tìm kiếm" aria-label="Tìm kiếm" aria-describedby="btnSearch" autofocus/>
-        <button class="btn btn-outline-secondary" type="submit" id="btnSearch">
-            <i class="bi bi-search"></i>
-            <span class="visually-hidden"></span>
-        </button>
+@model PurchaseOrderListSearchModel
+@using NamEcommerce.Domain.Shared.Enums.PurchaseOrders
+
+<form asp-action="List" method="get" class="d-flex flex-wrap gap-2">
+    <div class="search-group">
+        <div class="search-input-group">
+            <i class="bi bi-search text-muted"></i>
+            <input type="text" asp-for="Keywords" class="form-control" placeholder="Tìm theo mã đơn, nhà cung cấp, kho..." />
+        </div>
+        @if (!string.IsNullOrEmpty(Model.Keywords))
+        {
+            <a asp-action="List" class="btn btn-outline-secondary" title="Xóa tìm kiếm">
+                <i class="bi bi-x-lg"></i>
+            </a>
+        }
+        <button class="btn btn-primary" type="submit">Tìm kiếm</button>
     </div>
 </form>

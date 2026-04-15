@@ -4,63 +4,68 @@
     ViewData[ViewConstants.PageTitle] = "Tạo đơn nhập hàng";
 }
 
-<section class="content-title my-4 text-center">
-    <h1>Thêm mới</h1>
-    <a asp-action="List" class="text-muted d-block fs-3 ps-2 text-decoration-none">Đơn nhập hàng</a>
-</section>
-
-<section class="content-data">
+<div class="page-header">
     <div>
-        <div class="p-4 shadow border rounded offset-lg-2 col-lg-8">
-            <div class="d-flex justify-content-end mb-2">
-                <a asp-action="List" class="text-muted small text-decoration-none">
-                    <i class="bi bi-arrow-90deg-left"></i>
-                    Trở lại
-                </a>
-            </div>
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-            <form class="g-3" method="post" asp-antiforgery="true">
-                <div class="row">
-                    <div class="col-12 mb-3">
-                        <label class="form-label" asp-for="VendorId"></label>
-                        <select asp-for="VendorId" class="form-select">
-                            <option value="" selected="@(!Model.VendorId.HasValue)">(Không chọn)</option>
-                            @foreach (var vendor in Model.AvailableVendors)
-                            {
-                                <option value="@vendor.Id" selected="@(Model.VendorId == vendor.Id)">@vendor.Name</option>
-                            }
-                        </select>
-                        <span asp-validation-for="VendorId" class="text-danger small"></span>
-                    </div>
-                    <div class="col-12 col-md-6 col-lg-7 mb-3">
-                        <label class="form-label" asp-for="WarehouseId"></label>
-                        <select asp-for="WarehouseId" class="form-select">
-                            <option value="" selected="@(!Model.WarehouseId.HasValue)">(Không chọn)</option>
-                            @foreach (var warehouse in Model.AvailableWarehouses)
-                            {
-                                <option value="@warehouse.Id" selected="@(Model.WarehouseId == warehouse.Id)">@warehouse.Name</option>
-                            }
-                        </select>
-                        <span asp-validation-for="WarehouseId" class="text-danger small"></span>
-                    </div>
-                    <div class="col-12 col-md-6 col-lg-5 mb-3">
-                        <label asp-for="ExpectedDeliveryDate" class="form-label"></label>
-                        <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" />
-                        <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
-                    </div>
-                    <div class="col-12 mb-4">
-                        <label asp-for="Note" class="form-label"></label>
-                        <textarea asp-for="Note" class="form-control" rows="3" placeholder="@Html.DisplayNameFor(m => m.Note)"></textarea>
-                        <span asp-validation-for="Note" class="text-danger small"></span>
-                    </div>
-                    <div class="col-12">
-                        <button type="submit" class="btn btn-primary">Thêm mới</button>
-                    </div>
-                </div>
-            </form>
-        </div>
+        <h1 class="page-header-title">Thêm mới Đơn nhập hàng</h1>
+        <p class="page-header-subtitle">Tạo đơn nhập hàng mới từ nhà cung cấp</p>
     </div>
-</section>
+</div>
+
+<div class="form-card">
+    <div class="form-card-header">
+        <h2 class="form-card-title"><i class="bi bi-box-seam me-2 text-primary"></i>Thông tin đơn nhập</h2>
+        <a asp-action="List" class="form-card-breadcrumb">
+            <i class="bi bi-arrow-left"></i> Trở về danh sách
+        </a>
+    </div>
+    <div class="form-card-body">
+        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global mb-3"></div>
+        <form class="row g-3" method="post" asp-antiforgery="true">
+            <div class="col-md-6">
+                <label class="form-label" asp-for="VendorId"></label>
+                <select asp-for="VendorId" class="form-select">
+                    <option value="" selected="@(!Model.VendorId.HasValue)">(Không chọn)</option>
+                    @foreach (var vendor in Model.AvailableVendors)
+                    {
+                        <option value="@vendor.Id" selected="@(Model.VendorId == vendor.Id)">@vendor.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="VendorId" class="text-danger small"></span>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label" asp-for="WarehouseId"></label>
+                <select asp-for="WarehouseId" class="form-select">
+                    <option value="" selected="@(!Model.WarehouseId.HasValue)">(Không chọn)</option>
+                    @foreach (var warehouse in Model.AvailableWarehouses)
+                    {
+                        <option value="@warehouse.Id" selected="@(Model.WarehouseId == warehouse.Id)">@warehouse.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="WarehouseId" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <label asp-for="ExpectedDeliveryDate" class="form-label"></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-calendar text-muted"></i></span>
+                    <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" />
+                </div>
+                <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
+            </div>
+            <div class="col-12">
+                <label asp-for="Note" class="form-label"></label>
+                <textarea asp-for="Note" class="form-control" rows="3" placeholder="@Html.DisplayNameFor(m => m.Note)"></textarea>
+                <span asp-validation-for="Note" class="text-danger small"></span>
+            </div>
+            
+            <div class="form-card-footer" style="margin: 1.5rem -1.5rem -1.5rem; border-radius: 0 0 var(--card-radius) var(--card-radius);">
+                <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>Thêm mới
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

@@ -1,27 +1,25 @@
 @{
-    ViewData["Title"] = "Chuẩn bị hàng";
+    ViewData[ViewConstants.PageTitle] = "Chuẩn bị hàng";
 }
 
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0 fw-bold text-dark">Chuẩn bị hàng</h1>
-            <p class="text-muted small mb-0">Danh sách hàng hóa cần chuẩn bị từ đơn hàng chưa khóa.</p>
-        </div>
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Chuẩn bị hàng</h1>
+        <p class="page-header-subtitle">Danh sách hàng hóa cần chuẩn bị từ đơn hàng chưa khóa</p>
     </div>
-
-    <div id="alertArea"></div>
-
-    @switch (Model)
-    {
-        case ProductPreparationListModel:
-            <partial name="List.Product" model="Model"/>
-            break;
-        case CustomerPreparationListModel:
-            <partial name="List.Customer" model="Model"/>
-            break;
-    }
 </div>
+
+<div id="alertArea"></div>
+
+@switch (Model)
+{
+    case ProductPreparationListModel:
+        <partial name="List.Product" model="Model"/>
+        break;
+    case CustomerPreparationListModel:
+        <partial name="List.Customer" model="Model"/>
+        break;
+}
 
 <div class="modal fade" id="deliveryProofModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -30,26 +28,28 @@
                 <h5 class="modal-title fw-bold">Xác nhận giao hàng</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <p class="mb-3">Vui lòng tải lên hình ảnh biên nhận hoặc hình ảnh đã giao hàng cho <strong id="proofProductName"></strong>.</p>
+            <div class="modal-body py-4">
+                <div class="alert alert-info border-0 rounded-3 mb-4">
+                    Vui lòng tải lên hình ảnh biên nhận hoặc hình ảnh đã giao hàng cho <strong id="proofProductName" class="text-dark"></strong>.
+                </div>
                 <form id="deliveryProofForm">
                     <input type="hidden" id="proofOrderId" name="orderId" />
                     <input type="hidden" id="proofOrderItemId" name="orderItemId" />
                     
                     <div class="mb-3">
-                        <label class="form-label fw-bold">Hình ảnh bằng chứng <span class="text-danger">*</span></label>
-                        <input type="file" class="form-control" id="proofImage" name="proofImage" accept="image/*" capture="environment" required />
-                        <div class="form-text">Bạn có thể chụp ảnh trực tiếp từ điện thoại.</div>
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Hình ảnh bằng chứng <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control form-control-lg rounded-3 fs-6" id="proofImage" name="proofImage" accept="image/*" capture="environment" required />
+                        <div class="form-text mt-2">Bạn có thể chụp ảnh trực tiếp từ điện thoại.</div>
                     </div>
                     
                     <div class="text-center d-none" id="proofPreviewContainer">
-                        <img id="proofPreview" src="#" alt="Bản xem trước" class="img-fluid rounded shadow-sm mt-2 mb-3" style="max-height: 200px;" />
+                        <img id="proofPreview" src="#" alt="Bản xem trước" class="img-fluid rounded-4 shadow-sm mt-2 mb-0" style="max-height: 200px; object-fit: cover; width: 100%; border: 1px solid var(--bs-border-color);" />
                     </div>
                 </form>
             </div>
-            <div class="modal-footer border-top-0 pt-0">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-primary" id="btnSubmitProof">
+            <div class="modal-footer border-top-0 pt-0 pb-4 px-4">
+                <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary px-4 rounded-3 shadow-sm px-4" id="btnSubmitProof">
                     <i class="bi bi-check2-circle me-1"></i>Xác nhận đã giao
                 </button>
             </div>
@@ -124,8 +124,8 @@
                         const row = $(`#row-${orderItemId}`);
                         row.addClass('table-success opacity-75');
                         // Update status badge
-                        row.find('td:nth-last-child(2)').html(
-                            '<span class="badge rounded-pill bg-success px-2 py-1 fw-normal"><i class="bi bi-check-circle me-1"></i>Đã giao</span>'
+                        row.find('.status-cell').html(
+                            '<span class="status-badge success"><i class="bi bi-check-circle-fill"></i>Đã giao</span>'
                         );
                         // Remove button
                         currentBtn.closest('td').html('');
@@ -145,7 +145,7 @@
 
             function showAlert(type, message) {
                 const alertHtml = `
-                    <div class="alert alert-${type} alert-dismissible fade show mb-3" role="alert">
+                    <div class="alert alert-${type} alert-dismissible fade show alert-global mb-3" role="alert">
                         <i class="bi bi-${type === 'success' ? 'check-circle-fill' : 'exclamation-triangle-fill'} me-2"></i>
                         ${message}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>

@@ -1,12 +1,12 @@
-@model WarehouseListSearchModel
+@model string
 
 <form asp-action="List" method="get" class="d-flex flex-wrap gap-2">
     <div class="search-group">
         <div class="search-input-group">
             <i class="bi bi-search text-muted"></i>
-            <input type="text" asp-for="Keywords" class="form-control" placeholder="Tìm kiếm kho hàng..." />
+            <input type="text" name="Keywords" value="@Model" class="form-control" placeholder="Tìm theo mã phiếu, khách hàng, sđt..." />
         </div>
-        @if (!string.IsNullOrEmpty(Model.Keywords))
+        @if (!string.IsNullOrEmpty(Model))
         {
             <a asp-action="List" class="btn btn-outline-secondary" title="Xóa tìm kiếm">
                 <i class="bi bi-x-lg"></i>
