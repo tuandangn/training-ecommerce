@@ -1,5 +1,11 @@
 @{
     ViewData[ViewConstants.PageTitle] = "Chuẩn bị hàng";
+    var availableWarehouses = Model switch
+    {
+        ProductPreparationListModel p => p.AvailableWarehouses,
+        CustomerPreparationListModel c => c.AvailableWarehouses,
+        _ => null
+    };
 }
 
 <div class="page-header">
@@ -11,6 +17,13 @@
 
 <div id="alertArea"></div>
 
+<div class="mb-3">
+    <button id="btnCreateDeliveryNote" class="btn btn-primary" disabled>
+        <i class="bi bi-file-earmark-plus me-1"></i>
+        Tạo phiếu xuất (<span id="selectedCount">0</span>)
+    </button>
+</div>
+
 @switch (Model)
 {
     case ProductPreparationListModel:
@@ -21,6 +34,106 @@
         break;
 }
 
+<!-- Create Delivery Notes Modal -->
+<div class="modal fade" id="createDeliveryNotesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold">Tạo phiếu xuất kho</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="deliveryNotesForm" method="post">
+                <div class="modal-body py-4 px-4 bg-light bg-opacity-50">
+                    <div id="orderGroupsList" class="mb-4"></div>
+                    <div id="itemsContainer" class="bg-white p-3 rounded-4 border shadow-sm mb-4"></div>
+
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="bg-white p-3 rounded-4 border shadow-sm h-100">
+                                <h6 class="fw-bold mb-3 small text-muted text-uppercase">Thông tin chung</h6>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-muted text-uppercase" for="warehouseId">
+                                        Kho xuất hàng <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select rounded-3 shadow-sm" id="warehouseId" name="warehouseId"
+                                            data-val="true" data-val-required="Vui lòng chọn kho hàng">
+                                        <option value="">-- Chọn kho hàng --</option>
+                                        @if (availableWarehouses?.Options != null)
+                                        {
+                                            foreach (var warehouse in availableWarehouses.Options)
+                                            {
+                                                <option value="@warehouse.Id">@warehouse.Name</option>
+                                            }
+                                        }
+                                    </select>
+                                    <span class="small text-danger field-validation-valid" data-valmsg-for="warehouseId" data-valmsg-replace="true"></span>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-muted text-uppercase" for="note">Ghi chú</label>
+                                    <textarea class="form-control rounded-3" id="note" name="note" rows="2" placeholder="Ghi chú cho phiếu xuất..."></textarea>
+                                </div>
+                                <div class="form-check form-switch p-3 bg-light rounded-3">
+                                    <input class="form-check-input ms-0" type="checkbox" id="showPrice" name="showPrice" role="switch" />
+                                    <label class="form-check-label ms-2 fw-medium" for="showPrice">
+                                        Hiển thị giá trên phiếu
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-lg rounded-4 overflow-hidden" style="background: linear-gradient(145deg, #ffffff 0%, #f1f4f8 100%);">
+                                <div class="card-body p-4">
+                                    <h6 class="fw-bold mb-3 small text-muted text-uppercase">Tóm tắt thanh toán</h6>
+                                    
+                                    <div class="payment-breakdown mb-4 p-3 bg-white rounded-3 border border-light shadow-sm">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="text-muted small">Tiền hàng:</span>
+                                            <span class="fw-bold small" id="modal-breakdown-items">0đ</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-0">
+                                            <span class="text-muted small">Phụ phí:</span>
+                                            <span class="fw-bold small" id="modal-breakdown-surcharge">0đ</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-muted text-uppercase" for="modalSurcharge">Phụ phí</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control text-end shadow-sm" id="modalSurcharge" name="surcharge" step="1000" placeholder="0" />
+                                            <span class="input-group-text bg-white small border-start-0">đ</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-muted text-uppercase" for="modalSurchargeReason">Lý do phụ phí</label>
+                                        <input type="text" class="form-control shadow-sm" id="modalSurchargeReason" name="surchargeReason" placeholder="Nhập lý do..." />
+                                    </div>
+
+                                    <div class="mb-0 p-3 bg-primary bg-opacity-10 rounded-3 border border-primary border-opacity-25">
+                                        <label class="form-label small fw-bold text-primary text-uppercase mb-1">Số tiền phải thu</label>
+                                        <div class="input-group mb-1">
+                                            <input type="number" class="form-control text-end fw-bold text-primary fs-5 bg-transparent border-0" id="modalAmountToCollect" name="amountToCollect" step="1000" />
+                                            <span class="input-group-text bg-transparent border-0 text-primary fw-bold fs-5">đ</span>
+                                        </div>
+                                        <div class="small text-primary opacity-75" id="modalCalculationInfo" style="font-size: 0.75rem;">
+                                            <i class="bi bi-info-circle me-1"></i> Tự động tính theo phụ phí
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top p-4">
+                    <button type="button" class="btn btn-light px-4 rounded-3 border fw-medium" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary px-4 rounded-3 shadow-sm fw-bold" id="btnSubmitDeliveryNotes">
+                        <i class="bi bi-check2-circle me-2"></i>Tạo phiếu xuất
+                    </button>
+                </div>
+           </form>
+        </div>
+    </div>
+</div>
 <div class="modal fade" id="deliveryProofModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -35,13 +148,13 @@
                 <form id="deliveryProofForm">
                     <input type="hidden" id="proofOrderId" name="orderId" />
                     <input type="hidden" id="proofOrderItemId" name="orderItemId" />
-                    
+
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted text-uppercase mb-2">Hình ảnh bằng chứng <span class="text-danger">*</span></label>
                         <input type="file" class="form-control form-control-lg rounded-3 fs-6" id="proofImage" name="proofImage" accept="image/*" capture="environment" required />
                         <div class="form-text mt-2">Bạn có thể chụp ảnh trực tiếp từ điện thoại.</div>
                     </div>
-                    
+
                     <div class="text-center d-none" id="proofPreviewContainer">
                         <img id="proofPreview" src="#" alt="Bản xem trước" class="img-fluid rounded-4 shadow-sm mt-2 mb-0" style="max-height: 200px; object-fit: cover; width: 100%; border: 1px solid var(--bs-border-color);" />
                     </div>
@@ -58,10 +171,13 @@
 </div>
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
     <script type="module" defer>
-        import { confirm } from "/modules/modals.js";
+        import { confirm, toast } from "/modules/modals.js";
         (function () {
             const deliveryProofModal = new bootstrap.Modal(document.getElementById('deliveryProofModal'));
+            const createDeliveryNotesModal = new bootstrap.Modal(document.getElementById('createDeliveryNotesModal'));
             let currentBtn = null;
 
             // Handle file input change for preview
@@ -82,16 +198,16 @@
             $(document).on('click', '.btnMarkDelivered', function (e) {
                 e.preventDefault();
                 currentBtn = $(this);
-                
+
                 // Populate modal
                 $('#proofOrderId').val(currentBtn.data('order-id'));
                 $('#proofOrderItemId').val(currentBtn.data('order-item-id'));
                 $('#proofProductName').text(currentBtn.data('product-name'));
-                
+
                 // Reset form
                 $('#deliveryProofForm')[0].reset();
                 $('#proofPreviewContainer').addClass('d-none');
-                
+
                 deliveryProofModal.show();
             });
 
@@ -104,7 +220,7 @@
 
                 const btn = $('#btnSubmitProof');
                 const orderItemId = $('#proofOrderItemId').val();
-                
+
                 btn.prop('disabled', true);
                 btn.html('<span class="spinner-border spinner-border-sm me-1"></span>Đang xử lý...');
 
@@ -153,6 +269,265 @@
                 $('#alertArea').html(alertHtml);
                 setTimeout(() => { $('#alertArea .alert').alert('close'); }, 5000);
             }
+
+            // Selection logic for creating delivery notes
+            const btnCreate = $('#btnCreateDeliveryNote');
+            const selectedCountEl = $('#selectedCount');
+            const $modalSurcharge = $('#modalSurcharge');
+            const $modalAmountToCollect = $('#modalAmountToCollect');
+            const $modalCalculationInfo = $('#modalCalculationInfo');
+            const $modalBreakdownItems = $('#modal-breakdown-items');
+            const $modalBreakdownSurcharge = $('#modal-breakdown-surcharge');
+            const $modalShowPrice = $('#showPrice');
+
+            function formatCurrency(amount) {
+                return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+            }
+
+            function calculateTotals() {
+                let totalItems = 0;
+                $('.qty-input').each(function() {
+                    const qty = parseFloat($(this).val()) || 0;
+                    if (qty > 0) {
+                        const orderId = $(this).data('order-id');
+                        const itemId = $(this).data('item-id');
+                        const itemDetails = btnCreate.data('itemDetails');
+                        const item = itemDetails[orderId].find(i => i.orderItemId === itemId);
+                        if (item && item.unitPrice) {
+                            totalItems += qty * item.unitPrice;
+                        }
+                    }
+                });
+
+                const surcharge = parseFloat($modalSurcharge.val()) || 0;
+                const showPrice = $modalShowPrice.is(':checked');
+
+                let amountToCollect = surcharge;
+                let infoText = 'Tự động tính theo phụ phí';
+
+                if (showPrice) {
+                    amountToCollect = totalItems + surcharge;
+                    infoText = `Tổng tiền hàng (${formatCurrency(totalItems)}) + Phụ phí (${formatCurrency(surcharge)})`;
+                }
+
+                $modalAmountToCollect.val(amountToCollect);
+                $modalCalculationInfo.html(`<i class="bi bi-info-circle me-1"></i> ${infoText}`);
+                $modalBreakdownItems.text(formatCurrency(totalItems));
+                $modalBreakdownSurcharge.text(formatCurrency(surcharge));
+            }
+
+            // Events for financial calculation
+            $(document).on('input change', '.qty-input, #modalSurcharge, #showPrice', function() {
+                calculateTotals();
+            });
+
+            // Toggle all
+            $(document).on('change', '.select-all-prep-group, .select-all-customers', function () {
+                const checked = $(this).is(':checked');
+                $(this).closest('table').find('.select-prep-item').prop('checked', checked).trigger('change');
+            });
+
+            // Update selected count and ensure button state
+            $(document).on('change', '.select-prep-item', function () {
+                const checkedBoxes = $('.select-prep-item:checked');
+                selectedCountEl.text(checkedBoxes.length);
+                btnCreate.prop('disabled', checkedBoxes.length === 0);
+            });
+
+            btnCreate.on('click', function () {
+                const checkedBoxes = $('.select-prep-item:checked');
+                if (checkedBoxes.length === 0) {
+                    showAlert('danger', 'Vui lòng chọn ít nhất một mặt hàng để tạo phiếu xuất.');
+                    return;
+                }
+
+                // Group items by orderId
+                const orderGroups = {};
+                const itemDetails = {};
+                checkedBoxes.each(function () {
+                    const orderId = $(this).data('order-id');
+                    const orderCode = $(this).data('order-code');
+                    const orderItemId = $(this).data('order-item-id');
+                    const row = $(this).closest('tr');
+
+                    if (!orderGroups[orderId]) {
+                        orderGroups[orderId] = [];
+                    }
+                    orderGroups[orderId].push(orderItemId);
+
+                    if (!itemDetails[orderId]) {
+                        itemDetails[orderId] = [];
+                    }
+
+                    const productName = $(this).data('product-name');
+                    const quantity = parseFloat($(this).data('quantity')) || 0;
+                    const deliveredQuantity = parseFloat($(this).data('delivered-quantity')) || 0;
+                    const stock = parseFloat($(this).data('stock')) || 0;
+                    const unitPrice = parseFloat($(this).data('unit-price')) || 0;
+                    const remainingQuantity = Math.max(0, quantity - deliveredQuantity);
+
+                    itemDetails[orderId].push({
+                        orderCode: orderCode,
+                        orderItemId: orderItemId,
+                        productName: productName,
+                        quantity: quantity,
+                        deliveredQuantity: deliveredQuantity,
+                        remainingQuantity: remainingQuantity,
+                        stock: stock,
+                        unitPrice: unitPrice
+                    });
+                });
+
+                // Build items table with quantity inputs
+                let itemsHtml = '<div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0">';
+                itemsHtml += '<thead><tr><th class="ps-3">Mã đơn</th><th>Sản phẩm</th><th class="text-end">Đã giao/Tổng</th><th class="text-end" style="width: 120px;">Số lượng xuất</th><th class="text-end pe-3">Tồn kho</th></tr></thead><tbody class="border-top-0">';
+
+                Object.keys(orderGroups).forEach(orderId => {
+                    itemDetails[orderId].forEach((item, index) => {
+                        itemsHtml += `
+                            <tr>
+                                <td class="ps-3"><span class="badge bg-light text-dark border">${item.orderCode}</span></td>
+                                <td class="fw-medium">${item.productName}</td>
+                                <td class="text-end small text-muted">
+                                    <span class="text-success">${item.deliveredQuantity}</span> / <span class="fw-bold text-dark">${item.quantity}</span>
+                                </td>
+                                <td class="pe-0">
+                                    <input type="number" class="form-control form-control-sm text-end qty-input fw-bold shadow-sm" 
+                                           data-order-id="${orderId}" data-item-id="${item.orderItemId}"
+                                           value="${item.remainingQuantity}" min="0" max="${item.remainingQuantity}" step="0.01" />
+                                </td>
+                                <td class="text-end text-muted pe-3 small">${item.stock}</td>
+                            </tr>
+                        `;
+                    });
+                });
+
+                itemsHtml += '</tbody></table></div>';
+                $('#itemsContainer').html(itemsHtml);
+
+                btnCreate.data('orderGroups', orderGroups);
+                btnCreate.data('itemDetails', itemDetails);
+                
+                // Reset financial fields
+                $modalSurcharge.val('');
+                $('#modalSurchargeReason').val('');
+                calculateTotals();
+
+                createDeliveryNotesModal.show();
+            });
+
+        $('#deliveryNotesForm').on('submit', async function (e) {
+            e.preventDefault();
+
+            if(!$(this).valid()){
+                return;
+            }
+
+                const orderGroups = btnCreate.data('orderGroups');
+                if (!orderGroups) return;
+
+                const btn = $('#btnSubmitDeliveryNotes');
+                const showPrice = $('#showPrice').is(':checked');
+                const note = $('#note').val().trim();
+                const warehouseId = $('#warehouseId').val();
+                const surchargeTotal = parseFloat($modalSurcharge.val()) || 0;
+                const surchargeReason = $('#modalSurchargeReason').val().trim();
+                const amountToCollectTotal = parseFloat($modalAmountToCollect.val()) || 0;
+
+                if (!warehouseId) {
+                    toast('Lỗi', 'Vui lòng chọn kho xuất hàng.', 'error');
+                    return;
+                }
+
+                btn.prop('disabled', true);
+                btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...');
+
+                try {
+                    const orderIds = Object.keys(orderGroups);
+                    let successCount = 0;
+                    let errorCount = 0;
+                    
+                    // We need to divide surcharge among orders if multiple orders are selected (simple division for now)
+                    const surchargePerOrder = surchargeTotal / orderIds.length;
+                    
+                    // Same for Amount To Collect logic? Actually, we should calculate it per order.
+                    // If we have multiple orders, it's safer to just let the user know this modal works best for single order or 
+                    // distribute surcharge. For now, we distribute.
+
+                    for (const orderId of orderIds) {
+                        const selectedItems = [];
+                        let orderItemsTotal = 0;
+                        $(`input.qty-input[data-order-id="${orderId}"]`).each(function () {
+                            const qty = parseFloat($(this).val()) || 0;
+                            if (qty > 0) {
+                                const itemId = $(this).data('item-id');
+                                const itemDetails = btnCreate.data('itemDetails');
+                                const item = itemDetails[orderId].find(i => i.orderItemId === itemId);
+                                
+                                selectedItems.push({
+                                    orderItemId: itemId,
+                                    quantity: qty
+                                });
+                                
+                                if (item && item.unitPrice) {
+                                    orderItemsTotal += qty * item.unitPrice;
+                                }
+                            }
+                        });
+
+                        if (selectedItems.length === 0) continue;
+
+                        // Per-order financial calculation
+                        const orderSurcharge = surchargePerOrder;
+                        const orderAmountToCollect = showPrice ? (orderItemsTotal + orderSurcharge) : orderSurcharge;
+
+                        try {
+                            const response = await $.ajax({
+                                url: '@Url.Action("CreateFromPreparation", "DeliveryNote")',
+                                type: 'POST',
+                                contentType: 'application/json',
+                                data: JSON.stringify({
+                                    orderId: orderId,
+                                    selectedItems: selectedItems,
+                                    showPrice: showPrice,
+                                    warehouseId: warehouseId,
+                                    note: note,
+                                    surcharge: orderSurcharge,
+                                    surchargeReason: surchargeReason,
+                                    amountToCollect: orderAmountToCollect
+                                })
+                            });
+
+                            if (response.success) {
+                                successCount++;
+                            } else {
+                                errorCount++;
+                            }
+                        } catch (err) {
+                            errorCount++;
+                        }
+                    }
+
+                    createDeliveryNotesModal.hide();
+
+                    if (errorCount === 0) {
+                        toast('Thành công', `Đã tạo thành công ${successCount} phiếu xuất kho.`, 'success');
+                        $('.select-prep-item').prop('checked', false).trigger('change');
+                        setTimeout(() => { location.reload(); }, 1500);
+                    } else if (successCount > 0) {
+                        showAlert('warning', `Tạo ${successCount} phiếu xuất thành công, ${errorCount} thất bại.`);
+                        setTimeout(() => { location.reload(); }, 2000);
+                    } else {
+                        showAlert('danger', 'Có lỗi xảy ra khi tạo phiếu xuất kho.');
+                    }
+                } catch (err) {
+                    showAlert('danger', 'Có lỗi xảy ra khi tạo phiếu xuất kho. Vui lòng thử lại.');
+                } finally {
+                    btn.prop('disabled', false);
+                    btn.html('<i class="bi bi-check2-circle me-2"></i>Tạo phiếu xuất');
+                }
+            });
         })();
     </script>
 }
+

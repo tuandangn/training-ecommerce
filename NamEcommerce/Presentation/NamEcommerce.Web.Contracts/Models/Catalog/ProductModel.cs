@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Web.Contracts.Models.Common;
+using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Models.Catalog;
 
@@ -12,5 +12,5 @@ public sealed record ProductModel
     public Guid? UnitMeasurementId { get; set; }
     public int DisplayOrder { get; set; }
     public Base64ImageModel? ImageFile { get; set; }
-    public bool TrackInventory { get; set; }
+
 }

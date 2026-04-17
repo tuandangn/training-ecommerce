@@ -40,80 +40,86 @@
         <table class="table data-table">
             <thead>
                 <tr>
-                    <th class="ps-4" style="width: 15%">Mã đơn</th>
+                    <th class="ps-4">Mã đơn</th>
                     <th>Khách hàng</th>
-                    <th class="text-end">Tiền</th>
-                    <th class="text-center">Ngày giao</th>
-                    <th>Trạng thái</th>
+                    <th class="text-end">Tổng đơn</th>
+                    <th class="text-center">Dự kiến giao</th>
+                    <th class="text-center">Trạng thái</th>
+                    <th class="text-center d-none d-lg-table-cell">Ngày tạo</th>
                     <th style="width: 100px;"></th>
                 </tr>
             </thead>
             <tbody>
                 @if (Model.Data.Pagination.TotalCount > 0)
                 {
-                    @foreach (var item in Model.Data)
+                    @foreach (var order in Model.Data)
                     {
                         <tr>
                             <td class="ps-4">
-                                <span class="fw-medium text-primary d-block">@HighlighHelper.Highlight(item.Code, Model.Keywords)</span>
-                                <span class="text-muted small">@item.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                                <div class="position-relative">
+                                    <a asp-action="Details" asp-route-id="@order.Id" class="fw-medium text-primary d-block text-nowrap text-decoration-none">
+                                        @HighlighHelper.Highlight(order.Code, Model.Keywords)
+                                    </a>
+                                    <span class="text-muted small d-inline d-lg-none">@order.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                                </div>
                             </td>
                             <td>
-                                <div>
-                                    <div class="fw-medium">
-                                        <i class="bi bi-person me-1"></i>
-                                        @HighlighHelper.Highlight(item.CustomerName, Model.Keywords)
-                                    </div>
-                                    @if (!string.IsNullOrEmpty(item.CustomerPhone))
+                                <div class="position-relative">
+                                    <a asp-action="Edit" asp-controller="Customer" asp-route-id="@order.CustomerId" class="stretched-link fw-medium text-decoration-none">                                        <i class="bi bi-person me-1"></i>
+                                        @HighlighHelper.Highlight(order.CustomerName, Model.Keywords)
+                                    </a>
+                                    @if (!string.IsNullOrEmpty(order.CustomerPhone))
                                     {
                                         <div>
-                                            <a href="tel:@item.CustomerPhone" class="text-muted small text-decoration-none">
-                                                <i class="bi bi-telephone me-1"></i> @HighlighHelper.Highlight(item.CustomerPhone, Model.Keywords)
+                                            <a href="tel:@order.CustomerPhone" class="text-muted small text-decoration-none">
+                                                <i class="bi bi-telephone me-1"></i> @HighlighHelper.Highlight(order.CustomerPhone, Model.Keywords)
                                             </a>
                                         </div>
                                     }
                                 </div>
                             </td>
-                            <td class="text-end text-danger fw-bold">
-                                @item.TotalAmount.ToString("N0") @ViewConstants.DefaultCurrencySymbol
+                            <td class="text-end text-danger fw-bold text-nowrap">
+                                @order.TotalAmount.ToString(ViewConstants.CurrencyDisplayFormat)
                             </td>
                             <td class="text-center text-muted">
-                                @item.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat)
+                                @order.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat)
                             </td>
-                            <td>
+                            <td class="text-center">
                                 @{
-                                    var itemOrderStatus = (OrderStatus)item.Status;
+                                    var itemOrderStatus = (OrderStatus)order.Status;
                                 }
                                 <span class="badge rounded-pill @itemOrderStatus.GetDisplayColor() px-2 py-1 fw-normal">
                                     @itemOrderStatus.GetDisplayText()
                                 </span>
                             </td>
+                            <td class="text-center d-none d-lg-table-cell">
+                                <span class="text-muted">@order.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                            </td>
                             <td class="text-end pe-3">
-                                @if (item.CanUpdateInfo)
+                                @if (order.CanUpdateInfo)
                                 {
-                                    <a class="btn-table-action me-1" asp-action="Details" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                    <a class="btn-table-action" asp-action="Details" asp-route-id="@order.Id" title="Chỉnh sửa">
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                 }
                                 else
                                 {
-                                    <a class="btn-table-action me-1" asp-action="Details" asp-route-id="@item.Id" title="Xem">
+                                    <a class="btn-table-action" asp-action="Details" asp-route-id="@order.Id" title="Xem">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                 }
-                                
                                 <div class="btn-group dropstart">
                                     <button class="btn-table-action" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Thêm">
                                         <i class="bi bi-three-dots-vertical"></i>
                                     </button>
                                     <ul class="dropdown-menu border-0 shadow-sm rounded-3">
                                         <li>
-                                            <a class="dropdown-item py-2 dropdown-item-custom" asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@item.Id">
+                                            <a class="dropdown-item py-2 dropdown-item-custom" asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@order.Id">
                                                 <i class="bi bi-box-seam me-2 text-muted"></i> Tạo phiếu xuất kho
                                             </a>
                                         </li>
                                         <li>
-                                            <button type="button" class="dropdown-item py-2 text-danger btnDelete dropdown-item-custom" data-id="@item.Id" data-code="@item.Code">
+                                            <button type="button" class="dropdown-item py-2 text-danger btnDelete dropdown-item-custom" data-id="@order.Id" data-code="@order.Code">
                                                 <i class="bi bi-trash me-2"></i> Xóa đơn màng
                                             </button>
                                         </li>
@@ -153,14 +159,14 @@
     <script type="module" defer>
         import { confirm } from "/modules/modals.js";
         (function () {
-            $('.btnDelete').on('click', async function (e) {
-                e.preventDefault();
-                const code = $(this).data('code');
-                $(this).prop('disabled', true);
-                const confirmed = await confirm('Xóa đơn hàng', `Bạn muốn xóa đơn hàng <strong>${code}</strong>?`);
-                if (!confirmed) { $(this).prop('disabled', false); return; }
-                $(`#deleteForm${$(this).data('id')}`).submit();
-            });
+        $('.btnDelete').on('click', async function (e) {
+        e.preventDefault();
+        const code = $(this).data('code');
+        $(this).prop('disabled', true);
+        const confirmed = await confirm('Xóa đơn hàng', `Bạn muốn xóa đơn hàng <strong>${code}</strong>?`);
+        if (!confirmed) { $(this).prop('disabled', false); return; }
+        $(`#deleteForm${$(this).data('id')}`).submit();
+        });
         })();
     </script>
 }

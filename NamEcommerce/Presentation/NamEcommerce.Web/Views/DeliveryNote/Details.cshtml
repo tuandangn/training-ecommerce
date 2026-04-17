@@ -1,6 +1,6 @@
 @model NamEcommerce.Web.Contracts.Models.DeliveryNotes.DeliveryNoteDetailsModel
 @{
-    ViewBag.PageTitle = "Chi tiết phiếu xuất kho " + Model.Code;
+    ViewData["Title"] = "Chi tiết phiếu xuất kho " + Model.Code;
 
     var statusTuple = Model.Status switch
     {
@@ -13,6 +13,8 @@
     };
 }
 
+@Html.AntiForgeryToken()
+
 <div class="page-header">
     <div>
         <h1 class="page-header-title d-flex align-items-center gap-2">
@@ -24,6 +26,33 @@
         </p>
     </div>
     <div class="d-flex gap-2">
+        @if (Model.Status == 10)
+        {
+            <button type="button" class="btn btn-outline-primary btn-confirm" data-id="@Model.Id">
+                <i class="bi bi-check-all me-1"></i> Xác nhận xuất
+            </button>
+        }
+        @if (Model.Status == 20)
+        {
+            <button type="button" class="btn btn-outline-warning btn-delivering" data-id="@Model.Id">
+                <i class="bi bi-truck me-1"></i> Bắt đầu đi giao
+            </button>
+        }
+        @if (Model.Status == 30 || Model.Status == 20)
+        {
+            <button type="button" class="btn btn-outline-success btn-delivered" data-id="@Model.Id">
+                <i class="bi bi-check-circle-fill me-1"></i> Xác nhận Đã giao
+            </button>
+        }
+        @if (Model.Status != 40 && Model.Status != 50)
+        {
+            <button type="button" class="btn btn-outline-danger btn-cancel" data-id="@Model.Id">
+                <i class="bi bi-x-circle me-1"></i> Hủy phiếu
+            </button>
+        }
+        
+        <div class="vr mx-1"></div>
+
         <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-primary d-flex align-items-center">
             <i class="bi bi-printer me-2"></i> In phiếu
         </a>
@@ -55,9 +84,51 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Địa chỉ xuất</label>
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Kho xuất hàng</label>
+                    <div class="text-dark">@Model.WarehouseName</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Địa chỉ giao hàng</label>
                     <div class="text-dark">@Model.ShippingAddress</div>
                 </div>
+
+                <hr class="border-light my-4">
+
+                @if (Model.ShowPrice || Model.AmountToCollect > 0 || Model.Surcharge > 0)
+                {
+                    <div class="financial-summary-sidebar mb-4 p-3 rounded-3" style="background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%); border: 1px solid #edf2f9;">
+                        <h6 class="fw-bold mb-3 small text-muted text-uppercase">Tóm tắt thanh toán</h6>
+                    
+                        @if (Model.ShowPrice)
+                        {
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Tiền hàng:</span>
+                                <span class="fw-bold small">@Model.TotalAmount.ToString("N0")đ</span>
+                            </div>
+                        }
+                        @if (Model.Surcharge > 0)
+                        {
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Phụ phí:</span>
+                                <div class="text-end">
+                                    <span class="fw-bold small">@Model.Surcharge.ToString("N0")đ</span>
+                                    @if (!string.IsNullOrEmpty(Model.SurchargeReason))
+                                    {
+                                        <div class="text-muted x-small">(@Model.SurchargeReason)</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                        @if (Model.AmountToCollect > 0)
+                        {
+                            <div class="d-flex justify-content-between mt-3 pt-3 border-top">
+                                <span class="text-primary fw-bold small">TỔNG THU:</span>
+                                <span class="text-primary fw-bold fs-5">@Model.AmountToCollect.ToString("N0")đ</span>
+                            </div>
+                        }
+                    </div>
+                }
                 
                 @if (!string.IsNullOrEmpty(Model.Note))
                 {
@@ -66,8 +137,7 @@
                         <div class="text-dark bg-light p-2 rounded border">@Model.Note</div>
                     </div>
                 }
-
-                <div class="mb-4">
+@*                 <div class="mb-4">
                     <label class="form-label small fw-bold text-muted text-uppercase mb-1">Hiển thị giá</label>
                     <div>
                         @if (Model.ShowPrice)
@@ -80,7 +150,7 @@
                         }
                     </div>
                 </div>
-
+ *@
                 @if (Model.Status == 40 && Model.DeliveredOnUtc.HasValue)
                 {
                     <hr class="border-light my-4">
@@ -156,9 +226,29 @@
                                 }
                                 @if (Model.ShowPrice)
                                 {
+                                    <tr class="bg-light border-top">
+                                        <td colspan="4" class="text-end py-2 text-dark small">TỔNG TIỀN HÀNG:</td>
+                                        <td class="text-end pe-4 py-2 fw-bold">@Model.TotalAmount.ToString("N0") <span class="small">đ</span></td>
+                                    </tr>
+                                }
+                                @if (Model.Surcharge > 0)
+                                {
+                                    <tr class="bg-light border-top">
+                                        <td colspan="@(Model.ShowPrice ? 4 : 2)" class="text-end py-2 text-dark small">
+                                            PHỤ PHÍ:
+                                            @if (!string.IsNullOrEmpty(Model.SurchargeReason))
+                                            {
+                                                <div class="text-muted fw-normal x-small mt-1">(@Model.SurchargeReason)</div>
+                                            }
+                                        </td>
+                                        <td class="text-end pe-4 py-2 fw-bold">@Model.Surcharge.ToString("N0") <span class="small">đ</span></td>
+                                    </tr>
+                                }
+                                @if (Model.AmountToCollect > 0)
+                                {
                                     <tr class="fw-bold bg-light border-top border-2">
-                                        <td colspan="4" class="text-end py-3 text-dark">TỔNG CỘNG:</td>
-                                        <td class="text-end pe-4 py-3 fs-5 text-primary">@Model.TotalAmount.ToString("N0") <span class="small">đ</span></td>
+                                        <td colspan="@(Model.ShowPrice ? 4 : 2)" class="text-end py-3 text-dark">SỐ TIỀN PHẢI THU:</td>
+                                        <td class="text-end pe-4 py-3 fs-5 text-primary">@Model.AmountToCollect.ToString("N0") <span class="small">đ</span></td>
                                     </tr>
                                 }
                             }
@@ -182,16 +272,172 @@
 @if (!string.IsNullOrEmpty(Model.DeliveryProofPictureUrl))
 {
     <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-          <div class="modal-header border-0 pb-0">
-            <h5 class="modal-title fw-bold">Bằng chứng giao hàng</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body text-center py-4">
-            <img src="data:image/jpeg;base64,@Model.DeliveryProofPictureUrl" class="img-fluid rounded shadow-sm" alt="Bằng chứng giao hàng" />
-          </div>
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Bằng chứng giao hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <img src="data:image/jpeg;base64,@Model.DeliveryProofPictureUrl" class="img-fluid rounded shadow-sm" alt="Bằng chứng giao hàng" />
+                </div>
+            </div>
         </div>
-      </div>
     </div>
+}
+
+<!-- Modal Mark Delivered (Bằng chứng) -->
+<div class="modal fade" id="markDeliveredModal" tabindex="-1" aria-labelledby="markDeliveredModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="markDeliveredForm" method="post" enctype="multipart/form-data">
+            <input type="hidden" id="deliveryNoteId" name="deliveryNoteId" value="@Model.Id" />
+            
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="markDeliveredModalLabel">Xác nhận giao hàng thành công</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-4">
+                    <div class="alert alert-info border-0 rounded-3 mb-4">
+                        Phiếu xuất này đã được giao đến tay khách hàng. Hãy chụp ảnh để xác nhận.
+                    </div>
+                    <div class="mb-3">
+                        <label for="receiverName" class="form-label small fw-bold text-muted text-uppercase mb-2">Tên người nhận (Không bắt buộc)</label>
+                        <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="receiverName" name="receiverName" placeholder="Ví dụ: Anh Tâm">
+                    </div>
+                    <div class="mb-3">
+                        <label for="deliveryProofPicture" class="form-label small fw-bold text-muted text-uppercase mb-2">Hình ảnh bằng chứng <span class="text-danger">*</span></label>
+                        <input class="form-control form-control-lg rounded-3 fs-6" type="file" id="deliveryProofPicture" name="pictureFile" accept="image/*" capture="environment" required>
+                        <div class="form-text mt-2 mb-0">Ví dụ: Chụp ảnh hàng hóa đã xếp lên cửa hàng, chữ ký người nhận. Bắt buộc chụp/tải ảnh lên!</div>
+                    </div>
+                    <div class="mt-3 text-center d-none" id="previewContainer">
+                        <img id="imagePreview" src="#" alt="Preview" class="img-fluid rounded-4 shadow-sm" style="max-height: 250px; display: none; object-fit: cover; width: 100%; border: 1px solid var(--bs-border-color);" />
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-4 px-4">
+                    <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-success px-4 rounded-3 shadow-sm px-5" id="btnSubmitDelivery">
+                        <i class="bi bi-camera me-1"></i> Xác nhận Đã giao
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            
+            // Confirm
+            $('.btn-confirm').click(function(e) {
+                e.preventDefault();
+                var id = $(this).data('id');
+                if (confirm('Xác nhận phiếu xuất kho này?')) {
+                    postAction('/DeliveryNote/Confirm/' + id);
+                }
+            });
+
+            // Mark Delivering
+            $('.btn-delivering').click(function(e) {
+                e.preventDefault();
+                var id = $(this).data('id');
+                postAction('/DeliveryNote/MarkDelivering/' + id);
+            });
+
+            // Cancel
+            $('.btn-cancel').click(function(e) {
+                e.preventDefault();
+                var id = $(this).data('id');
+                if (confirm('Bạn có chắc chắn muốn hủy phiếu xuất này?')) {
+                    postAction('/DeliveryNote/Cancel/' + id);
+                }
+            });
+
+            // Mark Delivered Flow
+            var markDeliveredModal = new bootstrap.Modal(document.getElementById('markDeliveredModal'));
+            
+            $('.btn-delivered').click(function(e) {
+                e.preventDefault();
+                $('#markDeliveredModal').modal('show');
+            });
+
+            // Image Preview inside Modal
+            $("#deliveryProofPicture").change(function () {
+                var input = this;
+                if (input.files && input.files[0]) {
+                    var reader = new FileReader();
+
+                    reader.onload = function (e) {
+                        $('#previewContainer').removeClass('d-none');
+                        $('#imagePreview').attr('src', e.target.result).show();
+                    }
+
+                    reader.readAsDataURL(input.files[0]);
+                } else {
+                    $('#previewContainer').addClass('d-none');
+                    $('#imagePreview').hide();
+                }
+            });
+
+            // Form Submit for Delivery Proof
+            $('#markDeliveredForm').submit(function(e) {
+                e.preventDefault();
+                var form = $(this)[0];
+                var formData = new FormData(form);
+                
+                var actionUrl = '/DeliveryNote/MarkDelivered';
+                
+                var btn = $('#btnSubmitDelivery');
+                var originalText = btn.html();
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang tải ảnh...');
+
+                $.ajax({
+                    url: actionUrl,
+                    type: 'POST',
+                    data: formData,
+                    processData: false, // important
+                    contentType: false, // important
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(res) {
+                        if (res.success) {
+                            alert(res.message);
+                            location.reload();
+                        } else {
+                            alert("Lỗi: " + res.message);
+                            btn.prop('disabled', false).html(originalText);
+                        }
+                    },
+                    error: function(err) {
+                        alert('Có lỗi hệ thống xảy ra.');
+                        console.error(err);
+                        btn.prop('disabled', false).html(originalText);
+                    }
+                });
+            });
+
+            function postAction(url) {
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: {
+                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function(res) {
+                        if (res.success) {
+                            location.reload();
+                        } else {
+                            alert(res.message);
+                        }
+                    },
+                    error: function(err) {
+                        alert("Lỗi hệ thống.");
+                        console.error(err);
+                    }
+                });
+            }
+        });
+    </script>
 }

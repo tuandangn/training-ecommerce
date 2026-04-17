@@ -76,13 +76,7 @@
                 </div>
                 <div class="tab-pane fade" id="additional" role="tabpanel">
                     <div class="row g-3">
-                        <div class="col-12">
-                            <div class="form-check form-switch">
-                                <input asp-for="TrackInventory" class="form-check-input" role="switch" />
-                                <label class="form-check-label fw-medium" asp-for="TrackInventory">@Html.DisplayNameFor(m => m.TrackInventory)</label>
-                            </div>
-                            <span asp-validation-for="TrackInventory" class="text-danger small"></span>
-                        </div>
+
                         <div class="col-sm-6 col-md-3">
                             <label asp-for="DisplayOrder" class="form-label"></label>
                             <input asp-for="DisplayOrder" class="form-control" placeholder="0" />

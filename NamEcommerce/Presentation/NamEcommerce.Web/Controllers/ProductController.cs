@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
@@ -68,8 +68,7 @@ public sealed class ProductController : BaseAuthorizedController
             CategoryId = model.CategoryId,
             UnitMeasurementId = model.UnitMeasurementId,
             DisplayOrder = model.DisplayOrder,
-            ImageFile = imageFileInfo,
-            TrackInventory = model.TrackInventory
+            ImageFile = imageFileInfo
         });
         if (!createProductResult.Success)
         {
@@ -152,8 +151,7 @@ public sealed class ProductController : BaseAuthorizedController
             CategoryId = model.CategoryId,
             UnitMeasurementId = model.UnitMeasurementId,
             DisplayOrder = model.DisplayOrder,
-            ImageFile = imageFileInfo,
-            TrackInventory = model.TrackInventory
+            ImageFile = imageFileInfo
         });
         if (!updateProductResult.Success)
         {
@@ -175,5 +173,12 @@ public sealed class ProductController : BaseAuthorizedController
 
         TempData[ViewConstants.ProductSuccessMessage] = "Xóa hàng hóa thành công!";
         return RedirectToAction(nameof(List));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> PriceHistory(GetProductPriceHistoryQuery query)
+    {
+        var model = await _mediator.Send(query).ConfigureAwait(false);
+        return Json(model);
     }
 }

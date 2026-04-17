@@ -1,6 +1,8 @@
-﻿using MediatR;
+using MediatR;
+using NamEcommerce.Application.Contracts.Events.DeliveryNotes;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Events;
+using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.Entities;
 
 namespace NamEcommerce.Application.Services.Events;
@@ -26,6 +28,17 @@ public sealed class EventPublisher : IEventPublisher
             {
                 AdditionalData = updatedEvent.AdditionalData
             },
+            _ => throw new NotSupportedException()
+        };
+        return _mediator.Publish(publishedNotification);
+    }
+
+    public Task PublishEvent<TEvent>(TEvent @event) where TEvent : BaseEvent
+    {
+        object publishedNotification = @event switch
+        {
+            DeliveryNoteConfirmedEvent deliveryNoteConfirmedEvent => new DeliveryNoteConfirmedNotification(deliveryNoteConfirmedEvent.DeliveryNoteId),
+            DeliveryNoteDeliveredEvent deliveryNoteDeliveredEvent => new DeliveryNoteDeliveredNotification(deliveryNoteDeliveredEvent.DeliveryNoteId),
             _ => throw new NotSupportedException()
         };
         return _mediator.Publish(publishedNotification);

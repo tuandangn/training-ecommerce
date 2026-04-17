@@ -59,7 +59,6 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             };
             var product = await _productAppService.GetProductByIdAsync(item.ProductId).ConfigureAwait(false);
             itemModel.ProductName = product?.Name ?? string.Empty;
-            itemModel.TrackInventory = product?.TrackInventory ?? false;
 
             model.Items.Add(itemModel);
         }

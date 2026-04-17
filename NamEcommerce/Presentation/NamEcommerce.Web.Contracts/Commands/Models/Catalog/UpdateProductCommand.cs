@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Common;
 
@@ -14,5 +14,5 @@ public sealed class UpdateProductCommand : IRequest<UpdateProductResultModel>
     public Guid? UnitMeasurementId { get; set; }
     public int DisplayOrder { get; set; }
     public FileInfoModel? ImageFile { get; set; }
-    public bool TrackInventory { get; set; }
+
 }

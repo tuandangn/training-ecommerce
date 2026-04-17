@@ -1,3 +1,4 @@
+@using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
 @model ProductPreparationListModel
 
 <div class="content-card mb-4 p-2">
@@ -29,7 +30,10 @@
                 </h5>
                 <div class="d-flex align-items-center gap-3">
                     <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">
-                        Tổng cộng: @preparationItem.TotalQuantity.ToString(ViewConstants.NumberCustomFormat)
+                        Đã giao: @preparationItem.DeliveredQuantity.ToString(ViewConstants.NumberCustomFormat) / @preparationItem.TotalQuantity.ToString(ViewConstants.NumberCustomFormat)
+                    </span>
+                    <span class="badge bg-info px-3 py-2 fs-6 rounded-pill text-dark" title="Tồn kho khả dụng">
+                        <i class="bi bi-box-seam me-1"></i> Tồn kho: @preparationItem.StockQuantityAvailable.ToString(ViewConstants.NumberCustomFormat)
                     </span>
                     @if (preparationItem.EarliestShippingDate.HasValue && preparationItem.EarliestShippingDate.Value != default)
                     {
@@ -45,6 +49,7 @@
                 <table class="table data-table mb-0">
                     <thead>
                         <tr>
+                            <th style="width:40px;" class="text-center"><input type="checkbox" class="select-all-prep-group" /></th>
                             <th class="ps-4">Khách hàng</th>
                             <th class="text-end">Số lượng</th>
                             <th class="text-center d-none d-sm-table-cell">Ngày dự kiến</th>
@@ -60,6 +65,17 @@
                             var isDetailOverdue = detail.ExpectedShippingDate.HasValue && detail.ExpectedShippingDate.Value.Date <= DateTime.Now.Date && !detail.IsDelivered;
                             
                             <tr class="@detailRowClass" id="row-@detail.OrderItemId">
+                                <td class="align-middle text-center" style="width:40px;">
+                                    <input type="checkbox" class="select-prep-item" 
+                                           data-order-id="@detail.OrderId" 
+                                           data-order-code="@detail.OrderCode"
+                                           data-order-item-id="@detail.OrderItemId"
+                                           data-quantity="@detail.Quantity"
+                                           data-delivered-quantity="@detail.DeliveredQuantity"
+                                           data-product-name="@preparationItem.ProductName"
+                                           data-stock="@preparationItem.StockQuantityAvailable"
+                                           data-unit-price="@detail.UnitPrice" />
+                                </td>
                                 <td class="ps-4">
                                     <div class="fw-bold text-dark">
                                         <i class="bi bi-person text-muted me-1"></i>@detail.CustomerName
@@ -72,7 +88,7 @@
                                     }
                                 </td>
                                 <td class="text-end fw-bold fs-6">
-                                    @detail.Quantity.ToString(ViewConstants.NumberCustomFormat)
+                                    <span class="text-muted small">@detail.DeliveredQuantity.ToString(ViewConstants.NumberCustomFormat) /</span> @detail.Quantity.ToString(ViewConstants.NumberCustomFormat)
                                 </td>
                                 <td class="text-center d-none d-sm-table-cell">
                                     @if (detail.ExpectedShippingDate.HasValue)
@@ -91,10 +107,43 @@
                                     }
                                 </td>
                                 <td class="d-none d-md-table-cell">
-                                    <a asp-controller="Order" asp-action="Details" asp-route-id="@detail.OrderId"
-                                       class="text-primary fw-bold text-decoration-none">
-                                        @detail.OrderCode
-                                    </a>
+                                    <div class="d-flex flex-column gap-1">
+                                        <a asp-controller="Order" asp-action="Details" asp-route-id="@detail.OrderId"
+                                           class="text-primary fw-bold text-decoration-none">
+                                            @detail.OrderCode
+                                        </a>
+                                        @if (detail.DeliveryNoteLinks.Any())
+                                        {
+                                            <div class="dropdown">
+                                                <button class="btn btn-xs btn-outline-info dropdown-toggle py-0 px-2 small" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.75rem;">
+                                                    <i class="bi bi-file-earmark-text me-1"></i>PXK (@detail.DeliveryNoteLinks.Count)
+                                                </button>
+                                                <ul class="dropdown-menu shadow-sm border-0 py-1" style="min-width: 180px;">
+                                                    @foreach (var link in detail.DeliveryNoteLinks)
+                                                    {
+                                                        var statusTuple = (DeliveryNoteStatus) link.Status switch
+                                                        {
+                                                            DeliveryNoteStatus.Draft => ("secondary", "Bản nháp"),
+                                                            DeliveryNoteStatus.Confirmed => ("info text-white", "Đã xác nhận"),
+                                                            DeliveryNoteStatus.Delivering => ("warning", "Đang giao"),
+                                                            DeliveryNoteStatus.Delivered => ("success", "Đã giao"),
+                                                            DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy"),
+                                                            _ => ("secondary", "Không rõ")
+                                                        };
+                                                        <li>
+                                                            <a class="dropdown-item d-flex align-items-center justify-content-between gap-2 py-2 px-3" asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@link.Id">
+                                                                <div class="flex-grow-1">
+                                                                    <div class="small fw-medium">@link.Code</div>
+                                                                    <div class="small text-muted" style="font-size: 0.75rem;">@link.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                                                                </div>
+                                                                <span class="badge bg-@statusTuple.Item1" style="font-size: 0.65rem;">@statusTuple.Item2</span>
+                                                            </a>
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        }
+                                    </div>
                                 </td>
                                 <td class="text-center status-cell">
                                     @if (detail.IsDelivered)

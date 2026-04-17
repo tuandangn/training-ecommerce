@@ -16,16 +16,20 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
 
     public async Task<bool> Handle(CreateDeliveryNoteCommand request, CancellationToken cancellationToken)
     {
-        var selectedItems = request.Model.Items.Where(i => i.Selected && i.Quantity > 0).ToList();
+        var selectedItems = request.Items.Where(i => i.Quantity > 0).ToList();
         if (!selectedItems.Any())
             return false;
 
         var dto = new CreateDeliveryNoteAppDto
         {
-            OrderId = request.Model.OrderId,
-            ShippingAddress = request.Model.ShippingAddress,
-            ShowPrice = request.Model.ShowPrice,
-            Note = request.Model.Note,
+            OrderId = request.OrderId,
+            ShippingAddress = request.ShippingAddress,
+            WarehouseId = request.WarehouseId,
+            ShowPrice = request.ShowPrice,
+            Note = request.Note,
+            AmountToCollect = request.AmountToCollect,
+            Surcharge = request.Surcharge,
+            SurchargeReason = request.SurchargeReason,
             Items = selectedItems.Select(i => new CreateDeliveryNoteItemAppDto
             {
                 OrderItemId = i.OrderItemId,

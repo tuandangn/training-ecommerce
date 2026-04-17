@@ -373,27 +373,24 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         }
 
         Guid? warehouseId = purchaseOrder.WarehouseId ?? dto.WarehouseId ?? null;
-        if (product.TrackInventory)
+        if (!warehouseId.HasValue)
         {
-            if (!warehouseId.HasValue)
+            return new ReceivedGoodsForItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Warehouse is required."
+            };
+        }
+        else
+        {
+            var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+            if (warehouse is null)
             {
                 return new ReceivedGoodsForItemResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = "Warehouse is required."
+                    ErrorMessage = $"Warehouse with ID {dto.WarehouseId} does not exist."
                 };
-            }
-            else
-            {
-                var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
-                if (warehouse is null)
-                {
-                    return new ReceivedGoodsForItemResultAppDto
-                    {
-                        Success = false,
-                        ErrorMessage = $"Warehouse with ID {dto.WarehouseId} does not exist."
-                    };
-                }
             }
         }
 

@@ -9,6 +9,11 @@ public sealed record DeliveryNoteAppDto
     public required string Code { get; init; }
     
     public required Guid OrderId { get; init; }
+    public required string? OrderCode { get; set; }
+
+    public Guid WarehouseId { get; set; }
+    public string? WarehouseName { get; set; }
+
     public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
     public string? CustomerPhone { get; init; }
@@ -30,6 +35,9 @@ public sealed record DeliveryNoteAppDto
     public DateTime? UpdatedOnUtc { get; init; }
 
     public decimal TotalAmount { get; init; }
+    public decimal Surcharge { get; init; }
+    public string? SurchargeReason { get; init; }
+    public decimal AmountToCollect { get; init; }
 
     public IList<DeliveryNoteItemAppDto> Items { get; init; } = [];
 }
@@ -51,10 +59,34 @@ public sealed record DeliveryNoteItemAppDto
 public sealed record CreateDeliveryNoteAppDto
 {
     public required Guid OrderId { get; init; }
+    public required Guid WarehouseId { get; set; }
     public required string ShippingAddress { get; init; }
     public bool ShowPrice { get; init; }
     public string? Note { get; init; }
+    public decimal Surcharge { get; init; }
+    public string? SurchargeReason { get; init; }
+    public decimal AmountToCollect { get; init; }
     public required IList<CreateDeliveryNoteItemAppDto> Items { get; init; } = [];
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (OrderId == Guid.Empty)
+            return (false, "OrderId is required.");
+        if (WarehouseId == Guid.Empty)
+            return (false, "WarehouseId is required.");
+        if (string.IsNullOrEmpty(ShippingAddress))
+            return (false, "ShippingAddress is required.");
+        if (Items == null || !Items.Any())
+            return (false, "At least one item is required.");
+        if (Items.Any(i => i.Quantity <= 0))
+            return (false, "All items must have a quantity greater than 0.");
+        if (Surcharge < 0)
+            return (false, "Surcharge cannot be negative.");
+        if (AmountToCollect < 0)
+            return (false, "Amount to collect cannot be negative.");
+
+        return (true, string.Empty);
+    }
 }
 
 [Serializable]

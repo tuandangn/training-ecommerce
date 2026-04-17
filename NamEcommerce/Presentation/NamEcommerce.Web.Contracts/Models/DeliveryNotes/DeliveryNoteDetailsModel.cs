@@ -12,6 +12,8 @@ public sealed class DeliveryNoteDetailsModel
     public string? CustomerPhone { get; set; }
     public string? CustomerAddress { get; set; }
     public string ShippingAddress { get; set; } = string.Empty;
+    public Guid WarehouseId { get; set; }
+    public string? WarehouseName { get; set; }
     
     public bool ShowPrice { get; set; }
     public string? Note { get; set; }
@@ -26,6 +28,9 @@ public sealed class DeliveryNoteDetailsModel
     public string? DeliveryReceiverName { get; set; }
 
     public decimal TotalAmount { get; set; }
+    public decimal Surcharge { get; set; }
+    public string? SurchargeReason { get; set; }
+    public decimal AmountToCollect { get; set; }
 
     public IList<DeliveryNoteItemModel> Items { get; set; } = [];
 }

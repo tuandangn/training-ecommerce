@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Catalog;
@@ -28,8 +28,7 @@ public sealed class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery,
         {
             Id = productInfo.Id,
             Name = productInfo.Name,
-            ShortDesc = productInfo.ShortDesc,
-            TrackInventory = productInfo.TrackInventory
+            ShortDesc = productInfo.ShortDesc
         };
 
         var productCategory = productInfo.Categories.FirstOrDefault();

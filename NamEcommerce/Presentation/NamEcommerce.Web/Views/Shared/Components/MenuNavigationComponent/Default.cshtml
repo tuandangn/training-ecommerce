@@ -11,15 +11,15 @@
         </a>
         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
             <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Order", "List") ? "active" : "")"
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Order") ? "active" : "")"
                    asp-controller="Order" asp-action="List">Đơn hàng</a>
             </li>
             <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("DeliveryNote", "List") ? "active" : "")"
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("DeliveryNote") ? "active" : "")"
                    asp-controller="DeliveryNote" asp-action="List">Phiếu xuất kho</a>
             </li>
             <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Preparation", "List") ? "active" : "")"
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Preparation") ? "active" : "")"
                    asp-controller="Preparation" asp-action="List">Chuẩn bị hàng</a>
             </li>
         </ul>
@@ -31,24 +31,28 @@
         </a>
         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
             <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("PurchaseOrder", "List") ? "active" : "")"
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("PurchaseOrder") ? "active" : "")"
                    asp-controller="PurchaseOrder" asp-action="List">Đơn nhập</a>
             </li>
             <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Inventory", "StockList") ? "active" : "")"
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Inventory") ? "active" : "")"
                    asp-controller="Inventory" asp-action="StockList">Tồn kho</a>
             </li>
         </ul>
     </li>
     <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("Customer") ? "active" : "")" href="#"
+        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("Customer", "CustomerDebt") ? "active" : "")" href="#"
                id="customerMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Khách hàng
         </a>
         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
             <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Customer", "List") ? "active" : "")"
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Customer") ? "active" : "")"
                    asp-controller="Customer" asp-action="List">Khách hàng</a>
+            </li>
+            <li>
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("CustomerDebt") ? "active" : "")"
+                   asp-controller="CustomerDebt" asp-action="List">Công nợ khách hàng</a>
             </li>
         </ul>
     </li>
@@ -83,7 +87,7 @@
         </a>
         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
             <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Report", "Financial") ? "active" : "")"
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Report") ? "active" : "")"
                    asp-controller="Report" asp-action="Financial">Báo cáo Mua Bán</a>
             </li>
             <li>

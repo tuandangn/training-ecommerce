@@ -35,6 +35,7 @@ public static class ViewConstants
     public const string OrderErrorMessage = "Messages.Order.Error";
 
     public const string NumberCustomFormat = "#,##0.##";
+    public const string CurrencyDisplayFormat = $"#,##0.## {DefaultCurrencySymbol}";
     public const string DefaultDateFormat = "dd/MM/yyyy";
     public const string DefaultDateTimeFormat = "dd/MM/yyyy hh:mm";
     public const string DefaultCurrencySymbol = "đ";

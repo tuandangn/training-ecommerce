@@ -19,8 +19,5 @@ public interface IDeliveryNoteAppService
     
     Task<IList<DeliveryNoteAppDto>> GetByOrderIdAsync(Guid orderId);
     
-    Task<PagedDataAppDto<DeliveryNoteAppDto>> GetListAsync(
-        string? keywords = null,
-        int pageIndex = 0,
-        int pageSize = 15);
+    Task<PagedDataAppDto<DeliveryNoteAppDto>> GetListAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15);
 }

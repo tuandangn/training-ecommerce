@@ -27,6 +27,32 @@ public sealed record OrderDetailsModel
     public bool CanUpdateOrderItems { get; init; }
 
     public IList<OrderItemModel> Items { get; init; } = [];
+    public IList<DeliveryNoteBasicModel> DeliveryNotes { get; init; } = [];
+
+    /// <summary>
+    /// Checks if all order items have been fully covered by delivery notes
+    /// </summary>
+    public bool AreAllItemsFullyCovered
+    {
+        get
+        {
+            if (Items.Count == 0)
+                return false;
+
+            foreach (var item in Items)
+            {
+                var totalDeliveredQty = DeliveryNotes
+                    .SelectMany(dn => dn.Items)
+                    .Where(dni => dni.OrderItemId == item.Id)
+                    .Sum(dni => dni.Quantity);
+
+                if (totalDeliveredQty < item.Quantity)
+                    return false;
+            }
+
+            return true;
+        }
+    }
 
     [Serializable]
     public sealed record OrderItemModel(Guid Id)
@@ -38,5 +64,41 @@ public sealed record OrderDetailsModel
         public string? ProductPicture { get; set; }
         public decimal? ProductAvailableQty { get; set; }
         public decimal SubTotal => UnitPrice * Quantity;
+
+        /// <summary>
+        /// Gets the total quantity already delivered for this item across all delivery notes
+        /// </summary>
+        public decimal GetDeliveredQuantity(IList<DeliveryNoteBasicModel> deliveryNotes)
+        {
+            return deliveryNotes
+                .SelectMany(dn => dn.Items)
+                .Where(dni => dni.OrderItemId == Id)
+                .Sum(dni => dni.Quantity);
+        }
+
+        /// <summary>
+        /// Gets the remaining quantity that can be delivered for this item
+        /// </summary>
+        public decimal GetRemainingQuantity(IList<DeliveryNoteBasicModel> deliveryNotes)
+        {
+            var delivered = GetDeliveredQuantity(deliveryNotes);
+            return Quantity - delivered;
+        }
+    }
+
+    [Serializable]
+    public sealed record DeliveryNoteBasicModel
+    {
+        public required Guid Id { get; init; }
+        public required string Code { get; init; }
+        public IList<DeliveryNoteItemModel> Items { get; init; } = [];
+    }
+
+    [Serializable]
+    public sealed record DeliveryNoteItemModel
+    {
+        public required Guid OrderItemId { get; init; }
+        public required decimal Quantity { get; init; }
     }
 }
+

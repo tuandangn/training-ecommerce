@@ -741,7 +741,6 @@ public sealed class PurchaseOrderManagerTests
 
         var purchaseOrder = new PurchaseOrder("code", null!, warehouseId: null, null!);
         var product = new Product(Guid.NewGuid(), "product");
-        product.SetTrackInventory(true);
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, 1, 0);
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await purchaseOrder.AddPurchaseOrderItemAsync(purchaseOrderItem, productDataReaderStub.Object);
@@ -764,7 +763,6 @@ public sealed class PurchaseOrderManagerTests
         var notFoundWarehouseId = Guid.NewGuid();
         var purchaseOrder = new PurchaseOrder("code", null!, warehouseId: null, null!);
         var product = new Product(Guid.NewGuid(), "product");
-        product.SetTrackInventory(true);
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, 1, 0);
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await purchaseOrder.AddPurchaseOrderItemAsync(purchaseOrderItem, productDataReaderStub.Object);
@@ -817,7 +815,6 @@ public sealed class PurchaseOrderManagerTests
         var warehouseId = Guid.NewGuid();
         var purchaseOrder = new PurchaseOrder("code", null!, warehouseId, null!);
         var product = new Product(Guid.NewGuid(), "product");
-        product.SetTrackInventory(true);
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, 100, 0);
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await purchaseOrder.AddPurchaseOrderItemAsync(purchaseOrderItem, productDataReaderStub.Object);

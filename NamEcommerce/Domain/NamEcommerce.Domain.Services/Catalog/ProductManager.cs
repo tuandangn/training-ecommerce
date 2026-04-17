@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Data.Contracts;
+using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Services.Extensions;
@@ -19,17 +19,24 @@ public sealed class ProductManager : IProductManager
     private readonly IEntityDataReader<Category> _categoryDataReader;
     private readonly IEntityDataReader<Picture> _pictureDataReader;
     private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
+    private readonly IRepository<ProductPriceHistory> _priceHistoryRepository;
+    private readonly IEntityDataReader<ProductPriceHistory> _priceHistoryDataReader;
     private readonly IEventPublisher _eventPublisher;
 
     public ProductManager(IRepository<Product> productRepository,
         IEntityDataReader<Product> productEntityDataReader, IEntityDataReader<Category> categoryDataReader,
-        IEntityDataReader<Picture> pictureDataReader, IEventPublisher eventPublisher, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader)
+        IEntityDataReader<Picture> pictureDataReader, IEventPublisher eventPublisher, 
+        IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
+        IRepository<ProductPriceHistory> priceHistoryRepository,
+        IEntityDataReader<ProductPriceHistory> priceHistoryDataReader)
     {
         _productRepository = productRepository;
         _productDataReader = productEntityDataReader;
         _categoryDataReader = categoryDataReader;
         _pictureDataReader = pictureDataReader;
         _unitMeasurementDataReader = unitMeasurementDataReader;
+        _priceHistoryRepository = priceHistoryRepository;
+        _priceHistoryDataReader = priceHistoryDataReader;
         _eventPublisher = eventPublisher;
     }
 
@@ -46,10 +53,11 @@ public sealed class ProductManager : IProductManager
         {
             ShortDesc = dto.ShortDesc
         };
+        product.UpdatePrice(dto.UnitPrice, dto.CostPrice, "Khởi tạo sản phẩm");
 
         await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, _unitMeasurementDataReader).ConfigureAwait(false);
 
-        product.SetTrackInventory(dto.TrackInventory);
+
         foreach (var categoryInfo in dto.Categories)
             await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, _categoryDataReader).ConfigureAwait(false);
         foreach (var pictureId in dto.Pictures)
@@ -90,7 +98,7 @@ public sealed class ProductManager : IProductManager
 
     public Task<IPagedDataDto<ProductDto>> GetProductsAsync(
         int pageIndex, int pageSize,
-        string? keywords = null, bool onlyTrackInventory = false,
+        string? keywords = null,
         Guid? categoryId = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
@@ -104,8 +112,7 @@ public sealed class ProductManager : IProductManager
             query = query.Where(c => c.Name.Contains(keywords) || c.Name.Contains(normizedKeywords) || c.NormalizedName.Contains(normizedKeywords));
         }
 
-        if (onlyTrackInventory)
-            query = query.Where(c => c.TrackInventory);
+
 
         if (categoryId.HasValue)
             query = query.Where(c => c.ProductCategories.Any(pc => pc.CategoryId == categoryId));
@@ -142,12 +149,15 @@ public sealed class ProductManager : IProductManager
         if (product is null)
             throw new ProductIsNotFoundException(dto.Id);
 
+        var oldUnitPrice = product.UnitPrice;
+        var oldCostPrice = product.CostPrice;
+
         product.ShortDesc = dto.ShortDesc;
         product.UpdatedOnUtc = DateTime.UtcNow;
 
         await product.SetNameAsync(dto.Name, this).ConfigureAwait(false);
         await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, _unitMeasurementDataReader).ConfigureAwait(false);
-        product.SetTrackInventory(dto.TrackInventory);
+        product.UpdatePrice(dto.UnitPrice, dto.CostPrice);
 
         product.ClearProductCategories();
         foreach (var categoryInfo in dto.Categories)
@@ -160,6 +170,11 @@ public sealed class ProductManager : IProductManager
 
         var result = await _productRepository.UpdateAsync(product).ConfigureAwait(false);
 
+        if (oldUnitPrice != result.UnitPrice || oldCostPrice != result.CostPrice)
+        {
+            await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(result.Id, oldUnitPrice, result.UnitPrice, oldCostPrice, result.CostPrice, "Cập nhật sản phẩm")).ConfigureAwait(false);
+        }
+
         await _eventPublisher.EntityUpdated(result, deletedPictureIds).ConfigureAwait(false);
 
         return new UpdateProductResultDto(result.Id)
@@ -168,8 +183,29 @@ public sealed class ProductManager : IProductManager
             ShortDesc = result.ShortDesc,
             Categories = result.ProductCategories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
             Pictures = result.ProductPictures.Select(pp => pp.PictureId),
-            TrackInventory = result.TrackInventory,
+
             UnitMeasurementId = result.UnitMeasurementId
         };
+    }
+
+    public Task<IEnumerable<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId)
+    {
+        var history = _priceHistoryDataReader.DataSource
+            .Where(h => h.ProductId == productId)
+            .OrderByDescending(h => h.CreatedOnUtc)
+            .Take(10)
+            .Select(h => new ProductPriceHistoryDto
+            {
+                Id = h.Id,
+                OldPrice = h.OldPrice,
+                NewPrice = h.NewPrice,
+                OldCostPrice = h.OldCostPrice,
+                NewCostPrice = h.NewCostPrice,
+                Note = h.Note,
+                CreatedOnUtc = h.CreatedOnUtc
+            })
+            .ToList();
+
+        return Task.FromResult((IEnumerable<ProductPriceHistoryDto>)history);
     }
 }

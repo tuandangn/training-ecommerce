@@ -1,9 +1,6 @@
 namespace NamEcommerce.Application.Contracts.Dtos.Preparation;
 
-/// <summary>
-/// Ungrouped preparation item - one row per OrderItem from active (non-locked) orders.
-/// Default view for the preparation dashboard.
-/// </summary>
+
 [Serializable]
 public sealed record PreparationItemAppDto
 {
@@ -20,12 +17,14 @@ public sealed record PreparationItemAppDto
     public DateTime? ExpectedShippingDateUtc { get; set; }
 
     public bool IsDelivered { get; init; }
+    
+    public decimal DeliveredQuantity { get; init; }
+    
+    public decimal StockQuantityAvailable { get; set; }
+
+    public IList<DeliveryNoteLinkAppDto> DeliveryNoteLinks { get; set; } = [];
 }
 
-/// <summary>
-/// Grouped preparation item - products grouped by ProductId across multiple orders.
-/// Shows total quantity needed and list of customers who ordered.
-/// </summary>
 [Serializable]
 public sealed record PreparationGroupedItemAppDto
 {
@@ -35,6 +34,8 @@ public sealed record PreparationGroupedItemAppDto
     public DateTime? EarliestShippingDate { get; init; }
 
     public required IList<PreparationGroupedCustomerDetail> CustomerDetails { get; init; }
+
+    public decimal StockQuantityAvailable { get; set; }
 }
 
 [Serializable]
@@ -47,7 +48,15 @@ public sealed record PreparationGroupedCustomerDetail
     public required Guid CustomerId { get; init; }
 
     public required decimal Quantity { get; init; }
+    public required decimal UnitPrice { get; set; }
     public DateTime? ExpectedShippingDateUtc { get; set; }
 
     public bool IsDelivered { get; init; }
+
+    public decimal DeliveredQuantity { get; init; }
+
+    public IList<DeliveryNoteLinkAppDto> DeliveryNoteLinks { get; set; } = [];
 }
+
+[Serializable]
+public sealed record DeliveryNoteLinkAppDto(Guid Id, string Code, int Status, DateTime CreatedOnUtc);

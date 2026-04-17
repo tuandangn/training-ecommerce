@@ -1,15 +1,14 @@
-﻿using NamEcommerce.Application.Contracts.Dtos.Catalog;
+using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 
 namespace NamEcommerce.Application.Contracts.Catalog;
 
 public interface IProductAppService
 {
-    Task<IPagedDataAppDto<ProductAppDto>> GetProductsAsync(
-        string? keywords = null, bool onlyTrackInventory = false,
-        int pageIndex = 0, int pageSize = int.MaxValue);
+    Task<IPagedDataAppDto<ProductAppDto>> GetProductsAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue);
 
     Task<ProductAppDto?> GetProductByIdAsync(Guid id);
+
     Task<IEnumerable<ProductAppDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids);
 
     Task<CreateProductResultAppDto> CreateProductAsync(CreateProductAppDto dto);
@@ -17,4 +16,5 @@ public interface IProductAppService
     Task<UpdateProductResultAppDto> UpdateProductAsync(UpdateProductAppDto dto);
 
     Task<DeleteProductResultAppDto> DeleteProductAsync(DeleteProductAppDto dto);
+    Task<IEnumerable<ProductPriceHistoryAppDto>> GetProductPriceHistoryAsync(Guid id);
 }

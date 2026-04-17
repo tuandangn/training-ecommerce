@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Web.Contracts.Models.Common;
+using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Models.Catalog;
 
@@ -14,6 +14,7 @@ public sealed class ProductListForOrderModel
     {
         public required string Name { get; init; }
         public string? PictureUrl { get; set; }
+        public decimal UnitPrice { get; set; }
 
         public decimal QuantityOnHand { get; set; }
         public decimal QuantityReserved { get; set; }

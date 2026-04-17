@@ -181,9 +181,24 @@
                         @if (Model.ShowPrice)
                         {
                             <tr>
-                                <td colspan="4" class="text-right"><strong>Tổng cộng:</strong></td>
+                                <td colspan="4" class="text-right"><strong>Tồng tiền hàng:</strong></td>
                                 <td class="text-right"><strong>@Model.TotalAmount.ToString("N0")</strong></td>
                             </tr>
+                        }
+                        @if (Model.Surcharge > 0)
+                        {
+                            <tr>
+                                <td colspan="@(Model.ShowPrice ? 4 : 2)" class="text-right">
+                                    <strong>Phụ phí:</strong> @(string.IsNullOrEmpty(Model.SurchargeReason) ? "" : "(" + Model.SurchargeReason + ")")
+                                </td>
+                                <td class="text-right"><strong>@Model.Surcharge.ToString("N0")</strong></td>
+                            </tr>
+                        }
+                        @if(Model.AmountToCollect > 0){
+                        <tr>
+                            <td colspan="@(Model.ShowPrice ? 4 : 2)" class="text-right"><strong>SỐ TIỀN PHẢI THU:</strong></td>
+                            <td class="text-right"><strong style="font-size: 16px;">@Model.AmountToCollect.ToString("N0")</strong></td>
+                        </tr>
                         }
                     }
                 </tbody>

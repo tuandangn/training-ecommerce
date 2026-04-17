@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using NamEcommerce.Web.Contracts.Models.Common;
 using System.ComponentModel.DataAnnotations;
 
@@ -25,8 +25,7 @@ public sealed record EditProductModel
     [ValidateNever]
     public required EntityOptionListModel AvailableUnitMeasurements { get; set; }
 
-    [Display(Name = "Quản lý kho hàng")]
-    public bool TrackInventory { get; set; }
+
 
     [Display(Name = "Thứ tự hiển thị")]
     public int DisplayOrder { get; set; }

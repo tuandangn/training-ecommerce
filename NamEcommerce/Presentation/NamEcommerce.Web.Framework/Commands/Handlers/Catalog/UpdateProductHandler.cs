@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Common;
@@ -32,8 +32,7 @@ public sealed class UpdateProductHandler : IRequestHandler<UpdateProductCommand,
                 MimeType = request.ImageFile.MimeType,
                 Extension = request.ImageFile.Extension,
                 FileName = request.ImageFile.FileName
-            } : null,
-            TrackInventory = request.TrackInventory
+            } : null
         });
 
         return new UpdateProductResultModel

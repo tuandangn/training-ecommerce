@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -12,11 +13,13 @@ public sealed class OrderModelFactory : IOrderModelFactory
 {
     private readonly AppConfig _appConfig;
     private readonly IMediator _mediator;
+    private readonly IDeliveryNoteAppService _deliveryNoteAppService;
 
-    public OrderModelFactory(AppConfig appConfig, IMediator mediator)
+    public OrderModelFactory(AppConfig appConfig, IMediator mediator, IDeliveryNoteAppService deliveryNoteAppService)
     {
         _appConfig = appConfig;
         _mediator = mediator;
+        _deliveryNoteAppService = deliveryNoteAppService;
     }
 
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? model = null)
@@ -98,6 +101,29 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 Quantity = it.Quantity,
                 UnitPrice = it.UnitPrice
             });
+        }
+
+        // Fetch delivery notes for this order
+        var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
+        foreach (var dn in deliveryNotes)
+        {
+            var dnModel = new OrderDetailsModel.DeliveryNoteBasicModel
+            {
+                Id = dn.Id,
+                Code = dn.Code
+            };
+
+            // Add delivery note items for coverage calculation
+            foreach (var item in dn.Items)
+            {
+                dnModel.Items.Add(new OrderDetailsModel.DeliveryNoteItemModel
+                {
+                    OrderItemId = item.OrderItemId,
+                    Quantity = item.Quantity
+                });
+            }
+
+            model.DeliveryNotes.Add(dnModel);
         }
 
         return model;

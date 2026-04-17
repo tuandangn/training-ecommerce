@@ -16,7 +16,7 @@ public sealed class GetProductOptionListHandler : IRequestHandler<GetProductOpti
 
     public async Task<EntityOptionListModel> Handle(GetProductOptionListQuery request, CancellationToken cancellationToken)
     {
-        var products = await _productAppService.GetProductsAsync(null, request.OnlyTrackInventory, 0, int.MaxValue);
+        var products = await _productAppService.GetProductsAsync(null, 0, int.MaxValue);
 
         return new EntityOptionListModel
         {

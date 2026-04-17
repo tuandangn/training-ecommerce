@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
@@ -63,10 +63,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         if (purchaseOrderInfo == null)
             return null;
 
-        var availableProducts = await _mediator.Send(new GetProductOptionListQuery
-        {
-            OnlyTrackInventory = false
-        }).ConfigureAwait(false);
+        var availableProducts = await _mediator.Send(new GetProductOptionListQuery()).ConfigureAwait(false);
         var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         var availableVendors = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
 

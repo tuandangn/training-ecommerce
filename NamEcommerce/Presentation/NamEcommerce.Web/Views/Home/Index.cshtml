@@ -2,7 +2,6 @@
     ViewData["Title"] = "Trang chủ";
 }
 <div class="py-2">
-    <!-- Welcome Banner -->
     <div class="content-card mb-4" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border: none; color: #fff;">
         <div class="content-card-body d-flex align-items-center gap-4 flex-wrap" style="padding: 2rem 2rem;">
             <div class="flex-shrink-0 d-none d-md-block">
@@ -14,63 +13,60 @@
             </div>
         </div>
     </div>
-
-    <!-- Quick Access -->
-    <h6 class="text-uppercase fw-semibold mb-3" style="color: var(--gray-500); letter-spacing: 0.5px; font-size: 0.75rem;">Truy cập nhanh</h6>
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-4 col-lg-3">
             <a asp-controller="Order" asp-action="List" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
                 <div class="mb-2" style="color: var(--primary); font-size: 2rem;"><i class="bi bi-receipt-cutoff"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800); font-size: 0.9rem;">Đơn hàng</div>
+                <div class="fw-semibold" style="color: var(--gray-800);">Đơn hàng</div>
                 <div class="text-muted small">Quản lý bán hàng</div>
             </a>
         </div>
         <div class="col-6 col-md-4 col-lg-3">
             <a asp-controller="PurchaseOrder" asp-action="List" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
                 <div class="mb-2" style="color: #0284c7; font-size: 2rem;"><i class="bi bi-truck"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800); font-size: 0.9rem;">Đơn nhập</div>
+                <div class="fw-semibold" style="color: var(--gray-800);">Đơn nhập</div>
                 <div class="text-muted small">Nhập hàng từ NCC</div>
             </a>
         </div>
         <div class="col-6 col-md-4 col-lg-3">
             <a asp-controller="Inventory" asp-action="StockList" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
                 <div class="mb-2" style="color: #059669; font-size: 2rem;"><i class="bi bi-boxes"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800); font-size: 0.9rem;">Tồn kho</div>
+                <div class="fw-semibold" style="color: var(--gray-800);">Tồn kho</div>
                 <div class="text-muted small">Theo dõi kho hàng</div>
             </a>
         </div>
         <div class="col-6 col-md-4 col-lg-3">
             <a asp-controller="Product" asp-action="Index" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
                 <div class="mb-2" style="color: #d97706; font-size: 2rem;"><i class="bi bi-tags"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800); font-size: 0.9rem;">Hàng hóa</div>
+                <div class="fw-semibold" style="color: var(--gray-800);">Hàng hóa</div>
                 <div class="text-muted small">Danh mục sản phẩm</div>
             </a>
         </div>
         <div class="col-6 col-md-4 col-lg-3">
             <a asp-controller="Customer" asp-action="List" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
                 <div class="mb-2" style="color: #7c3aed; font-size: 2rem;"><i class="bi bi-people"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800); font-size: 0.9rem;">Khách hàng</div>
+                <div class="fw-semibold" style="color: var(--gray-800);">Khách hàng</div>
                 <div class="text-muted small">CRM đơn giản</div>
             </a>
         </div>
         <div class="col-6 col-md-4 col-lg-3">
             <a asp-controller="Vendor" asp-action="Index" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
                 <div class="mb-2" style="color: #dc2626; font-size: 2rem;"><i class="bi bi-building"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800); font-size: 0.9rem;">Nhà cung cấp</div>
+                <div class="fw-semibold" style="color: var(--gray-800);">Nhà cung cấp</div>
                 <div class="text-muted small">Quản lý đối tác</div>
             </a>
         </div>
         <div class="col-6 col-md-4 col-lg-3">
             <a asp-controller="Warehouse" asp-action="Index" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
                 <div class="mb-2" style="color: #0891b2; font-size: 2rem;"><i class="bi bi-geo-alt"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800); font-size: 0.9rem;">Kho hàng</div>
+                <div class="fw-semibold" style="color: var(--gray-800);">Kho hàng</div>
                 <div class="text-muted small">Vị trí lưu trữ</div>
             </a>
         </div>
         <div class="col-6 col-md-4 col-lg-3">
             <a asp-controller="Category" asp-action="Index" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
                 <div class="mb-2" style="color: #16a34a; font-size: 2rem;"><i class="bi bi-grid"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800); font-size: 0.9rem;">Danh mục</div>
+                <div class="fw-semibold" style="color: var(--gray-800);">Danh mục</div>
                 <div class="text-muted small">Phân loại hàng hóa</div>
             </a>
         </div>

@@ -21,7 +21,7 @@ public static class OrderStatusExtensions
 
         public string GetDisplayColor() => status switch
         {
-            OrderStatus.Pending => "bg-primary",
+            OrderStatus.Pending => "bg-secondary",
             OrderStatus.Locked => "bg-danger",
             _ => throw new InvalidDataException(nameof(status)),
         };

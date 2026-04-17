@@ -1,4 +1,4 @@
-﻿namespace NamEcommerce.Web.Contracts.Models.PurchaseOrders;
+namespace NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 
 [Serializable]
 public sealed class PurchaseOrderModel

@@ -11,4 +11,6 @@ public sealed class AppConfig
     public int UploadFileMaxSizeInBytes { get; set; }
 
     public string BreadcrumbSeparator { get; set; } = ">";
+
+    public string N8nEndpoint { get; set; } = "";
 }

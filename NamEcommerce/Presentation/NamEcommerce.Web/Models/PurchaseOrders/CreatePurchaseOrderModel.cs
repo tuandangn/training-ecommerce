@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using NamEcommerce.Web.Contracts.Models.Common;
 using System.ComponentModel.DataAnnotations;
 

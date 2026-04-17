@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NamEcommerce.Application.Contracts.Catalog;
+using NamEcommerce.Application.Contracts.Communication;
 using NamEcommerce.Application.Contracts.Customers;
+using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Finance;
 using NamEcommerce.Application.Contracts.Inventory;
@@ -15,15 +17,17 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Report;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Catalog;
+using NamEcommerce.Application.Services.Communication;
 using NamEcommerce.Application.Services.Customers;
+using NamEcommerce.Application.Services.Debts;
 using NamEcommerce.Application.Services.DeliveryNotes;
 using NamEcommerce.Application.Services.Events;
 using NamEcommerce.Application.Services.Finance;
 using NamEcommerce.Application.Services.Inventory;
 using NamEcommerce.Application.Services.Media;
 using NamEcommerce.Application.Services.Orders;
-using NamEcommerce.Application.Services.PurchaseOrders;
 using NamEcommerce.Application.Services.Preparation;
+using NamEcommerce.Application.Services.PurchaseOrders;
 using NamEcommerce.Application.Services.Report;
 using NamEcommerce.Application.Services.Users;
 using NamEcommerce.Data.Contracts;
@@ -31,6 +35,7 @@ using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Domain.Services.Catalog;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Customers;
+using NamEcommerce.Domain.Services.Debts;
 using NamEcommerce.Domain.Services.DeliveryNotes;
 using NamEcommerce.Domain.Services.Finance;
 using NamEcommerce.Domain.Services.Inventory;
@@ -43,6 +48,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Services.Catalog;
 using NamEcommerce.Domain.Shared.Services.Customers;
+using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Inventory;
@@ -62,10 +68,9 @@ using NamEcommerce.Web.Services.Catalog;
 using NamEcommerce.Web.Services.DeliveryNotes;
 using NamEcommerce.Web.Services.Inventory;
 using NamEcommerce.Web.Services.Orders;
+using NamEcommerce.Web.Services.Preparations;
 using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Validators.Users;
-using System.Reflection;
-using NamEcommerce.Web.Services.Preparations;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -83,6 +88,9 @@ app.Run();
 void ConfigureServices(IServiceCollection services, ConfigurationManager configuration)
 {
     //options
+    var appConfig = new AppConfig();
+    configuration.GetSection(AppConstants.AppConfigSectionName).Bind(appConfig);
+
     services.Configure<AppConfig>(options =>
     {
         builder.Configuration.Bind(AppConstants.AppConfigSectionName, options);
@@ -127,6 +135,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IStockAuditLogger, StockAuditLogger>();
     services.AddScoped<ICustomerManager, CustomerManager>();
     services.AddScoped<IExpenseManager, ExpenseManager>();
+    services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();
+    services.AddScoped<IOrderManager, OrderManager>();
+    services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
 
     services.AddScoped<ISecurityService, SecurityService>();
     services.AddScoped<IEventPublisher, EventPublisher>();
@@ -144,17 +155,16 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerAppService, CustomerAppService>();
     services.AddScoped<IFinancialReportAppService, FinancialReportAppService>();
     services.AddScoped<IExpenseAppService, ExpenseAppService>();
-
-    // Orders
-    services.AddScoped<IOrderManager, OrderManager>();
-    services.AddScoped<IOrderAppService, OrderAppService>();
-
-    // Preparation
-    services.AddScoped<IPreparationAppService, PreparationAppService>();
-
-    // Delivery Notes
-    services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();
     services.AddScoped<IDeliveryNoteAppService, DeliveryNoteAppService>();
+    services.AddScoped<IPreparationAppService, PreparationAppService>();
+    services.AddScoped<IOrderAppService, OrderAppService>();
+    services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
+
+    builder.Services.AddHttpClient<IN8nAppService, N8nAppService>(client =>
+    {
+        client.BaseAddress = new Uri(appConfig.N8nEndpoint);
+        client.DefaultRequestHeaders.Add("Accept", "application/json");
+    });
 
     services.AddScoped<IInformationService, InformationService>();
     services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -177,10 +187,15 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddSession();
 
     //mvc
-    services.AddMvc(options =>
+    var mvcBuilder = services.AddMvc(options =>
     {
         options.ModelBinderProviders.Insert(0, new TrimModelBinderProvider());
     }).AddSessionStateTempDataProvider();
+
+    if (builder.Environment.IsDevelopment())
+    {
+        mvcBuilder.AddRazorRuntimeCompilation();
+    }
 
     services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
     services.AddValidatorsFromAssemblyContaining<LoginModelValidator>();

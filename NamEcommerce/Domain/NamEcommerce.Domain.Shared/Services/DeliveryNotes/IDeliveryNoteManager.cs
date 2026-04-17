@@ -21,4 +21,8 @@ public interface IDeliveryNoteManager
         string? keywords = null,
         int pageIndex = 0,
         int pageSize = 15);
+
+    Task<IDictionary<Guid, decimal>> GetDeliveredQuantitiesAsync(IEnumerable<Guid> orderItemIds);
+
+    Task<IDictionary<Guid, List<DeliveryNoteLinkDto>>> GetDeliveryNoteLinksAsync(IEnumerable<Guid> orderItemIds);
 }

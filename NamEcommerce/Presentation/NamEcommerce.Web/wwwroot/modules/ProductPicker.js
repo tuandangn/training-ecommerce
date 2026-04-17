@@ -1,11 +1,12 @@
-﻿// ─── Model ───────────────────────────────────────────────────────────────────
+// ─── Model ───────────────────────────────────────────────────────────────────
 
 class Product {
-    constructor({ id, name, availableQty, picture }) {
+    constructor({ id, name, availableQty, picture, unitPrice }) {
         this.id = id;
         this.name = name ?? '';
         this.availableQty = availableQty ?? 0;
         this.picture = picture ?? '';
+        this.unitPrice = unitPrice ?? 0;
     }
 }
 

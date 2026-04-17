@@ -14,6 +14,9 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.HasIndex(d => d.Code).IsUnique();
 
         builder.Property(d => d.OrderId).IsRequired();
+        builder.Property(d => d.WarehouseId).IsRequired();
+        builder.Property(d => d.OrderCode);
+
         builder.Property(d => d.CustomerId).IsRequired();
         builder.Property(d => d.CustomerName).HasMaxLength(255).IsRequired();
         builder.Property(d => d.CustomerPhone).HasMaxLength(50).IsRequired(false);
@@ -37,6 +40,7 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         // One-to-many relationship with items
         builder.Metadata.FindNavigation(nameof(DeliveryNote.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(d => d.Items).WithOne().HasForeignKey(i => i.DeliveryNoteId).OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(d => d.Items).AutoInclude();
 
         // Ignore computed property
         builder.Ignore(d => d.TotalAmount);

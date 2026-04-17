@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Application.Contracts.Catalog;
+using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Services.Extensions;
@@ -81,9 +81,11 @@ public sealed class ProductAppService : IProductAppService
             Name = dto.Name,
             ShortDesc = dto.ShortDesc,
             UnitMeasurementId = dto.UnitMeasurementId,
+            UnitPrice = dto.UnitPrice,
+            CostPrice = dto.CostPrice,
             Categories = dto.Categories.Select(item => new ProductCategoryDto(item.CategoryId, item.DisplayOrder)),
             Pictures = pictureId.HasValue ? [pictureId.Value] : [],
-            TrackInventory = dto.TrackInventory
+
         };
         var result = await _productManager.CreateProductAsync(createDto).ConfigureAwait(false);
 
@@ -130,10 +132,10 @@ public sealed class ProductAppService : IProductAppService
     }
 
     public async Task<IPagedDataAppDto<ProductAppDto>> GetProductsAsync(
-        string? keywords = null, bool onlyTrackInventory = false,
+        string? keywords = null,
         int pageIndex = 0, int pageSize = int.MaxValue)
     {
-        var pagedData = await _productManager.GetProductsAsync(pageIndex, pageSize, keywords, onlyTrackInventory).ConfigureAwait(false);
+        var pagedData = await _productManager.GetProductsAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
         var result = PagedDataAppDto.Create(
             pagedData.Select(product => product.ToDto()),
             pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
@@ -206,9 +208,11 @@ public sealed class ProductAppService : IProductAppService
             Name = dto.Name,
             ShortDesc = dto.ShortDesc,
             UnitMeasurementId = dto.UnitMeasurementId,
+            UnitPrice = dto.UnitPrice,
+            CostPrice = dto.CostPrice,
             Categories = dto.Categories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
             Pictures = pictureId.HasValue ? [pictureId.Value] : [],
-            TrackInventory = dto.TrackInventory
+
         }).ConfigureAwait(false);
 
         return new UpdateProductResultAppDto
@@ -216,5 +220,20 @@ public sealed class ProductAppService : IProductAppService
             Success = true,
             UpdatedId = result.Id
         };
+    }
+
+    public async Task<IEnumerable<ProductPriceHistoryAppDto>> GetProductPriceHistoryAsync(Guid id)
+    {
+        var history = await _productManager.GetProductPriceHistoryAsync(id).ConfigureAwait(false);
+        return history.Select(h => new ProductPriceHistoryAppDto
+        {
+            Id = h.Id,
+            OldPrice = h.OldPrice,
+            NewPrice = h.NewPrice,
+            OldCostPrice = h.OldCostPrice,
+            NewCostPrice = h.NewCostPrice,
+            Note = h.Note,
+            CreatedOnUtc = h.CreatedOnUtc
+        });
     }
 }

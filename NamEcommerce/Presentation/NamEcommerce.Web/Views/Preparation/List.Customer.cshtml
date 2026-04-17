@@ -1,3 +1,4 @@
+@using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
 @model CustomerPreparationListModel
 
 <div class="content-card mb-4 p-2">
@@ -18,18 +19,29 @@
     </div>
 </div>
 
+@{
+    var hasRemainingQuantities = Model.Items.Any(item => item.RemainingQuantity > 0);
+}
 <div class="content-card">
     <div class="table-responsive">
         <table class="table data-table">
             <thead>
                 <tr>
-                    <th class="ps-4">Sản phẩm</th>
+                    @if (hasRemainingQuantities)
+                    {
+                        <th style="width:40px;" class="text-center">
+                            <input type="checkbox" class="select-all-customers" />
+                        </th>
+                    }
+                    <th class="@(hasRemainingQuantities ? "" : "ps-3")">
+                        Sản phẩm
+                    </th>
                     <th class="text-end">Số lượng</th>
                     <th class="d-none d-md-table-cell">Khách hàng</th>
                     <th class="text-center d-none d-sm-table-cell">Ngày dự kiến</th>
                     <th>Mã đơn</th>
-                    <th class="text-center" style="width: 140px;">Trạng thái</th>
-                    <th class="text-end pe-4" style="width: 120px;"></th>
+                    <th class="text-center">Trạng thái</th>
+                    <th class="text-end pe-3"></th>
                 </tr>
             </thead>
             <tbody>
@@ -40,11 +52,30 @@
                         var rowClass = item.IsDelivered ? "table-success opacity-75" : "";
                         var isOverdue = item.ExpectedShippingDate.HasValue && item.ExpectedShippingDate.Value.Date <= DateTime.Now.Date && !item.IsDelivered;
                         <tr class="@rowClass" id="row-@item.OrderItemId">
-                            <td class="ps-4">
+                            <td class="align-middle text-center" style="width:40px;">
+                                @if (item.RemainingQuantity > 0)
+                                {
+                                    <input type="checkbox" class="select-prep-item"
+                                           data-order-id="@item.OrderId"
+                                           data-order-code="@item.OrderCode"
+                                           data-order-item-id="@item.OrderItemId"
+                                           data-quantity="@item.Quantity"
+                                           data-delivered-quantity="@item.DeliveredQuantity"
+                                           data-product-name="@item.ProductName"
+                                           data-stock="@item.StockQuantityAvailable"
+                                           data-unit-price="@item.UnitPrice" />
+                                }
+                            </td>
+                            <td class="@(Model.Items.Any(item => !item.IsDelivered) ? "" : "ps-3")">
                                 <span class="fw-bold text-dark">@item.ProductName</span>
                             </td>
-                            <td class="text-end fw-bold fs-6">
-                                @item.Quantity.ToString(ViewConstants.NumberCustomFormat)
+                            <td class="text-end">
+                                <div class="fw-bold fs-6">
+                                    <span class="text-muted small">@item.DeliveredQuantity.ToString(ViewConstants.NumberCustomFormat) /</span> @item.Quantity.ToString(ViewConstants.NumberCustomFormat)
+                                </div>
+                                <div class="small text-muted" title="Tồn kho">
+                                    <i class="bi bi-box-seam me-1"></i>@item.StockQuantityAvailable.ToString(ViewConstants.NumberCustomFormat)
+                                </div>
                             </td>
                             <td class="d-none d-md-table-cell">
                                 <div class="fw-bold">
@@ -74,10 +105,40 @@
                                 }
                             </td>
                             <td>
-                                <a asp-controller="Order" asp-action="Details" asp-route-id="@item.OrderId"
-                                       class="text-primary fw-bold text-decoration-none">
-                                    @item.OrderCode
-                                </a>
+                                <div class="d-flex flex-column gap-1">
+                                    <a asp-controller="Order" asp-action="Details" asp-route-id="@item.OrderId"
+                                           class="text-primary fw-bold text-decoration-none">
+                                        @item.OrderCode
+                                    </a>
+                                    @if (item.DeliveryNoteLinks.Any())
+                                    {
+                                        <div class="dropdown">
+                                            <button class="btn btn-xs btn-outline-info dropdown-toggle py-0 px-2 small" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.75rem;">
+                                                <i class="bi bi-file-earmark-text me-1"></i>PXK (@item.DeliveryNoteLinks.Count)
+                                            </button>
+                                            <ul class="dropdown-menu shadow-sm border-0 py-1" style="min-width: 180px;">
+                                                @foreach (var link in item.DeliveryNoteLinks)
+                                                {
+                                                    var statusTuple = (DeliveryNoteStatus)link.Status switch
+                                                    {
+                                                        DeliveryNoteStatus.Draft => ("secondary", "Bản nháp"),
+                                                        DeliveryNoteStatus.Confirmed => ("info text-white", "Đã xác nhận"),
+                                                        DeliveryNoteStatus.Delivering => ("warning", "Đang giao"),
+                                                        DeliveryNoteStatus.Delivered => ("success", "Đã giao"),
+                                                        DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy"),
+                                                        _ => ("secondary", "Không rõ")
+                                                    };
+                                                    <li>
+                                                        <a class="dropdown-item d-flex align-items-center justify-content-between gap-2 py-1 px-3" asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@link.Id">
+                                                            <span class="small fw-medium">@link.Code</span>
+                                                            <span class="badge bg-@statusTuple.Item1" style="font-size: 0.65rem;">@statusTuple.Item2</span>
+                                                        </a>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
+                                </div>
                             </td>
                             <td class="text-center status-cell">
                                 @if (item.IsDelivered)
@@ -93,7 +154,7 @@
                                     </span>
                                 }
                             </td>
-                            <td class="text-end pe-4 align-middle">
+                            <td class="text-end pe-3 align-middle">
                                 @if (!item.IsDelivered)
                                 {
                                     <button class="btn btn-sm btn-outline-success btnMarkDelivered w-100"
@@ -112,7 +173,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="7">
+                        <td colspan="@(hasRemainingQuantities ? 7 : 6)">
                             <div class="empty-state">
                                 <div class="empty-icon"><i class="bi bi-person-lines-fill"></i></div>
                                 <h5>Không có dữ liệu</h5>

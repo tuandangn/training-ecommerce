@@ -22,7 +22,7 @@ public sealed class GetProductListHandler : IRequestHandler<GetProductListQuery,
 
     public async Task<ProductListModel> Handle(GetProductListQuery request, CancellationToken cancellationToken)
     {
-        var pagedData = await _productAppService.GetProductsAsync(request.Keywords, false, request.PageIndex, request.PageSize);
+        var pagedData = await _productAppService.GetProductsAsync(request.Keywords, request.PageIndex, request.PageSize);
 
         var productListItems = new List<ProductListModel.ProductItemModel>();
         foreach (var productInfo in pagedData)

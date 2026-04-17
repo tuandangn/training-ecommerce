@@ -84,7 +84,7 @@ public sealed class OrderController : BaseAuthorizedController
         }
 
         TempData[ViewConstants.OrderSuccessMessage] = "Tạo đơn hàng thành công!";
-        return RedirectToAction(nameof(Details), new { id = result.CreatedId });
+        return RedirectToAction(nameof(List));
     }
 
     public async Task<IActionResult> Details(Guid id)

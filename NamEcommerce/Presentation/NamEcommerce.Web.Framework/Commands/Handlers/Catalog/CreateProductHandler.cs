@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Common;
@@ -32,8 +32,7 @@ public sealed class CreateProductHandler : IRequestHandler<CreateProductCommand,
                 MimeType = request.ImageFile.MimeType,
                 Extension = request.ImageFile.Extension,
                 FileName = request.ImageFile.FileName
-            } : null,
-            TrackInventory = request.TrackInventory
+            } : null
         };
 
         var result = await _productAppService.CreateProductAsync(dto).ConfigureAwait(false);

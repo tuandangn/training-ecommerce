@@ -1,4 +1,4 @@
-﻿import { toast } from "/modules/modals.js";
+import { toast } from "/modules/modals.js";
 import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
 
@@ -14,11 +14,12 @@ class Customer {
 }
 
 class ProductInfo {
-    constructor({ id, name, availableQty, picture }) {
+    constructor({ id, name, availableQty, picture, unitPrice }) {
         this.id = id;
         this.name = name ?? '';
         this.availableQty = availableQty ?? 0;
         this.picture = picture ?? '';
+        this.unitPrice = unitPrice ?? 0;
     }
 }
 
@@ -412,13 +413,67 @@ export class AddItemController {
         });
     }
 
-    setProduct(productInfo) {
+    async setProduct(productInfo) {
         this.state.productInfo = productInfo;
+        if (productInfo) {
+            this.state.unitPrice = productInfo.unitPrice;
+            await this.#fetchPriceHistory(productInfo.id);
+        } else {
+            this.state.unitPrice = 0;
+            this.#hidePriceHistory();
+        }
         this.#render();
+    }
+
+    async #fetchPriceHistory(productId) {
+        const container = getEl('priceHistoryContainer');
+        const loading = getEl('priceHistoryLoading');
+        const empty = getEl('priceHistoryEmpty');
+        const tableBody = getEl('priceHistoryTableBodyContent');
+
+        container.classList.remove('d-none');
+        loading.classList.remove('d-none');
+        empty.classList.add('d-none');
+        tableBody.innerHTML = '';
+
+        try {
+            const res = await fetch(`/Product/PriceHistory?ProductId=${productId}`);
+            if (!res.ok) throw new Error('Failed to fetch price history');
+            const data = await res.json();
+
+            loading.classList.add('d-none');
+
+            if (!data.items || data.items.length === 0) {
+                empty.classList.remove('d-none');
+                return;
+            }
+
+            data.items.forEach(item => {
+                const row = document.createElement('tr');
+                const date = new Date(item.createdOnUtc).toLocaleDateString('vi-VN');
+                row.innerHTML = `
+                    <td class="ps-2 py-2">${date}</td>
+                    <td class="text-end fw-bold text-success py-2">${item.newPrice.toLocaleString()}đ</td>
+                    <td class="text-end text-muted pe-2 py-2">${item.newCostPrice.toLocaleString()}đ</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error(error);
+            loading.classList.add('d-none');
+            empty.innerHTML = '<small class="text-danger">Lỗi tải lịch sử.</small>';
+            empty.classList.remove('d-none');
+        }
+    }
+
+    #hidePriceHistory() {
+        const container = getEl('priceHistoryContainer');
+        if (container) container.classList.add('d-none');
     }
 
     reset() {
         this.state = { productInfo: null, quantity: 1, unitPrice: 0 };
+        this.#hidePriceHistory();
         this.#render();
     }
 

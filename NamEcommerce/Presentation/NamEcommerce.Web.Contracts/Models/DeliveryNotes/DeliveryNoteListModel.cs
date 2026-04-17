@@ -21,8 +21,15 @@ public sealed record DeliveryNoteListItemModel
     public required Guid Id { get; init; }
     public required string Code { get; init; }
     public required string CustomerName { get; init; }
-    public string? CustomerPhone { get; init; }
     public required string ShippingAddress { get; init; }
+
+    public Guid WarehouseId { get; init; }
+    public string? WarehouseName { get; set; }
+
+    public required Guid OrderId { get; set; }
+    public required string OrderCode { get; set; }
+
+    public string? CustomerPhone { get; init; }
     public decimal TotalAmount { get; init; }
     public int Status { get; init; }
     public string StatusName { get; init; } = string.Empty;

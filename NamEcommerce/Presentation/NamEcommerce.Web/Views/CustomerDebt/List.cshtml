@@ -1,0 +1,118 @@
+@using NamEcommerce.Domain.Shared.Enums.Debts
+@using NamEcommerce.Web.Contracts.Models.Debts
+@using NamEcommerce.Web.Extensions
+@model CustomerDebtListModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Công nợ khách hàng";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Công nợ khách hàng</h1>
+        <p class="page-header-subtitle">Quản lý và theo dõi các khoản nợ của khách hàng</p>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="action-toolbar">
+        <form asp-action="List" method="get" class="row g-3">
+            <div class="col-md-6 col-lg-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search py-1"></i></span>
+                    <input type="text" name="keywords" class="form-control border-start-0 ps-0" placeholder="Tìm theo mã nợ, khách hàng, đơn hàng..." value="@Model.Keywords">
+                </div>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary px-4">Tìm kiếm</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table data-table align-middle">
+            <thead>
+                <tr>
+                    <th class="ps-4">Mã công nợ</th>
+                    <th>Khách hàng</th>
+                    <th>Đơn hàng / Phiếu xuất</th>
+                    <th class="text-end">Tổng nợ</th>
+                    <th class="text-end">Đã trả</th>
+                    <th class="text-end">Còn lại</th>
+                    <th class="text-center">Trạng thái</th>
+                    <th class="text-center d-none d-lg-table-cell">Ngày tạo</th>
+                    <th style="width: 80px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Data.Pagination.TotalCount > 0)
+                {
+                    @foreach (var debt in Model.Data)
+                    {
+                        var debtStatus = (DebtStatus)debt.Status;
+                        <tr>
+                            <td class="ps-4">
+                                <a asp-action="Details" asp-route-id="@debt.Id" class="fw-bold text-primary text-decoration-none">
+                                    @debt.Code
+                                </a>
+                            </td>
+                            <td>
+                                <div class="fw-medium text-dark">@debt.CustomerName</div>
+                            </td>
+                            <td>
+                                <div class="small">
+                                    <div class="mb-1">
+                                        <i class="bi bi-receipt text-muted me-1"></i>
+                                        <span class="text-muted">Đơn:</span> <span class="fw-medium">@debt.OrderCode</span>
+                                    </div>
+                                    <div>
+                                        <i class="bi bi-box-seam text-muted me-1"></i>
+                                        <span class="text-muted">Xuất:</span> <span class="fw-medium">@debt.DeliveryNoteCode</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="text-end fw-medium text-dark">
+                                @debt.TotalAmount.ToString(ViewConstants.CurrencyDisplayFormat)
+                            </td>
+                            <td class="text-end text-success fw-medium">
+                                @debt.PaidAmount.ToString(ViewConstants.CurrencyDisplayFormat)
+                            </td>
+                            <td class="text-end text-danger fw-bold">
+                                @debt.RemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)
+                            </td>
+                            <td class="text-center">
+                                <span class="badge rounded-pill @debtStatus.GetDisplayColor() px-2 py-1 fw-normal">
+                                    @debtStatus.GetDisplayText()
+                                </span>
+                            </td>
+                            <td class="text-center d-none d-lg-table-cell">
+                                <span class="text-muted small">@debt.CreatedOnUtc.ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                            </td>
+                            <td class="text-end pe-3">
+                                <a class="btn-table-action" asp-action="Details" asp-route-id="@debt.Id" title="Xem chi tiết">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="9">
+                            <div class="empty-state py-5">
+                                <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
+                                <h5>Không có thông tin công nợ</h5>
+                                <p>Các khoản nợ sẽ được tạo tự động khi phiếu xuất kho được giao.</p>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.Data.Pagination.TotalCount > 0)
+    {
+        <partial name="_Pager" model="Model.Data.Pagination" />
+    }
+</div>

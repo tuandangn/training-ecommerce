@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 
 namespace NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;

@@ -241,16 +241,13 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             throw new ProductIsNotFoundException(purchaseOrderItem.ProductId);
 
         Guid? warehouseId = purchaseOrder.WarehouseId ?? dto.WarehouseId ?? null;
-        if (product.TrackInventory)
+        if (!warehouseId.HasValue)
+            throw new ArgumentException("Warehouse is required", nameof(dto));
+        else
         {
-            if (!warehouseId.HasValue)
-                throw new ArgumentException("Warehouse is required", nameof(dto));
-            else
-            {
-                var warehouse = await _warehouseOrderDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
-                if (warehouse is null)
-                    throw new WarehouseIsNotFoundException(warehouseId.Value);
-            }
+            var warehouse = await _warehouseOrderDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+            if (warehouse is null)
+                throw new WarehouseIsNotFoundException(warehouseId.Value);
         }
 
         purchaseOrderItem.AddQuantityReceived(dto.ReceivedQuantity);
@@ -274,13 +271,10 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             await _productRepository.UpdateAsync(product).ConfigureAwait(false);
         }
 
-        if (product.TrackInventory)
-        {
-            await _stockManager.ReceiveStockAsync(purchaseOrderItem.ProductId,
-                warehouseId!.Value, dto.ReceivedQuantity,
-                $"Nhập hàng từ PO {purchaseOrder.Code}", dto.ReceivedByUserId,
-                (int)StockReferenceType.PurchaseOrder, purchaseOrder.Id).ConfigureAwait(false);
-        }
+        await _stockManager.ReceiveStockAsync(purchaseOrderItem.ProductId,
+            warehouseId!.Value, dto.ReceivedQuantity,
+            $"Nhập hàng từ PO {purchaseOrder.Code}", dto.ReceivedByUserId,
+            (int)StockReferenceType.PurchaseOrder, purchaseOrder.Id).ConfigureAwait(false);
 
         await _eventPublisher.EntityUpdated(updatedPurchaseOrder).ConfigureAwait(false);
 

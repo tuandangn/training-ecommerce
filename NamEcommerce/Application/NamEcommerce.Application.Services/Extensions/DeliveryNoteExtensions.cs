@@ -5,29 +5,34 @@ namespace NamEcommerce.Application.Services.Extensions;
 
 public static class DeliveryNoteExtensions
 {
-    public static DeliveryNoteAppDto ToDto(this DeliveryNoteDto source)
+    public static DeliveryNoteAppDto ToDto(this DeliveryNoteDto deliveryNote)
     {
         return new DeliveryNoteAppDto
         {
-            Id = source.Id,
-            Code = source.Code,
-            OrderId = source.OrderId,
-            CustomerId = source.CustomerId,
-            CustomerName = source.CustomerName,
-            CustomerPhone = source.CustomerPhone,
-            CustomerAddress = source.CustomerAddress,
-            ShippingAddress = source.ShippingAddress,
-            ShowPrice = source.ShowPrice,
-            Note = source.Note,
-            Status = (int)source.Status,
-            DeliveredOnUtc = source.DeliveredOnUtc,
-            DeliveryProofPictureId = source.DeliveryProofPictureId,
-            DeliveryReceiverName = source.DeliveryReceiverName,
-            CreatedByUserId = source.CreatedByUserId,
-            CreatedOnUtc = source.CreatedOnUtc,
-            UpdatedOnUtc = source.UpdatedOnUtc,
-            TotalAmount = source.TotalAmount,
-            Items = source.Items.Select(i => new DeliveryNoteItemAppDto
+            Id = deliveryNote.Id,
+            Code = deliveryNote.Code,
+            OrderId = deliveryNote.OrderId,
+            OrderCode = deliveryNote.OrderCode,
+            CustomerId = deliveryNote.CustomerId,
+            WarehouseId = deliveryNote.WarehouseId,
+            CustomerName = deliveryNote.CustomerName,
+            CustomerPhone = deliveryNote.CustomerPhone,
+            CustomerAddress = deliveryNote.CustomerAddress,
+            ShippingAddress = deliveryNote.ShippingAddress,
+            ShowPrice = deliveryNote.ShowPrice,
+            Note = deliveryNote.Note,
+            Status = (int)deliveryNote.Status,
+            DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
+            DeliveryProofPictureId = deliveryNote.DeliveryProofPictureId,
+            DeliveryReceiverName = deliveryNote.DeliveryReceiverName,
+            CreatedByUserId = deliveryNote.CreatedByUserId,
+            CreatedOnUtc = deliveryNote.CreatedOnUtc,
+            UpdatedOnUtc = deliveryNote.UpdatedOnUtc,
+            TotalAmount = deliveryNote.TotalAmount,
+            Surcharge = deliveryNote.Surcharge,
+            SurchargeReason = deliveryNote.SurchargeReason,
+            AmountToCollect = deliveryNote.AmountToCollect,
+            Items = deliveryNote.Items.Select(i => new DeliveryNoteItemAppDto
             {
                 Id = i.Id,
                 DeliveryNoteId = i.DeliveryNoteId,

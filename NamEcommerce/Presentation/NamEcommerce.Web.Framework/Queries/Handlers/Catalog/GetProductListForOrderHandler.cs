@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Media;
@@ -25,14 +25,15 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
 
     public async Task<ProductListForOrderModel> Handle(GetProductListForOrderQuery request, CancellationToken cancellationToken)
     {
-        var pagedData = await _productAppService.GetProductsAsync(request.Keywords, false, 0, int.MaxValue);
+        var pagedData = await _productAppService.GetProductsAsync(request.Keywords, 0, int.MaxValue);
 
         var productListItems = new List<ProductListForOrderModel.ProductItemModel>();
         foreach (var productInfo in pagedData)
         {
             var productModel = new ProductListForOrderModel.ProductItemModel(productInfo.Id)
             {
-                Name = productInfo.Name
+                Name = productInfo.Name,
+                UnitPrice = productInfo.UnitPrice
             };
 
             if (productInfo.Pictures.Any())

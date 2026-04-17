@@ -1,4 +1,5 @@
 using NamEcommerce.Web.Contracts.Models.Common;
+using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 
 namespace NamEcommerce.Web.Contracts.Models.Preparation;
 
@@ -37,6 +38,12 @@ public sealed record PreparationItemModel
     public DateTime? ExpectedShippingDate { get; init; }
 
     public bool IsDelivered { get; init; }
+
+    public decimal DeliveredQuantity { get; init; }
+    
+    public decimal StockQuantityAvailable { get; init; }
+
+    public IList<DeliveryNoteLinkModel> DeliveryNoteLinks { get; init; } = [];
 }
 
 [Serializable]
@@ -49,6 +56,8 @@ public sealed record PreparationGroupedItemModel
     public DateTime? EarliestShippingDate { get; init; }
 
     public required IList<PreparationGroupedCustomerDetailModel> CustomerDetails { get; init; }
+
+    public decimal StockQuantityAvailable { get; init; }
 }
 
 [Serializable]
@@ -63,7 +72,12 @@ public sealed record PreparationGroupedCustomerDetailModel
     public string? CustomerPhone { get; init; }
 
     public required decimal Quantity { get; init; }
+    public required decimal UnitPrice { get; init; }
     public DateTime? ExpectedShippingDate { get; init; }
 
     public bool IsDelivered { get; init; }
+
+    public decimal DeliveredQuantity { get; init; }
+
+    public IList<DeliveryNoteLinkModel> DeliveryNoteLinks { get; init; } = [];
 }

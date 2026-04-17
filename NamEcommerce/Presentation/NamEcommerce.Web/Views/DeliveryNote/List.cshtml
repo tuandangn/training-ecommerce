@@ -1,7 +1,7 @@
-@model NamEcommerce.Web.Contracts.Models.DeliveryNotes.DeliveryNoteListModel
+@model DeliveryNoteListModel
 @using NamEcommerce.Web.Constants
 @{
-    ViewBag.PageTitle = "Phiếu xuất kho";
+    ViewData["Title"] = "Phiếu xuất kho";
     var query = Model.Keywords ?? "";
 }
 
@@ -38,19 +38,31 @@
             <thead>
                 <tr>
                     <th class="ps-4">Mã PXK</th>
-                    <th class="d-none d-md-table-cell"><i class="bi bi-calendar me-1"></i>Thời gian</th>
-                    <th><i class="bi bi-person me-1"></i>Khách hàng</th>
-                    <th class="d-none d-lg-table-cell"><i class="bi bi-geo-alt me-1"></i>Địa chỉ giao</th>
-                    <th class="text-center" style="width: 140px;">Trạng thái</th>
+                    <th class="text-center">Đơn hàng</th>
+                    <th>
+                        <i class="bi bi-person me-1"></i>
+                        Khách hàng
+                    </th>
+                    <th class="d-none d-lg-table-cell">
+                        <i class="bi bi-geo-alt me-1"></i>
+                        Địa chỉ giao
+                    </th>
+                    <th class="text-center" style="width: 140px;">
+                        Trạng thái
+                    </th>
+                    <th class="d-none d-md-table-cell">
+                        <i class="bi bi-calendar me-1"></i>
+                        Ngày tạo
+                    </th>
                     <th style="width: 100px;"></th>
                 </tr>
             </thead>
             <tbody>
                 @if (Model.Data.Items.Any())
                 {
-                    foreach (var item in Model.Data.Items)
+                    foreach (var deliveryNote in Model.Data.Items)
                     {
-                        var statusTuple = item.Status switch
+                        var statusTuple = deliveryNote.Status switch
                         {
                             10 => ("secondary", "Bản nháp", "bi-pencil"),
                             20 => ("info text-white", "Đã xác nhận", "bi-check-all"),
@@ -61,57 +73,74 @@
                         };
 
                         <tr>
-                            <td class="ps-4 fw-medium">
-                                <a asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none fw-bold">
-                                    @HighlighHelper.Highlight(item.Code, query)
+                            <td class="ps-4">
+                                <a asp-action="Details" asp-route-id="@deliveryNote.Id" class="text-decoration-none fw-bold">
+                                    @HighlighHelper.Highlight(deliveryNote.Code, query)
                                 </a>
                             </td>
-                            <td class="d-none d-md-table-cell text-muted">@item.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td class="text-center fw-medium">
+                                <a asp-action="Details" asp-controller="Order" asp-route-id="@deliveryNote.OrderId" class="text-decoration-none">
+                                    @deliveryNote.OrderCode
+                                </a>
+                            </td>
                             <td>
-                                <div class="fw-bold">@HighlighHelper.Highlight(item.CustomerName ?? "", query)</div>
-                                <div class="small text-muted"><i class="bi bi-telephone ms-1 me-1"></i>@HighlighHelper.Highlight(item.CustomerPhone ?? "", query)</div>
+                                <div class="fw-bold">
+                                    @HighlighHelper.Highlight(deliveryNote.CustomerName ?? "", query)
+                                </div>
+                                @if (!string.IsNullOrEmpty(deliveryNote.CustomerPhone))
+                                {
+                                    <a href="tel:@deliveryNote.CustomerPhone" class="small text-muted text-decoration-none">
+                                        @HighlighHelper.Highlight(deliveryNote.CustomerPhone ?? "", query)
+                                    </a>
+                                }
+                                <div class="d-md-none mt-1">
+                                    <small class="text-muted d-block">
+                                        <i class="bi bi-calendar me-1"></i>@deliveryNote.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                    </small>
+                                </div>
                             </td>
                             <td class="d-none d-lg-table-cell">
-                                <span class="d-inline-block text-truncate" style="max-width: 250px;" title="@item.ShippingAddress">
-                                    @item.ShippingAddress
+                                <span class="d-inline-block text-truncate" style="max-width: 250px;" title="@deliveryNote.ShippingAddress">
+                                    @deliveryNote.ShippingAddress
                                 </span>
                             </td>
                             <td class="text-center">
                                 <span class="status-badge @statusTuple.Item1 w-100">
-                                    <i class="bi @statusTuple.Item3 me-1"></i>@item.StatusName
+                                    <i class="bi @statusTuple.Item3 me-1"></i>@deliveryNote.StatusName
                                 </span>
-                                @if (item.Status == 40 && item.DeliveredOnUtc.HasValue)
+                                @if (deliveryNote.Status == 40 && deliveryNote.DeliveredOnUtc.HasValue)
                                 {
-                                    <div class="small text-muted mt-1 fst-italic">@item.DeliveredOnUtc.Value.ToLocalTime().ToString("dd/MM HH:mm")</div>
+                                    <div class="small text-muted mt-1 fst-italic">@deliveryNote.DeliveredOnUtc.Value.ToLocalTime().ToString("dd/MM HH:mm")</div>
                                 }
                             </td>
+                            <td class="d-none d-md-table-cell text-muted">@deliveryNote.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
                             <td>
                                 <div class="dropdown position-static text-end pe-3">
-                                    <button class="btn btn-sm btn-outline-secondary" type="button" id="dropdownMenuButton-@item.Id" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" id="dropdownMenuButton-@deliveryNote.Id" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
                                         <i class="bi bi-three-dots"></i>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="dropdownMenuButton-@item.Id">
-                                        <li><a class="dropdown-item py-2" asp-action="Details" asp-route-id="@item.Id"><i class="bi bi-info-circle me-2 text-primary"></i>Chi tiết</a></li>
-                                        <li><a class="dropdown-item py-2" asp-action="Print" asp-route-id="@item.Id" target="_blank"><i class="bi bi-printer me-2 text-secondary"></i>In phiếu (2 bản)</a></li>
-                                        @if (item.Status == 10)
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="dropdownMenuButton-@deliveryNote.Id">
+                                        <li><a class="dropdown-item py-2" asp-action="Details" asp-route-id="@deliveryNote.Id"><i class="bi bi-info-circle me-2 text-primary"></i>Chi tiết</a></li>
+                                        <li><a class="dropdown-item py-2" asp-action="Print" asp-route-id="@deliveryNote.Id" target="_blank"><i class="bi bi-printer me-2 text-secondary"></i>In phiếu (2 bản)</a></li>
+                                        @if (deliveryNote.Status == 10)
                                         {
                                             <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item py-2 text-primary btn-confirm fw-medium" href="#" data-id="@item.Id"><i class="bi bi-check-all me-2"></i>Xác nhận xuất</a></li>
+                                            <li><a class="dropdown-item py-2 text-primary btn-confirm fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-check-all me-2"></i>Xác nhận xuất</a></li>
                                         }
-                                        @if (item.Status == 20)
+                                        @if (deliveryNote.Status == 20)
                                         {
                                             <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item py-2 text-warning btn-delivering fw-medium" href="#" data-id="@item.Id"><i class="bi bi-truck me-2"></i>Bắt đầu đi giao</a></li>
+                                            <li><a class="dropdown-item py-2 text-warning btn-delivering fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-truck me-2"></i>Bắt đầu đi giao</a></li>
                                         }
-                                        @if (item.Status == 30 || item.Status == 20)
+                                        @if (deliveryNote.Status == 30 || deliveryNote.Status == 20)
                                         {
                                             <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item py-2 text-success btn-delivered fw-medium" href="#" data-id="@item.Id"><i class="bi bi-check-circle-fill me-2"></i>Xác nhận Đã giao</a></li>
+                                            <li><a class="dropdown-item py-2 text-success btn-delivered fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-check-circle-fill me-2"></i>Xác nhận Đã giao</a></li>
                                         }
-                                        @if (item.Status != 40 && item.Status != 50)
+                                        @if (deliveryNote.Status != 40 && deliveryNote.Status != 50)
                                         {
                                             <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item py-2 text-danger btn-cancel fw-medium" href="#" data-id="@item.Id"><i class="bi bi-x-circle me-2"></i>Hủy phiếu</a></li>
+                                            <li><a class="dropdown-item py-2 text-danger btn-cancel fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-x-circle me-2"></i>Hủy phiếu</a></li>
                                         }
                                     </ul>
                                 </div>

@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 
@@ -8,7 +8,7 @@ public interface IProductManager : INameExistCheckingService
 {
     Task<IPagedDataDto<ProductDto>> GetProductsAsync(
         int pageIndex, int pageSize,
-        string? keywords = null, bool onlyTrackInventory = false,
+        string? keywords = null,
         Guid? categoryId = null);
 
     Task<CreateProductResultDto> CreateProductAsync(CreateProductDto dto);
@@ -18,4 +18,5 @@ public interface IProductManager : INameExistCheckingService
     Task RemoveProductFromCategoryAsync(Guid productId, Guid categoryId);
 
     Task DeleteProductAsync(Guid id);
+    Task<IEnumerable<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId);
 }

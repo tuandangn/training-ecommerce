@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 
 namespace NamEcommerce.Domain.Shared.Dtos.Catalog;
 
@@ -8,9 +8,11 @@ public abstract record BaseProductDto
     public required string Name { get; init; }
     public required string? ShortDesc { get; init; }
     public Guid? UnitMeasurementId { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal CostPrice { get; set; }
     public IEnumerable<ProductCategoryDto> Categories { get; set; } = [];
     public IEnumerable<Guid> Pictures { get; set; } = [];
-    public bool TrackInventory { get; set; }
+
 
     public virtual void Verify()
     {
@@ -37,3 +39,15 @@ public sealed record UpdateProductResultDto(Guid Id) : BaseProductDto;
 
 [Serializable]
 public sealed record ProductCategoryDto(Guid CategoryId, int DisplayOrder);
+
+[Serializable]
+public sealed record ProductPriceHistoryDto
+{
+    public Guid Id { get; init; }
+    public decimal OldPrice { get; init; }
+    public decimal NewPrice { get; init; }
+    public decimal OldCostPrice { get; init; }
+    public decimal NewCostPrice { get; init; }
+    public string? Note { get; init; }
+    public DateTime CreatedOnUtc { get; init; }
+}

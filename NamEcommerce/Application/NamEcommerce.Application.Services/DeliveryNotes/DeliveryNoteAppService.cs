@@ -1,6 +1,7 @@
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
@@ -10,20 +11,31 @@ namespace NamEcommerce.Application.Services.DeliveryNotes;
 public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
 {
     private readonly IDeliveryNoteManager _deliveryNoteManager;
+    private readonly IWarehouseAppService _warehouseAppService;
 
-    public DeliveryNoteAppService(IDeliveryNoteManager deliveryNoteManager)
+    public DeliveryNoteAppService(IDeliveryNoteManager deliveryNoteManager, IWarehouseAppService warehouseAppService)
     {
         _deliveryNoteManager = deliveryNoteManager;
+        _warehouseAppService = warehouseAppService;
     }
 
     public async Task<DeliveryNoteAppDto> CreateFromOrderAsync(CreateDeliveryNoteAppDto dto)
     {
+        var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(dto.WarehouseId);
+        if (warehouse is null)
+            throw new Exception("Warehouse not found."); //*TODO*
+
         var domainDto = new CreateDeliveryNoteDto
         {
             OrderId = dto.OrderId,
             ShippingAddress = dto.ShippingAddress,
             ShowPrice = dto.ShowPrice,
             Note = dto.Note,
+            WarehouseId = dto.WarehouseId,
+            WarehouseName = warehouse.Name,
+            Surcharge = dto.Surcharge,
+            SurchargeReason = dto.SurchargeReason,
+            AmountToCollect = dto.AmountToCollect,
             Items = dto.Items.Select(i => new CreateDeliveryNoteItemDto
             {
                 OrderItemId = i.OrderItemId,

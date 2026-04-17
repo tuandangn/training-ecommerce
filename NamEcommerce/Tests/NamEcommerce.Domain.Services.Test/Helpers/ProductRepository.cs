@@ -7,7 +7,7 @@ public static class ProductRepository
         return Repository.Create<Product>().WhenCall(r =>
             r.InsertAsync(It.Is<Product>(entity =>
                 entity.Name == @return.Name && entity.ShortDesc == @return.ShortDesc
-                && entity.UnitMeasurementId == @return.UnitMeasurementId && entity.TrackInventory == @return.TrackInventory
+                && entity.UnitMeasurementId == @return.UnitMeasurementId 
                 && entity.ProductCategories.All(pc => @return.ProductCategories.Any(i => i.CategoryId == pc.CategoryId && i.DisplayOrder == pc.DisplayOrder))
                 && entity.ProductCategories.Count() == @return.ProductCategories.Count()
                 && entity.ProductPictures.All(pp => @return.ProductPictures.Any(i => i.PictureId == pp.PictureId))
@@ -20,7 +20,7 @@ public static class ProductRepository
         return Repository.Create<Product>().WhenCall(r =>
             r.UpdateAsync(It.Is<Product>(entity =>
                 entity.Name == @return.Name && entity.ShortDesc == @return.ShortDesc
-                && entity.UnitMeasurementId == @return.UnitMeasurementId && entity.TrackInventory == @return.TrackInventory
+                && entity.UnitMeasurementId == @return.UnitMeasurementId 
                 && entity.ProductCategories.All(pc => @return.ProductCategories.Any(i => i.CategoryId == pc.CategoryId && i.DisplayOrder == pc.DisplayOrder))
                 && entity.ProductCategories.Count() == @return.ProductCategories.Count()
                 && entity.ProductPictures.All(pp => @return.ProductPictures.Any(i => i.PictureId == pp.PictureId))

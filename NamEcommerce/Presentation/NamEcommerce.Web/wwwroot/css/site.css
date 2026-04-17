@@ -1,5 +1,6 @@
 /* ============================================================
-   NamEcommerce Design System
+   NamEcommerce Design System — v2
+   Mobile-first, professional ERP aesthetic
    ============================================================ */
 
 /* -- Google Fonts -- */
@@ -21,15 +22,18 @@
     --gray-50:       #f9fafb;
     --gray-100:      #f3f4f6;
     --gray-200:      #e5e7eb;
+    --gray-300:      #d1d5db;
     --gray-400:      #9ca3af;
     --gray-500:      #6b7280;
     --gray-700:      #374151;
     --gray-900:      #111827;
-    --body-bg:       #f5f6fa;
-    --card-shadow:   0 1px 4px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.04);
-    --card-radius:   0.875rem;
+    --body-bg:       #f0f2f5;
+    --card-shadow:   0 1px 3px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.04);
+    --card-shadow-lg:0 4px 12px rgba(0,0,0,.08), 0 1px 3px rgba(0,0,0,.06);
+    --card-radius:   0.75rem;
     --btn-radius:    0.5rem;
     --transition:    all 0.2s ease;
+    --content-max-width: 1200px;
 }
 
 /* -- Base -- */
@@ -39,7 +43,7 @@ html {
 }
 
 @media (min-width: 768px) {
-    html { font-size: 16px; }
+    html { font-size: 15px; }
 }
 
 body {
@@ -49,17 +53,22 @@ body {
     line-height: 1.6;
 }
 
-/* -- Navbar -- */
+/* ============================================================
+   Navbar
+   ============================================================ */
 .navbar-main {
     background: #fff;
     border-bottom: 1px solid var(--gray-200);
     box-shadow: 0 1px 3px rgba(0,0,0,.06);
     padding: 0.5rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 1030;
 }
 
 .navbar-brand-custom {
     font-weight: 700;
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     color: var(--primary) !important;
     letter-spacing: -0.3px;
 }
@@ -67,7 +76,7 @@ body {
 .navbar-main .nav-link {
     color: var(--gray-700) !important;
     font-weight: 500;
-    font-size: 0.9rem;
+    /*font-size: 0.875rem;*/
     padding: 0.5rem 0.75rem !important;
     border-radius: var(--btn-radius);
     transition: var(--transition);
@@ -80,7 +89,7 @@ body {
 }
 
 .navbar-main .dropdown-item {
-    font-size: 0.875rem;
+    font-size: 0.85rem;
     padding: 0.5rem 1rem;
     color: var(--gray-700);
     border-radius: 0.375rem;
@@ -99,56 +108,63 @@ body {
 }
 
 .navbar-main .dropdown-menu {
-    border: none;
+    border: 1px solid var(--gray-100);
     box-shadow: 0 4px 20px rgba(0,0,0,.1);
     border-radius: 0.75rem;
     padding: 0.4rem;
     min-width: 200px;
 }
 
-/* -- Page Layout -- */
+/* ============================================================
+   Page Layout
+   ============================================================ */
 .page-wrapper {
     min-height: calc(100vh - 60px);
-    padding: 1.5rem 0 3rem;
+    padding: 1.25rem 0 3rem;
+    max-width: var(--content-max-width);
+    /*margin: 0 auto;*/
 }
 
-/* -- Page Header -- */
+/* ============================================================
+   Page Header
+   ============================================================ */
 .page-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 0.75rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
+    padding: 0 0.25rem;
 }
 
 .page-header-title {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     font-weight: 700;
     color: var(--gray-900);
     margin: 0;
-    line-height: 1.2;
+    line-height: 1.3;
 }
 
 .page-header-subtitle {
-    font-size: 0.875rem;
+    font-size: 1rem;
     color: var(--gray-500);
-    margin: 0.2rem 0 0;
+    margin: 0.15rem 0 0;
 }
 
-/* -- Content Card -- */
+/* ============================================================
+   Content Card — the core building block
+   ============================================================ */
 .content-card {
     background: #fff;
     border-radius: var(--card-radius);
     box-shadow: var(--card-shadow);
     border: 1px solid var(--gray-200);
-    overflow: hidden;
 }
 
 .content-card-header {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--gray-200);
-    background-color: var(--gray-50);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--gray-100);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -156,22 +172,40 @@ body {
     gap: 0.75rem;
 }
 
+.content-card-header h5,
+.content-card-header .card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
+}
+
 .content-card-body {
-    padding: 1.25rem 1.5rem;
+    padding: 1.25rem;
 }
 
 .content-card-body-flush {
     padding: 0;
 }
 
-/* -- Action Toolbar (search + button row) -- */
+.content-card-footer {
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid var(--gray-100);
+    background: var(--gray-50);
+    border-radius: 0 0 var(--card-radius) var(--card-radius);
+}
+
+/* ============================================================
+   Action Toolbar (search + filters inside card)
+   ============================================================ */
 .action-toolbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 0.75rem;
-    padding: 1rem 1.5rem;
+    padding: 0.875rem 1.25rem;
+    border-bottom: 1px solid var(--gray-100);
 }
 
 .action-toolbar .search-group {
@@ -199,7 +233,9 @@ body {
     border-right: none;
 }
 
-/* -- Tables -- */
+/* ============================================================
+   Tables — clean, readable
+   ============================================================ */
 .data-table {
     width: 100%;
     margin: 0;
@@ -207,25 +243,25 @@ body {
 
 .data-table thead th {
     background-color: var(--gray-50);
-    font-size: 0.75rem;
+    /*font-size: 0.7rem;*/
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: var(--gray-500);
-    padding: 0.75rem 1rem;
+    padding: 0.625rem 1rem;
     border-bottom: 1px solid var(--gray-200);
     border-top: none;
     white-space: nowrap;
 }
 
 .data-table tbody td {
-    padding: 0.875rem 1rem;
+    padding: 0.75rem 1rem;
     border-bottom: 1px solid var(--gray-100);
     vertical-align: middle;
     color: var(--gray-700);
+    /*font-size: 0.875rem;*/
 }
 
-/* Action column — always no-wrap so buttons stay side-by-side */
 .data-table tbody td:last-child {
     white-space: nowrap;
 }
@@ -246,7 +282,16 @@ body {
     background-color: var(--gray-50);
 }
 
-/* -- Action buttons in table rows -- */
+/* -- Table summary row -- */
+.data-table tfoot td {
+    padding: 0.75rem 1rem;
+    border-top: 2px solid var(--gray-200);
+    font-weight: 600;
+}
+
+/* ============================================================
+   Action buttons in table rows
+   ============================================================ */
 .btn-table-action {
     display: inline-flex;
     align-items: center;
@@ -260,7 +305,7 @@ body {
     color: var(--gray-500);
     transition: var(--transition);
     text-decoration: none;
-    font-size: 0.8125rem;
+    /*font-size: 0.8rem;*/
     line-height: 1;
     vertical-align: middle;
     cursor: pointer;
@@ -288,7 +333,9 @@ body {
     border-color: transparent;
 }
 
-/* -- Primary button override -- */
+/* ============================================================
+   Buttons
+   ============================================================ */
 .btn-primary {
     background-color: var(--primary);
     border-color: var(--primary);
@@ -301,7 +348,7 @@ body {
     background-color: var(--primary-dark);
     border-color: var(--primary-dark);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(79,70,229,.3);
+    box-shadow: 0 4px 12px rgba(79,70,229,.25);
 }
 
 .btn-primary:focus {
@@ -320,48 +367,66 @@ body {
     border-color: var(--primary);
 }
 
-/* -- Status Badges -- */
+.btn-outline-secondary {
+    border-radius: var(--btn-radius);
+    font-weight: 500;
+}
+
+.btn-sm {
+    border-radius: 0.375rem;
+}
+
+/* ============================================================
+   Status Badges — unified across all modules
+   ============================================================ */
 .status-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.3rem;
-    padding: 0.3rem 0.75rem;
+    padding: 0.25rem 0.625rem;
     border-radius: 99px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 500;
+    white-space: nowrap;
 }
 
-.status-badge.success { background: var(--success-light); color: var(--success); }
-.status-badge.warning { background: var(--warning-light); color: var(--warning); }
-.status-badge.danger  { background: var(--danger-light);  color: var(--danger); }
-.status-badge.info    { background: var(--info-light);    color: var(--info); }
-.status-badge.secondary { background: var(--gray-100); color: var(--gray-500); }
+.status-badge.success  { background: var(--success-light); color: var(--success); }
+.status-badge.warning  { background: var(--warning-light); color: var(--warning); }
+.status-badge.danger   { background: var(--danger-light);  color: var(--danger); }
+.status-badge.info     { background: var(--info-light);    color: var(--info); }
+.status-badge.primary  { background: var(--primary-light); color: var(--primary); }
+.status-badge.secondary{ background: var(--gray-100);      color: var(--gray-500); }
 
-/* -- Empty state -- */
+/* ============================================================
+   Empty state
+   ============================================================ */
 .empty-state {
     text-align: center;
-    padding: 4rem 1rem;
+    padding: 3.5rem 1rem;
 }
 
 .empty-state .empty-icon {
-    font-size: 3rem;
-    color: var(--gray-400);
-    margin-bottom: 1rem;
-    opacity: 0.5;
+    font-size: 2.5rem;
+    color: var(--gray-300);
+    margin-bottom: 0.75rem;
 }
 
 .empty-state h5 {
     color: var(--gray-500);
     font-weight: 500;
-    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+    margin-bottom: 0.35rem;
 }
 
 .empty-state p {
     color: var(--gray-400);
-    font-size: 0.875rem;
+    font-size: 0.825rem;
+    margin: 0;
 }
 
-/* -- Form Card -- */
+/* ============================================================
+   Form Card — centered create/edit forms
+   ============================================================ */
 .form-card {
     background: #fff;
     border-radius: var(--card-radius);
@@ -375,12 +440,12 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid var(--gray-200);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--gray-100);
 }
 
 .form-card-title {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--gray-900);
     margin: 0;
@@ -401,23 +466,26 @@ body {
 }
 
 .form-card-body {
-    padding: 1.5rem;
+    padding: 1.25rem;
 }
 
 .form-card-footer {
-    padding: 1rem 1.5rem;
-    border-top: 1px solid var(--gray-200);
+    padding: 0.875rem 1.25rem;
+    border-top: 1px solid var(--gray-100);
     background: var(--gray-50);
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
+    border-radius: 0 0 var(--card-radius) var(--card-radius);
 }
 
-/* -- Form controls override -- */
+/* ============================================================
+   Form controls
+   ============================================================ */
 .form-control, .form-select {
     border-color: var(--gray-200);
-    border-radius: 0.5rem;
-    font-size: 0.9rem;
+    border-radius: var(--btn-radius);
+    /*font-size: 0.875rem;*/
     transition: var(--transition);
 }
 
@@ -428,12 +496,94 @@ body {
 
 .form-label {
     font-weight: 500;
-    font-size: 0.875rem;
+    font-size: 0.825rem;
     color: var(--gray-700);
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.3rem;
 }
 
-/* -- Nav tabs override -- */
+/* ============================================================
+   Detail info rows — key-value pairs in sidebar cards
+   ============================================================ */
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.5rem 0;
+    gap: 0.75rem;
+}
+
+.detail-row + .detail-row {
+    border-top: 1px solid var(--gray-100);
+}
+
+.detail-label {
+    /*font-size: 0.78rem;*/
+    color: var(--gray-500);
+    font-weight: 500;
+    flex-shrink: 0;
+    min-width: 90px;
+}
+
+.detail-value {
+    /*font-size: 0.875rem;*/
+    color: var(--gray-900);
+    text-align: right;
+    word-break: break-word;
+}
+
+/* ============================================================
+   Order summary rows (subtotal, discount, total)
+   ============================================================ */
+.order-summary {
+    border-top: 2px solid var(--gray-200);
+    padding: 0.75rem 1.25rem 1rem;
+}
+
+.order-summary-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 2rem;
+    padding: 0.375rem 0;
+}
+
+.order-summary-row .label {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    font-weight: 500;
+    min-width: 80px;
+    text-align: right;
+}
+
+.order-summary-row .value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    min-width: 120px;
+    text-align: right;
+}
+
+.order-summary-row.total {
+    border-top: 1px solid var(--gray-200);
+    padding-top: 0.625rem;
+    margin-top: 0.25rem;
+}
+
+.order-summary-row.total .label {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.order-summary-row.total .value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+/* ============================================================
+   Nav tabs
+   ============================================================ */
 .nav-tabs {
     border-bottom: 1px solid var(--gray-200);
     gap: 0.25rem;
@@ -443,8 +593,8 @@ body {
     border: none;
     color: var(--gray-500);
     font-weight: 500;
-    font-size: 0.875rem;
-    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    padding: 0.5rem 0.875rem;
     border-radius: var(--btn-radius) var(--btn-radius) 0 0;
 }
 
@@ -459,27 +609,34 @@ body {
     border-bottom: 2px solid var(--primary);
 }
 
-/* -- Pager -- */
+/* ============================================================
+   Pager
+   ============================================================ */
 .pager-wrapper {
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 0.5rem;
-    padding: 0.75rem 1rem;
+    padding: 0.625rem 1rem;
+    border-top: 1px solid var(--gray-100);
 }
 
 .pager-info {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--gray-500);
+}
+
+.pagination {
+    margin-bottom: 0;
 }
 
 .pagination .page-link {
     border-radius: 0.375rem;
     border: 1px solid var(--gray-200);
     color: var(--gray-700);
-    font-size: 0.85rem;
-    padding: 0.35rem 0.65rem;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
     margin: 0 1px;
     transition: var(--transition);
 }
@@ -501,20 +658,9 @@ body {
     background: transparent;
 }
 
-/* -- Hover utility -- */
-.hover-lift {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.hover-lift:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0,0,0,.12) !important;
-}
-
-/* -- Utility -- */
-.text-primary { color: var(--primary) !important; }
-.fw-medium { font-weight: 500 !important; }
-
-/* -- Validation -- */
+/* ============================================================
+   Validation
+   ============================================================ */
 .validation-summary-errors {
     padding-left: 0;
 }
@@ -522,30 +668,36 @@ body {
     margin-bottom: 0;
 }
 
-/* -- Alert global -- */
+/* ============================================================
+   Alerts
+   ============================================================ */
 .alert-global {
     border-radius: var(--btn-radius);
     border: none;
-    font-size: 0.875rem;
+    font-size: 0.85rem;
 }
 
-/* -- Footer -- */
+/* ============================================================
+   Footer
+   ============================================================ */
 .footer-main {
     background: #fff;
     border-top: 1px solid var(--gray-200);
-    padding: 1rem 0;
-    font-size: 0.8rem;
+    padding: 0.875rem 0;
+    font-size: 0.78rem;
     color: var(--gray-400);
 }
 
-/* -- Responsive tweaks -- */
+/* ============================================================
+   Responsive
+   ============================================================ */
 @media (max-width: 576px) {
     .page-header {
         flex-direction: column;
         align-items: stretch;
     }
     .page-header .btn {
-        width: 100%;
+        /*width: 100%;*/
         text-align: center;
     }
     .action-toolbar {
@@ -564,16 +716,45 @@ body {
         align-items: center;
     }
     .content-card-header {
-        flex-direction: column;
-        align-items: stretch;
+        /*flex-direction: column;*/
+        /*align-items: stretch;*/
     }
     .form-card-header {
         flex-direction: column;
         gap: 0.5rem;
     }
+    .order-summary-row {
+        gap: 1rem;
+    }
 }
 
-/* -- Text utilities -- */
+/* ============================================================
+   Utilities
+   ============================================================ */
+.text-primary { color: var(--primary) !important; }
+.fw-medium { font-weight: 500 !important; }
+.fw-600 { font-weight: 600; }
+
+.hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--card-shadow-lg) !important;
+}
+
+.hover-shadow {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.hover-shadow:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--card-shadow-lg) !important;
+}
+
+.transition {
+    transition: all 0.3s ease;
+}
+
 .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -582,18 +763,7 @@ body {
     overflow: hidden;
 }
 
-/* -- Legacy hover-shadow (used by card-based modules) -- */
-.hover-shadow {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.hover-shadow:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0,0,0,.12) !important;
-}
-.transition {
-    transition: all 0.3s ease;
-}
-
-.fw-600{
-    font-weight:600;
+.uppercase {
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }

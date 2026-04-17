@@ -37,8 +37,22 @@ public record Product : AppAggregateEntity
     public Guid? UnitMeasurementId { get; private set; }
 
     public decimal CostPrice { get; private set; }
+    public decimal UnitPrice { get; private set; }
 
-    public bool TrackInventory { get; private set; }
+    internal void UpdatePrice(decimal unitPrice, decimal costPrice, string reason = "")
+    {
+        if (unitPrice < 0) throw new ArgumentOutOfRangeException(nameof(unitPrice), "Unit price cannot be less than 0");
+        if (costPrice < 0) throw new ArgumentOutOfRangeException(nameof(costPrice), "Cost price cannot be less than 0");
+
+        if (UnitPrice == unitPrice && CostPrice == costPrice)
+            return;
+
+        UnitPrice = unitPrice;
+        CostPrice = costPrice;
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
+
+
 
     public DateTime CreatedOnUtc { get; }
     public DateTime? UpdatedOnUtc { get; internal set; }
@@ -59,7 +73,7 @@ public record Product : AppAggregateEntity
         CostPrice = costPrice;
     }
 
-    internal void SetTrackInventory(bool trackInventory) => TrackInventory = trackInventory;
+
 
     internal async Task SetNameAsync(string name, INameExistCheckingService checker)
     {

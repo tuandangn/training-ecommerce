@@ -1,6 +1,6 @@
-@model NamEcommerce.Web.Contracts.Models.DeliveryNotes.CreateDeliveryNoteModel
+@model CreateDeliveryNoteModel
 @{
-    ViewBag.PageTitle = "Tạo phiếu xuất kho";
+    ViewData["Title"] = "Tạo phiếu xuất kho";
 }
 
 <div class="page-header">
@@ -15,149 +15,275 @@
 
 <form asp-action="Create" method="post" id="createDeliveryForm">
     <input type="hidden" asp-for="OrderId" />
-    <input type="hidden" asp-for="OrderCode" />
-    <input type="hidden" asp-for="CustomerName" />
 
     <div class="row g-4">
-        <!-- Thông tin phiếu -->
         <div class="col-md-4">
-            <div class="content-card h-100">
-                <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-info-circle me-2 text-primary"></i>Thông tin phiếu</h5>
+                <!-- Info Card -->
+                <div class="content-card mb-4">
+                    <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="bi bi-info-circle me-2 text-primary"></i>
+                            Thông tin phiếu
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <span class="form-label small text-muted text-uppercase d-block mb-2">Đơn hàng tham chiếu</span>
+                            <span class="fw-bold d-block ps-2">@Model.OrderCode</span>
+                            @if (!string.IsNullOrEmpty(Model.OrderNote))
+                            {
+                                <p class="text-muted bg-light p-2 small mt-2 rounded">@Model.OrderNote</p>
+                            }
+                            <span asp-validation-for="OrderId" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-3">
+                            <span class="form-label small text-muted text-uppercase d-block mb-2">Khách hàng</span>
+                            <span class="fw-bold d-block ps-2">@Model.CustomerName</span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
+                            <textarea asp-for="ShippingAddress" class="form-control" rows="2"></textarea>
+                            <span asp-validation-for="ShippingAddress" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
+                            <select asp-for="WarehouseId" asp-items="Model.AvailableWarehouses.ToSelectList(Model.WarehouseId)" class="form-select">
+                                <option value="">-- Chọn kho xuất --</option>
+                            </select>
+                            <span asp-validation-for="WarehouseId" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-0">
+                            <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
+                            <textarea asp-for="Note" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Đơn hàng tham chiếu</label>
-                        <input type="text" class="form-control bg-light" value="@Model.OrderCode" disabled />
+
+                <!-- Payment Summary Card (Premium look) -->
+                <div class="content-card border-0 shadow-lg" style="background: linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%);">
+                    <div class="card-header bg-transparent border-bottom-0 pt-4 pb-0 px-4">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="bi bi-wallet2 me-2 text-primary"></i>
+                            Tổng kết thanh toán
+                        </h5>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase mb-2">Khách hàng</label>
-                        <input type="text" class="form-control bg-light" value="@Model.CustomerName" disabled />
-                    </div>
-                    <div class="mb-3">
-                        <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
-                        <textarea asp-for="ShippingAddress" class="form-control" rows="3"></textarea>
-                        <span asp-validation-for="ShippingAddress" class="text-danger small"></span>
-                    </div>
-                    <div class="mb-4">
-                        <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
-                        <textarea asp-for="Note" class="form-control" rows="2"></textarea>
-                    </div>
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input" type="checkbox" asp-for="ShowPrice" role="switch">
-                        <label class="form-check-label ms-2" asp-for="ShowPrice">
-                            Hiển thị giá trên phiếu in
-                        </label>
+                    <div class="card-body">
+                        <div class="payment-breakdown mb-4 p-3 bg-white rounded border border-light shadow-sm">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted small">Tiền hàng:</span>
+                                <span class="fw-bold" id="breakdown-items">0đ</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-0">
+                                <span class="text-muted small">Phụ phí:</span>
+                                <span class="fw-bold" id="breakdown-surcharge">0đ</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label asp-for="Surcharge" class="form-label small fw-bold text-muted text-uppercase mb-0"></label>
+                            </div>
+                            <div class="input-group">
+                                <input asp-for="Surcharge" class="form-control text-end" type="number" step="1000" id="surchargeInput" placeholder="0" />
+                                <span class="input-group-text bg-white">đ</span>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="SurchargeReason" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
+                            <textarea asp-for="SurchargeReason" class="form-control" rows="2" placeholder="Lý do thu phụ phí (ví dụ: phí vận chuyển xa, phí bốc xếp...)"></textarea>
+                        </div>
+
+                        <div class="mb-4 p-3 bg-primary bg-opacity-10 rounded border border-primary border-opacity-25">
+                            <label asp-for="AmountToCollect" class="form-label small fw-bold text-primary text-uppercase mb-1"></label>
+                            <div class="input-group">
+                                <input asp-for="AmountToCollect" class="form-control text-end fw-bold text-primary fs-5" type="number" step="1000" id="amountToCollectInput" />
+                                <span class="input-group-text bg-primary text-white border-primary">đ</span>
+                            </div>
+                            <div class="form-text mt-2 text-primary" id="calculationInfo" style="font-size: 0.75rem;">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Tự động tính theo phụ phí
+                            </div>
+                        </div>
+
+                        <div class="form-check form-switch mb-0 p-3 bg-light rounded border">
+                            <input class="form-check-input ms-0" type="checkbox" asp-for="ShowPrice" role="switch" id="showPriceSwitch">
+                            <label class="form-check-label ms-2 fw-medium" asp-for="ShowPrice">
+                                Hiển thị giá trên phiếu
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Danh sách hàng hóa -->
-        <div class="col-md-8">
-            <div class="content-card h-100 d-flex flex-column">
-                <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
-                    <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Hàng hóa cần xuất</h5>
-                </div>
-                <div class="card-body p-0 mt-3 flex-grow-1">
-                    <div class="table-responsive">
-                        <table class="table data-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th style="width: 50px;" class="text-center ps-4">
-                                        <input type="checkbox" id="selectAll" class="form-check-input" checked />
-                                    </th>
-                                    <th>Mặt hàng</th>
-                                    <th class="text-end">Đã đặt</th>
-                                    <th class="text-end">Đã giao</th>
-                                    <th class="text-end pe-4" style="width: 150px;">SL xuất đợt này</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @if (Model.Items.Any())
-                                {
-                                    for (int i = 0; i < Model.Items.Count; i++)
+            <!-- Danh sách hàng hóa -->
+            <div class="col-md-8">
+                <div class="content-card h-100 d-flex flex-column">
+                    <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Hàng hóa cần xuất</h5>
+                            <div class="text-end" id="selectedTotalContainer" style="display:none;">
+                                <span class="text-muted small">Tổng tiền chọn:</span>
+                                <span class="fw-bold text-dark ms-2" id="selectedTotalText">0đ</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body p-0 mt-3 flex-grow-1">
+                        <div class="table-responsive">
+                            <table class="table data-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;" class="text-center ps-4">
+                                            <input type="checkbox" id="selectAll" class="form-check-input" checked />
+                                        </th>
+                                        <th>Mặt hàng</th>
+                                        <th class="text-end">Đã đặt</th>
+                                        <th class="text-end">Đã giao</th>
+                                        <th class="text-end pe-4" style="width: 150px;">SL xuất đợt này</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (Model.Items.Any())
+                                    {
+                                        for (int i = 0; i < Model.Items.Count; i++)
+                                        {
+                                            <tr class="item-row">
+                                                <td class="align-middle text-center ps-4">
+                                                    <input type="checkbox" asp-for="Items[i].Selected" class="form-check-input item-checkbox" />
+                                                    <input type="hidden" asp-for="Items[i].OrderItemId" />
+                                                    <input type="hidden" asp-for="Items[i].ProductName" />
+                                                    <input type="hidden" asp-for="Items[i].OrderedQuantity" />
+                                                    <input type="hidden" asp-for="Items[i].PreviouslyDeliveredQuantity" />
+                                                    <input type="hidden" asp-for="Items[i].UnitPrice" class="item-price" />
+                                                </td>
+                                                <td class="align-middle fw-medium">@Model.Items[i].ProductName</td>
+                                                <td class="text-end align-middle">@Model.Items[i].OrderedQuantity.ToString("N2")</td>
+                                                <td class="text-end align-middle text-success">@Model.Items[i].PreviouslyDeliveredQuantity.ToString("N2")</td>
+                                                <td class="pe-4">
+                                                    <input type="number" asp-for="Items[i].Quantity" class="form-control text-end quantity-input fw-bold" step="0.01" min="0.01" max="@Model.Items[i].OrderedQuantity" />
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                    else
                                     {
                                         <tr>
-                                            <td class="align-middle text-center ps-4">
-                                                <input type="checkbox" asp-for="Items[i].Selected" class="form-check-input item-checkbox" />
-                                                <input type="hidden" asp-for="Items[i].OrderItemId" />
-                                                <input type="hidden" asp-for="Items[i].ProductName" />
-                                                <input type="hidden" asp-for="Items[i].OrderedQuantity" />
-                                                <input type="hidden" asp-for="Items[i].PreviouslyDeliveredQuantity" />
-                                                <input type="hidden" asp-for="Items[i].UnitPrice" />
-                                            </td>
-                                            <td class="align-middle fw-medium">@Model.Items[i].ProductName</td>
-                                            <td class="text-end align-middle">@Model.Items[i].OrderedQuantity.ToString("N2")</td>
-                                            <td class="text-end align-middle text-success">@Model.Items[i].PreviouslyDeliveredQuantity.ToString("N2")</td>
-                                            <td class="pe-4">
-                                                <input type="number" asp-for="Items[i].Quantity" class="form-control text-end quantity-input fw-bold" step="0.01" min="0.01" max="@Model.Items[i].OrderedQuantity" />
+                                            <td colspan="5" class="text-center py-5">
+                                                <div class="empty-state">
+                                                    <div class="empty-icon"><i class="bi bi-check-circle text-success"></i></div>
+                                                    <h5>Hàng hóa đã giao đủ</h5>
+                                                    <p>Tất cả hàng hóa trong đơn này đã được xuất và giao đầy đủ.</p>
+                                                </div>
                                             </td>
                                         </tr>
                                     }
-                                }
-                                else
-                                {
-                                    <tr>
-                                        <td colspan="5" class="text-center py-5">
-                                            <div class="empty-state">
-                                                <div class="empty-icon"><i class="bi bi-check-circle text-success"></i></div>
-                                                <h5>Hàng hóa đã giao đủ</h5>
-                                                <p>Tất cả hàng hóa trong đơn này đã được xuất và giao đầy đủ.</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
-                <div class="card-footer bg-light border-top p-3 text-end" style="border-radius: 0 0 var(--card-radius) var(--card-radius);">
-                    <button type="submit" class="btn btn-primary px-4 shadow-sm" @(Model.Items.Any() ? "" : "disabled")>
-                        <i class="bi bi-box-arrow-right me-1"></i> Tạo phiếu xuất
-                    </button>
+                    <div class="card-footer bg-light border-top p-3 text-end" style="border-radius: 0 0 var(--card-radius) var(--card-radius);">
+                        <button type="submit" class="btn btn-primary px-4 shadow-sm" @(Model.Items.Any() ? "" : "disabled")>
+                            <i class="bi bi-box-arrow-right me-1"></i> Tạo phiếu xuất
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</form>
+    </form>
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <script>
-        $(document).ready(function() {
-            // Select all
-            $('#selectAll').change(function() {
-                var checked = $(this).is(':checked');
-                $('.item-checkbox').prop('checked', checked);
-            });
+    @section Scripts {
+        <partial name="_ValidationScriptsPartial" />
+        <script>
+            $(document).ready(function() {
+                const $showPriceSwitch = $('#showPriceSwitch');
+                const $surchargeInput = $('#surchargeInput');
+                const $amountToCollectInput = $('#amountToCollectInput');
+                const $calculationInfo = $('#calculationInfo');
+                const $selectedTotalContainer = $('#selectedTotalContainer');
+                const $selectedTotalText = $('#selectedTotalText');
 
-            // Handle individual checkbox change to uncheck selectAll
-            $('.item-checkbox').change(function() {
-                var allChecked = $('.item-checkbox').length === $('.item-checkbox:checked').length;
-                $('#selectAll').prop('checked', allChecked);
-            });
-            
-            // Validation on submit
-            $('#createDeliveryForm').submit(function(e) {
-                var hasSelected = false;
-                $('.item-checkbox:checked').each(function() {
-                    hasSelected = true;
-                    var row = $(this).closest('tr');
-                    var qty = parseFloat(row.find('.quantity-input').val());
-                    if (isNaN(qty) || qty <= 0) {
-                        alert('Vui lòng nhập số lượng hợp lệ cho các mặt hàng được chọn.');
-                        e.preventDefault();
-                        return false; // break loop
+                const $breakdownItems = $('#breakdown-items');
+                const $breakdownSurcharge = $('#breakdown-surcharge');
+
+                function formatCurrency(amount) {
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+                }
+
+                function calculateAmount() {
+                    let totalSelected = 0;
+                    $('.item-row').each(function() {
+                        const isSelected = $(this).find('.item-checkbox').is(':checked');
+                        if (isSelected) {
+                            const qty = parseFloat($(this).find('.quantity-input').val()) || 0;
+                            const price = parseFloat($(this).find('.item-price').val()) || 0;
+                            totalSelected += qty * price;
+                        }
+                    });
+
+                    const surcharge = parseFloat($surchargeInput.val()) || 0;
+                    const showPrice = $showPriceSwitch.is(':checked');
+
+                    let amountToCollect = surcharge;
+                    let infoText = 'Tự động tính theo phụ phí';
+
+                    if (showPrice) {
+                        amountToCollect = totalSelected + surcharge;
+                        infoText = `Tổng tiền hàng (${formatCurrency(totalSelected)}) + Phụ phí (${formatCurrency(surcharge)})`;
+                        $selectedTotalContainer.show();
+                        $selectedTotalText.text(formatCurrency(totalSelected));
+                    } else {
+                        $selectedTotalContainer.hide();
                     }
+
+                    $amountToCollectInput.val(amountToCollect);
+                    $calculationInfo.html(`<i class="bi bi-info-circle me-1"></i> ${infoText}`);
+
+                    // Update breakdown
+                    $breakdownItems.text(formatCurrency(totalSelected));
+                    $breakdownSurcharge.text(formatCurrency(surcharge));
+                }
+
+                // Events
+                $('#selectAll, .item-checkbox, .quantity-input, #surchargeInput, #showPriceSwitch').on('change input', function() {
+                    calculateAmount();
                 });
 
-                if (!hasSelected) {
-                    alert('Vui lòng chọn ít nhất một mặt hàng để xuất kho.');
-                    e.preventDefault();
-                    return false;
-                }
+                // Initial calculation
+                calculateAmount();
+
+                // Select all
+                $('#selectAll').change(function() {
+                    var checked = $(this).is(':checked');
+                    $('.item-checkbox').prop('checked', checked);
+                    calculateAmount();
+                });
+
+                // Handle individual checkbox change to uncheck selectAll
+                $('.item-checkbox').change(function() {
+                    var allChecked = $('.item-checkbox').length === $('.item-checkbox:checked').length;
+                    $('#selectAll').prop('checked', allChecked);
+                });
+            
+                // Validation on submit
+                $('#createDeliveryForm').submit(function(e) {
+                    var hasSelected = false;
+                    $('.item-checkbox:checked').each(function() {
+                        hasSelected = true;
+                        var row = $(this).closest('tr');
+                        var qty = parseFloat(row.find('.quantity-input').val());
+                        if (isNaN(qty) || qty <= 0) {
+                            alert('Vui lòng nhập số lượng hợp lệ cho các mặt hàng được chọn.');
+                            e.preventDefault();
+                            return false; // break loop
+                        }
+                    });
+
+                    if (!hasSelected) {
+                        alert('Vui lòng chọn ít nhất một mặt hàng để xuất kho.');
+                        e.preventDefault();
+                        return false;
+                    }
+                });
             });
-        });
-    </script>
-}
+        </script>
+    }

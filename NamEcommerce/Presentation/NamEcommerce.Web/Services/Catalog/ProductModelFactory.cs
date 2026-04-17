@@ -23,7 +23,6 @@ public sealed class ProductModelFactory : IProductModelFactory
         var unitMeasurementOptions = await _mediator.Send(new GetUnitMeasurementOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new CreateProductModel
         {
-            TrackInventory = true,
             DisplayOrder = 1,
             AvailableCategories = categoryOptions,
             AvailableUnitMeasurements = unitMeasurementOptions
@@ -54,7 +53,6 @@ public sealed class ProductModelFactory : IProductModelFactory
             AvailableCategories = categoryOptions,
             UnitMeasurementId = product.UnitMeasurementId,
             AvailableUnitMeasurements = unitMeasurementOptions,
-            TrackInventory = product.TrackInventory,
             DisplayOrder = product.DisplayOrder,
             ImageFile = product.ImageFile ?? new(),
         };

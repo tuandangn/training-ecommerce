@@ -1,4 +1,5 @@
-﻿using NamEcommerce.Web.Contracts.Models.Common;
+using NamEcommerce.Web.Contracts.Models.Common;
+using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using System.Collections;
 
 namespace NamEcommerce.Web.Models.Preparations;
@@ -7,6 +8,7 @@ namespace NamEcommerce.Web.Models.Preparations;
 public sealed class ProductPreparationListModel : IEnumerable<ProductPreparationListModel.PreparationItemModel>, IEnumerable
 {
     public required IPagedDataModel<PreparationItemModel> Items { get; set; }
+    public EntityOptionListModel? AvailableWarehouses { get; set; }
 
     public IEnumerator<PreparationItemModel> GetEnumerator()
         => Items.GetEnumerator();
@@ -22,6 +24,9 @@ public sealed class ProductPreparationListModel : IEnumerable<ProductPreparation
         public DateTime? EarliestShippingDate { get; init; }
 
         public required IList<PreparationCustomerDetailModel> CustomerDetails { get; init; }
+
+        public decimal DeliveredQuantity { get; init; }
+        public decimal StockQuantityAvailable { get; init; }
     }
 
     [Serializable]
@@ -36,9 +41,12 @@ public sealed class ProductPreparationListModel : IEnumerable<ProductPreparation
         public string? CustomerPhone { get; init; }
 
         public required decimal Quantity { get; init; }
+        public required decimal UnitPrice { get; set; }
+        public decimal DeliveredQuantity { get; init; }
         public DateTime? ExpectedShippingDate { get; init; }
 
         public bool IsDelivered { get; init; }
-    }
 
+        public IList<DeliveryNoteLinkModel> DeliveryNoteLinks { get; init; } = [];
+    }
 }

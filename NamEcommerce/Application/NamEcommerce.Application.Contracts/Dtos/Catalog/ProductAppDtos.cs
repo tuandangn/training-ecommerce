@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Application.Contracts.Dtos.Common;
+using NamEcommerce.Application.Contracts.Dtos.Common;
 
 namespace NamEcommerce.Application.Contracts.Dtos.Catalog;
 
@@ -8,9 +8,11 @@ public abstract record BaseProductAppDto
     public required string Name { get; init; }
     public required string? ShortDesc { get; init; }
     public Guid? UnitMeasurementId { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal CostPrice { get; set; }
     public IEnumerable<ProductCategoryAppDto> Categories { get; set; } = [];
     public IEnumerable<Guid> Pictures { get; set; } = [];
-    public bool TrackInventory { get; set; }
+
 
     public (bool valid, string? errorMessage) Validate()
     {

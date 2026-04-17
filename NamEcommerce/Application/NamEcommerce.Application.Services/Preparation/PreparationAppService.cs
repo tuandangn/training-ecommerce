@@ -4,9 +4,15 @@ using NamEcommerce.Application.Contracts.Preparation;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Services.Orders;
 
+using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
+
 namespace NamEcommerce.Application.Services.Preparation;
 
-public sealed class PreparationAppService(IOrderManager orderManager) : IPreparationAppService
+public sealed class PreparationAppService(
+    IOrderManager orderManager,
+    IInventoryStockManager inventoryStockManager,
+    IDeliveryNoteManager deliveryNoteManager) : IPreparationAppService
 {
     public async Task<IPagedDataAppDto<PreparationItemAppDto>> GetPreparationListAsync(int pageIndex, int pageSize, string? keywords = null)
     {
@@ -16,10 +22,19 @@ public sealed class PreparationAppService(IOrderManager orderManager) : IPrepara
         var orderItems = orders.OrderBy(o => o.ExpectedShippingDateUtc).SelectMany(order => order.Items.Select(item => (order, item)));
         var totalCount = orderItems.Count();
 
+        var selectedItems = orderItems.Skip(pageIndex * pageSize).Take(pageSize).ToList();
+        var orderItemIds = selectedItems.Select(x => x.item.Id).ToList();
+        var deliveredQuantities = await deliveryNoteManager.GetDeliveredQuantitiesAsync(orderItemIds).ConfigureAwait(false);
+        var deliveryNoteLinks = await deliveryNoteManager.GetDeliveryNoteLinksAsync(orderItemIds).ConfigureAwait(false);
+
         var preparationItems = new List<PreparationItemAppDto>();
 
-        foreach (var (order, item) in orderItems.Skip(pageIndex * pageSize).Take(pageSize))
+        foreach (var (order, item) in selectedItems)
         {
+            var links = deliveryNoteLinks.TryGetValue(item.Id, out var dnLinks)
+                ? dnLinks.Select(l => new DeliveryNoteLinkAppDto(l.Id, l.Code, (int)l.Status, l.CreatedOnUtc)).ToList()
+                : [];
+
             preparationItems.Add(new PreparationItemAppDto
             {
                 OrderItemId = item.Id,
@@ -30,8 +45,16 @@ public sealed class PreparationAppService(IOrderManager orderManager) : IPrepara
                 UnitPrice = item.UnitPrice,
                 CustomerId = order.CustomerId,
                 ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
-                IsDelivered = item.IsDelivered
+                IsDelivered = item.IsDelivered,
+                DeliveredQuantity = deliveredQuantities.TryGetValue(item.Id, out var qty) ? qty : 0,
+                DeliveryNoteLinks = links
             });
+        }
+
+        foreach (var item in preparationItems)
+        {
+            var stocks = await inventoryStockManager.GetInventoryStocksForProductAsync(item.ProductId, null).ConfigureAwait(false);
+            item.StockQuantityAvailable = stocks.Sum(s => s.QuantityAvailable);
         }
 
         return PagedDataAppDto.Create(preparationItems, pageIndex, pageSize, totalCount);
@@ -58,8 +81,14 @@ public sealed class PreparationAppService(IOrderManager orderManager) : IPrepara
 
         var totalCount = groupedItems.Count;
 
-        var preparationItems = groupedItems
-            .Skip(pageIndex * pageSize).Take(pageSize)
+        var selectedGroups = groupedItems.Skip(pageIndex * pageSize).Take(pageSize).ToList();
+        
+        // Collect all OrderItemIds for the selected groups to fetch delivered quantities and links in one go
+        var allOrderItemIds = selectedGroups.SelectMany(g => g.group.Select(info => info.item.Id)).ToList();
+        var deliveredQuantities = await deliveryNoteManager.GetDeliveredQuantitiesAsync(allOrderItemIds).ConfigureAwait(false);
+        var deliveryNoteLinks = await deliveryNoteManager.GetDeliveryNoteLinksAsync(allOrderItemIds).ConfigureAwait(false);
+
+        var preparationItems = selectedGroups
             .Select(groupInfo => new PreparationGroupedItemAppDto
             {
                 ProductId = groupInfo.group.Key,
@@ -72,10 +101,21 @@ public sealed class PreparationAppService(IOrderManager orderManager) : IPrepara
                     CustomerId = info.order.CustomerId,
                     OrderCode = info.order.Code,
                     Quantity = info.item.Quantity,
+                    UnitPrice = info.item.UnitPrice,
                     ExpectedShippingDateUtc = info.order.ExpectedShippingDateUtc,
-                    IsDelivered = info.item.IsDelivered
+                    IsDelivered = info.item.IsDelivered,
+                    DeliveredQuantity = deliveredQuantities.TryGetValue(info.item.Id, out var qty) ? qty : 0,
+                    DeliveryNoteLinks = deliveryNoteLinks.TryGetValue(info.item.Id, out var dnLinks)
+                        ? dnLinks.Select(l => new DeliveryNoteLinkAppDto(l.Id, l.Code, (int)l.Status, l.CreatedOnUtc)).ToList()
+                        : []
                 }).ToList()
-            });
+            }).ToList();
+
+        foreach (var item in preparationItems)
+        {
+            var stocks = await inventoryStockManager.GetInventoryStocksForProductAsync(item.ProductId, null).ConfigureAwait(false);
+            item.StockQuantityAvailable = stocks.Sum(s => s.QuantityAvailable);
+        }
 
         return PagedDataAppDto.Create(preparationItems, pageIndex, pageSize, totalCount);
     }
