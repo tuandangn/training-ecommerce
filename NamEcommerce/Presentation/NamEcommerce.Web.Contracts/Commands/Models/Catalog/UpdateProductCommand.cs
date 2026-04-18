@@ -13,6 +13,8 @@ public sealed class UpdateProductCommand : IRequest<UpdateProductResultModel>
     public Guid? CategoryId { get; set; }
     public Guid? UnitMeasurementId { get; set; }
     public int DisplayOrder { get; set; }
+    public decimal UnitPrice { get; set; }
+    public decimal CostPrice { get; set; }
+    public string? ChangePriceReason { get; set; }
     public FileInfoModel? ImageFile { get; set; }
-
 }

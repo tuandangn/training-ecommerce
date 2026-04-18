@@ -1,10 +1,12 @@
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
+using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
+using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 
 namespace NamEcommerce.Domain.Entities.PurchaseOrders;
@@ -103,8 +105,20 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
         _items.Add(item);
     }
+    internal void RemoveOrderItem(Guid itemId)
+    {
+        if (!CanUpdatePurchaseOrderItems())
+            throw new PurchaseOrderCannotUpdateOrderItemsException();
 
-    public bool CanAddPurchaseOrderItems() => Status == PurchaseOrderStatus.Draft;
+        var orderItem = _items.FirstOrDefault(i => i.Id == itemId);
+        if (orderItem is null)
+            return;
+
+        _items.Remove(orderItem);
+    }
+    public bool CanUpdatePurchaseOrderItems() => Status == PurchaseOrderStatus.Draft;
+    public bool CanReceiveGoods() => Status == PurchaseOrderStatus.Approved || Status == PurchaseOrderStatus.Receiving;
+
     private bool CanUpdateStatus() => Status != PurchaseOrderStatus.Completed && Status != PurchaseOrderStatus.Cancelled;
     public bool CanChangeStatusTo(PurchaseOrderStatus toStatus)
     {
@@ -123,9 +137,6 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
         return Enum.IsDefined(toStatus);
     }
-
-    public bool CanReceiveGoods() => Status == PurchaseOrderStatus.Approved || Status == PurchaseOrderStatus.Receiving;
-
     internal void ChangeStatus(PurchaseOrderStatus status)
     {
         if (!CanChangeStatusTo(status))
@@ -133,7 +144,6 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
         Status = status;
     }
-
     internal bool VerifyStatus()
     {
         if (!CanUpdateStatus())

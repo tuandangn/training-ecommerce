@@ -75,31 +75,36 @@ public sealed class VendorManager : IVendorManager
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
 
-        var query = _vendorDataReader.DataSource;
+        return Task.Run(() => queryData());
 
-        if (!string.IsNullOrEmpty(keywords))
+        //local method
+        async Task<IPagedDataDto<VendorDto>> queryData()
         {
-            var normizedKeywords = TextHelper.Normalize(keywords);
-            query = query.Where(c =>
-                c.Name.Contains(keywords) 
-                || c.Name.Contains(normizedKeywords) 
-                || c.NormalizedName.Contains(normizedKeywords) 
-                || c.PhoneNumber.Contains(keywords)
-                || c.NormalizedAddress.Contains(normizedKeywords)
-            );
+            var query = _vendorDataReader.DataSource;
+
+            if (!string.IsNullOrEmpty(keywords))
+            {
+                var normizedKeywords = TextHelper.Normalize(keywords);
+                query = query.Where(c =>
+                    c.Name.Contains(keywords)
+                    || c.Name.Contains(normizedKeywords)
+                    || c.NormalizedName.Contains(normizedKeywords)
+                    || c.PhoneNumber.Contains(keywords)
+                    || c.NormalizedAddress.Contains(normizedKeywords)
+                );
+            }
+
+            query = query.OrderBy(c => c.DisplayOrder).ThenBy(c => c.Name);
+
+            var totalCount = query.Count();
+            var pagedData = query
+                .Skip(pageIndex * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var data = PagedDataDto.Create(pagedData.Select(vendor => vendor.ToDto()), pageIndex, pageSize, totalCount);
+            return data;
         }
-
-        query = query.OrderBy(c => c.DisplayOrder)
-            .ThenBy(c => c.Name);
-
-        var totalCount = query.Count();
-        var pagedData = query
-            .Skip(pageIndex * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        var data = PagedDataDto.Create(pagedData.Select(vendor => vendor.ToDto()), pageIndex, pageSize, totalCount);
-        return Task.FromResult(data);
     }
 
     public async Task<UpdateVendorResultDto> UpdateVendorAsync(UpdateVendorDto dto)

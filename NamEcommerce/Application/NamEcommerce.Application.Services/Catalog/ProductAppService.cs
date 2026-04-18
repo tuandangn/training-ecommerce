@@ -119,7 +119,10 @@ public sealed class ProductAppService : IProductAppService
     public async Task<ProductAppDto?> GetProductByIdAsync(Guid id)
     {
         var product = await _productDataReader.GetByIdAsync(id).ConfigureAwait(false);
-        return product?.ToDto();
+
+        if (product is null)
+            return null;
+        return product.ToDto();
     }
 
     public async Task<IEnumerable<ProductAppDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids)
@@ -128,6 +131,7 @@ public sealed class ProductAppService : IProductAppService
             return [];
 
         var products = await _productDataReader.GetByIdsAsync(ids).ConfigureAwait(false);
+
         return products.Select(p => p.ToDto());
     }
 
@@ -136,6 +140,7 @@ public sealed class ProductAppService : IProductAppService
         int pageIndex = 0, int pageSize = int.MaxValue)
     {
         var pagedData = await _productManager.GetProductsAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
+
         var result = PagedDataAppDto.Create(
             pagedData.Select(product => product.ToDto()),
             pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
@@ -212,7 +217,7 @@ public sealed class ProductAppService : IProductAppService
             CostPrice = dto.CostPrice,
             Categories = dto.Categories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
             Pictures = pictureId.HasValue ? [pictureId.Value] : [],
-
+            ChangePriceReason = dto.ChangePriceReason
         }).ConfigureAwait(false);
 
         return new UpdateProductResultAppDto

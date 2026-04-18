@@ -14,6 +14,7 @@ public sealed class ProductListForOrderModel
     {
         public required string Name { get; init; }
         public string? PictureUrl { get; set; }
+        public string? UnitMeasurementName { get; set; }
         public decimal UnitPrice { get; set; }
 
         public decimal QuantityOnHand { get; set; }

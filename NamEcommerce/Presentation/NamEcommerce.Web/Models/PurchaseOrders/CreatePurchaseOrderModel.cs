@@ -10,6 +10,12 @@ public sealed class CreatePurchaseOrderModel
     [Display(Name = "Nhà cung cấp")]
     public Guid? VendorId { get; set; }
     [ValidateNever]
+    public string? VendorName { get; set; }
+    [ValidateNever]
+    public string? VendorPhone { get; set; }
+    [ValidateNever]
+    public string? VendorAddress { get; set; }
+    [ValidateNever]
     public required EntityOptionListModel AvailableVendors { get; set; }
 
     [Display(Name = "Nhập vào kho hàng")]
@@ -22,4 +28,33 @@ public sealed class CreatePurchaseOrderModel
 
     [Display(Name = "Ghi chú")]
     public string? Note { get; set; }
+
+    public IList<CreatePurchaseOrderItemModel> Items { get; set; } = [];
+
+    [ValidateNever]
+    public decimal OrderSubTotal => Items.Sum(item => item.ItemSubTotal);
+    [ValidateNever]
+    public decimal OrderTotal => OrderSubTotal;
+}
+
+[Serializable]
+public sealed class CreatePurchaseOrderItemModel
+{
+    [Display(Name = "Hàng hóa")]
+    public Guid? ProductId { get; set; }
+    [ValidateNever]
+    public string? ProductDisplayName { get; set; }
+    [ValidateNever]
+    public string? ProductDisplayPicture { get; set; }
+
+    [Display(Name = "Số lượng")]
+    [UIHint("Quantity")]
+    public decimal? Quantity { get; set; }
+
+    [Display(Name = "Đơn giá")]
+    [UIHint("Currency")]
+    public decimal? UnitCost { get; set; }
+
+    [ValidateNever]
+    public decimal ItemSubTotal => (UnitCost ?? 0) * (Quantity ?? 0);
 }

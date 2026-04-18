@@ -67,12 +67,15 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
         {
             var vendor = await _vendorAppService.GetVendorByIdAsync(model.VendorId.Value).ConfigureAwait(false);
             model.VendorName = vendor?.Name;
+            model.VendorPhone = vendor?.PhoneNumber;
+            model.VendorAddress = vendor?.Address;
         }
 
         if (model.WarehouseId.HasValue)
         {
             var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(model.WarehouseId.Value).ConfigureAwait(false);
             model.WarehouseName = warehouse?.Name;
+            model.WarehouseAddress = warehouse?.Address;
         }
 
         return model;

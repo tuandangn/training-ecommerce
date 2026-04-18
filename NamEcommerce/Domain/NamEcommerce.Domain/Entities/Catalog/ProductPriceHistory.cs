@@ -5,14 +5,14 @@ namespace NamEcommerce.Domain.Entities.Catalog;
 [Serializable]
 public sealed record ProductPriceHistory : AppAggregateEntity
 {
-    internal ProductPriceHistory(Guid productId, decimal oldPrice, decimal newPrice, decimal oldCostPrice, decimal newCostPrice, string reason) : base(Guid.NewGuid())
+    internal ProductPriceHistory(Guid productId, decimal oldPrice, decimal newPrice, decimal oldCostPrice, decimal newCostPrice, string note) : base(Guid.NewGuid())
     {
         ProductId = productId;
         OldPrice = oldPrice;
         NewPrice = newPrice;
         OldCostPrice = oldCostPrice;
         NewCostPrice = newCostPrice;
-        Note = reason;
+        Note = note;
         CreatedOnUtc = DateTime.UtcNow;
     }
 

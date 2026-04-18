@@ -30,7 +30,13 @@ public sealed class CreatePurchaseOrderHandler : IRequestHandler<CreatePurchaseO
             ExpectedDeliveryDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedDeliveryDate),
             ShippingAmount = request.ShippingAmount,
             TaxAmount = request.TaxAmount,
-            CreatedByUserId = currentUser?.Id
+            CreatedByUserId = currentUser?.Id,
+            Items = request.Items?.Select(i => new CreatePurchaseOrderItemAppDto
+            {
+                ProductId = i.ProductId,
+                Quantity = i.Quantity,
+                UnitCost = i.UnitCost
+            }).ToList() ?? []
         }).ConfigureAwait(false);
 
         return new CreatePurchaseOrderResultModel

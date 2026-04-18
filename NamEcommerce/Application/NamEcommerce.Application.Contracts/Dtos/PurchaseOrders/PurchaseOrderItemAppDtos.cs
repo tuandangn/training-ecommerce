@@ -63,3 +63,12 @@ public sealed record ReceivedGoodsForItemResultAppDto
     public string? ErrorMessage { get; set; }
     public decimal ReceivedQuantity { get; set; }
 }
+
+[Serializable]
+public sealed record DeletePurchaseOrderItemAppDto(Guid PurchaseOrderId, Guid ItemId);
+[Serializable]
+public sealed record DeletePurchaseOrderItemResultAppDto
+{
+    public required bool Success { get; init; }
+    public string? ErrorMessage { get; set; }
+}

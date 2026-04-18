@@ -13,9 +13,11 @@ public sealed class ProductListModel
     public sealed record ProductItemModel(Guid Id)
     {
         public required string Name { get; init; }
-        public string? ShortDesc { get; init; }
+        public string? ShortDesc { get; set; }
         public string? PictureUrl { get; set; }
         public Guid? CategoryId { get; set; }
         public string? CategoryBreadcrumb { get; set; }
+        public string? UnitMeasurementName { get; set; }
+        public decimal UnitPrice { get; set; }
     }
 }

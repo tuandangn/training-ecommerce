@@ -20,5 +20,7 @@ public interface IPurchaseOrderAppService
 
     Task<AddPurchaseOrderItemResultAppDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemAppDto dto);
 
+    Task<DeletePurchaseOrderItemResultAppDto> DeletePurchaseOrderItemAsync(DeletePurchaseOrderItemAppDto dto);
+
     Task<ReceivedGoodsForItemResultAppDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto);
 }

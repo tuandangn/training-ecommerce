@@ -12,4 +12,13 @@ public sealed class CreatePurchaseOrderCommand : IRequest<CreatePurchaseOrderRes
     public DateTime? ExpectedDeliveryDate { get; init; }
     public decimal ShippingAmount { get; set; }
     public decimal TaxAmount { get; set; }
+    public IList<CreatePurchaseOrderItemCommand> Items { get; init; } = [];
+}
+
+[Serializable]
+public sealed class CreatePurchaseOrderItemCommand
+{
+    public Guid? ProductId { get; init; }
+    public decimal Quantity { get; init; }
+    public decimal UnitCost { get; init; }
 }

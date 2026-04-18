@@ -41,64 +41,80 @@
             <thead>
                 <tr>
                     <th class="ps-4">Mã đơn</th>
-                    <th><i class="bi bi-building me-1"></i>Nhà cung cấp</th>
-                    <th class="d-none d-md-table-cell"><i class="bi bi-geo-alt me-1"></i>Kho hàng</th>
-                    <th class="d-none d-md-table-cell"><i class="bi bi-calendar me-1"></i>Ngày tạo</th>
+                    <th>
+                        Nhà cung cấp
+                    </th>
+                    <th class="d-none d-md-table-cell">
+                        Kho hàng
+                    </th>
+                    <th class="text-center">
+                        Dự kiến giao
+                    </th>
                     <th class="text-end">Tổng tiền</th>
-                    <th class="text-center" style="width: 120px;">Trạng thái</th>
+                    <th class="text-center" style="width: 120px;">
+                        Trạng thái
+                    </th>
+                    <th class="d-none d-md-table-cell text-center">
+                        Ngày tạo
+                    </th>
                     <th style="width: 80px;"></th>
                 </tr>
             </thead>
             <tbody>
                 @if (Model.Data.Pagination.TotalCount > 0)
                 {
-                    @foreach (var item in Model.Data)
+                    @foreach (var purchaseOrder in Model.Data)
                     {
-                        var (badgeClass, label, icon) = (PurchaseOrderStatus)item.Status switch
-                        {
-                            PurchaseOrderStatus.Draft => ("secondary", "Bản nháp", "bi-pencil"),
-                            PurchaseOrderStatus.Submitted => ("primary", "Đã gửi", "bi-send"),
-                            PurchaseOrderStatus.Approved => ("info", "Đã duyệt", "bi-check-all"),
-                            PurchaseOrderStatus.Receiving => ("warning text-dark", "Đang nhận", "bi-box-arrow-in-down"),
-                            PurchaseOrderStatus.Completed => ("success", "Hoàn tất", "bi-check-circle-fill"),
-                            PurchaseOrderStatus.Cancelled => ("danger", "Đã hủy", "bi-x-circle"),
-                            _ => ("light", "Không rõ", "bi-question-circle")
-                        };
-
                         <tr>
-                            <td class="ps-4 fw-medium">
-                                <a asp-action="Details" asp-route-id="@item.Id" class="text-decoration-none">
-                                    @HighlighHelper.Highlight(item.Code, query)
+                            <td class="ps-4">
+                                <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="text-decoration-none fw-medium text-nowrap">
+                                    @HighlighHelper.Highlight(purchaseOrder.Code, query)
                                 </a>
+                                <span class="text-muted small d-inline d-lg-none">@purchaseOrder.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
                             </td>
                             <td>
-                                @if(!string.IsNullOrEmpty(item.VendorName)) 
-                                {
-                                    @HighlighHelper.Highlight(item.VendorName, query)
-                                }
-                                else 
-                                {
-                                    <span class="text-muted small">N/A</span>
-                                }
+                                <div class="position-relative">
+                                    @if (!string.IsNullOrEmpty(purchaseOrder.VendorName))
+                                    {
+                                        @HighlighHelper.Highlight(purchaseOrder.VendorName, query)
+                                    }
+                                    @if (!string.IsNullOrEmpty(purchaseOrder.VendorPhone))
+                                    {
+                                        <div>
+                                            <a href="tel:@purchaseOrder.VendorPhone" class="text-muted small text-decoration-none">
+                                                <i class="bi bi-telephone me-1"></i> @HighlighHelper.Highlight(purchaseOrder.VendorPhone, Model.Keywords)
+                                            </a>
+                                        </div>
+                                    }
+                                </div>
                             </td>
                             <td class="d-none d-md-table-cell">
-                                @if(!string.IsNullOrEmpty(item.WarehouseName)) 
+                                @if (!string.IsNullOrEmpty(purchaseOrder.WarehouseName))
                                 {
-                                    @HighlighHelper.Highlight(item.WarehouseName, query)
-                                }
-                                else 
-                                {
-                                    <span class="text-muted small">N/A</span>
+                                    @HighlighHelper.Highlight(purchaseOrder.WarehouseName, query)
                                 }
                             </td>
-                            <td class="d-none d-md-table-cell text-muted">@item.CreatedOn.ToString("dd/MM/yyyy")</td>
-                            <td class="text-end fw-bold text-primary">@item.TotalAmount.ToString("N0") <span class="small">đ</span></td>
+                            <td class="text-center text-muted">
+                                @purchaseOrder.ExpectedDeliveryDate?.ToString(ViewConstants.DefaultDateFormat)
+                            </td>
+                            <td class="text-end fw-bold text-primary text-nowrap">
+                                @purchaseOrder.TotalAmount.DisplayCurrency()
+                            </td>
                             <td class="text-center">
-                                <span class="status-badge @badgeClass"><i class="bi @icon"></i>@label</span>
+                                @{
+                                    var purchaseOrderStatus = (PurchaseOrderStatus)purchaseOrder.Status;
+                                }
+                                <span class="status-badge @purchaseOrderStatus.GetDisplayColor()">
+                                    @purchaseOrderStatus.GetDisplayText()
+                                </span>
+                            </td>
+                            <td class="d-none d-md-table-cell text-muted text-center">
+                                @purchaseOrder.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
                             </td>
                             <td class="text-end pe-3">
-                                <a class="btn-table-action" asp-action="Details" asp-route-id="@item.Id" title="Chi tiết">
+                                <a class="btn-table-action" asp-action="Details" asp-route-id="@purchaseOrder.Id" title="Chi tiết">
                                     <i class="bi bi-chevron-right"></i>
+                                    <span class="visually-hidden">Chi tiết</span>
                                 </a>
                             </td>
                         </tr>

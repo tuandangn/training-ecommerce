@@ -12,6 +12,8 @@ public static class ProductExtensions
             ShortDesc = product.ShortDesc,
             UnitMeasurementId = product.UnitMeasurementId,
             Categories = product.ProductCategories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
-            Pictures = product.ProductPictures.OrderBy(pp => pp.DisplayOrder).Select(pp => pp.PictureId)
+            Pictures = product.ProductPictures.OrderBy(pp => pp.DisplayOrder).Select(pp => pp.PictureId),
+            UnitPrice = product.UnitPrice,
+            CostPrice = product.CostPrice
         };
 }

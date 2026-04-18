@@ -3,6 +3,7 @@ using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Queries.Models.Customers;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Models.Catalog;
@@ -28,12 +29,46 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         var model = oldModel ?? new CreatePurchaseOrderModel
         {
             AvailableVendors = vendorOptions,
-            AvailableWarehouses = warehouseOptions
+            AvailableWarehouses = warehouseOptions,
         };
         if (oldModel is not null)
         {
             model.AvailableVendors = vendorOptions;
             model.AvailableWarehouses = warehouseOptions;
+        }
+
+        if (model.VendorId.HasValue)
+        {
+            var vendor = await _mediator.Send(new GetVendorQuery { Id = model.VendorId.Value }).ConfigureAwait(false);
+            if (vendor is null)
+                model.VendorId = null;
+            else
+            {
+                model.VendorName = vendor.Name;
+                model.VendorPhone = vendor.PhoneNumber;
+                model.VendorAddress = vendor.Address;
+            }
+        }
+
+        if (model.Items.Count > 0)
+        {
+            var productIds = model.Items.Select(i => i.ProductId).OfType<Guid>().ToList();
+            if (productIds.Count > 0)
+            {
+                var products = await _mediator.Send(new GetProductsByIdsForOrderQuery
+                {
+                    Ids = productIds
+                }).ConfigureAwait(false);
+
+                model.Items = model.Items.Where(i => products.Any(p => p.Id == i.ProductId)).ToList();
+
+                foreach (var item in model.Items)
+                {
+                    var product = products.First(p => p.Id == item.ProductId);
+                    item.ProductDisplayName = product.Name;
+                    item.ProductDisplayPicture = product.PictureUrl;
+                }
+            }
         }
 
         return model;

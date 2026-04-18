@@ -1,0 +1,126 @@
+﻿/* =============================================
+   Decimal EditorTemplate Styles
+   Dùng chung cho Currency và Quantity fields
+   ============================================= */
+
+.decimal-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+    /* Input chung */
+    .decimal-field .decimal-input {
+        font-variant-numeric: tabular-nums;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: #1e293b;
+        /*background: #f8fafc;*/
+        border: 1.5px solid #cbd5e1;
+        border-radius: 8px;
+        padding: 0.45rem 0.75rem;
+        height: 38px;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        width: 100%;
+    }
+
+        .decimal-field .decimal-input:focus {
+            outline: none;
+            background: #fff;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+        }
+
+        .decimal-field .decimal-input::placeholder {
+            color: #94a3b8;
+            font-weight: 400;
+        }
+
+/* ----- Currency (prefix ₫) ----- */
+.currency-field {
+    flex-direction: row-reverse; /* prefix hiện bên trái */
+}
+
+    .currency-field .field-prefix {
+        position: absolute;
+        right: 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #64748b;
+        pointer-events: none;
+        user-select: none;
+        z-index: 1;
+    }
+
+    .currency-field .currency-input {
+        padding-right: 30px;
+        text-align: right;
+        color: #0f766e; /* teal — tiền tệ */
+        border-color: #99f6e4;
+        /*background: #f0fdf4;*/
+    }
+
+        .currency-field .currency-input:focus {
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+            background: #fff;
+            color: #0f766e;
+        }
+
+/* ----- Quantity (suffix icon) ----- */
+.quantity-field {
+    flex-direction: row;
+}
+
+    .quantity-field .field-suffix {
+        position: absolute;
+        right: 10px;
+        display: flex;
+        align-items: center;
+        color: #94a3b8;
+        pointer-events: none;
+        user-select: none;
+        z-index: 1;
+    }
+
+    .quantity-field .quantity-input {
+        padding-right: 30px;
+        text-align: right;
+        color: #1d4ed8; /* blue — số lượng */
+        border-color: #bfdbfe;
+        /*background: #eff6ff;*/
+    }
+
+        .quantity-field .quantity-input:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+            background: #fff;
+            color: #1d4ed8;
+        }
+
+/* ----- Validation states ----- */
+.decimal-field .decimal-input.input-validation-error {
+    border-color: #f87171 !important;
+    background: #fff1f2 !important;
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12) !important;
+}
+
+
+.currency-hint {
+    display: block;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    font-size: 0.78rem;
+    font-style: italic;
+    color: #0d9488;
+    padding: 0 4px;
+    transition: max-height 0.25s ease, opacity 0.2s ease, padding 0.2s ease;
+}
+
+    .currency-hint.visible {
+        max-height: 3rem;
+        opacity: 1;
+        padding: 3px 4px 0;
+    }
+ 

@@ -13,11 +13,17 @@ public abstract record BaseProductAppDto
     public IEnumerable<ProductCategoryAppDto> Categories { get; set; } = [];
     public IEnumerable<Guid> Pictures { get; set; } = [];
 
-
     public (bool valid, string? errorMessage) Validate()
     {
         if (string.IsNullOrEmpty(Name))
             return (false, "Name cannot be empty");
+
+        if (UnitPrice < 0)
+            return (false, "Unit price cannot be negative");
+
+        if (CostPrice < 0)
+            return (false, "Cost price cannot be negative");
+
         return (true, string.Empty);
     }
 }
@@ -42,6 +48,7 @@ public sealed record CreateProductResultAppDto
 public sealed record UpdateProductAppDto(Guid Id) : BaseProductAppDto
 {
     public FileInfoAppDto? ImageFile { get; set; }
+    public string? ChangePriceReason { get; set; }
 }
 [Serializable]
 public sealed record UpdateProductResultAppDto

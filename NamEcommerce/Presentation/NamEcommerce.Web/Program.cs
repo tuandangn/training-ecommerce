@@ -190,6 +190,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     var mvcBuilder = services.AddMvc(options =>
     {
         options.ModelBinderProviders.Insert(0, new TrimModelBinderProvider());
+        options.ModelBinderProviders.Insert(0, new DecimalModelBinderProvider());
     }).AddSessionStateTempDataProvider();
 
     if (builder.Environment.IsDevelopment())

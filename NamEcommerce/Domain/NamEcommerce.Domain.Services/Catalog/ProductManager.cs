@@ -25,7 +25,7 @@ public sealed class ProductManager : IProductManager
 
     public ProductManager(IRepository<Product> productRepository,
         IEntityDataReader<Product> productEntityDataReader, IEntityDataReader<Category> categoryDataReader,
-        IEntityDataReader<Picture> pictureDataReader, IEventPublisher eventPublisher, 
+        IEntityDataReader<Picture> pictureDataReader, IEventPublisher eventPublisher,
         IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
         IRepository<ProductPriceHistory> priceHistoryRepository,
         IEntityDataReader<ProductPriceHistory> priceHistoryDataReader)
@@ -53,10 +53,9 @@ public sealed class ProductManager : IProductManager
         {
             ShortDesc = dto.ShortDesc
         };
-        product.UpdatePrice(dto.UnitPrice, dto.CostPrice, "Khởi tạo sản phẩm");
+        product.UpdatePrice(dto.UnitPrice, dto.CostPrice);
 
         await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, _unitMeasurementDataReader).ConfigureAwait(false);
-
 
         foreach (var categoryInfo in dto.Categories)
             await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, _categoryDataReader).ConfigureAwait(false);
@@ -64,6 +63,12 @@ public sealed class ProductManager : IProductManager
             await product.AddPictureAsync(pictureId, _pictureDataReader).ConfigureAwait(false);
 
         var insertedProduct = await _productRepository.InsertAsync(product).ConfigureAwait(false);
+
+        await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(
+            insertedProduct.Id, 0, insertedProduct.UnitPrice,
+            0, insertedProduct.CostPrice,
+            "Giá bán ban đầu")
+        ).ConfigureAwait(false);
 
         await _eventPublisher.EntityCreated(insertedProduct).ConfigureAwait(false);
 
@@ -104,29 +109,35 @@ public sealed class ProductManager : IProductManager
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
 
-        var query = _productDataReader.DataSource;
+        return Task.Run(() => queryData());
 
-        if (!string.IsNullOrEmpty(keywords))
+        //local method
+        async Task<IPagedDataDto<ProductDto>> queryData()
         {
-            var normizedKeywords = TextHelper.Normalize(keywords);
-            query = query.Where(c => c.Name.Contains(keywords) || c.Name.Contains(normizedKeywords) || c.NormalizedName.Contains(normizedKeywords));
+            var query = _productDataReader.DataSource;
+
+            if (!string.IsNullOrEmpty(keywords))
+            {
+                var normizedKeywords = TextHelper.Normalize(keywords);
+                query = query.Where(product => product.Name.Contains(keywords) 
+                    || product.Name.Contains(normizedKeywords) 
+                    || product.NormalizedName.Contains(normizedKeywords));
+            }
+
+            if (categoryId.HasValue)
+                query = query.Where(c => c.ProductCategories.Any(pc => pc.CategoryId == categoryId));
+
+            query = query.OrderBy(c => c.Name);
+
+            var totalCount = query.Count();
+            var pagedData = query
+                .Skip(pageIndex * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var data = PagedDataDto.Create(pagedData.Select(product => product.ToDto()), pageIndex, pageSize, totalCount);
+            return data;
         }
-
-
-
-        if (categoryId.HasValue)
-            query = query.Where(c => c.ProductCategories.Any(pc => pc.CategoryId == categoryId));
-
-        query = query.OrderBy(c => c.Name);
-
-        var totalCount = query.Count();
-        var pagedData = query
-            .Skip(pageIndex * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        var data = PagedDataDto.Create(pagedData.Select(product => product.ToDto()), pageIndex, pageSize, totalCount);
-        return Task.FromResult(data);
     }
 
     public async Task RemoveProductFromCategoryAsync(Guid productId, Guid categoryId)
@@ -172,7 +183,12 @@ public sealed class ProductManager : IProductManager
 
         if (oldUnitPrice != result.UnitPrice || oldCostPrice != result.CostPrice)
         {
-            await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(result.Id, oldUnitPrice, result.UnitPrice, oldCostPrice, result.CostPrice, "Cập nhật sản phẩm")).ConfigureAwait(false);
+            await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(
+                result.Id,
+                oldUnitPrice, result.UnitPrice,
+                oldCostPrice, result.CostPrice,
+                string.IsNullOrEmpty(dto.ChangePriceReason) ? "Cập nhật giá cả" : dto.ChangePriceReason)
+            ).ConfigureAwait(false);
         }
 
         await _eventPublisher.EntityUpdated(result, deletedPictureIds).ConfigureAwait(false);

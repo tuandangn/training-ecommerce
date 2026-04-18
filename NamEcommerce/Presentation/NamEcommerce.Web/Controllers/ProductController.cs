@@ -67,6 +67,8 @@ public sealed class ProductController : BaseAuthorizedController
             ShortDesc = model.ShortDesc,
             CategoryId = model.CategoryId,
             UnitMeasurementId = model.UnitMeasurementId,
+            UnitPrice = model.UnitPrice,
+            CostPrice = model.CostPrice,
             DisplayOrder = model.DisplayOrder,
             ImageFile = imageFileInfo
         });
@@ -91,26 +93,6 @@ public sealed class ProductController : BaseAuthorizedController
         }
 
         return View(model);
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> Search(string q, Guid? w)
-    {
-        var model = await _mediator.Send(new GetProductListForOrderQuery
-        {
-            Keywords = q,
-            WarehouseId = w
-        });
-
-        var products = model.Data.Items.Select(productInfo => new
-        {
-            id = productInfo.Id,
-            name = productInfo.Name,
-            picture = productInfo.PictureUrl,
-            availableQty = productInfo.QuantityAvailable,
-            avaialbeWarehouses = productInfo.AvailableWarehouseIds
-        }).ToList();
-        return Json(products);
     }
 
     [HttpPost]
@@ -150,8 +132,11 @@ public sealed class ProductController : BaseAuthorizedController
             ShortDesc = model.ShortDesc,
             CategoryId = model.CategoryId,
             UnitMeasurementId = model.UnitMeasurementId,
+            UnitPrice = model.UnitPrice,
+            CostPrice = model.CostPrice,
             DisplayOrder = model.DisplayOrder,
-            ImageFile = imageFileInfo
+            ImageFile = imageFileInfo,
+            ChangePriceReason = model.ChangePriceReason
         });
         if (!updateProductResult.Success)
         {
@@ -162,6 +147,26 @@ public sealed class ProductController : BaseAuthorizedController
 
         TempData[ViewConstants.ProductSuccessMessage] = "Chỉnh sửa hàng hóa thành công!";
         return RedirectToAction(nameof(List));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Search(string q, Guid? w)
+    {
+        var model = await _mediator.Send(new GetProductListForOrderQuery
+        {
+            Keywords = q,
+            WarehouseId = w
+        });
+
+        var products = model.Data.Items.Select(productInfo => new
+        {
+            id = productInfo.Id,
+            name = productInfo.Name,
+            picture = productInfo.PictureUrl,
+            availableQty = productInfo.QuantityAvailable,
+            avaialbeWarehouses = productInfo.AvailableWarehouseIds
+        }).ToList();
+        return Json(products);
     }
 
     [HttpPost]

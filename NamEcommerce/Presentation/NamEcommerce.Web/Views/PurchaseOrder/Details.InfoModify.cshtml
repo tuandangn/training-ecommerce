@@ -1,125 +1,125 @@
 @model EditPurchaseOrderModel
 <form asp-action="Edit">
     <input type="hidden" asp-for="Id" id="modifyInfoId" />
-    <div class="row mb-3">
-        <div class="col-md-6 mb-lg-3">
-            <table class="table table-borderless mb-0">
-                <tbody>
-                    <tr>
-                        <td class="fw-bold align-middle">
-                            <label class="form-label" asp-for="VendorId"></label>
-                        </td>
-                        <td>
-                            @if (Model.CanChangeVendor)
-                            {
-                                <select asp-for="VendorId" class="form-select">
-                                    @foreach (var vendor in Model.AvailableVendors)
-                                    {
-                                        <option value="@vendor.Id" selected="@(Model.VendorId == vendor.Id)">@vendor.Name</option>
-                                    }
-                                </select>
-                                <span asp-validation-for="VendorId" class="text-danger small"></span>
-                            }
-                            else
-                            {
-                                <input type="hidden" asp-for="VendorId" />
-                                @(Model.VendorName ?? "-")
-                            }
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold align-middle">
-                            <label asp-for="ExpectedDeliveryDate" class="form-label"></label>
-                        </td>
-                        <td>
-                            @if (Model.CanChangeDate)
-                            {
-                                <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" />
-                                <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
-                            }
-                            else
-                            {
-                                <input type="hidden" asp-for="ExpectedDeliveryDate" />
-                                @(Model.ExpectedDeliveryDate?.ToString("d") ?? "-")
-                            }
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold border-bottom-0 pt-1">
-                            <label asp-for="Note" class="form-label"></label>
-                        </td>
-                        <td class="border-bottom-0">
-                            <textarea asp-for="Note" class="form-control" rows="2" placeholder="@Html.DisplayNameFor(m => m.Note)"></textarea>
-                            <span asp-validation-for="Note" class="text-danger small"></span>
-                        </td>
-                    </tr>
-                    <tr class="d-none d-md-table-row">
-                        <td></td>
-                        <td>
-                            <div>
-                                <button type="submit" class="btn btn-outline-warning text-dark bg-light">
-                                    <i class="bi bi-pencil-square"></i>
-                                    Cập nhật
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="col-md-6 text-lg-end order-0 order-lg-1 pt-2 ps-lg-5">
-            <div class="row mb-3">
-                @if (Model.CanChangeFees)
+
+    <!-- Thông tin chung -->
+    <div class="mb-3">
+        <label class="form-label small fw-bold text-muted text-uppercase d-block mb-3">Thông tin cơ bản</label>
+        <div class="row g-3">
+            <div class="col-lg-6">
+                @if (Model.CanChangeVendor)
                 {
-                    <div class="col-6 col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="ShippingAmount" class="form-control form-control-sm" placeholder="@Html.DisplayNameFor(m => m.ShippingAmount)"
-                                   min="0" step="1" type="number" value="@decimal.Round(Model.ShippingAmount)"
-                                   data-val-range="Phí vận chuyển phải lớn hơn hoặc bằng 0." data-val-range-min="0"
-                                   data-val-number="Phí vận chuyển không đúng." />
-                            <label asp-for="ShippingAmount" class="form-label fw-bold"></label>
-                        </div>
-                        <span asp-validation-for="ShippingAmount" class="text-danger small"></span>
-                    </div>
-                    <div class="col-6 col-md-6">
-                        <div class="form-floating">
-                            <input asp-for="TaxAmount" class="form-control form-control-sm" placeholder="@Html.DisplayNameFor(m => m.ShippingAmount)"
-                                   min="0" step="1" type="number" value="@decimal.Round(Model.TaxAmount)"
-                                   data-val-range="Tổng thuế phải lớn hơn hoặc bằng 0." data-val-range-min="0"
-                                   data-val-number="Tổng thuế không đúng." />
-                            <label asp-for="TaxAmount" class="form-label fw-bold"></label>
-                        </div>
-                        <span asp-validation-for="TaxAmount" class="text-danger small"></span>
-                    </div>
+                    <label asp-for="VendorId" class="form-label fw-medium mb-2">Nhà cung cấp</label>
+                    <select asp-for="VendorId" class="form-select">
+                        @foreach (var vendor in Model.AvailableVendors)
+                        {
+                            <option value="@vendor.Id" selected="@(Model.VendorId == vendor.Id)">@vendor.Name</option>
+                        }
+                    </select>
+                    <span asp-validation-for="VendorId" class="text-danger small"></span>
                 }
                 else
                 {
-                    <div class="col-6 col-md-6">
-                        <div class="d-flex flex-column border rounded p-2 bg-light">
-                            <label asp-for="ShippingAmount" class="form-label fw-bold"></label>
-                            <span>@Model.ShippingAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-6">
-                        <div class="d-flex flex-column border rounded p-2 bg-light">
-                            <label asp-for="TaxAmount" class="form-label fw-bold"></label>
-                            <span>@Model.TaxAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
-                        </div>
+                    <input type="hidden" asp-for="VendorId" />
+                    <label class="form-label fw-medium text-muted small">Nhà cung cấp</label>
+                    <div class="p-2 bg-light rounded border">
+                        <span class="text-dark fw-500">@(Model.VendorName ?? "-")</span>
                     </div>
                 }
             </div>
-            <p class="fs-5 fw-bold">
-                Tổng đơn: <span class="text-primary">@Model.TotalAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
-            </p>
-            <p class="text-muted">
-                Ngày tạo: @Model.CreatedOn.ToString("g")
-            </p>
-            <div class="d-block d-md-none">
-                <button type="submit" class="btn btn-outline-warning text-dark bg-light">
-                    <i class="bi bi-pencil-square"></i>
-                    Cập nhật
-                </button>
+
+            <div class="col-lg-6">
+                @if (Model.CanChangeDate)
+                {
+                    <label asp-for="ExpectedDeliveryDate" class="form-label fw-medium mb-2">Ngày giao dự kiến</label>
+                    <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" />
+                    <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
+                }
+                else
+                {
+                    <input type="hidden" asp-for="ExpectedDeliveryDate" />
+                    <label class="form-label fw-medium text-muted small">Ngày giao dự kiến</label>
+                    <div class="p-2 bg-light rounded border">
+                        <span class="text-dark fw-500">@(Model.ExpectedDeliveryDate?.ToString("dd/MM/yyyy") ?? "-")</span>
+                    </div>
+                }
             </div>
         </div>
+    </div>
+
+    <!-- Ghi chú -->
+    <div class="mb-3">
+        <label asp-for="Note" class="form-label fw-medium mb-2">Ghi chú</label>
+        <textarea asp-for="Note" class="form-control" rows="2" placeholder="Nhập ghi chú về đơn nhập..."></textarea>
+        <span asp-validation-for="Note" class="text-danger small"></span>
+    </div>
+
+    <!-- Phí vận chuyển & Thuế -->
+    <div class="mb-4">
+        <label class="form-label small fw-bold text-muted text-uppercase d-block mb-3">Chi phí bổ sung</label>
+        <div class="row g-3">
+            @if (Model.CanChangeFees)
+            {
+                <div class="col-md-6">
+                    <label asp-for="ShippingAmount" class="form-label fw-medium mb-2">Phí vận chuyển (đ)</label>
+                    <input asp-for="ShippingAmount" class="form-control" placeholder="0"
+                           min="0" step="1" type="number" value="@decimal.Round(Model.ShippingAmount)"
+                           data-val-range="Phí vận chuyển phải lớn hơn hoặc bằng 0." data-val-range-min="0"
+                           data-val-number="Phí vận chuyển không đúng." />
+                    <span asp-validation-for="ShippingAmount" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-6">
+                    <label asp-for="TaxAmount" class="form-label fw-medium mb-2">Thuế VAT (đ)</label>
+                    <input asp-for="TaxAmount" class="form-control" placeholder="0"
+                           min="0" step="1" type="number" value="@decimal.Round(Model.TaxAmount)"
+                           data-val-range="Tổng thuế phải lớn hơn hoặc bằng 0." data-val-range-min="0"
+                           data-val-number="Tổng thuế không đúng." />
+                    <span asp-validation-for="TaxAmount" class="text-danger small"></span>
+                </div>
+            }
+            else
+            {
+                <div class="col-md-6">
+                    <label class="form-label fw-medium text-muted small">Phí vận chuyển</label>
+                    <div class="p-2 bg-light rounded border">
+                        <span class="text-dark fw-500">@Model.ShippingAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-medium text-muted small">Thuế VAT</label>
+                    <div class="p-2 bg-light rounded border">
+                        <span class="text-dark fw-500">@Model.TaxAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Tóm tắt tài chính -->
+    <div class="bg-light rounded p-3 mb-3 border">
+        <div class="row">
+            <div class="col-6">
+                <div class="small text-muted fw-medium">TỔNG CỘNG</div>
+                <div class="fs-5 fw-bold text-primary">
+                    @Model.TotalAmount.ToString(ViewConstants.NumberCustomFormat) đ
+                </div>
+            </div>
+            <div class="col-6 text-end">
+                <div class="small text-muted fw-medium">Tạo lúc</div>
+                <div class="small text-dark">@Model.CreatedOn.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nút cập nhật -->
+    <div class="d-flex gap-2 justify-content-end">
+        <button type="button" class="btn btn-light" onclick="history.back()">
+            <i class="bi bi-x-lg me-1"></i>Hủy
+        </button>
+        <button type="submit" class="btn btn-warning text-dark">
+            <i class="bi bi-pencil-square me-1"></i>Cập nhật thông tin
+        </button>
     </div>
 </form>

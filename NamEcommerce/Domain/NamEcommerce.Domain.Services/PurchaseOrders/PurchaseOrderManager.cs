@@ -6,11 +6,13 @@ using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
+using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Users;
 using NamEcommerce.Domain.Shared.Helpers;
@@ -86,6 +88,14 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             ShippingAmount = dto.ShippingAmount,
             TaxAmount = dto.TaxAmount
         };
+        foreach (var orderItem in dto.Items)
+        {
+            await po.AddPurchaseOrderItemAsync(new PurchaseOrderItem(po.Id, orderItem.ProductId, orderItem.QuantityOrdered, orderItem.UnitCost)
+            {
+                Note = orderItem.Note
+            }, _productDataReader).ConfigureAwait(false);
+        }
+
         var insertedPurchaseOrder = await _purchaseOrderRepository.InsertAsync(po).ConfigureAwait(false);
 
         await _eventPublisher.EntityCreated(insertedPurchaseOrder).ConfigureAwait(false);
@@ -147,7 +157,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (product is null)
             throw new ProductIsNotFoundException(dto.ProductId);
 
-        if (!purchaseOrder.CanAddPurchaseOrderItems())
+        if (!purchaseOrder.CanUpdatePurchaseOrderItems())
             throw new PurchaseOrderCannotAddItemException();
 
         var purchaseOrderItem = new PurchaseOrderItem(dto.PurchaseOrderId, dto.ProductId, dto.QuantityOrdered, dto.UnitCost)
@@ -201,7 +211,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
-        return purchaseOrder.CanAddPurchaseOrderItems();
+        return purchaseOrder.CanUpdatePurchaseOrderItems();
     }
 
     public Task<bool> DoesCodeExistAsync(string code, Guid? comparesWithCurrentId = null)
@@ -358,5 +368,22 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
         return purchaseOrder.CanReceiveGoods();
+    }
+
+    public async Task DeleteOrderItemAsync(Guid purchaseOrderId, Guid itemId)
+    {
+        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
+
+        if (!purchaseOrder.CanUpdatePurchaseOrderItems())
+            throw new PurchaseOrderCannotUpdateOrderItemsException();
+
+        purchaseOrder.RemoveOrderItem(itemId);
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+
+        var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(updatedPurchaseOrder).ConfigureAwait(false);
     }
 }

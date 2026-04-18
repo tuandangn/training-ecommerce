@@ -259,7 +259,6 @@ export default class OrderController {
         $.validator.unobtrusive.parse(form);
 
         const customerValid = this.#validateCustomer();
-
         const dateValid = this.#validateExpectedDate();
         const canSubmit = Boolean(
             this.#state.items.length > 0 &&

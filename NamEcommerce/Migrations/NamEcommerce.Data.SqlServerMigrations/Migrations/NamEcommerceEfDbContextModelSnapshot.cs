@@ -158,6 +158,48 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.ToTable("ProductPicture", "tbl");
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Catalog.ProductPriceHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("NewCostPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("NewPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(800)
+                        .HasColumnType("nvarchar(800)");
+
+                    b.Property<decimal>("OldCostPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OldPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("ProductPriceHistory", "tbl");
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Catalog.UnitMeasurement", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1211,6 +1253,15 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.HasOne("NamEcommerce.Domain.Entities.Catalog.Product", null)
                         .WithMany("ProductPictures")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Catalog.ProductPriceHistory", b =>
+                {
+                    b.HasOne("NamEcommerce.Domain.Entities.Catalog.Product", null)
+                        .WithMany()
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

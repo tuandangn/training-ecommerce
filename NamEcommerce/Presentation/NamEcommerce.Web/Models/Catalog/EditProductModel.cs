@@ -25,7 +25,16 @@ public sealed record EditProductModel
     [ValidateNever]
     public required EntityOptionListModel AvailableUnitMeasurements { get; set; }
 
+    [Display(Name = "Giá nhập")]
+    [UIHint("Currency")]
+    public decimal CostPrice { get; set; }
 
+    [Display(Name = "Giá bán")]
+    [UIHint("Currency")]
+    public decimal UnitPrice { get; set; }
+
+    [Display(Name = "Lý do")]
+    public string? ChangePriceReason { get; set; }
 
     [Display(Name = "Thứ tự hiển thị")]
     public int DisplayOrder { get; set; }

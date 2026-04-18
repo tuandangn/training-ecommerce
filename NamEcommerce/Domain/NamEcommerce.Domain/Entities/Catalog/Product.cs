@@ -39,21 +39,6 @@ public record Product : AppAggregateEntity
     public decimal CostPrice { get; private set; }
     public decimal UnitPrice { get; private set; }
 
-    internal void UpdatePrice(decimal unitPrice, decimal costPrice, string reason = "")
-    {
-        if (unitPrice < 0) throw new ArgumentOutOfRangeException(nameof(unitPrice), "Unit price cannot be less than 0");
-        if (costPrice < 0) throw new ArgumentOutOfRangeException(nameof(costPrice), "Cost price cannot be less than 0");
-
-        if (UnitPrice == unitPrice && CostPrice == costPrice)
-            return;
-
-        UnitPrice = unitPrice;
-        CostPrice = costPrice;
-        UpdatedOnUtc = DateTime.UtcNow;
-    }
-
-
-
     public DateTime CreatedOnUtc { get; }
     public DateTime? UpdatedOnUtc { get; internal set; }
 
@@ -66,14 +51,6 @@ public record Product : AppAggregateEntity
         => _productPictures.AsReadOnly();
 
     #region Methods
-
-    internal void SetCostPrice(decimal costPrice)
-    {
-        if (costPrice < 0) throw new ArgumentOutOfRangeException(nameof(costPrice), "Cost price cannot be less than 0");
-        CostPrice = costPrice;
-    }
-
-
 
     internal async Task SetNameAsync(string name, INameExistCheckingService checker)
     {
@@ -147,6 +124,30 @@ public record Product : AppAggregateEntity
             throw new PictureIsNotFoundException(pictureId);
 
         _productPictures.Add(new ProductPicture(Id, pictureId));
+    }
+
+    internal void SetCostPrice(decimal costPrice)
+    {
+        if (costPrice < 0)
+            throw new ArgumentOutOfRangeException(nameof(costPrice), "Cost price cannot be less than 0");
+
+        CostPrice = costPrice;
+    }
+
+    internal void UpdatePrice(decimal unitPrice, decimal costPrice)
+    {
+        if (unitPrice < 0)
+            throw new ArgumentOutOfRangeException(nameof(unitPrice), "Unit price cannot be less than 0");
+
+        if (costPrice < 0)
+            throw new ArgumentOutOfRangeException(nameof(costPrice), "Cost price cannot be less than 0");
+
+        if (UnitPrice == unitPrice && CostPrice == costPrice)
+            return;
+
+        UnitPrice = unitPrice;
+        CostPrice = costPrice;
+        UpdatedOnUtc = DateTime.UtcNow;
     }
 
     #endregion

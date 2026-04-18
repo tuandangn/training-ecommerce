@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -54,7 +54,9 @@ public sealed class ProductModelFactory : IProductModelFactory
             UnitMeasurementId = product.UnitMeasurementId,
             AvailableUnitMeasurements = unitMeasurementOptions,
             DisplayOrder = product.DisplayOrder,
-            ImageFile = product.ImageFile ?? new(),
+            UnitPrice = product.UnitPrice,
+            CostPrice = product.CostPrice,
+            ImageFile = product.ImageFile ?? new()
         };
         if (oldModel is not null)
         {

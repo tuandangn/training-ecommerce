@@ -12,11 +12,12 @@ public static class ProductExtensions
             Name = product.Name,
             ShortDesc = product.ShortDesc,
             UnitMeasurementId = product.UnitMeasurementId,
-            Categories = product.ProductCategories.Select(pc => new ProductCategoryAppDto(pc.CategoryId, pc.DisplayOrder)),
+            Categories = product.ProductCategories
+                .OrderBy(pc => pc.DisplayOrder)
+                .Select(pc => new ProductCategoryAppDto(pc.CategoryId, pc.DisplayOrder)),
             Pictures = product.ProductPictures.OrderBy(pp => pp.DisplayOrder).Select(pp => pp.PictureId),
             UnitPrice = product.UnitPrice,
             CostPrice = product.CostPrice
-
         };
 
     public static ProductAppDto ToDto(this ProductDto dto)
@@ -25,10 +26,11 @@ public static class ProductExtensions
             Name = dto.Name,
             ShortDesc = dto.ShortDesc,
             UnitMeasurementId = dto.UnitMeasurementId,
-            Categories = dto.Categories.Select(pc => new ProductCategoryAppDto(pc.CategoryId, pc.DisplayOrder)),
+            Categories = dto.Categories
+                .OrderBy(pc => pc.DisplayOrder)
+                .Select(pc => new ProductCategoryAppDto(pc.CategoryId, pc.DisplayOrder)),
             Pictures = dto.Pictures,
             UnitPrice = dto.UnitPrice,
             CostPrice = dto.CostPrice
-
         };
 }

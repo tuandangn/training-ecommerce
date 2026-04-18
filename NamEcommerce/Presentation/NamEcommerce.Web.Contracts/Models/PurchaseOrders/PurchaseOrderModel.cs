@@ -7,8 +7,11 @@ public sealed class PurchaseOrderModel
     public required string Code { get; init; }
     public Guid? VendorId { get; set; }
     public string? VendorName { get; set; }
+    public string? VendorPhone { get; set; }
+    public string? VendorAddress { get; set; }
     public Guid? WarehouseId { get; set; }
     public string? WarehouseName { get; set; }
+    public string? WarehouseAddress { get; set; }
     public int Status { get; set; }
     public string? Note { get; set; }
     public DateTime? ExpectedDeliveryDate { get; set; }
@@ -26,6 +29,7 @@ public sealed class PurchaseOrderModel
     {
         public required Guid ProductId { get; init; }
         public string ProductName { get; set; } = "";
+        public string? ProductPicture { get; set; }
         public decimal QuantityOrdered { get; set; }
         public decimal UnitCost { get; set; }
         public decimal QuantityReceived { get; set; }

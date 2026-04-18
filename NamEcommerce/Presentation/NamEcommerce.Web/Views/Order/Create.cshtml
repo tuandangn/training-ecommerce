@@ -9,7 +9,6 @@
         <p class="page-header-subtitle">Thêm mới đơn bán hàng vào hệ thống</p>
     </div>
 </div>
-
 <div class="form-card" style="max-width: 1200px;">
     <div class="form-card-header">
         <h2 class="form-card-title"><i class="bi bi-cart me-2 text-primary"></i>Thông tin đơn hàng</h2>
@@ -22,7 +21,6 @@
         <form method="post" id="createOrderForm" asp-antiforgery="true">
             <div class="row g-4">
                 <div class="col-lg-8">
-                    <!-- Customer Section -->
                     <div class="mb-4">
                         <h5 class="fw-bold mb-3"><i class="bi bi-person text-muted me-2"></i>Khách hàng</h5>
                         <div id="customerPicker" data-id="@Model.CustomerId" data-name="@Model.CustomerDisplayName"
@@ -30,8 +28,6 @@
                         <input type="text" class="visually-hidden" asp-for="CustomerId" />
                         <span asp-validation-for="CustomerId" class="small text-danger"></span>
                     </div>
-
-                    <!-- Items Section -->
                     <div>
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="fw-bold mb-0"><i class="bi bi-box-seam text-muted me-2"></i>Sản phẩm</h5>

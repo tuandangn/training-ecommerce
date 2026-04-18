@@ -17,9 +17,9 @@
             <i class="bi bi-arrow-left"></i> Trở về danh sách
         </a>
     </div>
-    <div class="form-card-body">
-        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
-        <form class="row g-3" method="post" asp-antiforgery="true">
+    <form method="post" asp-antiforgery="true">
+        <div class="form-card-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
             <ul class="nav nav-tabs" id="productTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="infoTab" data-bs-toggle="tab" data-bs-target="#info"
@@ -34,7 +34,7 @@
                     </button>
                 </li>
             </ul>
-            <div class="tab-content pt-3" id="productContent">
+            <div class="tab-content px-3 pt-4" id="productContent">
                 <div class="tab-pane fade show active" id="info" role="tabpanel">
                     <div class="row g-3">
                         <div class="col-12 col-lg-4 order-0 order-lg-2">
@@ -79,10 +79,19 @@
                                     </select>
                                     <span asp-validation-for="CategoryId" class="text-danger small"></span>
                                 </div>
+                                <div class="col-12 col-md-6">
+                                    <label asp-for="CostPrice" class="form-label"></label>
+                                    @Html.EditorFor(m => m.CostPrice)
+                                    <span asp-validation-for="CostPrice" class="text-danger small"></span>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label asp-for="UnitPrice" class="form-label"></label>
+                                    @Html.EditorFor(m => m.UnitPrice)
+                                    <span asp-validation-for="UnitPrice" class="text-danger small"></span>
+                                </div>
                                 <div class="col-12">
                                     <label asp-for="ShortDesc" class="form-label"></label>
-                                    <textarea asp-for="ShortDesc" class="form-control" rows="3"
-                                              placeholder="Mô tả ngắn về hàng hóa..."></textarea>
+                                    <textarea asp-for="ShortDesc" class="form-control" rows="3" placeholder="Mô tả ngắn về hàng hóa..."></textarea>
                                     <span asp-validation-for="ShortDesc" class="text-danger small"></span>
                                 </div>
                             </div>
@@ -91,9 +100,6 @@
                 </div>
                 <div class="tab-pane fade" id="additional" role="tabpanel">
                     <div class="row g-3">
-                        <div class="col-12">
-    
-                        </div>
                         <div class="col-sm-6 col-md-3">
                             <label asp-for="DisplayOrder" class="form-label"></label>
                             <input asp-for="DisplayOrder" class="form-control" placeholder="0" />
@@ -102,14 +108,15 @@
                     </div>
                 </div>
             </div>
-            <div class="form-card-footer" style="margin: 0 -1.5rem -1.5rem; border-radius: 0 0 var(--card-radius) var(--card-radius);">
-                <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i>Thêm mới
-                </button>
-            </div>
-        </form>
-    </div>
+        </div>
+        <div class="form-card-footer">
+            <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
+            <button type="submit" class="btn btn-primary flex-lg-grow-0 flex-grow-1">
+                <i class="bi bi-plus-lg me-1"></i>
+                Thêm mới
+            </button>
+        </div>
+    </form>
 </div>
 
 @section Scripts {

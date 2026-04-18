@@ -13,7 +13,6 @@ public abstract record BaseProductDto
     public IEnumerable<ProductCategoryDto> Categories { get; set; } = [];
     public IEnumerable<Guid> Pictures { get; set; } = [];
 
-
     public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Name))
@@ -33,7 +32,10 @@ public sealed record CreateProductResultDto
 }
 
 [Serializable]
-public sealed record UpdateProductDto(Guid Id) : BaseProductDto;
+public sealed record UpdateProductDto(Guid Id) : BaseProductDto
+{
+    public string? ChangePriceReason { get; set; }
+}
 [Serializable]
 public sealed record UpdateProductResultDto(Guid Id) : BaseProductDto;
 

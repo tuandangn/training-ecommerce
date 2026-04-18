@@ -133,4 +133,24 @@ public sealed class VendorController : BaseAuthorizedController
         TempData[ViewConstants.VendorSuccessMessage] = "Xóa nhà cung cấp thành công!";
         return RedirectToAction(nameof(List));
     }
+
+    [HttpGet]
+    public async Task<IActionResult> Search(string q)
+    {
+        var model = await _mediator.Send(new GetVendorListQuery
+        {
+            Keywords = q,
+            PageIndex = 0,
+            PageSize = int.MaxValue
+        });
+
+        var vendors = model.Data.Items.Select(vendor => new
+        {
+            id = vendor.Id,
+            name = vendor.Name,
+            phone = vendor.PhoneNumber,
+            address = vendor.Address
+        }).ToList();
+        return Json(vendors);
+    }
 }

@@ -1,0 +1,30 @@
+﻿@model decimal?
+@{
+    var value = Model.HasValue ? Model.Value.ToString("N2") : string.Empty;
+    var htmlAttrs = ViewData["htmlAttributes"] as IDictionary<string, object>;
+    var extraClass = htmlAttrs?["class"]?.ToString() ?? string.Empty;
+}
+<div class="decimal-field quantity-field">
+    <span class="field-suffix">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="7" width="20" height="14" rx="2" />
+            <path d="M16 7V5a2 2 0 0 0-4 0v2" />
+            <line x1="12" y1="12" x2="12" y2="16" />
+            <line x1="10" y1="14" x2="14" y2="14" />
+        </svg>
+    </span>
+    @Html.TextBox(
+        string.Empty,
+        value,
+        new
+        {
+            @class = $"form-control decimal-input quantity-input {extraClass}".Trim(),
+            placeholder = "0.00",
+            inputmode = "decimal",
+            autocomplete = "off",
+            data_decimals = "2",
+            data_type = "quantity"
+        }
+    )
+</div>

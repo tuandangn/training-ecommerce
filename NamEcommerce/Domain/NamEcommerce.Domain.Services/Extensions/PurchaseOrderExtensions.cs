@@ -18,7 +18,7 @@ public static class PurchaseOrderExtensions
             ShippingAmount = purchaseOrder.ShippingAmount,
             TaxAmount = purchaseOrder.TaxAmount,
             Status = purchaseOrder.Status,
-            CanAddItems = purchaseOrder.CanAddPurchaseOrderItems(),
+            CanAddItems = purchaseOrder.CanUpdatePurchaseOrderItems(),
             CanReceiveGoods = purchaseOrder.CanReceiveGoods(),
             CreatedOnUtc = purchaseOrder.CreatedOnUtc,
             TotalAmount = purchaseOrder.TotalAmount

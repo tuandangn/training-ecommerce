@@ -113,6 +113,17 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             TaxAmount = dto.TaxAmount
         };
 
+        foreach (var item in dto.Items)
+        {
+            createPurchaseOrderDto.Items.Add(new PurchaseOrderItemDto(Guid.NewGuid())
+            {
+                PurchaseOrderId = Guid.Empty, // Will be set by manager
+                ProductId = item.ProductId ?? Guid.Empty,
+                QuantityOrdered = item.Quantity,
+                UnitCost = item.UnitCost
+            });
+        }
+
         var result = await _purchaseOrderManager.CreatePurchaseOrderAsync(createPurchaseOrderDto).ConfigureAwait(false);
 
         return new CreatePurchaseOrderResultAppDto
@@ -446,5 +457,47 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Cancelled).ConfigureAwait(false);
 
         return (true, null);
+    }
+
+    public async Task<DeletePurchaseOrderItemResultAppDto> DeletePurchaseOrderItemAsync(DeletePurchaseOrderItemAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+        {
+            return new DeletePurchaseOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = $"Purchase order with ID {dto.PurchaseOrderId} does not exist."
+            };
+        }
+
+        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == dto.ItemId);
+        if (purchaseOrderItem is null)
+        {
+            return new DeletePurchaseOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = $"Item with ID {dto.ItemId} does not exist in purchase order {dto.PurchaseOrderId}."
+            };
+        }
+
+        // Can only delete items from Draft status
+        if (purchaseOrder.Status != PurchaseOrderStatus.Draft)
+        {
+            return new DeletePurchaseOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Can only delete items from purchase orders in Draft status."
+            };
+        }
+
+        await _purchaseOrderManager.DeleteOrderItemAsync(dto.PurchaseOrderId, dto.ItemId).ConfigureAwait(false);
+
+        return new DeletePurchaseOrderItemResultAppDto
+        {
+            Success = true
+        };
     }
 }

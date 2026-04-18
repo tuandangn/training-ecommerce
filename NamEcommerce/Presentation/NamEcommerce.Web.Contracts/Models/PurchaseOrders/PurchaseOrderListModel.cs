@@ -13,6 +13,7 @@ public sealed class PurchaseOrderListModel
     {
         public required string Code { get; init; }
         public string? VendorName { get; set; }
+        public string? VendorPhone { get; set; }
         public string? WarehouseName { get; set; }
         public int Status { get; set; }
         public decimal TotalAmount { get; set; }

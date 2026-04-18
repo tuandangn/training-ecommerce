@@ -1,0 +1,22 @@
+﻿@model decimal?
+@{
+    var value = Model.HasValue ? Model.Value.ToString("N0") : string.Empty;
+    var htmlAttrs = ViewData["htmlAttributes"] as IDictionary<string, object>;
+    var extraClass = htmlAttrs?["class"]?.ToString() ?? string.Empty;
+}
+<div class="decimal-field currency-field">
+    @Html.TextBox(
+        string.Empty,
+        value,
+        new
+        {
+            @class = $"form-control decimal-input currency-input {extraClass}".Trim(),
+            placeholder = "0",
+            // inputmode = "numeric",
+            autocomplete = "off",
+            data_decimals = "0",
+            data_type = "currency"
+        }
+    )
+    <span class="field-prefix">₫</span>
+</div>

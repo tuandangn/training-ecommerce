@@ -1,5 +1,4 @@
-@using System.Text.Encodings.Web
-@inject UrlEncoder MyUrlEncoder
+@inject IWebHelper WebHelper
 @model ProductListModel
 @{
     ViewData[ViewConstants.PageTitle] = "Hàng hóa";
@@ -36,37 +35,29 @@
 <div class="content-card">
     <div class="action-toolbar">
         <div class="search-group">
-            <div class="search-input-group input-group">
-                <span class="input-group-text"><i class="bi bi-search text-muted"></i></span>
-                <partial name="_Search" model="@(new ProductListSearchModel { Keywords = Model.Keywords })" />
-            </div>
-            @if (!string.IsNullOrEmpty(query))
-            {
-                <a asp-action="List" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-x"></i> Xóa lọc
-                </a>
-            }
+            <partial name="_Search" model="@(new ProductListSearchModel { Keywords = Model.Keywords })" />
         </div>
     </div>
-
     <div class="table-responsive">
         <table class="table data-table">
             <thead>
                 <tr>
                     <th class="ps-4" style="width: 80px;">Ảnh</th>
                     <th>Tên hàng hóa</th>
+                    <th class="text-end">Giá bán</th>
                     <th class="d-none d-md-table-cell">Danh mục</th>
+                    <th class="d-none d-md-table-cell">Đơn vị</th>
                     <th style="width: 100px;"></th>
                 </tr>
             </thead>
             <tbody>
                 @if (Model.Data.Pagination.TotalCount > 0)
                 {
-                    @foreach (var item in Model.Data)
+                    @foreach (var product in Model.Data)
                     {
                         <tr>
                             <td class="ps-4">
-                                @if (string.IsNullOrEmpty(item.PictureUrl))
+                                @if (string.IsNullOrEmpty(product.PictureUrl))
                                 {
                                     <div class="d-flex align-items-center justify-content-center rounded"
                                          style="width: 44px; height: 44px; background: var(--gray-100);">
@@ -75,25 +66,39 @@
                                 }
                                 else
                                 {
-                                    <a href="@item.PictureUrl" target="_blank" data-lightbox="products">
-                                        <img src="@item.PictureUrl" alt="@item.Name"
+                                    <a href="@product.PictureUrl" target="_blank" data-lightbox="products">
+                                        <img src="@product.PictureUrl" alt="@product.Name"
                                              class="rounded" style="width: 44px; height: 44px; object-fit: cover;" />
                                     </a>
                                 }
                             </td>
-                            <td class="fw-medium">@HighlighHelper.Highlight(item.Name, query)</td>
+                            <td class="fw-medium">@HighlighHelper.Highlight(product.Name, query)</td>
+                            <td class="text-end">
+                                <span class="fw-medium d-block text-nowrap">
+                                    @product.UnitPrice.DisplayCurrency()
+                                    @if (!string.IsNullOrEmpty(product.UnitMeasurementName))
+                                    {
+                                        <span class="d-block d-lg-none text-muted small">/ @product.UnitMeasurementName</span>
+                                    }
+                                </span>
+                                <span class="text-muted small d-none d-lg-inline">@product.UnitPrice.DisplayVietnameseCurrencyHint()</span>
+                            </td>
                             <td class="d-none d-md-table-cell text-muted small">
-                                @if (item.CategoryId.HasValue)
+                                @if (product.CategoryId.HasValue)
                                 {
-                                    @item.CategoryBreadcrumb
+                                    @product.CategoryBreadcrumb
                                 }
                             </td>
+                            <td class="d-none d-md-table-cell text-muted small">
+                                @product.UnitMeasurementName
+                            </td>
                             <td class="text-end pe-3">
-                                <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                <a class="btn-table-action" asp-action="Edit" asp-route-id="@product.Id" title="Chỉnh sửa">
                                     <i class="bi bi-pencil"></i>
+                                    <span class="visually-hidden"></span>
                                 </a>
                                 <button type="button" class="btn-table-action danger btnDelete"
-                                        data-id="@item.Id" data-name="@item.Name" title="Xóa">
+                                        data-id="@product.Id" data-name="@product.Name" title="Xóa">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
@@ -130,15 +135,18 @@
 @section Scripts {
     <script type="module" defer>
         import { confirm } from "/modules/modals.js";
+
         (function () {
-            $('.btnDelete').on('click', async function (e) {
-                e.preventDefault();
-                const name = $(this).data('name');
-                $(this).prop('disabled', true);
-                const confirmed = await confirm('Xóa hàng hóa', `Bạn muốn xóa hàng hóa <strong>${name}</strong>?`);
-                if (!confirmed) { $(this).prop('disabled', false); return; }
-                $(`#deleteForm${$(this).data('id')}`).submit();
-            });
+        $('.btnDelete').on('click', async function (e) {
+        e.preventDefault();
+        const name = $(this).data('name');
+        $(this).prop('disabled', true);
+        const confirmed = await confirm('Xóa hàng hóa', `Bạn muốn xóa hàng hóa <strong>${name}</strong>?`);
+        if (!confirmed) {
+        $(this).prop('disabled', false); return;
+        }
+        $(`#deleteForm${$(this).data('id')}`).submit();
+        });
         })();
     </script>
 }

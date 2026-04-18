@@ -45,6 +45,7 @@ public sealed record CreatePurchaseOrderAppDto : BasePurchaseOrderAppDto
 {
     public Guid? WarehouseId { get; set; }
     public Guid? CreatedByUserId { get; set; }
+    public IList<CreatePurchaseOrderItemAppDto> Items { get; init; } = [];
 }
 [Serializable]
 public sealed record CreatePurchaseOrderResultAppDto
@@ -62,4 +63,12 @@ public sealed record UpdatePurchaseOrderResultAppDto
     public required bool Success { get; init; }
     public Guid? UpdatedId { get; set; }
     public string? ErrorMessage { get; set; }
+}
+
+[Serializable]
+public sealed record CreatePurchaseOrderItemAppDto
+{
+    public Guid? ProductId { get; init; }
+    public decimal Quantity { get; init; }
+    public decimal UnitCost { get; init; }
 }

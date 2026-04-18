@@ -470,13 +470,11 @@ body {
 }
 
 .form-card-footer {
-    padding: 0.875rem 1.25rem;
-    border-top: 1px solid var(--gray-100);
-    background: var(--gray-50);
+    padding: 1rem;
     display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    border-radius: 0 0 var(--card-radius) var(--card-radius);
+    justify-content: end;
+    gap: 10px;
+    border-top: 1px solid #dee2e6 !important;
 }
 
 /* ============================================================
@@ -496,7 +494,7 @@ body {
 
 .form-label {
     font-weight: 500;
-    font-size: 0.825rem;
+    /*font-size: 0.825rem;*/
     color: var(--gray-700);
     margin-bottom: 0.3rem;
 }
@@ -646,6 +644,11 @@ body {
     color: var(--primary);
     border-color: transparent;
 }
+
+    .pagination .page-item {
+        margin-left: 0.25rem;
+    }
+
 
 .pagination .page-item.active .page-link {
     background-color: var(--primary) !important;

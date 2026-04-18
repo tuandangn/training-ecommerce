@@ -20,24 +20,27 @@ public sealed class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery,
 
     public async Task<ProductModel?> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
     {
-        var productInfo = await _productAppService.GetProductByIdAsync(request.Id);
-        if (productInfo is null)
+        var product = await _productAppService.GetProductByIdAsync(request.Id).ConfigureAwait(false);
+        if (product is null)
             return null;
 
         var model = new ProductModel
         {
-            Id = productInfo.Id,
-            Name = productInfo.Name,
-            ShortDesc = productInfo.ShortDesc
+            Id = product.Id,
+            Name = product.Name,
+            ShortDesc = product.ShortDesc,
+            UnitPrice = product.UnitPrice,
+            CostPrice = product.CostPrice,
+            UnitMeasurementId = product.UnitMeasurementId
         };
 
-        var productCategory = productInfo.Categories.FirstOrDefault();
+        var productCategory = product.Categories.FirstOrDefault();
         model.CategoryId = productCategory?.CategoryId;
         model.DisplayOrder = productCategory?.DisplayOrder ?? 1;
 
-        if (productInfo.Pictures.Any())
+        if (product.Pictures.Any())
         {
-            var pictureInfo = await _pictureAppService.GetBase64PictureByIdAsync(productInfo.Pictures.First()).ConfigureAwait(false);
+            var pictureInfo = await _pictureAppService.GetBase64PictureByIdAsync(product.Pictures.First()).ConfigureAwait(false);
             if (pictureInfo is not null)
             {
                 model.ImageFile = new Base64ImageModel

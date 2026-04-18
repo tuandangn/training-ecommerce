@@ -41,6 +41,7 @@ public sealed class GetPurchaseOrderListHandler : IRequestHandler<GetPurchaseOrd
             {
                 var vendor = await _vendorAppService.GetVendorByIdAsync(itemInfo.VendorId.Value).ConfigureAwait(false);
                 purchaseOrderModel.VendorName = vendor?.Name;
+                purchaseOrderModel.VendorPhone = vendor?.PhoneNumber;
             }
 
             if (itemInfo.WarehouseId.HasValue)
