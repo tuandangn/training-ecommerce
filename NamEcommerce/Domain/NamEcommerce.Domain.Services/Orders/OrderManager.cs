@@ -12,7 +12,6 @@ using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
-using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Users;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Orders;
@@ -35,7 +34,7 @@ public sealed class OrderManager(
         dto.Verify();
 
         if (await DoesCodeExistAsync(dto.Code).ConfigureAwait(false))
-            throw new PurchaseOrderCodeExistsException(dto.Code);
+            throw new OrderCodeExistsException(dto.Code);
 
         var customer = await customerDataReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
         if (customer is null)

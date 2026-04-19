@@ -35,7 +35,7 @@ public sealed record Order : AppAggregateEntity
     public string? LockOrderReason { get; private set; }
     public string? Note { get; internal set; }
 
-    public DateTime? ExpectedShippingDateUtc { get; set; }
+    public DateTime? ExpectedShippingDateUtc { get; internal set; }
     public string? ShippingAddress
     {
         get;

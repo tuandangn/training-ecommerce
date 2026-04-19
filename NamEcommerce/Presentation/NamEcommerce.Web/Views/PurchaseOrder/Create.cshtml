@@ -23,7 +23,7 @@
                 <div class="col-lg-8">
                     <div class="mb-4">
                         <h5 class="fw-bold mb-3"><i class="bi bi-truck text-muted me-2"></i>Nhà cung cấp</h5>
-                        <div id="vendorPicker" data-id="@Model.VendorId" data-name="@Model.VendorName" data-phone="@Model.VendorPhone" data-address="@Model.VendorPhone"></div>
+                        <div id="vendorPicker" data-id="@Model.VendorId" data-name="@Model.VendorName" data-phone="@Model.VendorPhone" data-address="@Model.VendorAddress"></div>
                         <input type="text" class="visually-hidden" asp-for="VendorId" />
                         <span asp-validation-for="VendorId" class="small text-danger"></span>
                     </div>
@@ -93,8 +93,7 @@
                                             </td>
                                             <td class="text-end pe-3">
                                                 <button type="button"
-                                                        class="btn-table-action danger border-0 bg-transparent shadow-none"
-                                                        onclick="this.closest('tr').remove(); window.updateGrandTotal();">
+                                                        class="btn-table-action danger border-0 bg-transparent shadow-none">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </td>
