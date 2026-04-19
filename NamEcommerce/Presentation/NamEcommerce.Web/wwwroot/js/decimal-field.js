@@ -159,7 +159,7 @@
         var hint = document.createElement('div');
         hint.className = 'currency-hint';
 
-        var rawNum = input.value.replace(/[^\d]/g, '');
+        var rawNum = parseNumber(stripFormatting(input.value, 0));
         if (rawNum) {
             hint.textContent = global.SoBangChu.docSoTien(rawNum);
             hint.classList.add('visible');
@@ -168,7 +168,7 @@
         wrapper.insertAdjacentElement('afterend', hint);
 
         input.addEventListener('input', function () {
-            var r = this.value.replace(/[^\d]/g, '');
+            var r = parseNumber(stripFormatting(this.value, 0));
             hint.textContent = r ? global.SoBangChu.docSoTien(r) : '';
             hint.classList.toggle('visible', !!r);
         });
@@ -176,7 +176,7 @@
         input.addEventListener('blur', function () {
             var self = this;
             setTimeout(function () {
-                var r = stripFormatting(self.value, 0);
+                var r = parseNumber(stripFormatting(self.value, 0));
                 hint.textContent = r ? global.SoBangChu.docSoTien(r) : '';
                 hint.classList.toggle('visible', !!r);
             }, 0);
@@ -320,7 +320,6 @@
 
         // 6. Bind events
         bindInput(input);
-
         // 7. Hint doc bang chu
         var hint = (isCurr && opts.showHint && !input.classList.contains('no-hint')) ? attachHint(wrapper, input) : null;
 

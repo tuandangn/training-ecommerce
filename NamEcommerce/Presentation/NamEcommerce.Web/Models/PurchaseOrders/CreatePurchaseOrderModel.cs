@@ -15,8 +15,6 @@ public sealed class CreatePurchaseOrderModel
     public string? VendorPhone { get; set; }
     [ValidateNever]
     public string? VendorAddress { get; set; }
-    [ValidateNever]
-    public required EntityOptionListModel AvailableVendors { get; set; }
 
     [Display(Name = "Nhập vào kho hàng")]
     public Guid? WarehouseId { get; set; }

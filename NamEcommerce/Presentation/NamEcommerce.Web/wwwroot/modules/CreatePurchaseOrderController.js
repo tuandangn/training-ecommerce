@@ -51,10 +51,7 @@ class PurchaseOrderState {
     }
 }
 
-
-// ─── PurchaseOrderController ──────────────────────────────────────────────────
-
-export default class PurchaseOrderController {
+export default class CreatePurchaseOrderController {
     #state;
     #addItemController = new AddItemController();
 
@@ -177,10 +174,10 @@ export default class PurchaseOrderController {
                     data-valmsg-for="Items[${index}].UnitCost"
                     data-valmsg-replace="true"></span>
             </td>
-            <td class="text-end fw-bold text-danger px-3 row-total text-nowrap d-none d-lg-table-cell align-middle">
+            <td class="text-end fw-bold text-danger px-3 row-total text-nowrap d-none d-lg-table-cell">
                 ${DecimalFields.formatCurrency(item.lineTotal)}
             </td>
-            <td class="text-end pe-3 w-auto align-middle">
+            <td class="text-end pe-3 w-auto">
                 <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none"
                     aria-label="Xóa hàng hóa">
                     <i class="bi bi-trash"></i>

@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
-using NamEcommerce.Web.Contracts.Models.Common;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace NamEcommerce.Web.Models.PurchaseOrders;
 
@@ -11,9 +9,6 @@ public sealed class AddPurchaseOrderItemModel
 
     [Display(Name = "Hàng hóa")]
     public Guid? ProductId { get; set; }
-
-    [ValidateNever]
-    public required EntityOptionListModel AvailableProducts { get; set; }
 
     [Display(Name = "Số lượng")]
     public decimal? Quantity { get; set; }

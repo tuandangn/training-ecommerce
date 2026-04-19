@@ -1,22 +1,18 @@
 @model EditPurchaseOrderModel
 <form asp-action="Edit">
     <input type="hidden" asp-for="Id" id="modifyInfoId" />
-
-    <!-- Thông tin chung -->
     <div class="mb-3">
         <label class="form-label small fw-bold text-muted text-uppercase d-block mb-3">Thông tin cơ bản</label>
         <div class="row g-3">
-            <div class="col-lg-6">
+            <div class="col-lg-12">
                 @if (Model.CanChangeVendor)
                 {
-                    <label asp-for="VendorId" class="form-label fw-medium mb-2">Nhà cung cấp</label>
-                    <select asp-for="VendorId" class="form-select">
-                        @foreach (var vendor in Model.AvailableVendors)
-                        {
-                            <option value="@vendor.Id" selected="@(Model.VendorId == vendor.Id)">@vendor.Name</option>
-                        }
-                    </select>
-                    <span asp-validation-for="VendorId" class="text-danger small"></span>
+                    <label for="vendorSearch" class="form-label fw-medium mb-2">Nhà cung cấp</label>
+                    <div>
+                        <div id="vendorPicker" data-id="@Model.VendorId" data-name="@Model.VendorName" data-phone="@Model.VendorPhone" data-address="@Model.VendorAddress"></div>
+                        <input type="text" class="visually-hidden" asp-for="VendorId" />
+                        <span asp-validation-for="VendorId" class="small text-danger"></span>
+                    </div>
                 }
                 else
                 {
@@ -27,8 +23,7 @@
                     </div>
                 }
             </div>
-
-            <div class="col-lg-6">
+            <div class="col-12">
                 @if (Model.CanChangeDate)
                 {
                     <label asp-for="ExpectedDeliveryDate" class="form-label fw-medium mb-2">Ngày giao dự kiến</label>
@@ -47,34 +42,36 @@
         </div>
     </div>
 
-    <!-- Ghi chú -->
     <div class="mb-3">
         <label asp-for="Note" class="form-label fw-medium mb-2">Ghi chú</label>
         <textarea asp-for="Note" class="form-control" rows="2" placeholder="Nhập ghi chú về đơn nhập..."></textarea>
         <span asp-validation-for="Note" class="text-danger small"></span>
     </div>
 
-    <!-- Phí vận chuyển & Thuế -->
     <div class="mb-4">
-        <label class="form-label small fw-bold text-muted text-uppercase d-block mb-3">Chi phí bổ sung</label>
+        <label class="form-label small fw-bold text-muted text-uppercase d-block mb-3" asp-for="ShippingAmount">Chi phí bổ sung</label>
         <div class="row g-3">
             @if (Model.CanChangeFees)
             {
                 <div class="col-md-6">
-                    <label asp-for="ShippingAmount" class="form-label fw-medium mb-2">Phí vận chuyển (đ)</label>
-                    <input asp-for="ShippingAmount" class="form-control" placeholder="0"
-                           min="0" step="1" type="number" value="@decimal.Round(Model.ShippingAmount)"
-                           data-val-range="Phí vận chuyển phải lớn hơn hoặc bằng 0." data-val-range-min="0"
-                           data-val-number="Phí vận chuyển không đúng." />
+                    <label asp-for="ShippingAmount" class="form-label fw-medium mb-2">Phí vận chuyển</label>
+                    <div>
+                        <input asp-for="ShippingAmount" class="form-control no-additional-element no-hint" placeholder="0"
+                               value="@Model.ShippingAmount.ToString("#0")" data-decimal="currency" autocomplete="off"
+                               data-val-range="Phí vận chuyển phải lớn hơn hoặc bằng 0." data-val-range-min="0"
+                               data-val-number="Phí vận chuyển không đúng." />
+                    </div>
                     <span asp-validation-for="ShippingAmount" class="text-danger small"></span>
                 </div>
 
                 <div class="col-md-6">
-                    <label asp-for="TaxAmount" class="form-label fw-medium mb-2">Thuế VAT (đ)</label>
-                    <input asp-for="TaxAmount" class="form-control" placeholder="0"
-                           min="0" step="1" type="number" value="@decimal.Round(Model.TaxAmount)"
-                           data-val-range="Tổng thuế phải lớn hơn hoặc bằng 0." data-val-range-min="0"
-                           data-val-number="Tổng thuế không đúng." />
+                    <label asp-for="TaxAmount" class="form-label fw-medium mb-2">Thuế VAT</label>
+                    <div>
+                        <input asp-for="TaxAmount" class="form-control no-additional-element no-hint" placeholder="0"
+                               value="@Model.TaxAmount.ToString("#0")" data-decimal="currency" autocomplete="off"
+                               data-val-range="Tổng thuế phải lớn hơn hoặc bằng 0." data-val-range-min="0"
+                               data-val-number="Tổng thuế không đúng." />
+                    </div>
                     <span asp-validation-for="TaxAmount" class="text-danger small"></span>
                 </div>
             }
@@ -96,29 +93,8 @@
             }
         </div>
     </div>
-
-    <!-- Tóm tắt tài chính -->
-    <div class="bg-light rounded p-3 mb-3 border">
-        <div class="row">
-            <div class="col-6">
-                <div class="small text-muted fw-medium">TỔNG CỘNG</div>
-                <div class="fs-5 fw-bold text-primary">
-                    @Model.TotalAmount.ToString(ViewConstants.NumberCustomFormat) đ
-                </div>
-            </div>
-            <div class="col-6 text-end">
-                <div class="small text-muted fw-medium">Tạo lúc</div>
-                <div class="small text-dark">@Model.CreatedOn.ToString("dd/MM/yyyy HH:mm")</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Nút cập nhật -->
-    <div class="d-flex gap-2 justify-content-end">
-        <button type="button" class="btn btn-light" onclick="history.back()">
-            <i class="bi bi-x-lg me-1"></i>Hủy
-        </button>
-        <button type="submit" class="btn btn-warning text-dark">
+    <div class="d-grid">
+        <button type="submit" class="btn btn-outline-secondary">
             <i class="bi bi-pencil-square me-1"></i>Cập nhật thông tin
         </button>
     </div>

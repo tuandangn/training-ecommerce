@@ -1,43 +1,68 @@
-@model PurchaseOrderModel
-<div class="row mb-3">
-    <div class="col-md-6">
-        <table class="table table-sm">
-            <tbody>
-                <tr>
-                    <td class="fw-bold">Nhà cung cấp</td>
-                    <td>@(Model.VendorName ?? "-")</td>
-                </tr>
-                <tr>
-                    <td class="fw-bold">Ngày giao dự kiến</td>
-                    <td>@(Model.ExpectedDeliveryDate?.ToString("d") ?? "-")</td>
-                </tr>
-                <tr>
-                    <td class="fw-bold">Ghi chú</td>
-                    <td>@(string.IsNullOrEmpty(Model.Note) ? "-" : Model.Note)</td>
-                </tr>
-            </tbody>
-        </table>
+@model PurchaseOrderDetailsModel
+<div class="content-card mb-3">
+    <div class="content-card-header">
+        <h5>
+            <i class="bi bi-info-circle me-2 text-primary"></i>
+            Thông tin đơn nhập
+        </h5>
     </div>
-    <div class="col-md-6 text-lg-end order-0 order-lg-1">
-        <div class="row mb-3">
-            <div class="col-6 col-md-6">
-                <div class="d-flex flex-column border rounded p-2">
-                    <label asp-for="ShippingAmount" class="form-label fw-bold"></label>
-                    <span>@Model.ShippingAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
+    <div class="content-card-body">
+        <div class="mb-3">
+            <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Nhà cung cấp</span>
+            <div class="d-flex align-items-center">
+                <div class="bg-light rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                    <i class="bi bi-building-fill text-primary fs-4"></i>
                 </div>
-            </div>
-            <div class="col-6 col-md-6">
-                <div class="d-flex flex-column border rounded p-2">
-                    <label asp-for="TaxAmount" class="form-label fw-bold"></label>
-                    <span>@Model.TaxAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
+                <div>
+                    <div class="fw-bold text-dark fs-6">@(Model.Info.VendorName ?? "N/A")</div>
+                    @if (!string.IsNullOrEmpty(Model.Info.VendorPhone))
+                    {
+                        <div class="text-muted small">
+                            <i class="bi bi-phone"></i>
+                            @Model.Info.VendorPhone
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Info.VendorAddress))
+                    {
+                        <div class="text-muted small">
+                            <i class="bi bi-geo-alt"></i>
+                            @Model.Info.VendorAddress
+                        </div>
+                    }
                 </div>
             </div>
         </div>
-        <p class="fs-5 fw-bold mb-1">
-            Tổng đơn: <span class="text-primary">@Model.TotalAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
-        </p>
-        <p class="text-muted">
-            Ngày tạo: @Model.CreatedOn.ToString("g")
-        </p>
+        @if (Model.Info.WarehouseId.HasValue)
+        {
+            <div class="mb-3">
+                <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Kho nhập hàng</span>
+                <div class="d-flex align-items-center">
+                    <div class="bg-light rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                        <i class="bi bi-geo-alt text-info fs-4"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark">@Model.Info.WarehouseName</div>
+                        @if (!string.IsNullOrEmpty(Model.Info.WarehouseAddress))
+                        {
+                            <div class="text-muted small">
+                                <i class="bi bi-geo-alt"></i>
+                                @Model.Info.WarehouseAddress
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(Model.Info.Note))
+        {
+            <div>
+                <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Ghi chú</span>
+                <div class="d-flex align-items-center">
+                    <div class="fw-medium">
+                        @Model.Info.Note
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 </div>

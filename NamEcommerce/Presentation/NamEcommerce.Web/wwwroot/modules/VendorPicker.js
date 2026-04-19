@@ -1,4 +1,4 @@
-class Vendor {
+export class Vendor {
     constructor({ id, name, phone }) {
         this.id = id;
         this.name = name ?? '';
@@ -232,8 +232,6 @@ export default class VendorPicker {
 
     #template() {
         return `
-        <label class="form-label small fw-bold text-muted" for="vendorSearch">Tìm kiếm nhà cung cấp</label>
-
         <div class="input-group-container">
             <div class="input-group">
                 <span class="input-group-text bg-white border-end-0">

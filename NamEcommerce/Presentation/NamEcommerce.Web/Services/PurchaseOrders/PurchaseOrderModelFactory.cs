@@ -28,12 +28,10 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         var warehouseOptions = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new CreatePurchaseOrderModel
         {
-            AvailableVendors = vendorOptions,
             AvailableWarehouses = warehouseOptions,
         };
         if (oldModel is not null)
         {
-            model.AvailableVendors = vendorOptions;
             model.AvailableWarehouses = warehouseOptions;
         }
 
@@ -98,9 +96,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         if (purchaseOrderInfo == null)
             return null;
 
-        var availableProducts = await _mediator.Send(new GetProductOptionListQuery()).ConfigureAwait(false);
         var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
-        var availableVendors = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
 
         var model = new PurchaseOrderDetailsModel
         {
@@ -117,8 +113,9 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 Id = purchaseOrderInfo.Id,
                 VendorId = purchaseOrderInfo.VendorId,
                 VendorName = purchaseOrderInfo.VendorName,
+                VendorAddress = purchaseOrderInfo.VendorAddress,
+                VendorPhone = purchaseOrderInfo.VendorPhone,
                 Note = purchaseOrderInfo.Note,
-                AvailableVendors = availableVendors,
                 ExpectedDeliveryDate = purchaseOrderInfo.ExpectedDeliveryDate,
                 ShippingAmount = purchaseOrderInfo.ShippingAmount,
                 TaxAmount = purchaseOrderInfo.TaxAmount,
@@ -133,8 +130,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         {
             model.AddItemModel = new AddPurchaseOrderItemModel
             {
-                PurchaseOrderId = purchaseOrderInfo.Id,
-                AvailableProducts = availableProducts
+                PurchaseOrderId = purchaseOrderInfo.Id
             };
         }
         else if (model.Info.CanReceiveGoods)
