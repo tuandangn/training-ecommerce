@@ -229,14 +229,15 @@ export default class OrderController {
             });
         });
 
-        row.querySelector('.row-qty').addEventListener('input', debounce((e) => {
+        const onInputQuantityChange = debounce((e) => {
             this.#updateItem(index, { quantity: parseNumber(e.target.value) });
-            e.target.focus();
-        }, 500));
+        }, 500);
+        row.querySelector('.row-qty').addEventListener('input', onInputQuantityChange);
 
-        row.querySelector('.row-price').addEventListener('input', debounce((e) => {
+        const onInputUnitPriceChange = debounce((e) => {
             this.#updateItem(index, { unitPrice: parseNumber(e.target.value) });
-        }, 700));
+        }, 700);
+        row.querySelector('.row-price').addEventListener('input', onInputUnitPriceChange);
 
         return row;
     }
@@ -332,13 +333,15 @@ export default class OrderController {
 
     #bindDiscount() {
         const el = getEl('OrderDiscount');
-        el.addEventListener('input', debounce((e) => {
+
+        const onDiscountChange = debounce((e) => {
             const raw = parseNumber(e.target.value);
             const discount = Math.min(this.#state.subTotal, raw);
             this.#setState({ discount });
-        }, 300));
+        }, 300);
+        el.addEventListener('input', onDiscountChange);
 
-        return parseNumber(el.value);
+        return parseNumber(DecimalFields.stripFormatting(el.value), 0);
     }
 
     #bindExpectedDate() {

@@ -47,6 +47,40 @@
         '<line x1="12" y1="12" x2="12" y2="16"/>' +
         '<line x1="10" y1="14" x2="14" y2="14"/></svg>';
 
+    // ---- Validate truoc khi format ------------------------------------
+
+    /**
+     * Kiem tra mot decimal input co hop le khong bang cach chay
+     * jQuery Validate tren dung field do (neu co), tra ve true/false.
+     *
+     * - Neu jQuery Validate chua load: bo qua validate, tra ve true (cho format).
+     * - Neu input khong nam trong form co validator: tra ve true.
+     * - Chi kiem tra cac rule lien quan den gia tri so: required, range, min, max.
+     *   (Khong kich hoat toan bo validate de tranh side effect.)
+     */
+    function isValidDecimal(input, rawValue) {
+        if (typeof jQuery === 'undefined' || !jQuery.validator) return true;
+
+        var $form = jQuery(input).closest('form');
+        if (!$form.length) return true;
+
+        var validator = $form.data('validator');
+        if (!validator) return true;
+
+        // Tam thay the value bang raw de validator doc dung gia tri so
+        var prevValue = input.value;
+        input.value = rawValue;
+
+        // element() chay validate cho dung 1 field, cap nhat luon UI error
+        var valid = validator.element(input);
+
+        // Khoi phuc value goc de blur handler xu ly tiep
+        input.value = prevValue;
+
+        // valid co the la undefined (chua tung validate) -> coi la hop le
+        return valid !== false;
+    }
+
     // ---- Gan events cho mot input ---------------------------------------
 
     function bindInput(input) {
@@ -55,16 +89,53 @@
 
         var type = input.dataset.type;
         var decimals = parseInt(input.dataset.decimals || '0', 10);
+        // Flag ngan event 'input' / 'change' fire khi chinh code minh gan .value
+        var _formatting = false;
+
+        // Wrap de ben ngoai co the check: input._decimalFormatting
+        Object.defineProperty(input, '_decimalFormatting', {
+            get: function () { return _formatting; }
+        });
+
+        input.addEventListener('input', function (e) {
+            // Bo qua neu do chinh blur handler gan gia tri
+            if (_formatting) {
+                e.stopImmediatePropagation();
+                return;
+            }
+        });
+
+        input.addEventListener('change', function (e) {
+            if (_formatting) {
+                e.stopImmediatePropagation();
+                return;
+            }
+        });
 
         input.addEventListener('focus', function () {
+            _formatting = true;
             this.value = stripFormatting(this.value, decimals);
             this.select();
+            _formatting = false;
         });
 
         input.addEventListener('blur', function () {
             var raw = stripFormatting(this.value, decimals);
-            if (raw === '') { this.value = ''; return; }
-            this.value = type === 'currency' ? formatCurrency(raw) : formatQuantity(raw);
+
+            // Validate truoc khi format
+            // jQuery Validate unobtrusive: kiem tra field nay co hop le khong
+            if (raw !== '' && !isValidDecimal(this, raw)) {
+                // Gia tri sai: khong format, giu nguyen de nguoi dung biet
+                return;
+            }
+
+            _formatting = true;
+            if (raw === '') {
+                this.value = '';
+            } else {
+                this.value = type === 'currency' ? formatCurrency(raw) : formatQuantity(raw);
+            }
+            _formatting = false;
         });
 
         input.addEventListener('keypress', function (e) {
@@ -119,8 +190,7 @@
     function createCurrencyInput(options) {
         var opts = Object.assign({
             name: '', value: null, id: null,
-            placeholder: '0', cssClass: '', showHint: true,
-            noPrefix: false
+            placeholder: '0', cssClass: '', showHint: true
         }, options);
 
         var wrapper = document.createElement('div');
@@ -128,8 +198,7 @@
 
         var prefix = document.createElement('span');
         prefix.className = 'field-prefix';
-        if (!opts.noPrefix)
-            prefix.textContent = '\u20ab'; // dong
+        prefix.textContent = '\u20ab'; // dong
 
         var input = document.createElement('input');
         input.type = 'text';
@@ -140,12 +209,11 @@
         input.autocomplete = 'off';
         input.dataset.decimals = '0';
         input.dataset.type = 'currency';
-        if (opts.noPrefix)
-            input.style.paddingRight = '0.5em';
         if (opts.id) input.id = opts.id;
         if (opts.value != null) input.value = formatCurrency(String(opts.value));
 
-        wrapper.appendChild(prefix);
+        if (!opts.noPrefix)
+            wrapper.appendChild(prefix);
         wrapper.appendChild(input);
         bindInput(input);
 
@@ -164,8 +232,7 @@
 
         var suffix = document.createElement('span');
         suffix.className = 'field-suffix';
-        if (!opts.noSuffix)
-            suffix.innerHTML = SUFFIX_SVG;
+        suffix.innerHTML = SUFFIX_SVG;
 
         var input = document.createElement('input');
         input.type = 'text';
@@ -176,12 +243,11 @@
         input.autocomplete = 'off';
         input.dataset.decimals = '2';
         input.dataset.type = 'quantity';
-        if (opts.noSuffix)
-            input.style.paddingRight = '0.5em';
         if (opts.id) input.id = opts.id;
         if (opts.value != null) input.value = formatQuantity(String(opts.value));
 
-        wrapper.appendChild(suffix);
+        if (!opt.noSuffix)
+            wrapper.appendChild(suffix);
         wrapper.appendChild(input);
         bindInput(input);
 
@@ -232,9 +298,9 @@
         wrapper.appendChild(input);
 
         // 4. Them prefix hoac suffix
-        if (opts.noAdditionalElement) {
-            input.style.paddingRight = '0.5em';
-        }else {
+        if (opts.noAdditionalElement || input.classList.contains('no-additional-element')) {
+            input.style.paddingRight = '0.5rem';
+        } else {
             if (isCurr) {
                 var prefix = document.createElement('span');
                 prefix.className = 'field-prefix';
@@ -256,7 +322,7 @@
         bindInput(input);
 
         // 7. Hint doc bang chu
-        var hint = (isCurr && opts.showHint) ? attachHint(wrapper, input) : null;
+        var hint = (isCurr && opts.showHint && !input.classList.contains('no-hint')) ? attachHint(wrapper, input) : null;
 
         return { wrapper: wrapper, input: input, hint: hint };
     }
@@ -264,18 +330,36 @@
     // ---- Init DOM co san ------------------------------------------------
 
     function patchJqueryValidator() {
-        if (typeof jQuery === 'undefined' || !jQuery.validator) return;
-        var _number = jQuery.validator.methods.number;
-        jQuery.validator.methods.number = function (value, element) {
-            if (element.classList && element.classList.contains('decimal-input')) {
-                value = stripFormatting(value, parseInt(element.dataset.decimals || '0', 10));
-            }
-            return _number.call(this, value, element);
-        };
+        // Viec patch da duoc chuyen sang decimal-validation-patch.js
+        // Load file do SAU jquery.validate.unobtrusive.js
+    }
+
+    // ---- Auto-wrap theo data-decimal attribute -------------------------
+
+    /**
+     * Quet DOM tim cac <input data-decimal="currency|quantity"> chua duoc wrap
+     * va tu dong goi wrapExistingInput.
+     *
+     * Dung trong:
+     *   - Razor View  : <input asp-for="UnitPrice" data-decimal="currency" />
+     *   - EditorTemplate: them data_decimal = "currency" vao Html.TextBox(...)
+     *   - Input tao dong: sau khi inject vao DOM goi lai autoWrap(container)
+     *
+     * @param {HTMLElement} [root=document] - quet trong pham vi nay (tuy chon)
+     */
+    function autoWrap(root) {
+        root = root || document;
+        root.querySelectorAll('input[data-decimal]:not([data-decimal-bound])')
+            .forEach(function (input) {
+                var type = input.dataset.decimal; // "currency" | "quantity"
+                if (type !== 'currency' && type !== 'quantity') return;
+                wrapExistingInput(input, type);
+            });
     }
 
     function initDecimalFields() {
         patchJqueryValidator();
+        autoWrap();
         document.querySelectorAll('.decimal-input').forEach(bindInput);
         document.querySelectorAll('form').forEach(function (form) {
             form.addEventListener('submit', function () {
@@ -298,7 +382,9 @@
         createCurrencyInput: createCurrencyInput,
         createQuantityInput: createQuantityInput,
         wrapExistingInput: wrapExistingInput,
+        autoWrap: autoWrap,
         bindInput: bindInput,
+        isValidDecimal: isValidDecimal,
         formatCurrency: formatCurrency,
         formatQuantity: formatQuantity,
         stripFormatting: stripFormatting

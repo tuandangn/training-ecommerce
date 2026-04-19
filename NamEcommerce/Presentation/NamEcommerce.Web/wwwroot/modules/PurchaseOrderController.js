@@ -139,7 +139,6 @@ export default class PurchaseOrderController {
 
     #buildItemRow(container, item, index) {
         const { productInfo: p, quantity, unitCost } = item;
-        console.log(item);
         const row = document.createElement('tr');
         row.id = `row-${index}`;
         row.className = 'align-top';
@@ -159,40 +158,34 @@ export default class PurchaseOrderController {
                     data-valmsg-replace="true"></span>
             </td>
             <td class="text-center">
-                <input name="Items[${index}].Quantity"
-                    class="row-qty" value="${quantity}"
-                    data-val="true"
-                    data-val-required="Vui lòng nhập số lượng."
-                    data-val-range="Số lượng phải lớn hơn 0."
-                    data-val-range-min="0.000000000000000001"
-                    data-val-number="Số lượng không đúng." />
+                <input name="Items[${index}].Quantity" data-decimal="quantity"
+                    class="row-qty no-additional-element" value="${quantity}"
+                    data-val="true" data-val-required="Vui lòng nhập số lượng." 
+                    data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001" 
+                    data-val-number="Số lượng phải là số" />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="Items[${index}].Quantity"
                     data-valmsg-replace="true"></span>
             </td>
             <td class="text-end">
-                <input name="Items[${index}].UnitCost"
-                    class="row-price" value="${unitCost}"
+                <input name="Items[${index}].UnitCost" data-decimal="currency"
+                    class="row-price no-additional-element" value="${unitCost}"
                     data-val="true"
-                    data-val-required="Vui lòng nhập đơn giá."
-                    data-val-range="Đơn giá phải lớn hơn hoặc bằng 0."
-                    data-val-range-min="0"
-                    data-val-number="Đơn giá không đúng." />
+                    data-val-required="Vui lòng nhập đơn giá"
+                    data-val-number="Đơn giá phải là số" />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="Items[${index}].UnitCost"
                     data-valmsg-replace="true"></span>
             </td>
-            <td class="text-end fw-bold text-danger px-3 row-total text-nowrap d-none d-lg-table-cell">
+            <td class="text-end fw-bold text-danger px-3 row-total text-nowrap d-none d-lg-table-cell align-middle">
                 ${DecimalFields.formatCurrency(item.lineTotal)}
             </td>
-            <td class="text-end pe-3 w-auto">
+            <td class="text-end pe-3 w-auto align-middle">
                 <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none"
                     aria-label="Xóa hàng hóa">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>`;
-
-        container.appendChild(row);
 
         // Events
         row.querySelector('button').addEventListener('click', () => {
@@ -202,51 +195,36 @@ export default class PurchaseOrderController {
             this.#dispatch('purchaseOrder:itemRemoved');
         });
 
+        container.appendChild(row);
+        DecimalFields.autoWrap(row);
+
         const inputQuantity = row.querySelector('.row-qty');
-        DecimalFields.wrapExistingInput(inputQuantity, 'quantity', { noAdditionalElement : true});
+        const inputQtyChangeDebounced = debounce((e) => {
+            const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
+            this.#updateItem(index, { quantity: newQuantity });
+        }, 2000, () => {
+            if (inputQuantity._decimalFormatting)
+                return false;
 
-        //const inputQuantityAttrs = inputQuantity.attributes;
-        //const inputQuantityAttrMap = {};
-        //for (let i = 0; i < inputQuantityAttrs.length; i++) {
-        //    const attrName = inputQuantityAttrs[i].name;
-        //    if (attrName.startsWith('data-val'))
-        //        inputQuantityAttrMap[attrName] = inputQuantityAttrs[i].value;
-        //}
-        //const { wrapper: qtyWrapper, input: qtyInput } = DecimalFields.createQuantityInput({
-        //    name: inputQuantity.name,
-        //    value: inputQuantity.value,
-        //    id: inputQuantity.id,
-        //    placeholder: inputQuantity.placeholder,
-        //    noSuffix: true
-        //});
-        //$(inputQuantity).replaceWith(qtyWrapper);
-        //$(qtyInput).attr(inputQuantityAttrMap);
-        inputQuantity.addEventListener('change', debounce((e) => {
-            this.#updateItem(index, { quantity: parseNumber(DecimalFields.stripFormatting(e.target.value, 2), 0) });
-            e.target.focus();
-        }, 500));
+            var quantityRaw = DecimalFields.stripFormatting(inputQuantity.value, 2)
+            return DecimalFields.isValidDecimal(inputQuantity, quantityRaw);
+        });
+        //inputQuantity.addEventListener('input', inputQtyChangeDebounced);
+        inputQuantity.addEventListener('change', inputQtyChangeDebounced.flush);
 
-        var inputUnitCost = row.querySelector('.row-price');
-        DecimalFields.wrapExistingInput(inputUnitCost, 'currency', { showHint: false, noAdditionalElement: true });
-        //const inputUnitCostAttrs = inputUnitCost.attributes;
-        //const inputUnitCostAttrMap = {};
-        //for (let i = 0; i < inputUnitCostAttrs.length; i++) {
-        //    const attrName = inputUnitCostAttrs[i].name;
-        //    if (attrName.startsWith('data-val'))
-        //        inputUnitCostAttrMap[attrName] = inputUnitCostAttrs[i].value;
-        //}
-        //const { wrapper: unitCostWrapper, input: unitCostInput } = DecimalFields.createCurrencyInput({
-        //    name: inputUnitCost.name,
-        //    value: inputUnitCost.value,
-        //    id: inputUnitCost.id,
-        //    placeholder: inputUnitCost.placeholder,
-        //    noPrefix: true
-        //});
-        //$(unitCostInput).attr(inputUnitCostAttrMap);
-        inputUnitCost.addEventListener('change', debounce((e) => {
-            this.#updateItem(index, { unitCost: parseNumber(DecimalFields.stripFormatting(e.target.value, 0), 0) });
-        }, 700));
-        //$(inputUnitCost).replaceWith(unitCostWrapper);
+        const inputUnitCost = row.querySelector('.row-price');
+        const inputUnitCostChangeDebounced = debounce((e) => {
+            const newUnitCost = parseNumber(DecimalFields.stripFormatting(inputUnitCost.value, 0), 0);
+            this.#updateItem(index, { unitCost: newUnitCost });
+        }, 3000, () => {
+            if (inputUnitCost._decimalFormatting)
+                return false;
+
+            var unitCostRaw = DecimalFields.stripFormatting(inputUnitCost.value)
+            return DecimalFields.isValidDecimal(inputUnitCost, unitCostRaw);
+        });
+        //inputUnitCost.addEventListener('input', inputUnitCostChangeDebounced);
+        inputUnitCost.addEventListener('change', inputUnitCostChangeDebounced.flush);
     }
 
     #updateItem(index, patch) {
@@ -443,6 +421,8 @@ export class AddItemController {
 
         getEl('itemQuantity').value = quantity;
         getEl('itemUnitPrice').value = unitCost;
+
+        getEl('modalProductInfo').querySelector('.currency-hint').textContent = '';
 
         const hasProduct = Boolean(productInfo);
         getEl('modalProductInfo').classList.toggle('d-none', !hasProduct);

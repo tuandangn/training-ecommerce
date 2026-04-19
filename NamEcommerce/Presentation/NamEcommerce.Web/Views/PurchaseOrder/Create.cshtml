@@ -17,7 +17,7 @@
         </a>
     </div>
     <div class="form-card-body">
-        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
+        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible"></div>
         <form method="post" id="createPurchaseOrderForm" asp-antiforgery="true">
             <div class="row g-4">
                 <div class="col-lg-8">
@@ -30,7 +30,7 @@
                     <div>
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="fw-bold mb-0"><i class="bi bi-box-seam text-muted me-2"></i>Sản phẩm</h5>
-                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
                                     data-bs-target="#addProductModal">
                                 <i class="bi bi-plus-lg me-1"></i> Thêm sản phẩm
                             </button>
@@ -75,21 +75,17 @@
                                                       data-valmsg-for="Items[@i].ProductId" data-valmsg-replace="true"></span>
                                             </td>
                                             <td class="text-center">
-                                                @Html.EditorFor(m => m.Items[@i].Quantity)
-@*                                                 <input type="number" name="Items[@i].Quantity" value="@item.Quantity"
-                                                       class="form-control form-control-sm text-center row-qty" step="any"
-                                                       min="0.00000001" data-val="true"
-                                                       data-val-required="Vui lòng nhập số lượng." placeholder="0" />
- *@                                                <span class="small text-danger field-validation-valid"
+                                                <input type="number" asp-for="Items[@i].Quantity" data-decimal="quantity"
+                                                       class="form-control form-control-sm text-center row-qty"/>
+                                                <span class="small text-danger field-validation-valid"
                                                       data-valmsg-for="Items[@i].Quantity" data-valmsg-replace="true"></span>
                                             </td>
                                             <td class="text-end">
-                                                @Html.EditorFor(m => m.Items[@i].UnitCost)
-@*                                                 <input type="number" name="Items[@i].UnitCost" value="@item.UnitCost"
-                                                       class="form-control form-control-sm text-end row-price" min="0"
+                                                <input type="number" asp-for="Items[@i].UnitCost" data-decimal="currency"
+                                                       class="form-control form-control-sm text-end row-price no-additional-element" min="0"
                                                        data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                                        placeholder="0" />
- *@                                                <span class="small text-danger field-validation-valid"
+                                                <span class="small text-danger field-validation-valid"
                                                       data-valmsg-for="Items[@i].UnitCost" data-valmsg-replace="true"></span>
                                             </td>
                                             <td class="text-end fw-bold text-danger row-total text-nowrap d-none d-lg-table-cell">
@@ -192,19 +188,22 @@
                         <div class="row g-2">
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted" for="itemQuantity">Số lượng</label>
-                                <input type="number" id="itemQuantity" name="itemProductQuantity" class="form-control"
-                                       value="1" min="0.01" step="any" data-val="true"
-                                       data-val-required="Vui lòng nhập số lượng." />
+                                <input id="itemQuantity" name="itemProductQuantity" class="form-control no-additional-element"
+                                       data-decimal="quantity" value="1"
+                                       data-val="true" data-val-required="Vui lòng nhập số lượng" 
+                                       data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
+                                       data-val-number="Số lượng phải là số"/>
                                 <span class="small text-danger field-validation-valid"
                                       data-valmsg-for="itemProductQuantity" data-valmsg-replace="true"></span>
                             </div>
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted noRefill" for="itemUnitPrice">
-                                    Đơn
-                                    giá
+                                    Đơn giá
                                 </label>
-                                <input type="number" id="itemUnitPrice" name="itemProductUnitPrice" class="form-control"
-                                       step="any" min="0" data-val="true" data-val-required="Vui lòng nhập đơn giá." />
+                                <input id="itemUnitPrice" name="itemProductUnitPrice" class="form-control no-additional-element"
+                                       data-decimal="currency" 
+                                       data-val="true" data-val-required="Vui lòng nhập đơn giá." 
+                                       data-val-number="Đơn giá phải là số" />
                                 <span class="small text-danger field-validation-valid"
                                       data-valmsg-for="itemProductUnitPrice" data-valmsg-replace="true"></span>
                             </div>

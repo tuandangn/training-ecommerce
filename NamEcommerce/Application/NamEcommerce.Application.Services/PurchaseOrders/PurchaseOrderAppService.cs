@@ -61,19 +61,6 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             };
         }
 
-        if (dto.CreatedByUserId.HasValue)
-        {
-            var user = await _userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
-            if (user is null)
-            {
-                return new CreatePurchaseOrderResultAppDto
-                {
-                    Success = false,
-                    ErrorMessage = $"User with ID {dto.CreatedByUserId} does not exist."
-                };
-            }
-        }
-
         if (dto.VendorId.HasValue)
         {
             var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
@@ -96,6 +83,19 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 {
                     Success = false,
                     ErrorMessage = $"Warehouse with ID {dto.WarehouseId.Value} does not exist."
+                };
+            }
+        }
+
+        if (dto.CreatedByUserId.HasValue)
+        {
+            var user = await _userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
+            if (user is null)
+            {
+                return new CreatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = $"User with ID {dto.CreatedByUserId} does not exist."
                 };
             }
         }

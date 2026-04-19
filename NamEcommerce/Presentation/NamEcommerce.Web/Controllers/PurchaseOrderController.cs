@@ -61,6 +61,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (!result.Success)
         {
             ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
             return View(model);
         }
         TempData[ViewConstants.PurchaseOrderSuccessMessage] = "Thêm mới đơn nhập thành công!";

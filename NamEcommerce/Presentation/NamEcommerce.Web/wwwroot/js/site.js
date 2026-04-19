@@ -18,18 +18,6 @@ $(function () {
     $('.alert-dismissible').each(function () {
         setTimeout(() => $(this).slideUp(), 3000);
     });
-
-    $(document).on('focus', 'form input', function (e) {
-        if (this.type != 'number')
-            return;
-        if (this.value.match('^\\s*0+\\s*$'))
-            this.value = '';
-        $(this).on('blur', function onBlur() {
-            if (this.value == '')
-                this.value = '0';
-            $(this).off('blur', onBlur);
-        });
-    });
 })
 
 function isFormValid(form) {
@@ -71,12 +59,25 @@ function parseNumber(value, defaultVal = 0) {
     return Number.isFinite(n) ? n : defaultVal;
 }
 
-function debounce(fn, ms) {
+function debounce(fn, ms, checkFn) {
     let timer;
-    return (...args) => {
+
+    const debounced = (...args) => {
+        if (checkFn && !checkFn())
+            return;
         clearTimeout(timer);
         timer = setTimeout(() => fn(...args), ms);
     };
+
+    debounced.cancel = () => clearTimeout(timer);
+    debounced.flush = (...args) => {
+        if (checkFn && !checkFn())
+            return;
+        clearTimeout(timer);
+        fn(...args);
+    };
+
+    return debounced;
 }
 
 function getEl(id) {
