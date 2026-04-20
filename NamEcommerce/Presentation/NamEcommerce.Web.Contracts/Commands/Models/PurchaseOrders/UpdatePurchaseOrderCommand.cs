@@ -8,6 +8,7 @@ public sealed class UpdatePurchaseOrderCommand : IRequest<UpdatePurchaseOrderRes
 {
     public required Guid Id { get; set; }
     public required Guid? VendorId { get; set; }
+    public required Guid? WarehouseId { get; set; }
     public DateTime? ExpectedDeliveryDate { get; set; }
     public string? Note { get; set; }
     public required decimal TaxAmount { get; set; }

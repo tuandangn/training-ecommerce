@@ -115,6 +115,8 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 VendorName = purchaseOrderInfo.VendorName,
                 VendorAddress = purchaseOrderInfo.VendorAddress,
                 VendorPhone = purchaseOrderInfo.VendorPhone,
+                WarehouseId = purchaseOrderInfo.WarehouseId,
+                AvailableWarehouses = availableWarehouses,
                 Note = purchaseOrderInfo.Note,
                 ExpectedDeliveryDate = purchaseOrderInfo.ExpectedDeliveryDate,
                 ShippingAmount = purchaseOrderInfo.ShippingAmount,
@@ -147,6 +149,9 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                     RemainingQuantity = item.RemainingQuantity,
                     WarehouseRequired = item.TrackInventory,
                     WarehouseId = purchaseOrderInfo.WarehouseId,
+                    CurrentUnitPrice = item.CurrentUnitPrice,
+                    UnitCost = item.UnitCost,
+                    SellingPrice = item.CurrentUnitPrice
                 });
             }
         }

@@ -25,7 +25,8 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
         {
             ReceivedQuantity = request.ReceivedQuantity,
             WarehouseId = request.WarehouseId,
-            ReceivedByUserId = currentUser?.Id
+            ReceivedByUserId = currentUser?.Id,
+            SellingPrice = request.SellingPrice
         }).ConfigureAwait(false);
 
         return new ReceivePurchaseOrderItemResultModel

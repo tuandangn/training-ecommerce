@@ -323,10 +323,14 @@ export default class CreatePurchaseOrderController {
         this.#vendorPicker = new VendorPicker(el);
 
         el.addEventListener('select', (e) => {
-            this.#setState({ vendor: e.detail?.vendor ? new Vendor(e.detail.vendor) : null });
+            const vendor = e.detail?.vendor ? new Vendor(e.detail.vendor) : null;
+            this.#setState({ vendor });
+            // Khi đổi NCC → tự động điền giá của NCC đó (nếu có dữ liệu)
+            this.#addItemController.applyVendorPrice(vendor?.id ?? null);
         });
         el.addEventListener('remove', () => {
             this.#setState({ vendor: null });
+            this.#addItemController.applyVendorPrice(null);
         });
 
         const initialVendor = el.dataset;
@@ -343,10 +347,11 @@ export default class CreatePurchaseOrderController {
         this.#productPicker = new ProductPicker(el);
 
         el.addEventListener('select', (e) => {
-            this.#addItemController.setProduct(e.detail?.product ? new ProductInfo(e.detail.product) : null);
+            const product = e.detail?.product ? new ProductInfo(e.detail.product) : null;
+            this.#addItemController.setProduct(product, this.#state.vendor?.id ?? null);
         });
         el.addEventListener('remove', () => {
-            this.#addItemController.setProduct(null);
+            this.#addItemController.setProduct(null, null);
         });
     }
 
@@ -387,6 +392,8 @@ export class AddItemController {
         productInfo: null,
         quantity: 1,
         unitCost: 0,
+        /** @type {Array<{vendorId: string|null, vendorName: string, unitCost: number, purchaseOrderCode: string, purchaseDate: string}>} */
+        recentPrices: [],
     };
 
     constructor() {
@@ -398,19 +405,70 @@ export class AddItemController {
         });
     }
 
-    setProduct(productInfo) {
+    /**
+     * Khi chọn sản phẩm: fetch giá gần nhất rồi render.
+     * @param {ProductInfo|null} productInfo
+     * @param {string|null} currentVendorId - ID nhà cung cấp đang chọn (có thể null)
+     */
+    async setProduct(productInfo, currentVendorId) {
         this.state.productInfo = productInfo;
+        this.state.recentPrices = [];
+
         if (productInfo) {
-            this.state.unitCost = productInfo.unitPrice;
+            // Fetch giá gần nhất
+            try {
+                const res = await fetch(`/PurchaseOrder/RecentPurchasePrices?productId=${productInfo.id}`);
+                if (res.ok) {
+                    this.state.recentPrices = await res.json();
+                }
+            } catch {
+                this.state.recentPrices = [];
+            }
+
+            // Tự động điền giá theo NCC đang chọn
+            this.#autoFillPrice(currentVendorId);
         } else {
             this.state.unitCost = 0;
         }
+
         this.#render();
     }
 
+    /**
+     * Khi thay đổi NCC: tự động điền lại giá phù hợp (nếu có dữ liệu).
+     * @param {string|null} vendorId
+     */
+    applyVendorPrice(vendorId) {
+        this.#autoFillPrice(vendorId);
+        this.#renderPriceTable(vendorId);
+        // Cập nhật giá trị input
+        getEl('itemUnitPrice').value = this.state.unitCost;
+        DecimalFields.autoWrap(getEl('itemUnitPrice').closest('div') ?? document.body);
+    }
+
     reset() {
-        this.state = { productInfo: null, quantity: 1, unitCost: 0 };
+        this.state = { productInfo: null, quantity: 1, unitCost: 0, recentPrices: [] };
         this.#render();
+    }
+
+    // ─── Private ──────────────────────────────────────────────────────────────
+
+    /**
+     * Tự động điền giá unitCost trong state từ recentPrices theo vendorId.
+     * @param {string|null} vendorId
+     */
+    #autoFillPrice(vendorId) {
+        if (this.state.recentPrices.length === 0) return;
+
+        if (vendorId) {
+            const match = this.state.recentPrices.find(p => p.vendorId === vendorId);
+            if (match) {
+                this.state.unitCost = match.unitCost;
+            }
+            // Nếu NCC chưa có lịch sử → không thay đổi giá (giữ nguyên 0 hoặc giá cũ)
+        } else {
+            // Không chọn NCC → không tự động điền
+        }
     }
 
     #render() {
@@ -419,10 +477,126 @@ export class AddItemController {
         getEl('itemQuantity').value = quantity;
         getEl('itemUnitPrice').value = unitCost;
 
-        getEl('modalProductInfo').querySelector('.currency-hint').textContent = '';
+        const currencyHint = getEl('modalProductInfo').querySelector('.currency-hint');
+        if (currencyHint) currencyHint.textContent = '';
 
         const hasProduct = Boolean(productInfo);
         getEl('modalProductInfo').classList.toggle('d-none', !hasProduct);
         getEl('addItemToTable').classList.toggle('d-none', !hasProduct);
+
+        if (hasProduct) {
+            // Đọc vendorId hiện tại từ hidden input (nếu có)
+            const vendorIdEl = document.getElementById('VendorId');
+            const currentVendorId = vendorIdEl?.value || null;
+            this.#renderPriceTable(currentVendorId);
+            this.#renderAutoFillInfo(currentVendorId);
+        } else {
+            this.#hidePriceHint();
+        }
     }
+
+    /**
+     * Render bảng giá nhập gần nhất trong modal.
+     * @param {string|null} currentVendorId
+     */
+    #renderPriceTable(currentVendorId) {
+        const hintEl = document.getElementById('recentPricesHint');
+        const emptyEl = document.getElementById('recentPricesEmpty');
+        const tableWrapper = document.getElementById('recentPricesTableWrapper');
+        const tbody = document.getElementById('recentPricesTbody');
+
+        if (!hintEl || !tbody) return;
+
+        const prices = this.state.recentPrices;
+
+        if (prices.length === 0) {
+            hintEl.classList.remove('d-none');
+            tableWrapper?.classList.add('d-none');
+            emptyEl?.classList.remove('d-none');
+            return;
+        }
+
+        hintEl.classList.remove('d-none');
+        tableWrapper?.classList.remove('d-none');
+        emptyEl?.classList.add('d-none');
+
+        tbody.innerHTML = '';
+        prices.forEach(p => {
+            const isCurrentVendor = currentVendorId && p.vendorId === currentVendorId;
+            const tr = document.createElement('tr');
+            tr.className = isCurrentVendor ? 'table-success' : '';
+            tr.style.cursor = 'pointer';
+            tr.title = `Đơn: ${p.purchaseOrderCode}`;
+
+            tr.innerHTML = `
+                <td class="ps-0 py-1 text-nowrap">
+                    ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success"></i>' : ''}
+                    <span class="fw-medium">${escapeHtml(p.vendorName ?? 'Không rõ')}</span>
+                    <div class="text-muted" style="font-size:0.72rem">${escapeHtml(p.purchaseOrderCode)}</div>
+                </td>
+                <td class="text-end py-1 fw-semibold text-nowrap">
+                    ${DecimalFields.formatCurrency(String(p.unitCost))}
+                </td>
+                <td class="text-end py-1 text-muted text-nowrap" style="font-size:0.75rem">${escapeHtml(p.purchaseDate)}</td>`;
+
+            // Click vào hàng → điền giá
+            tr.addEventListener('click', () => {
+                this.state.unitCost = p.unitCost;
+                getEl('itemUnitPrice').value = p.unitCost;
+                DecimalFields.autoWrap(getEl('itemUnitPrice').closest('div') ?? document.body);
+                this.#renderAutoFillInfo(currentVendorId);
+            });
+
+            tbody.appendChild(tr);
+        });
+
+        this.#renderAutoFillInfo(currentVendorId);
+    }
+
+    /**
+     * Hiển thị thông báo đã tự động điền giá / gợi ý.
+     * @param {string|null} currentVendorId
+     */
+    #renderAutoFillInfo(currentVendorId) {
+        const infoEl = document.getElementById('recentPricesAutoFillInfo');
+        const textEl = document.getElementById('recentPricesAutoFillText');
+        if (!infoEl || !textEl) return;
+
+        if (!this.state.productInfo || this.state.recentPrices.length === 0) {
+            infoEl.classList.add('d-none');
+            return;
+        }
+
+        if (currentVendorId) {
+            const match = this.state.recentPrices.find(p => p.vendorId === currentVendorId);
+            if (match) {
+                textEl.textContent = `Đã tự động điền giá nhập gần nhất của nhà cung cấp này (${DecimalFields.formatCurrency(String(match.unitCost))}).`;
+                infoEl.classList.remove('d-none');
+            } else {
+                textEl.textContent = 'Nhà cung cấp này chưa có lịch sử nhập hàng cho sản phẩm — vui lòng nhập giá thủ công.';
+                infoEl.classList.remove('d-none');
+                infoEl.className = infoEl.className.replace('text-success', 'text-warning');
+            }
+        } else {
+            // Chưa chọn NCC → gợi ý chọn hàng để điền giá
+            textEl.textContent = 'Chọn nhà cung cấp để tự động điền giá, hoặc nhấn vào hàng trong bảng bên dưới.';
+            infoEl.classList.remove('d-none');
+            infoEl.className = 'small text-info mb-1';
+        }
+    }
+
+    #hidePriceHint() {
+        document.getElementById('recentPricesHint')?.classList.add('d-none');
+        document.getElementById('recentPricesAutoFillInfo')?.classList.add('d-none');
+    }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }

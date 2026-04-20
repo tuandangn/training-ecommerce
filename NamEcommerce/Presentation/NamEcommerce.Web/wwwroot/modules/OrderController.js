@@ -419,6 +419,8 @@ export class AddItemController {
         this.state.productInfo = productInfo;
         if (productInfo) {
             this.state.unitPrice = productInfo.unitPrice;
+            // Luôn ẩn container trước, fetch ngầm rồi mới hiện nút toggle
+            this.#hidePriceHistory();
             await this.#fetchPriceHistory(productInfo.id);
         } else {
             this.state.unitPrice = 0;
@@ -432,11 +434,15 @@ export class AddItemController {
         const loading = getEl('priceHistoryLoading');
         const empty = getEl('priceHistoryEmpty');
         const tableBody = getEl('priceHistoryTableBodyContent');
+        const toggleBtn = getEl('togglePriceHistoryBtn');
+        const closeBtn = getEl('closePriceHistoryBtn');
+        const toggleCostBtn = getEl('toggleCostColLabel');
 
-        container.classList.remove('d-none');
+        // Reset nội dung, ẩn container, hiện loading BÊN TRONG (container vẫn ẩn)
+        tableBody.innerHTML = '';
         loading.classList.remove('d-none');
         empty.classList.add('d-none');
-        tableBody.innerHTML = '';
+        toggleBtn?.classList.add('d-none');
 
         try {
             const res = await fetch(`/Product/PriceHistory?ProductId=${productId}`);
@@ -446,20 +452,46 @@ export class AddItemController {
             loading.classList.add('d-none');
 
             if (!data.items || data.items.length === 0) {
-                empty.classList.remove('d-none');
+                // Không có lịch sử → không hiện nút toggle
                 return;
             }
 
+            // Render các hàng, mỗi hàng có thể click để chọn giá
             data.items.forEach(item => {
                 const row = document.createElement('tr');
+                row.style.cursor = 'pointer';
+                row.title = 'Nhấn để chọn giá bán này';
                 const date = new Date(item.createdOnUtc).toLocaleDateString('vi-VN');
                 row.innerHTML = `
                     <td class="ps-2 py-2">${date}</td>
                     <td class="text-end fw-bold text-success py-2">${item.newPrice.toLocaleString()}đ</td>
-                    <td class="text-end text-muted pe-2 py-2">${item.newCostPrice.toLocaleString()}đ</td>
+                    <td class="text-end text-muted pe-2 py-2 d-none cost-cell">${item.newCostPrice.toLocaleString()}đ</td>
                 `;
+                // Click → điền giá bán vào input và đóng bảng
+                row.addEventListener('click', () => {
+                    const priceInput = getEl('itemUnitPrice');
+                    if (priceInput) {
+                        priceInput.value = item.newPrice;
+                        priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                    this.#togglePriceHistory(false); // đóng sau khi chọn
+                });
+                row.addEventListener('mouseenter', () => row.classList.add('table-active'));
+                row.addEventListener('mouseleave', () => row.classList.remove('table-active'));
                 tableBody.appendChild(row);
             });
+
+            // Hiện nút toggle (chỉ khi có dữ liệu)
+            if (toggleBtn) {
+                toggleBtn.classList.remove('d-none');
+                // Đảm bảo chỉ bind 1 lần
+                toggleBtn.onclick = () => this.#togglePriceHistory();
+            }
+            if (closeBtn) {
+                closeBtn.onclick = () => this.#togglePriceHistory(false);
+            }
+            if (toggleCostBtn)
+                toggleCostBtn.onclick = () => this.#toggleCost();
         } catch (error) {
             console.error(error);
             loading.classList.add('d-none');
@@ -468,9 +500,44 @@ export class AddItemController {
         }
     }
 
+    /** Toggle hoặc ép trạng thái bảng lịch sử giá.
+     * @param {boolean|undefined} forceShow - true: luôn hiện, false: luôn ẩn, undefined: toggle
+     */
+    #togglePriceHistory(forceShow) {
+        const container = getEl('priceHistoryContainer');
+        const toggleBtn = getEl('togglePriceHistoryBtn');
+        const labelEl = getEl('togglePriceHistoryLabel');
+        if (!container) return;
+
+        const willShow = forceShow !== undefined ? forceShow : container.classList.contains('d-none');
+        container.classList.toggle('d-none', !willShow);
+
+        if (labelEl) {
+            labelEl.textContent = willShow ? 'Ẩn lịch sử giá' : 'Xem lịch sử giá';
+        }
+    }
+
+    #toggleCost(forceClose) {
+        const container = getEl('priceHistoryContainer');
+        const priceHistoryTable = container.querySelector('table');
+        const costColumnHeader = priceHistoryTable.querySelector('.price-history-cost-col');
+
+        const willHide = forceClose !== undefined ? forceClose : !costColumnHeader.classList.contains('d-none');
+        costColumnHeader.classList.toggle('d-none', willHide)
+
+        const priceHistoryBody = getEl('priceHistoryTableBodyContent');
+        const cells = priceHistoryBody.querySelectorAll('.cost-cell');
+        cells.forEach(cell => cell.classList.toggle('d-none', willHide));
+    }
+
     #hidePriceHistory() {
         const container = getEl('priceHistoryContainer');
+        const toggleBtn = getEl('togglePriceHistoryBtn');
+        const labelEl = getEl('togglePriceHistoryLabel');
         if (container) container.classList.add('d-none');
+        if (toggleBtn) toggleBtn.classList.add('d-none');
+        if (labelEl) labelEl.textContent = 'Xem lịch sử giá';
+        this.#toggleCost(true);
     }
 
     reset() {

@@ -7,6 +7,7 @@ namespace NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 public abstract record BasePurchaseOrderDto
 {
     public Guid? VendorId { get; init; }
+    public required Guid? WarehouseId { get; init; }
 
     public DateTime? ExpectedDeliveryDateUtc { get; set; }
     public string? Note { get; set; }
@@ -30,7 +31,6 @@ public abstract record BasePurchaseOrderDto
 public sealed record PurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
 {
     public required string Code { get; init; }
-    public required Guid? WarehouseId { get; init; }
     public required Guid? CreatedByUserId { get; init; }
     public PurchaseOrderStatus Status { get; set; }
     public DateTime CreatedOnUtc { get; set; }
@@ -45,7 +45,6 @@ public sealed record PurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
 public sealed record CreatePurchaseOrderDto : BasePurchaseOrderDto
 {
     public required string Code { get; init; }
-    public required Guid? WarehouseId { get; init; }
     public required Guid? CreatedByUserId { get; init; }
 
     public IList<PurchaseOrderItemDto> Items { get; } = [];

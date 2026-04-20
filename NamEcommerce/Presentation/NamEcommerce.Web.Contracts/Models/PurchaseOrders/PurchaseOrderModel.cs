@@ -37,6 +37,11 @@ public sealed class PurchaseOrderModel
         public string? Note { get; set; }
         public decimal RemainingQuantity { get; set; }
         public bool TrackInventory { get; set; }
+
+        /// <summary>
+        /// Giá bán hiện tại của Product tại thời điểm truy vấn — dùng để pre-fill form Nhận hàng.
+        /// </summary>
+        public decimal CurrentUnitPrice { get; set; }
     }
 }
 

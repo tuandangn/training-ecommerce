@@ -24,6 +24,17 @@
                 }
             </div>
             <div class="col-12">
+                <label asp-for="WarehouseId" class="form-label fw-medium mb-2"></label>
+                <select asp-for="WarehouseId" class="form-select">
+                    <option value="" selected="@(!Model.WarehouseId.HasValue)">(Không chọn)</option>
+                    @foreach (var warehouse in Model.AvailableWarehouses)
+                    {
+                        <option value="@warehouse.Id" selected="@(Model.WarehouseId == warehouse.Id)">@warehouse.Name</option>
+                    }
+                </select>
+                <span asp-validation-for="WarehouseId" class="small text-danger"></span>
+            </div>
+            <div class="col-12">
                 @if (Model.CanChangeDate)
                 {
                     <label asp-for="ExpectedDeliveryDate" class="form-label fw-medium mb-2">Ngày giao dự kiến</label>

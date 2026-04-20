@@ -14,6 +14,9 @@ public static class EntityDataReader
         where TEntity : AppAggregateEntity
     {
         mock.Setup(t => t.DataSource).Returns(entities.AsQueryable()).Verifiable();
+        // GetByIdsAsync trả về các entity có Id nằm trong danh sách được truyền vào
+        mock.Setup(t => t.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>()))
+            .ReturnsAsync((IEnumerable<Guid> ids) => entities.Where(e => ids.Contains(e.Id)));
         return mock;
     }
 

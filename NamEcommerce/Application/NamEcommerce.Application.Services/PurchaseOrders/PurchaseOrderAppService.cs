@@ -178,6 +178,14 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                     ErrorMessage = $"Purchase order in status cannot change vendor"
                 };
             }
+            if (dto.WarehouseId != purchaseOrder.WarehouseId)
+            {
+                return new UpdatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = $"Purchase order in status cannot change warehouse"
+                };
+            }
             if (dto.ExpectedDeliveryDateUtc?.Date != purchaseOrder.ExpectedDeliveryDateUtc?.Date)
             {
                 return new UpdatePurchaseOrderResultAppDto
@@ -221,9 +229,23 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             }
         }
 
+        if (dto.WarehouseId.HasValue)
+        {
+            var warehouse = await _warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
+            if (warehouse is null)
+            {
+                return new UpdatePurchaseOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = $"Warehouse with ID {dto.WarehouseId.Value} does not exist."
+                };
+            }
+        }
+
         var updatePurchaseOrderDto = new UpdatePurchaseOrderDto(dto.Id)
         {
             VendorId = dto.VendorId,
+            WarehouseId = dto.WarehouseId,
             ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
             Note = dto.Note,
             ShippingAmount = dto.ShippingAmount,
@@ -409,7 +431,8 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         {
             ReceivedByUserId = dto.ReceivedByUserId,
             ReceivedQuantity = dto.ReceivedQuantity,
-            WarehouseId = warehouseId
+            WarehouseId = warehouseId,
+            SellingPrice = dto.SellingPrice
         });
         return new ReceivedGoodsForItemResultAppDto
         {
@@ -499,5 +522,19 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         {
             Success = true
         };
+    }
+
+    public async Task<IList<RecentPurchasePriceAppDto>> GetRecentPurchasePricesAsync(Guid productId)
+    {
+        var domainDtos = await _purchaseOrderManager.GetRecentPurchasePricesAsync(productId).ConfigureAwait(false);
+
+        return domainDtos
+            .Select(d => new RecentPurchasePriceAppDto(
+                VendorId: d.VendorId,
+                VendorName: d.VendorName,
+                UnitCost: d.UnitCost,
+                PurchaseOrderCode: d.PurchaseOrderCode,
+                PurchaseDate: d.PurchaseDateUtc.ToLocalTime()))
+            .ToList();
     }
 }

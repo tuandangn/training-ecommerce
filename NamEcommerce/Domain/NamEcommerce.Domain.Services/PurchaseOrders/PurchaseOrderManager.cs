@@ -33,11 +33,13 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private readonly IEventPublisher _eventPublisher;
     private readonly IEntityDataReader<InventoryStock> _stockDataReader;
     private readonly IRepository<Product> _productRepository;
+    private readonly IRepository<ProductPriceHistory> _priceHistoryRepository;
 
     public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IInventoryStockManager stockManager, IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
         IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader, IEventPublisher eventPublisher,
-        IEntityDataReader<InventoryStock> stockDataReader, IRepository<Product> productRepository)
+        IEntityDataReader<InventoryStock> stockDataReader, IRepository<Product> productRepository,
+        IRepository<ProductPriceHistory> priceHistoryRepository)
     {
         _purchaseOrderRepository = poRepository;
         _stockManager = stockManager;
@@ -49,6 +51,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         _eventPublisher = eventPublisher;
         _stockDataReader = stockDataReader;
         _productRepository = productRepository;
+        _priceHistoryRepository = priceHistoryRepository;
     }
 
     public async Task<CreatePurchaseOrderResultDto> CreatePurchaseOrderAsync(CreatePurchaseOrderDto dto)
@@ -123,11 +126,19 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 throw new VendorIsNotFoundException(dto.VendorId.Value);
         }
 
+        if (dto.WarehouseId.HasValue)
+        {
+            var warehouse = await _warehouseOrderDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
+            if (warehouse is null)
+                throw new WarehouseIsNotFoundException(dto.WarehouseId.Value);
+        }
+
         purchaseOrder.Note = dto.Note;
         purchaseOrder.ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc;
         purchaseOrder.ShippingAmount = dto.ShippingAmount;
         purchaseOrder.TaxAmount = dto.TaxAmount;
         await purchaseOrder.ChangeVendorAsync(dto.VendorId, _vendorOrderDataReader).ConfigureAwait(false);
+        await purchaseOrder.ChangeWarehouse(dto.WarehouseId, _warehouseOrderDataReader).ConfigureAwait(false);
 
         var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
@@ -136,6 +147,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         return new UpdatePurchaseOrderResultDto(updatedPurchaseOrder.Id)
         {
             VendorId = updatedPurchaseOrder.VendorId,
+            WarehouseId = updatedPurchaseOrder.WarehouseId,
             TaxAmount = updatedPurchaseOrder.TaxAmount,
             ShippingAmount = updatedPurchaseOrder.ShippingAmount,
             Note = updatedPurchaseOrder.Note,
@@ -273,12 +285,31 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         var receivedValue = dto.ReceivedQuantity * purchaseOrderItem.UnitCost;
         var newTotalStock = currentTotalStock + dto.ReceivedQuantity;
 
-        if (newTotalStock > 0)
+        var oldUnitPrice = product.UnitPrice;
+        var oldCostPrice = product.CostPrice;
+
+        var newCostPrice = newTotalStock > 0
+            ? (currentTotalValue + receivedValue) / newTotalStock
+            : oldCostPrice;
+
+        // Nếu người dùng không nhập giá bán mới thì giữ nguyên giá bán hiện tại
+        var newUnitPrice = dto.SellingPrice ?? oldUnitPrice;
+
+        if (newUnitPrice != oldUnitPrice || newCostPrice != oldCostPrice)
         {
-            var newCostPrice = (currentTotalValue + receivedValue) / newTotalStock;
-            product.SetCostPrice(newCostPrice);
+            product.UpdatePrice(newUnitPrice, newCostPrice);
             product.UpdatedOnUtc = DateTime.UtcNow;
             await _productRepository.UpdateAsync(product).ConfigureAwait(false);
+
+            if (_priceHistoryRepository is not null)
+            {
+                await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(
+                    product.Id,
+                    oldUnitPrice, newUnitPrice,
+                    oldCostPrice, newCostPrice,
+                    $"Nhập hàng từ PO {purchaseOrder.Code}")
+                ).ConfigureAwait(false);
+            }
         }
 
         await _stockManager.ReceiveStockAsync(purchaseOrderItem.ProductId,
@@ -385,5 +416,58 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         await _eventPublisher.EntityUpdated(updatedPurchaseOrder).ConfigureAwait(false);
+    }
+
+    public async Task<IList<RecentPurchasePriceDto>> GetRecentPurchasePricesAsync(Guid productId)
+    {
+        // Lấy tất cả đơn nhập (không bị hủy) có chứa sản phẩm này
+        var purchaseOrders = _purchaseOrderDataReader.DataSource
+            .Where(po => po.Status != PurchaseOrderStatus.Cancelled
+                      && po.Items.Any(item => item.ProductId == productId))
+            .OrderByDescending(po => po.CreatedOnUtc)
+            .ToList();
+
+        // Gom nhóm theo VendorId, lấy lần nhập gần nhất của mỗi nhà cung cấp
+        var groupedByVendor = purchaseOrders
+            .SelectMany(po => po.Items
+                .Where(item => item.ProductId == productId)
+                .Select(item => new
+                {
+                    po.VendorId,
+                    item.UnitCost,
+                    po.Code,
+                    po.CreatedOnUtc
+                }))
+            .GroupBy(x => x.VendorId)
+            .Select(g => g.OrderByDescending(x => x.CreatedOnUtc).First())
+            .OrderByDescending(x => x.CreatedOnUtc)
+            .ToList();
+
+        if (groupedByVendor.Count == 0)
+            return [];
+
+        // Lấy tên nhà cung cấp theo batch
+        var vendorIds = groupedByVendor
+            .Where(x => x.VendorId.HasValue)
+            .Select(x => x.VendorId!.Value)
+            .Distinct()
+            .ToList();
+
+        var vendors = vendorIds.Count > 0
+            ? await _vendorOrderDataReader.GetByIdsAsync(vendorIds).ConfigureAwait(false)
+            : [];
+
+        var vendorMap = vendors.ToDictionary(v => v.Id, v => v.Name);
+
+        return groupedByVendor
+            .Select(x => new RecentPurchasePriceDto(
+                VendorId: x.VendorId,
+                VendorName: x.VendorId.HasValue && vendorMap.TryGetValue(x.VendorId.Value, out var name)
+                    ? name
+                    : "Không rõ nhà cung cấp",
+                UnitCost: x.UnitCost,
+                PurchaseOrderCode: x.Code,
+                PurchaseDateUtc: x.CreatedOnUtc))
+            .ToList();
     }
 }

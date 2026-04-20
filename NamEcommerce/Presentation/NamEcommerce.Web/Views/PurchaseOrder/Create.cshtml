@@ -215,6 +215,33 @@
                                       data-valmsg-for="itemUnitPrice" data-valmsg-replace="true"></span>
                             </div>
                         </div>
+                        {{! Gợi ý giá nhập gần nhất }}
+                        <div id="recentPricesHint" class="mt-2 d-none">
+                            <div id="recentPricesAutoFillInfo" class="d-none small text-success mb-1">
+                                <i class="bi bi-check-circle-fill me-1"></i>
+                                <span id="recentPricesAutoFillText"></span>
+                            </div>
+                            <div class="border rounded-3 bg-light p-2 mt-1">
+                                <div class="small fw-semibold text-muted mb-1">
+                                    <i class="bi bi-clock-history me-1"></i> Giá nhập gần nhất theo nhà cung cấp
+                                </div>
+                                <div id="recentPricesTableWrapper">
+                                    <table class="table table-sm table-borderless mb-0 small" id="recentPricesTable">
+                                        <thead class="text-muted">
+                                            <tr>
+                                                <th class="ps-0 py-1">Nhà cung cấp</th>
+                                                <th class="text-end py-1">Giá nhập</th>
+                                                <th class="text-end py-1 text-nowrap">Ngày</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="recentPricesTbody"></tbody>
+                                    </table>
+                                </div>
+                                <div id="recentPricesEmpty" class="text-muted fst-italic small d-none py-1">
+                                    Chưa có lịch sử nhập hàng cho sản phẩm này.
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 pb-3">

@@ -21,6 +21,7 @@ public sealed class UpdatePurchaseOrderHandler : IRequestHandler<UpdatePurchaseO
         var updatePurchaseOrderResult = await _purchaseOrderAppService.UpdatePurchaseOrderAsync(new UpdatePurchaseOrderAppDto(request.Id)
         {
             VendorId = request.VendorId,
+            WarehouseId = request.WarehouseId,
             ExpectedDeliveryDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedDeliveryDate),
             Note = request.Note,
             TaxAmount = request.TaxAmount,

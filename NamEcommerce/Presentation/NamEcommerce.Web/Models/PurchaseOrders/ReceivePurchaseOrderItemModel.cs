@@ -20,4 +20,22 @@ public sealed class ReceivePurchaseOrderItemModel
 
     [ValidateNever]
     public bool WarehouseRequired { get; set; }
+
+    /// <summary>
+    /// Giá bán mới (tùy chọn). Nếu null hoặc không nhập thì giữ nguyên giá bán hiện tại của sản phẩm.
+    /// </summary>
+    [Display(Name = "Giá bán")]
+    public decimal? SellingPrice { get; set; }
+
+    /// <summary>
+    /// Giá bán hiện tại của sản phẩm — dùng để pre-fill input và so sánh cảnh báo trên UI.
+    /// </summary>
+    [ValidateNever]
+    public decimal CurrentUnitPrice { get; set; }
+
+    /// <summary>
+    /// Giá vốn của dòng nhập này — dùng để cảnh báo khi giá bán &lt;= giá vốn.
+    /// </summary>
+    [ValidateNever]
+    public decimal UnitCost { get; set; }
 }

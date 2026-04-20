@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using NamEcommerce.Web.Contracts.Models.Common;
 using System.ComponentModel.DataAnnotations;
 
 namespace NamEcommerce.Web.Models.PurchaseOrders;
@@ -16,6 +17,10 @@ public sealed class EditPurchaseOrderModel
     public string? VendorPhone { get; set; }
     [ValidateNever]
     public string? VendorAddress { get; set; }
+
+    public Guid? WarehouseId { get; set; }
+    [ValidateNever]
+    public required EntityOptionListModel AvailableWarehouses { get; set; }
 
     [Display(Name = "Ngày nhập dự kiến")]
     public DateTime? ExpectedDeliveryDate { get; set; }

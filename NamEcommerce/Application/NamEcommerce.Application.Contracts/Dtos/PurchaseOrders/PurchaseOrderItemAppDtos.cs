@@ -48,10 +48,17 @@ public sealed record ReceivedGoodsForItemAppDto(Guid PurchaseOrderId, Guid Purch
     public Guid? ReceivedByUserId { get; set; }
     public Guid? WarehouseId { get; set; }
 
+    /// <summary>
+    /// Giá bán mới cho sản phẩm (tùy chọn). Nếu null thì giữ nguyên UnitPrice hiện tại của Product.
+    /// </summary>
+    public decimal? SellingPrice { get; set; }
+
     public (bool valid, string? errorMessage) Validate()
     {
         if (ReceivedQuantity <= 0)
             return (false, "Received quantity must be greater than 0.");
+        if (SellingPrice.HasValue && SellingPrice.Value < 0)
+            return (false, "Selling price must be greater than or equal to 0.");
 
         return (true, string.Empty);
     }

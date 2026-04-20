@@ -90,6 +90,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             ShippingAmount = model.ShippingAmount,
             TaxAmount = model.TaxAmount,
             VendorId = model.VendorId,
+            WarehouseId = model.WarehouseId,
             ExpectedDeliveryDate = model.ExpectedDeliveryDate,
             Note = model.Note
         });
@@ -159,7 +160,8 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             PurchaseOrderId = model.PurchaseOrderId,
             PurchaseOrderItemId = model.PurchaseOrderItemId,
             ReceivedQuantity = model.ReceivedQuantity,
-            WarehouseId = model.WarehouseId
+            WarehouseId = model.WarehouseId,
+            SellingPrice = model.SellingPrice
         });
 
         if (!result.Success)
@@ -234,6 +236,30 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         TempData[success ? ViewConstants.PurchaseOrderSuccessMessage : ViewConstants.PurchaseOrderErrorMessage] = errorMessage;
         return RedirectToAction(nameof(Details), new { id });
     }
+    /// <summary>
+    /// AJAX: Lấy giá nhập gần nhất của một sản phẩm theo từng nhà cung cấp.
+    /// Dùng để gợi ý và tự động điền giá khi tạo đơn nhập.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> RecentPurchasePrices(Guid productId)
+    {
+        if (productId == Guid.Empty)
+            return Json(Array.Empty<object>());
+
+        var prices = await _mediator.Send(new GetRecentPurchasePricesQuery { ProductId = productId });
+
+        var result = prices.Select(p => new
+        {
+            vendorId = p.VendorId,
+            vendorName = p.VendorName,
+            unitCost = p.UnitCost,
+            purchaseOrderCode = p.PurchaseOrderCode,
+            purchaseDate = p.PurchaseDate.ToString("dd/MM/yyyy")
+        });
+
+        return Json(result);
+    }
+
     [HttpPost]
     public async Task<IActionResult> ChangeStatus(Guid id, int status)
     {
