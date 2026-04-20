@@ -18,5 +18,6 @@ public interface IProductManager : INameExistCheckingService
     Task RemoveProductFromCategoryAsync(Guid productId, Guid categoryId);
 
     Task DeleteProductAsync(Guid id);
-    Task<IEnumerable<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId);
+
+    Task<IEnumerable<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId, int? limit = null);
 }

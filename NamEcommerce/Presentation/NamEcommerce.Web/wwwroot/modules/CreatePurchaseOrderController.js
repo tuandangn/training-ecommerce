@@ -530,20 +530,25 @@ export class AddItemController {
 
             tr.innerHTML = `
                 <td class="ps-0 py-1 text-nowrap">
-                    ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success"></i>' : ''}
+                    ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success vendor-selected"></i>' : ''}
                     <span class="fw-medium">${escapeHtml(p.vendorName ?? 'Không rõ')}</span>
                     <div class="text-muted" style="font-size:0.72rem">${escapeHtml(p.purchaseOrderCode)}</div>
                 </td>
                 <td class="text-end py-1 fw-semibold text-nowrap">
-                    ${DecimalFields.formatCurrency(String(p.unitCost))}
+                    ${DecimalFields.formatCurrency(p.unitCost)}
                 </td>
                 <td class="text-end py-1 text-muted text-nowrap" style="font-size:0.75rem">${escapeHtml(p.purchaseDate)}</td>`;
 
             // Click vào hàng → điền giá
             tr.addEventListener('click', () => {
+                tr.closest('table').querySelectorAll('tbody tr').forEach(row => {
+                    row.classList.remove('table-success')
+                });
+                tr.classList.add('table-success');
                 this.state.unitCost = p.unitCost;
-                getEl('itemUnitPrice').value = p.unitCost;
-                DecimalFields.autoWrap(getEl('itemUnitPrice').closest('div') ?? document.body);
+                const itemUnitPrice= getEl('itemUnitPrice');
+                itemUnitPrice.value = DecimalFields.formatCurrency(p.unitCost);
+                itemUnitPrice.dispatchEvent(new Event('blur'));
                 this.#renderAutoFillInfo(currentVendorId);
             });
 
@@ -570,7 +575,7 @@ export class AddItemController {
         if (currentVendorId) {
             const match = this.state.recentPrices.find(p => p.vendorId === currentVendorId);
             if (match) {
-                textEl.textContent = `Đã tự động điền giá nhập gần nhất của nhà cung cấp này (${DecimalFields.formatCurrency(String(match.unitCost))}).`;
+                textEl.innerHTML = `Giá nhập gần nhất của nhà cung cấp <span>${match.vendorName}</span> là <span class="fw-bold">${DecimalFields.formatCurrency(String(match.unitCost))}</span>.`;
                 infoEl.classList.remove('d-none');
             } else {
                 textEl.textContent = 'Nhà cung cấp này chưa có lịch sử nhập hàng cho sản phẩm — vui lòng nhập giá thủ công.';

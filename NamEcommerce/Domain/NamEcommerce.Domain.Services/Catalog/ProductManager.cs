@@ -204,12 +204,13 @@ public sealed class ProductManager : IProductManager
         };
     }
 
-    public Task<IEnumerable<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId)
+    public Task<IEnumerable<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId, int? limit = null)
     {
+        limit = limit ?? 10;
         var history = _priceHistoryDataReader.DataSource
             .Where(h => h.ProductId == productId)
             .OrderByDescending(h => h.CreatedOnUtc)
-            .Take(10)
+            .Take(limit.Value)
             .Select(h => new ProductPriceHistoryDto
             {
                 Id = h.Id,

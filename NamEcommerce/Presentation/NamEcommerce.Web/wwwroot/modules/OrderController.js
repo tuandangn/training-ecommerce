@@ -464,8 +464,8 @@ export class AddItemController {
                 const date = new Date(item.createdOnUtc).toLocaleDateString('vi-VN');
                 row.innerHTML = `
                     <td class="ps-2 py-2">${date}</td>
-                    <td class="text-end fw-bold text-success py-2">${item.newPrice.toLocaleString()}đ</td>
-                    <td class="text-end text-muted pe-2 py-2 d-none cost-cell">${item.newCostPrice.toLocaleString()}đ</td>
+                    <td class="text-end fw-bold text-success py-2">${item.newPrice < item.newCostPrice ? '<i class="bi bi-exclamation-triangle-fill me-1"></i>' : ''}${DecimalFields.formatCurrency(item.newPrice)}</td >
+                    <td class="text-end text-muted pe-2 py-2 d-none cost-cell">${DecimalFields.formatCurrency(item.newCostPrice)}</td >
                 `;
                 // Click → điền giá bán vào input và đóng bảng
                 row.addEventListener('click', () => {
@@ -492,6 +492,8 @@ export class AddItemController {
             }
             if (toggleCostBtn)
                 toggleCostBtn.onclick = () => this.#toggleCost();
+
+            this.#togglePriceHistory(true);
         } catch (error) {
             console.error(error);
             loading.classList.add('d-none');
