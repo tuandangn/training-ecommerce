@@ -100,7 +100,6 @@ export default class CustomerPicker {
     }
 
     async #fetchCustomers(query) {
-        console.trace('CustomerPicker.fetch');
         this.#abortController = new AbortController();
 
         try {
@@ -234,8 +233,6 @@ export default class CustomerPicker {
     // ─── Template HTML ───────────────────────────────────────────────────────────
     #template() {
         return `
-        <label class="form-label small fw-bold text-muted" for="customerSearch">Tìm kiếm khách hàng</label>
-
         <div class="input-group-container">
             <div class="input-group">
                 <span class="input-group-text bg-white border-end-0">

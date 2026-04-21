@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Helpers;
 
 namespace NamEcommerce.Domain.Entities.Debts;
 
@@ -38,8 +39,38 @@ public sealed record CustomerDebt : AppAggregateEntity
     public string Code { get; private set; }
     
     public Guid CustomerId { get; private set; }
-    public string CustomerName { get; private set; }
-    
+
+    public string CustomerName { 
+        get;
+        internal set
+        {
+            field = value;
+            NormalizedCustomerName = TextHelper.Normalize(value);
+        }
+    }
+    internal string NormalizedCustomerName { get; private set; } = "";
+
+    public string? CustomerPhone { 
+        get;
+        internal set
+        {
+            field = value;
+            NormalizedCustomerPhone = TextHelper.Normalize(value);
+        }
+    }
+    internal string NormalizedCustomerPhone { get; private set; } = "";
+
+    public string? CustomerAddress { 
+        get;
+        internal set
+        {
+            field = value;
+            NormalizedCustomerAddress = TextHelper.Normalize(value);
+        }
+    }
+    internal string NormalizedCustomerAddress { get; private set; } = "";
+
+
     public Guid DeliveryNoteId { get; private set; }
     public string DeliveryNoteCode { get; private set; }
     

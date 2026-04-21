@@ -226,7 +226,7 @@
                         beginAtZero: true,
                         grid: { borderDash: [5, 5], color: 'rgba(0,0,0,0.05)' },
                         ticks: {
-                            callback: function(value) { return value.toLocaleString() + ' ₫'; }
+                            callback: function(value) { return DecimalFields.formatCurrency(value) + ' ₫'; }
                         }
                     },
                     x: {

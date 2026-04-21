@@ -8,3 +8,11 @@ public sealed class RecordCustomerPaymentCommand : IRequest<CommonResultModel>
 {
     public required RecordPaymentModel Model { get; init; }
 }
+
+/// <summary>
+/// Thanh toán linh động: không gắn vào debt cụ thể, hệ thống tự phân bổ FIFO.
+/// </summary>
+public sealed class RecordFlexiblePaymentCommand : IRequest<CommonResultModel>
+{
+    public required RecordPaymentModel Model { get; init; }
+}

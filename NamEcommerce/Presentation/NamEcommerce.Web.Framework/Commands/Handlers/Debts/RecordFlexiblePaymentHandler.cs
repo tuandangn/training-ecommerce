@@ -7,14 +7,14 @@ using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Debts;
 
-public sealed class RecordCustomerPaymentHandler(
+public sealed class RecordFlexiblePaymentHandler(
     ICustomerDebtAppService debtAppService,
-    ICurrentUserService currentUserService) : IRequestHandler<RecordCustomerPaymentCommand, CommonResultModel>
+    ICurrentUserService currentUserService) : IRequestHandler<RecordFlexiblePaymentCommand, CommonResultModel>
 {
     private readonly ICustomerDebtAppService _debtAppService = debtAppService;
     private readonly ICurrentUserService _currentUserService = currentUserService;
 
-    public async Task<CommonResultModel> Handle(RecordCustomerPaymentCommand request, CancellationToken cancellationToken)
+    public async Task<CommonResultModel> Handle(RecordFlexiblePaymentCommand request, CancellationToken cancellationToken)
     {
         try
         {
@@ -23,8 +23,7 @@ public sealed class RecordCustomerPaymentHandler(
             var dto = new CreateCustomerPaymentAppDto
             {
                 CustomerId = request.Model.CustomerId,
-                CustomerDebtId = request.Model.CustomerDebtId,
-                OrderId = request.Model.OrderId,
+                // CustomerDebtId không set → hệ thống tự phân bổ FIFO
                 Amount = request.Model.Amount,
                 PaymentMethod = request.Model.PaymentMethod,
                 PaymentType = request.Model.PaymentType,
@@ -33,8 +32,12 @@ public sealed class RecordCustomerPaymentHandler(
                 RecordedByUserId = currentUser?.Id
             };
 
-            await _debtAppService.RecordPaymentAsync(dto).ConfigureAwait(false);
-            return new CommonResultModel { Success = true };
+            var payments = await _debtAppService.RecordFlexiblePaymentForCustomerAsync(dto).ConfigureAwait(false);
+            return new CommonResultModel
+            {
+                Success = true,
+                SuccessMessage = $"Đã ghi nhận {payments.Count} giao dịch thanh toán."
+            };
         }
         catch (Exception ex)
         {

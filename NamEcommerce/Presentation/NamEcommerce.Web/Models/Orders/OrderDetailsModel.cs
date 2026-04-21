@@ -29,6 +29,8 @@ public sealed record OrderDetailsModel
     public IList<OrderItemModel> Items { get; init; } = [];
     public IList<DeliveryNoteBasicModel> DeliveryNotes { get; init; } = [];
 
+    public DateTime CreatedOn { get; set; }
+
     /// <summary>
     /// Checks if all order items have been fully covered by delivery notes
     /// </summary>

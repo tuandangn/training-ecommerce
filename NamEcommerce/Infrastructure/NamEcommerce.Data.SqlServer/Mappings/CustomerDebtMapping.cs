@@ -15,6 +15,11 @@ public sealed class CustomerDebtMapping : IEntityTypeConfiguration<CustomerDebt>
 
         builder.Property(x => x.CustomerId).IsRequired();
         builder.Property(x => x.CustomerName).IsRequired().HasMaxLength(255);
+        builder.Property(x => x.NormalizedCustomerName).HasMaxLength(400);
+        builder.Property(x => x.CustomerPhone).HasMaxLength(50);
+        builder.Property(x => x.NormalizedCustomerPhone).HasMaxLength(100);
+        builder.Property(x => x.CustomerAddress).HasMaxLength(500);
+        builder.Property(x => x.NormalizedCustomerAddress).HasMaxLength(1000);
         
         builder.Property(x => x.DeliveryNoteId).IsRequired();
         builder.Property(x => x.DeliveryNoteCode).IsRequired().HasMaxLength(100);

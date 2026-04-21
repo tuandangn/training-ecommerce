@@ -83,7 +83,7 @@ class ProductPickerView {
         const pictureFieldIcon = this.displayInfo.querySelector('.picture-field-icon');
 
         nameField.textContent = product.name;
-        stockField.textContent = product.availableQty.toLocaleString();
+        stockField.textContent = DecimalFields.formatQuantity(product.availableQty);
 
         const hasPicture = Boolean(product.picture);
         pictureField.alt = product.name;
@@ -130,7 +130,7 @@ class ProductPickerView {
                 <div class="flex-grow-1 overflow-hidden">
                     <div class="fw-bold text-truncate">${highlight(product.name, query)}</div>
                     ${product.availableQty > 0 ? `<div class="small text-muted">
-                            Tồn kho: <span>${product.availableQty.toLocaleString()}</span>
+                            Tồn kho: <span>${DecimalFields.formatQuantity(product.availableQty)}</span>
                         </div>`: ''}
                 </div>
             </div>`;

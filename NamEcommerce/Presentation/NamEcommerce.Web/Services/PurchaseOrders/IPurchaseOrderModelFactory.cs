@@ -1,5 +1,6 @@
 ﻿using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Models.Catalog;
+using NamEcommerce.Web.Models.CustomerDebts;
 using NamEcommerce.Web.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Services.PurchaseOrders;

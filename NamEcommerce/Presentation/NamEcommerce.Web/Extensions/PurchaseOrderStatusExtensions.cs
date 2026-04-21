@@ -25,12 +25,12 @@ public static class PurchaseOrderStatusExtensions
 
         public string GetDisplayColor() => status switch
         {
-            PurchaseOrderStatus.Draft => "secondary",
-            PurchaseOrderStatus.Submitted => "primary",
-            PurchaseOrderStatus.Approved => "info",
-            PurchaseOrderStatus.Receiving => "warning text-dark",
-            PurchaseOrderStatus.Completed => "success",
-            PurchaseOrderStatus.Cancelled => "danger",
+            PurchaseOrderStatus.Draft => "bg-secondary text-light",
+            PurchaseOrderStatus.Submitted => "bg-primary text-light",
+            PurchaseOrderStatus.Approved => "bg-info",
+            PurchaseOrderStatus.Receiving => "bg-warning text-dark",
+            PurchaseOrderStatus.Completed => "bg-success text-light",
+            PurchaseOrderStatus.Cancelled => "bg-danger light",
             _ => throw new InvalidDataException(nameof(status)),
         };
     }

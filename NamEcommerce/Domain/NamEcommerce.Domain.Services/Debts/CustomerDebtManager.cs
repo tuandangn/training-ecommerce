@@ -60,7 +60,11 @@ public sealed class CustomerDebtManager(
             totalAmount: dto.TotalAmount,
             dueDateUtc: dto.DueDateUtc,
             createdByUserId: dto.CreatedByUserId
-        );
+        )
+        {
+            CustomerAddress = customer.PhoneNumber,
+            CustomerPhone = customer.PhoneNumber
+        };
 
         // 2. Auto-allocate deposits (Tiền cọc)
         var deposits = paymentReader.DataSource
@@ -136,23 +140,240 @@ public sealed class CustomerDebtManager(
     {
         var debt = await debtReader.GetByIdAsync(id).ConfigureAwait(false);
         if (debt == null) return null;
-        
+
+        // Load tất cả payments liên quan đến debt này
+        var payments = paymentReader.DataSource
+            .Where(p => p.CustomerDebtId == id)
+            .OrderBy(p => p.PaidOnUtc)
+            .ToList();
+
         var dto = MapToDto(debt);
-        // Note: In a real app we might want to include payments list here
-        return dto;
+        return dto with { Payments = payments.Select(MapToPaymentDto).ToList() };
     }
 
-    public async Task<IPagedDataDto<CustomerDebtDto>> GetDebtsAsync(Guid? customerId = null, int pageIndex = 0, int pageSize = 15)
+    public async Task<CustomerPaymentDto?> GetPaymentByIdAsync(Guid paymentId)
+    {
+        var payment = await paymentReader.GetByIdAsync(paymentId).ConfigureAwait(false);
+        return payment == null ? null : MapToPaymentDto(payment);
+    }
+
+    public async Task<CustomerDebtSummaryDto?> GetCustomerDebtSummaryAsync(Guid customerId)
+    {
+        var debts = debtReader.DataSource
+            .Where(d => d.CustomerId == customerId)
+            .ToList();
+
+        if (debts.Count == 0) return null;
+
+        // Lấy tên khách hàng từ bản ghi đầu tiên
+        var customerName = debts[0].CustomerName;
+
+        return new CustomerDebtSummaryDto
+        {
+            CustomerId = customerId,
+            CustomerName = customerName,
+            TotalDebtAmount = debts.Sum(d => d.TotalAmount),
+            TotalPaidAmount = debts.Sum(d => d.PaidAmount),
+            TotalRemainingAmount = debts.Sum(d => d.RemainingAmount),
+            DebtCount = debts.Count
+        };
+    }
+
+    /// <summary>
+    /// Thanh toán linh động: phân bổ số tiền vào các debt còn lại của khách hàng theo thứ tự FIFO.
+    /// Nếu tiền thừa sau khi trả hết tất cả nợ, lưu dưới dạng CustomerPayment không gắn debt (General).
+    /// </summary>
+    public async Task<IList<CustomerPaymentDto>> RecordFlexiblePaymentForCustomerAsync(CreateCustomerPaymentDto dto)
+    {
+        dto.Verify();
+
+        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        if (customer == null) throw new ArgumentException("Customer not found");
+
+        // Lấy tất cả debts chưa trả hết, sắp xếp cũ nhất trước (FIFO)
+        var pendingDebts = debtReader.DataSource
+            .Where(d => d.CustomerId == dto.CustomerId && d.RemainingAmount > 0)
+            .OrderBy(d => d.CreatedOnUtc)
+            .ToList();
+
+        var results = new List<CustomerPaymentDto>();
+        var remaining = dto.Amount;
+
+        foreach (var debt in pendingDebts)
+        {
+            if (remaining <= 0) break;
+
+            var applyAmount = Math.Min(remaining, debt.RemainingAmount);
+            var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
+
+            var payment = new CustomerPayment(
+                code: code,
+                customerId: customer.Id,
+                customerName: customer.FullName,
+                amount: applyAmount,
+                paymentMethod: dto.PaymentMethod,
+                paymentType: PaymentType.DebtPayment,
+                paidOnUtc: dto.PaidOnUtc,
+                recordedByUserId: dto.RecordedByUserId,
+                note: dto.Note
+            )
+            {
+                CustomerDebtId = debt.Id,
+                OrderId = debt.OrderId,
+                DeliveryNoteId = debt.DeliveryNoteId
+            };
+
+            debt.ApplyPayment(applyAmount);
+            payment.MarkAsApplied();
+
+            await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+            var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
+            results.Add(MapToPaymentDto(inserted));
+
+            remaining -= applyAmount;
+        }
+
+        // Nếu còn dư tiền sau khi trả hết nợ → lưu làm tiền cọc chung
+        if (remaining > 0)
+        {
+            var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
+            var overpayment = new CustomerPayment(
+                code: code,
+                customerId: customer.Id,
+                customerName: customer.FullName,
+                amount: remaining,
+                paymentMethod: dto.PaymentMethod,
+                paymentType: PaymentType.Deposit,
+                paidOnUtc: dto.PaidOnUtc,
+                recordedByUserId: dto.RecordedByUserId,
+                note: string.IsNullOrEmpty(dto.Note) ? "Tiền dư sau khi thanh toán nợ" : dto.Note
+            );
+            var inserted = await paymentRepository.InsertAsync(overpayment).ConfigureAwait(false);
+            results.Add(MapToPaymentDto(inserted));
+        }
+
+        return results;
+    }
+
+    public async Task<IPagedDataDto<CustomerDebtSummaryDto>> GetCustomersWithDebtsAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
+    {
+        // Load tất cả debts vào memory rồi group (phù hợp với quy mô cửa hàng)
+        var allDebts = debtReader.DataSource.ToList();
+
+        // Group theo CustomerId
+        var groups = allDebts
+            .GroupBy(d => d.CustomerId)
+            .Select(g => new
+            {
+                CustomerId = g.Key,
+                CustomerName = g.First().CustomerName,
+                CustomerPhone = g.First().CustomerPhone,
+                CustomerAddress = g.First().CustomerAddress,
+                TotalDebtAmount = g.Sum(d => d.TotalAmount),
+                TotalPaidAmount = g.Sum(d => d.PaidAmount),
+                TotalRemainingAmount = g.Sum(d => d.RemainingAmount),
+                DebtCount = g.Count()
+            })
+            .AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(keywords))
+            groups = groups.Where(g => g.CustomerName.Contains(keywords, StringComparison.OrdinalIgnoreCase));
+
+        var sorted = groups.OrderBy(g => g.CustomerName).ToList();
+        var total = sorted.Count;
+        var page = sorted.Skip(pageIndex * pageSize).Take(pageSize).ToList();
+
+        var results = new List<CustomerDebtSummaryDto>();
+        foreach (var item in page)
+        {
+            var depositBalance = paymentReader.DataSource
+                .Where(p => p.CustomerId == item.CustomerId
+                         && p.PaymentType == PaymentType.Deposit
+                         && !p.IsApplied)
+                .Sum(p => p.Amount);
+
+            results.Add(new CustomerDebtSummaryDto
+            {
+                CustomerId = item.CustomerId,
+                CustomerName = item.CustomerName,
+                CustomerPhone = item.CustomerPhone,
+                CustomerAddress = item.CustomerAddress,
+                TotalDebtAmount = item.TotalDebtAmount,
+                TotalPaidAmount = item.TotalPaidAmount,
+                TotalRemainingAmount = item.TotalRemainingAmount,
+                DepositBalance = depositBalance,
+                DebtCount = item.DebtCount
+            });
+        }
+
+        return PagedDataDto.Create(results, pageIndex, pageSize, total);
+    }
+
+    public async Task<CustomerDebtsByCustomerDto?> GetDebtsByCustomerIdAsync(Guid customerId)
+    {
+        var debts = debtReader.DataSource
+            .Where(d => d.CustomerId == customerId)
+            .OrderByDescending(d => d.CreatedOnUtc)
+            .ToList();
+
+        if (debts.Count == 0) return null;
+
+        // Load payments gắn với từng debt
+        var debtDtos = new List<CustomerDebtDto>();
+        foreach (var debt in debts)
+        {
+            var payments = paymentReader.DataSource
+                .Where(p => p.CustomerDebtId == debt.Id)
+                .OrderBy(p => p.PaidOnUtc)
+                .ToList();
+            debtDtos.Add(MapToDto(debt) with { Payments = payments.Select(MapToPaymentDto).ToList() });
+        }
+
+        // Tiền cọc chưa áp dụng
+        var deposits = paymentReader.DataSource
+            .Where(p => p.CustomerId == customerId && p.PaymentType == PaymentType.Deposit && !p.IsApplied)
+            .OrderByDescending(p => p.PaidOnUtc)
+            .ToList();
+
+        // Lịch sử 20 giao dịch gần nhất
+        var recentPayments = paymentReader.DataSource
+            .Where(p => p.CustomerId == customerId)
+            .OrderByDescending(p => p.PaidOnUtc)
+            .Take(20)
+            .ToList();
+
+        var depositBalance = deposits.Sum(p => p.Amount);
+
+        return new CustomerDebtsByCustomerDto
+        {
+            CustomerId = customerId,
+            CustomerName = debts[0].CustomerName,
+            TotalDebtAmount = debts.Sum(d => d.TotalAmount),
+            TotalPaidAmount = debts.Sum(d => d.PaidAmount),
+            TotalRemainingAmount = debts.Sum(d => d.RemainingAmount),
+            DepositBalance = depositBalance,
+            Debts = debtDtos,
+            Deposits = deposits.Select(MapToPaymentDto).ToList(),
+            RecentPayments = recentPayments.Select(MapToPaymentDto).ToList()
+        };
+    }
+
+    public async Task<IPagedDataDto<CustomerDebtDto>> GetDebtsAsync(Guid? customerId = null, string? keywords = null, int pageIndex = 0, int pageSize = 15)
     {
         var query = debtReader.DataSource;
         if (customerId.HasValue)
             query = query.Where(d => d.CustomerId == customerId.Value);
-            
+        if (!string.IsNullOrWhiteSpace(keywords))
+            query = query.Where(d => d.Code.Contains(keywords)
+                || d.CustomerName.Contains(keywords)
+                || d.OrderCode.Contains(keywords)
+                || d.DeliveryNoteCode.Contains(keywords));
+
         query = query.OrderByDescending(d => d.CreatedOnUtc);
-        
+
         var total = query.Count();
         var items = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
-        
+
         return PagedDataDto.Create(items.Select(MapToDto).ToList(), pageIndex, pageSize, total);
     }
 

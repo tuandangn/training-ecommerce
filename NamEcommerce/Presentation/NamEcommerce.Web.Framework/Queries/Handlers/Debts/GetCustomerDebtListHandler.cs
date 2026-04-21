@@ -12,27 +12,30 @@ public sealed class GetCustomerDebtListHandler(ICustomerDebtAppService debtAppSe
 
     public async Task<CustomerDebtListModel> Handle(GetCustomerDebtListQuery request, CancellationToken cancellationToken)
     {
-        var pagedData = await _debtAppService.GetDebtsAsync(request.CustomerId, request.PageIndex - 1, request.PageSize).ConfigureAwait(false);
+        var pageIndex0 = request.PageIndex - 1;
 
-        var debtModels = pagedData.Items.Select(d => new CustomerDebtListItemModel
+        var pagedData = await _debtAppService.GetCustomersWithDebtsAsync(
+            request.Keywords,
+            pageIndex0,
+            request.PageSize).ConfigureAwait(false);
+
+        var items = pagedData.Items.Select(s => new CustomerDebtCustomerSummaryModel
         {
-            Id = d.Id,
-            Code = d.Code,
-            CustomerName = d.CustomerName,
-            DeliveryNoteCode = d.DeliveryNoteCode,
-            OrderCode = d.OrderCode,
-            TotalAmount = d.TotalAmount,
-            PaidAmount = d.PaidAmount,
-            RemainingAmount = d.RemainingAmount,
-            Status = d.Status,
-            StatusName = d.Status.ToString(),
-            DueDateUtc = d.DueDateUtc?.ToLocalTime(),
-            CreatedOnUtc = d.CreatedOnUtc.ToLocalTime()
+            CustomerId = s.CustomerId,
+            CustomerName = s.CustomerName,
+            CustomerPhone = s.CustomerPhone,
+            CustomerAddress = s.CustomerAddress,
+            TotalDebtAmount = s.TotalDebtAmount,
+            TotalPaidAmount = s.TotalPaidAmount,
+            TotalRemainingAmount = s.TotalRemainingAmount,
+            DepositBalance = s.DepositBalance,
+            DebtCount = s.DebtCount
         }).ToList();
 
         return new CustomerDebtListModel
         {
-            Data = PagedDataModel.Create(debtModels, pagedData.Pagination.PageIndex + 1, pagedData.Pagination.PageSize, pagedData.Pagination.TotalCount)
+            Keywords = request.Keywords,
+            Data = PagedDataModel.Create(items, pagedData.Pagination.PageIndex, pagedData.Pagination.PageSize, pagedData.Pagination.TotalCount)
         };
     }
 }

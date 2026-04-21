@@ -29,6 +29,8 @@ public sealed record OrderModel
 
     public IList<OrderItemModel> Items { get; init; } = [];
 
+    public DateTime CreatedOn { get; set; }
+
     [Serializable]
     public sealed record OrderItemModel(Guid Id)
     {

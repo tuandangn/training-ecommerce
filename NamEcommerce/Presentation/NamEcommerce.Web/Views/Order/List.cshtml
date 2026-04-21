@@ -65,7 +65,7 @@
                             </td>
                             <td>
                                 <div class="position-relative">
-                                    <a asp-action="Edit" asp-controller="Customer" asp-route-id="@order.CustomerId" class="stretched-link fw-medium text-decoration-none">                                        <i class="bi bi-person me-1"></i>
+                                    <a asp-action="Details" asp-controller="CustomerDebt" asp-route-id="@order.CustomerId" class="stretched-link fw-medium text-decoration-none">                                        <i class="bi bi-person me-1"></i>
                                         @HighlighHelper.Highlight(order.CustomerName, Model.Keywords)
                                     </a>
                                     @if (!string.IsNullOrEmpty(order.CustomerPhone))

@@ -1,214 +1,194 @@
 @using NamEcommerce.Domain.Shared.Enums.Debts
 @using NamEcommerce.Domain.Shared.Enums.Orders
 @using NamEcommerce.Web.Contracts.Models.Debts
+@using NamEcommerce.Web.Extensions
 @model CustomerDebtDetailsModel
+@inject InfoOptions Info
 @{
     Layout = null;
+    var allPayments = Model.Debts.SelectMany(d => d.Payments).OrderBy(p => p.PaidOnUtc).ToList();
 }
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sao kê công nợ - @Model.Code</title>
+    <title>Sao kê — @Model.CustomerName</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            color: #000;
-            margin: 0;
-            padding: 0;
-            background-color: #f0f0f0;
-        }
-        .print-page {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 20mm;
-            margin: 10mm auto;
-            border: 1px #D3D3D3 solid;
-            background: white;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 26px;
-            text-transform: uppercase;
-        }
-        .header p {
-            margin: 5px 0 0 0;
-        }
-        .info-section {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #EEE;
-            padding-bottom: 15px;
-        }
-        .info-box h3 {
-            margin: 0 0 10px 0;
-            font-size: 18px;
-            color: #333;
-        }
-        .info-box p {
-            margin: 3px 0;
-        }
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .summary-item {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            border: 1px solid #EEE;
-        }
-        .summary-label {
-            display: block;
-            font-size: 12px;
-            text-transform: uppercase;
-            color: #666;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .summary-value {
-            font-size: 20px;
-            font-weight: bold;
-        }
-        .payment-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-        }
-        .payment-table th, .payment-table td {
-            border: 1px solid #DDD;
-            padding: 10px;
-            text-align: left;
-        }
-        .payment-table th {
-            background-color: #F2F2F2;
-            font-size: 12px;
-            text-transform: uppercase;
-        }
-        .text-right { text-align: right !important; }
-        .footer {
-            margin-top: 50px;
-            display: flex;
-            justify-content: space-around;
-        }
-        .sig-box {
-            text-align: center;
-            width: 200px;
-        }
-        @@media print {
-            body { background: white; margin: 0; padding: 0; }
-            .print-page { margin: 0; border: none; box-shadow: none; width: 100%; }
-        }
-    </style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; font-size: 12px; color: #000; background: #eee; }
+.page { width: 210mm; min-height: 297mm; padding: 15mm 18mm; margin: 8mm auto; background: #fff; }
+/* Header */
+.hdr { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 10px; }
+.shop-name { font-size: 14px; font-weight: bold; }
+.shop-sub { font-size: 11px; color: #444; margin-top: 3px; }
+.doc-title { text-align: right; }
+.doc-title h1 { font-size: 18px; text-transform: uppercase; letter-spacing: 1px; }
+.doc-title p { font-size: 11px; color: #555; margin-top: 3px; }
+/* Summary row */
+.summary { display: flex; flex-direction: column; margin-bottom: 12px; }
+.summary-row{ display: flex; align-items:center; justify-content: space-between; margin: 5px 0; padding: 0 5px; border-bottom: dashed 1px #ccc; }
+.summary-row .lbl{ text-transform: uppercase; font-weight: bold; }
+.val-danger { color: #c00; }
+.val-green { color: #007a00; }
+.val-blue { color: #0055aa; }
+/* Section title */
+.sec { font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: .5px;
+       border-left: 3px solid #333; padding-left: 6px; margin: 12px 0 6px; }
+/* Tables */
+table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+th { background: #f0f0f0; border: 1px solid #ccc; padding: 5px 7px; font-size: 10.5px; text-transform: uppercase; text-align: left; }
+td { border: 1px solid #ccc; padding: 5px 7px; vertical-align: top; }
+.r { text-align: right; }
+.c { text-align: center; }
+.bold { font-weight: bold; }
+.red { color: #c00; }
+.green { color: #007a00; }
+/* Signature */
+.sig-row { display: flex; justify-content: space-around; margin-top: 30px; }
+.sig-box { text-align: center; width: 140px; font-size: 11px; }
+.sig-box strong { display: block; margin-bottom: 3px; }
+.sig-box em { font-size: 10px; color: #555; }
+.sig-space { height: 36px; }
+@@media print {
+  body { background: #fff; }
+  .page { margin: 0; padding: 12mm 15mm; }
+}
+.customer-sec{ text-align:center;margin: 15px 0 5px;}
+.customer-sec .sub{ font-size: 14px; color: gray;}
+.customer-sec .title{ font-size: 17px; font-weight: bold;}
+</style>
 </head>
 <body onload="window.print()">
-    <div class="print-page">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+    <div class="page">
+        <!-- Header -->
+        <div class="hdr">
             <div>
-                <strong>CỬA HÀNG VLXD TUẤN KHÔI</strong><br />
-                Số 123 Đường ABCD, Quận XYZ, TP.HCM<br />
-                Hotline: 0909.123.456
-            </div>
-            <div class="text-right">
-                Ngày in: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
-            </div>
-        </div>
-
-        <div class="header">
-            <h1>SAO KÊ CÔNG NỢ</h1>
-            <p>Mã quản lý: @Model.Code</p>
-        </div>
-
-        <div class="info-section">
-            <div class="info-box">
-                <h3>Khách hàng</h3>
-                <p><strong>@Model.CustomerName</strong></p>
-                <p>Chứng từ gốc: @Model.DeliveryNoteCode / Đơn: @Model.OrderCode</p>
-                <p>Ngày ghi nhận: @Model.CreatedOnUtc.ToString("dd/MM/yyyy")</p>
-            </div>
-            <div class="info-box text-right">
-                <h3>Trạng thái</h3>
-                <p><strong>@(((DebtStatus)Model.Status).ToString())</strong></p>
-                @if (Model.DueDateUtc.HasValue)
+                <div class="shop-name">@Info.Name</div>
+                @if (!string.IsNullOrEmpty(Info.PhoneNumber))
                 {
-                    <p>Hạn thanh toán: @Model.DueDateUtc.Value.ToString("dd/MM/yyyy")</p>
+                    <div class="shop-sub">SĐT: @Info.PhoneNumber</div>
+                }
+                @if (!string.IsNullOrEmpty(Info.Address))
+                {
+                    <div class="shop-sub">Địa chỉ: @Info.Address</div>
                 }
             </div>
-        </div>
-
-        <div class="summary-grid">
-            <div class="summary-item">
-                <span class="summary-label">Tổng nợ phát sinh</span>
-                <div class="summary-value">@Model.TotalAmount.ToString("N0") đ</div>
-            </div>
-            <div class="summary-item">
-                <span class="summary-label">Đã thanh toán</span>
-                <div class="summary-value" style="color: green;">@Model.PaidAmount.ToString("N0") đ</div>
-            </div>
-            <div class="summary-item" style="background: #FFF5F5; border-color: #FEB2B2;">
-                <span class="summary-label" style="color: #C53030;">Còn lại phải thu</span>
-                <div class="summary-value" style="color: #C53030;">@Model.RemainingAmount.ToString("N0") đ</div>
+            <div class="doc-title">
+                <h1>Sao kê công nợ</h1>
+                <p>Ngày @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
             </div>
         </div>
+        <div class="customer-sec">
+            <div class="sub">Khách hàng</div>
+            <div class="title">
+                @Model.CustomerName
+            </div>
+        </div>
+        <!-- Summary -->
+        <div class="summary">
+            <div class="summary-row">
+                <div class="lbl">Tổng nợ phát sinh</div>
+                <div class="val val-danger bold">@Model.TotalDebtAmount.ToString("N0") đ</div>
+            </div>
+            <div class="summary-row">
+                <div class="lbl">Đã thanh toán</div>
+                <div class="val val-green bold">@Model.TotalPaidAmount.ToString("N0") đ</div>
+            </div>
+            <div class="summary-row">
+                <div class="lbl">Còn phải thu</div>
+                <div class="val bold">@Model.TotalRemainingAmount.ToString("N0") đ</div>
+            </div>
+            @if (Model.DepositBalance > 0)
+            {
+                <div class="summary-row">
+                    <div class="lbl">Tiền cọc / dư</div>
+                    <div class="val val-blue bold">@Model.DepositBalance.ToString("N0") đ</div>
+                </div>
+            }
+        </div>
 
-        <h3 style="border-left: 4px solid #3182CE; padding-left: 10px; margin-bottom: 15px;">Lịch sử thanh toán</h3>
-        <table class="payment-table">
+        <!-- Debts table -->
+        <div class="sec">Danh sách công nợ</div>
+        <table>
             <thead>
                 <tr>
-                    <th>STT</th>
-                    <th>Ngày thu</th>
-                    <th>Mã biên lai</th>
-                    <th>Hình thức</th>
-                    <th>Nội dung</th>
-                    <th class="text-right">Số tiền</th>
+                    <th class="c" style="width:32px">STT</th>
+                    <th class="c">Ngày tạo</th>
+                    <th class="r">Số tiền</th>
                 </tr>
             </thead>
             <tbody>
-                @if (Model.Payments.Any())
-                {
+                @{
                     var i = 1;
-                    foreach (var payment in Model.Payments)
-                    {
-                        <tr>
-                            <td style="text-align: center;">@(i++)</td>
-                            <td>@payment.PaidOnUtc.ToString("dd/MM/yyyy HH:mm")</td>
-                            <td><strong>@payment.Code</strong></td>
-                            <td>@(((PaymentMethod)payment.PaymentMethod).ToString())</td>
-                            <td style="font-size: 12px;">@payment.Note</td>
-                            <td class="text-right"><strong>@payment.Amount.ToString("N0")</strong></td>
-                        </tr>
-                    }
                 }
-                else
+                @foreach (var d in Model.Debts)
                 {
+                    var st = (DebtStatus)d.Status;
                     <tr>
-                        <td colspan="6" style="text-align: center; color: #999; padding: 20px;">Chưa có giao dịch thanh toán</td>
+                        <td class="c">@(i++)</td>
+                        <td class="c">@d.CreatedOnUtc.ToString("dd/MM/yy")</td>
+                        <td class="r">@d.TotalAmount.ToString("N0")</td>
                     </tr>
                 }
             </tbody>
+            <tfoot>
+                <tr style="background:#f8f8f8; font-weight:bold;">
+                    <td></td>
+                    <td class="c">Tổng cộng</td>
+                    <td class="r">@Model.TotalDebtAmount.ToString("N0")</td>
+                </tr>
+            </tfoot>
         </table>
 
-        <div class="footer">
+        <!-- Payment history -->
+        @if (allPayments.Any())
+        {
+            <div class="sec">Lịch sử thanh toán</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th class="c" style="width:32px">STT</th>
+                        <th class="c">Ngày thu</th>
+                        <th class="r">Số tiền (đ)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        var j = 1;
+                    }
+                    @foreach (var p in allPayments)
+                    {
+                        <tr>
+                            <td class="c">@(j++)</td>
+                            <td class="c">@p.PaidOnUtc.ToString("dd/MM/yy HH:mm")</td>
+                            <td class="r">@p.Amount.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="background:#f8f8f8; font-weight:bold;">
+                        <td></td>
+                        <td class="c">Tổng đã thu</td>
+                        <td class="r">@allPayments.Sum(p => p.Amount).ToString("N0")</td>
+                    </tr>
+                </tfoot>
+            </table>
+        }
+
+        <!-- Signatures -->
+        <div class="sig-row">
             <div class="sig-box">
-                <strong>KHÁCH HÀNG</strong><br />
-                <span style="font-size: 11px; font-style: italic;">(Ký và ghi rõ họ tên)</span>
+                <strong>KHÁCH HÀNG</strong>
+                <em>(Ký, ghi rõ họ tên)</em>
+                <div class="sig-space"></div>
             </div>
             <div class="sig-box">
-                <strong>NGƯỜI LẬP BẢNG</strong><br />
-                <span style="font-size: 11px; font-style: italic;">(Ký và ghi rõ họ tên)</span>
+                <strong>NGƯỜI LẬP</strong>
+                <em>(Ký, ghi rõ họ tên)</em>
+                <div class="sig-space"></div>
             </div>
         </div>
+
     </div>
 </body>
 </html>

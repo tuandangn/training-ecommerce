@@ -98,9 +98,9 @@ export default class OrderController {
     }
 
     #renderSummary() {
-        getEl('subTotal').textContent = this.#state.subTotal.toLocaleString() + ' đ';
-        getEl('discountDisplay').textContent = '- ' + this.#state.discount.toLocaleString() + ' đ';
-        getEl('grandTotal').textContent = this.#state.total.toLocaleString() + ' đ';
+        getEl('subTotal').textContent = DecimalFields.formatCurrency(this.#state.subTotal) + ' đ';
+        getEl('discountDisplay').textContent = '- ' + DecimalFields.formatCurrency(this.#state.discount) + ' đ';
+        getEl('grandTotal').textContent = DecimalFields.formatCurrency(this.#state.total) + ' đ';
 
         const hasItems = this.#state.items.length > 0;
         getEl('noItemsMessage').style.display = hasItems ? 'none' : 'block';
@@ -152,7 +152,7 @@ export default class OrderController {
 
         if (hasItems) {
             const max = this.#state.subTotal;
-            discountInput.dataset.valRange = `Giảm giá tối đa không quá ${max.toLocaleString()}.`;
+            discountInput.dataset.valRange = `Giảm giá tối đa không quá ${DecimalFields.formatCurrency(max)}.`;
             discountInput.dataset.valRangeMax = max;
         } else {
             delete discountInput.dataset.valRange;
@@ -213,7 +213,7 @@ export default class OrderController {
                     data-valmsg-replace="true"></span>
             </td>
             <td class="text-end fw-bold text-primary px-3 row-total text-nowrap d-none d-lg-table-cell">
-                ${item.lineTotal.toLocaleString()} đ
+                ${DecimalFields.formatCurrency(item.lineTotal)} đ
             </td>
             <td class="text-end pe-4 w-auto">
                 <button type="button" class="btn btn-link link-danger p-0 border-0 orderItemRemove"

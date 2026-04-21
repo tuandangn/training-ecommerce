@@ -1,7 +1,7 @@
 @model CreatePurchaseOrderModel
 @using System.Text.Json
 @{
-    ViewData["Title"] = "Tạo Đơn nhập hàng mới";
+    ViewData["Title"] = "Thêm đơn nhập";
 }
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
@@ -134,10 +134,9 @@
                     </div>
                     <div class="content-card-body">
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase d-block mb-3">Thông tin cơ bản</label>
                             <div class="row g-3">
                                 <div class="col-12">
-                                    <label for="vendorSearch" class="form-label fw-medium mb-2">Nhà cung cấp</label>
+                                    <label for="vendorSearch" class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
                                     <div>
                                         <div id="vendorPicker" data-id="@Model.VendorId" data-name="@Model.VendorName" data-phone="@Model.VendorPhone" data-address="@Model.VendorAddress"></div>
                                         <input type="text" class="visually-hidden" asp-for="VendorId" />
@@ -145,7 +144,7 @@
                                     </div>
                                 </div>
                                 <div class="col-12">
-                                    <label asp-for="WarehouseId" class="form-label fw-medium mb-2"></label>
+                                    <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                                     <select asp-for="WarehouseId" class="form-select">
                                         <option value="" selected="@(!Model.WarehouseId.HasValue)">(Không chọn)</option>
                                         @foreach (var warehouse in Model.AvailableWarehouses)
@@ -156,14 +155,14 @@
                                     <span asp-validation-for="WarehouseId" class="small text-danger"></span>
                                 </div>
                                 <div class="col-12">
-                                    <label asp-for="ExpectedDeliveryDate" class="form-label fw-medium mb-2">Ngày giao dự kiến</label>
+                                    <label asp-for="ExpectedDeliveryDate" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                                     <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" />
                                     <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label asp-for="Note" class="form-label fw-medium mb-2">Ghi chú</label>
+                            <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <textarea asp-for="Note" class="form-control" rows="2" placeholder="Nhập ghi chú về đơn nhập..."></textarea>
                             <span asp-validation-for="Note" class="text-danger small"></span>
                         </div>

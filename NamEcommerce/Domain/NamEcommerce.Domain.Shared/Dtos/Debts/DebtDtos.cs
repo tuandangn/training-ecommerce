@@ -3,6 +3,41 @@ using NamEcommerce.Domain.Shared.Enums.Orders;
 
 namespace NamEcommerce.Domain.Shared.Dtos.Debts;
 
+/// <summary>Tổng hợp công nợ theo từng khách hàng — dùng cho trang List.</summary>
+[Serializable]
+public sealed record CustomerDebtSummaryDto
+{
+    public required Guid CustomerId { get; init; }
+    public required string CustomerName { get; init; }
+    public string? CustomerPhone { get; init; }
+    public string? CustomerAddress { get; init; }
+    public decimal TotalDebtAmount { get; init; }
+    public decimal TotalPaidAmount { get; init; }
+    public decimal TotalRemainingAmount { get; init; }
+    /// <summary>Tiền cọc / tiền thừa chưa được áp dụng vào nợ.</summary>
+    public decimal DepositBalance { get; init; }
+    public int DebtCount { get; init; }
+}
+
+/// <summary>Toàn bộ thông tin công nợ của 1 khách hàng — dùng cho trang Details.</summary>
+[Serializable]
+public sealed record CustomerDebtsByCustomerDto
+{
+    public required Guid CustomerId { get; init; }
+    public required string CustomerName { get; init; }
+    public decimal TotalDebtAmount { get; init; }
+    public decimal TotalPaidAmount { get; init; }
+    public decimal TotalRemainingAmount { get; init; }
+    /// <summary>Tiền cọc / tiền thừa chưa áp dụng.</summary>
+    public decimal DepositBalance { get; init; }
+    /// <summary>Danh sách từng phiếu công nợ (kèm payments của từng phiếu).</summary>
+    public IList<CustomerDebtDto> Debts { get; init; } = [];
+    /// <summary>Danh sách các khoản tiền cọc chưa áp dụng.</summary>
+    public IList<CustomerPaymentDto> Deposits { get; init; } = [];
+    /// <summary>Lịch sử thanh toán gần nhất (tất cả loại).</summary>
+    public IList<CustomerPaymentDto> RecentPayments { get; init; } = [];
+}
+
 [Serializable]
 public sealed record CustomerDebtDto
 {

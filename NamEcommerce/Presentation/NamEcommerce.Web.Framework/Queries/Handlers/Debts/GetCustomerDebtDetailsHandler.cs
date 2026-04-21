@@ -11,38 +11,54 @@ public sealed class GetCustomerDebtDetailsHandler(ICustomerDebtAppService debtAp
 
     public async Task<CustomerDebtDetailsModel?> Handle(GetCustomerDebtDetailsQuery request, CancellationToken cancellationToken)
     {
-        var debt = await _debtAppService.GetDebtByIdAsync(request.Id).ConfigureAwait(false);
-        if (debt == null) return null;
+        var result = await _debtAppService.GetDebtsByCustomerIdAsync(request.CustomerId).ConfigureAwait(false);
+        if (result == null) return null;
+
+        var debtItems = result.Debts.Select(d => new CustomerDebtItemModel
+        {
+            Id = d.Id,
+            Code = d.Code,
+            DeliveryNoteCode = d.DeliveryNoteCode,
+            OrderCode = d.OrderCode,
+            OrderId = d.OrderId,
+            TotalAmount = d.TotalAmount,
+            PaidAmount = d.PaidAmount,
+            RemainingAmount = d.RemainingAmount,
+            Status = d.Status,
+            DueDateUtc = d.DueDateUtc?.ToLocalTime(),
+            CreatedOnUtc = d.CreatedOnUtc.ToLocalTime(),
+            Payments = d.Payments.Select(p => MapPayment(p)).ToList()
+        }).ToList();
+
+        var deposits = result.Deposits.Select(p => MapPayment(p)).ToList();
+        var recentPayments = result.RecentPayments.Select(p => MapPayment(p)).ToList();
 
         return new CustomerDebtDetailsModel
         {
-            Id = debt.Id,
-            Code = debt.Code,
-            CustomerId = debt.CustomerId,
-            CustomerName = debt.CustomerName,
-            DeliveryNoteCode = debt.DeliveryNoteCode,
-            OrderCode = debt.OrderCode,
-            OrderId = debt.OrderId,
-            TotalAmount = debt.TotalAmount,
-            PaidAmount = debt.PaidAmount,
-            RemainingAmount = debt.RemainingAmount,
-            Status = debt.Status,
-            StatusName = debt.Status.ToString(),
-            DueDateUtc = debt.DueDateUtc?.ToLocalTime(),
-            CreatedOnUtc = debt.CreatedOnUtc.ToLocalTime(),
-            Payments = debt.Payments.Select(p => new CustomerPaymentListItemModel
-            {
-                Id = p.Id,
-                Code = p.Code,
-                Amount = p.Amount,
-                PaymentMethod = p.PaymentMethod,
-                PaymentMethodName = p.PaymentMethod.ToString(),
-                PaymentType = p.PaymentType,
-                PaymentTypeName = p.PaymentType.ToString(),
-                Note = p.Note,
-                PaidOnUtc = p.PaidOnUtc.ToLocalTime(),
-                OrderCode = p.OrderCode
-            }).ToList()
+            CustomerId = result.CustomerId,
+            CustomerName = result.CustomerName,
+            TotalDebtAmount = result.TotalDebtAmount,
+            TotalPaidAmount = result.TotalPaidAmount,
+            TotalRemainingAmount = result.TotalRemainingAmount,
+            DepositBalance = result.DepositBalance,
+            Debts = debtItems,
+            Deposits = deposits,
+            RecentPayments = recentPayments
         };
     }
+
+    private static CustomerPaymentListItemModel MapPayment(Application.Contracts.Dtos.Debts.CustomerPaymentAppDto p) =>
+        new()
+        {
+            Id = p.Id,
+            Code = p.Code,
+            Amount = p.Amount,
+            PaymentMethod = p.PaymentMethod,
+            PaymentType = p.PaymentType,
+            Note = p.Note,
+            PaidOnUtc = p.PaidOnUtc.ToLocalTime(),
+            OrderCode = p.OrderCode,
+            DeliveryNoteCode = p.DeliveryNoteCode,
+            CustomerDebtId = p.CustomerDebtId
+        };
 }

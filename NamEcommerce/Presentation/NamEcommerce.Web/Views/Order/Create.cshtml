@@ -1,43 +1,43 @@
 @model CreateOrderModel
 @using System.Text.Json
 @{
-    ViewData["Title"] = "Tạo Đơn hàng mới";
+    ViewData["Title"] = "Thêm đơn bán";
 }
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Tạo Đơn hàng mới</h1>
-        <p class="page-header-subtitle">Thêm mới đơn bán hàng vào hệ thống</p>
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+        <li class="breadcrumb-item"><a asp-action="List" class="text-decoration-none">Đơn bán</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
+    </ol>
+</nav>
+<div class="content-card mb-3">
+    <div class="content-card-header">
+        <div>
+            <h1 class="page-header-title">Thêm đơn bán</h1>
+            <p class="page-header-subtitle">Thêm mới đơn bán hàng</p>
+        </div>
     </div>
 </div>
-<div class="form-card" style="max-width: 1200px;">
-    <div class="form-card-header">
-        <h2 class="form-card-title"><i class="bi bi-cart me-2 text-primary"></i>Thông tin đơn hàng</h2>
-        <a asp-action="List" class="form-card-breadcrumb">
-            <i class="bi bi-arrow-left"></i> Trở về danh sách
-        </a>
-    </div>
-    <div class="form-card-body">
-        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
-        <form method="post" id="createOrderForm" asp-antiforgery="true">
-            <div class="row g-4">
-                <div class="col-lg-8">
-                    <div class="mb-4">
-                        <h5 class="fw-bold mb-3"><i class="bi bi-person text-muted me-2"></i>Khách hàng</h5>
-                        <div id="customerPicker" data-id="@Model.CustomerId" data-name="@Model.CustomerDisplayName"
-                             data-phone="@Model.CustomerDisplayPhone" data-address="@Model.CustomerDisplayAddress"></div>
-                        <input type="text" class="visually-hidden" asp-for="CustomerId" />
-                        <span asp-validation-for="CustomerId" class="small text-danger"></span>
+<div>
+    <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible"></div>
+    <form method="post" id="createOrderForm" asp-antiforgery="true">
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h5>
+                            <i class="bi bi-box-seam me-2 text-primary"></i>
+                            Danh sách hàng hóa
+                        </h5>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
+                                data-bs-target="#addProductModal">
+                            <i class="bi bi-plus-lg me-1"></i>
+                            <span class="d-none d-lg-inline">Thêm hàng hóa</span>
+                            <span class="d-lg-none">Thêm</span>
+                        </button>
                     </div>
                     <div>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="fw-bold mb-0"><i class="bi bi-box-seam text-muted me-2"></i>Sản phẩm</h5>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
-                                    data-bs-target="#addProductModal">
-                                <i class="bi bi-plus-lg me-1"></i> Thêm sản phẩm
-                            </button>
-                        </div>
-
-                        <div class="table-responsive border rounded bg-white">
+                        <div class="table-responsive">
                             <table class="table data-table mb-0" id="orderItemsTable">
                                 <thead>
                                     <tr>
@@ -107,98 +107,90 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="@(Model.Items.Count > 0 ? "" : "d-none") bg-light rounded p-3 mt-3"
-                             id="tableFooter">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">Tạm tính</span>
-                                <span class="fw-bold"
-                                      id="subTotal">
-                                    @Model.OrderSubTotal.ToString(ViewConstants.NumberCustomFormat)
-                                    @ViewConstants.DefaultCurrencySymbol
-                                </span>
+                        <div class="@(Model.Items.Count > 0 ? "" : "d-none") order-summary" id="tableFooter">
+                            <div class="order-summary-row">
+                                <span class="label">Tạm tính</span>
+                                <span class="value" id="subTotal">@Model.OrderSubTotal.DisplayCurrency()</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted">Giảm giá</span>
-                                <span class="fw-bold text-danger" id="discountDisplay">
-                                    - @((Model.OrderDiscount ??
-                                                                                                                                                                                                                                        0).ToString(ViewConstants.NumberCustomFormat))
-                                    @ViewConstants.DefaultCurrencySymbol
-                                </span>
+                            <div class="order-summary-row">
+                                <span class="label">Giảm giá</span>
+                                <span class="value" id="discountDisplay">-@Model.OrderDiscount.DisplayCurrency()</span>
                             </div>
-                            <hr class="my-2">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="fw-bold text-uppercase">Tổng cộng</span>
-                                <span class="fw-bold text-primary fs-5"
-                                      id="grandTotal">
-                                    @Model.OrderTotal.ToString(ViewConstants.NumberCustomFormat)
-                                    @ViewConstants.DefaultCurrencySymbol
+                            <div class="order-summary-row total">
+                                <span class="label">Tổng cộng</span>
+                                <span class="value" id="grandTotal">
+                                    @Model.OrderTotal.DisplayCurrency()
                                 </span>
                             </div>
                         </div>
-                        <div id="noItemsMessage" class="py-4 text-center text-muted"
-                             style="display:@(Model.Items.Count == 0 ? "block" : "none")">
-                            <i class="bi bi-box-seam me-1"></i> Chưa có sản phẩm nào được chọn.
-                            <div class="mt-1"><span asp-validation-for="Items" class="text-danger small"></span></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-4">
-                    <div class="card bg-light border-0">
-                        <div class="card-body">
-                            <h5 class="fw-bold mb-3"><i class="bi bi-truck text-muted me-2"></i>Giao hàng & Khác</h5>
-
-                            <div class="mb-3">
-                                <label asp-for="ExpectedShippingDate"
-                                       class="form-label text-muted small fw-medium"></label>
-                                <input type="date" asp-for="ExpectedShippingDate" class="form-control" />
-                                <span asp-validation-for="ExpectedShippingDate" class="small text-danger"></span>
-                            </div>
-
-                            <div class="mb-3">
-                                <label asp-for="ShippingAddress" class="form-label text-muted small fw-medium"></label>
-                                <div class="input-group">
-                                    <input asp-for="ShippingAddress" class="form-control text-sm"
-                                           placeholder="Nhập địa chỉ giao hàng"
-                                           readonly="@(Model.CustomerDisplayAddress == Model.ShippingAddress)" />
-                                    @if (Model.CustomerDisplayAddress == Model.ShippingAddress)
-                                    {
-                                        <button type="button" class="btn btn-outline-secondary" id="btnEditShippingAddress"
-                                                title="Chỉnh sửa địa chỉ">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                    }
-                                </div>
-                                <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
-                            </div>
-
-                            <div class="mb-3">
-                                <label asp-for="OrderDiscount" class="form-label text-muted small fw-medium"></label>
-                                <input type="number" asp-for="OrderDiscount" class="form-control" min="0"
-                                       placeholder="0" disabled />
-                                <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
-                            </div>
-
-                            <div class="mb-3">
-                                <label asp-for="Note" class="form-label text-muted small fw-medium"></label>
-                                <textarea asp-for="Note" class="form-control" rows="3"
-                                          placeholder="Nhập ghi chú..."></textarea>
-                                <span asp-validation-for="Note" class="small text-danger"></span>
+                        <div id="noItemsMessage" class="py-4 text-center text-muted" style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
+                            Chưa có sản phẩm nào được chọn.
+                            <div class="mt-1">
+                                <span asp-validation-for="Items" class="text-danger small"></span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="form-card-footer mt-4"
-                 style="margin: 0 -1.5rem -1.5rem; border-radius: 0 0 var(--card-radius) var(--card-radius);">
-                <a asp-action="List" class="btn btn-outline-secondary">Hủy bỏ</a>
-                <button type="submit" class="btn btn-primary" disabled id="btnSubmitOrder">
-                    <i class="bi bi-check2 me-1"></i>Tạo đơn
-                </button>
+            <div class="col-lg-4">
+                <div class="content-card mb-2">
+                    <div class="content-card-header">
+                        <h5>
+                            <i class="bi bi-pencil-square me-2 text-primary"></i>
+                            Thông tin đơn bán
+                        </h5>
+                    </div>
+                    <div class="content-card-body">
+                        <div class="mb-3">
+                            <label for="customerSearch" class="form-label small fw-bold text-muted text-uppercase d-block">Khách hàng</label>
+                            <div id="customerPicker" data-id="@Model.CustomerId" data-name="@Model.CustomerDisplayName"
+                                 data-phone="@Model.CustomerDisplayPhone" data-address="@Model.CustomerDisplayAddress"></div>
+                            <input type="text" class="visually-hidden" asp-for="CustomerId" />
+                            <span asp-validation-for="CustomerId" class="small text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="ExpectedShippingDate" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <input type="date" asp-for="ExpectedShippingDate" class="form-control" />
+                            <span asp-validation-for="ExpectedShippingDate" class="small text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <div class="input-group">
+                                <input asp-for="ShippingAddress" class="form-control text-sm"
+                                       placeholder="Nhập địa chỉ giao hàng"
+                                       readonly="@(Model.CustomerDisplayAddress == Model.ShippingAddress)" />
+                                @if (Model.CustomerDisplayAddress == Model.ShippingAddress)
+                                {
+                                    <button type="button" class="btn btn-outline-secondary" id="btnEditShippingAddress"
+                                            title="Chỉnh sửa địa chỉ">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                }
+                            </div>
+                            <span asp-validation-for="ShippingAddress" class="small text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="OrderDiscount" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <input type="number" asp-for="OrderDiscount" class="form-control" min="0" placeholder="0" disabled />
+                            <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <textarea asp-for="Note" class="form-control" rows="3"
+                                      placeholder="Nhập ghi chú..."></textarea>
+                            <span asp-validation-for="Note" class="small text-danger"></span>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary" disabled id="btnSubmitOrder">
+                                <i class="bi bi-check2 me-1"></i>Tạo đơn
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </form>
-    </div>
+        </div>
+    </form>
 </div>
 
 <!-- Add Product Modal -->

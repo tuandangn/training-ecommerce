@@ -1,0 +1,117 @@
+@using NamEcommerce.Domain.Shared.Enums.Debts
+@using NamEcommerce.Domain.Shared.Enums.Orders
+@using NamEcommerce.Web.Contracts.Models.Debts
+@using NamEcommerce.Web.Extensions
+@model CustomerPaymentReceiptModel
+@inject InfoOptions Info
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<title>Biên lai — @Model.PaymentCode</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; font-size: 12px; color: #000; background: #eee; }
+.page { width: 105mm; padding: 10mm 12mm 12mm; margin: 8mm auto; background: #fff; }
+/* Header */
+.shop { text-align: center; margin-bottom: 10px; border-bottom: 1px solid #000; padding-bottom: 8px; }
+.shop-name { font-size: 13px; font-weight: bold; }
+.shop-sub { font-size: 10px; color: #555; margin-top: 2px; }
+/* Title */
+.title { text-align: center; font-size: 16px; font-weight: bold; text-transform: uppercase;
+         letter-spacing: 1px; margin: 8px 0 2px; }
+.code-line { text-align: center; font-size: 10.5px; color: #555; margin-bottom: 10px; }
+/* Info table */
+table.info { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+table.info td { padding: 4px 5px; font-size: 11.5px; vertical-align: top; }
+table.info td:first-child { color: #555; white-space: nowrap; width: 36%; }
+table.info td:last-child { font-weight: bold; }
+.divider { border: none; border-top: 1px dashed #bbb; margin: 8px 0; }
+/* Amount box */
+.amt-box { border: 2px solid #333; padding: 8px; text-align: center; margin: 10px 0; }
+.amt-lbl { font-size: 9.5px; text-transform: uppercase; color: #555; letter-spacing: .5px; }
+.amt-val { font-size: 22px; font-weight: bold; margin-top: 3px; }
+/* Signature */
+.sig-row { display: flex; justify-content: space-around; margin-top: 20px; }
+.sig-box { text-align: center; width: 42%; font-size: 10.5px; }
+.sig-box strong { display: block; font-size: 11px; }
+.sig-box em { font-size: 9.5px; color: #666; }
+.sig-space { height: 32px; }
+@@media print {
+  body { background: #fff; }
+  .page { margin: 0; }
+}
+</style>
+</head>
+<body onload="window.print()">
+<div class="page">
+
+  <div class="shop">
+    <div class="shop-name">@Info.Name</div>
+    <div class="shop-sub">SĐT: @Info.PhoneNumber</div>
+    <div class="shop-sub">Địa chỉ: @Info.Address</div>
+  </div>
+
+  <div class="title">Biên lai thu tiền</div>
+  <div class="code-line">@Model.PaymentCode</div>
+
+  <table class="info">
+    <tr>
+      <td>Khách hàng</td>
+      <td>@Model.CustomerName</td>
+    </tr>
+    <tr>
+      <td>Hình thức</td>
+      <td>@(((PaymentMethod)Model.PaymentMethod).GetDisplayText())</td>
+    </tr>
+    <tr>
+      <td>Ngày thu</td>
+      <td>@Model.PaidOn.ToString(ViewConstants.DefaultDateTimeFormat)</td>
+    </tr>
+    @if (!string.IsNullOrEmpty(Model.OrderCode))
+    {
+    <tr>
+      <td>Đơn hàng</td>
+      <td>@Model.OrderCode</td>
+    </tr>
+    }
+    @if (!string.IsNullOrEmpty(Model.DeliveryNoteCode))
+    {
+    <tr>
+      <td>Phiếu xuất</td>
+      <td>@Model.DeliveryNoteCode</td>
+    </tr>
+    }
+    @if (!string.IsNullOrEmpty(Model.Note))
+    {
+    <tr>
+      <td>Ghi chú</td>
+      <td style="font-weight:normal; font-style:italic;">@Model.Note</td>
+    </tr>
+    }
+  </table>
+
+  <div class="amt-box">
+    <div class="amt-lbl">Số tiền thu</div>
+    <div class="amt-val">@Model.Amount.DisplayCurrency()</div>
+  </div>
+
+  <div class="sig-row">
+    <div class="sig-box">
+      <strong>KHÁCH HÀNG</strong>
+      <em>(Ký, ghi rõ họ tên)</em>
+      <div class="sig-space"></div>
+    </div>
+    <div class="sig-box">
+      <strong>NGƯỜI THU TIỀN</strong>
+      <em>(Ký, ghi rõ họ tên)</em>
+      <div class="sig-space"></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

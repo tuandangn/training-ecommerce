@@ -1,6 +1,36 @@
 namespace NamEcommerce.Application.Contracts.Dtos.Debts;
 
 [Serializable]
+public sealed record CustomerDebtSummaryAppDto
+{
+    public required Guid CustomerId { get; init; }
+    public required string CustomerName { get; init; }
+    public string? CustomerPhone { get; init; }
+    public string? CustomerAddress { get; init; }
+    public decimal TotalDebtAmount { get; init; }
+    public decimal TotalPaidAmount { get; init; }
+    public decimal TotalRemainingAmount { get; init; }
+    /// <summary>Tiền cọc / tiền thừa chưa áp dụng vào nợ.</summary>
+    public decimal DepositBalance { get; init; }
+    public int DebtCount { get; init; }
+}
+
+/// <summary>Toàn bộ thông tin công nợ của 1 khách hàng — dùng cho trang Details.</summary>
+[Serializable]
+public sealed record CustomerDebtsByCustomerAppDto
+{
+    public required Guid CustomerId { get; init; }
+    public required string CustomerName { get; init; }
+    public decimal TotalDebtAmount { get; init; }
+    public decimal TotalPaidAmount { get; init; }
+    public decimal TotalRemainingAmount { get; init; }
+    public decimal DepositBalance { get; init; }
+    public IList<CustomerDebtAppDto> Debts { get; init; } = [];
+    public IList<CustomerPaymentAppDto> Deposits { get; init; } = [];
+    public IList<CustomerPaymentAppDto> RecentPayments { get; init; } = [];
+}
+
+[Serializable]
 public sealed record CustomerDebtAppDto
 {
     public required Guid Id { get; init; }

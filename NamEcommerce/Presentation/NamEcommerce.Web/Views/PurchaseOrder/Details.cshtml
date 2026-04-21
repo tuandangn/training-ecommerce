@@ -1,11 +1,10 @@
 @model PurchaseOrderDetailsModel
 @{
-    ViewData[ViewConstants.PageTitle] = $"Đơn nhập hàng - {Model.Info.Code}";
+    ViewData[ViewConstants.PageTitle] = $"Đơn nhập - {Model.Info.Code}";
     
     var successMessage = TempData[ViewConstants.PurchaseOrderSuccessMessage] as string;
     var errorMessage = TempData[ViewConstants.PurchaseOrderErrorMessage] as string;
 }
-
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>

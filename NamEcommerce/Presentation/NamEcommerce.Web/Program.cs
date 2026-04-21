@@ -1,8 +1,10 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.Globalization;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Communication;
 using NamEcommerce.Application.Contracts.Customers;
@@ -104,6 +106,15 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     });
     services.AddScoped(services
         => services.GetRequiredService<IOptionsSnapshot<InfoOptions>>().Value);
+
+    services.Configure<CultureConfig>(options =>
+    {
+        builder.Configuration.Bind(AppConstants.CultureConfigSectionName, options);
+    });
+    services.AddScoped(services
+        => services.GetRequiredService<IOptionsSnapshot<CultureConfig>>().Value);
+
+    services.AddLocalization();
 
     //infrastructure services
     services.AddDbContext<NamEcommerceEfDbContext>(opts =>
@@ -213,6 +224,17 @@ void Configure(WebApplication app)
 
     app.UseHttpsRedirection();
     app.UseStaticFiles();
+
+    var cultureConfig = app.Services.GetRequiredService<IOptions<CultureConfig>>().Value;
+    var supportedCultures = cultureConfig.SupportedCultures
+        .Select(c => new CultureInfo(c))
+        .ToList();
+    app.UseRequestLocalization(new RequestLocalizationOptions
+    {
+        DefaultRequestCulture = new RequestCulture(cultureConfig.DefaultCulture),
+        SupportedCultures = supportedCultures,
+        SupportedUICultures = supportedCultures,
+    });
 
     app.UseRouting();
 

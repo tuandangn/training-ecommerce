@@ -88,7 +88,8 @@ public sealed class OrderModelFactory : IOrderModelFactory
             CustomerPhoneNumber = order.CustomerPhoneNumber,
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
-            CanLockOrder = order.CanLockOrder
+            CanLockOrder = order.CanLockOrder,
+            CreatedOn = order.CreatedOn
         };
         foreach (var it in order.Items)
         {

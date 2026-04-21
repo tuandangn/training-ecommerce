@@ -955,8 +955,10 @@ public sealed class PurchaseOrderManagerTests
         var product = new Product(Guid.NewGuid(), "product");
         product.UpdatePrice(unitPrice: 200, costPrice: 100);
         // existing stock = 100 đơn vị với costPrice 100 → weighted avg giữ nguyên khi nhập tiếp 100 đơn vị với cost 100
-        var existingStock = new InventoryStock(product.Id, warehouseId);
-        existingStock.IncreaseQuantityOnHand(100);
+        var existingStock = new InventoryStock(Guid.NewGuid(), product.Id, warehouseId, default)
+        {
+            QuantityOnHand = 100
+        };
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, 100, unitCost: 100);
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await purchaseOrder.AddPurchaseOrderItemAsync(purchaseOrderItem, productDataReaderStub.Object);
@@ -1210,6 +1212,7 @@ public sealed class PurchaseOrderManagerTests
             TaxAmount = -1,
             ShippingAmount = -1,
             ExpectedDeliveryDateUtc = DateTime.UtcNow.AddDays(-1),
+            WarehouseId = null
         };
         var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
@@ -1222,7 +1225,8 @@ public sealed class PurchaseOrderManagerTests
         var notFoundPurchaseOrderId = Guid.NewGuid();
         var dto = new UpdatePurchaseOrderDto(notFoundPurchaseOrderId)
         {
-            VendorId = Guid.NewGuid()
+            VendorId = Guid.NewGuid(),
+            WarehouseId = null
         };
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.NotFound(notFoundPurchaseOrderId);
         var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
@@ -1240,7 +1244,8 @@ public sealed class PurchaseOrderManagerTests
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
         var dto = new UpdatePurchaseOrderDto(purchaseOrder.Id)
         {
-            VendorId = notFoundVendorId
+            VendorId = notFoundVendorId,
+            WarehouseId = null
         };
         var vendorDataReaderMock = VendorDataReader.NotFound(notFoundVendorId);
         var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!);
@@ -1259,7 +1264,8 @@ public sealed class PurchaseOrderManagerTests
         {
             VendorId = vendor.Id,
             ShippingAmount = 100,
-            TaxAmount = 200
+            TaxAmount = 200,
+            WarehouseId = null
         };
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
         var vendorDataReaderStub = VendorDataReader.VendorById(vendor.Id, vendor);

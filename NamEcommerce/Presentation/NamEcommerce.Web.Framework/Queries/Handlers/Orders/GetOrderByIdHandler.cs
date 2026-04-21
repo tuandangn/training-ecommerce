@@ -49,7 +49,8 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             LockOrderReason = order.LockOrderReason,
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
-            CanLockOrder = order.CanCancelOrder
+            CanLockOrder = order.CanCancelOrder,
+            CreatedOn = order.CreatedOnUtc.ToLocalTime()
         };
         var products = order.CanUpdateInfo 
             ? await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = order.Items.Select(i => i.ProductId)}, cancellationToken).ConfigureAwait(false)
