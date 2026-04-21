@@ -37,9 +37,12 @@ public sealed record CustomerDebt : AppAggregateEntity
     }
 
     public string Code { get; private set; }
+    public Guid DeliveryNoteId { get; private set; }
+    public string DeliveryNoteCode { get; private set; }
+    public Guid OrderId { get; private set; }
+    public string OrderCode { get; private set; }
     
     public Guid CustomerId { get; private set; }
-
     public string CustomerName { 
         get;
         internal set
@@ -49,7 +52,6 @@ public sealed record CustomerDebt : AppAggregateEntity
         }
     }
     internal string NormalizedCustomerName { get; private set; } = "";
-
     public string? CustomerPhone { 
         get;
         internal set
@@ -59,7 +61,6 @@ public sealed record CustomerDebt : AppAggregateEntity
         }
     }
     internal string NormalizedCustomerPhone { get; private set; } = "";
-
     public string? CustomerAddress { 
         get;
         internal set
@@ -69,13 +70,6 @@ public sealed record CustomerDebt : AppAggregateEntity
         }
     }
     internal string NormalizedCustomerAddress { get; private set; } = "";
-
-
-    public Guid DeliveryNoteId { get; private set; }
-    public string DeliveryNoteCode { get; private set; }
-    
-    public Guid OrderId { get; private set; }
-    public string OrderCode { get; private set; }
 
     public decimal TotalAmount { get; private set; }
     public decimal PaidAmount { get; private set; }

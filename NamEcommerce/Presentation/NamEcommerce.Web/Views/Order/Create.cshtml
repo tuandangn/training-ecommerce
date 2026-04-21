@@ -31,7 +31,6 @@
                         </h5>
                         <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
                                 data-bs-target="#addProductModal">
-                            <i class="bi bi-plus-lg me-1"></i>
                             <span class="d-none d-lg-inline">Thêm hàng hóa</span>
                             <span class="d-lg-none">Thêm</span>
                         </button>
@@ -42,10 +41,10 @@
                                 <thead>
                                     <tr>
                                         <th class="ps-3">Sản phẩm</th>
-                                        <th class="text-center" style="width: 100px">Số lượng</th>
-                                        <th class="text-end" style="width: 130px">Đơn giá</th>
-                                        <th class="text-end d-none d-lg-table-cell" style="width: 130px">Thành tiền</th>
-                                        <th style="width: 50px;"></th>
+                                        <th class="text-center">Số lượng</th>
+                                        <th class="text-end">Đơn giá</th>
+                                        <th class="text-end d-none d-lg-table-cell">Thành tiền</th>
+                                        <th></th>
                                     </tr>
                                 </thead>
                                 <tbody id="itemsTableBody">
@@ -76,24 +75,26 @@
                                                       data-valmsg-for="Items[@i].ProductId" data-valmsg-replace="true"></span>
                                             </td>
                                             <td class="text-center">
-                                                <input type="number" name="Items[@i].Quantity" value="@item.Quantity"
-                                                       class="form-control form-control-sm text-center row-qty" step="any"
-                                                       min="0.00000001" data-val="true"
-                                                       data-val-required="Vui lòng nhập số lượng." placeholder="0" />
+                                                <input name="Items[@i].Quantity" value="@item.Quantity.DisplayQuantity()"
+                                                       class="form-control form-control-sm text-end row-qty no-additional-element"
+                                                       data-decimal="quantity" min="0.001" placeholder="0"
+                                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.001"
+                                                       data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
                                                 <span class="small text-danger field-validation-valid"
                                                       data-valmsg-for="Items[@i].Quantity" data-valmsg-replace="true"></span>
                                             </td>
                                             <td class="text-end">
-                                                <input type="number" name="Items[@i].UnitPrice" value="@item.UnitPrice"
-                                                       class="form-control form-control-sm text-end row-price" min="0"
-                                                       data-val="true" data-val-required="Vui lòng nhập đơn giá."
-                                                       placeholder="0" />
+                                                <input name="Items[@i].UnitPrice" value="@item.UnitPrice.DisplayCurrency()"
+                                                       class="form-control form-control-sm text-end row-price no-additional-element no-hint"
+                                                       data-decimal="currency" placeholder="0" min="0"
+                                                       data-val-required="Vui lòng nhập đơn giá."
+                                                       data-val-range="Đơn giá phải lớn hơn hoặc bằng 0." data-val-range-min="0"
+                                                       data-val-number="Đơn giá không đúng." />
                                                 <span class="small text-danger field-validation-valid"
                                                       data-valmsg-for="Items[@i].UnitPrice" data-valmsg-replace="true"></span>
                                             </td>
                                             <td class="text-end fw-bold text-danger row-total text-nowrap d-none d-lg-table-cell">
-                                                @item.ItemSubTotal.ToString(ViewConstants.NumberCustomFormat)
-                                                @ViewConstants.DefaultCurrencySymbol
+                                                @item.ItemSubTotal.DisplayCurrency()
                                             </td>
                                             <td class="text-end pe-3">
                                                 <button type="button"
@@ -118,10 +119,11 @@
                             </div>
                             <div class="order-summary-row total">
                                 <span class="label">Tổng cộng</span>
-                                <span class="value" id="grandTotal">
-                                    @Model.OrderTotal.DisplayCurrency()
+                                <span class="value">
+                                    <span id="grandTotal">@Model.OrderTotal.DisplayCurrency()</span>
                                 </span>
                             </div>
+                            <div class="currency-hint text-end visible" id="grandTotalHint">@Model.OrderTotal.DisplayVietnameseCurrencyHint()</div>
                         </div>
                         <div id="noItemsMessage" class="py-4 text-center text-muted" style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
                             Chưa có sản phẩm nào được chọn.
@@ -151,7 +153,7 @@
                         </div>
                         <div class="mb-3">
                             <label asp-for="ExpectedShippingDate" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <input type="date" asp-for="ExpectedShippingDate" class="form-control" />
+                            <input type="date" asp-for="ExpectedShippingDate" class="form-control" placeholder="Nhập ngày giao dự kiến" />
                             <span asp-validation-for="ExpectedShippingDate" class="small text-danger"></span>
                         </div>
                         <div class="mb-3">
@@ -172,7 +174,7 @@
                         </div>
                         <div class="mb-3">
                             <label asp-for="OrderDiscount" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <input type="number" asp-for="OrderDiscount" class="form-control" min="0" placeholder="0" disabled />
+                            <input type="number" asp-for="OrderDiscount" class="form-control" min="0" placeholder="Nhập giảm giá" disabled />
                             <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
                         </div>
                         <div class="mb-3">
@@ -210,16 +212,16 @@
                         <div class="row g-2 mb-2">
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted" for="itemQuantity">Số lượng</label>
-                                <input type="number" id="itemQuantity" name="itemProductQuantity" class="form-control"
-                                       value="1" min="0.01" step="any" data-val="true"
+                                <input id="itemQuantity" name="itemProductQuantity" class="form-control no-additional-element"
+                                       data-decimal="quantity" value="1" data-val="true"
                                        data-val-required="Vui lòng nhập số lượng." />
                                 <span class="small text-danger field-validation-valid"
                                       data-valmsg-for="itemProductQuantity" data-valmsg-replace="true"></span>
                             </div>
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted noRefill" for="itemUnitPrice">Đơn giá</label>
-                                <input type="number" id="itemUnitPrice" name="itemProductUnitPrice" class="form-control"
-                                       step="any" min="0" data-val="true" data-val-required="Vui lòng nhập đơn giá." />
+                                <input id="itemUnitPrice" name="itemProductUnitPrice" class="form-control no-additional-element"
+                                       data-decimal="currency" min="0" data-val="true" data-val-required="Vui lòng nhập đơn giá." />
                                 <span class="small text-danger field-validation-valid"
                                       data-valmsg-for="itemProductUnitPrice" data-valmsg-replace="true"></span>
                             </div>

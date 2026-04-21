@@ -33,6 +33,7 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
     public required decimal OrderSubTotal { get; init; }
     public required decimal TotalAmount { get; init; }
     public required int Status { get; init; }
+    public bool IsFinished { get; set; }
     public string? LockOrderReason { get; set; }
 
     public string? ShippingAddress { get; set; }

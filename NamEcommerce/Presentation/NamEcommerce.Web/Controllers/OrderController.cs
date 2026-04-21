@@ -7,6 +7,7 @@ using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
+using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.Orders;
 using NamEcommerce.Web.Services.Orders;
 
@@ -57,7 +58,7 @@ public sealed class OrderController : BaseAuthorizedController
         var orderSubTotal = model.Items.Sum(item => item.ItemSubTotal);
         if ((model.OrderDiscount ?? 0) > orderSubTotal)
         {
-            ModelState.AddModelError(nameof(model.OrderDiscount), $"Giảm giá tối đa không quá {orderSubTotal.ToString(ViewConstants.NumberCustomFormat)}");
+            ModelState.AddModelError(nameof(model.OrderDiscount), $"Giảm giá tối đa không quá {orderSubTotal.DisplayCurrency()}");
             model = await _orderModelFactory.PrepareCreateOrderModel(model);
             return View(model);
         }

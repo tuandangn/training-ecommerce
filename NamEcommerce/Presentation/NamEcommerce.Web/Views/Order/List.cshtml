@@ -5,34 +5,36 @@
     var successMessage = TempData[ViewConstants.OrderSuccessMessage] as string;
     var errorMessage = TempData[ViewConstants.OrderErrorMessage] as string;
 }
-<div class="content-card">
+
+<div class="content-card mb-3">
     <div class="content-card-header">
         <div>
-            <h1>Đơn hàng</h1>
-            <p class="page-header-subtitle">
-                <span>Theo dõi và quản lý đơn hàng</span>
-            </p>
+            <h1 class="page-header-title">Đơn hàng</h1>
+            <p class="page-header-subtitle">Theo dõi và quản lý đơn hàng</p>
         </div>
-        <a asp-action="Create" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i> Tạo đơn
-        </a>
     </div>
+</div>
+<div class="content-card">
     @if (!string.IsNullOrEmpty(successMessage))
     {
-        <div class="alert alert-success alert-dismissible fade show alert-global mb-3" role="alert">
+        <div class="alert alert-success alert-global fade show rounded-top" role="alert">
             <i class="bi bi-check-circle-fill me-2"></i>@successMessage
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
     @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div class="alert alert-warning alert-dismissible fade show alert-global mb-3" role="alert">
+        <div class="alert alert-warning alert-globall alert-dismissible fade show" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     }
     <div class="action-toolbar">
         <partial name="_Search" model="@(new OrderListSearchModel { Keywords = Model.Keywords, Status = Model.Status })" />
+        
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Tạo đơn
+        </a>
     </div>
     <div class="table-responsive">
         <table class="table data-table">
@@ -41,10 +43,9 @@
                     <th class="ps-4">Mã đơn</th>
                     <th>Khách hàng</th>
                     <th class="text-end">Tổng đơn</th>
-                    <th class="text-center">Dự kiến giao</th>
-                    <th class="text-center">Trạng thái</th>
-                    <th class="text-center d-none d-lg-table-cell">Ngày tạo</th>
-                    <th style="width: 100px;"></th>
+                    <th class="text-center">Ngày dự kiến</th>
+                    <th class="text-center">Đã giao</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -52,19 +53,18 @@
                 {
                     @foreach (var order in Model.Data)
                     {
-                        <tr>
+                        <tr class="align-middle">
                             <td class="ps-4">
                                 <div class="position-relative">
-                                    <a asp-action="Details" asp-route-id="@order.Id" class="fw-medium text-primary d-block text-nowrap text-decoration-none" data-bs-toggle="tooltip" title="Xem chi tiết">
+                                    <a asp-action="Details" asp-route-id="@order.Id" class="fw-medium d-block text-nowrap text-decoration-none" data-bs-toggle="tooltip" title="Xem chi tiết">
                                         @HighlighHelper.Highlight(order.Code, Model.Keywords)
                                     </a>
-                                    <span class="text-muted small d-inline d-lg-none">@order.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                                    <span class="text-muted small">@order.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
                                 </div>
                             </td>
                             <td>
                                 <div class="position-relative">
-                                    <a asp-action="Details" asp-controller="CustomerDebt" asp-route-id="@order.CustomerId" class="stretched-link fw-medium text-decoration-none" data-bs-toggle="tooltip" title="Xem công nợ">
-                                        <i class="bi bi-person me-1"></i>
+                                    <a asp-action="Details" asp-controller="CustomerDebt" asp-route-id="@order.CustomerId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
                                         @HighlighHelper.Highlight(order.CustomerName, Model.Keywords)
                                     </a>
                                     @if (!string.IsNullOrEmpty(order.CustomerPhone))
@@ -77,60 +77,26 @@
                                     }
                                 </div>
                             </td>
-                            <td class="text-end text-danger fw-bold text-nowrap">
-                                @order.TotalAmount.ToString(ViewConstants.CurrencyDisplayFormat)
+                            <td class="text-end fw-medium text-nowrap">
+                                @order.TotalAmount.DisplayCurrency()
                             </td>
                             <td class="text-center text-muted">
                                 @order.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat)
                             </td>
                             <td class="text-center">
-                                @{
-                                    var itemOrderStatus = (OrderStatus)order.Status;
-                                }
-                                <span class="badge rounded-pill @itemOrderStatus.GetDisplayColor() px-2 py-1 fw-normal">
-                                    @itemOrderStatus.GetDisplayText()
-                                </span>
-                            </td>
-                            <td class="text-center d-none d-lg-table-cell">
-                                <span class="text-muted">@order.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
-                            </td>
-                            <td class="text-end pe-3">
-                                @if (order.CanUpdateInfo)
+                                @if (order.IsFinished)
                                 {
-                                    <a class="btn-table-action" asp-action="Details" asp-route-id="@order.Id" data-bs-toggle="tooltip" title="Chỉnh sửa">
-                                        <i class="bi bi-pencil"></i>
-                                        <span class="visually-hidden">Chỉnh sửa</span>
-                                    </a>
+                                    <i class="bi bi-check-circle-fill text-success ms-1" data-bs-toggle="tooltip" title="Đơn hàng đã hoàn thành"></i>
                                 }
                                 else
                                 {
-                                    <a class="btn-table-action" asp-action="Details" asp-route-id="@order.Id" data-bs-toggle="tooltip" title="Xem chi tiết">
-                                        <i class="bi bi-eye"></i>
-                                        <span class="visually-hidden">Xem chi tiết</span>
-                                    </a>
+                                    <i class="bi bi-x-circle-fill text-info ms-1" data-bs-toggle="tooltip" title="Đơn hàng chưa hoàn thành"></i>
                                 }
-                                @if (order.CanUpdateInfo)
-                                {
-                                    <div class="btn-group dropstart">
-                                        <button class="btn-table-action" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Thêm">
-                                            <i class="bi bi-three-dots-vertical"></i>
-                                        </button>
-                                        <ul class="dropdown-menu border-0 shadow-sm rounded-3">
-                                            <li>
-                                                <a class="dropdown-item py-2 dropdown-item-custom" asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@order.Id">
-                                                    <i class="bi bi-box-seam me-2 text-muted"></i>
-                                                    Tạo phiếu xuất
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <button type="button" class="dropdown-item py-2 text-danger btnDelete dropdown-item-custom" data-id="@order.Id" data-code="@order.Code">
-                                                    <i class="bi bi-trash me-2"></i>
-                                                    Xóa đơn hàng
-                                                </button>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                }
+                            </td>
+                            <td class="text-end pe-3">
+                                <a class="btn btn-sm btn-link text-decoration-none text-primary" asp-action="Details" asp-route-id="@order.Id">
+                                    <span>Xem</span>
+                                </a>
                             </td>
                         </tr>
                     }
@@ -138,7 +104,7 @@
                 else
                 {
                     <tr>
-                        <td colspan="6">
+                        <td colspan="5">
                             <div class="empty-state">
                                 <div class="empty-icon"><i class="bi bi-inbox"></i></div>
                                 <h5>Không có đơn hàng nào</h5>

@@ -19,7 +19,7 @@ public sealed class InventoryStockListModel
         public required decimal QuantityOnHand { get; init; }
         public required decimal QuantityReserved { get; init; }
         public required decimal QuantityAvailable { get; init; }
-        public required DateTime UpdatedOnUtc { get; init; }
+        public required DateTime UpdatedOn { get; init; }
     }
 }
 

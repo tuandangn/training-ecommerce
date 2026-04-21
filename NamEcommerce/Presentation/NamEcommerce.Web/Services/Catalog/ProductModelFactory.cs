@@ -21,16 +21,19 @@ public sealed class ProductModelFactory : IProductModelFactory
     {
         var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
         var unitMeasurementOptions = await _mediator.Send(new GetUnitMeasurementOptionListQuery()).ConfigureAwait(false);
+        var vendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new CreateProductModel
         {
             DisplayOrder = 1,
             AvailableCategories = categoryOptions,
-            AvailableUnitMeasurements = unitMeasurementOptions
+            AvailableUnitMeasurements = unitMeasurementOptions,
+            AvailableVendors = vendorOptions
         };
         if (oldModel is not null)
         {
             model.AvailableCategories = categoryOptions;
             model.AvailableUnitMeasurements = unitMeasurementOptions;
+            model.AvailableVendors = vendorOptions;
         }
 
         return model;
@@ -44,6 +47,7 @@ public sealed class ProductModelFactory : IProductModelFactory
 
         var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
         var unitMeasurementOptions = await _mediator.Send(new GetUnitMeasurementOptionListQuery()).ConfigureAwait(false);
+        var vendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new EditProductModel
         {
             Id = product!.Id,
@@ -53,6 +57,8 @@ public sealed class ProductModelFactory : IProductModelFactory
             AvailableCategories = categoryOptions,
             UnitMeasurementId = product.UnitMeasurementId,
             AvailableUnitMeasurements = unitMeasurementOptions,
+            VendorIds = product.VendorIds,
+            AvailableVendors = vendorOptions,
             DisplayOrder = product.DisplayOrder,
             UnitPrice = product.UnitPrice,
             CostPrice = product.CostPrice,
@@ -62,6 +68,7 @@ public sealed class ProductModelFactory : IProductModelFactory
         {
             model.AvailableCategories = categoryOptions;
             model.AvailableUnitMeasurements = unitMeasurementOptions;
+            model.AvailableVendors = vendorOptions;
         }
 
         return model;

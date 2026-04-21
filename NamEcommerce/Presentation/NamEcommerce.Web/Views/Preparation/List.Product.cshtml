@@ -30,10 +30,10 @@
                 </h5>
                 <div class="d-flex align-items-center gap-3">
                     <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">
-                        Đã giao: @preparationItem.DeliveredQuantity.ToString(ViewConstants.NumberCustomFormat) / @preparationItem.TotalQuantity.ToString(ViewConstants.NumberCustomFormat)
+                        Đã giao: @preparationItem.DeliveredQuantity.DisplayQuantity() / @preparationItem.TotalQuantity.DisplayQuantity()
                     </span>
                     <span class="badge bg-info px-3 py-2 fs-6 rounded-pill text-dark" title="Tồn kho khả dụng">
-                        <i class="bi bi-box-seam me-1"></i> Tồn kho: @preparationItem.StockQuantityAvailable.ToString(ViewConstants.NumberCustomFormat)
+                        <i class="bi bi-box-seam me-1"></i> Tồn kho: @preparationItem.StockQuantityAvailable.DisplayQuantity()
                     </span>
                     @if (preparationItem.EarliestShippingDate.HasValue && preparationItem.EarliestShippingDate.Value != default)
                     {
@@ -88,7 +88,7 @@
                                     }
                                 </td>
                                 <td class="text-end fw-bold fs-6">
-                                    <span class="text-muted small">@detail.DeliveredQuantity.ToString(ViewConstants.NumberCustomFormat) /</span> @detail.Quantity.ToString(ViewConstants.NumberCustomFormat)
+                                    <span class="text-muted small">@detail.DeliveredQuantity.DisplayQuantity() /</span> @detail.Quantity.DisplayQuantity()
                                 </td>
                                 <td class="text-center d-none d-sm-table-cell">
                                     @if (detail.ExpectedShippingDate.HasValue)

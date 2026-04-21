@@ -64,15 +64,15 @@
                             <div class="row g-0 mb-4 bg-light rounded-4 p-3 border border-light">
                                 <div class="col-4 border-end border-white text-center">
                                     <div class="small text-muted mb-1">Thực tế</div>
-                                    <div class="fw-bold fs-5">@item.QuantityOnHand.ToString("N1")</div>
+                                    <div class="fw-bold fs-5">@item.QuantityOnHand.DisplayQuantity()</div>
                                 </div>
                                 <div class="col-4 border-end border-white text-center">
                                     <div class="small text-muted mb-1">Chờ giao</div>
-                                    <div class="fw-bold fs-5 text-warning">@item.QuantityReserved.ToString("N1")</div>
+                                    <div class="fw-bold fs-5 text-warning">@item.QuantityReserved.DisplayQuantity()</div>
                                 </div>
                                 <div class="col-4 text-center">
                                     <div class="small text-muted mb-1">Sẵn có</div>
-                                    <div class="fw-bold fs-5 text-@stockHealth">@item.QuantityAvailable.ToString("N1")</div>
+                                    <div class="fw-bold fs-5 text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</div>
                                 </div>
                             </div>
 
@@ -90,7 +90,7 @@
                         <div class="card-footer bg-white border-0 px-4 pb-4 pt-0">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div class="text-muted small">
-                                    <i class="bi bi-clock me-1"></i> @item.UpdatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                    <i class="bi bi-clock me-1"></i> @item.UpdatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
                                 </div>
                                 <div class="btn-group shadow-sm rounded-pill overflow-hidden">
                                     <a class="btn btn-outline-dark btn-sm border-0 px-3" asp-action="MovementLogs" asp-route-productId="@item.ProductId" asp-route-warehouseId="@item.WarehouseId" title="Lịch sử">

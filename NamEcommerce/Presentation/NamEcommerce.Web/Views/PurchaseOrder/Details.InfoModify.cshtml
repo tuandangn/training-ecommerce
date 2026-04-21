@@ -90,14 +90,14 @@
                 <div class="col-md-6">
                     <label class="form-label fw-medium text-muted small">Phí vận chuyển</label>
                     <div class="p-2 bg-light rounded border">
-                        <span class="text-dark fw-500">@Model.ShippingAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
+                        <span class="text-dark fw-500">@Model.ShippingAmount.DisplayCurrency()</span>
                     </div>
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label fw-medium text-muted small">Thuế VAT</label>
                     <div class="p-2 bg-light rounded border">
-                        <span class="text-dark fw-500">@Model.TaxAmount.ToString(ViewConstants.NumberCustomFormat) đ</span>
+                        <span class="text-dark fw-500">@Model.TaxAmount.DisplayCurrency()</span>
                     </div>
                 </div>
             }

@@ -19,7 +19,7 @@ public sealed class OrderListModel
         public string? CustomerAddress { get; set; }
         public string? CustomerPhone { get; set; }
         public required decimal TotalAmount { get; init; }
-        public int Status { get; init; }
+        public bool IsFinished { get; init; }
         public DateTime? ExpectedShippingDate { get; set; }
         public DateTime CreatedOn { get; set; }
         public bool CanUpdateInfo { get; set; }

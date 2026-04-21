@@ -1,5 +1,6 @@
 using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 
 namespace NamEcommerce.Application.Services.Extensions;
 
@@ -19,6 +20,7 @@ public static class OrderExtensions
             TotalAmount = order.TotalAmount,
             OrderDiscount = order.OrderDiscount ?? 0,
             Status = (int)order.Status,
+            IsFinished = order.Status == OrderStatus.Locked,
             Note = order.Note,
             ShippingAddress = order.ShippingAddress,
             LockOrderReason = order.LockOrderReason,

@@ -15,6 +15,8 @@ public sealed class CreatePurchaseOrderModel
     public string? VendorPhone { get; set; }
     [ValidateNever]
     public string? VendorAddress { get; set; }
+    [ValidateNever]
+    public bool VendorIsLocked { get; set; }
 
     [Display(Name = "Kho nhập hàng")]
     public Guid? WarehouseId { get; set; }

@@ -228,6 +228,16 @@ export default class VendorPicker {
         this.target.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
     }
 
+    setLocked(isLocked) {
+        if (isLocked) {
+            this.clearBtn.classList.add('d-none');
+            this.input.disabled = true;
+        } else {
+            this.clearBtn.classList.remove('d-none');
+            this.input.disabled = false;
+        }
+    }
+
     // ─── Template ────────────────────────────────────────────────────────────────
 
     #template() {

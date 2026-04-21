@@ -24,6 +24,11 @@ public sealed class CreateProductModel
     [ValidateNever]
     public required EntityOptionListModel AvailableUnitMeasurements { get; set; }
 
+    [Display(Name = "Nhà cung cấp")]
+    public IList<Guid> VendorIds { get; set; } = [];
+    [ValidateNever]
+    public required EntityOptionListModel AvailableVendors { get; set; }
+
     [Display(Name = "Giá nhập")]
     [UIHint("Currency")]
     public decimal CostPrice { get; set; }

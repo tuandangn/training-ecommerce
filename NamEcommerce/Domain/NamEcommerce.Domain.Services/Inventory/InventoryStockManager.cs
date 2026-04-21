@@ -6,6 +6,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using System.Diagnostics;
+using NamEcommerce.Domain.Shared.Helpers;
 
 namespace NamEcommerce.Domain.Services.Inventory;
 
@@ -181,7 +182,10 @@ public sealed class InventoryStockManager : IInventoryStockManager
 
         if (!string.IsNullOrWhiteSpace(keywords))
         {
-            query = query.Where(x => x.p.Name.Contains(keywords) || x.w.Name.Contains(keywords));
+            var normalizedKeywords = TextHelper.Normalize(keywords);
+            var uppercaseKeywords = keywords.Trim().ToUpper();
+            query = query.Where(agg => agg.p.Name.ToUpper().Contains(uppercaseKeywords) || agg.p.Name.ToUpper().Contains(normalizedKeywords) || agg.p.NormalizedName.Contains(normalizedKeywords)
+                || agg.w.Name.ToUpper().Contains(uppercaseKeywords) || agg.w.Name.ToUpper().Contains(normalizedKeywords) || agg.w.NormalizedName.Contains(normalizedKeywords));
         }
 
         var total = query.Count();

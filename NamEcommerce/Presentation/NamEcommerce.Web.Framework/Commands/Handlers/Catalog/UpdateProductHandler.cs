@@ -28,6 +28,7 @@ public sealed class UpdateProductHandler : IRequestHandler<UpdateProductCommand,
             Categories = request.CategoryId.HasValue
                 ? [new ProductCategoryAppDto(request.CategoryId.Value, request.DisplayOrder)]
                 : [],
+            Vendors = request.VendorIds?.Select(id => new ProductVendorAppDto(id, 0)) ?? [],
             ImageFile = request.ImageFile is not null ? new FileInfoAppDto
             {
                 Data = request.ImageFile.Data,
@@ -41,8 +42,7 @@ public sealed class UpdateProductHandler : IRequestHandler<UpdateProductCommand,
         return new UpdateProductResultModel
         {
             Success = updateResult.Success,
-            ErrorMessage = updateResult.ErrorMessage,
-            UpdatedId = updateResult.UpdatedId
+            ErrorMessage = updateResult.ErrorMessage
         };
     }
 }

@@ -11,13 +11,15 @@ namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductListForOrderQuery, ProductListForOrderModel>
 {
     private readonly IProductAppService _productAppService;
+    private readonly IVendorAppService _vendorAppService;
     private readonly IPictureAppService _pictureAppService;
     private readonly IMediator _mediator;
     private readonly IInventoryAppService _inventoryAppService;
 
-    public GetProductListForOrderHandler(IProductAppService productAppService, IMediator mediator, IPictureAppService pictureAppService, IInventoryAppService inventoryAppService)
+    public GetProductListForOrderHandler(IProductAppService productAppService, IVendorAppService vendorAppService, IMediator mediator, IPictureAppService pictureAppService, IInventoryAppService inventoryAppService)
     {
         _productAppService = productAppService;
+        _vendorAppService = vendorAppService;
         _mediator = mediator;
         _pictureAppService = pictureAppService;
         _inventoryAppService = inventoryAppService;
@@ -25,10 +27,30 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
 
     public async Task<ProductListForOrderModel> Handle(GetProductListForOrderQuery request, CancellationToken cancellationToken)
     {
-        var pagedData = await _productAppService.GetProductsAsync(request.Keywords, 0, int.MaxValue);
+        IEnumerable<Application.Contracts.Dtos.Catalog.ProductAppDto> products;
+        string? vendorName = null;
+
+        if (request.VendorId.HasValue)
+        {
+            products = await _productAppService.GetProductsByVendorIdAsync(request.VendorId.Value).ConfigureAwait(false);
+            if (!string.IsNullOrEmpty(request.Keywords))
+            {
+                var lowerKeywords = request.Keywords.ToLowerInvariant();
+                products = products.Where(p => p.Name.ToLowerInvariant().Contains(lowerKeywords));
+            }
+            var vendor = await _vendorAppService.GetVendorByIdAsync(request.VendorId.Value).ConfigureAwait(false);
+            if (vendor != null) vendorName = vendor.Name;
+        }
+        else
+        {
+            var pagedData = await _productAppService.GetProductsAsync(request.Keywords, 0, int.MaxValue).ConfigureAwait(false);
+            products = pagedData;
+        }
+
+        var allVendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
 
         var productListItems = new List<ProductListForOrderModel.ProductItemModel>();
-        foreach (var productInfo in pagedData)
+        foreach (var productInfo in products)
         {
             var productModel = new ProductListForOrderModel.ProductItemModel(productInfo.Id)
             {
@@ -49,15 +71,23 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
             productModel.QuantityAvailable = stockItems.Sum(item => item.QuantityAvailable);
             productModel.AvailableWarehouseIds = stockItems.Where(item => item.WarehouseId.HasValue).Select(item => item.WarehouseId).OfType<Guid>().ToList();
 
+            if (!request.VendorId.HasValue && productInfo.Vendors != null)
+            {
+                productModel.AvailableVendors = productInfo.Vendors
+                    .Select(v => allVendorOptions.Options.FirstOrDefault(o => o.Id == v.VendorId))
+                    .Where(o => o != null)
+                    .Select(o => new ProductListForOrderModel.VendorOptionModel(o!.Id, o.Name))
+                    .ToList();
+            }
+
             productListItems.Add(productModel);
         }
 
-        var model = new ProductListForOrderModel
+        return new ProductListForOrderModel
         {
             Keywords = request.Keywords,
-            Data = PagedDataModel.Create(productListItems, 0, int.MaxValue, pagedData.Pagination.TotalCount)
+            FilteredByVendorName = vendorName,
+            Data = PagedDataModel.Create(productListItems)
         };
-
-        return model;
     }
 }

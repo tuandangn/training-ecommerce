@@ -7,6 +7,7 @@ using NamEcommerce.Web.Models.Catalog;
 using NamEcommerce.Web.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Models.CustomerDebts;
+using NamEcommerce.Web.Extensions;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -168,7 +169,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (!result.Success)
             TempData[ViewConstants.PurchaseOrderErrorMessage] = result.ErrorMessage;
         else
-            TempData[ViewConstants.PurchaseOrderSuccessMessage] = $"Nhập kho {model.ReceivedQuantity.ToString(ViewConstants.NumberCustomFormat)} sản phẩm thành công!";
+            TempData[ViewConstants.PurchaseOrderSuccessMessage] = $"Nhập kho {model.ReceivedQuantity.DisplayQuantity()} sản phẩm thành công!";
 
         return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
     }

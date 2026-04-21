@@ -84,6 +84,7 @@ public sealed class ProductAppService : IProductAppService
             UnitPrice = dto.UnitPrice,
             CostPrice = dto.CostPrice,
             Categories = dto.Categories.Select(item => new ProductCategoryDto(item.CategoryId, item.DisplayOrder)),
+            Vendors = dto.Vendors.Select(item => new ProductVendorDto(item.VendorId, item.DisplayOrder)),
             Pictures = pictureId.HasValue ? [pictureId.Value] : [],
 
         };
@@ -132,6 +133,12 @@ public sealed class ProductAppService : IProductAppService
 
         var products = await _productDataReader.GetByIdsAsync(ids).ConfigureAwait(false);
 
+        return products.Select(p => p.ToDto());
+    }
+
+    public async Task<IEnumerable<ProductAppDto>> GetProductsByVendorIdAsync(Guid vendorId)
+    {
+        var products = await _productManager.GetProductsByVendorIdAsync(vendorId).ConfigureAwait(false);
         return products.Select(p => p.ToDto());
     }
 
@@ -216,6 +223,7 @@ public sealed class ProductAppService : IProductAppService
             UnitPrice = dto.UnitPrice,
             CostPrice = dto.CostPrice,
             Categories = dto.Categories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
+            Vendors = dto.Vendors.Select(pv => new ProductVendorDto(pv.VendorId, pv.DisplayOrder)),
             Pictures = pictureId.HasValue ? [pictureId.Value] : [],
             ChangePriceReason = dto.ChangePriceReason
         }).ConfigureAwait(false);
@@ -227,9 +235,9 @@ public sealed class ProductAppService : IProductAppService
         };
     }
 
-    public async Task<IEnumerable<ProductPriceHistoryAppDto>> GetProductPriceHistoryAsync(Guid id)
+    public async Task<IEnumerable<ProductPriceHistoryAppDto>> GetProductPriceHistoryAsync(Guid productId)
     {
-        var history = await _productManager.GetProductPriceHistoryAsync(id).ConfigureAwait(false);
+        var history = await _productManager.GetProductPriceHistoryAsync(productId).ConfigureAwait(false);
         return history.Select(h => new ProductPriceHistoryAppDto
         {
             Id = h.Id,

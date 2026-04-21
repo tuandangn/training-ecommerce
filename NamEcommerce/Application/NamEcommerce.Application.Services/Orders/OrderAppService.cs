@@ -5,6 +5,7 @@ using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
+using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
@@ -19,7 +20,8 @@ public sealed class OrderAppService(
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
     IEntityDataReader<User> userDataReader,
-    IEntityDataReader<DeliveryNote> deliveryNoteDataReader) : IOrderAppService
+    IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
+    IEntityDataReader<Order> orderDataReader) : IOrderAppService
 {
     public async Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto)
     {
@@ -508,11 +510,14 @@ public sealed class OrderAppService(
 
     public async Task<string> NextOrderCodeAsync()
     {
-        var now = DateTime.UtcNow;
         var code = string.Empty;
+        var now = DateTime.UtcNow;
+        var monthDateStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var monthDateEnd = new DateTime(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month), 23, 59, 59, DateTimeKind.Utc);
+        var monthOrderCount = await Task.Run(() => orderDataReader.DataSource.Where(o => o.CreatedOnUtc >= monthDateStart && o.CreatedOnUtc <= monthDateEnd).Count()).ConfigureAwait(false);
         do
         {
-            code = $"O-{now:yyyyMM}-{Random.Shared.Next(1000, 9999)}";
+            code = $"{Order.OrderCodePrefix}{now:MMyy}{++monthOrderCount:D3}";
         }
         while (await orderManager.DoesCodeExistAsync(code).ConfigureAwait(false));
 

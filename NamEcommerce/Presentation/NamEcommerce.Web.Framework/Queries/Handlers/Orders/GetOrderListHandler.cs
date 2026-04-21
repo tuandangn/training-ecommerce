@@ -36,7 +36,7 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
                 CustomerPhone = customer?.PhoneNumber,
                 CustomerAddress = customer?.Address,
                 TotalAmount = order.TotalAmount,
-                Status = order.Status,
+                IsFinished = order.IsFinished,
                 ExpectedShippingDate = order.ExpectedShippingDateUtc?.ToLocalTime(),
                 CreatedOn = order.CreatedOnUtc.ToLocalTime(),
                 CanUpdateInfo = order.CanUpdateInfo

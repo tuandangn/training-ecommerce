@@ -5,6 +5,5 @@ public interface IEntityDataReader<TEntity> : IGetByIdService<TEntity> where TEn
     IQueryable<TEntity> DataSource { get; }
 
     Task<IEnumerable<TEntity>> GetAllAsync();
-
     Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids);
 }

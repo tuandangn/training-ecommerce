@@ -55,6 +55,9 @@ public sealed record PurchaseOrder : AppAggregateEntity
         if (VendorId == vendorId)
             return;
 
+        if (_items.Any())
+            throw new InvalidOperationException("Cannot change vendor when there are items in the purchase order.");
+
         if (!vendorId.HasValue)
         {
             RemoveVendor();
@@ -102,6 +105,9 @@ public sealed record PurchaseOrder : AppAggregateEntity
         var product = await byIdGetter.GetByIdAsync(item.ProductId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(item.ProductId);
+
+        if (VendorId.HasValue && !product.ProductVendors.Any(v => v.VendorId == VendorId.Value))
+            throw new InvalidOperationException("The product does not belong to the selected vendor.");
 
         _items.Add(item);
     }

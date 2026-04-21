@@ -13,12 +13,15 @@ class Vendor {
 }
 
 class ProductInfo {
-    constructor({ id, name, availableQty, picture, unitPrice }) {
+    constructor({ id, name, availableQty, picture, unitPrice, vendorCount, firstVendorId, availableVendors }) {
         this.id = id;
         this.name = name ?? '';
         this.availableQty = availableQty ?? 0;
         this.picture = picture ?? '';
         this.unitPrice = unitPrice ?? 0;
+        this.vendorCount = vendorCount ?? 0;
+        this.firstVendorId = firstVendorId;
+        this.availableVendors = availableVendors ?? [];
     }
 }
 
@@ -105,6 +108,12 @@ export default class CreatePurchaseOrderController {
         const vendorId = getEl('VendorId');
 
         vendorId.value = vendor?.id ?? '';
+        
+        const hasItems = this.#state.items.length > 0;
+        const isServerLocked = getEl('vendorPicker')?.dataset.locked === 'true';
+        if (this.#vendorPicker) {
+            this.#vendorPicker.setLocked(hasItems || isServerLocked);
+        }
     }
 
     #renderItems() {
@@ -325,11 +334,13 @@ export default class CreatePurchaseOrderController {
         el.addEventListener('select', (e) => {
             const vendor = e.detail?.vendor ? new Vendor(e.detail.vendor) : null;
             this.#setState({ vendor });
+            if (this.#productPicker) this.#productPicker.vendorId = vendor?.id ?? null;
             // Khi đổi NCC → tự động điền giá của NCC đó (nếu có dữ liệu)
             this.#addItemController.applyVendorPrice(vendor?.id ?? null);
         });
         el.addEventListener('remove', () => {
             this.#setState({ vendor: null });
+            if (this.#productPicker) this.#productPicker.vendorId = null;
             this.#addItemController.applyVendorPrice(null);
         });
 
@@ -337,6 +348,7 @@ export default class CreatePurchaseOrderController {
         if (initialVendor.id) {
             var vendor = new Vendor(initialVendor);
             this.#vendorPicker.displayVendor(vendor);
+            if (this.#productPicker) this.#productPicker.vendorId = vendor.id;
             return vendor;
         }
         return null;
@@ -348,6 +360,25 @@ export default class CreatePurchaseOrderController {
 
         el.addEventListener('select', (e) => {
             const product = e.detail?.product ? new ProductInfo(e.detail.product) : null;
+            
+            if (product && !this.#state.vendor) {
+                if (product.vendorCount === 1) {
+                    const vendorId = product.firstVendorId;
+                    const vendorName = product.availableVendors.find(v => v.key === vendorId)?.value;
+                    const vendor = new Vendor({ id: vendorId, name: vendorName });
+                    
+                    this.#vendorPicker.selectVendor(vendor);
+                } else if (product.vendorCount > 1) {
+                    toast('Thông báo', 'Sản phẩm có nhiều nhà cung cấp. Vui lòng chọn nhà cung cấp ở mục trên trước!', 'info');
+                    this.#productPicker.clear();
+                    return;
+                } else if (product.vendorCount === 0) {
+                    toast('Lỗi', 'Sản phẩm này chưa được liên kết với nhà cung cấp nào. Vui lòng cập nhật sản phẩm.', 'error');
+                    this.#productPicker.clear();
+                    return;
+                }
+            }
+            
             this.#addItemController.setProduct(product, this.#state.vendor?.id ?? null);
         });
         el.addEventListener('remove', () => {
@@ -442,7 +473,7 @@ export class AddItemController {
         this.#autoFillPrice(vendorId);
         this.#renderPriceTable(vendorId);
         // Cập nhật giá trị input
-        getEl('itemUnitPrice').value = this.state.unitCost;
+        getEl('itemUnitPrice').value = DecimalFields.formatCurrency(this.state.unitCost);
         DecimalFields.autoWrap(getEl('itemUnitPrice').closest('div') ?? document.body);
     }
 

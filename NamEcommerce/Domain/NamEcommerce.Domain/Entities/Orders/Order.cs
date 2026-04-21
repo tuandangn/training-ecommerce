@@ -13,6 +13,8 @@ namespace NamEcommerce.Domain.Entities.Orders;
 [Serializable]
 public sealed record Order : AppAggregateEntity
 {
+    public const string OrderCodePrefix = "ORD";
+
     internal Order(string code) : base(Guid.NewGuid())
     {
         Code = code;

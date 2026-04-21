@@ -1,4 +1,7 @@
-﻿namespace NamEcommerce.Web.Services;
+﻿using System.Globalization;
+using System.Text;
+
+namespace NamEcommerce.Web.Services;
 
 /// <summary>
 /// Format decimal để hiển thị trong View — đồng bộ với decimal-fields.js và so-bang-chu.js.
@@ -22,23 +25,27 @@ public static class DecimalFormatHelper
     /// </summary>
     public static string FormatQuantity(decimal? value, int decimalPlaces = 2)
     {
-        if (!value.HasValue) return string.Empty;
+        if (!value.HasValue)
+            return string.Empty;
 
-        var raw = Math.Round(value.Value, decimalPlaces)
-                           .ToString("F" + decimalPlaces,
-                                System.Globalization.CultureInfo.InvariantCulture);
+        var raw = Math.Round(value.Value, decimalPlaces).ToString("F" + decimalPlaces, CultureInfo.InvariantCulture);
         var parts = raw.Split('.');
         var intPart = InsertThousandSeparator(parts[0], '.');
-        var fracPart = parts.Length > 1 ? parts[1] : new string('0', decimalPlaces);
+        if (parts.Length == 1)
+            return intPart;
 
-        return intPart + ',' + fracPart;
+        var fracPart = parts[1];
+        if (fracPart == "00")
+            return intPart;
+
+        return $"{intPart},{fracPart}";
     }
 
     // ── private: format ──────────────────────────────────────
 
     private static string InsertThousandSeparator(string intStr, char sep, char? endSymbol = null)
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         int count = 0;
 
         for (int i = intStr.Length - 1; i >= 0; i--)
@@ -123,7 +130,7 @@ public static class DecimalFormatHelper
         int chuc = (n % 100) / 10;
         int donvi = n % 10;
 
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
 
         // Hàng trăm
         if (tram > 0)

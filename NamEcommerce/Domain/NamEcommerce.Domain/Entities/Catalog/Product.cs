@@ -46,6 +46,10 @@ public record Product : AppAggregateEntity
     public IEnumerable<ProductCategory> ProductCategories
         => _productCategories.AsReadOnly();
 
+    private readonly IList<ProductVendor> _productVendors = [];
+    public IEnumerable<ProductVendor> ProductVendors
+        => _productVendors.AsReadOnly();
+
     private readonly IList<ProductPicture> _productPictures = [];
     public IEnumerable<ProductPicture> ProductPictures
         => _productPictures.AsReadOnly();
@@ -87,7 +91,7 @@ public record Product : AppAggregateEntity
         UnitMeasurementId = unitMeasurementId;
     }
 
-    internal void ClearProductCategories() => _productCategories.Clear();
+    internal void ClearCategories() => _productCategories.Clear();
     internal async Task AddToCategoryAsync(Guid categoryId, int displayOrder, IGetByIdService<Category> byIdGetter)
     {
         ArgumentNullException.ThrowIfNull(byIdGetter);
@@ -101,7 +105,6 @@ public record Product : AppAggregateEntity
 
         _productCategories.Add(new ProductCategory(Id, categoryId, displayOrder));
     }
-
     internal void RemoveFromCategory(Guid categoryId)
     {
         var productCategory = _productCategories.FirstOrDefault(pc => pc.CategoryId == categoryId);
@@ -111,7 +114,30 @@ public record Product : AppAggregateEntity
         _productCategories.Remove(productCategory);
     }
 
-    internal void ClearProductPictures() => _productPictures.Clear();
+    internal void ClearVendors() => _productVendors.Clear();
+    internal async Task AddVendorAsync(Guid vendorId, int displayOrder, IGetByIdService<Vendor> byIdGetter)
+    {
+        ArgumentNullException.ThrowIfNull(byIdGetter);
+
+        if (ProductVendors.Any(pv => pv.VendorId == vendorId))
+            return;
+
+        var vendor = await byIdGetter.GetByIdAsync(vendorId).ConfigureAwait(false);
+        if (vendor is null)
+            throw new VendorIsNotFoundException(vendorId);
+
+        _productVendors.Add(new ProductVendor(Id, vendorId, displayOrder));
+    }
+    internal void RemoveVendor(Guid vendorId)
+    {
+        var productVendor = _productVendors.FirstOrDefault(pv => pv.VendorId == vendorId);
+        if (productVendor is null)
+            return;
+
+        _productVendors.Remove(productVendor);
+    }
+
+    internal void ClearPictures() => _productPictures.Clear();
     internal async Task AddPictureAsync(Guid pictureId, IGetByIdService<Picture> byIdGetter)
     {
         ArgumentNullException.ThrowIfNull(byIdGetter);
@@ -126,14 +152,6 @@ public record Product : AppAggregateEntity
         _productPictures.Add(new ProductPicture(Id, pictureId));
     }
 
-    internal void SetCostPrice(decimal costPrice)
-    {
-        if (costPrice < 0)
-            throw new ArgumentOutOfRangeException(nameof(costPrice), "Cost price cannot be less than 0");
-
-        CostPrice = costPrice;
-    }
-
     internal void UpdatePrice(decimal unitPrice, decimal costPrice)
     {
         if (unitPrice < 0)
@@ -142,12 +160,11 @@ public record Product : AppAggregateEntity
         if (costPrice < 0)
             throw new ArgumentOutOfRangeException(nameof(costPrice), "Cost price cannot be less than 0");
 
-        if (UnitPrice == unitPrice && CostPrice == costPrice)
+        if (unitPrice == UnitPrice && costPrice == CostPrice)
             return;
 
         UnitPrice = unitPrice;
         CostPrice = costPrice;
-        UpdatedOnUtc = DateTime.UtcNow;
     }
 
     #endregion
@@ -157,22 +174,42 @@ public record Product : AppAggregateEntity
 public sealed record ProductCategory : AppEntity
 {
     internal ProductCategory(Guid productId, Guid categoryId, int displayOrder) : base(Guid.Empty)
-        => (ProductId, CategoryId, DisplayOrder) = (productId, categoryId, displayOrder);
+    {
+        ProductId = productId;
+        CategoryId = categoryId;
+        DisplayOrder = displayOrder;
+    }
 
     public Guid ProductId { get; init; }
     public Guid CategoryId { get; init; }
+    public int DisplayOrder { get; set; }
+}
 
+[Serializable]
+public sealed record ProductVendor : AppEntity
+{
+    internal ProductVendor(Guid productId, Guid vendorId, int displayOrder) : base(Guid.Empty)
+    {
+        ProductId = productId;
+        VendorId = vendorId;
+        DisplayOrder = displayOrder;
+    }
+
+    public Guid ProductId { get; init; }
+    public Guid VendorId { get; init; }
     public int DisplayOrder { get; set; }
 }
 
 [Serializable]
 public sealed record ProductPicture : AppEntity
 {
-    public ProductPicture(Guid productId, Guid pictureId) : base(Guid.Empty)
-        => (ProductId, PictureId) = (productId, pictureId);
+    internal ProductPicture(Guid productId, Guid pictureId) : base(Guid.Empty)
+    {
+        ProductId = productId;
+        PictureId = pictureId;
+    }
 
     public Guid ProductId { get; init; }
     public Guid PictureId { get; init; }
-
     public int DisplayOrder { get; set; }
-}
+} 

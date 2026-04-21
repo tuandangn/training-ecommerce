@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Media;
@@ -47,6 +47,9 @@ public sealed class GetProductsByIdsForOrderHandler : IRequestHandler<GetProduct
             productModel.QuantityReserved = stockItems.Sum(item => item.QuantityReserved);
             productModel.QuantityAvailable = stockItems.Sum(item => item.QuantityAvailable);
             productModel.AvailableWarehouseIds = stockItems.Where(item => item.WarehouseId.HasValue).Select(item => item.WarehouseId).OfType<Guid>().ToList();
+
+            productModel.VendorCount = productInfo.Vendors?.Count() ?? 0;
+            productModel.FirstVendorId = productInfo.Vendors?.FirstOrDefault()?.VendorId;
 
             model.Add(productModel);
         }

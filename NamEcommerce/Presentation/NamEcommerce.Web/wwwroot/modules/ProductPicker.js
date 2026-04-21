@@ -1,12 +1,15 @@
 // ─── Model ───────────────────────────────────────────────────────────────────
 
 class Product {
-    constructor({ id, name, availableQty, picture, unitPrice }) {
+    constructor({ id, name, availableQty, picture, unitPrice, vendorCount, firstVendorId, availableVendors }) {
         this.id = id;
         this.name = name ?? '';
         this.availableQty = availableQty ?? 0;
         this.picture = picture ?? '';
         this.unitPrice = unitPrice ?? 0;
+        this.vendorCount = vendorCount ?? 0;
+        this.firstVendorId = firstVendorId ?? null;
+        this.availableVendors = availableVendors ?? [];
     }
 }
 
@@ -15,11 +18,16 @@ class Product {
 class ProductApi {
     #abortController = null;
 
-    async search(query) {
+    async search(query, vendorId = null) {
         this.cancel();
         this.#abortController = new AbortController();
 
-        const res = await fetch(`/Product/Search?q=${encodeURIComponent(query)}`, {
+        let url = `/Product/Search?q=${encodeURIComponent(query)}`;
+        if (vendorId) {
+            url += `&vendorId=${encodeURIComponent(vendorId)}`;
+        }
+
+        const res = await fetch(url, {
             signal: this.#abortController.signal,
         });
 
@@ -195,6 +203,7 @@ class ProductPickerView {
 export default class ProductPicker {
     #selected = null;
     #debounceTimer = null;
+    vendorId = null;
 
     static #DEBOUNCE_MS = 500;
     static #MIN_QUERY_LEN = 0;
@@ -257,7 +266,7 @@ export default class ProductPicker {
         this.view.setLoading(true);
 
         try {
-            const data = await this.api.search(query);
+            const data = await this.api.search(query, this.vendorId);
             const products = data.map(d => new Product(d));
             this.view.renderSuggestion(products, query);
         } catch (err) {

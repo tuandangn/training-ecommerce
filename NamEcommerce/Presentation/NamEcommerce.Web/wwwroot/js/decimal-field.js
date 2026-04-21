@@ -157,7 +157,7 @@
         if (!global.SoBangChu) return null;
 
         var hint = document.createElement('div');
-        hint.className = 'currency-hint';
+        hint.className = 'currency-hint text-end';
 
         var rawNum = parseNumber(stripFormatting(input.value, 0));
         if (rawNum) {

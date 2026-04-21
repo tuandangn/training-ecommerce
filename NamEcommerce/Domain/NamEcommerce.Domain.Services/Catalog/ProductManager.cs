@@ -21,6 +21,7 @@ public sealed class ProductManager : IProductManager
     private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
     private readonly IRepository<ProductPriceHistory> _priceHistoryRepository;
     private readonly IEntityDataReader<ProductPriceHistory> _priceHistoryDataReader;
+    private readonly IEntityDataReader<Vendor> _vendorDataReader;
     private readonly IEventPublisher _eventPublisher;
 
     public ProductManager(IRepository<Product> productRepository,
@@ -28,7 +29,8 @@ public sealed class ProductManager : IProductManager
         IEntityDataReader<Picture> pictureDataReader, IEventPublisher eventPublisher,
         IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
         IRepository<ProductPriceHistory> priceHistoryRepository,
-        IEntityDataReader<ProductPriceHistory> priceHistoryDataReader)
+        IEntityDataReader<ProductPriceHistory> priceHistoryDataReader,
+        IEntityDataReader<Vendor> vendorDataReader)
     {
         _productRepository = productRepository;
         _productDataReader = productEntityDataReader;
@@ -37,6 +39,7 @@ public sealed class ProductManager : IProductManager
         _unitMeasurementDataReader = unitMeasurementDataReader;
         _priceHistoryRepository = priceHistoryRepository;
         _priceHistoryDataReader = priceHistoryDataReader;
+        _vendorDataReader = vendorDataReader;
         _eventPublisher = eventPublisher;
     }
 
@@ -61,6 +64,8 @@ public sealed class ProductManager : IProductManager
             await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, _categoryDataReader).ConfigureAwait(false);
         foreach (var pictureId in dto.Pictures)
             await product.AddPictureAsync(pictureId, _pictureDataReader).ConfigureAwait(false);
+        foreach (var vendorInfo in dto.Vendors)
+            await product.AddVendorAsync(vendorInfo.VendorId, vendorInfo.DisplayOrder, _vendorDataReader).ConfigureAwait(false);
 
         var insertedProduct = await _productRepository.InsertAsync(product).ConfigureAwait(false);
 
@@ -140,6 +145,36 @@ public sealed class ProductManager : IProductManager
         }
     }
 
+    public Task<IList<ProductDto>> GetProductsByVendorIdAsync(Guid vendorId)
+    {
+        var query = _productDataReader.DataSource
+            .Where(p => p.ProductVendors.Any(pv => pv.VendorId == vendorId))
+            .OrderBy(p => p.Name);
+
+        var list = query.ToList().Select(p => p.ToDto()).ToList();
+        return Task.FromResult((IList<ProductDto>)list);
+    }
+
+    public async Task AddProductVendorAsync(Guid productId, Guid vendorId, int displayOrder)
+    {
+        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+        if (product is null)
+            throw new ProductIsNotFoundException(productId);
+
+        await product.AddVendorAsync(vendorId, displayOrder, _vendorDataReader).ConfigureAwait(false);
+        await _productRepository.UpdateAsync(product).ConfigureAwait(false);
+    }
+
+    public async Task RemoveProductVendorAsync(Guid productId, Guid vendorId)
+    {
+        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+        if (product is null)
+            throw new ProductIsNotFoundException(productId);
+
+        product.RemoveVendor(vendorId);
+        await _productRepository.UpdateAsync(product).ConfigureAwait(false);
+    }
+
     public async Task RemoveProductFromCategoryAsync(Guid productId, Guid categoryId)
     {
         var product = await _productDataReader.GetByIdAsync(productId);
@@ -170,59 +205,69 @@ public sealed class ProductManager : IProductManager
         await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, _unitMeasurementDataReader).ConfigureAwait(false);
         product.UpdatePrice(dto.UnitPrice, dto.CostPrice);
 
-        product.ClearProductCategories();
+        product.ClearCategories();
         foreach (var categoryInfo in dto.Categories)
             await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, _categoryDataReader).ConfigureAwait(false);
 
         var deletedPictureIds = product.ProductPictures.Select(p => p.PictureId).ToList();
-        product.ClearProductPictures();
+        product.ClearPictures();
         foreach (var pictureId in dto.Pictures)
             await product.AddPictureAsync(pictureId, _pictureDataReader).ConfigureAwait(false);
 
-        var result = await _productRepository.UpdateAsync(product).ConfigureAwait(false);
+        product.ClearVendors();
+        foreach (var vendorInfo in dto.Vendors)
+            await product.AddVendorAsync(vendorInfo.VendorId, vendorInfo.DisplayOrder, _vendorDataReader).ConfigureAwait(false);
 
-        if (oldUnitPrice != result.UnitPrice || oldCostPrice != result.CostPrice)
+        if (oldCostPrice != product.CostPrice || oldUnitPrice != product.UnitPrice)
         {
             await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(
-                result.Id,
-                oldUnitPrice, result.UnitPrice,
-                oldCostPrice, result.CostPrice,
-                string.IsNullOrEmpty(dto.ChangePriceReason) ? "Cập nhật giá cả" : dto.ChangePriceReason)
-            ).ConfigureAwait(false);
+                product.Id,
+                oldUnitPrice,
+                product.UnitPrice,
+                oldCostPrice,
+                product.CostPrice,
+                dto.ChangePriceReason ?? "Cập nhật hàng hóa")).ConfigureAwait(false);
         }
 
-        await _eventPublisher.EntityUpdated(result, deletedPictureIds).ConfigureAwait(false);
+        await _productRepository.UpdateAsync(product).ConfigureAwait(false);
 
-        return new UpdateProductResultDto(result.Id)
+        await _eventPublisher.EntityUpdated(product, deletedPictureIds).ConfigureAwait(false);
+
+        return new UpdateProductResultDto(product.Id)
         {
-            Name = result.Name,
-            ShortDesc = result.ShortDesc,
-            Categories = result.ProductCategories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
-            Pictures = result.ProductPictures.Select(pp => pp.PictureId),
-
-            UnitMeasurementId = result.UnitMeasurementId
+            Name = product.Name,
+            ShortDesc = product.ShortDesc,
+            UnitMeasurementId = product.UnitMeasurementId,
+            UnitPrice = product.UnitPrice,
+            CostPrice = product.CostPrice,
+            Categories = product.ProductCategories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
+            Vendors = product.ProductVendors.Select(pv => new ProductVendorDto(pv.VendorId, pv.DisplayOrder)),
+            Pictures = product.ProductPictures.Select(pp => pp.PictureId)
         };
     }
 
-    public Task<IEnumerable<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId, int? limit = null)
+    public async Task<IList<ProductDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids)
     {
-        limit = limit ?? 10;
-        var history = _priceHistoryDataReader.DataSource
-            .Where(h => h.ProductId == productId)
-            .OrderByDescending(h => h.CreatedOnUtc)
-            .Take(limit.Value)
-            .Select(h => new ProductPriceHistoryDto
-            {
-                Id = h.Id,
-                OldPrice = h.OldPrice,
-                NewPrice = h.NewPrice,
-                OldCostPrice = h.OldCostPrice,
-                NewCostPrice = h.NewCostPrice,
-                Note = h.Note,
-                CreatedOnUtc = h.CreatedOnUtc
-            })
-            .ToList();
+        var products = await _productDataReader.GetByIdsAsync(ids).ConfigureAwait(false);
+        return products.Select(p => p.ToDto()).ToList();
+    }
 
-        return Task.FromResult((IEnumerable<ProductPriceHistoryDto>)history);
+    public Task<IList<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId)
+    {
+        return Task.FromResult<IList<ProductPriceHistoryDto>>(
+            _priceHistoryDataReader.DataSource
+                .Where(ph => ph.ProductId == productId)
+                .OrderByDescending(ph => ph.CreatedOnUtc)
+                .Select(ph => new ProductPriceHistoryDto
+                {
+                    Id = ph.Id,
+                    OldPrice = ph.OldPrice,
+                    NewPrice = ph.NewPrice,
+                    OldCostPrice = ph.OldCostPrice,
+                    NewCostPrice = ph.NewCostPrice,
+                    Note = ph.Note,
+                    CreatedOnUtc = ph.CreatedOnUtc
+                })
+                .ToList());
     }
 }

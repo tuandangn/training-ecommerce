@@ -226,7 +226,7 @@ public sealed class OrderManager(
             IList<Guid?> userIds = [];
 
             query = query.Where(order => order.Code.Contains(keywords) || order.Code.Contains(normalizedKeywords)
-                || (order.ShippingAddress != null && (order.ShippingAddress.ToUpper().Contains(uppercaseKeywords) || order.ShippingAddress.ToUpperInvariant().Contains(normalizedKeywords) || order.NormalizedShippingAddress.Contains(normalizedKeywords)))
+                || (order.ShippingAddress != null && (order.ShippingAddress.ToUpper().Contains(uppercaseKeywords) || order.ShippingAddress.ToUpper().Contains(normalizedKeywords) || order.NormalizedShippingAddress.Contains(normalizedKeywords)))
                 || customerIds.Contains(order.CustomerId)
                 || userIds.Contains(order.CreatedByUserId));
         }
@@ -297,7 +297,7 @@ public sealed class OrderManager(
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
-        if (order.CanUpdateInfo())
+        if (!order.CanUpdateInfo())
             throw new InvalidOperationException("Order cannot delete.");
 
         var processingDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource

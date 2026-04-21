@@ -11,13 +11,17 @@ public interface IProductManager : INameExistCheckingService
         string? keywords = null,
         Guid? categoryId = null);
 
+    Task<IList<ProductDto>> GetProductsByVendorIdAsync(Guid vendorId);
+    Task AddProductVendorAsync(Guid productId, Guid vendorId, int displayOrder);
+    Task RemoveProductVendorAsync(Guid productId, Guid vendorId);
+    
     Task<CreateProductResultDto> CreateProductAsync(CreateProductDto dto);
 
     Task<UpdateProductResultDto> UpdateProductAsync(UpdateProductDto dto);
 
-    Task RemoveProductFromCategoryAsync(Guid productId, Guid categoryId);
-
     Task DeleteProductAsync(Guid id);
 
-    Task<IEnumerable<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId, int? limit = null);
+    Task<IList<ProductDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids);
+
+    Task<IList<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId);
 }

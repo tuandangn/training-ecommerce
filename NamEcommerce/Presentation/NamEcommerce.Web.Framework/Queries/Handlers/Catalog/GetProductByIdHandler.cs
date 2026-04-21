@@ -38,6 +38,8 @@ public sealed class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery,
         model.CategoryId = productCategory?.CategoryId;
         model.DisplayOrder = productCategory?.DisplayOrder ?? 1;
 
+        model.VendorIds = product.Vendors.Select(v => v.VendorId).ToList();
+
         if (product.Pictures.Any())
         {
             var pictureInfo = await _pictureAppService.GetBase64PictureByIdAsync(product.Pictures.First()).ConfigureAwait(false);

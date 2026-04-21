@@ -8,8 +8,9 @@ namespace NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 public sealed class CreateProductCommand : IRequest<CreateProductResultModel>
 {
     public required string Name { get; init; }
-    public string? ShortDesc { get; init; }
+    public string? ShortDesc { get; set; }
     public Guid? CategoryId { get; set; }
+    public IList<Guid> VendorIds { get; set; } = [];
     public Guid? UnitMeasurementId { get; set; }
     public int DisplayOrder { get; set; }
     public decimal UnitPrice { get; set; }

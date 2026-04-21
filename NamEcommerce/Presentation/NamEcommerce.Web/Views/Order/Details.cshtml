@@ -37,7 +37,6 @@
         </li>
     </ol>
 </nav>
-
 <div class="content-card mb-3">
     <div class="content-card-header">
         <div>
@@ -54,11 +53,14 @@
                     var status = (OrderStatus)Model.Status;
                 }
                 <span class="text-primary small">@Model.Code</span>
-                <span class="text-muted small">
-                    <span class="status-badge @status.GetDisplayColor()">
-                        @status.GetDisplayText()
+                @if (status != OrderStatus.Locked)
+                {
+                    <span class="text-muted small">
+                        <span class="status-badge @status.GetDisplayColor()">
+                            @status.GetDisplayText()
+                        </span>
                     </span>
-                </span>
+                }
             </h1>
             <p class="page-header-subtitle">
                 <span>Ngày tạo @Model.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
@@ -87,14 +89,14 @@
         </div>
     </div>
 </div>
-<div class="row g-3">
+<div class="row">
     <div class="col-lg-8 order-1 order-lg-0">
-        <div class="content-card mb-3">
+        <div class="content-card">
             <div class="content-card-header">
                 <h5>
                     <i class="bi bi-box-seam me-2 text-primary"></i>
                     Danh sách hàng hóa
-                    <span class="status-badge secondary">@Model.Items.Count hàng hóa</span>
+                    <span class="status-badge secondary d-none d-lg-inline">@Model.Items.Count hàng hóa</span>
                 </h5>
                 <div class="d-flex align-items-center gap-2">
                     @if (Model.CanUpdateOrderItems)
@@ -143,18 +145,16 @@
                                     </div>
                                 </td>
                                 <td class="text-center fw-600">
-                                    <span class="quantity-text">@item.Quantity.ToString(ViewConstants.NumberCustomFormat)</span>
+                                    <span class="quantity-text">@item.Quantity.DisplayQuantity()</span>
                                 </td>
                                 <td class="text-end text-muted">
                                     <span class="unit-price-text">
-                                        @item.UnitPrice.ToString(ViewConstants.NumberCustomFormat)
-                                        @ViewConstants.DefaultCurrencySymbol
+                                        @item.UnitPrice.DisplayCurrency()
                                     </span>
                                 </td>
                                 <td class="text-end fw-600 text-primary d-none d-md-table-cell @(Model.CanUpdateOrderItems ? "" : "pe-4")">
                                     <span class="total-price-text">
-                                        @item.SubTotal.ToString(ViewConstants.NumberCustomFormat)
-                                        @ViewConstants.DefaultCurrencySymbol
+                                        @item.SubTotal.DisplayCurrency()
                                     </span>
                                 </td>
                                 @if (Model.CanUpdateOrderItems)
@@ -168,7 +168,7 @@
                                                 <li>
                                                     <button class="dropdown-item btnEditItem" data-id="@item.Id"
                                                             data-product="@item.ProductName"
-                                                            data-availableQty="@item.ProductAvailableQty?.ToString(ViewConstants.NumberCustomFormat)"
+                                                            data-availableQty="@item.ProductAvailableQty?.DisplayQuantity()"
                                                             data-qty="@item.Quantity.ToString("#")"
                                                             data-price="@item.UnitPrice.ToString("#")">
                                                         <i class="bi bi-pencil me-2 text-primary"></i>Chỉnh sửa
@@ -199,8 +199,7 @@
                 <div class="order-summary-row">
                     <span class="label">Tạm tính</span>
                     <span class="value" id="subTotal">
-                        @Model.OrderSubTotal.ToString(ViewConstants.NumberCustomFormat)
-                        @ViewConstants.DefaultCurrencySymbol
+                        @Model.OrderSubTotal.DisplayCurrency()
                     </span>
                 </div>
                 <div class="order-summary-row">
@@ -210,16 +209,14 @@
                         {
                             <a href="#" class="text-decoration-none text-danger" data-bs-toggle="modal"
                                    data-bs-target="#editDiscountModal">
-                                -@Model.OrderDiscount.ToString(ViewConstants.NumberCustomFormat)
-                                @ViewConstants.DefaultCurrencySymbol
+                                -@Model.OrderDiscount.DisplayCurrency()
                                 <i class="bi bi-pencil-square ms-1 small"></i>
                             </a>
                         }
                         else
                         {
                             <span>
-                                -@Model.OrderDiscount.ToString(ViewConstants.NumberCustomFormat)
-                                @ViewConstants.DefaultCurrencySymbol
+                                -@Model.OrderDiscount.DisplayCurrency()
                             </span>
                         }
                     </span>
@@ -227,35 +224,38 @@
                 <div class="order-summary-row total">
                     <span class="label">Tổng cộng</span>
                     <span class="value" id="grandTotal">
-                        @Model.TotalAmount.ToString(ViewConstants.NumberCustomFormat)
-                        @ViewConstants.DefaultCurrencySymbol
+                        @Model.TotalAmount.DisplayCurrency()
                     </span>
                 </div>
             </div>
         </div>
-
-    </div>
-    <div class="col-lg-4 order-0 order-lg-1">
-        <div class="content-card mb-3">
-            <div class="p-3 text-center @orderStatus.GetDisplayColor() text-white bg-gradient"
-                 style="border-radius: calc(var(--card-radius) - 1px) calc(var(--card-radius) - 1px) 0 0;">
-                <div class="small opacity-75 text-uppercase mb-1" style="letter-spacing: 1px;">Trạng thái</div>
-                <div class="fs-4 fw-bold">@orderStatus.GetDisplayText()</div>
-                @if (Model.Status == (int)OrderStatus.Locked && !string.IsNullOrEmpty(Model.LockOrderReason))
-                {
-                    <div class="small opacity-75 fst-italic mt-1">"@Model.LockOrderReason"</div>
-                }
-            </div>
-            @if (Model.CanLockOrder)
-            {
+        @if (Model.CanLockOrder)
+        {
+            <div class="content-card mt-3 mt-lg-0">
                 <div class="content-card-body text-center d-lg-none">
                     <button type="button" class="btn btn-outline-danger w-100" data-bs-toggle="modal"
                             data-bs-target="#lockModal">
                         <i class="bi bi-lock-fill me-1"></i> Khóa đơn hàng
                     </button>
                 </div>
-            }
-        </div>
+            </div>
+        }
+    </div>
+    <div class="col-lg-4 order-0 order-lg-1">
+        @if (status == OrderStatus.Locked)
+        {
+            <div class="content-card">
+                <div class="p-3 text-center @orderStatus.GetDisplayColor() text-white bg-gradient"
+                     style="border-radius: calc(var(--card-radius) - 1px) calc(var(--card-radius) - 1px) 0 0;">
+                    <div class="small opacity-75 text-uppercase mb-1" style="letter-spacing: 1px;">Trạng thái</div>
+                    <div class="fs-4 fw-bold">@orderStatus.GetDisplayText()</div>
+                    @if (Model.Status == (int)OrderStatus.Locked && !string.IsNullOrEmpty(Model.LockOrderReason))
+                    {
+                        <div class="small opacity-75 fst-italic mt-1">"@Model.LockOrderReason"</div>
+                    }
+                </div>
+            </div>
+        }
         <div class="content-card mb-3">
             <div class="content-card-header">
                 <h5>
@@ -417,7 +417,6 @@
                 </div>
             </div>
         }
-
         @if (Model.CanLockOrder)
         {
             <div class="d-none d-lg-grid">

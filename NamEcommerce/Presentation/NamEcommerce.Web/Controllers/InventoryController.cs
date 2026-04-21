@@ -25,13 +25,13 @@ public sealed class InventoryController : BaseAuthorizedController
 
     public IActionResult Index() => RedirectToAction(nameof(StockList));
 
-    public async Task<IActionResult> StockList(int pageNumber = 1)
+    public async Task<IActionResult> StockList(int pageNumber = 1, string? keywords = null)
     {
         var pageSize = _appConfig.DefaultPageSize;
 
         var model = await _mediator.Send(new GetInventoryStockListQuery
         {
-            Keywords = null,
+            Keywords = keywords,
             WarehouseId = null,
             PageIndex = pageNumber - 1,
             PageSize = pageSize

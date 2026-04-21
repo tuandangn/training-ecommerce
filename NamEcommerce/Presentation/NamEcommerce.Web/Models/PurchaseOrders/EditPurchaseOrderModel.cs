@@ -34,12 +34,13 @@ public sealed class EditPurchaseOrderModel
     [Display(Name = "Phí vận chuyển")]
     public decimal ShippingAmount { get; set; }
 
-    [ValidateNever]
-    public bool CanChangeVendor { get; set; }
+
     [ValidateNever]
     public bool CanChangeDate { get; set; }
     [ValidateNever]
     public bool CanChangeFees { get; set; }
+    [ValidateNever]
+    public bool CanChangeVendor { get; set; }
 
     [ValidateNever]
     public decimal TotalAmount { get; set; }

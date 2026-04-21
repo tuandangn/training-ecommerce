@@ -15,6 +15,7 @@ public static class ProductExtensions
             Categories = product.ProductCategories
                 .OrderBy(pc => pc.DisplayOrder)
                 .Select(pc => new ProductCategoryAppDto(pc.CategoryId, pc.DisplayOrder)),
+            Vendors = product.ProductVendors.Select(pv => new ProductVendorAppDto(pv.VendorId, pv.DisplayOrder)),
             Pictures = product.ProductPictures.OrderBy(pp => pp.DisplayOrder).Select(pp => pp.PictureId),
             UnitPrice = product.UnitPrice,
             CostPrice = product.CostPrice
@@ -29,6 +30,7 @@ public static class ProductExtensions
             Categories = dto.Categories
                 .OrderBy(pc => pc.DisplayOrder)
                 .Select(pc => new ProductCategoryAppDto(pc.CategoryId, pc.DisplayOrder)),
+            Vendors = dto.Vendors.Select(pv => new ProductVendorAppDto(pv.VendorId, pv.DisplayOrder)),
             Pictures = dto.Pictures,
             UnitPrice = dto.UnitPrice,
             CostPrice = dto.CostPrice

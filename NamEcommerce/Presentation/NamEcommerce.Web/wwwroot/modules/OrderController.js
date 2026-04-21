@@ -101,6 +101,7 @@ export default class OrderController {
         getEl('subTotal').textContent = DecimalFields.formatCurrency(this.#state.subTotal) + ' đ';
         getEl('discountDisplay').textContent = '- ' + DecimalFields.formatCurrency(this.#state.discount) + ' đ';
         getEl('grandTotal').textContent = DecimalFields.formatCurrency(this.#state.total) + ' đ';
+        getEl('grandTotalHint').textContent = window.SoBangChu.docSoTien(this.#state.total);
 
         const hasItems = this.#state.items.length > 0;
         getEl('noItemsMessage').style.display = hasItems ? 'none' : 'block';
@@ -123,8 +124,7 @@ export default class OrderController {
         container.innerHTML = '';
 
         this.#state.items.forEach((item, index) => {
-            const row = this.#buildItemRow(item, index);
-            container.appendChild(row);
+            this.#buildItemRow(container, item, index);
         });
     }
 
@@ -137,8 +137,8 @@ export default class OrderController {
             orderItem.productInfo.id = row.querySelector('.product-id').value;
             orderItem.productInfo.name = row.querySelector('.product-name').textContent;
             orderItem.productInfo.picture = row.querySelector('.product-picture')?.src;
-            orderItem.quantity = parseNumber(row.querySelector('.row-qty').value);
-            orderItem.unitPrice = parseNumber(row.querySelector('.row-price').value);
+            orderItem.quantity = parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-qty').value), 2);
+            orderItem.unitPrice = parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-price').value));
 
             return orderItem;
         });
@@ -162,14 +162,14 @@ export default class OrderController {
 
     // ─── Build item row ───────────────────────────────────────────────────────
 
-    #buildItemRow(item, index) {
+    #buildItemRow(container, item, index) {
         const { productInfo: p, quantity, unitPrice } = item;
         const row = document.createElement('tr');
         row.id = `row-${index}`;
         row.className = 'align-top';
         row.innerHTML = `
             <td class="ps-4">
-                <div class="d-flex gap-3">
+                <div class="d-flex align-items-center gap-3">
                     <div class="text-center d-none d-lg-block" style="min-width:45px;">
                         ${p.picture
                 ? `<img src="${p.picture}" class="img-fluid img-thumbnail product-picture" style="width:45px;" alt="${p.name}" />`
@@ -187,23 +187,21 @@ export default class OrderController {
                     data-valmsg-replace="true"></span>
             </td>
             <td class="text-center">
-                <input type="number" name="Items[${index}].Quantity" value="${quantity}"
-                    class="form-control form-control-sm text-center row-qty"
-                    step="any" min="0.00000001"
-                    data-val="true"
+                <input name="Items[${index}].Quantity" value="${quantity}"
+                    class="form-control form-control-sm text-end row-qty no-additional-element"
+                    data-decimal="quantity" min="0.00000001" data-val="true"
                     data-val-required="Vui lòng nhập số lượng."
                     data-val-range="Số lượng phải lớn hơn 0."
-                    data-val-range-min="0.000000000000000001"
+                    data-val-range-min="0.001"
                     data-val-number="Số lượng không đúng." />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="Items[${index}].Quantity"
                     data-valmsg-replace="true"></span>
             </td>
             <td class="text-end">
-                <input type="number" name="Items[${index}].UnitPrice" value="${unitPrice}"
-                    class="form-control form-control-sm text-end row-price"
-                    min="0" style="min-width:80px;"
-                    data-val="true"
+                <input name="Items[${index}].UnitPrice" value="${unitPrice}"
+                    class="form-control form-control-sm text-end row-price no-additional-element no-hint"
+                    min="0" data-decimal="currency" data-val="true"
                     data-val-required="Vui lòng nhập đơn giá."
                     data-val-range="Đơn giá phải lớn hơn hoặc bằng 0."
                     data-val-range-min="0"
@@ -212,15 +210,18 @@ export default class OrderController {
                     data-valmsg-for="Items[${index}].UnitPrice"
                     data-valmsg-replace="true"></span>
             </td>
-            <td class="text-end fw-bold text-primary px-3 row-total text-nowrap d-none d-lg-table-cell">
+            <td class="text-end fw-bold text-primary px-3 row-total text-nowrap d-none d-lg-table-cell align-middle">
                 ${DecimalFields.formatCurrency(item.lineTotal)} đ
             </td>
-            <td class="text-end pe-4 w-auto">
+            <td class="text-end pe-4 w-auto align-middle">
                 <button type="button" class="btn btn-link link-danger p-0 border-0 orderItemRemove"
                     aria-label="Xóa hàng hóa">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>`;
+
+        container.appendChild(row);
+        DecimalFields.autoWrap(row);
 
         // Events
         row.querySelector('.orderItemRemove').addEventListener('click', () => {
@@ -229,15 +230,33 @@ export default class OrderController {
             });
         });
 
-        const onInputQuantityChange = debounce((e) => {
-            this.#updateItem(index, { quantity: parseNumber(e.target.value) });
-        }, 500);
-        row.querySelector('.row-qty').addEventListener('input', onInputQuantityChange);
+        const inputQuantity = row.querySelector('.row-qty');
+        const inputQtyChangeDebounced = debounce((e) => {
+            const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
+            this.#updateItem(index, { quantity: newQuantity });
+        }, 2000, () => {
+            if (inputQuantity._decimalFormatting)
+                return false;
 
-        const onInputUnitPriceChange = debounce((e) => {
-            this.#updateItem(index, { unitPrice: parseNumber(e.target.value) });
-        }, 700);
-        row.querySelector('.row-price').addEventListener('input', onInputUnitPriceChange);
+            var quantityRaw = DecimalFields.stripFormatting(inputQuantity.value, 2)
+            return DecimalFields.isValidDecimal(inputQuantity, quantityRaw);
+        });
+        inputQuantity.addEventListener('input', inputQtyChangeDebounced);
+        inputQuantity.addEventListener('change', inputQtyChangeDebounced.flush);
+
+        const inputUnitPrice = row.querySelector('.row-price');
+        const inputUnitPriceChangeDebounced = debounce((e) => {
+            const newUnitPrice = parseNumber(DecimalFields.stripFormatting(inputUnitPrice.value, 0), 0);
+            this.#updateItem(index, { unitPrice: newUnitPrice });
+        }, 3000, () => {
+            if (inputUnitPrice._decimalFormatting)
+                return false;
+
+            var unitPriceRaw = DecimalFields.stripFormatting(inputUnitPrice.value)
+            return DecimalFields.isValidDecimal(inputUnitPrice, unitPriceRaw);
+        });
+        inputUnitPrice.addEventListener('input', inputUnitPriceChangeDebounced);
+        inputUnitPrice.addEventListener('change', inputUnitPriceChangeDebounced.flush);
 
         return row;
     }
@@ -335,7 +354,7 @@ export default class OrderController {
         const el = getEl('OrderDiscount');
 
         const onDiscountChange = debounce((e) => {
-            const raw = parseNumber(e.target.value);
+            const raw = parseNumber(DecimalFields.stripFormatting(e.target.value));
             const discount = Math.min(this.#state.subTotal, raw);
             this.#setState({ discount });
         }, 300);
@@ -408,10 +427,10 @@ export class AddItemController {
 
     constructor() {
         getEl('itemQuantity').addEventListener('input', (e) => {
-            this.state.quantity = parseNumber(e.target.value, 1);
+            this.state.quantity = parseNumber(DecimalFields.stripFormatting(e.target.value, 2), 1);
         });
         getEl('itemUnitPrice').addEventListener('input', (e) => {
-            this.state.unitPrice = parseNumber(e.target.value);
+            this.state.unitPrice = parseNumber(DecimalFields.stripFormatting(e.target.value));
         });
     }
 
@@ -469,12 +488,15 @@ export class AddItemController {
                 `;
                 // Click → điền giá bán vào input và đóng bảng
                 row.addEventListener('click', () => {
+                    tableBody.querySelectorAll('tr').forEach(r => r.classList.remove('table-info'));
+                    row.classList.add('table-info');
                     const priceInput = getEl('itemUnitPrice');
                     if (priceInput) {
-                        priceInput.value = item.newPrice;
+                        priceInput.value = DecimalFields.formatCurrency(item.newPrice);
                         priceInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        priceInput.dispatchEvent(new Event('blur', { bubbles: true }));
                     }
-                    this.#togglePriceHistory(false); // đóng sau khi chọn
+                    //this.#togglePriceHistory(false); // đóng sau khi chọn
                 });
                 row.addEventListener('mouseenter', () => row.classList.add('table-active'));
                 row.addEventListener('mouseleave', () => row.classList.remove('table-active'));
@@ -553,6 +575,9 @@ export class AddItemController {
 
         getEl('itemQuantity').value = quantity;
         getEl('itemUnitPrice').value = unitPrice;
+
+        const currencyHint = getEl('modalProductInfo').querySelector('.currency-hint');
+        if (currencyHint) currencyHint.textContent = '';
 
         const hasProduct = Boolean(productInfo);
         getEl('modalProductInfo').classList.toggle('d-none', !hasProduct);

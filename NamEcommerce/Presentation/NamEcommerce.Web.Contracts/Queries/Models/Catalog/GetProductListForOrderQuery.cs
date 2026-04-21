@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 
 namespace NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -7,5 +7,6 @@ namespace NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 public sealed class GetProductListForOrderQuery : IRequest<ProductListForOrderModel>
 {
     public required string? Keywords { get; set; }
-    public required Guid? WarehouseId { get; set; }
+    public Guid? VendorId { get; set; }
+    public Guid? WarehouseId { get; set; }
 }

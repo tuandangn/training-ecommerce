@@ -11,6 +11,7 @@ public abstract record BaseProductDto
     public decimal UnitPrice { get; set; }
     public decimal CostPrice { get; set; }
     public IEnumerable<ProductCategoryDto> Categories { get; set; } = [];
+    public IEnumerable<ProductVendorDto> Vendors { get; set; } = [];
     public IEnumerable<Guid> Pictures { get; set; } = [];
 
     public virtual void Verify()
@@ -41,6 +42,9 @@ public sealed record UpdateProductResultDto(Guid Id) : BaseProductDto;
 
 [Serializable]
 public sealed record ProductCategoryDto(Guid CategoryId, int DisplayOrder);
+
+[Serializable]
+public sealed record ProductVendorDto(Guid VendorId, int DisplayOrder);
 
 [Serializable]
 public sealed record ProductPriceHistoryDto

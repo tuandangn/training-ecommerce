@@ -11,6 +11,7 @@ public abstract record BaseProductAppDto
     public decimal UnitPrice { get; set; }
     public decimal CostPrice { get; set; }
     public IEnumerable<ProductCategoryAppDto> Categories { get; set; } = [];
+    public IEnumerable<ProductVendorAppDto> Vendors { get; set; } = [];
     public IEnumerable<Guid> Pictures { get; set; } = [];
 
     public (bool valid, string? errorMessage) Validate()
@@ -70,3 +71,6 @@ public sealed record DeleteProductResultAppDto
 
 [Serializable]
 public sealed record ProductCategoryAppDto(Guid CategoryId, int DisplayOrder);
+
+[Serializable]
+public sealed record ProductVendorAppDto(Guid VendorId, int DisplayOrder);

@@ -61,9 +61,9 @@
                                         break;
                                 }
                             </td>
-                            <td class="text-end">@item.QuantityBefore.ToString(ViewConstants.NumberCustomFormat)</td>
-                            <td class="text-end fw-bold @colorClass">@sign@item.Quantity.ToString(ViewConstants.NumberCustomFormat)</td>
-                            <td class="text-end fw-bold">@item.QuantityAfter.ToString(ViewConstants.NumberCustomFormat)</td>
+                            <td class="text-end">@item.QuantityBefore.DisplayQuantity()</td>
+                            <td class="text-end fw-bold @colorClass">@sign@item.Quantity.DisplayQuantity()</td>
+                            <td class="text-end fw-bold">@item.QuantityAfter.DisplayQuantity()</td>
                             <td class="text-muted"><small>@item.Note</small></td>
                         </tr>
                     }

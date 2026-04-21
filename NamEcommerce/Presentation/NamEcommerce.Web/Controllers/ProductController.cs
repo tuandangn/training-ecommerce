@@ -66,6 +66,7 @@ public sealed class ProductController : BaseAuthorizedController
             Name = model.Name!,
             ShortDesc = model.ShortDesc,
             CategoryId = model.CategoryId,
+            VendorIds = model.VendorIds,
             UnitMeasurementId = model.UnitMeasurementId,
             UnitPrice = model.UnitPrice,
             CostPrice = model.CostPrice,
@@ -131,6 +132,7 @@ public sealed class ProductController : BaseAuthorizedController
             Name = model.Name,
             ShortDesc = model.ShortDesc,
             CategoryId = model.CategoryId,
+            VendorIds = model.VendorIds,
             UnitMeasurementId = model.UnitMeasurementId,
             UnitPrice = model.UnitPrice,
             CostPrice = model.CostPrice,
@@ -150,11 +152,12 @@ public sealed class ProductController : BaseAuthorizedController
     }
 
     [HttpGet]
-    public async Task<IActionResult> Search(string q, Guid? w)
+    public async Task<IActionResult> Search(string q, Guid? w, Guid? vendorId)
     {
         var model = await _mediator.Send(new GetProductListForOrderQuery
         {
             Keywords = q,
+            VendorId = vendorId,
             WarehouseId = w
         });
 
@@ -164,7 +167,10 @@ public sealed class ProductController : BaseAuthorizedController
             name = productInfo.Name,
             picture = productInfo.PictureUrl,
             availableQty = productInfo.QuantityAvailable,
-            avaialbeWarehouses = productInfo.AvailableWarehouseIds
+            avaialbeWarehouses = productInfo.AvailableWarehouseIds,
+            vendorCount = productInfo.AvailableVendors.Count,
+            firstVendorId = productInfo.AvailableVendors.FirstOrDefault()?.Id.ToString(),
+            availableVendors = productInfo.AvailableVendors.Select(v => new { key = v.Id.ToString(), value = v.Name })
         }).ToList();
         return Json(products);
     }

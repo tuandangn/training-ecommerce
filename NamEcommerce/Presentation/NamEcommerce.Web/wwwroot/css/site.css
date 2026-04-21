@@ -119,10 +119,10 @@ body {
    Page Layout
    ============================================================ */
 .page-wrapper {
-    min-height: calc(100vh - 60px);
+    min-height: calc(100vh - 105px);
     padding: 1.25rem 0 3rem;
-    max-width: var(--content-max-width);
-    /*margin: 0 auto;*/
+/*    max-width: var(--content-max-width);
+*/    /*margin: 0 auto;*/
 }
 
 /* ============================================================
@@ -249,7 +249,7 @@ body {
 
 .data-table thead th {
     background-color: var(--gray-50);
-    /*font-size: 0.7rem;*/
+    font-size: 0.85rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -339,6 +339,9 @@ body {
     border-color: transparent;
 }
 
+.btn {
+    border-radius: var(--btn-radius);
+}
 /* ============================================================
    Buttons
    ============================================================ */
@@ -681,9 +684,9 @@ body {
    Alerts
    ============================================================ */
 .alert-global {
-    border-radius: var(--btn-radius);
+    border-radius: 0;
     border: none;
-    font-size: 0.85rem;
+    margin-bottom: 1rem;
 }
 
 /* ============================================================

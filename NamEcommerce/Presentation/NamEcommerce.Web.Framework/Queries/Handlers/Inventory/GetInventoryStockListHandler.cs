@@ -32,7 +32,7 @@ public sealed class GetInventoryStockListHandler : IRequestHandler<GetInventoryS
                 QuantityOnHand = item.QuantityOnHand,
                 QuantityReserved = item.QuantityReserved,
                 QuantityAvailable = item.QuantityAvailable,
-                UpdatedOnUtc = item.UpdatedOnUtc
+                UpdatedOn = item.UpdatedOnUtc.ToLocalTime()
             })
         };
 

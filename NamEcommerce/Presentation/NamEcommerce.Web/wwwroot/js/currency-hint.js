@@ -118,7 +118,7 @@
         let hint = fieldGroup.querySelector('.currency-hint');
         if (!hint) {
             hint = document.createElement('div');
-            hint.className = 'currency-hint';
+            hint.className = 'currency-hint text-end';
             fieldGroup.insertAdjacentElement('beforeend', hint);
         }
         return hint;

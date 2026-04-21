@@ -28,6 +28,7 @@ public sealed class CreateProductHandler : IRequestHandler<CreateProductCommand,
             Categories = request.CategoryId.HasValue
                 ? [new ProductCategoryAppDto(request.CategoryId.Value, request.DisplayOrder)]
                 : [],
+            Vendors = request.VendorIds?.Select(id => new ProductVendorAppDto(id, 0)) ?? [],
             ImageFile = request.ImageFile is not null ? new FileInfoAppDto
             {
                 Data = request.ImageFile.Data,
@@ -42,8 +43,7 @@ public sealed class CreateProductHandler : IRequestHandler<CreateProductCommand,
         return new CreateProductResultModel
         {
             Success = result.Success,
-            ErrorMessage = result.ErrorMessage,
-            CreatedId = result.CreatedId ?? default
+            ErrorMessage = result.ErrorMessage
         };
     }
 }

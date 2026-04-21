@@ -6,6 +6,7 @@ namespace NamEcommerce.Web.Contracts.Models.Catalog;
 public sealed class ProductListForOrderModel
 {
     public string? Keywords { get; set; }
+    public string? FilteredByVendorName { get; set; }
 
     public required IPagedDataModel<ProductItemModel> Data { get; init; }
 
@@ -21,6 +22,10 @@ public sealed class ProductListForOrderModel
         public decimal QuantityReserved { get; set; }
         public decimal QuantityAvailable { get; set; }
 
-        public IEnumerable<Guid> AvailableWarehouseIds { get; set; } = [];
+        public IList<Guid> AvailableWarehouseIds { get; set; } = [];
+        public IList<VendorOptionModel> AvailableVendors { get; set; } = [];
     }
+
+    [Serializable]
+    public sealed record VendorOptionModel(Guid Id, string Name);
 }
