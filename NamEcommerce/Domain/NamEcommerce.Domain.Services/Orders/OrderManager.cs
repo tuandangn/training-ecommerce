@@ -205,6 +205,9 @@ public sealed class OrderManager(
 
     public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, IEnumerable<OrderStatus> status, int pageIndex, int pageSize)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
+
         var query = orderDataReader.DataSource;
 
         if (status != null && status.Any())

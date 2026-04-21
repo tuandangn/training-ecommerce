@@ -11,7 +11,7 @@ public interface IProductManager : INameExistCheckingService
         string? keywords = null,
         Guid? categoryId = null);
 
-    Task<IList<ProductDto>> GetProductsByVendorIdAsync(Guid vendorId);
+    Task<IEnumerable<ProductDto>> GetProductsByVendorIdAsync(Guid vendorId);
     Task AddProductVendorAsync(Guid productId, Guid vendorId, int displayOrder);
     Task RemoveProductVendorAsync(Guid productId, Guid vendorId);
     
@@ -21,7 +21,7 @@ public interface IProductManager : INameExistCheckingService
 
     Task DeleteProductAsync(Guid id);
 
-    Task<IList<ProductDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids);
+    Task<IEnumerable<ProductDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids);
 
-    Task<IList<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId);
+    Task<IEnumerable<ProductPriceHistoryDto>> GetProductPriceHistoryAsync(Guid productId);
 }

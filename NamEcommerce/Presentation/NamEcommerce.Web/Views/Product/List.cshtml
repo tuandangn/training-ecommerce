@@ -45,8 +45,10 @@
                     <th class="ps-4" style="width: 80px;">Ảnh</th>
                     <th>Tên hàng hóa</th>
                     <th class="text-end">Giá bán</th>
-                    <th class="d-none d-md-table-cell">Danh mục</th>
+                    <th class="d-none d-lg-table-cell">Danh mục</th>
+                    <th class="text-end">Tồn kho</th>
                     <th class="d-none d-md-table-cell">Đơn vị</th>
+                    <th>Nhà cung cấp</th>
                     <th style="width: 100px;"></th>
                 </tr>
             </thead>
@@ -72,25 +74,45 @@
                                     </a>
                                 }
                             </td>
-                            <td class="fw-medium">@HighlighHelper.Highlight(product.Name, query)</td>
+                            <td>
+                                <span class="fw-medium d-block">@HighlighHelper.Highlight(product.Name, query)</span>
+                                @if (product.CategoryId.HasValue)
+                                {
+                                    <span class="d-inline d-lg-none text-muted small">
+                                        @HighlighHelper.Highlight(product.CategoryBreadcrumb, query)
+                                    </span>
+                                }
+                            </td>
                             <td class="text-end">
                                 <span class="fw-medium d-block text-nowrap">
                                     @product.UnitPrice.DisplayCurrency()
                                     @if (!string.IsNullOrEmpty(product.UnitMeasurementName))
                                     {
-                                        <span class="d-block d-lg-none text-muted small">/ @product.UnitMeasurementName</span>
+                                        <span class="d-lg-none text-muted small">/ @product.UnitMeasurementName</span>
                                     }
                                 </span>
-                                <span class="text-muted small d-none d-lg-inline">@product.UnitPrice.DisplayVietnameseCurrencyHint()</span>
                             </td>
-                            <td class="d-none d-md-table-cell text-muted small">
+                            <td class="text-muted d-none d-lg-table-cell">
                                 @if (product.CategoryId.HasValue)
                                 {
-                                    @product.CategoryBreadcrumb
+                                    @HighlighHelper.Highlight(product.CategoryBreadcrumb, query)
                                 }
                             </td>
-                            <td class="d-none d-md-table-cell text-muted small">
+                            <td class="text-end text-nowrap">
+                                <span class="fw-medium">
+                                    @product.StockQuantity.DisplayQuantity()
+                                </span>
+                            </td>
+                            <td class="d-none d-md-table-cell text-muted">
                                 @product.UnitMeasurementName
+                            </td>
+                            <td>
+                                @foreach (var vendor in product.VendorNames)
+                                {
+                                    <span class="badge bg-light text-muted fw-normal text-truncate d-inline-block me-2" style="font-size: 0.9rem; max-width: 120px;">
+                                        @HighlighHelper.Highlight(vendor, query)
+                                    </span>
+                                }
                             </td>
                             <td class="text-end pe-3">
                                 <a class="btn-table-action" asp-action="Edit" asp-route-id="@product.Id" title="Chỉnh sửa">

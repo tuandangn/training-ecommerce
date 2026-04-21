@@ -4,12 +4,14 @@ using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 
 public sealed class GetProductListHandler(
     IProductAppService productAppService, IMediator mediator,
-    IPictureAppService pictureAppService, IUnitMeasurementAppService unitMeasurementAppService)
+    IPictureAppService pictureAppService, IUnitMeasurementAppService unitMeasurementAppService,
+    IVendorAppService vendorAppService)
     : IRequestHandler<GetProductListQuery, ProductListModel>
 {
     public async Task<ProductListModel> Handle(GetProductListQuery request, CancellationToken cancellationToken)
@@ -31,6 +33,9 @@ public sealed class GetProductListHandler(
 
         var unitMeasurementIds = pagedData.Where(p => p.UnitMeasurementId.HasValue).Select(p => p.UnitMeasurementId!.Value).Distinct();
         var unitMeasurements = await unitMeasurementAppService.GetUnitMeasurementsByIdsAsync(unitMeasurementIds).ConfigureAwait(false);
+
+        var vendorIds = pagedData.SelectMany(p => p.Vendors.Select(v => v.VendorId)).Distinct();
+        var vendors = await vendorAppService.GetVendorsByIdsAsync(vendorIds).ConfigureAwait(false);
 
         var productModels = new List<ProductListModel.ProductItemModel>();
         foreach (var product in pagedData)
@@ -57,6 +62,12 @@ public sealed class GetProductListHandler(
                 var base64PictureInfo = await pictureAppService.GetBase64PictureByIdAsync(pictureId).ConfigureAwait(false);
                 productModel.PictureUrl = base64PictureInfo?.Base64Value;
             }
+
+            var productVendors = vendors.Where(v => product.Vendors.Any(pv => pv.VendorId == v.Id));
+            productModel.VendorNames = productVendors.Select(pv => pv.Name);
+
+            var stockInfo = await mediator.Send(new GetProductStockInfoQuery(product.Id, null)).ConfigureAwait(false);
+            productModel.StockQuantity = stockInfo.QuantityAvailable;
 
             productModels.Add(productModel);
         }

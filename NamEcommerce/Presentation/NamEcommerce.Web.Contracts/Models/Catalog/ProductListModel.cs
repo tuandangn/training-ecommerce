@@ -19,5 +19,7 @@ public sealed class ProductListModel
         public string? CategoryBreadcrumb { get; set; }
         public string? UnitMeasurementName { get; set; }
         public decimal UnitPrice { get; set; }
+        public IEnumerable<string> VendorNames { get; set; } = [];
+        public decimal StockQuantity { get; set; }
     }
 }

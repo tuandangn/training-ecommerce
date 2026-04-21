@@ -83,6 +83,12 @@ public sealed class VendorAppService : IVendorAppService
         return vendor?.ToDto();
     }
 
+    public async Task<IEnumerable<VendorAppDto>> GetVendorsByIdsAsync(IEnumerable<Guid> ids)
+    {
+        var vendors = await _vendorDataReader.GetByIdsAsync(ids).ConfigureAwait(false);
+        return vendors.Select(vendor => vendor.ToDto());
+    }
+
     public async Task<IPagedDataAppDto<VendorAppDto>> GetVendorsAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue)
     {
         var pagedData = await _vendorManager.GetVendorsAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);

@@ -46,7 +46,9 @@ public sealed class InventoryAppService : IInventoryAppService
         var productStockInfoDtos = stockItems.Select(stockItem => new ProductInventoryStockInfoAppDto
         {
             ProductId = productId,
+            ProductName = stockItem.ProductName,
             WarehouseId = stockItem.WarehouseId,
+            WarehouseName = stockItem.WarehouseName,
             QuantityOnHand = stockItem.QuantityOnHand,
             QuantityReserved = stockItem.QuantityReserved,
             QuantityAvailable = stockItem.QuantityAvailable,

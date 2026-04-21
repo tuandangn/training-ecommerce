@@ -134,4 +134,10 @@ public sealed class VendorManager : IVendorManager
             DisplayOrder = result.DisplayOrder
         };
     }
+
+    public async Task<IEnumerable<VendorDto>> GetVendorsByIdsAsync(IEnumerable<Guid> ids)
+    {
+        var vendors = await _vendorDataReader.GetByIdsAsync(ids).ConfigureAwait(false);
+        return vendors.Select(v => v.ToDto()).ToList();
+    }
 }

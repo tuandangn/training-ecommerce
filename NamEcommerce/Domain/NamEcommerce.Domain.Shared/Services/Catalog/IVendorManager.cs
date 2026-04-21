@@ -7,6 +7,7 @@ namespace NamEcommerce.Domain.Shared.Services.Catalog;
 public interface IVendorManager : INameExistCheckingService
 {
     Task<IPagedDataDto<VendorDto>> GetVendorsAsync(string? keywords, int pageIndex, int pageSize);
+    Task<IEnumerable<VendorDto>> GetVendorsByIdsAsync(IEnumerable<Guid> ids);
 
     Task<CreateVendorResultDto> CreateVendorAsync(CreateVendorDto dto);
 

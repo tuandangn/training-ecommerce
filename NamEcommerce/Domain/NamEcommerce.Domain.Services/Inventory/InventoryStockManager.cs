@@ -225,7 +225,6 @@ public sealed class InventoryStockManager : IInventoryStockManager
                     join w in warehouseQuery on s.WarehouseId equals w.Id
                     select new { s, p, w };
         var items = query
-            .OrderBy(x => x.p.Name)
             .Select(x => new InventoryStockDto(x.s.Id)
             {
                 ProductId = x.s.ProductId,
@@ -237,6 +236,8 @@ public sealed class InventoryStockManager : IInventoryStockManager
                 QuantityAvailable = x.s.QuantityOnHand - x.s.QuantityReserved,
                 UpdatedOnUtc = x.s.UpdatedOnUtc
             })
+            .OrderByDescending(x => x.UpdatedOnUtc)
+            .ThenBy(x => x.ProductName)
             .ToList();
 
         return items;

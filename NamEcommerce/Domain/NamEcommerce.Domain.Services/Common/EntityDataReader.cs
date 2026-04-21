@@ -25,7 +25,7 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
 
     public Task<IEnumerable<TEntity>> GetByIdsAsync(IEnumerable<Guid> ids)
     {
-        if(ids.Count() == 0)
+        if (ids.Count() == 0)
             return Task.FromResult(Enumerable.Empty<TEntity>());
 
         var query = from entity in DataSource

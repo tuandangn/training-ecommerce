@@ -20,6 +20,7 @@ public sealed record InventoryStockAppDto
 public sealed record ProductInventoryStockInfoAppDto
 {
     public required Guid ProductId { get; init; }
+    public string? ProductName { get; set; }
     public Guid? WarehouseId { get; init; }
     public string? WarehouseName { get; set; }
     public required decimal QuantityOnHand { get; init; }
