@@ -4,9 +4,11 @@ using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
+using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Services.Orders;
 
@@ -16,9 +18,9 @@ public sealed class OrderAppService(
     IOrderManager orderManager,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
-    IEntityDataReader<User> userDataReader) : IOrderAppService
+    IEntityDataReader<User> userDataReader,
+    IEntityDataReader<DeliveryNote> deliveryNoteDataReader) : IOrderAppService
 {
-
     public async Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -185,6 +187,30 @@ public sealed class OrderAppService(
             };
         }
 
+        var deliveryNoteOrderItems = (from deliveryNote in deliveryNoteDataReader.DataSource
+                                      where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
+                                         && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                      select deliveryNote)
+                                     .SelectMany(deliveryNote => deliveryNote.Items.Where(item => item.OrderItemId == dto.OrderItemId))
+                                     .ToList();
+        var deliveryNoteQty = deliveryNoteOrderItems.Sum(item => item.Quantity);
+        if (dto.Quantity < deliveryNoteQty)
+        {
+            return new UpdateOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Updated order item quantity cannot less than its delivering quantity."
+            };
+        }
+        if (deliveryNoteOrderItems.Any(item => item.UnitPrice != dto.UnitPrice))
+        {
+            return new UpdateOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Updated order item cannot change unit price of items that are already in delivery notes."
+            };
+        }
+
         await orderManager.UpdateOrderItemAsync(new UpdateOrderItemDto
         {
             OrderId = dto.OrderId,
@@ -241,6 +267,18 @@ public sealed class OrderAppService(
             {
                 Success = false,
                 ErrorMessage = "Order discount cannot exceed order sub total."
+            };
+        }
+
+        var orderItemDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
+                                     where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
+                                     select deliveryNote;
+        if (orderItemDeliveryNotes.Any())
+        {
+            return new DeleteOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order item cannot be removed because it is processing in delivery note."
             };
         }
 
@@ -479,5 +517,48 @@ public sealed class OrderAppService(
         while (await orderManager.DoesCodeExistAsync(code).ConfigureAwait(false));
 
         return code;
+    }
+
+    public async Task<DeleteOrderResultAppDto> DeleteOrderAsync(DeleteOrderAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var order = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+        {
+            return new DeleteOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order is not found."
+            };
+        }
+
+        if (!order.CanUpdateInfo)
+        {
+            return new DeleteOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order cannot delete."
+            };
+        }
+
+        var processingDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
+                                      where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Draft && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                      select deliveryNote;
+        if (processingDeliveryNotes.Any())
+        {
+            return new DeleteOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Order cannot deleted because it is processing."
+            };
+        }
+
+        await orderManager.DeleteOrderAsync(new DeleteOrderDto(order.Id)).ConfigureAwait(false);
+
+        return new DeleteOrderResultAppDto
+        {
+            Success = true
+        };
     }
 }

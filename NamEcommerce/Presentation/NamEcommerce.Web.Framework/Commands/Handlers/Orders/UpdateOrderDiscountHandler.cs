@@ -6,19 +6,19 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 
-public sealed class UpdateOrderDiscountHandler : IRequestHandler<UpdateOrderDiscountCommand, CommonResultModel>
+public sealed class UpdateOrderDiscountHandler : IRequestHandler<UpdateOrderDiscountCommand, CommonActionResultModel>
 {
     private readonly IOrderAppService _orderAppService;
 
     public UpdateOrderDiscountHandler(IOrderAppService orderAppService)
         => _orderAppService = orderAppService;
 
-    public async Task<CommonResultModel> Handle(UpdateOrderDiscountCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(UpdateOrderDiscountCommand request, CancellationToken cancellationToken)
     {
         var order = await _orderAppService.GetOrderByIdAsync(request.OrderId).ConfigureAwait(false);
         if (order is null)
         {
-            return new CommonResultModel
+            return new CommonActionResultModel
             {
                 Success = false,
                 ErrorMessage = "Không tìm thấy đơn hàng."
@@ -27,7 +27,7 @@ public sealed class UpdateOrderDiscountHandler : IRequestHandler<UpdateOrderDisc
 
         if ((request.Discount ?? 0) > order.OrderSubTotal)
         {
-            return new CommonResultModel
+            return new CommonActionResultModel
             {
                 Success = false,
                 ErrorMessage = "Giảm giá không được lớn hơn tổng đơn."
@@ -41,7 +41,7 @@ public sealed class UpdateOrderDiscountHandler : IRequestHandler<UpdateOrderDisc
             Note = order.Note
         }).ConfigureAwait(false);
 
-        return new CommonResultModel
+        return new CommonActionResultModel
         {
             Success = result.Success,
             ErrorMessage = result.ErrorMessage

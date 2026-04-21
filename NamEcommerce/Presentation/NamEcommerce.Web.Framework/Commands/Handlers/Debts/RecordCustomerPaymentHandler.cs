@@ -9,12 +9,12 @@ namespace NamEcommerce.Web.Framework.Commands.Handlers.Debts;
 
 public sealed class RecordCustomerPaymentHandler(
     ICustomerDebtAppService debtAppService,
-    ICurrentUserService currentUserService) : IRequestHandler<RecordCustomerPaymentCommand, CommonResultModel>
+    ICurrentUserService currentUserService) : IRequestHandler<RecordCustomerPaymentCommand, CommonActionResultModel>
 {
     private readonly ICustomerDebtAppService _debtAppService = debtAppService;
     private readonly ICurrentUserService _currentUserService = currentUserService;
 
-    public async Task<CommonResultModel> Handle(RecordCustomerPaymentCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(RecordCustomerPaymentCommand request, CancellationToken cancellationToken)
     {
         try
         {
@@ -34,11 +34,11 @@ public sealed class RecordCustomerPaymentHandler(
             };
 
             await _debtAppService.RecordPaymentAsync(dto).ConfigureAwait(false);
-            return new CommonResultModel { Success = true };
+            return new CommonActionResultModel { Success = true };
         }
         catch (Exception ex)
         {
-            return new CommonResultModel { Success = false, ErrorMessage = ex.Message };
+            return new CommonActionResultModel { Success = false, ErrorMessage = ex.Message };
         }
     }
 }

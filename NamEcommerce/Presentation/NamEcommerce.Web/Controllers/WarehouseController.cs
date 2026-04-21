@@ -116,10 +116,11 @@ public sealed class WarehouseController : BaseAuthorizedController
     public async Task<IActionResult> Delete(Guid id)
     {
         var resultDto = await _mediator.Send(new DeleteWarehouseCommand(id));
+
         if (!resultDto.Success)
             TempData[ViewConstants.WarehouseErrorMessage] = resultDto.ErrorMessage;
-
-        TempData[ViewConstants.WarehouseSuccessMessage] = "Xóa kho hàng thành công!";
+        else 
+            TempData[ViewConstants.WarehouseSuccessMessage] = "Xóa kho hàng thành công!";
         return RedirectToAction(nameof(List));
     }
 }

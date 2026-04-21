@@ -99,7 +99,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
         // For simplicity, we use GetListAsync and filter it down.
         // In a real app we might add a specific domain query.
         // Assuming page 0 to MAX gets enough for a single order's notes.
-        var paged = await _deliveryNoteManager.GetListAsync(null, 0, int.MaxValue).ConfigureAwait(false);
+        var paged = await _deliveryNoteManager.GetDeliveryNotesAsync(0, int.MaxValue).ConfigureAwait(false);
         return paged.Where(d => d.OrderId == orderId)
                     .Select(d => d.ToDto())
                     .OrderBy(d => d.CreatedOnUtc)
@@ -108,7 +108,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
 
     public async Task<PagedDataAppDto<DeliveryNoteAppDto>> GetListAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
     {
-        var paged = await _deliveryNoteManager.GetListAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);
+        var paged = await _deliveryNoteManager.GetDeliveryNotesAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
         var mappedItems = paged.Items.Select(d => d.ToDto()).ToList();
         var result = PagedDataAppDto.Create(mappedItems, paged.PagerInfo.PageIndex, paged.PagerInfo.PageSize, paged.PagerInfo.TotalCount);
         return (PagedDataAppDto<DeliveryNoteAppDto>)result;

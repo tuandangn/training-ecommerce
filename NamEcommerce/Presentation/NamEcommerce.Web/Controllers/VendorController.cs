@@ -127,10 +127,11 @@ public sealed class VendorController : BaseAuthorizedController
     public async Task<IActionResult> Delete(Guid id)
     {
         var resultDto = await _mediator.Send(new DeleteVendorCommand(id));
+        
         if (!resultDto.Success)
             TempData[ViewConstants.VendorErrorMessage] = resultDto.ErrorMessage;
-
-        TempData[ViewConstants.VendorSuccessMessage] = "Xóa nhà cung cấp thành công!";
+        else
+            TempData[ViewConstants.VendorSuccessMessage] = "Xóa nhà cung cấp thành công!";
         return RedirectToAction(nameof(List));
     }
 

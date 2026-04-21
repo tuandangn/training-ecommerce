@@ -197,19 +197,24 @@ public sealed class DeliveryNoteManager(
         return deliveryNote is null ? null : MapToDto(deliveryNote);
     }
 
-    public async Task<IPagedDataDto<DeliveryNoteDto>> GetListAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
+    public async Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize, string? keywords, Guid? orderId, IEnumerable<DeliveryNoteStatus>? status)
     {
         var query = deliveryNoteReader.DataSource;
         
         if (!string.IsNullOrWhiteSpace(keywords))
         {
-            var lower = keywords.ToLower();
-            query = query.Where(x => 
-                x.Code.ToLower().Contains(lower) || 
-                x.CustomerName.ToLower().Contains(lower) ||
-                (x.CustomerPhone != null && x.CustomerPhone.Contains(lower))
+            var uppercaseKeywords = keywords.Trim().ToUpper();
+            query = query.Where(deliveryNote => 
+                deliveryNote.Code.Contains(keywords) || 
+                (deliveryNote.OrderCode != null && deliveryNote.OrderCode.Contains(keywords)) ||
+                deliveryNote.CustomerName.ToUpper().Contains(uppercaseKeywords) ||
+                (deliveryNote.CustomerPhone != null && deliveryNote.CustomerPhone.Contains(keywords))
             );
         }
+        if (orderId.HasValue)
+            query = query.Where(deliverNote => deliverNote.OrderId == orderId);
+        if(status != null && status.Any())
+            query = query.Where(deliverNote => status.Contains(deliverNote.Status));
 
         query = query.OrderByDescending(x => x.CreatedOnUtc);
 

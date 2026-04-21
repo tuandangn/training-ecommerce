@@ -115,8 +115,8 @@ public sealed class CategoryController : BaseAuthorizedController
         var resultDto = await _mediator.Send(new DeleteCategoryCommand(id));
         if (!resultDto.Success)
             TempData[ViewConstants.CategoryErrorMessage] = resultDto.ErrorMessage;
-
-        TempData[ViewConstants.CategorySuccessMessage] = "Xóa danh mục thành công!";
+        else
+            TempData[ViewConstants.CategorySuccessMessage] = "Xóa danh mục thành công!";
         return RedirectToAction(nameof(List));
     }
 }

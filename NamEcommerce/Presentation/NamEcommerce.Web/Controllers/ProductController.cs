@@ -175,8 +175,8 @@ public sealed class ProductController : BaseAuthorizedController
         var resultDto = await _mediator.Send(new DeleteProductCommand(id));
         if (!resultDto.Success)
             TempData[ViewConstants.ProductErrorMessage] = resultDto.ErrorMessage;
-
-        TempData[ViewConstants.ProductSuccessMessage] = "Xóa hàng hóa thành công!";
+        else
+            TempData[ViewConstants.ProductSuccessMessage] = "Xóa hàng hóa thành công!";
         return RedirectToAction(nameof(List));
     }
 

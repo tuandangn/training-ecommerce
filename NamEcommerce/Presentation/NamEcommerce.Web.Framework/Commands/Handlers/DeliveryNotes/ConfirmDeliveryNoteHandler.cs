@@ -5,7 +5,7 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.DeliveryNotes;
 
-public sealed class ConfirmDeliveryNoteHandler : IRequestHandler<ConfirmDeliveryNoteCommand, CommonResultModel>
+public sealed class ConfirmDeliveryNoteHandler : IRequestHandler<ConfirmDeliveryNoteCommand, CommonActionResultModel>
 {
     private readonly IDeliveryNoteAppService _deliveryNoteAppService;
 
@@ -14,19 +14,19 @@ public sealed class ConfirmDeliveryNoteHandler : IRequestHandler<ConfirmDelivery
         _deliveryNoteAppService = deliveryNoteAppService;
     }
 
-    public async Task<CommonResultModel> Handle(ConfirmDeliveryNoteCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(ConfirmDeliveryNoteCommand request, CancellationToken cancellationToken)
     {
         try
         {
             await _deliveryNoteAppService.ConfirmAsync(request.DeliveryNoteId).ConfigureAwait(false);
-            return new CommonResultModel
+            return new CommonActionResultModel
             {
                 Success = true
             };
         }
         catch (Exception ex)
         {
-            return new CommonResultModel
+            return new CommonActionResultModel
             {
                 Success = false,
                 ErrorMessage = ex.Message

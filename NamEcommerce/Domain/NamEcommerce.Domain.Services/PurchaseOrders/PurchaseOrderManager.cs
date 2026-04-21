@@ -350,15 +350,16 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (!string.IsNullOrEmpty(keywords))
         {
             var normalizedKeywords = TextHelper.Normalize(keywords);
+            var uppercaseKeywords = keywords.Trim().ToUpper();
 
             var vendorIds = _vendorOrderDataReader.DataSource
-                .Where(v => v.Name.Contains(keywords) || v.Name.Contains(normalizedKeywords) || v.NormalizedName.Contains(keywords))
+                .Where(v => v.Name.ToUpper().Contains(uppercaseKeywords) || v.Name.ToUpper().Contains(normalizedKeywords) || v.NormalizedName.Contains(normalizedKeywords))
                 .Select(v => v.Id)
                 .ToList()
                 .OfType<Guid?>()
                 .ToList();
             var warehouseIds = _warehouseOrderDataReader.DataSource
-                .Where(w => w.Name.Contains(keywords) || w.Name.Contains(normalizedKeywords) || w.NormalizedName.Contains(keywords))
+                .Where(w => w.Name.ToUpper().Contains(uppercaseKeywords) || w.Name.ToUpper().Contains(normalizedKeywords) || w.NormalizedName.Contains(normalizedKeywords))
                 .Select(w => w.Id)
                 .ToList()
                 .OfType<Guid?>()

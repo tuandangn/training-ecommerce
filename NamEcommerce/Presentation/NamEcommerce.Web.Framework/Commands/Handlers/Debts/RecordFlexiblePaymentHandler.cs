@@ -9,12 +9,12 @@ namespace NamEcommerce.Web.Framework.Commands.Handlers.Debts;
 
 public sealed class RecordFlexiblePaymentHandler(
     ICustomerDebtAppService debtAppService,
-    ICurrentUserService currentUserService) : IRequestHandler<RecordFlexiblePaymentCommand, CommonResultModel>
+    ICurrentUserService currentUserService) : IRequestHandler<RecordFlexiblePaymentCommand, CommonActionResultModel>
 {
     private readonly ICustomerDebtAppService _debtAppService = debtAppService;
     private readonly ICurrentUserService _currentUserService = currentUserService;
 
-    public async Task<CommonResultModel> Handle(RecordFlexiblePaymentCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(RecordFlexiblePaymentCommand request, CancellationToken cancellationToken)
     {
         try
         {
@@ -33,7 +33,7 @@ public sealed class RecordFlexiblePaymentHandler(
             };
 
             var payments = await _debtAppService.RecordFlexiblePaymentForCustomerAsync(dto).ConfigureAwait(false);
-            return new CommonResultModel
+            return new CommonActionResultModel
             {
                 Success = true,
                 SuccessMessage = $"Đã ghi nhận {payments.Count} giao dịch thanh toán."
@@ -41,7 +41,7 @@ public sealed class RecordFlexiblePaymentHandler(
         }
         catch (Exception ex)
         {
-            return new CommonResultModel { Success = false, ErrorMessage = ex.Message };
+            return new CommonActionResultModel { Success = false, ErrorMessage = ex.Message };
         }
     }
 }

@@ -121,10 +121,11 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
     public async Task<IActionResult> Delete(Guid id)
     {
         var resultDto = await _mediator.Send(new DeleteUnitMeasurementCommand(id));
+
         if (!resultDto.Success)
             TempData[ViewConstants.UnitMeasurementErrorMessage] = resultDto.ErrorMessage;
-
-        TempData[ViewConstants.UnitMeasurementSuccessMessage] = "Xóa đơn vị tính thành công!";
+        else
+            TempData[ViewConstants.UnitMeasurementSuccessMessage] = "Xóa đơn vị tính thành công!";
         return RedirectToAction(nameof(List));
     }
 }

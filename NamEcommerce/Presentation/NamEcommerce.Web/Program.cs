@@ -149,6 +149,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();
     services.AddScoped<IOrderManager, OrderManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
+    services.AddScoped<IVendorDebtManager, VendorDebtManager>();
 
     services.AddScoped<ISecurityService, SecurityService>();
     services.AddScoped<IEventPublisher, EventPublisher>();
@@ -170,6 +171,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IPreparationAppService, PreparationAppService>();
     services.AddScoped<IOrderAppService, OrderAppService>();
     services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
+    services.AddScoped<IVendorDebtAppService, VendorDebtAppService>();
 
     builder.Services.AddHttpClient<IN8nAppService, N8nAppService>(client =>
     {

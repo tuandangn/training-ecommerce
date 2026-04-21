@@ -1,0 +1,139 @@
+@using NamEcommerce.Web.Contracts.Models.Debts
+@using NamEcommerce.Web.Models.VendorDebts
+@model VendorDebtListModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Công nợ nhà cung cấp";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Công nợ nhà cung cấp</h1>
+        <p class="page-header-subtitle">Tổng hợp số tiền phải trả cho từng nhà cung cấp — nhấn vào tên để xem chi tiết</p>
+    </div>
+</div>
+
+@* ── Tổng quan nhanh ── *@
+@if (Model.Data?.Pagination.TotalCount > 0)
+{
+    var totalRemaining = Model.Data.Sum(x => x.TotalRemainingAmount);
+    var totalAdvance = Model.Data.Sum(x => x.AdvanceBalance);
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Số NCC có nợ</div>
+                <div class="fs-4 fw-bold text-dark">@Model.Data.Pagination.TotalCount</div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3 @(totalRemaining > 0 ? "border-danger border" : "")">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Tổng còn phải trả</div>
+                <div class="fs-5 fw-bold @(totalRemaining > 0 ? "text-danger" : "text-success")">
+                    @totalRemaining.ToString(ViewConstants.CurrencyDisplayFormat)
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 text-center p-3 @(totalAdvance > 0 ? "border-warning border" : "")">
+                <div class="text-muted small text-uppercase fw-bold mb-1">Tổng tiền ứng trước</div>
+                <div class="fs-5 fw-bold @(totalAdvance > 0 ? "text-warning" : "text-muted")">
+                    @totalAdvance.ToString(ViewConstants.CurrencyDisplayFormat)
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="content-card">
+    <div class="action-toolbar">
+        <partial name="_Search" model="@(new VendorDebtListSearchModel { Keywords = Model.Keywords })" />
+    </div>
+    <div class="table-responsive">
+        <table class="table data-table align-middle">
+            <thead>
+                <tr>
+                    <th class="ps-4">Nhà cung cấp</th>
+                    <th class="text-center">Số phiếu</th>
+                    <th class="text-end">Tổng nợ</th>
+                    <th class="text-end">Đã trả</th>
+                    <th class="text-end">Còn phải trả</th>
+                    <th class="text-end">Tiền ứng trước</th>
+                    <th style="width: 80px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Data?.Pagination.TotalCount > 0)
+                {
+                    @foreach (var item in Model.Data)
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <a asp-action="Details" asp-route-vendorId="@item.VendorId"
+                                   class="fw-semibold text-decoration-none text-dark">
+                                    <i class="bi bi-building me-1 text-muted"></i>
+                                    @HighlighHelper.Highlight(item.VendorName, Model.Keywords)
+                                </a>
+                                @if (!string.IsNullOrEmpty(item.VendorPhone))
+                                {
+                                    <div>
+                                        <a href="tel:@item.VendorPhone" class="text-muted small text-decoration-none">
+                                            <i class="bi bi-telephone me-1"></i>
+                                            @HighlighHelper.Highlight(item.VendorPhone, Model.Keywords)
+                                        </a>
+                                    </div>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border fw-normal">@item.DebtCount phiếu</span>
+                            </td>
+                            <td class="text-end fw-medium text-dark">
+                                @item.TotalDebtAmount.ToString(ViewConstants.CurrencyDisplayFormat)
+                            </td>
+                            <td class="text-end text-success fw-medium">
+                                @item.TotalPaidAmount.ToString(ViewConstants.CurrencyDisplayFormat)
+                            </td>
+                            <td class="text-end fw-bold @(item.TotalRemainingAmount > 0 ? "text-danger" : "text-success")">
+                                @item.TotalRemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)
+                            </td>
+                            <td class="text-end">
+                                @if (item.AdvanceBalance > 0)
+                                {
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle fw-normal">
+                                        @item.AdvanceBalance.ToString(ViewConstants.CurrencyDisplayFormat)
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">—</span>
+                                }
+                            </td>
+                            <td class="text-end pe-3">
+                                <a class="btn-table-action" asp-action="Details" asp-route-vendorId="@item.VendorId"
+                                   title="Xem chi tiết">
+                                    <i class="bi bi-chevron-right"></i>
+                                    <span class="visually-hidden">Chi tiết</span>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state py-5">
+                                <div class="empty-icon"><i class="bi bi-building"></i></div>
+                                <h5>Không có công nợ nào</h5>
+                                <p class="text-muted">Các khoản nợ phát sinh khi đơn nhập hàng được xác nhận hoàn tất.</p>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.Data?.Pagination.TotalCount > 0)
+    {
+        <partial name="_Pager" model="Model.Data.Pagination" />
+    }
+</div>

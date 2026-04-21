@@ -51,10 +51,10 @@ public sealed class CustomerController : BaseAuthorizedController
             PageSize = pageSize
         });
 
-        return Json(result.Data.Items.Select(it => new 
-        { 
-            id = it.Id, 
-            name = it.FullName, 
+        return Json(result.Data.Items.Select(it => new
+        {
+            id = it.Id,
+            name = it.FullName,
             phone = it.PhoneNumber,
             address = it.Address
         }));
@@ -142,13 +142,11 @@ public sealed class CustomerController : BaseAuthorizedController
     public async Task<IActionResult> Delete(Guid id)
     {
         var result = await _mediator.Send(new DeleteCustomerCommand { Id = id });
-        if (!result.Success)
-        {
-            TempData[ViewConstants.CustomerErrorMessage] = result.ErrorMessage;
-            return RedirectToAction(nameof(List));
-        }
 
-        TempData[ViewConstants.CustomerSuccessMessage] = "Xóa khách hàng thành công!";
+        if (!result.Success)
+            TempData[ViewConstants.CustomerErrorMessage] = result.ErrorMessage;
+        else
+            TempData[ViewConstants.CustomerSuccessMessage] = "Xóa khách hàng thành công!";
         return RedirectToAction(nameof(List));
     }
 }

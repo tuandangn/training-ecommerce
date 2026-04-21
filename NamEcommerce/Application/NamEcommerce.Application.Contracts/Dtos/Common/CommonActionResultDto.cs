@@ -1,11 +1,10 @@
-﻿namespace NamEcommerce.Web.Contracts.Models.Common;
+﻿namespace NamEcommerce.Application.Contracts.Dtos.Common;
 
 [Serializable]
-public sealed record CommonResultModel
+public record CommonActionResultDto
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
-    public string? SuccessMessage { get; set; }
 
     public void Deconstruct(out bool success, out string? errorMessage)
         => (success, errorMessage) = (Success, ErrorMessage);

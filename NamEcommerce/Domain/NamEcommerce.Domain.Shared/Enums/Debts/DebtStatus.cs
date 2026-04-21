@@ -21,17 +21,27 @@ public enum DebtStatus
 public enum PaymentType
 {
     /// <summary>
-    /// Trả nợ cho phiếu xuất
+    /// Trả nợ cho phiếu xuất (khách hàng trả nợ)
     /// </summary>
     DebtPayment = 10,
 
     /// <summary>
-    /// Tiền cọc cho đơn hàng
+    /// Tiền cọc cho đơn hàng (khách hàng đặt cọc)
     /// </summary>
     Deposit = 20,
 
     /// <summary>
     /// Thu tiền chung (không gắn đơn)
     /// </summary>
-    General = 30
+    General = 30,
+
+    /// <summary>
+    /// Tiền ứng trước cho nhà cung cấp (chưa gắn phiếu nợ)
+    /// </summary>
+    AdvancePayment = 40,
+
+    /// <summary>
+    /// Trả nợ nhà cung cấp (thanh toán phiếu nợ NCC)
+    /// </summary>
+    VendorDebtPayment = 50
 }

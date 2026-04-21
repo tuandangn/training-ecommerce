@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
-using NamEcommerce.Web.Contracts.Dtos;
+using NamEcommerce.Web.Contracts.Models.Users;
 using NamEcommerce.Web.Contracts.Services;
 using System.Security.Claims;
 
@@ -14,7 +14,7 @@ public sealed class CurrentUserService : ICurrentUserService
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public async ValueTask<CurrentUserInfoDto?> GetCurrentUserInfoAsync()
+    public async ValueTask<CurrentUserInfoModel?> GetCurrentUserInfoAsync()
     {
         var httpContext = _httpContextAccessor.HttpContext;
         if (httpContext is null)
@@ -31,7 +31,7 @@ public sealed class CurrentUserService : ICurrentUserService
         if (!isValidId || string.IsNullOrEmpty(username) || string.IsNullOrEmpty(fullName))
             return null;
 
-        return new CurrentUserInfoDto(id, username, fullName);
+        return new CurrentUserInfoModel(id, username, fullName);
     }
 
     public ValueTask<bool> IsAuthenticatedAsync()

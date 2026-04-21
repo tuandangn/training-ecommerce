@@ -18,6 +18,11 @@ $(function () {
     $('.alert-dismissible').each(function () {
         setTimeout(() => $(this).slideUp(), 3000);
     });
+
+    var tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
 })
 
 function isFormValid(form) {

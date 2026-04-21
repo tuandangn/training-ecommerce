@@ -9,6 +9,7 @@ public interface IOrderManager : ICodeExistCheckingService
 {
     Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderDto dto);
     Task<UpdateOrderResultDto> UpdateOrderAsync(UpdateOrderDto dto);
+    Task DeleteOrderAsync(DeleteOrderDto dto);
 
     Task AddOrderItemAsync(Guid orderId, AddOrderItemDto dto);
     Task UpdateOrderItemAsync(UpdateOrderItemDto dto);

@@ -64,12 +64,12 @@
                     {
                         var statusTuple = deliveryNote.Status switch
                         {
-                            10 => ("secondary", "Bản nháp", "bi-pencil"),
-                            20 => ("info text-white", "Đã xác nhận", "bi-check-all"),
-                            30 => ("warning", "Đang giao", "bi-truck"),
-                            40 => ("success", "Đã giao", "bi-check-circle-fill"),
-                            50 => ("danger", "Đã hủy", "bi-x-circle"),
-                            _ => ("secondary", "Không rõ", "bi-question-circle")
+                            10 => ("bg-secondary text-light", "Bản nháp", "bi-pencil"),
+                            20 => ("bg-info text-light", "Đã xác nhận", "bi-check-all"),
+                            30 => ("bg-warning text-dark", "Đang giao", "bi-truck"),
+                            40 => ("bg-success text-light", "Đã giao", "bi-check-circle-fill"),
+                            50 => ("bg-danger text-light", "Đã hủy", "bi-x-circle"),
+                            _ => ("bg-secondary text-light", "Không rõ", "bi-question-circle")
                         };
 
                         <tr>

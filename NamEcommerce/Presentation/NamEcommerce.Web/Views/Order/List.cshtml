@@ -5,37 +5,35 @@
     var successMessage = TempData[ViewConstants.OrderSuccessMessage] as string;
     var errorMessage = TempData[ViewConstants.OrderErrorMessage] as string;
 }
-
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Đơn hàng</h1>
-        <p class="page-header-subtitle">Theo dõi và quản lý đơn hàng</p>
-    </div>
-    <a asp-action="Create" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i> Tạo đơn
-    </a>
-</div>
-
-@if (!string.IsNullOrEmpty(successMessage))
-{
-    <div class="alert alert-success alert-dismissible fade show alert-global mb-3" role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i>@successMessage
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-warning alert-dismissible fade show alert-global mb-3" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
 <div class="content-card">
+    <div class="content-card-header">
+        <div>
+            <h1>Đơn hàng</h1>
+            <p class="page-header-subtitle">
+                <span>Theo dõi và quản lý đơn hàng</span>
+            </p>
+        </div>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Tạo đơn
+        </a>
+    </div>
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show alert-global mb-3" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>@successMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-warning alert-dismissible fade show alert-global mb-3" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
     <div class="action-toolbar">
         <partial name="_Search" model="@(new OrderListSearchModel { Keywords = Model.Keywords, Status = Model.Status })" />
     </div>
-
     <div class="table-responsive">
         <table class="table data-table">
             <thead>
@@ -57,7 +55,7 @@
                         <tr>
                             <td class="ps-4">
                                 <div class="position-relative">
-                                    <a asp-action="Details" asp-route-id="@order.Id" class="fw-medium text-primary d-block text-nowrap text-decoration-none">
+                                    <a asp-action="Details" asp-route-id="@order.Id" class="fw-medium text-primary d-block text-nowrap text-decoration-none" data-bs-toggle="tooltip" title="Xem chi tiết">
                                         @HighlighHelper.Highlight(order.Code, Model.Keywords)
                                     </a>
                                     <span class="text-muted small d-inline d-lg-none">@order.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
@@ -65,15 +63,16 @@
                             </td>
                             <td>
                                 <div class="position-relative">
-                                    <a asp-action="Details" asp-controller="CustomerDebt" asp-route-id="@order.CustomerId" class="stretched-link fw-medium text-decoration-none">                                        <i class="bi bi-person me-1"></i>
+                                    <a asp-action="Details" asp-controller="CustomerDebt" asp-route-id="@order.CustomerId" class="stretched-link fw-medium text-decoration-none" data-bs-toggle="tooltip" title="Xem công nợ">
+                                        <i class="bi bi-person me-1"></i>
                                         @HighlighHelper.Highlight(order.CustomerName, Model.Keywords)
                                     </a>
                                     @if (!string.IsNullOrEmpty(order.CustomerPhone))
                                     {
                                         <div>
-                                            <a href="tel:@order.CustomerPhone" class="text-muted small text-decoration-none">
-                                                <i class="bi bi-telephone me-1"></i> @HighlighHelper.Highlight(order.CustomerPhone, Model.Keywords)
-                                            </a>
+                                            <span class="text-muted small">
+                                                @HighlighHelper.Highlight(order.CustomerPhone, Model.Keywords)
+                                            </span>
                                         </div>
                                     }
                                 </div>
@@ -98,33 +97,40 @@
                             <td class="text-end pe-3">
                                 @if (order.CanUpdateInfo)
                                 {
-                                    <a class="btn-table-action" asp-action="Details" asp-route-id="@order.Id" title="Chỉnh sửa">
+                                    <a class="btn-table-action" asp-action="Details" asp-route-id="@order.Id" data-bs-toggle="tooltip" title="Chỉnh sửa">
                                         <i class="bi bi-pencil"></i>
+                                        <span class="visually-hidden">Chỉnh sửa</span>
                                     </a>
                                 }
                                 else
                                 {
-                                    <a class="btn-table-action" asp-action="Details" asp-route-id="@order.Id" title="Xem">
+                                    <a class="btn-table-action" asp-action="Details" asp-route-id="@order.Id" data-bs-toggle="tooltip" title="Xem chi tiết">
                                         <i class="bi bi-eye"></i>
+                                        <span class="visually-hidden">Xem chi tiết</span>
                                     </a>
                                 }
-                                <div class="btn-group dropstart">
-                                    <button class="btn-table-action" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Thêm">
-                                        <i class="bi bi-three-dots-vertical"></i>
-                                    </button>
-                                    <ul class="dropdown-menu border-0 shadow-sm rounded-3">
-                                        <li>
-                                            <a class="dropdown-item py-2 dropdown-item-custom" asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@order.Id">
-                                                <i class="bi bi-box-seam me-2 text-muted"></i> Tạo phiếu xuất kho
-                                            </a>
-                                        </li>
-                                        <li>
-                                            <button type="button" class="dropdown-item py-2 text-danger btnDelete dropdown-item-custom" data-id="@order.Id" data-code="@order.Code">
-                                                <i class="bi bi-trash me-2"></i> Xóa đơn màng
-                                            </button>
-                                        </li>
-                                    </ul>
-                                </div>
+                                @if (order.CanUpdateInfo)
+                                {
+                                    <div class="btn-group dropstart">
+                                        <button class="btn-table-action" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Thêm">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu border-0 shadow-sm rounded-3">
+                                            <li>
+                                                <a class="dropdown-item py-2 dropdown-item-custom" asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@order.Id">
+                                                    <i class="bi bi-box-seam me-2 text-muted"></i>
+                                                    Tạo phiếu xuất
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <button type="button" class="dropdown-item py-2 text-danger btnDelete dropdown-item-custom" data-id="@order.Id" data-code="@order.Code">
+                                                    <i class="bi bi-trash me-2"></i>
+                                                    Xóa đơn hàng
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                }
                             </td>
                         </tr>
                     }

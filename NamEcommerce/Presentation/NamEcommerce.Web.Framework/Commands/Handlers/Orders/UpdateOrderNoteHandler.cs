@@ -6,19 +6,19 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 
-public sealed class UpdateOrderNoteHandler : IRequestHandler<UpdateOrderNoteCommand, CommonResultModel>
+public sealed class UpdateOrderNoteHandler : IRequestHandler<UpdateOrderNoteCommand, CommonActionResultModel>
 {
     private readonly IOrderAppService _orderAppService;
 
     public UpdateOrderNoteHandler(IOrderAppService orderAppService)
         => _orderAppService = orderAppService;
 
-    public async Task<CommonResultModel> Handle(UpdateOrderNoteCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(UpdateOrderNoteCommand request, CancellationToken cancellationToken)
     {
         var order = await _orderAppService.GetOrderByIdAsync(request.OrderId).ConfigureAwait(false);
         if (order is null)
         {
-            return new CommonResultModel
+            return new CommonActionResultModel
             {
                 Success = false,
                 ErrorMessage = "Không tìm thấy đơn hàng."
@@ -31,7 +31,7 @@ public sealed class UpdateOrderNoteHandler : IRequestHandler<UpdateOrderNoteComm
             Note = request.Note
         }).ConfigureAwait(false);
 
-        return new CommonResultModel
+        return new CommonActionResultModel
         {
             Success = result.Success,
             ErrorMessage = result.ErrorMessage

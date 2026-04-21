@@ -8,7 +8,7 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Preparation;
 
-public sealed class MarkOrderItemDeliveredHandler : IRequestHandler<MarkOrderItemDeliveredCommand, CommonResultModel>
+public sealed class MarkOrderItemDeliveredHandler : IRequestHandler<MarkOrderItemDeliveredCommand, CommonActionResultModel>
 {
     private readonly IOrderAppService _orderAppService;
     private readonly IPictureAppService _pictureAppService;
@@ -19,11 +19,11 @@ public sealed class MarkOrderItemDeliveredHandler : IRequestHandler<MarkOrderIte
         _pictureAppService = pictureAppService;
     }
 
-    public async Task<CommonResultModel> Handle(MarkOrderItemDeliveredCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(MarkOrderItemDeliveredCommand request, CancellationToken cancellationToken)
     {
         if (request.PictureData is null || request.PictureData.Length == 0)
         {
-            return new CommonResultModel
+            return new CommonActionResultModel
             {
                 Success = false,
                 ErrorMessage = "Hình ảnh bằng chứng giao hàng là bắt buộc."
@@ -49,7 +49,7 @@ public sealed class MarkOrderItemDeliveredHandler : IRequestHandler<MarkOrderIte
             PictureId = pictureId
         }).ConfigureAwait(false);
 
-        return new CommonResultModel
+        return new CommonActionResultModel
         {
             Success = result.Success,
             ErrorMessage = result.ErrorMessage

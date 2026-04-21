@@ -1,3 +1,5 @@
+using NamEcommerce.Application.Contracts.Dtos.Common;
+
 namespace NamEcommerce.Application.Contracts.Dtos.Orders;
 
 [Serializable]
@@ -106,6 +108,11 @@ public sealed record UpdateOrderResultAppDto
     public string? ErrorMessage { get; set; }
     public Guid? UpdatedId { get; init; }
 }
+
+[Serializable]
+public sealed record DeleteOrderAppDto(Guid OrderId);
+[Serializable]
+public sealed record DeleteOrderResultAppDto : CommonActionResultDto;
 
 [Serializable]
 public sealed record UpdateOrderShippingAppDto

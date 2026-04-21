@@ -6,7 +6,7 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 
-public sealed class UpdateOrderItemHandler : IRequestHandler<UpdateOrderItemCommand, CommonResultModel>
+public sealed class UpdateOrderItemHandler : IRequestHandler<UpdateOrderItemCommand, CommonActionResultModel>
 {
     private readonly IOrderAppService _orderAppService;
 
@@ -15,7 +15,7 @@ public sealed class UpdateOrderItemHandler : IRequestHandler<UpdateOrderItemComm
         _orderAppService = orderAppService;
     }
 
-    public async Task<CommonResultModel> Handle(UpdateOrderItemCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(UpdateOrderItemCommand request, CancellationToken cancellationToken)
     {
         var result = await _orderAppService.UpdateOrderItemAsync(new UpdateOrderItemAppDto
         {
@@ -25,7 +25,7 @@ public sealed class UpdateOrderItemHandler : IRequestHandler<UpdateOrderItemComm
             UnitPrice = request.UnitPrice
         }).ConfigureAwait(false);
 
-        return new CommonResultModel
+        return new CommonActionResultModel
         {
             Success = result.Success,
             ErrorMessage = result.ErrorMessage

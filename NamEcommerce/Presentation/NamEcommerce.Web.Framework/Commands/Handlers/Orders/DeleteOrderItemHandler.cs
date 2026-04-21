@@ -6,7 +6,7 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 
-public sealed class DeleteOrderItemHandler : IRequestHandler<DeleteOrderItemCommand, CommonResultModel>
+public sealed class DeleteOrderItemHandler : IRequestHandler<DeleteOrderItemCommand, CommonActionResultModel>
 {
     private readonly IOrderAppService _orderAppService;
 
@@ -15,11 +15,11 @@ public sealed class DeleteOrderItemHandler : IRequestHandler<DeleteOrderItemComm
         _orderAppService = orderAppService;
     }
 
-    public async Task<CommonResultModel> Handle(DeleteOrderItemCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(DeleteOrderItemCommand request, CancellationToken cancellationToken)
     {
         var result = await _orderAppService.DeleteOrderItemAsync(new DeleteOrderItemAppDto(request.OrderId, request.ItemId)).ConfigureAwait(false);
 
-        return new CommonResultModel
+        return new CommonActionResultModel
         {
             Success = result.Success,
             ErrorMessage = result.ErrorMessage

@@ -1,12 +1,14 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
+using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
@@ -24,9 +26,9 @@ public sealed class OrderManager(
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
     IEntityDataReader<User> userDataReader,
-    IEventPublisher eventPublisher) : IOrderManager
+    IEventPublisher eventPublisher,
+    IEntityDataReader<DeliveryNote> deliveryNoteDataReader) : IOrderManager
 {
-
     public async Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -127,6 +129,18 @@ public sealed class OrderManager(
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
+        var deliveryNoteOrderItems = (from deliveryNote in deliveryNoteDataReader.DataSource
+                                      where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
+                                         && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                      select deliveryNote)
+                                     .SelectMany(deliveryNote => deliveryNote.Items.Where(item => item.OrderItemId == dto.OrderItemId))
+                                     .ToList();
+        var deliveryNoteQty = deliveryNoteOrderItems.Sum(item => item.Quantity);
+        if (dto.Quantity < deliveryNoteQty)
+            throw new InvalidOperationException("Updated order item quantity cannot less than its delivering quantity.");
+        if (deliveryNoteOrderItems.Any(item => item.UnitPrice != dto.UnitPrice))
+            throw new InvalidOperationException("Updated order item cannot change unit price of items that are already in delivery notes.");
+
         order.UpdateOrderItem(dto.OrderItemId, dto.Quantity, dto.UnitPrice);
         order.UpdatedOnUtc = DateTime.UtcNow;
 
@@ -144,6 +158,13 @@ public sealed class OrderManager(
             throw new OrderIsNotFoundException(dto.OrderId);
 
         if (!order.CanUpdateOrderItems())
+            throw new OrderCannotUpdateOrderItemsException();
+
+        var orderItemDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
+                                     where deliveryNote.OrderId == order.Id && deliveryNote.Items.Any(item => item.OrderItemId == dto.OrderItemId)
+                                        && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                     select deliveryNote;
+        if (orderItemDeliveryNotes.Any())
             throw new OrderCannotUpdateOrderItemsException();
 
         order.RemoveOrderItem(dto.OrderItemId);
@@ -192,10 +213,11 @@ public sealed class OrderManager(
         if (!string.IsNullOrEmpty(keywords))
         {
             var normalizedKeywords = TextHelper.Normalize(keywords);
+            var uppercaseKeywords = keywords.Trim().ToUpper();
 
             var customerIds = customerDataReader.DataSource
-                .Where(c => c.FullName.Contains(keywords) || c.FullName.Contains(normalizedKeywords) || c.NormalizedFullName.Contains(normalizedKeywords)
-                    || c.Address.Contains(keywords) || c.Address.Contains(normalizedKeywords) || c.NormalizedAddress.Contains(normalizedKeywords)
+                .Where(c => c.FullName.ToUpper().Contains(uppercaseKeywords) || c.FullName.ToUpper().Contains(normalizedKeywords) || c.NormalizedFullName.Contains(normalizedKeywords)
+                    || c.Address.ToUpper().Contains(uppercaseKeywords) || c.Address.ToUpper().Contains(normalizedKeywords) || c.NormalizedAddress.Contains(normalizedKeywords)
                     || c.PhoneNumber.Contains(keywords))
                 .Select(v => v.Id)
                 .ToList()
@@ -204,7 +226,7 @@ public sealed class OrderManager(
             IList<Guid?> userIds = [];
 
             query = query.Where(order => order.Code.Contains(keywords) || order.Code.Contains(normalizedKeywords)
-                || (order.ShippingAddress != null && (order.ShippingAddress.Contains(keywords) || order.ShippingAddress.Contains(normalizedKeywords) || order.NormalizedShippingAddress.Contains(normalizedKeywords)))
+                || (order.ShippingAddress != null && (order.ShippingAddress.ToUpper().Contains(uppercaseKeywords) || order.ShippingAddress.ToUpperInvariant().Contains(normalizedKeywords) || order.NormalizedShippingAddress.Contains(normalizedKeywords)))
                 || customerIds.Contains(order.CustomerId)
                 || userIds.Contains(order.CreatedByUserId));
         }
@@ -267,5 +289,25 @@ public sealed class OrderManager(
         var updatedOrder = await orderRepository.UpdateAsync(order).ConfigureAwait(false);
 
         await eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
+    }
+
+    public async Task DeleteOrderAsync(DeleteOrderDto dto)
+    {
+        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        if (order.CanUpdateInfo())
+            throw new InvalidOperationException("Order cannot delete.");
+
+        var processingDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
+                                      where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Draft && deliveryNote.Status == DeliveryNoteStatus.Cancelled
+                                      select deliveryNote;
+        if (processingDeliveryNotes.Any())
+            throw new InvalidOperationException("Order cannot deleted because it is processing.");
+
+        await orderRepository.DeleteAsync(order).ConfigureAwait(false);
+
+        await eventPublisher.EntityDeleted(order).ConfigureAwait(false);
     }
 }

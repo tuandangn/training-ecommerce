@@ -5,7 +5,7 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.PurchaseOrders;
 
-public sealed class CancelPurchaseOrderHandler : IRequestHandler<CancelPurchaseOrderCommand, CommonResultModel>
+public sealed class CancelPurchaseOrderHandler : IRequestHandler<CancelPurchaseOrderCommand, CommonActionResultModel>
 {
     private readonly IPurchaseOrderAppService _purchaseOrderAppService;
 
@@ -14,11 +14,11 @@ public sealed class CancelPurchaseOrderHandler : IRequestHandler<CancelPurchaseO
         _purchaseOrderAppService = purchaseOrderAppService;
     }
 
-    public async Task<CommonResultModel> Handle(CancelPurchaseOrderCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(CancelPurchaseOrderCommand request, CancellationToken cancellationToken)
     {
         var (success, errorMessage) = await _purchaseOrderAppService.CancelPurchaseOrderAsync(request.PurchaseOrderId).ConfigureAwait(false);
 
-        return new CommonResultModel
+        return new CommonActionResultModel
         {
             Success = success,
             ErrorMessage = errorMessage

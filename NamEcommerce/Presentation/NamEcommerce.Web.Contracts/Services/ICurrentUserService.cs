@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Web.Contracts.Dtos;
+﻿using NamEcommerce.Web.Contracts.Models.Users;
 
 namespace NamEcommerce.Web.Contracts.Services;
 
@@ -6,5 +6,5 @@ public interface ICurrentUserService
 {
     ValueTask<bool> IsAuthenticatedAsync();
 
-    ValueTask<CurrentUserInfoDto?> GetCurrentUserInfoAsync();
+    ValueTask<CurrentUserInfoModel?> GetCurrentUserInfoAsync();
 }

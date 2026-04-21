@@ -7,14 +7,14 @@ using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 
-public sealed class UpdateOrderShippingHandler : IRequestHandler<UpdateOrderShippingCommand, CommonResultModel>
+public sealed class UpdateOrderShippingHandler : IRequestHandler<UpdateOrderShippingCommand, CommonActionResultModel>
 {
     private readonly IOrderAppService _orderAppService;
 
     public UpdateOrderShippingHandler(IOrderAppService orderAppService)
         => _orderAppService = orderAppService;
 
-    public async Task<CommonResultModel> Handle(UpdateOrderShippingCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(UpdateOrderShippingCommand request, CancellationToken cancellationToken)
     {
         var result = await _orderAppService.UpdateShippingAsync(new UpdateOrderShippingAppDto
         {
@@ -23,7 +23,7 @@ public sealed class UpdateOrderShippingHandler : IRequestHandler<UpdateOrderShip
             Address = request.Address
         });
 
-        return new CommonResultModel
+        return new CommonActionResultModel
         {
             Success = result.Success,
             ErrorMessage = result.ErrorMessage

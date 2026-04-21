@@ -25,7 +25,7 @@
         </ul>
     </li>
     <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("PurchaseOrder", "Inventory") ? "active" : "")"
+        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("PurchaseOrder", "Inventory", "VendorDebt") ? "active" : "")"
                href="#" id="inventoryMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             Nhập xuất
         </a>
@@ -37,6 +37,11 @@
             <li>
                 <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Inventory") ? "active" : "")"
                    asp-controller="Inventory" asp-action="StockList">Tồn kho</a>
+            </li>
+            <li><hr class="dropdown-divider" /></li>
+            <li>
+                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("VendorDebt") ? "active" : "")"
+                   asp-controller="VendorDebt" asp-action="Index">Công nợ NCC</a>
             </li>
         </ul>
     </li>

@@ -1,0 +1,557 @@
+@using NamEcommerce.Domain.Shared.Enums.Debts
+@using NamEcommerce.Domain.Shared.Enums.Orders
+@using NamEcommerce.Web.Contracts.Models.Debts
+@using NamEcommerce.Web.Extensions
+@model VendorDebtDetailsModel
+@{
+    ViewData[ViewConstants.PageTitle] = $"Công nợ NCC: {Model.VendorName}";
+}
+
+<div class="page-header">
+    <div class="d-flex align-items-center">
+        <a asp-action="Index" class="btn btn-icon btn-light me-3 shadow-sm border">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <h1 class="page-header-title">@Model.VendorName</h1>
+            <p class="page-header-subtitle mb-0">
+                Công nợ phải trả —
+                <span class="fw-semibold">@Model.Debts.Count phiếu</span>
+            </p>
+        </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        @if (Model.TotalRemainingAmount > 0)
+        {
+            <button type="button" class="btn btn-outline-warning shadow-sm"
+                    data-bs-toggle="modal" data-bs-target="#advancePaymentModal">
+                <i class="bi bi-piggy-bank me-1"></i> Ứng trước
+            </button>
+            <button type="button" class="btn btn-danger shadow-sm"
+                    data-bs-toggle="modal" data-bs-target="#paymentModal">
+                <i class="bi bi-cash-coin me-1"></i> Trả tiền NCC
+            </button>
+        }
+    </div>
+</div>
+
+@* ── KPI Cards ── *@
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+            <div class="text-muted small text-uppercase fw-bold mb-1">Tổng nợ phát sinh</div>
+            <div class="fs-5 fw-bold text-dark">@Model.TotalDebtAmount.ToString(ViewConstants.CurrencyDisplayFormat)</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm rounded-4 text-center p-3">
+            <div class="text-muted small text-uppercase fw-bold mb-1">Đã thanh toán</div>
+            <div class="fs-5 fw-bold text-success">@Model.TotalPaidAmount.ToString(ViewConstants.CurrencyDisplayFormat)</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm rounded-4 text-center p-3 @(Model.TotalRemainingAmount > 0 ? "border-danger border" : "")">
+            <div class="text-muted small text-uppercase fw-bold mb-1">Còn phải trả</div>
+            <div class="fs-4 fw-bold @(Model.TotalRemainingAmount > 0 ? "text-danger" : "text-success")">
+                @Model.TotalRemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm rounded-4 text-center p-3 @(Model.AdvanceBalance > 0 ? "border-warning border" : "")">
+            <div class="text-muted small text-uppercase fw-bold mb-1">Tiền ứng trước</div>
+            <div class="fs-5 fw-bold @(Model.AdvanceBalance > 0 ? "text-warning" : "text-muted")">
+                @Model.AdvanceBalance.ToString(ViewConstants.CurrencyDisplayFormat)
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ── Alert tiền ứng trước ── *@
+@if (Model.AdvanceBalance > 0)
+{
+    <div class="alert alert-warning border-0 rounded-4 mb-4 d-flex align-items-center gap-3">
+        <i class="bi bi-piggy-bank fs-4"></i>
+        <div>
+            <strong>Có @Model.AdvanceBalance.ToString(ViewConstants.CurrencyDisplayFormat) tiền ứng trước</strong>
+            chưa được áp dụng vào phiếu nợ nào.
+            Khi trả tiền mới, số dư này sẽ được hệ thống tự khấu trừ trước.
+        </div>
+    </div>
+}
+
+@* ── Danh sách phiếu công nợ ── *@
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold text-uppercase small text-muted">
+            <i class="bi bi-file-earmark-text me-2"></i>Danh sách phiếu công nợ
+        </h6>
+        <span class="badge bg-light text-dark border fw-normal">@Model.Debts.Count phiếu</span>
+    </div>
+
+    @if (!Model.Debts.Any())
+    {
+        <div class="empty-state py-4">
+            <i class="bi bi-inbox fs-3 text-muted"></i>
+            <p class="text-muted mt-2 mb-0">Không có phiếu công nợ nào.</p>
+        </div>
+    }
+
+    @foreach (var debt in Model.Debts)
+    {
+        var status = (DebtStatus)debt.Status;
+        var isPaid = status == DebtStatus.FullyPaid;
+        var isOverdue = debt.DueDate.HasValue && debt.DueDate.Value < DateTime.Now && !isPaid;
+
+        <div class="px-4 py-3 border-bottom">
+            @* Header row *@
+            <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="fw-bold text-dark font-monospace">@debt.Code</span>
+                    <span class="badge rounded-pill @status.GetDisplayColor() px-2 py-1 fw-normal small">
+                        @status.GetDisplayText()
+                    </span>
+                    @if (isOverdue)
+                    {
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-normal small">
+                            <i class="bi bi-exclamation-triangle me-1"></i>Quá hạn
+                        </span>
+                    }
+                </div>
+                <div class="d-flex align-items-center gap-3 small text-muted flex-wrap">
+                    <span>
+                        <i class="bi bi-cart3 me-1"></i>
+                        Đơn nhập:
+                        <a asp-controller="PurchaseOrder" asp-action="Details" asp-route-id="@debt.PurchaseOrderId"
+                           class="text-primary text-decoration-none fw-medium">@debt.PurchaseOrderCode</a>
+                    </span>
+                    <span class="text-muted">
+                        <i class="bi bi-calendar3 me-1"></i>@debt.CreatedOn.ToString(ViewConstants.DefaultDateFormat)
+                    </span>
+                    @if (debt.DueDate.HasValue)
+                    {
+                        <span class="@(isOverdue ? "text-danger fw-bold" : "text-muted")">
+                            <i class="bi bi-alarm me-1"></i>Hạn: @debt.DueDate.Value.ToString(ViewConstants.DefaultDateFormat)
+                        </span>
+                    }
+                </div>
+            </div>
+
+            @* Amounts row *@
+            <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+                <div class="d-flex gap-1 align-items-baseline">
+                    <span class="text-muted small">Tổng:</span>
+                    <span class="fw-medium">@debt.TotalAmount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
+                </div>
+                <span class="text-muted">·</span>
+                <div class="d-flex gap-1 align-items-baseline">
+                    <span class="text-muted small">Đã trả:</span>
+                    <span class="fw-medium text-success">@debt.PaidAmount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
+                </div>
+                <span class="text-muted">·</span>
+                <div class="d-flex gap-1 align-items-baseline">
+                    <span class="text-muted small">Còn lại:</span>
+                    <span class="fw-bold @(debt.RemainingAmount > 0 ? "text-danger" : "text-success")">
+                        @debt.RemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)
+                    </span>
+                </div>
+                @if (!isPaid)
+                {
+                    <div class="ms-auto">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger rounded-3 btn-pay-single"
+                                data-debt-id="@debt.Id"
+                                data-remaining="@debt.RemainingAmount"
+                                data-code="@debt.Code">
+                            <i class="bi bi-cash-coin me-1"></i>Trả khoản này
+                        </button>
+                    </div>
+                }
+            </div>
+
+            @* Payment history *@
+            @if (debt.Payments.Any())
+            {
+                <div class="mt-2 ps-3 border-start border-2 border-light">
+                    @foreach (var p in debt.Payments)
+                    {
+                        var method = (PaymentMethod)p.PaymentMethod;
+                        <div class="d-flex align-items-center justify-content-between py-1 small">
+                            <div class="d-flex align-items-center gap-2 text-muted">
+                                <i class="bi @(method == PaymentMethod.BankTransfer ? "bi-bank" : "bi-cash-stack")"></i>
+                                <span class="font-monospace">@p.Code</span>
+                                <span>@p.PaidOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                                @if (!string.IsNullOrEmpty(p.Note))
+                                {
+                                    <span class="fst-italic">— @p.Note</span>
+                                }
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold text-danger">−@p.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
+                                <a asp-action="Receipt" asp-route-paymentId="@p.Id" target="_blank"
+                                   class="btn btn-xs btn-outline-secondary border-0" title="In phiếu chi">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@* ── Tiền ứng trước chưa áp dụng ── *@
+@if (Model.AdvancePayments.Any())
+{
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold text-uppercase small text-muted">
+                <i class="bi bi-piggy-bank me-2 text-warning"></i>Tiền ứng trước chưa sử dụng
+            </h6>
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle fw-normal">
+                @Model.AdvanceBalance.ToString(ViewConstants.CurrencyDisplayFormat)
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="bg-light bg-opacity-50">
+                    <tr>
+                        <th class="ps-4 border-0 small text-uppercase text-muted fw-bold">Mã phiếu</th>
+                        <th class="border-0 small text-uppercase text-muted fw-bold">Ngày ứng</th>
+                        <th class="border-0 small text-uppercase text-muted fw-bold">Hình thức</th>
+                        <th class="border-0 small text-uppercase text-muted fw-bold">Ghi chú</th>
+                        <th class="text-end border-0 small text-uppercase text-muted fw-bold pe-4">Số tiền</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var adv in Model.AdvancePayments)
+                    {
+                        var method = (PaymentMethod)adv.PaymentMethod;
+                        <tr>
+                            <td class="ps-4 fw-medium font-monospace small">@adv.Code</td>
+                            <td class="text-muted small">@adv.PaidOn.ToString(ViewConstants.DefaultDateTimeFormat)</td>
+                            <td class="small">
+                                <i class="bi @(method == PaymentMethod.BankTransfer ? "bi-bank" : "bi-cash-stack") me-1 text-muted"></i>
+                                @method.GetDisplayText()
+                            </td>
+                            <td class="text-muted small fst-italic">@adv.Note</td>
+                            <td class="text-end fw-bold text-warning pe-4">
+                                @adv.Amount.ToString(ViewConstants.CurrencyDisplayFormat)
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@* ── Lịch sử giao dịch gần nhất ── *@
+@if (Model.RecentPayments.Any())
+{
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+            <h6 class="mb-0 fw-bold text-uppercase small text-muted">
+                <i class="bi bi-clock-history me-2"></i>Lịch sử giao dịch gần nhất
+            </h6>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="bg-light bg-opacity-50">
+                    <tr>
+                        <th class="ps-4 border-0 small text-uppercase text-muted fw-bold">Mã phiếu chi</th>
+                        <th class="border-0 small text-uppercase text-muted fw-bold">Ngày chi</th>
+                        <th class="border-0 small text-uppercase text-muted fw-bold">Hình thức</th>
+                        <th class="border-0 small text-uppercase text-muted fw-bold">Loại</th>
+                        <th class="border-0 small text-uppercase text-muted fw-bold">Ghi chú</th>
+                        <th class="text-end border-0 small text-uppercase text-muted fw-bold">Số tiền</th>
+                        <th class="border-0 pe-4" style="width:60px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.RecentPayments)
+                    {
+                        var method = (PaymentMethod)p.PaymentMethod;
+                        var type = (PaymentType)p.PaymentType;
+                        <tr>
+                            <td class="ps-4 fw-medium font-monospace small">@p.Code</td>
+                            <td class="text-muted small">@p.PaidOn.ToString(ViewConstants.DefaultDateTimeFormat)</td>
+                            <td class="small">
+                                <i class="bi @(method == PaymentMethod.BankTransfer ? "bi-bank" : "bi-cash-stack") me-1 text-muted"></i>
+                                @method.GetDisplayText()
+                            </td>
+                            <td>
+                                <span class="badge @type.GetDisplayColor() fw-normal small">@type.GetDisplayText()</span>
+                            </td>
+                            <td class="text-muted small fst-italic">@p.Note</td>
+                            <td class="text-end fw-bold text-danger">
+                                −@p.Amount.ToString(ViewConstants.CurrencyDisplayFormat)
+                            </td>
+                            <td class="text-end pe-4">
+                                <a asp-action="Receipt" asp-route-paymentId="@p.Id" target="_blank"
+                                   class="btn btn-xs btn-outline-secondary border-0" title="In phiếu chi">
+                                    <i class="bi bi-printer"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@* ── Modal: Trả tiền (thanh toán 1 phiếu / FIFO) ── *@
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-danger text-white pt-4 px-4 pb-3">
+                <h5 class="modal-title fw-bold" id="paymentModalTitle">
+                    <i class="bi bi-cash-coin me-2"></i>Chi tiền — @Model.VendorName
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="paymentForm">
+                <input type="hidden" name="vendorId" value="@Model.VendorId" />
+                <input type="hidden" name="vendorDebtId" id="debtIdInput" value="" />
+                <input type="hidden" name="paymentType" id="paymentTypeInput" value="@((int)PaymentType.VendorDebtPayment)" />
+
+                <div class="modal-body p-4">
+                    <div id="paymentInfo" class="alert alert-danger-subtle border border-danger-subtle rounded-3 small mb-4">
+                        <i class="bi bi-info-circle me-2 text-danger"></i>
+                        Tổng còn phải trả:
+                        <strong class="text-danger">@Model.TotalRemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)</strong>
+                        @if (Model.AdvanceBalance > 0)
+                        {
+                            <span>
+                                · Tiền ứng trước có sẵn:
+                                <strong class="text-warning">@Model.AdvanceBalance.ToString(ViewConstants.CurrencyDisplayFormat)</strong>
+                            </span>
+                        }
+                        <br />
+                        <span class="text-muted">Tiền sẽ được phân bổ FIFO vào các phiếu nợ cũ nhất. Tiền dư lưu làm ứng trước.</span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">
+                                Số tiền chi <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group input-group-lg bg-light rounded-3 border">
+                                <input class="form-control bg-transparent border-0 fw-bold text-danger no-additional-element no-hint"
+                                       type="number" step="1000" name="amount" id="paymentAmount"
+                                       value="@Model.TotalRemainingAmount.DisplayCurrency()" required min="1" />
+                                <span class="input-group-text bg-transparent border-0 fw-bold text-danger">đ</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Phương thức</label>
+                            <div class="d-flex gap-2">
+                                <input type="radio" class="btn-check" name="paymentMethod"
+                                       id="methodCash" value="@((int)PaymentMethod.Cash)" checked>
+                                <label class="btn btn-outline-secondary w-100 py-2 rounded-3" for="methodCash">
+                                    <i class="bi bi-cash-stack me-1"></i>Tiền mặt
+                                </label>
+                                <input type="radio" class="btn-check" name="paymentMethod"
+                                       id="methodBank" value="@((int)PaymentMethod.BankTransfer)">
+                                <label class="btn btn-outline-secondary w-100 py-2 rounded-3" for="methodBank">
+                                    <i class="bi bi-bank me-1"></i>Chuyển khoản
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Ngày chi</label>
+                            <input type="datetime-local" class="form-control rounded-3" name="paidOn"
+                                   value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Ghi chú</label>
+                            <textarea class="form-control rounded-3" name="note" rows="2"
+                                      placeholder="VD: Chuyển khoản cho NCC @Model.VendorName..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light border-top-0 p-4">
+                    <button type="button" class="btn btn-light px-4 rounded-3 border" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" id="btnSubmitPayment" class="btn btn-danger px-4 rounded-3 shadow-sm fw-bold">
+                        <i class="bi bi-check2-circle me-1"></i>Xác nhận chi tiền
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@* ── Modal: Ứng trước NCC ── *@
+<div class="modal fade" id="advancePaymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-warning text-dark pt-4 px-4 pb-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-piggy-bank me-2"></i>Ứng trước — @Model.VendorName
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="advanceForm">
+                <input type="hidden" name="vendorId" value="@Model.VendorId" />
+
+                <div class="modal-body p-4">
+                    <div class="alert alert-warning border-0 rounded-3 small mb-4">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Tiền ứng trước sẽ được lưu và tự động áp dụng vào phiếu nợ tiếp theo của NCC này.
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">
+                                Số tiền ứng <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group input-group-lg bg-light rounded-3 border">
+                                <input class="form-control bg-transparent border-0 fw-bold text-warning no-additional-element no-hint"
+                                       type="number" step="1000" name="amount" required min="1" />
+                                <span class="input-group-text bg-transparent border-0 fw-bold text-warning">đ</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Phương thức</label>
+                            <div class="d-flex gap-2">
+                                <input type="radio" class="btn-check" name="paymentMethod"
+                                       id="advMethodCash" value="@((int)PaymentMethod.Cash)" checked>
+                                <label class="btn btn-outline-secondary w-100 py-2 rounded-3" for="advMethodCash">
+                                    <i class="bi bi-cash-stack me-1"></i>Tiền mặt
+                                </label>
+                                <input type="radio" class="btn-check" name="paymentMethod"
+                                       id="advMethodBank" value="@((int)PaymentMethod.BankTransfer)">
+                                <label class="btn btn-outline-secondary w-100 py-2 rounded-3" for="advMethodBank">
+                                    <i class="bi bi-bank me-1"></i>Chuyển khoản
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Ngày ứng</label>
+                            <input type="datetime-local" class="form-control rounded-3" name="paidOn"
+                                   value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" required />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-2">Ghi chú</label>
+                            <textarea class="form-control rounded-3" name="note" rows="2"
+                                      placeholder="VD: Ứng trước cho đơn nhập tháng 5..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light border-top-0 p-4">
+                    <button type="button" class="btn btn-light px-4 rounded-3 border" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" id="btnSubmitAdvance" class="btn btn-warning px-4 rounded-3 shadow-sm fw-bold text-dark">
+                        <i class="bi bi-check2-circle me-1"></i>Xác nhận ứng tiền
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script type="module">
+        import { toast } from "/modules/modals.js";
+
+        (function () {
+            // ── Thanh toán (trả nợ) ──────────────────────────────────────────
+            const paymentForm = document.getElementById('paymentForm');
+            const debtIdInput = document.getElementById('debtIdInput');
+            const paymentTypeInput = document.getElementById('paymentTypeInput');
+            const paymentAmount = document.getElementById('paymentAmount');
+            const paymentModalTitle = document.getElementById('paymentModalTitle');
+            const btnSubmitPayment = document.getElementById('btnSubmitPayment');
+            const totalRemaining = @Model.TotalRemainingAmount.ToString("#0");
+
+            // Trả khoản nợ cụ thể
+            document.querySelectorAll('.btn-pay-single').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const debtId = this.dataset.debtId;
+                    const remaining = parseFloat(this.dataset.remaining);
+                    const code = this.dataset.code;
+
+                    debtIdInput.value = debtId;
+                    paymentAmount.value = remaining;
+                    paymentModalTitle.innerHTML = `<i class="bi bi-cash-coin me-2"></i>Chi tiền — Phiếu ${code}`;
+
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('paymentModal')).show();
+                });
+            });
+
+            // Trả tổng FIFO (mở từ nút header)
+            document.querySelector('[data-bs-target="#paymentModal"]')?.addEventListener('click', function () {
+                debtIdInput.value = '';
+                paymentAmount.value = totalRemaining;
+                paymentModalTitle.innerHTML = `<i class="bi bi-cash-coin me-2"></i>Chi tiền — @Html.Raw(Model.VendorName)`;
+            });
+
+            $(paymentForm).on('submit', async function (e) {
+                e.preventDefault();
+                if (!paymentForm.checkValidity()) { paymentForm.reportValidity(); return; }
+
+                btnSubmitPayment.disabled = true;
+                const orig = btnSubmitPayment.innerHTML;
+                btnSubmitPayment.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+
+                const hasDebtId = debtIdInput.value !== '';
+                const url = hasDebtId
+                    ? '@Url.Action("RecordPayment")'
+                    : '@Url.Action("RecordFlexiblePayment")';
+
+                try {
+                    const res = await $.ajax({ url, type: 'POST', data: $(paymentForm).serialize() });
+                    if (res.success) {
+                        toast('Thành công', res.message, 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        toast('Lỗi', res.message, 'error');
+                        btnSubmitPayment.disabled = false;
+                        btnSubmitPayment.innerHTML = orig;
+                    }
+                } catch {
+                    toast('Lỗi', 'Có lỗi xảy ra trong quá trình xử lý.', 'error');
+                    btnSubmitPayment.disabled = false;
+                    btnSubmitPayment.innerHTML = orig;
+                }
+            });
+
+            // ── Ứng trước ────────────────────────────────────────────────────
+            const advanceForm = document.getElementById('advanceForm');
+            const btnSubmitAdvance = document.getElementById('btnSubmitAdvance');
+
+            $(advanceForm).on('submit', async function (e) {
+                e.preventDefault();
+                if (!advanceForm.checkValidity()) { advanceForm.reportValidity(); return; }
+
+                btnSubmitAdvance.disabled = true;
+                const orig = btnSubmitAdvance.innerHTML;
+                btnSubmitAdvance.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang xử lý...';
+
+                try {
+                    const res = await $.ajax({
+                        url: '@Url.Action("RecordAdvance")',
+                        type: 'POST',
+                        data: $(advanceForm).serialize()
+                    });
+                    if (res.success) {
+                        toast('Thành công', res.message, 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        toast('Lỗi', res.message, 'error');
+                        btnSubmitAdvance.disabled = false;
+                        btnSubmitAdvance.innerHTML = orig;
+                    }
+                } catch {
+                    toast('Lỗi', 'Có lỗi xảy ra trong quá trình xử lý.', 'error');
+                    btnSubmitAdvance.disabled = false;
+                    btnSubmitAdvance.innerHTML = orig;
+                }
+            });
+        })();
+    </script>
+}

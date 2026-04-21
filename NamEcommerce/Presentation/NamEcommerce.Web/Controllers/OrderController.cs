@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Web.Constants;
+using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -83,7 +84,7 @@ public sealed class OrderController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.OrderSuccessMessage] = "Tạo đơn hàng thành công!";
+        TempData[ViewConstants.OrderSuccessMessage] = "Tạo đơn bán thành công!";
         return RedirectToAction(nameof(List));
     }
 
@@ -92,7 +93,7 @@ public sealed class OrderController : BaseAuthorizedController
         var model = await _orderModelFactory.PrepareOrderDetailsModel(id);
         if (model is null)
         {
-            TempData[ViewConstants.OrderErrorMessage] = "Order is not found.";
+            TempData[ViewConstants.OrderErrorMessage] = "Không tìm thấy đơn bán.";
             return RedirectToAction(nameof(List));
         }
 
@@ -110,10 +111,10 @@ public sealed class OrderController : BaseAuthorizedController
             Id = model.OrderId
         });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
 
         if (!order.CanLockOrder)
-            return Json(new { success = false, message = "Đơn hàng không thể khóa lúc này." });
+            return Json(new { success = false, message = "Đơn bán không thể khóa lúc này." });
 
         var result = await _mediator.Send(new LockOrderCommand(model.OrderId, model.Reason!));
 
@@ -131,7 +132,7 @@ public sealed class OrderController : BaseAuthorizedController
 
         var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
 
         if (!order.CanUpdateOrderItems)
             return Json(new { success = false, message = "Không thể cập nhật hàng hóa." });
@@ -162,7 +163,7 @@ public sealed class OrderController : BaseAuthorizedController
 
         var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
 
         var orderItem = order.Items.FirstOrDefault(orderItem => orderItem.Id == model.ItemId);
         if (orderItem is null)
@@ -192,7 +193,7 @@ public sealed class OrderController : BaseAuthorizedController
 
         var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
 
         var orderItem = order.Items.FirstOrDefault(orderItem => orderItem.Id == model.ItemId);
         if (orderItem is null)
@@ -223,10 +224,10 @@ public sealed class OrderController : BaseAuthorizedController
             Id = model.OrderId
         });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
 
         if (!order.CanUpdateInfo)
-            return Json(new { success = false, message = "Đơn hàng không thể thay đổi lúc này." });
+            return Json(new { success = false, message = "Đơn bán không thể thay đổi lúc này." });
 
         var result = await _mediator.Send(new UpdateOrderNoteCommand(model.OrderId, model.Note!));
 
@@ -246,10 +247,10 @@ public sealed class OrderController : BaseAuthorizedController
             Id = model.OrderId
         });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
 
         if (!order.CanUpdateInfo)
-            return Json(new { success = false, message = "Đơn hàng không thể thay đổi lúc này." });
+            return Json(new { success = false, message = "Đơn bán không thể thay đổi lúc này." });
 
         if ((model.OrderDiscount ?? 0) > order.OrderSubTotal)
             return Json(new { success = false, message = "Giảm giá không được lớn hơn tổng đơn." });
@@ -273,10 +274,10 @@ public sealed class OrderController : BaseAuthorizedController
             Id = model.OrderId
         });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn hàng." });
+            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
 
         if (!order.CanUpdateInfo)
-            return Json(new { success = false, message = "Đơn hàng không thể thay đổi lúc này." });
+            return Json(new { success = false, message = "Đơn bán không thể thay đổi lúc này." });
 
         var result = await _mediator.Send(new UpdateOrderShippingCommand(model.OrderId, model.ExpectedShippingDate, model.Address));
 
@@ -284,5 +285,17 @@ public sealed class OrderController : BaseAuthorizedController
             return Json(new { success = false, message = result.ErrorMessage });
 
         return Json(new { success = true, message = string.Empty });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var resultDto = await _mediator.Send(new DeleteOrderCommand(id));
+        if (!resultDto.Success)
+            TempData[ViewConstants.OrderErrorMessage] = resultDto.ErrorMessage;
+        else
+            TempData[ViewConstants.OrderSuccessMessage] = "Xóa đơn bán thành công!";
+
+        return RedirectToAction(nameof(List));
     }
 }

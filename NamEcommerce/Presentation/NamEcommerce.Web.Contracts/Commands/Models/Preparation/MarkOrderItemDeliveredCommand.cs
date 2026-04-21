@@ -8,4 +8,4 @@ public sealed record MarkOrderItemDeliveredCommand(
     Guid OrderItemId, 
     byte[] PictureData, 
     string FileName, 
-    string ContentType) : IRequest<CommonResultModel>;
+    string ContentType) : IRequest<CommonActionResultModel>;
