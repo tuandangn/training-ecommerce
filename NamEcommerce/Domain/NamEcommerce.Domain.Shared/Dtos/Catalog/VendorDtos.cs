@@ -14,11 +14,11 @@ public abstract record BaseVendorDto
     public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Name))
-            throw new VendorDataIsInvalidException("Vendor name is not empty");
+            throw new VendorDataIsInvalidException("Tên nhà cung cấp không được để trống");
         if (string.IsNullOrEmpty(PhoneNumber))
-            throw new VendorDataIsInvalidException("Vendor phone number is not empty");
+            throw new VendorDataIsInvalidException("Số điện thoại nhà cung cấp không được để trống");
         if (!Regex.IsMatch(PhoneNumber, @"0\d{9,10}"))
-            throw new VendorDataIsInvalidException("Vendor phone number is invalid");
+            throw new VendorDataIsInvalidException("Số điện thoại nhà cung cấp không hợp lệ");
     }
 }
 

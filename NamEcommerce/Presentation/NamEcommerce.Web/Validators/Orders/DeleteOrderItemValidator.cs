@@ -1,16 +1,18 @@
-﻿using FluentValidation;
+using FluentValidation;
+using Microsoft.Extensions.Localization;
 using NamEcommerce.Web.Models.Orders;
+using NamEcommerce.Web.Resources;
 
 namespace NamEcommerce.Web.Validators.Orders;
 
 public sealed class DeleteOrderItemValidator : AbstractValidator<DeleteOrderItemModel>
 {
-    public DeleteOrderItemValidator()
+    public DeleteOrderItemValidator(IStringLocalizer<ValidationResource> localizer)
     {
         RuleFor(m => m.OrderId)
-            .NotEmpty().WithMessage("Không tìm thấy order ID.");
+            .NotEmpty().WithMessage(m => localizer["Order.Id.NotFound"]);
 
         RuleFor(m => m.ItemId)
-            .NotEmpty().WithMessage("Không tìm thấy order item ID.");
+            .NotEmpty().WithMessage(m => localizer["Order.ItemId.NotFound"]);
     }
 }

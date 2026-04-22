@@ -43,20 +43,19 @@ function enableSubmitButtons(form, enabled) {
 
 $.fn.focusEnd = function () {
     return this.each(function () {
-        var el = this;
-        var len = el.value.length;
-
-        // Focus trước
-        el.focus();
-
-        // Nếu trình duyệt hỗ trợ setSelectionRange
-        if (el.setSelectionRange) {
-            el.setSelectionRange(len, len);
-        } else {
-            // Support cho các trình duyệt cũ hoặc các trường hợp đặc biệt
-            $(el).val($(el).val());
-        }
+        focusEnd(this);
     });
+};
+function focusEnd(el) {
+    const len = el.value.length;
+    el.focus();
+    if (el.setSelectionRange) {
+        el.setSelectionRange(len, len);
+    } else {
+        const value = el.value;
+        el.value = '';
+        el.value = value;
+    }
 };
 
 function parseNumber(value, defaultVal = 0) {

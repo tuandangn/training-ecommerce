@@ -23,16 +23,20 @@
 {
     @foreach (var preparationItem in Model)
     {
+        var remainingNeeded = preparationItem.TotalQuantity - preparationItem.DeliveredQuantity;
+        var hasStockShortage = remainingNeeded > preparationItem.StockQuantityAvailable;
+        var shortageQuantity = hasStockShortage ? remainingNeeded - preparationItem.StockQuantityAvailable : 0m;
+
         <div class="content-card mb-4 overflow-hidden">
             <div class="card-header bg-light border-bottom-0 py-3 px-4 d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 fw-bold">
                     <i class="bi bi-box-seam me-2 text-primary"></i>@preparationItem.ProductName
                 </h5>
-                <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
                     <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">
                         Đã giao: @preparationItem.DeliveredQuantity.DisplayQuantity() / @preparationItem.TotalQuantity.DisplayQuantity()
                     </span>
-                    <span class="badge bg-info px-3 py-2 fs-6 rounded-pill text-dark" title="Tồn kho khả dụng">
+                    <span class="badge @(hasStockShortage ? "bg-danger" : "bg-info text-dark") px-3 py-2 fs-6 rounded-pill" title="Tồn kho khả dụng">
                         <i class="bi bi-box-seam me-1"></i> Tồn kho: @preparationItem.StockQuantityAvailable.DisplayQuantity()
                     </span>
                     @if (preparationItem.EarliestShippingDate.HasValue && preparationItem.EarliestShippingDate.Value != default)
@@ -41,6 +45,16 @@
                         <span class="small @(isGroupOverdue ? "text-danger fw-bold" : "text-muted")">
                             <i class="bi bi-calendar-event me-1"></i>Giao sớm nhất: @preparationItem.EarliestShippingDate.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat)
                         </span>
+                    }
+                    @if (hasStockShortage)
+                    {
+                        <button class="btn btn-sm btn-warning btnQuickCreatePurchaseOrder"
+                                data-product-id="@preparationItem.ProductId"
+                                data-product-name="@preparationItem.ProductName"
+                                data-shortage-quantity="@shortageQuantity"
+                                title="Tồn kho không đủ — tạo đơn nhập hàng nhanh">
+                            <i class="bi bi-cart-plus me-1"></i>Tạo đơn nhập
+                        </button>
                     }
                 </div>
             </div>

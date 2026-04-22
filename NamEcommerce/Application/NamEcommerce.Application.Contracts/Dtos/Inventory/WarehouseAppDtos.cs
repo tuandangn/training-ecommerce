@@ -18,11 +18,11 @@ public abstract record BaseWarehouseAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (string.IsNullOrEmpty(Code))
-            return (false, "Code cannot be empty");
+            return (false, "Mã kho không được để trống");
         if (string.IsNullOrEmpty(Name))
-            return (false, "Name cannot be empty");
+            return (false, "Tên kho không được để trống");
         if (!string.IsNullOrEmpty(PhoneNumber) && !Regex.IsMatch(PhoneNumber, @"0\d{9,10}"))
-            return (false, "Phone number is invalid");
+            return (false, "Số điện thoại không hợp lệ");
         return (true, string.Empty);
     }
 }

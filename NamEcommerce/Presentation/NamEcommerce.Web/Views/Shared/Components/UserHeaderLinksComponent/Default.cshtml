@@ -1,27 +1,28 @@
-﻿@model UserHeaderLinksModel
+@model UserHeaderLinksModel
 @inject IWebHelper WebHelper
 
 @if (WebHelper.IsLoginPage() || WebHelper.IsRegisterPage())
 {
     return;
 }
-<ul class="navbar-nav">
+<div class="topbar-actions">
     @if (Model.IsAuthenticated)
     {
-        <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="otherMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-person-circle"></i>
-                @Model.Username
+        <div class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="color: inherit; text-decoration: none;">
+                <div class="user-avatar bg-primary text-white" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                    @(string.IsNullOrEmpty(Model.FullName) ? Model.Username?.Substring(0, 2).ToUpper() : string.Join("", Model.FullName.Split(' ').Select(n => n[0])).ToUpper().Substring(0, Math.Min(2, Model.FullName.Split(' ').Length)))
+                </div>
             </a>
-            <ul class="dropdown-menu" aria-labelledby="otherMenuItemsDropdown">
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                <li><h6 class="dropdown-header">@Model.Username</h6></li>
+                <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" asp-controller="User" asp-action="Logout">Đăng xuất</a></li>
             </ul>
-        </li>
+        </div>
     }
     else
     {
-        <li class="nav-item">
-            <a class="nav-link" asp-controller="User" asp-action="Login">Đăng nhập</a>
-        </li>
+        <a class="btn btn-link text-decoration-none" asp-controller="User" asp-action="Login">Đăng nhập</a>
     }
-</ul>
+</div>

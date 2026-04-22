@@ -1,13 +1,18 @@
-﻿using FluentValidation;
+using FluentValidation;
+using Microsoft.Extensions.Localization;
 using NamEcommerce.Web.Models.Catalog;
+using NamEcommerce.Web.Resources;
 
 namespace NamEcommerce.Web.Validators.PurchaseOrders;
 
 public sealed class CreatePurchaseOrderValidator : AbstractValidator<CreatePurchaseOrderModel>
 {
-    public CreatePurchaseOrderValidator()
+    public CreatePurchaseOrderValidator(IStringLocalizer<ValidationResource> localizer)
     {
-        RuleFor(p => p.VendorId).NotEmpty().WithMessage("Vui lòng chọn nhà cung cấp.");
-        RuleFor(p => p.ExpectedDeliveryDate).GreaterThanOrEqualTo(DateTime.Now).WithMessage("Ngày dự kiến phải lớn hơn hiện tại.");
+        RuleFor(p => p.VendorId)
+            .NotEmpty().WithMessage(p => localizer["PurchaseOrder.VendorId.Required"]);
+
+        RuleFor(p => p.ExpectedDeliveryDate)
+            .GreaterThanOrEqualTo(DateTime.Now).WithMessage(p => localizer["PurchaseOrder.ExpectedDate.Invalid"]);
     }
 }

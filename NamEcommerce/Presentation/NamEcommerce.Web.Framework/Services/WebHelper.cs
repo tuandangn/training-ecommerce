@@ -10,7 +10,6 @@ public sealed class WebHelper(IHttpContextAccessor httpContextAccessor, UrlEncod
     public string EncodeUrlComponent(string? urlComponent)
         => string.IsNullOrEmpty(urlComponent) ? string.Empty : urlEncoder.Encode(urlComponent);
     
-
     public bool IsMatchRouteInfo(string controller, string? action = null)
     {
         var httpContext = httpContextAccessor.HttpContext;

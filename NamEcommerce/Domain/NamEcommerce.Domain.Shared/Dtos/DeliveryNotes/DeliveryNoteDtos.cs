@@ -71,19 +71,19 @@ public sealed record CreateDeliveryNoteDto
     public void Verify()
     {
         if (OrderId == Guid.Empty)
-            throw new ArgumentException("OrderId is required");
+            throw new ArgumentException("Mã đơn hàng không được để trống");
         if (WarehouseId == Guid.Empty)
-            throw new ArgumentException("WarehouseId is required");
+            throw new ArgumentException("Mã kho không được để trống");
         if (string.IsNullOrEmpty(ShippingAddress))
-            throw new ArgumentException("ShippingAddress is required");
+            throw new ArgumentException("Địa chỉ giao hàng không được để trống");
         if (Items == null || !Items.Any())
-            throw new ArgumentException("At least one item is required");
+            throw new ArgumentException("Phiếu giao hàng phải có ít nhất một mặt hàng");
         if (Items.Any(i => i.Quantity <= 0))
-            throw new ArgumentException("Quantity must be greater than 0");
+            throw new ArgumentException("Số lượng phải lớn hơn 0");
         if (Surcharge < 0)
-            throw new ArgumentException("Surcharge cannot be negative");
+            throw new ArgumentException("Phụ phí không được âm");
         if (AmountToCollect < 0)
-            throw new ArgumentException("Amount to collect cannot be negative");
+            throw new ArgumentException("Số tiền thu không được âm");
     }
 }
 

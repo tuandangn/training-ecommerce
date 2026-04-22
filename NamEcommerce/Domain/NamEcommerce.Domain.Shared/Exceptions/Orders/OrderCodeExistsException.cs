@@ -1,5 +1,6 @@
 ﻿namespace NamEcommerce.Domain.Shared.Exceptions.Orders;
 
 [Serializable]
-public sealed class OrderCodeExistsException(string code) : Exception($"Order with code '{code}' exists");
+public sealed class OrderCodeExistsException(string code)  : NamEcommerceDomainException("Error.OrderCodeExistsException", code);
+
 

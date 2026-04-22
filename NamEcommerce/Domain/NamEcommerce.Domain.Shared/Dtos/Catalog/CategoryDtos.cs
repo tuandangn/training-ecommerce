@@ -12,7 +12,7 @@ public abstract record BaseCategoryDto
     public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Name))
-            throw new CategoryDataIsInvalidException("Category name is not empty");
+            throw new CategoryDataIsInvalidException("Tên danh mục không được để trống");
     }
 }
 

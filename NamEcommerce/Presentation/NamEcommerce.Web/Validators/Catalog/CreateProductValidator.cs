@@ -1,23 +1,25 @@
 using FluentValidation;
+using Microsoft.Extensions.Localization;
 using NamEcommerce.Web.Models.Catalog;
+using NamEcommerce.Web.Resources;
 
 namespace NamEcommerce.Web.Validators.Catalog;
 
 public sealed class CreateProductValidator : AbstractValidator<CreateProductModel>
 {
-    public CreateProductValidator()
+    public CreateProductValidator(IStringLocalizer<ValidationResource> localizer)
     {
         RuleFor(m => m.Name)
-            .NotEmpty().WithMessage("Vui lòng nhập tên hàng hóa")
-            .MaximumLength(200).WithMessage("Độ dài tên hàng hóa phải nhỏ hơn 200 ký tự");
+            .NotEmpty().WithMessage(m => localizer["Product.Name.Required"])
+            .MaximumLength(200).WithMessage(m => localizer["Product.Name.MaxLength"]);
 
         RuleFor(m => m.ShortDesc)
-            .MaximumLength(800).WithMessage("Độ dài mô tả ngắn phải nhỏ hơn 800 ký tự");
+            .MaximumLength(800).WithMessage(m => localizer["Product.ShortDesc.MaxLength"]);
 
         RuleFor(m => m.CostPrice)
-            .GreaterThanOrEqualTo(0).WithMessage("Giá vốn phải lớn hơn hoặc bằng 0");
+            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Product.CostPrice.Invalid"]);
 
         RuleFor(m => m.UnitPrice)
-            .GreaterThanOrEqualTo(0).WithMessage("Giá bán phải lớn hơn hoặc bằng 0");
+            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Product.UnitPrice.Invalid"]);
     }
 }

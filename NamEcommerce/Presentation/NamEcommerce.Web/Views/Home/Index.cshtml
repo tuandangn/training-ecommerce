@@ -1,18 +1,10 @@
 @{
     ViewData["Title"] = "Trang chủ";
 }
+@section TitleSection {
+    <h1 class="topbar-page-title">Dashboard</h1>
+}
 <div class="py-2">
-    <div class="content-card mb-4" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border: none; color: #fff;">
-        <div class="content-card-body d-flex align-items-center gap-4 flex-wrap" style="padding: 2rem 2rem;">
-            <div class="flex-shrink-0 d-none d-md-block">
-                <i class="bi bi-bag-heart-fill" style="font-size: 3.5rem; opacity: 0.9;"></i>
-            </div>
-            <div>
-                <h1 class="fw-bold mb-1" style="color:#fff; font-size: 1.75rem;">Chào mừng đến @Information.Name</h1>
-                <p class="mb-0" style="opacity: 0.85; font-size: 0.95rem;">Hệ thống quản lý bán hàng toàn diện — theo dõi đơn hàng, hàng hóa và kho hàng tại một nơi.</p>
-            </div>
-        </div>
-    </div>
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-4 col-lg-3">
             <a asp-controller="Order" asp-action="List" class="content-card d-block text-decoration-none hover-lift p-3 text-center">

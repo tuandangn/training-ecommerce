@@ -105,7 +105,7 @@ public sealed record Order : AppAggregateEntity
 
         var calculatedSubTotal = OrderSubTotal - orderItem.SubTotal + quantity * unitPrice;
         if (OrderDiscount > calculatedSubTotal)
-            throw new OrderDiscountIsInvalidException("Order discount cannot exceed order sub total.");
+            throw new OrderDiscountIsInvalidException("Chiết khấu không được vượt quá tổng tiền hàng");
 
         orderItem.Update(quantity, unitPrice);
 
@@ -123,7 +123,7 @@ public sealed record Order : AppAggregateEntity
 
         var calculatedSubTotal = OrderSubTotal - orderItem.SubTotal;
         if (OrderDiscount > calculatedSubTotal)
-            throw new OrderDiscountIsInvalidException("Order discount cannot exceed order sub total.");
+            throw new OrderDiscountIsInvalidException("Chiết khấu không được vượt quá tổng tiền hàng");
 
         _orderItems.Remove(orderItem);
 
@@ -143,7 +143,7 @@ public sealed record Order : AppAggregateEntity
             throw new OrderDiscountIsInvalidException("Order discount must greater than or equal to 0.");
 
         if (orderDiscount.Value > OrderSubTotal)
-            throw new OrderDiscountIsInvalidException("Order discount cannot exceed order sub total.");
+            throw new OrderDiscountIsInvalidException("Chiết khấu không được vượt quá tổng tiền hàng");
 
         OrderDiscount = orderDiscount.Value;
         RecalculateTotal();

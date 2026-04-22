@@ -86,7 +86,7 @@ public record Product : AppAggregateEntity
 
         var unitMeassurement = await byIdGetter.GetByIdAsync(unitMeasurementId.Value).ConfigureAwait(false);
         if (unitMeassurement is null)
-            throw new ArgumentException($"Cannot found unit mesuarement with id {unitMeasurementId}", nameof(unitMeasurementId));
+            throw new ArgumentException($"Không tìm thấy đơn vị tính với id {unitMeasurementId}", nameof(unitMeasurementId));
 
         UnitMeasurementId = unitMeasurementId;
     }
@@ -155,10 +155,10 @@ public record Product : AppAggregateEntity
     internal void UpdatePrice(decimal unitPrice, decimal costPrice)
     {
         if (unitPrice < 0)
-            throw new ArgumentOutOfRangeException(nameof(unitPrice), "Unit price cannot be less than 0");
+            throw new ArgumentOutOfRangeException(nameof(unitPrice), "Giá bán không được âm");
 
         if (costPrice < 0)
-            throw new ArgumentOutOfRangeException(nameof(costPrice), "Cost price cannot be less than 0");
+            throw new ArgumentOutOfRangeException(nameof(costPrice), "Giá vốn không được âm");
 
         if (unitPrice == UnitPrice && costPrice == CostPrice)
             return;

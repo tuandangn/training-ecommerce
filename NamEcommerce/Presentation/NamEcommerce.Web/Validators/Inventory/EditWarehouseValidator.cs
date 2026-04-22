@@ -1,23 +1,26 @@
-﻿using FluentValidation;
+using FluentValidation;
+using Microsoft.Extensions.Localization;
 using NamEcommerce.Web.Models.Inventory;
+using NamEcommerce.Web.Resources;
 
 namespace NamEcommerce.Web.Validators;
 
 public sealed class EditWarehouseValidator : AbstractValidator<EditWarehouseModel>
 {
-    public EditWarehouseValidator()
+    public EditWarehouseValidator(IStringLocalizer<ValidationResource> localizer)
     {
         RuleFor(m => m.Code)
-            .NotEmpty().WithMessage("Vui lòng nhập mã kho hàng")
-            .MaximumLength(50).WithMessage("Độ dài mã kho hàng phải nhỏ hơn 50 ký tự");
+            .NotEmpty().WithMessage(m => localizer["Warehouse.Code.Required"])
+            .MaximumLength(50).WithMessage(m => localizer["Warehouse.Code.MaxLength"]);
+
         RuleFor(m => m.Name)
-            .NotEmpty().WithMessage("Vui lòng nhập tên kho hàng")
-            .MaximumLength(200).WithMessage("Độ dài tên kho hàng phải nhỏ hơn 200 ký tự");
+            .NotEmpty().WithMessage(m => localizer["Warehouse.Name.Required"])
+            .MaximumLength(200).WithMessage(m => localizer["Warehouse.Name.MaxLength"]);
 
         RuleFor(m => m.PhoneNumber)
-            .Matches(@"0\d{9,10}").WithMessage("Số điện thoại không đúng");
+            .Matches(@"0\d{9,10}").WithMessage(m => localizer["Warehouse.Phone.Invalid"]);
 
         RuleFor(m => m.Address)
-            .MaximumLength(800).WithMessage("Độ dài địa chỉ phải nhỏ hơn 800 ký tự");
+            .MaximumLength(800).WithMessage(m => localizer["Warehouse.Address.MaxLength"]);
     }
 }

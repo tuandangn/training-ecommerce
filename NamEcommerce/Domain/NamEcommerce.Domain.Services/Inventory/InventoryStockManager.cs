@@ -36,7 +36,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         Guid modifiedByUserId)
     {
         if (newQuantity < 0)
-            throw new InvalidStockOperationException("Stock quantity cannot be negative");
+            throw new InvalidStockOperationException("Số lượng tồn kho không được âm");
 
         var stockList = await _dbContext.GetDataAsync<InventoryStock>();
         var stock = stockList.FirstOrDefault(s => s.ProductId == productId && s.WarehouseId == warehouseId);
@@ -87,10 +87,10 @@ public sealed class InventoryStockManager : IInventoryStockManager
         // #10 Audit Logging
         await _auditLogger.LogStockOperationAsync(
             productId,
-            product?.Name ?? "Unknown",
+            product?.Name ?? "(Không xác định)",
             warehouseId,
-            warehouse?.Name ?? "Unknown",
-            "Adjust",
+            warehouse?.Name ?? "(Không xác định)",
+            "Điều chỉnh",
             Math.Abs(quantityChange),
             quantityBefore,
             stock.QuantityOnHand,
@@ -102,7 +102,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return new StockMovementLogDto(log.Id)
         {
             ProductId = log.ProductId,
-            ProductName = product?.Name ?? "Unknown",
+            ProductName = product?.Name ?? "(Không xác định)",
             MovementType = (int)log.MovementType,
             Quantity = log.Quantity,
             QuantityBefore = log.QuantityBefore,
@@ -115,7 +115,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
     public async Task<StockMovementLogDto?> ReceiveStockAsync(Guid productId, Guid warehouseId, decimal receivedQuantity, string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId)
     {
         if (receivedQuantity <= 0)
-            throw new InvalidStockOperationException("Received quantity must be greater than 0");
+            throw new InvalidStockOperationException("Số lượng nhập kho phải lớn hơn 0");
 
         var stockList = await _dbContext.GetDataAsync<InventoryStock>();
         var stock = stockList.FirstOrDefault(s => s.ProductId == productId && s.WarehouseId == warehouseId);
@@ -129,7 +129,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         // Validate against max stock level if set
         if (stock.MaxStockLevel > 0 && quantityAfter > stock.MaxStockLevel)
             throw new WarehouseCapacityExceededException(
-                $"Receipt would exceed maximum stock level. Max: {stock.MaxStockLevel}, Projected: {quantityAfter}");
+                $"Nhập hàng sẽ vượt mức tồn kho tối đa. Tối đa: {stock.MaxStockLevel}, Dự kiến: {quantityAfter}");
 
         stock.QuantityOnHand = quantityAfter;
         stock.UpdatedOnUtc = DateTime.UtcNow;
@@ -156,7 +156,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return new StockMovementLogDto(log.Id)
         {
             ProductId = log.ProductId,
-            ProductName = product?.Name ?? "Unknown",
+            ProductName = product?.Name ?? "(Không xác định)",
             MovementType = (int)log.MovementType,
             Quantity = log.Quantity,
             QuantityBefore = log.QuantityBefore,
@@ -348,7 +348,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return new StockMovementLogDto(log.Id)
         {
             ProductId = log.ProductId,
-            ProductName = product?.Name ?? "Unknown",
+            ProductName = product?.Name ?? "(Không xác định)",
             MovementType = (int)log.MovementType,
             Quantity = log.Quantity,
             QuantityBefore = log.QuantityBefore,

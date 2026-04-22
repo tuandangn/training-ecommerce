@@ -1,0 +1,37 @@
+﻿@{
+    var controller = Context.Request.RouteValues["controller"]?.ToString();
+
+    var successMessage = TempData[$"Messages.{controller}.Success"] as string;
+    var errorMessage = TempData[$"Messages.{controller}.Error"] as string;
+}
+@if (!string.IsNullOrEmpty(successMessage) || !string.IsNullOrEmpty(errorMessage))
+{
+    <div class="toast-container position-absolute bottom-0 end-0 mb-4 me-4">
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="toast show bg-primary text-light" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <strong class="me-auto">Thành công</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    @successMessage
+                </div>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="toast show bg-danger text-light" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong class="me-auto">Lỗi</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+                <div class="toast-body">
+                    @errorMessage
+                </div>
+            </div>
+        }
+    </div>
+}

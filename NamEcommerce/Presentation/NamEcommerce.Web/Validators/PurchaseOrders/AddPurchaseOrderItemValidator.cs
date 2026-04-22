@@ -1,15 +1,24 @@
-﻿using FluentValidation;
+using FluentValidation;
+using Microsoft.Extensions.Localization;
 using NamEcommerce.Web.Models.PurchaseOrders;
+using NamEcommerce.Web.Resources;
 
 namespace NamEcommerce.Web.Validators.PurchaseOrders;
 
 public sealed class AddPurchaseOrderItemValidator : AbstractValidator<AddPurchaseOrderItemModel>
 {
-    public AddPurchaseOrderItemValidator()
+    public AddPurchaseOrderItemValidator(IStringLocalizer<ValidationResource> localizer)
     {
-        RuleFor(m => m.PurchaseOrderId).NotEmpty().WithMessage("Không tìm thấy đơn hàng nhập.");
-        RuleFor(m => m.ProductId).NotEmpty().WithMessage("Vui lòng chọn hàng hóa.");
-        RuleFor(m => m.UnitCost).GreaterThan(0).WithMessage("Đơn giá phải lớn hơn 0.");
-        RuleFor(m => m.Quantity).GreaterThan(0).WithMessage("Số lượng phải lớn hơn 0.");
+        RuleFor(m => m.PurchaseOrderId)
+            .NotEmpty().WithMessage(m => localizer["PurchaseOrder.Id.NotFound"]);
+
+        RuleFor(m => m.ProductId)
+            .NotEmpty().WithMessage(m => localizer["PurchaseOrder.ProductId.Required"]);
+
+        RuleFor(m => m.UnitCost)
+            .GreaterThan(0).WithMessage(m => localizer["PurchaseOrder.UnitCost.Invalid"]);
+
+        RuleFor(m => m.Quantity)
+            .GreaterThan(0).WithMessage(m => localizer["PurchaseOrder.Quantity.Invalid"]);
     }
 }

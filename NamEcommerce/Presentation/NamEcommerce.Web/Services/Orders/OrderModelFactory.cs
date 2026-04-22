@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -108,6 +109,8 @@ public sealed class OrderModelFactory : IOrderModelFactory
         var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
         foreach (var dn in deliveryNotes)
         {
+            if (dn.Status == (int)DeliveryNoteStatus.Cancelled)
+                continue;
             var dnModel = new OrderDetailsModel.DeliveryNoteBasicModel
             {
                 Id = dn.Id,

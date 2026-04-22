@@ -2,10 +2,11 @@ using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 
 namespace NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 
-public sealed class DeliveryNoteCannotChangeStatusException : Exception
+public sealed class DeliveryNoteCannotChangeStatusException : NamEcommerceDomainException
 {
     public DeliveryNoteCannotChangeStatusException(DeliveryNoteStatus currentStatus, DeliveryNoteStatus newStatus)
-        : base($"Cannot change delivery note status from {currentStatus} to {newStatus}.")
+        : base("Error.DeliveryNoteCannotChangeStatus", currentStatus, newStatus)
     {
     }
 }
+

@@ -13,11 +13,11 @@ public abstract record BaseVendorAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (string.IsNullOrEmpty(Name))
-            return (false, "Name cannot be empty");
+            return (false, "Tên nhà cung cấp không được để trống");
         if (string.IsNullOrEmpty(PhoneNumber))
-            return (false, "Phone nummber cannot be empty.");
+            return (false, "Số điện thoại không được để trống");
         if (!Regex.IsMatch(PhoneNumber, @"0\d{9,10}"))
-            return (false, "Phone number is invalid");
+            return (false, "Số điện thoại không hợp lệ");
         return (true, string.Empty);
     }
 }

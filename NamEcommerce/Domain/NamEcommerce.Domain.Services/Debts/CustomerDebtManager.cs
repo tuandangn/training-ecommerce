@@ -44,8 +44,8 @@ public sealed class CustomerDebtManager(
         var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
         var deliveryNote = await deliveryNoteReader.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
         
-        if (customer == null) throw new ArgumentException("Customer not found");
-        if (deliveryNote == null) throw new ArgumentException("Delivery note not found");
+        if (customer == null) throw new ArgumentException("Khách hàng không tồn tại");
+        if (deliveryNote == null) throw new ArgumentException("Phiếu giao hàng không tồn tại");
 
         var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
         
@@ -87,7 +87,7 @@ public sealed class CustomerDebtManager(
         dto.Verify();
 
         var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
-        if (customer == null) throw new ArgumentException("Customer not found");
+        if (customer == null) throw new ArgumentException("Khách hàng không tồn tại");
 
         var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
         
@@ -188,7 +188,7 @@ public sealed class CustomerDebtManager(
         dto.Verify();
 
         var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
-        if (customer == null) throw new ArgumentException("Customer not found");
+        if (customer == null) throw new ArgumentException("Khách hàng không tồn tại");
 
         // Lấy tất cả debts chưa trả hết, sắp xếp cũ nhất trước (FIFO)
         var pendingDebts = debtReader.DataSource

@@ -1,4 +1,5 @@
 ﻿namespace NamEcommerce.Domain.Shared.Exceptions.Catalog;
 
 [Serializable]
-public sealed class ProductIsNotFoundException(Guid id) : Exception($"Product with id '{id}' is not found");
+public sealed class ProductIsNotFoundException(Guid id)  : NamEcommerceDomainException("Error.ProductIsNotFoundException", id);
+

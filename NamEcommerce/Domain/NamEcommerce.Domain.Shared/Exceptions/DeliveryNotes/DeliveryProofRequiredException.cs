@@ -1,9 +1,10 @@
 namespace NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 
-public sealed class DeliveryProofRequiredException : Exception
+public sealed class DeliveryProofRequiredException : NamEcommerceDomainException
 {
     public DeliveryProofRequiredException()
-        : base("Delivery proof picture is required when marking a delivery note as delivered.")
+        : base("Error.DeliveryProofRequired")
     {
     }
 }
+

@@ -27,6 +27,9 @@
 @using NamEcommerce.Domain.Shared.Enums.Inventory
 @using NamEcommerce.Domain.Shared.Enums.PurchaseOrders
 @using NamEcommerce.Domain.Shared.Enums.Orders
+@using Microsoft.Extensions.Localization
+@using NamEcommerce.Web.Resources
 @inject IInformationService Information
+@inject IStringLocalizer<SharedResource> L
 
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers

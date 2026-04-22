@@ -1,41 +1,37 @@
 @model CreateOrderModel
 @using System.Text.Json
 @{
-    ViewData["Title"] = "Thêm đơn bán";
+    ViewData[ViewConstants.PageTitle] = "Thêm đơn bán";
 }
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
-        <li class="breadcrumb-item"><a asp-action="List" class="text-decoration-none">Đơn bán</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
-    </ol>
-</nav>
-<div class="content-card mb-3">
-    <div class="content-card-header">
-        <div>
-            <h1 class="page-header-title">Thêm đơn bán</h1>
-            <p class="page-header-subtitle">Thêm mới đơn bán hàng</p>
-        </div>
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Thêm mới
+        <span class="text-muted">Đơn bán</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Order" class="text-decoration-none">Đơn bán</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
+            </ol>
+        </nav>
     </div>
-</div>
+}
 <div>
     <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible"></div>
     <form method="post" id="createOrderForm" asp-antiforgery="true">
         <div class="row g-3">
-            <div class="col-lg-8">
-                <div class="content-card">
+            <div class="col-lg-8 order-1 order-lg-0">
+                <div class="content-card h-100">
                     <div class="content-card-header">
-                        <h5>
-                            <i class="bi bi-box-seam me-2 text-primary"></i>
-                            Danh sách hàng hóa
-                        </h5>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
-                                data-bs-target="#addProductModal">
+                        <h5>Danh sách hàng hóa</h5>
+                        <button type="button" class="btn btn-sm bg-light text-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
                             <span class="d-none d-lg-inline">Thêm hàng hóa</span>
                             <span class="d-lg-none">Thêm</span>
                         </button>
                     </div>
-                    <div>
+                    <div class="content-card-body-flush">
                         <div class="table-responsive">
                             <table class="table data-table mb-0" id="orderItemsTable">
                                 <thead>
@@ -97,9 +93,7 @@
                                                 @item.ItemSubTotal.DisplayCurrency()
                                             </td>
                                             <td class="text-end pe-3">
-                                                <button type="button"
-                                                        class="btn-table-action danger border-0 bg-transparent shadow-none"
-                                                        onclick="this.closest('tr').remove(); window.updateGrandTotal();">
+                                                <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </td>
@@ -108,23 +102,6 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="@(Model.Items.Count > 0 ? "" : "d-none") order-summary" id="tableFooter">
-                            <div class="order-summary-row">
-                                <span class="label">Tạm tính</span>
-                                <span class="value" id="subTotal">@Model.OrderSubTotal.DisplayCurrency()</span>
-                            </div>
-                            <div class="order-summary-row">
-                                <span class="label">Giảm giá</span>
-                                <span class="value" id="discountDisplay">-@Model.OrderDiscount.DisplayCurrency()</span>
-                            </div>
-                            <div class="order-summary-row total">
-                                <span class="label">Tổng cộng</span>
-                                <span class="value">
-                                    <span id="grandTotal">@Model.OrderTotal.DisplayCurrency()</span>
-                                </span>
-                            </div>
-                            <div class="currency-hint text-end visible" id="grandTotalHint">@Model.OrderTotal.DisplayVietnameseCurrencyHint()</div>
-                        </div>
                         <div id="noItemsMessage" class="py-4 text-center text-muted" style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
                             Chưa có sản phẩm nào được chọn.
                             <div class="mt-1">
@@ -132,16 +109,53 @@
                             </div>
                         </div>
                     </div>
+                    <div class="content-card-footer bg-white py-2">
+                        <div class="order-summary" id="tableFooter">
+                            <div class="order-summary-row small">
+                                <span class="label">Tạm tính</span>
+                                <span class="value" id="subTotal">@Model.OrderSubTotal.DisplayCurrency()</span>
+                            </div>
+                            <div class="order-summary-row">
+                                <span class="label">Giảm giá</span>
+                                <span class="value" id="discountDisplay">
+                                    @if (Model.OrderDiscount > 0)
+                                    {
+                                        @:-@Model.OrderDiscount.DisplayCurrency()
+                                    }
+                                    else
+                                    {
+                                        @:0 @ViewConstants.DefaultCurrencySymbol
+                                    }
+                                </span>
+                            </div>
+                            <div class="order-summary-row total">
+                                <span class="label">Tổng cộng</span>
+                                <span class="value">
+                                    <span id="grandTotal">@Model.OrderTotal.DisplayCurrency()</span>
+                                </span>
+                            </div>
+                            <div class="currency-hint text-end visible" id="grandTotalHint">
+                                @if (Model.OrderTotal > 0)
+                                {
+                                    @Model.OrderTotal.DisplayVietnameseCurrencyHint()
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="content-card-footer py-2 d-flex align-items-center justify-content-between">
+                        <a asp-action="List" class="btn btn-link text-decoration-none">
+                            <span class="text-muted small">Trở về</span>
+                        </a>
+                        <button type="submit" class="btn btn-primary btnSubmitOrder d-lg-none" disabled>
+                            Tạo đơn
+                        </button>
+                    </div>
                 </div>
             </div>
-
             <div class="col-lg-4">
-                <div class="content-card mb-2">
+                <div class="content-card">
                     <div class="content-card-header">
-                        <h5>
-                            <i class="bi bi-pencil-square me-2 text-primary"></i>
-                            Thông tin đơn bán
-                        </h5>
+                        <h5>Thông tin đơn bán</h5>
                     </div>
                     <div class="content-card-body">
                         <div class="mb-3">
@@ -177,15 +191,17 @@
                             <input type="number" asp-for="OrderDiscount" class="form-control" min="0" placeholder="Nhập giảm giá" disabled />
                             <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
                         </div>
-                        <div class="mb-3">
+                        <div>
                             <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <textarea asp-for="Note" class="form-control" rows="3"
                                       placeholder="Nhập ghi chú..."></textarea>
                             <span asp-validation-for="Note" class="small text-danger"></span>
                         </div>
+                    </div>
+                    <div class="content-card-footer d-none d-lg-block">
                         <div class="d-grid">
-                            <button type="submit" class="btn btn-primary" disabled id="btnSubmitOrder">
-                                <i class="bi bi-check2 me-1"></i>Tạo đơn
+                            <button type="submit" class="btn btn-primary btnSubmitOrder" disabled>
+                                Tạo đơn
                             </button>
                         </div>
                     </div>
@@ -290,13 +306,5 @@
         document.addEventListener('order:itemAdded', () => {
         addProductModal.hide();
         });
-
-        // Remove disabled dynamically if customer & items exist (handled by OrderController.js logic mostly, but let's ensure the selector works)
-        const checkEnableSubmit = () => {
-        let customerId = document.querySelector('input[name="CustomerId"]').value;
-        let itemRows = document.querySelectorAll('#itemsTableBody tr').length;
-        document.getElementById('btnSubmitOrder').disabled = !(customerId && itemRows > 0);
-        };
-        setInterval(checkEnableSubmit, 1000);
     </script>
 }

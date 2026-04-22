@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Login.Username.Required" xml:space="preserve">
+    <value>Vui lòng nhập tên đăng nhập</value>
+  </data>
+  <data name="Login.Password.Required" xml:space="preserve">
+    <value>Vui lòng nhập mật khẩu</value>
+  </data>
+  <data name="Register.Username.Required" xml:space="preserve">
+    <value>Vui lòng nhập tên đăng nhập</value>
+  </data>
+  <data name="Register.Username.MinLength" xml:space="preserve">
+    <value>Tên đăng nhập phải có ít nhất 6 ký tự</value>
+  </data>
+  <data name="Register.Username.MaxLength" xml:space="preserve">
+    <value>Tên đăng nhập không được vượt quá 100 ký tự</value>
+  </data>
+  <data name="Register.Password.Required" xml:space="preserve">
+    <value>Vui lòng nhập mật khẩu</value>
+  </data>
+  <data name="Register.Password.MinLength" xml:space="preserve">
+    <value>Mật khẩu phải có ít nhất 6 ký tự</value>
+  </data>
+  <data name="Register.ConfirmPassword.Required" xml:space="preserve">
+    <value>Vui lòng nhập xác nhận mật khẩu</value>
+  </data>
+  <data name="Register.ConfirmPassword.NotMatch" xml:space="preserve">
+    <value>Mật khẩu không trùng khớp</value>
+  </data>
+  <data name="Register.Fullname.Required" xml:space="preserve">
+    <value>Vui lòng nhập họ tên</value>
+  </data>
+  <data name="Register.Fullname.MaxLength" xml:space="preserve">
+    <value>Họ tên không được vượt quá 100 ký tự</value>
+  </data>
+  <data name="Register.Phone.Required" xml:space="preserve">
+    <value>Vui lòng nhập số điện thoại</value>
+  </data>
+  <data name="Register.Phone.Invalid" xml:space="preserve">
+    <value>Số điện thoại không hợp lệ</value>
+  </data>
+  <data name="Register.Address.MaxLength" xml:space="preserve">
+    <value>Địa chỉ không được vượt quá 300 ký tự</value>
+  </data>
+  <data name="Category.Name.Required" xml:space="preserve">
+    <value>Vui lòng nhập tên danh mục</value>
+  </data>
+  <data name="Category.Name.MaxLength" xml:space="preserve">
+    <value>Tên danh mục không được quá 200 ký tự</value>
+  </data>
+  <data name="Product.Name.Required" xml:space="preserve">
+    <value>Vui lòng nhập tên hàng hóa</value>
+  </data>
+  <data name="Product.Name.MaxLength" xml:space="preserve">
+    <value>Tên hàng hóa không được quá 200 ký tự</value>
+  </data>
+  <data name="Product.ShortDesc.MaxLength" xml:space="preserve">
+    <value>Mô tả ngắn không được quá 800 ký tự</value>
+  </data>
+  <data name="Product.CostPrice.Invalid" xml:space="preserve">
+    <value>Giá vốn phải lớn hơn hoặc bằng 0</value>
+  </data>
+  <data name="Product.UnitPrice.Invalid" xml:space="preserve">
+    <value>Giá bán phải lớn hơn hoặc bằng 0</value>
+  </data>
+  <data name="UnitMeasurement.Name.Required" xml:space="preserve">
+    <value>Vui lòng nhập tên đơn vị</value>
+  </data>
+  <data name="UnitMeasurement.Name.MaxLength" xml:space="preserve">
+    <value>Tên đơn vị không được quá 200 ký tự</value>
+  </data>
+  <data name="Vendor.Name.Required" xml:space="preserve">
+    <value>Vui lòng nhập tên nhà cung cấp</value>
+  </data>
+  <data name="Vendor.Name.MaxLength" xml:space="preserve">
+    <value>Tên nhà cung cấp không được quá 200 ký tự</value>
+  </data>
+  <data name="Vendor.Phone.Required" xml:space="preserve">
+    <value>Vui lòng nhập số điện thoại</value>
+  </data>
+  <data name="Vendor.Phone.Invalid" xml:space="preserve">
+    <value>Số điện thoại không hợp lệ</value>
+  </data>
+  <data name="Vendor.Address.MaxLength" xml:space="preserve">
+    <value>Địa chỉ không được quá 400 ký tự</value>
+  </data>
+  <data name="Customer.FullName.Required" xml:space="preserve">
+    <value>Vui lòng nhập tên khách hàng</value>
+  </data>
+  <data name="Customer.FullName.MaxLength" xml:space="preserve">
+    <value>Tên khách hàng không được quá 200 ký tự</value>
+  </data>
+  <data name="Customer.Address.Required" xml:space="preserve">
+    <value>Vui lòng nhập địa chỉ</value>
+  </data>
+  <data name="Customer.Address.MaxLength" xml:space="preserve">
+    <value>Địa chỉ không được quá 500 ký tự</value>
+  </data>
+  <data name="Customer.Phone.Required" xml:space="preserve">
+    <value>Vui lòng nhập số điện thoại</value>
+  </data>
+  <data name="Customer.Phone.Invalid" xml:space="preserve">
+    <value>Số điện thoại không hợp lệ</value>
+  </data>
+  <data name="Warehouse.Code.Required" xml:space="preserve">
+    <value>Vui lòng nhập mã kho hàng</value>
+  </data>
+  <data name="Warehouse.Code.MaxLength" xml:space="preserve">
+    <value>Mã kho hàng không được quá 50 ký tự</value>
+  </data>
+  <data name="Warehouse.Name.Required" xml:space="preserve">
+    <value>Vui lòng nhập tên kho hàng</value>
+  </data>
+  <data name="Warehouse.Name.MaxLength" xml:space="preserve">
+    <value>Tên kho hàng không được quá 200 ký tự</value>
+  </data>
+  <data name="Warehouse.Phone.Invalid" xml:space="preserve">
+    <value>Số điện thoại không hợp lệ</value>
+  </data>
+  <data name="Warehouse.Address.MaxLength" xml:space="preserve">
+    <value>Địa chỉ không được quá 800 ký tự</value>
+  </data>
+  <data name="Order.CustomerId.Required" xml:space="preserve">
+    <value>Vui lòng chọn khách hàng</value>
+  </data>
+  <data name="Order.Discount.Invalid" xml:space="preserve">
+    <value>Chiết khấu phải lớn hơn hoặc bằng 0</value>
+  </data>
+  <data name="Order.ExpectedDate.Invalid" xml:space="preserve">
+    <value>Ngày giao dự kiến phải lớn hơn hoặc bằng hôm nay</value>
+  </data>
+  <data name="Order.ShippingAddress.Required" xml:space="preserve">
+    <value>Vui lòng nhập địa chỉ giao hàng</value>
+  </data>
+  <data name="Order.ShippingAddress.MaxLength" xml:space="preserve">
+    <value>Địa chỉ giao hàng không được quá 1000 ký tự</value>
+  </data>
+  <data name="Order.Items.Required" xml:space="preserve">
+    <value>Vui lòng nhập hàng hóa</value>
+  </data>
+  <data name="Order.Id.NotFound" xml:space="preserve">
+    <value>Không tìm thấy ID đơn hàng</value>
+  </data>
+  <data name="Order.ProductId.Required" xml:space="preserve">
+    <value>Vui lòng chọn hàng hóa</value>
+  </data>
+  <data name="Order.ProductId.NotFound" xml:space="preserve">
+    <value>Không tìm thấy ID hàng hóa</value>
+  </data>
+  <data name="Order.ItemId.NotFound" xml:space="preserve">
+    <value>Không tìm thấy ID hàng hóa</value>
+  </data>
+  <data name="Order.Quantity.Required" xml:space="preserve">
+    <value>Vui lòng nhập số lượng</value>
+  </data>
+  <data name="Order.Quantity.Invalid" xml:space="preserve">
+    <value>Số lượng phải lớn hơn 0</value>
+  </data>
+  <data name="Order.UnitPrice.Required" xml:space="preserve">
+    <value>Vui lòng nhập đơn giá</value>
+  </data>
+  <data name="Order.UnitPrice.Invalid" xml:space="preserve">
+    <value>Đơn giá phải lớn hơn hoặc bằng 0</value>
+  </data>
+  <data name="Order.Note.MaxLength" xml:space="preserve">
+    <value>Ghi chú không được quá 1000 ký tự</value>
+  </data>
+  <data name="Order.Reason.MaxLength" xml:space="preserve">
+    <value>Lý do không được quá 1000 ký tự</value>
+  </data>
+  <data name="DeliveryNote.OrderId.Required" xml:space="preserve">
+    <value>Không tìm thấy ID đơn hàng</value>
+  </data>
+  <data name="DeliveryNote.WarehouseId.Required" xml:space="preserve">
+    <value>Vui lòng chọn kho xuất hàng</value>
+  </data>
+  <data name="DeliveryNote.ShippingAddress.Required" xml:space="preserve">
+    <value>Vui lòng nhập địa chỉ giao hàng</value>
+  </data>
+  <data name="DeliveryNote.ShippingAddress.MaxLength" xml:space="preserve">
+    <value>Địa chỉ giao hàng không được quá 500 ký tự</value>
+  </data>
+  <data name="DeliveryNote.Note.MaxLength" xml:space="preserve">
+    <value>Ghi chú không được quá 1000 ký tự</value>
+  </data>
+  <data name="DeliveryNote.Surcharge.Invalid" xml:space="preserve">
+    <value>Phụ phí không được âm</value>
+  </data>
+  <data name="DeliveryNote.AmountToCollect.Invalid" xml:space="preserve">
+    <value>Số tiền thu không được âm</value>
+  </data>
+  <data name="DeliveryNote.Item.Quantity.Invalid" xml:space="preserve">
+    <value>Số lượng xuất phải lớn hơn 0</value>
+  </data>
+  <data name="PurchaseOrder.VendorId.Required" xml:space="preserve">
+    <value>Vui lòng chọn nhà cung cấp</value>
+  </data>
+  <data name="PurchaseOrder.ExpectedDate.Invalid" xml:space="preserve">
+    <value>Ngày dự kiến phải lớn hơn hiện tại</value>
+  </data>
+  <data name="PurchaseOrder.ShippingAmount.Invalid" xml:space="preserve">
+    <value>Phí vận chuyển phải lớn hơn hoặc bằng 0</value>
+  </data>
+  <data name="PurchaseOrder.TaxAmount.Invalid" xml:space="preserve">
+    <value>Tổng thuế phải lớn hơn hoặc bằng 0</value>
+  </data>
+  <data name="PurchaseOrder.Id.NotFound" xml:space="preserve">
+    <value>Không tìm thấy đơn nhập hàng</value>
+  </data>
+  <data name="PurchaseOrder.ItemId.NotFound" xml:space="preserve">
+    <value>Không tìm thấy hàng hóa cần nhập</value>
+  </data>
+  <data name="PurchaseOrder.ProductId.Required" xml:space="preserve">
+    <value>Vui lòng chọn hàng hóa</value>
+  </data>
+  <data name="PurchaseOrder.Quantity.Invalid" xml:space="preserve">
+    <value>Số lượng phải lớn hơn 0</value>
+  </data>
+  <data name="PurchaseOrder.UnitCost.Invalid" xml:space="preserve">
+    <value>Đơn giá phải lớn hơn 0</value>
+  </data>
+  <data name="PurchaseOrder.SellingPrice.Invalid" xml:space="preserve">
+    <value>Giá bán phải lớn hơn hoặc bằng 0</value>
+  </data>
+</root>

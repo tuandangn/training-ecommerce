@@ -1,29 +1,36 @@
-﻿using FluentValidation;
+using FluentValidation;
+using Microsoft.Extensions.Localization;
 using NamEcommerce.Web.Models.Users;
+using NamEcommerce.Web.Resources;
 
 namespace NamEcommerce.Web.Validators.Users;
 
 public sealed class RegisterModelValidator : AbstractValidator<RegisterModel>
 {
-    public RegisterModelValidator()
+    public RegisterModelValidator(IStringLocalizer<ValidationResource> localizer)
     {
         RuleFor(m => m.Username)
-            .NotEmpty().WithMessage("Vui lòng nhập tên đăng nhập")
-            .MinimumLength(6).WithMessage("Tên đăng nhập phải có ít nhất 6 ký tự")
-            .MaximumLength(100).WithMessage("Tên đăng nhập không được vượt quá 100 ký tự");
+            .NotEmpty().WithMessage(m => localizer["Register.Username.Required"])
+            .MinimumLength(6).WithMessage(m => localizer["Register.Username.MinLength"])
+            .MaximumLength(100).WithMessage(m => localizer["Register.Username.MaxLength"]);
+
         RuleFor(m => m.Password)
-            .NotEmpty().WithMessage("Vui lòng nhập mật khẩu")
-            .MinimumLength(6).WithMessage("Mật khẩu phải có ít nhất 6 ký tự");
+            .NotEmpty().WithMessage(m => localizer["Register.Password.Required"])
+            .MinimumLength(6).WithMessage(m => localizer["Register.Password.MinLength"]);
+
         RuleFor(m => m.ConfirmPassword)
-            .NotEmpty().WithMessage("Vui lòng nhập xác nhận mật khẩu")
-            .Equal(m => m.Password).WithMessage("Mật khẩu không trùng khớp");
+            .NotEmpty().WithMessage(m => localizer["Register.ConfirmPassword.Required"])
+            .Equal(m => m.Password).WithMessage(m => localizer["Register.ConfirmPassword.NotMatch"]);
+
         RuleFor(m => m.Fullname)
-            .NotEmpty().WithMessage("Vui lòng nhập họ tên")
-            .MaximumLength(100).WithMessage("Họ tên không được vượt quá 100 ký tự");
+            .NotEmpty().WithMessage(m => localizer["Register.Fullname.Required"])
+            .MaximumLength(100).WithMessage(m => localizer["Register.Fullname.MaxLength"]);
+
         RuleFor(m => m.PhoneNumber)
-            .NotEmpty().WithMessage("Vui lòng nhập số điện thoại")
-            .Matches(@"0\d{9,10}").WithMessage("Số điện thoại không đúng");
+            .NotEmpty().WithMessage(m => localizer["Register.Phone.Required"])
+            .Matches(@"0\d{9,10}").WithMessage(m => localizer["Register.Phone.Invalid"]);
+
         RuleFor(m => m.Address)
-            .MaximumLength(300).WithMessage("Địa chỉ không được vượt quá 200 ký tự");
+            .MaximumLength(300).WithMessage(m => localizer["Register.Address.MaxLength"]);
     }
 }

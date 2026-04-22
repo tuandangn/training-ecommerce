@@ -58,7 +58,7 @@ public sealed record CreateOrderDto : BaseOrderDto
     public override void Verify()
     {
         if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
-            throw new OrderDataIsInvalidException("Expected shipping date is invalid");
+            throw new OrderDataIsInvalidException("Ngày giao hàng dự kiến không hợp lệ");
 
         foreach (var item in Items)
             item.Verify();
@@ -95,7 +95,7 @@ public sealed record UpdateShippingDto
     public void Verify()
     {
         if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
-            throw new OrderDataIsInvalidException("Expected shipping date is invalid");
+            throw new OrderDataIsInvalidException("Ngày giao hàng dự kiến không hợp lệ");
     }
 }
 

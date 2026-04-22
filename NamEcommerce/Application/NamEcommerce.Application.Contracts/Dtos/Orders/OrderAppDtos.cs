@@ -12,7 +12,7 @@ public abstract record BaseOrderAppDto
     public virtual (bool valid, string? errorMessage) Validate()
     {
         if (OrderDiscount.HasValue && OrderDiscount < 0)
-            return (false, "Order discount cannot less than 0");
+            return (false, "Chiết khấu đơn hàng không được âm");
 
         return (true, string.Empty);
     }
@@ -58,7 +58,7 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
     public override (bool valid, string? errorMessage) Validate()
     {
         if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
-            return (false, "Expected shipping date is invalid");
+            return (false, "Ngày giao hàng dự kiến không hợp lệ");
 
         foreach (var item in Items)
         {
@@ -68,7 +68,7 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
         }
 
         if (OrderDiscount > Items.Sum(item => item.Quantity * item.UnitPrice))
-            return (false, "Order discount cannot exceed order sub total.");
+            return (false, "Chiết khấu không được vượt quá tổng tiền hàng");
 
         return base.Validate();
     }
@@ -84,9 +84,9 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
         public (bool valid, string? errorMessage) Validate()
         {
             if (Quantity <= 0)
-                return (false, "Quantity must be greater than 0");
+                return (false, "Số lượng phải lớn hơn 0");
             if (UnitPrice < 0)
-                return (false, "Unit price must be >= 0");
+                return (false, "Đơn giá không được âm");
 
             return (true, string.Empty);
         }
@@ -125,7 +125,7 @@ public sealed record UpdateOrderShippingAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
-            return (false, "Expected shipping date is invalid");
+            return (false, "Ngày giao hàng dự kiến không hợp lệ");
 
         return (true, string.Empty);
     }

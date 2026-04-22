@@ -1,6 +1,9 @@
 @using NamEcommerce.Web.Contracts.Configurations
 @inject CultureConfig CultureCfg
+@inject IWebHelper WebHelper
 @{
+    var isAuthPage = WebHelper.IsLoginPage() || WebHelper.IsRegisterPage();
+    var pageTitle = ViewData[ViewConstants.PageTitle] as string ?? Information.Name;
     var errorMessage = TempData[ViewConstants.GlobalErrorMessage] as string;
 }
 <!DOCTYPE html>
@@ -20,53 +23,68 @@
     <link rel="stylesheet" href="~/NamEcommerce.Web.styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css" />
 
-    @await RenderSectionAsync("Styles", required: false)
+    @await RenderSectionAsync(ViewConstants.StyleSection, required: false)
 </head>
 <body>
-    <div class="d-flex flex-column min-vh-100">
-        <header>
-            <nav class="navbar navbar-expand-lg navbar-main navbar-light">
-                <div class="container-fluid px-3 px-lg-4">
-                    <a class="navbar-brand navbar-brand-custom" asp-controller="Home" asp-action="Index">
-                        <i class="bi bi-bag-heart-fill me-1"></i>@Information.Name
-                    </a>
-                    <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse"
-                            data-bs-target="#mainNavbar" aria-controls="mainNavbar"
-                            aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <div class="collapse navbar-collapse" id="mainNavbar">
-                        @await Component.InvokeAsync("MenuNavigationComponent")
-                        @await Component.InvokeAsync("UserHeaderLinksComponent")
-                    </div>
-                </div>
-            </nav>
-        </header>
-        <div class="container">
-            <div class="row">
-                <div class="offset-lg-1 col-lg-10">
-                    <div class="flex-grow-1 page-wrapper px-3 px-lg-4">
-                        @if (!string.IsNullOrEmpty(errorMessage))
-                        {
-                            <div class="alert alert-warning alert-dismissible fade show alert-global mb-3" role="alert">
-                                <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>
-                        }
-                        <main role="main">
-                            @RenderBody()
-                        </main>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="app-layout">
+        <!-- Sidebar overlay cho mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-        <footer class="footer-main">
-            <div class="container-fluid px-3 px-lg-4 text-center">
-                &copy; 2026 @Information.Name &mdash; Hệ thống quản lý bán hàng
+        <aside class="sidebar" id="appSidebar">
+            <a class="sidebar-brand" asp-controller="Home" asp-action="Index">
+                <div class="sidebar-brand-icon">
+                    <i class="bi bi-bag-heart-fill"></i>
+                </div>
+                <div>
+                    <div class="sidebar-brand-text">@Information.Name</div>
+                    <div class="sidebar-brand-sub">Quản lý bán hàng</div>
+                </div>
+            </a>
+            <nav class="sidebar-nav">
+                @await Component.InvokeAsync("MenuNavigationComponent")
+            </nav>
+        </aside>
+
+        <div class="main-area">
+            <header class="topbar">
+                <button class="topbar-toggle" id="sidebarToggle" type="button" aria-label="Mở/đóng menu">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="topbar-title">
+                    @if (IsSectionDefined(ViewConstants.TitleSection))
+                    {
+                        @await RenderSectionAsync(ViewConstants.TitleSection)
+                    }
+                    else
+                    {
+                        <h1 class="topbar-page-title">@pageTitle</h1>
+                    }
+                </div>
+                @await Component.InvokeAsync("UserHeaderLinksComponent")
+            </header>
+
+            <div class="page-content">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-warning alert-dismissible fade show mb-3" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                <main role="main">
+                    @RenderBody()
+                </main>
+                <partial name="_Messages" />
             </div>
-        </footer>
+
+            <footer class="footer-main">
+                <div class="container-fluid px-3 px-lg-4 text-center">
+                    &copy; 2026 @Information.Name &mdash; Hệ thống quản lý bán hàng
+                </div>
+            </footer>
+        </div>
     </div>
+
     <partial name="_ReusedModals" />
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
@@ -87,7 +105,7 @@
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/l10n/@(CultureCfg.FlatpickrLocale).js" defer></script>
-    <script defer>
+    <script>
         document.addEventListener('DOMContentLoaded', function () {
         var cfg = window._fp;
 
@@ -110,9 +128,27 @@
         time_24hr:   true,
         allowInput:  true
         });
+
+        // Sidebar toggle (mobile)
+        var toggle  = document.getElementById('sidebarToggle');
+        var sidebar = document.getElementById('appSidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+
+        if (toggle && sidebar) {
+        toggle.addEventListener('click', function () {
+        sidebar.classList.toggle('open');
+        if (overlay) overlay.classList.toggle('active');
+        });
+        if (overlay) {
+        overlay.addEventListener('click', function () {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        });
+        }
+        }
         });
     </script>
 
-    @await RenderSectionAsync("Scripts", required: false)
+    @await RenderSectionAsync(ViewConstants.ScriptSection, required: false)
 </body>
 </html>

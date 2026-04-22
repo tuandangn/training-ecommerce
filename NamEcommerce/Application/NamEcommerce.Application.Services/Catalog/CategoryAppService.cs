@@ -149,7 +149,7 @@ public sealed class CategoryAppService : ICategoryAppService
             return new UpdateCategoryResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Không tìm thấy nhà cung cáp"
+                ErrorMessage = "Không tìm thấy nhà cung cấp"
             };
         }
 

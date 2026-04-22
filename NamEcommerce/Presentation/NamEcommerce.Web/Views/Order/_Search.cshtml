@@ -1,31 +1,18 @@
 @model OrderListSearchModel
 <form method="get" class="d-flex flex-wrap align-items-center gap-2">
+    <input type="hidden" asp-for="Status" />
     <div class="search-input-group flex-grow-1">
         <div class="input-group">
             <span class="input-group-text bg-white border-end-0">
                 <i class="bi bi-search text-muted"></i>
             </span>
-            <input asp-for="Keywords" class="form-control border-start-0 ps-0" placeholder="Tìm theo mã đơn, tên khách..." />
+            <input asp-for="Keywords" class="form-control border-start-0 ps-0" placeholder="Tìm theo mã đơn, tên khách, sđt"/>
+            @if (!string.IsNullOrEmpty(Model.Keywords))
+            {
+                <a asp-action="List" asp-route-status="@Model.Status" class="btn btn-outline-secondary" title="Bỏ lọc">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            }
         </div>
-    </div>
-    <div class="d-flex align-items-center gap-2 flex-grow-1 flex-lg-grow-0">
-        <div class="flex-grow-1 flex-lg-grow-0">
-            <select asp-for="Status" class="form-select">
-                <option value="" selected="@(!Model.Status.HasValue)">Tất cả trạng thái</option>
-                @foreach (var (value, text) in OrderStatus.GetOptions())
-                {
-                    <option value="@value" selected="@(Model.Status == value)">@text</option>
-                }
-            </select>
-        </div>
-        <button type="submit" class="btn btn-light px-3">
-            Tìm kiếm
-        </button>
-        @if (!string.IsNullOrEmpty(Model.Keywords) || Model.Status.HasValue)
-        {
-            <a asp-action="List" class="btn btn-outline-secondary px-3" title="Bỏ lọc">
-                <i class="bi bi-x-lg"></i>
-            </a>
-        }
     </div>
 </form>

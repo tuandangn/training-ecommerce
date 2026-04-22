@@ -77,11 +77,11 @@ public sealed record CreateVendorDebtDto
     public void Verify()
     {
         if (VendorId == Guid.Empty)
-            throw new ArgumentException("VendorId is required");
+            throw new ArgumentException("Mã nhà cung cấp không được để trống");
         if (PurchaseOrderId == Guid.Empty)
-            throw new ArgumentException("PurchaseOrderId is required");
+            throw new ArgumentException("Mã đơn nhập hàng không được để trống");
         if (TotalAmount <= 0)
-            throw new ArgumentException("TotalAmount must be greater than 0");
+            throw new ArgumentException("Tổng tiền phải lớn hơn 0");
     }
 }
 
@@ -128,10 +128,10 @@ public sealed record CreateVendorPaymentDto
     public void Verify()
     {
         if (VendorId == Guid.Empty)
-            throw new ArgumentException("VendorId is required");
+            throw new ArgumentException("Mã nhà cung cấp không được để trống");
         if (Amount <= 0)
-            throw new ArgumentException("Amount must be greater than 0");
+            throw new ArgumentException("Số tiền thanh toán phải lớn hơn 0");
         if (PaidOnUtc == default)
-            throw new ArgumentException("PaidOnUtc is required");
+            throw new ArgumentException("Ngày thanh toán không được để trống");
     }
 }

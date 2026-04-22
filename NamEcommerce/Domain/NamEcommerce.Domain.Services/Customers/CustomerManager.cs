@@ -41,7 +41,7 @@ public sealed class CustomerManager : ICustomerManager
     {
         ArgumentNullException.ThrowIfNull(dto);
         var customer = await _customerDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
-        if (customer == null) throw new ArgumentException("Customer not found");
+        if (customer == null) throw new ArgumentException("Khách hàng không tồn tại");
 
         customer.FullName = dto.FullName;
         customer.PhoneNumber = dto.PhoneNumber;
@@ -56,7 +56,7 @@ public sealed class CustomerManager : ICustomerManager
     public async Task DeleteCustomerAsync(Guid id)
     {
         var hasOrders = await Task.Run(() => _orderDataReader.DataSource.Any(o => o.CustomerId == id)).ConfigureAwait(false);
-        if (hasOrders) throw new InvalidOperationException("Cannot delete customer with existing orders");
+        if (hasOrders) throw new InvalidOperationException("Không thể xóa khách hàng đã có đơn hàng");
 
         var customer = await _customerDataReader.GetByIdAsync(id).ConfigureAwait(false);
         if (customer != null)

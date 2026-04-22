@@ -114,7 +114,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped(services
         => services.GetRequiredService<IOptionsSnapshot<CultureConfig>>().Value);
 
-    services.AddLocalization();
+    services.AddLocalization(options => options.ResourcesPath = "Resources");
 
     //infrastructure services
     services.AddDbContext<NamEcommerceEfDbContext>(opts =>

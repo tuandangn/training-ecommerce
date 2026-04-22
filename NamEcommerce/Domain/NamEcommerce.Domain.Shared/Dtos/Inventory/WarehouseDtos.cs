@@ -19,11 +19,11 @@ public abstract record BaseWarehouseDto
     public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Code))
-            throw new WarehouseDataIsInvalidException("Code is not empty");
+            throw new WarehouseDataIsInvalidException("Mã kho không được để trống");
         if (string.IsNullOrEmpty(Name))
-            throw new WarehouseDataIsInvalidException("Name is not empty");
+            throw new WarehouseDataIsInvalidException("Tên kho không được để trống");
         if (!string.IsNullOrEmpty(PhoneNumber) && !Regex.IsMatch(PhoneNumber, @"0\d{9,10}"))
-            throw new WarehouseDataIsInvalidException("Warehouse phone number is invalid");
+            throw new WarehouseDataIsInvalidException("Số điện thoại kho không hợp lệ");
     }
 }
 

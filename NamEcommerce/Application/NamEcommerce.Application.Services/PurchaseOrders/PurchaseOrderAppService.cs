@@ -69,7 +69,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new CreatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Vendor with ID {dto.VendorId.Value} does not exist."
+                    ErrorMessage = $"Nhà cung cấp không tồn tại"
                 };
             }
         }
@@ -82,7 +82,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new CreatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Warehouse with ID {dto.WarehouseId.Value} does not exist."
+                    ErrorMessage = $"Kho hàng không tồn tại"
                 };
             }
         }
@@ -153,7 +153,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new UpdatePurchaseOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Purchase order with ID {dto.Id} does not exist."
+                ErrorMessage = $"Đơn nhập hàng không tồn tại"
             };
         }
 
@@ -164,7 +164,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new UpdatePurchaseOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Purchase order in status cannot change info"
+                ErrorMessage = $"Đơn nhập hàng ở trạng thái hiện tại không thể chỉnh sửa thông tin"
             };
         }
 
@@ -175,7 +175,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Purchase order in status cannot change vendor"
+                    ErrorMessage = $"Đơn nhập hàng ở trạng thái hiện tại không thể đổi nhà cung cấp"
                 };
             }
             if (dto.WarehouseId != purchaseOrder.WarehouseId)
@@ -183,7 +183,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Purchase order in status cannot change warehouse"
+                    ErrorMessage = $"Đơn nhập hàng ở trạng thái hiện tại không thể đổi kho"
                 };
             }
             if (dto.ExpectedDeliveryDateUtc?.Date != purchaseOrder.ExpectedDeliveryDateUtc?.Date)
@@ -191,7 +191,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Purchase order in status cannot change date"
+                    ErrorMessage = $"Đơn nhập hàng ở trạng thái hiện tại không thể đổi ngày giao"
                 };
             }
         }
@@ -203,7 +203,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Purchase order cannot set shipping amount"
+                    ErrorMessage = $"Đơn hàng chưa có sản phẩm, không thể thiết lập phí vận chuyển"
                 };
             }
             if (dto.TaxAmount > 0)
@@ -211,7 +211,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Purchase order cannot set tax amount"
+                    ErrorMessage = $"Đơn hàng chưa có sản phẩm, không thể thiết lập tiền thuế"
                 };
             }
         }
@@ -224,7 +224,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Vendor with ID {dto.VendorId.Value} does not exist."
+                    ErrorMessage = $"Nhà cung cấp không tồn tại"
                 };
             }
         }
@@ -237,7 +237,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Warehouse with ID {dto.WarehouseId.Value} does not exist."
+                    ErrorMessage = $"Kho hàng không tồn tại"
                 };
             }
         }
@@ -458,10 +458,10 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     {
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(id).ConfigureAwait(false);
         if (purchaseOrder is null)
-            return (false, $"Purchase order with ID {id} does not exist.");
+            return (false, $"Đơn nhập hàng không tồn tại");
 
         if (!await _purchaseOrderManager.CanChangeStatusToAsync(id, PurchaseOrderStatus.Submitted))
-            return (false, "Cannot submit this purchase order");
+            return (false, "Không thể xác nhận đơn nhập hàng ở trạng thái hiện tại");
 
         await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Submitted).ConfigureAwait(false);
 
@@ -472,10 +472,10 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     {
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(id).ConfigureAwait(false);
         if (purchaseOrder is null)
-            return (false, $"Purchase order with ID {id} does not exist.");
+            return (false, $"Đơn nhập hàng không tồn tại");
 
         if (!await _purchaseOrderManager.CanChangeStatusToAsync(id, PurchaseOrderStatus.Cancelled))
-            return (false, "Cannot cancel this purchase order");
+            return (false, "Không thể hủy đơn nhập hàng ở trạng thái hiện tại");
 
         await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Cancelled).ConfigureAwait(false);
 

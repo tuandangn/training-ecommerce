@@ -1,9 +1,10 @@
 namespace NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 
-public sealed class DeliveryNoteNotFoundException : Exception
+public sealed class DeliveryNoteNotFoundException : NamEcommerceDomainException
 {
     public DeliveryNoteNotFoundException(Guid id)
-        : base($"Delivery note with ID {id} was not found.")
+        : base("Error.DeliveryNoteNotFound", id)
     {
     }
 }
+

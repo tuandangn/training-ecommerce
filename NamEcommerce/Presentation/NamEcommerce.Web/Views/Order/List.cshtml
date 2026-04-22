@@ -1,144 +1,143 @@
 @model OrderListModel
 @inject IWebHelper WebHelper
 @{
-    ViewData["Title"] = "Đơn hàng";
-    var successMessage = TempData[ViewConstants.OrderSuccessMessage] as string;
-    var errorMessage = TempData[ViewConstants.OrderErrorMessage] as string;
+    ViewData[ViewConstants.PageTitle] = "Đơn hàng";
 }
-
-<div class="content-card mb-3">
-    <div class="content-card-header">
-        <div>
-            <h1 class="page-header-title">Đơn hàng</h1>
-            <p class="page-header-subtitle">Theo dõi và quản lý đơn hàng</p>
-        </div>
+@section TitleSection {
+    <h1 class="topbar-page-title">Đơn bán</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Đơn bán</li>
+            </ol>
+        </nav>
     </div>
-</div>
+}
 <div class="content-card">
-    @if (!string.IsNullOrEmpty(successMessage))
-    {
-        <div class="alert alert-success alert-global fade show rounded-top" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i>@successMessage
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
-    @if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <div class="alert alert-warning alert-globall alert-dismissible fade show" role="alert">
-            <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    }
     <div class="action-toolbar">
         <partial name="_Search" model="@(new OrderListSearchModel { Keywords = Model.Keywords, Status = Model.Status })" />
-        
         <a asp-action="Create" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i> Tạo đơn
         </a>
     </div>
-    <div class="table-responsive">
-        <table class="table data-table">
-            <thead>
-                <tr>
-                    <th class="ps-4">Mã đơn</th>
-                    <th>Khách hàng</th>
-                    <th class="text-end">Tổng đơn</th>
-                    <th class="text-center">Ngày dự kiến</th>
-                    <th class="text-center">Đã giao</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Data.Pagination.TotalCount > 0)
-                {
-                    @foreach (var order in Model.Data)
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : WebHelper.EncodeUrlComponent(Model.Keywords))" asp-route-status=""
+               class="nav-link @(Model.Status.HasValue ? "" : "active")">Tất cả</a>
+        </li>
+        @foreach (var statusOption in OrderStatus.GetOptions())
+        {
+            <li class="nav-item">
+                <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : WebHelper.EncodeUrlComponent(Model.Keywords))" asp-route-status="@statusOption.value"
+                   class="nav-link @(statusOption.value == Model.Status ? "active" : "")" aria-current="page">@statusOption.text</a>
+            </li>
+        }
+    </ul>
+    <div class="content-card-body-flush">
+        <div class="table-responsive">
+            <table class="table data-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Mã đơn</th>
+                        <th>Khách hàng</th>
+                        <th class="text-end">Tổng đơn</th>
+                        <th>Ngày dự kiến</th>
+                        <th class="text-center">Đã giao</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Data.Pagination.TotalCount > 0)
                     {
-                        <tr class="align-middle">
-                            <td class="ps-4">
-                                <div class="position-relative">
-                                    <a asp-action="Details" asp-route-id="@order.Id" class="fw-medium d-block text-nowrap text-decoration-none" data-bs-toggle="tooltip" title="Xem chi tiết">
-                                        @HighlighHelper.Highlight(order.Code, Model.Keywords)
-                                    </a>
-                                    <span class="text-muted small">@order.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="position-relative">
-                                    <a asp-action="Details" asp-controller="CustomerDebt" asp-route-id="@order.CustomerId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
-                                        @HighlighHelper.Highlight(order.CustomerName, Model.Keywords)
-                                    </a>
-                                    @if (!string.IsNullOrEmpty(order.CustomerPhone))
+                        @foreach (var order in Model.Data)
+                        {
+                            <tr class="align-middle">
+                                <td class="ps-4">
+                                    <div class="position-relative">
+                                        <a asp-action="Details" asp-route-id="@order.Id" class="fw-medium d-block text-nowrap text-decoration-none" data-bs-toggle="tooltip" title="Xem chi tiết">
+                                            @HighlighHelper.Highlight(order.Code, Model.Keywords)
+                                        </a>
+                                        <span class="text-muted small">@order.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="position-relative">
+                                        <a asp-action="Details" asp-controller="CustomerDebt" asp-route-id="@order.CustomerId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
+                                            @HighlighHelper.Highlight(order.CustomerName, Model.Keywords)
+                                        </a>
+                                        @if (!string.IsNullOrEmpty(order.CustomerPhone))
+                                        {
+                                            <div>
+                                                <span class="text-muted small">
+                                                    @HighlighHelper.Highlight(order.CustomerPhone, Model.Keywords)
+                                                </span>
+                                            </div>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="text-end fw-medium text-nowrap">
+                                    @order.TotalAmount.DisplayCurrency()
+                                </td>
+                                <td class="text-muted">
+                                    @if (order.ExpectedShippingDate.HasValue)
                                     {
-                                        <div>
-                                            <span class="text-muted small">
-                                                @HighlighHelper.Highlight(order.CustomerPhone, Model.Keywords)
-                                            </span>
-                                        </div>
+                                        @order.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat)
                                     }
+                                    else
+                                    {
+                                        @:-
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (order.IsFinished)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success ms-1" data-bs-toggle="tooltip" title="Đơn hàng đã hoàn thành"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle-fill text-info ms-1" data-bs-toggle="tooltip" title="Đơn hàng chưa hoàn thành"></i>
+                                    }
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a class="btn btn-sm btn-light text-decoration-none text-primary" asp-action="Details" asp-route-id="@order.Id">
+                                        <span>Xem</span>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <span class="text-muted">Không có đơn hàng nào</span>
                                 </div>
-                            </td>
-                            <td class="text-end fw-medium text-nowrap">
-                                @order.TotalAmount.DisplayCurrency()
-                            </td>
-                            <td class="text-center text-muted">
-                                @order.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat)
-                            </td>
-                            <td class="text-center">
-                                @if (order.IsFinished)
-                                {
-                                    <i class="bi bi-check-circle-fill text-success ms-1" data-bs-toggle="tooltip" title="Đơn hàng đã hoàn thành"></i>
-                                }
-                                else
-                                {
-                                    <i class="bi bi-x-circle-fill text-info ms-1" data-bs-toggle="tooltip" title="Đơn hàng chưa hoàn thành"></i>
-                                }
-                            </td>
-                            <td class="text-end pe-3">
-                                <a class="btn btn-sm btn-link text-decoration-none text-primary" asp-action="Details" asp-route-id="@order.Id">
-                                    <span>Xem</span>
-                                </a>
                             </td>
                         </tr>
                     }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="5">
-                            <div class="empty-state">
-                                <div class="empty-icon"><i class="bi bi-inbox"></i></div>
-                                <h5>Không có đơn hàng nào</h5>
-                                <p>Tạo mới đơn hàng để bắt đầu bán hàng.</p>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+                </tbody>
+            </table>
+        </div>
     
-    @if (Model.Data.Pagination.TotalCount > 0)
-    {
-        <partial name="_Pager" model="Model.Data.Pagination" />
-    }
+        @if (Model.Data.Pagination.TotalCount > 0)
+        {
+            <partial name="_Pager" model="Model.Data.Pagination" />
+        }
+    </div>
 </div>
-
-@foreach (var item in Model.Data)
-{
-    <partial name="_DeleteForm" model="@item.Id" />
-}
 @section Scripts {
-    <script type="module" defer>
-        import { confirm } from "/modules/modals.js";
-        (function () {
-        $('.btnDelete').on('click', async function (e) {
-        e.preventDefault();
-        const code = $(this).data('code');
-        $(this).prop('disabled', true);
-        const confirmed = await confirm('Xóa đơn hàng', `Bạn muốn xóa đơn hàng <strong>${code}</strong>?`);
-        if (!confirmed) { $(this).prop('disabled', false); return; }
-        $(`#deleteForm${$(this).data('id')}`).submit();
-        });
-        })();
+    <script type="module">
+        const txtKeywords = document.getElementById('@Html.IdFor(m => m.Keywords)');
+        const form = txtKeywords.closest('form');
+        const onSearchChanged = debounce(function () {
+        form.submit();
+        }, 700);
+        txtKeywords.addEventListener('input', onSearchChanged);
+
+        if(txtKeywords.value){
+            focusEnd(txtKeywords);
+        }
     </script>
 }

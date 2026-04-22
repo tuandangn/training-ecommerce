@@ -78,11 +78,11 @@ public sealed record CreateCustomerDebtDto
     public void Verify()
     {
         if (CustomerId == Guid.Empty)
-            throw new ArgumentException("CustomerId is required");
+            throw new ArgumentException("Mã khách hàng không được để trống");
         if (DeliveryNoteId == Guid.Empty)
-            throw new ArgumentException("DeliveryNoteId is required");
+            throw new ArgumentException("Mã phiếu giao hàng không được để trống");
         if (TotalAmount <= 0)
-            throw new ArgumentException("TotalAmount must be greater than 0");
+            throw new ArgumentException("Tổng tiền phải lớn hơn 0");
     }
 }
 
@@ -133,10 +133,10 @@ public sealed record CreateCustomerPaymentDto
     public void Verify()
     {
         if (CustomerId == Guid.Empty)
-            throw new ArgumentException("CustomerId is required");
+            throw new ArgumentException("Mã khách hàng không được để trống");
         if (Amount <= 0)
-            throw new ArgumentException("Amount must be greater than 0");
+            throw new ArgumentException("Số tiền thanh toán phải lớn hơn 0");
         if (PaidOnUtc == default)
-            throw new ArgumentException("PaidOnUtc is required");
+            throw new ArgumentException("Ngày thanh toán không được để trống");
     }
 }

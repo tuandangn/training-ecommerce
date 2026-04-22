@@ -41,21 +41,21 @@ public sealed class InventoryValidator : IInventoryValidator
     {
         // Validate IDs are not empty
         if (productId == Guid.Empty)
-            throw new InvalidStockOperationException("Product ID cannot be empty");
+            throw new InvalidStockOperationException("Mã sản phẩm không được để trống");
 
         if (warehouseId == Guid.Empty)
-            throw new InvalidStockOperationException("Warehouse ID cannot be empty");
+            throw new InvalidStockOperationException("Mã kho không được để trống");
 
         // Validate quantity
         if (quantity <= 0)
-            throw new InvalidStockOperationException("Quantity must be greater than 0");
+            throw new InvalidStockOperationException("Số lượng phải lớn hơn 0");
 
         // Check if product exists
         if (!await ValidateProductExistsAsync(productId))
-            throw new InvalidStockOperationException($"Product with ID {productId} not found");
+            throw new InvalidStockOperationException($"Sản phẩm không tồn tại");
 
         // Check if warehouse exists  
         if (!await ValidateWarehouseExistsAsync(warehouseId))
-            throw new InvalidStockOperationException($"Warehouse with ID {warehouseId} not found");
+            throw new InvalidStockOperationException($"Kho không tồn tại");
     }
 }

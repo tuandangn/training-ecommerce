@@ -8,7 +8,7 @@ using NamEcommerce.Application.Contracts.Inventory;
 namespace NamEcommerce.Web.Services.Preparations;
 
 public sealed class PreparationModelFactory(
-    IMediator mediator, 
+    IMediator mediator,
     AppConfig appConfig,
     IWarehouseAppService warehouseAppService) : IPreparationModelFactory
 {
@@ -40,6 +40,7 @@ public sealed class PreparationModelFactory(
             PageSize = pageSize
         });
 
+        var availableWarehouses = await GetAvailableWarehousesAsync().ConfigureAwait(false);
         return new CustomerPreparationListModel
         {
             Items = PagedDataModel.Create(preparationList.Items!.Select(item => new CustomerPreparationListModel.PreparationItemModel
@@ -60,7 +61,7 @@ public sealed class PreparationModelFactory(
                 StockQuantityAvailable = item.StockQuantityAvailable,
                 DeliveryNoteLinks = item.DeliveryNoteLinks.Select(link => new NamEcommerce.Web.Contracts.Models.DeliveryNotes.DeliveryNoteLinkModel(link.Id, link.Code, link.Status, link.CreatedOnUtc)).ToList()
             }).ToList(), preparationList.Items!.Pagination.PageIndex, preparationList.Items!.Pagination.PageSize, preparationList.Items!.Pagination.TotalCount),
-            AvailableWarehouses = await GetAvailableWarehousesAsync()
+            AvailableWarehouses = availableWarehouses
         };
     }
 
@@ -79,6 +80,7 @@ public sealed class PreparationModelFactory(
             PageSize = pageSize
         });
 
+        var availableWarehouses = await GetAvailableWarehousesAsync().ConfigureAwait(false);
         return new ProductPreparationListModel
         {
             Items = PagedDataModel.Create(preparationList.GroupedItems!.Select(info => new ProductPreparationListModel.PreparationItemModel
@@ -105,7 +107,7 @@ public sealed class PreparationModelFactory(
                     DeliveryNoteLinks = details.DeliveryNoteLinks.Select(link => new NamEcommerce.Web.Contracts.Models.DeliveryNotes.DeliveryNoteLinkModel(link.Id, link.Code, link.Status, link.CreatedOnUtc)).ToList()
                 }).ToList()
             }), preparationList.GroupedItems!.Pagination.PageIndex, preparationList.GroupedItems!.Pagination.PageSize, preparationList.GroupedItems!.Pagination.TotalCount),
-            AvailableWarehouses = await GetAvailableWarehousesAsync()
+            AvailableWarehouses = availableWarehouses
         };
     }
 }

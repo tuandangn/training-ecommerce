@@ -1,42 +1,44 @@
 using FluentValidation;
+using Microsoft.Extensions.Localization;
 using NamEcommerce.Web.Models.DeliveryNotes;
+using NamEcommerce.Web.Resources;
 
 namespace NamEcommerce.Web.Validators.Orders;
 
 public sealed class CreateDeliveryNoteValidator : AbstractValidator<CreateDeliveryNoteModel>
 {
-    public CreateDeliveryNoteValidator()
+    public CreateDeliveryNoteValidator(IStringLocalizer<ValidationResource> localizer)
     {
         RuleFor(x => x.OrderId)
-            .NotEmpty().WithMessage("OrderId là bắt buộc.");
+            .NotEmpty().WithMessage(x => localizer["DeliveryNote.OrderId.Required"]);
 
         RuleFor(x => x.WarehouseId)
-            .NotEmpty().WithMessage("Vui lòng chọn kho xuất hàng.");
+            .NotEmpty().WithMessage(x => localizer["DeliveryNote.WarehouseId.Required"]);
 
         RuleFor(x => x.ShippingAddress)
-            .NotEmpty().WithMessage("Địa chỉ giao hàng là bắt buộc.")
-            .MaximumLength(500).WithMessage("Địa chỉ giao hàng không được vượt quá 500 ký tự.");
+            .NotEmpty().WithMessage(x => localizer["DeliveryNote.ShippingAddress.Required"])
+            .MaximumLength(500).WithMessage(x => localizer["DeliveryNote.ShippingAddress.MaxLength"]);
 
         RuleFor(x => x.Note)
-            .MaximumLength(1000).WithMessage("Ghi chú không được vượt quá 1000 ký tự.");
+            .MaximumLength(1000).WithMessage(x => localizer["DeliveryNote.Note.MaxLength"]);
 
         RuleFor(x => x.Surcharge)
-            .GreaterThanOrEqualTo(0).WithMessage("Phụ phí không được âm.");
+            .GreaterThanOrEqualTo(0).WithMessage(x => localizer["DeliveryNote.Surcharge.Invalid"]);
 
         RuleFor(x => x.AmountToCollect)
-            .GreaterThanOrEqualTo(0).WithMessage("Số tiền phải thu không được âm.");
+            .GreaterThanOrEqualTo(0).WithMessage(x => localizer["DeliveryNote.AmountToCollect.Invalid"]);
 
         RuleForEach(x => x.Items)
-            .SetValidator(new CreateDeliveryNoteItemValidator());
+            .SetValidator(new CreateDeliveryNoteItemValidator(localizer));
     }
 }
 
 public sealed class CreateDeliveryNoteItemValidator : AbstractValidator<CreateDeliveryNoteItemModel>
 {
-    public CreateDeliveryNoteItemValidator()
+    public CreateDeliveryNoteItemValidator(IStringLocalizer<ValidationResource> localizer)
     {
         RuleFor(x => x.Quantity)
             .GreaterThan(0).When(x => x.Selected)
-            .WithMessage("Số lượng xuất phải lớn hơn 0.");
+            .WithMessage(x => localizer["DeliveryNote.Item.Quantity.Invalid"]);
     }
 }

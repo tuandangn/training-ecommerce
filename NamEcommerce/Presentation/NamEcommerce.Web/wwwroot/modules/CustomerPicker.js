@@ -41,7 +41,6 @@ export default class CustomerPicker {
         this.suggestion = q('.customerSuggestion');
         this.displayInfo = q('.selectedCustomerInfo');
         this.clearBtn = q('.clearCustomer');
-        this.loadingSpinner = q('.searchSpinner');
         this.searchIcon = q('.searchIcon');
     }
 
@@ -131,7 +130,7 @@ export default class CustomerPicker {
         if (!this.#customers.length) {
             this.suggestion.innerHTML = `
                 <div class="list-group-item p-3 text-center text-muted small">
-                    <i class="bi bi-inbox me-1"></i> Không tìm thấy kết quả
+                     Không tìm thấy kết quả
                 </div>`;
             this.suggestion.style.display = 'block';
             return;
@@ -143,13 +142,12 @@ export default class CustomerPicker {
             const customer = new Customer(data);
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'list-group-item list-group-item-action border-0 py-2';
+            btn.className = 'list-group-item list-group-item-action py-2';
             btn.dataset.index = index;
             btn.innerHTML = `
-                <div class="fw-bold">${this.#highlight(customer.name, query)}</div>
-                <div class="small text-muted">
-                    <div><i class="bi bi-telephone me-1"></i>${customer.phone}</div>
-                    ${customer.address ? `<div><i class="bi bi-geo-alt me-1"></i>${customer.address}</div>` : ''}
+                <div><span class="fw-bold">${this.#highlight(customer.name, query)}</span> <span class="text-muted">- ${customer.phone}</span></div>
+                <div class="text-muted">
+                    ${customer.address ? `<div>${customer.address}</div>` : ''}
                 </div>`;
 
             btn.addEventListener('click', () => this.selectCustomer(customer));
@@ -178,7 +176,7 @@ export default class CustomerPicker {
     #showError(message) {
         this.suggestion.innerHTML = `
             <div class="list-group-item p-3 text-center text-danger small">
-                <i class="bi bi-exclamation-circle me-1"></i>${message}
+                ${message}
             </div>`;
         this.suggestion.style.display = 'block';
     }
@@ -189,8 +187,7 @@ export default class CustomerPicker {
     }
 
     #setLoading(isLoading) {
-        this.loadingSpinner.classList.toggle('d-none', !isLoading);
-        this.searchIcon.classList.toggle('d-none', isLoading);
+        this.input.readonly = isLoading;
     }
 
     // ─── Chọn / Xóa khách hàng ──────────────────────────────────────────────────
@@ -234,24 +231,12 @@ export default class CustomerPicker {
     #template() {
         return `
         <div class="input-group-container">
-            <div class="input-group">
-                <span class="input-group-text bg-white border-end-0">
-                    <span class="spinner-border spinner-border-sm text-secondary d-none searchSpinner" role="status"></span>
-                    <i class="bi bi-search text-muted searchSpinner d-none"></i>
-                    <i class="bi bi-search text-muted searchIcon"></i>
-                </span>
-                <input type="text" class="form-control border-start-0 ps-0 customerSearch" id="customerSearch"
-                    placeholder="Nhập tên, số điện thoại..." autocomplete="off"
-                    aria-label="Tìm kiếm khách hàng" aria-autocomplete="list" />
-            </div>
+            <input type="text" class="form-control customerSearch" id="customerSearch"
+                placeholder="Nhập tên, số điện thoại..." autocomplete="off"
+                aria-label="Tìm kiếm khách hàng" aria-autocomplete="list" />
         </div>
-
-        <div class="list-group position-absolute w-100 shadow-lg mt-1 customerSuggestion"
-            style="z-index: 1050; display: none; max-height: 300px; overflow-y: auto;"
-            role="listbox"></div>
-
+        <div class="list-group list-group-flush position-absolute w-100 shadow-lg mt-1 customerSuggestion" style="z-index: 1050; display: none; max-height: 300px; overflow-y: auto;" role="listbox"></div>
         <div class="alert alert-primary d-none border-0 rounded-3 d-flex align-items-center mb-0 selectedCustomerInfo" role="status">
-            <i class="bi bi-person-check-fill fs-4 me-3 flex-shrink-0"></i>
             <div class="flex-grow-1 overflow-hidden">
                 <div class="fw-bold text-truncate name-field"></div>
                 <div class="small text-muted phone-field"></div>

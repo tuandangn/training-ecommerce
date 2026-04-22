@@ -34,6 +34,77 @@
         break;
 }
 
+<!-- Quick Create Purchase Order Modal -->
+<div class="modal fade" id="quickCreatePurchaseOrderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-cart-plus me-2 text-warning"></i>Tạo đơn nhập hàng nhanh</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3 px-4">
+                <div class="alert alert-warning border-0 rounded-3 mb-3 small">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Tồn kho không đủ để xuất hàng. Tạo đơn nhập để bổ sung.
+                </div>
+
+                <div id="qcpoNoVendorAlert" class="alert alert-danger border-0 rounded-3 mb-3 small d-none">
+                    <i class="bi bi-x-circle-fill me-2"></i>
+                    Sản phẩm này chưa có nhà cung cấp. Vui lòng cập nhật thông tin sản phẩm trước.
+                </div>
+
+                <input type="hidden" id="qcpoProductId" />
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Sản phẩm</label>
+                    <input type="text" class="form-control rounded-3 bg-light" id="qcpoProductName" readonly />
+                </div>
+
+                <div id="qcpoVendorField" class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase" for="qcpoVendorId">
+                        Nhà cung cấp <span class="text-danger">*</span>
+                    </label>
+                    <div class="d-flex align-items-center gap-2">
+                        <select class="form-select rounded-3" id="qcpoVendorId">
+                            <option value="">-- Đang tải... --</option>
+                        </select>
+                        <span id="qcpoVendorSpinner" class="spinner-border spinner-border-sm text-secondary d-none" role="status"></span>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3" id="qcpoInputFields">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-muted text-uppercase" for="qcpoQuantity">
+                            Số lượng nhập <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" class="form-control rounded-3" id="qcpoQuantity" min="0.01" step="0.01" placeholder="0" />
+                        <div class="form-text">Gợi ý: số lượng đang thiếu</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-muted text-uppercase" for="qcpoUnitCost">
+                            Đơn giá nhập <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <input type="number" class="form-control rounded-3" id="qcpoUnitCost" min="0" step="1000" placeholder="0" />
+                            <span class="input-group-text bg-white small">đ</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-1">
+                    <label class="form-label small fw-bold text-muted text-uppercase" for="qcpoNote">Ghi chú</label>
+                    <textarea class="form-control rounded-3" id="qcpoNote" rows="2" placeholder="Ghi chú cho đơn nhập..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 pb-4 px-4">
+                <button type="button" class="btn btn-light px-4 rounded-3 border fw-medium" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-warning px-4 rounded-3 shadow-sm fw-bold" id="btnSubmitQuickPO">
+                    <i class="bi bi-cart-plus me-2"></i>Tạo đơn nhập
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Create Delivery Notes Modal -->
 <div class="modal fade" id="createDeliveryNotesModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -527,6 +598,120 @@
                     btn.html('<i class="bi bi-check2-circle me-2"></i>Tạo phiếu xuất');
                 }
             });
+            // ── Quick Create Purchase Order ──────────────────────────────
+            const quickCreatePOModal = new bootstrap.Modal(document.getElementById('quickCreatePurchaseOrderModal'));
+            const $qcpoVendorId      = $('#qcpoVendorId');
+            const $qcpoVendorSpinner = $('#qcpoVendorSpinner');
+            const $qcpoNoVendorAlert = $('#qcpoNoVendorAlert');
+            const $qcpoInputFields   = $('#qcpoInputFields');
+            const $qcpoVendorField   = $('#qcpoVendorField');
+            const $btnSubmitQuickPO  = $('#btnSubmitQuickPO');
+
+            async function loadProductVendors(productId) {
+                // Reset state
+                $qcpoNoVendorAlert.addClass('d-none');
+                $qcpoVendorField.removeClass('d-none');
+                $qcpoInputFields.removeClass('d-none');
+                $btnSubmitQuickPO.prop('disabled', true);
+                $qcpoVendorSpinner.removeClass('d-none');
+                $qcpoVendorId.html('<option value="">-- Đang tải... --</option>');
+
+                try {
+                    const res = await $.ajax({
+                        url: '@Url.Action("GetProductVendors", "Preparation")',
+                        type: 'GET',
+                        data: { productId }
+                    });
+
+                    $qcpoVendorSpinner.addClass('d-none');
+
+                    if (!res.vendors || res.vendors.length === 0) {
+                        // No vendors → show alert, hide fields, keep submit disabled
+                        $qcpoNoVendorAlert.removeClass('d-none');
+                        $qcpoVendorField.addClass('d-none');
+                        $qcpoInputFields.addClass('d-none');
+                        return;
+                    }
+
+                    // Populate vendor dropdown
+                    let options = '<option value="">-- Chọn nhà cung cấp --</option>';
+                    res.vendors.forEach(v => {
+                        options += `<option value="${v.id}">${v.name}</option>`;
+                    });
+                    $qcpoVendorId.html(options);
+                    $btnSubmitQuickPO.prop('disabled', false);
+
+                } catch (err) {
+                    $qcpoVendorSpinner.addClass('d-none');
+                    $qcpoVendorId.html('<option value="">-- Lỗi tải dữ liệu --</option>');
+                }
+            }
+
+            $(document).on('click', '.btnQuickCreatePurchaseOrder', function () {
+                const productId    = $(this).data('product-id');
+                const productName  = $(this).data('product-name');
+                const shortageQty  = $(this).data('shortage-quantity');
+
+                $('#qcpoProductId').val(productId);
+                $('#qcpoProductName').val(productName);
+                $('#qcpoQuantity').val(shortageQty);
+                $('#qcpoUnitCost').val('');
+                $('#qcpoNote').val('');
+
+                loadProductVendors(productId);
+                quickCreatePOModal.show();
+            });
+
+            $btnSubmitQuickPO.on('click', async function () {
+                const productId = $('#qcpoProductId').val();
+                const vendorId  = $qcpoVendorId.val();
+                const quantity  = parseFloat($('#qcpoQuantity').val());
+                const unitCost  = parseFloat($('#qcpoUnitCost').val()) || 0;
+                const note      = $('#qcpoNote').val().trim();
+
+                if (!vendorId) {
+                    toast('Lỗi', 'Vui lòng chọn nhà cung cấp.', 'error');
+                    return;
+                }
+                if (!quantity || quantity <= 0) {
+                    toast('Lỗi', 'Vui lòng nhập số lượng hợp lệ.', 'error');
+                    return;
+                }
+                if (unitCost < 0) {
+                    toast('Lỗi', 'Đơn giá nhập không hợp lệ.', 'error');
+                    return;
+                }
+
+                const btn = $(this);
+                btn.prop('disabled', true);
+                btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Đang tạo...');
+
+                try {
+                    const response = await $.ajax({
+                        url: '@Url.Action("QuickCreatePurchaseOrder", "Preparation")',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({ productId, vendorId, quantity, unitCost, note })
+                    });
+
+                    quickCreatePOModal.hide();
+
+                    if (response.success) {
+                        const poUrl = '@Url.Action("Details", "PurchaseOrder")' + '/' + response.purchaseOrderId;
+                        toast('Thành công',
+                            `Đã tạo đơn nhập hàng. <a href="${poUrl}" class="alert-link">Xem đơn nhập</a>`,
+                            'success');
+                    } else {
+                        showAlert('danger', response.message || 'Không thể tạo đơn nhập hàng.');
+                    }
+                } catch (err) {
+                    showAlert('danger', 'Có lỗi xảy ra khi tạo đơn nhập hàng. Vui lòng thử lại.');
+                } finally {
+                    btn.prop('disabled', false);
+                    btn.html('<i class="bi bi-cart-plus me-2"></i>Tạo đơn nhập');
+                }
+            });
+
         })();
     </script>
 }

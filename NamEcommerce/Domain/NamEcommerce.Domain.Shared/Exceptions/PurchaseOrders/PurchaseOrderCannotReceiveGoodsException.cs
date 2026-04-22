@@ -1,5 +1,6 @@
 ﻿namespace NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 
 [Serializable]
-public sealed class PurchaseOrderCannotReceiveGoodsException() : Exception("PurchaseOrder cannot receive goods.");
+public sealed class PurchaseOrderCannotReceiveGoodsException()  : NamEcommerceDomainException("Error.PurchaseOrderCannotReceiveGoodsException");
+
 

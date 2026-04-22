@@ -1,42 +1,45 @@
-﻿using FluentValidation;
+using FluentValidation;
+using Microsoft.Extensions.Localization;
 using NamEcommerce.Web.Models.Orders;
+using NamEcommerce.Web.Resources;
 
 namespace NamEcommerce.Web.Validators.Orders;
 
 public sealed class CreateOrderValidator : AbstractValidator<CreateOrderModel>
 {
-    public CreateOrderValidator()
+    public CreateOrderValidator(IStringLocalizer<ValidationResource> localizer)
     {
         RuleFor(p => p.CustomerId)
-            .NotEmpty().WithMessage("Vui lòng chọn khách hàng.");
+            .NotEmpty().WithMessage(p => localizer["Order.CustomerId.Required"]);
 
         RuleFor(p => p.OrderDiscount)
-            .GreaterThanOrEqualTo(0).WithMessage("Giảm giá phải lớn hơn hoặc bằng 0.");
+            .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Order.Discount.Invalid"]);
 
         RuleFor(p => p.ExpectedShippingDate)
-            .GreaterThanOrEqualTo(DateTime.Now.Date).WithMessage("Ngày giao dự kiến phải lớn hơn hiện tại.");
+            .GreaterThanOrEqualTo(DateTime.Now.Date).WithMessage(p => localizer["Order.ExpectedDate.Invalid"]);
 
         RuleFor(p => p.ShippingAddress)
-            .NotEmpty().WithMessage("Vui lòng nhập địa chỉ giao hàng.")
-            .MaximumLength(1000).WithMessage("Địa chỉ giao hàng tối đa 1000 ký tự.");
+            .NotEmpty().WithMessage(p => localizer["Order.ShippingAddress.Required"])
+            .MaximumLength(1000).WithMessage(p => localizer["Order.ShippingAddress.MaxLength"]);
 
         RuleFor(p => p.Items)
-            .NotEmpty().WithMessage("Vui lòng nhập hàng hóa.");
+            .NotEmpty().WithMessage(p => localizer["Order.Items.Required"]);
     }
 }
+
 public sealed class CreateOrderItemValidator : AbstractValidator<CreateOrderItemModel>
 {
-    public CreateOrderItemValidator()
+    public CreateOrderItemValidator(IStringLocalizer<ValidationResource> localizer)
     {
         RuleFor(p => p.ProductId)
-            .NotEmpty().WithMessage("Vui lòng chọn hàng hóa.");
+            .NotEmpty().WithMessage(p => localizer["Order.ProductId.Required"]);
 
         RuleFor(p => p.Quantity)
-            .NotEmpty().WithMessage("Vui lòng nhập số lượng.")
-            .GreaterThan(0).WithMessage("Số lượng phải lớn hơn 0.");
+            .NotEmpty().WithMessage(p => localizer["Order.Quantity.Required"])
+            .GreaterThan(0).WithMessage(p => localizer["Order.Quantity.Invalid"]);
 
         RuleFor(p => p.UnitPrice)
-            .NotEmpty().WithMessage("Vui lòng nhập đơn giá.")
-            .GreaterThanOrEqualTo(0).WithMessage("Đơn giá phải lớn hơn hoặc bằng 0.");
+            .NotEmpty().WithMessage(p => localizer["Order.UnitPrice.Required"])
+            .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Order.UnitPrice.Invalid"]);
     }
 }

@@ -11,7 +11,7 @@ public abstract record BaseUnitMeasurementDto
     public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Name))
-            throw new UnitMeasurementDataIsInvalidException("Unit measurement name is not empty");
+            throw new UnitMeasurementDataIsInvalidException("Tên đơn vị tính không được để trống");
     }
 }
 

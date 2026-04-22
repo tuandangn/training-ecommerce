@@ -1,21 +1,23 @@
-﻿using FluentValidation;
+using FluentValidation;
+using Microsoft.Extensions.Localization;
 using NamEcommerce.Web.Models.Catalog;
+using NamEcommerce.Web.Resources;
 
 namespace NamEcommerce.Web.Validators.Catalog;
 
 public sealed class EditVendorValidator : AbstractValidator<EditVendorModel>
 {
-    public EditVendorValidator()
+    public EditVendorValidator(IStringLocalizer<ValidationResource> localizer)
     {
         RuleFor(m => m.Name)
-            .NotEmpty().WithMessage("Vui lòng nhập tên nhà cung cấp")
-            .MaximumLength(200).WithMessage("Độ dài tên nhà cung cấp phải nhỏ hơn 200 ký tự");
+            .NotEmpty().WithMessage(m => localizer["Vendor.Name.Required"])
+            .MaximumLength(200).WithMessage(m => localizer["Vendor.Name.MaxLength"]);
 
         RuleFor(m => m.PhoneNumber)
-            .NotEmpty().WithMessage("Vui lòng nhập số điện thoại")
-            .Matches(@"0\d{9,10}").WithMessage("Số điện thoại không đúng");
+            .NotEmpty().WithMessage(m => localizer["Vendor.Phone.Required"])
+            .Matches(@"0\d{9,10}").WithMessage(m => localizer["Vendor.Phone.Invalid"]);
 
         RuleFor(m => m.Address)
-            .MaximumLength(400).WithMessage("Độ dài địa chỉ phải nhỏ hơn 400 ký tự");
+            .MaximumLength(400).WithMessage(m => localizer["Vendor.Address.MaxLength"]);
     }
 }

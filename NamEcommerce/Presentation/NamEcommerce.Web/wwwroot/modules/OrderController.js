@@ -99,13 +99,17 @@ export default class OrderController {
 
     #renderSummary() {
         getEl('subTotal').textContent = DecimalFields.formatCurrency(this.#state.subTotal) + ' đ';
-        getEl('discountDisplay').textContent = '- ' + DecimalFields.formatCurrency(this.#state.discount) + ' đ';
+        if (this.#state.discount > 0) {
+            getEl('discountDisplay').textContent = '- ' + DecimalFields.formatCurrency(this.#state.discount) + ' đ';
+        } else {
+            getEl('discountDisplay').textContent = '0 đ';
+        }
         getEl('grandTotal').textContent = DecimalFields.formatCurrency(this.#state.total) + ' đ';
         getEl('grandTotalHint').textContent = window.SoBangChu.docSoTien(this.#state.total);
 
         const hasItems = this.#state.items.length > 0;
         getEl('noItemsMessage').style.display = hasItems ? 'none' : 'block';
-        getEl('tableFooter').classList.toggle('d-none', !hasItems);
+        //getEl('tableFooter').classList.toggle('d-none', !hasItems);
     }
 
     #renderCustomer() {
@@ -286,7 +290,9 @@ export default class OrderController {
             dateValid
         );
 
-        form.querySelector('[type="submit"]').disabled = !canSubmit;
+        form.querySelectorAll('[type="submit"]').forEach(btn => {
+            btn.disabled = !canSubmit;
+        });
     }
 
     #validateCustomer() {

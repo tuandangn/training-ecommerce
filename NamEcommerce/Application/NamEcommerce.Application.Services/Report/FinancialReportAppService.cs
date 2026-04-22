@@ -71,7 +71,7 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
                     var product = products.FirstOrDefault(p => p.Id == item.ProductId);
                     productDict[item.ProductId] = new TopSellingProductAppDto 
                     { 
-                        ProductName = product?.Name ?? "Unknown" 
+                        ProductName = product?.Name ?? "(Không xác định)"
                     };
                 }
                 

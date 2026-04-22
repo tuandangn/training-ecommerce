@@ -23,7 +23,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
     {
         var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(dto.WarehouseId);
         if (warehouse is null)
-            throw new Exception("Warehouse not found."); //*TODO*
+            throw new Exception("Kho hàng không tồn tại"); //*TODO*
 
         var domainDto = new CreateDeliveryNoteDto
         {

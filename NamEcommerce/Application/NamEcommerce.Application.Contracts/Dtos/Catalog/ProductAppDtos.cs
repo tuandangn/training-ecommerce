@@ -17,13 +17,13 @@ public abstract record BaseProductAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (string.IsNullOrEmpty(Name))
-            return (false, "Name cannot be empty");
+            return (false, "Tên sản phẩm không được để trống");
 
         if (UnitPrice < 0)
-            return (false, "Unit price cannot be negative");
+            return (false, "Giá bán không được âm");
 
         if (CostPrice < 0)
-            return (false, "Cost price cannot be negative");
+            return (false, "Giá vốn không được âm");
 
         return (true, string.Empty);
     }

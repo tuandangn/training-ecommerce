@@ -1,110 +1,109 @@
 @inject IWebHelper WebHelper
-<ul class="navbar-nav flex-grow-1">
-    <li class="nav-item">
-        <a class="nav-link @(WebHelper.IsMatchRouteInfo("Home", "Index") ? "active" : "")" asp-controller="Home"
-           asp-action="Index">Trang chủ</a>
-    </li>
-    <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("Order", "Preparation", "DeliveryNote") ? "active" : "")"
-               href="#" id="orderMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Bán hàng
-        </a>
-        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Order") ? "active" : "")"
-                   asp-controller="Order" asp-action="List">Đơn hàng</a>
-            </li>
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Preparation") ? "active" : "")"
-                   asp-controller="Preparation" asp-action="List">Chuẩn bị hàng</a>
-            </li>
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("DeliveryNote") ? "active" : "")"
-                   asp-controller="DeliveryNote" asp-action="List">Phiếu xuất kho</a>
-            </li>
-        </ul>
-    </li>
-    <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("PurchaseOrder", "Inventory", "Category", "Product", "Warehouse") ? "active" : "")"
-               href="#" id="catalogMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Hàng hóa
-        </a>
-        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("PurchaseOrder") ? "active" : "")"
-                   asp-controller="PurchaseOrder" asp-action="List">Đơn nhập</a>
-            </li>
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Inventory") ? "active" : "")"
-                   asp-controller="Inventory" asp-action="StockList">Tồn kho</a>
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Product") ? "active" : "")"
-                   asp-controller="Product" asp-action="Index">Hàng hóa</a>
-            </li>
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Category") ? "active" : "")"
-                   asp-controller="Category" asp-action="Index">Danh mục</a>
-            </li>
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Warehouse") ? "active" : "")"
-                   asp-controller="Warehouse" asp-action="Index">Kho hàng</a>
-            </li>
-        </ul>
-    </li>
-    <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("VendorDebt", "Vendor", "Customer", "CustomerDebt") ? "active" : "")" href="#"
-               id="debtMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Công nợ
-        </a>
-        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("CustomerDebt") ? "active" : "")"
-                   asp-controller="CustomerDebt" asp-action="List">Công nợ khách hàng</a>
-            </li>
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Customer") ? "active" : "")"
-                   asp-controller="Customer" asp-action="List">Khách hàng</a>
-            </li>
-            <li><hr class="dropdown-divider" /></li>
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("VendorDebt") ? "active" : "")"
-                   asp-controller="VendorDebt" asp-action="Index">Công nợ NCC</a>
-            </li>
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Vendor") ? "active" : "")" asp-controller="Vendor"
-                   asp-action="Index">Nhà cung cấp</a>
-            </li>
 
-        </ul>
-    </li>
-    <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("Report") || WebHelper.IsHasController("Expense") ? "active" : "")" href="#"
-               id="reportMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Tài chính & Báo cáo
+<ul class="nav flex-column">
+    <li class="nav-item">
+        <a class="nav-link @(WebHelper.IsMatchRouteInfo("Home", "Index") ? "active" : "")" asp-controller="Home" asp-action="Index">
+            <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Dashboard
         </a>
-        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Report") ? "active" : "")"
-                   asp-controller="Report" asp-action="Financial">Báo cáo Mua Bán</a>
-            </li>
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("Expense") ? "active" : "")"
-                   asp-controller="Expense" asp-action="Index">Quản lý Chi phí (OPEX)</a>
-            </li>
-        </ul>
     </li>
-    <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle @(WebHelper.IsHasController("UnitMeasurement") ? "active" : "")" href="#"
-               id="otherMenuItemsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            Khác
+    
+    <!-- Bán hàng -->
+    <li class="nav-item">
+        <a class="nav-link @(WebHelper.IsHasController("Order", "Preparation", "DeliveryNote") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseSales" aria-expanded="@(WebHelper.IsHasController("Order", "Preparation", "DeliveryNote") ? "true" : "false")">
+            <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Bán hàng
         </a>
-        <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-            <li>
-                <a class="dropdown-item @(WebHelper.IsMatchRouteInfo("UnitMeasurement") ? "active" : "")"
-                   asp-controller="UnitMeasurement" asp-action="Index">Đơn vị tính</a>
-            </li>
-        </ul>
+        <div class="collapse @(WebHelper.IsHasController("Order", "Preparation", "DeliveryNote") ? "show" : "")" id="collapseSales">
+            <ul class="nav flex-column sub-menu">
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Order") ? "active" : "")" asp-controller="Order" asp-action="List">Đơn hàng</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Preparation") ? "active" : "")" asp-controller="Preparation" asp-action="List">Chuẩn bị hàng</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("DeliveryNote") ? "active" : "")" asp-controller="DeliveryNote" asp-action="List">Phiếu xuất kho</a>
+                </li>
+            </ul>
+        </div>
+    </li>
+
+    <!-- Hàng hóa -->
+    <li class="nav-item">
+        <a class="nav-link @(WebHelper.IsHasController("PurchaseOrder", "Inventory", "Category", "Product", "Warehouse") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseCatalog" aria-expanded="@(WebHelper.IsHasController("PurchaseOrder", "Inventory", "Category", "Product", "Warehouse") ? "true" : "false")">
+            <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Hàng hóa
+        </a>
+        <div class="collapse @(WebHelper.IsHasController("PurchaseOrder", "Inventory", "Category", "Product", "Warehouse") ? "show" : "")" id="collapseCatalog">
+            <ul class="nav flex-column sub-menu">
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("PurchaseOrder") ? "active" : "")" asp-controller="PurchaseOrder" asp-action="List">Đơn nhập</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Inventory") ? "active" : "")" asp-controller="Inventory" asp-action="StockList">Tồn kho</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Product") ? "active" : "")" asp-controller="Product" asp-action="Index">Sản phẩm</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Category") ? "active" : "")" asp-controller="Category" asp-action="Index">Danh mục</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Warehouse") ? "active" : "")" asp-controller="Warehouse" asp-action="Index">Kho hàng</a>
+                </li>
+            </ul>
+        </div>
+    </li>
+
+    <!-- Công nợ -->
+    <li class="nav-item">
+        <a class="nav-link @(WebHelper.IsHasController("VendorDebt", "Vendor", "Customer", "CustomerDebt") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseDebt" aria-expanded="@(WebHelper.IsHasController("VendorDebt", "Vendor", "Customer", "CustomerDebt") ? "true" : "false")">
+            <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Công nợ
+        </a>
+        <div class="collapse @(WebHelper.IsHasController("VendorDebt", "Vendor", "Customer", "CustomerDebt") ? "show" : "")" id="collapseDebt">
+            <ul class="nav flex-column sub-menu">
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerDebt") ? "active" : "")" asp-controller="CustomerDebt" asp-action="List">Công nợ khách hàng</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Customer") ? "active" : "")" asp-controller="Customer" asp-action="List">Khách hàng</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("VendorDebt") ? "active" : "")" asp-controller="VendorDebt" asp-action="Index">Công nợ NCC</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Vendor") ? "active" : "")" asp-controller="Vendor" asp-action="Index">Nhà cung cấp</a>
+                </li>
+            </ul>
+        </div>
+    </li>
+
+    <!-- Tài chính -->
+    <li class="nav-item">
+        <a class="nav-link @(WebHelper.IsHasController("Report", "Expense") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseFinance" aria-expanded="@(WebHelper.IsHasController("Report", "Expense") ? "true" : "false")">
+            <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Tài chính
+        </a>
+        <div class="collapse @(WebHelper.IsHasController("Report", "Expense") ? "show" : "")" id="collapseFinance">
+            <ul class="nav flex-column sub-menu">
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Report") ? "active" : "")" asp-controller="Report" asp-action="Financial">Báo cáo Mua Bán</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Expense") ? "active" : "")" asp-controller="Expense" asp-action="Index">Quản lý Chi phí</a>
+                </li>
+            </ul>
+        </div>
+    </li>
+
+    <!-- Khác -->
+    <li class="nav-item">
+        <a class="nav-link @(WebHelper.IsHasController("UnitMeasurement") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseOther" aria-expanded="@(WebHelper.IsHasController("UnitMeasurement") ? "true" : "false")">
+            <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Khác
+        </a>
+        <div class="collapse @(WebHelper.IsHasController("UnitMeasurement") ? "show" : "")" id="collapseOther">
+            <ul class="nav flex-column sub-menu">
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("UnitMeasurement") ? "active" : "")" asp-controller="UnitMeasurement" asp-action="Index">Đơn vị tính</a>
+                </li>
+            </ul>
+        </div>
     </li>
 </ul>

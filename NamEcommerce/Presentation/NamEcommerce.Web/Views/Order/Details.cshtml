@@ -5,244 +5,223 @@
     ViewData[ViewConstants.PageTitle] = $"Đơn bán - {Model.Code}";
     var orderStatus = (OrderStatus)Model.Status;
 }
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Đơn bán
+        <span class="text-muted">@Model.Code</span>
+        <span class="text-muted fw-normal">@Model.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
+        @if (orderStatus != OrderStatus.Locked)
+        {
+            <span class="text-muted small">
+                <span class="status-badge @orderStatus.GetDisplayColor()">
+                    @orderStatus.GetDisplayText()
+                </span>
+            </span>
+        }
 
-@if (TempData[ViewConstants.OrderSuccessMessage] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show alert-global mb-3" role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i>@TempData[ViewConstants.OrderSuccessMessage]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Order" class="text-decoration-none">Đơn bán</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Đơn bán @Model.Code</li>
+            </ol>
+        </nav>
     </div>
 }
-@if (TempData[ViewConstants.OrderErrorMessage] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show alert-global mb-3" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData[ViewConstants.OrderErrorMessage]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
-        <li class="breadcrumb-item"><a asp-action="List" class="text-decoration-none">Đơn bán</a></li>
-        <li class="breadcrumb-item active" aria-current="page">
-            @if (Model.CanUpdateInfo)
-            {
-                @:Chỉnh sửa
-            }
-            else
-            {
-                @:Xem chi tiết
-            }
-        </li>
-    </ol>
-</nav>
-<div class="content-card mb-3">
-    <div class="content-card-header">
-        <div>
-            <h1 class="page-header-title">
-                @if (Model.CanUpdateInfo)
-                {
-                    @:Chỉnh sửa đơn
-                }
-                else
-                {
-                    @:Xem chi tiết
-                }
-                @{
-                    var status = (OrderStatus)Model.Status;
-                }
-                <span class="text-primary small">@Model.Code</span>
-                @if (status != OrderStatus.Locked)
-                {
-                    <span class="text-muted small">
-                        <span class="status-badge @status.GetDisplayColor()">
-                            @status.GetDisplayText()
-                        </span>
-                    </span>
-                }
-            </h1>
-            <p class="page-header-subtitle">
-                <span>Ngày tạo @Model.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
-            </p>
-        </div>
-        <div class="d-flex gap-2 flex-grow-1 flex-lg-grow-0 justify-content-between justify-content-lg-center">
-            @if (Model.Status != (int)OrderStatus.Locked)
-            {
-                @if (Model.DeliveryNotes.Count > 0)
-                {
-                    <a asp-controller="DeliveryNote" asp-action="List" asp-route-keywords="@Model.Code" class="btn btn-info text-white">
-                        <i class="bi bi-card-list me-1"></i> DS Phiếu xuất
-                    </a>
-                }
-                @if (!Model.AreAllItemsFullyCovered)
-                {
-                    <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@Model.Id" class="btn btn-success">
-                        <i class="bi bi-file-earmark-plus me-1"></i> Tạo phiếu xuất kho
-                    </a>
-                }
-            }
-            <button type="button" class="btn btn-primary" onclick="window.print()">
-                <i class="bi bi-printer me-1"></i> In đơn
-            </button>
-        
-        </div>
-    </div>
-</div>
-<div class="row">
+<div class="row g-3">
     <div class="col-lg-8 order-1 order-lg-0">
-        <div class="content-card">
+        <div class="content-card h-100">
             <div class="content-card-header">
-                <h5>
-                    <i class="bi bi-box-seam me-2 text-primary"></i>
-                    Danh sách hàng hóa
-                    <span class="status-badge secondary d-none d-lg-inline">@Model.Items.Count hàng hóa</span>
-                </h5>
+                <h5>Danh sách hàng hóa</h5>
                 <div class="d-flex align-items-center gap-2">
+                    @if (Model.Status != (int)OrderStatus.Locked)
+                    {
+                        @if (Model.DeliveryNotes.Count > 0)
+                        {
+                            <a asp-controller="DeliveryNote" asp-action="List" asp-route-keywords="@Model.Code" class="btn btn-sm btn-info text-white">
+                                <i class="bi bi-card-list me-1"></i> DS Phiếu xuất
+                            </a>
+                        }
+                        @if (!Model.AreAllItemsFullyCovered)
+                        {
+                            <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@Model.Id" class="btn btn-sm btn-primary">
+                                Tạo phiếu xuất
+                            </a>
+                        }
+                    }
                     @if (Model.CanUpdateOrderItems)
                     {
-                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
-                                data-bs-target="#addProductModal">
-                            <i class="bi bi-plus-lg me-1"></i>Thêm
+                        <button type="button" class="btn btn-sm btn-light text-primary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                            <span class="d-none d-lg-inline">Thêm hàng hóa</span>
+                            <span class="d-lg-none">Thêm</span>
                         </button>
                     }
                 </div>
             </div>
-            <div class="table-responsive">
-                <table class="table data-table mb-0">
-                    <thead>
-                        <tr>
-                            <th class="ps-3">Hàng hóa</th>
-                            <th class="text-center" style="width: 12%">SL</th>
-                            <th class="text-end" style="width: 18%">Đơn giá</th>
-                            <th class="text-end d-none d-md-table-cell @(Model.CanUpdateOrderItems ? "" : "pe-3")"
-                                style="width: 18%">Thành tiền</th>
-                            @if (Model.CanUpdateOrderItems)
-                            {
-                                <th class="text-end pe-2" style="width: 48px"></th>
-                            }
-                        </tr>
-                    </thead>
-                    <tbody id="itemsTableBody">
-                        @foreach (var item in Model.Items)
-                        {
-                            <tr data-item-id="@item.Id">
-                                <td class="ps-4">
-                                    <div class="d-flex align-items-center gap-2">
-                                        @if (!string.IsNullOrEmpty(item.ProductPicture))
-                                        {
-                                            <img src="@item.ProductPicture" class="rounded d-none d-lg-block"
-                                                 style="width: 36px; height: 36px; object-fit: cover;" alt="" />
-                                        }
-                                        else
-                                        {
-                                            <div class="d-none d-lg-flex align-items-center justify-content-center rounded bg-light"
-                                                 style="width: 36px; height: 36px; flex-shrink: 0;">
-                                                <i class="bi bi-image text-muted small"></i>
-                                            </div>
-                                        }
-                                        <span class="fw-medium text-dark">@item.ProductName</span>
-                                    </div>
-                                </td>
-                                <td class="text-center fw-600">
-                                    <span class="quantity-text">@item.Quantity.DisplayQuantity()</span>
-                                </td>
-                                <td class="text-end text-muted">
-                                    <span class="unit-price-text">
-                                        @item.UnitPrice.DisplayCurrency()
-                                    </span>
-                                </td>
-                                <td class="text-end fw-600 text-primary d-none d-md-table-cell @(Model.CanUpdateOrderItems ? "" : "pe-4")">
-                                    <span class="total-price-text">
-                                        @item.SubTotal.DisplayCurrency()
-                                    </span>
-                                </td>
+            <div class="content-card-body-flush">
+                <div class="table-responsive">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Hàng hóa</th>
+                                <th class="text-center" style="width: 12%">SL</th>
+                                <th class="text-end" style="width: 18%">Đơn giá</th>
+                                <th class="text-end d-none d-md-table-cell @(Model.CanUpdateOrderItems ? "" : "pe-3")"
+                                    style="width: 18%">Thành tiền</th>
                                 @if (Model.CanUpdateOrderItems)
                                 {
-                                    <td class="text-end pe-4">
-                                        <div class="dropdown">
-                                            <button class="btn-table-action" type="button" data-bs-toggle="dropdown">
-                                                <i class="bi bi-three-dots-vertical"></i>
-                                            </button>
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                                                <li>
-                                                    <button class="dropdown-item btnEditItem" data-id="@item.Id"
-                                                            data-product="@item.ProductName"
-                                                            data-availableQty="@item.ProductAvailableQty?.DisplayQuantity()"
-                                                            data-qty="@item.Quantity.ToString("#")"
-                                                            data-price="@item.UnitPrice.ToString("#")">
-                                                        <i class="bi bi-pencil me-2 text-primary"></i>Chỉnh sửa
-                                                    </button>
-                                                </li>
-                                                @if (Model.Items.Count > 1)
-                                                {
-                                                    <li>
-                                                        <hr class="dropdown-divider">
-                                                    </li>
-                                                    <li>
-                                                        <button class="dropdown-item text-danger btnRemoveItem" data-id="@item.Id"
-                                                                data-order="@Model.Id" data-name="@item.ProductName">
-                                                            <i class="bi bi-trash me-2"></i>Xóa
-                                                        </button>
-                                                    </li>
-                                                }
-                                            </ul>
-                                        </div>
-                                    </td>
+                                    <th class="text-end pe-2" style="width: 48px"></th>
                                 }
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody id="itemsTableBody">
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr data-item-id="@item.Id">
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center gap-2">
+                                            @if (!string.IsNullOrEmpty(item.ProductPicture))
+                                            {
+                                                <img src="@item.ProductPicture" class="rounded d-none d-lg-block"
+                                                     style="width: 36px; height: 36px; object-fit: cover;" alt="" />
+                                            }
+                                            else
+                                            {
+                                                <div class="d-none d-lg-flex align-items-center justify-content-center rounded bg-light"
+                                                     style="width: 36px; height: 36px; flex-shrink: 0;">
+                                                    <i class="bi bi-image text-muted small"></i>
+                                                </div>
+                                            }
+                                            <span class="fw-medium text-dark">@item.ProductName</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-center fw-600">
+                                        <span class="quantity-text">@item.Quantity.DisplayQuantity()</span>
+                                    </td>
+                                    <td class="text-end text-muted">
+                                        <span class="unit-price-text">
+                                            @item.UnitPrice.DisplayCurrency()
+                                        </span>
+                                    </td>
+                                    <td class="text-end fw-600 text-primary d-none d-md-table-cell @(Model.CanUpdateOrderItems ? "" : "pe-4")">
+                                        <span class="total-price-text">
+                                            @item.SubTotal.DisplayCurrency()
+                                        </span>
+                                    </td>
+                                    @if (Model.CanUpdateOrderItems)
+                                    {
+                                        <td class="text-end pe-4">
+                                            <div class="dropdown">
+                                                <button class="btn-table-action" type="button" data-bs-toggle="dropdown">
+                                                    <i class="bi bi-three-dots-vertical"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                                    <li>
+                                                        <button class="dropdown-item btnEditItem" data-id="@item.Id"
+                                                                data-product="@item.ProductName"
+                                                                data-availableQty="@item.ProductAvailableQty?.DisplayQuantity()"
+                                                                data-qty="@item.Quantity.ToString("#")"
+                                                                data-price="@item.UnitPrice.ToString("#")">
+                                                            <i class="bi bi-pencil me-2 text-primary"></i>Chỉnh sửa
+                                                        </button>
+                                                    </li>
+                                                    @if (Model.Items.Count > 1)
+                                                    {
+                                                        <li>
+                                                            <hr class="dropdown-divider">
+                                                        </li>
+                                                        <li>
+                                                            <button class="dropdown-item text-danger btnRemoveItem" data-id="@item.Id"
+                                                                    data-order="@Model.Id" data-name="@item.ProductName">
+                                                                <i class="bi bi-trash me-2"></i>Xóa
+                                                            </button>
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="@(Model.Items.Count > 0 ? "" : "d-none") order-summary" id="tableFooter">
-                <div class="order-summary-row">
-                    <span class="label">Tạm tính</span>
-                    <span class="value" id="subTotal">
-                        @Model.OrderSubTotal.DisplayCurrency()
-                    </span>
-                </div>
-                <div class="order-summary-row">
-                    <span class="label">Giảm giá</span>
-                    <span class="value text-danger" id="discountDisplay">
-                        @if (Model.CanUpdateInfo)
+            <div class="content-card-footer bg-white py-2">
+                <div class="order-summary" id="tableFooter">
+                    <div class="order-summary-row small">
+                        <span class="label">Tạm tính</span>
+                        <span class="value" id="subTotal">@Model.OrderSubTotal.DisplayCurrency()</span>
+                    </div>
+                    <div class="order-summary-row position-relative">
+                        <span class="label">
+                            Giảm giá
+                            @if (Model.CanUpdateInfo)
+                            {
+                                <a href="#" class="text-muted stretched-link" data-bs-toggle="modal" data-bs-target="#editDiscountModal">
+                                    <i class="bi bi-pencil-square"></i>
+                                    <span class="visually-hidden">Chỉnh sửa</span>
+                                </a>
+                            }
+                        </span>
+                        <span class="value" id="discountDisplay">
+                            @if (Model.OrderDiscount > 0)
+                            {
+                                @:-@Model.OrderDiscount.DisplayCurrency()
+                            }
+                            else
+                            {
+                                @:0 @ViewConstants.DefaultCurrencySymbol
+                            }
+                        </span>
+                    </div>
+                    <div class="order-summary-row total">
+                        <span class="label">Tổng cộng</span>
+                        <span class="value">
+                            <span id="grandTotal">@Model.TotalAmount.DisplayCurrency()</span>
+                        </span>
+                    </div>
+                    <div class="currency-hint text-end visible" id="grandTotalHint">
+                        @if (Model.TotalAmount > 0)
                         {
-                            <a href="#" class="text-decoration-none text-danger" data-bs-toggle="modal"
-                                   data-bs-target="#editDiscountModal">
-                                -@Model.OrderDiscount.DisplayCurrency()
-                                <i class="bi bi-pencil-square ms-1 small"></i>
-                            </a>
+                            @Model.TotalAmount.DisplayVietnameseCurrencyHint()
                         }
-                        else
-                        {
-                            <span>
-                                -@Model.OrderDiscount.DisplayCurrency()
-                            </span>
-                        }
-                    </span>
+                    </div>
                 </div>
-                <div class="order-summary-row total">
-                    <span class="label">Tổng cộng</span>
-                    <span class="value" id="grandTotal">
-                        @Model.TotalAmount.DisplayCurrency()
-                    </span>
+            </div>
+            <div class="content-card-footer py-2 d-flex align-items-center justify-content-between">
+                <a asp-action="List" class="btn btn-link text-decoration-none">
+                    <span class="text-muted small">Trở về</span>
+                </a>
+                <div>
+                    <button type="button" class="btn btn-info text-white" onclick="window.print()">
+                        <i class="bi bi-printer me-1"></i>
+                        In đơn
+                    </button>
+                    @if (Model.CanLockOrder)
+                    {
+                        <button type="button" class="btn btn-danger d-lg-none" data-bs-toggle="modal" data-bs-target="#lockModal">
+                            Khóa đơn
+                        </button>
+                    }
                 </div>
             </div>
         </div>
-        @if (Model.CanLockOrder)
-        {
-            <div class="content-card mt-3 mt-lg-0">
-                <div class="content-card-body text-center d-lg-none">
-                    <button type="button" class="btn btn-outline-danger w-100" data-bs-toggle="modal"
-                            data-bs-target="#lockModal">
-                        <i class="bi bi-lock-fill me-1"></i> Khóa đơn hàng
-                    </button>
-                </div>
-            </div>
-        }
     </div>
     <div class="col-lg-4 order-0 order-lg-1">
-        @if (status == OrderStatus.Locked)
+        @{
+            // Check if order is not locked
+            var isOrderLocked = Model.Status == (int)OrderStatus.Locked;
+            // Check if there are delivery notes
+            var hasDeliveryNotes = Model.DeliveryNotes.Count > 0;
+            // Check if all items are fully covered
+            var allItemsCovered = Model.AreAllItemsFullyCovered;
+            // Show create button only if order is not locked and not all items are covered
+            var canCreateDeliveryNotes = !isOrderLocked && !allItemsCovered;
+        }
+        @if (orderStatus == OrderStatus.Locked)
         {
             <div class="content-card">
                 <div class="p-3 text-center @orderStatus.GetDisplayColor() text-white bg-gradient"
@@ -256,25 +235,20 @@
                 </div>
             </div>
         }
-        <div class="content-card mb-3">
+        <div class="content-card">
             <div class="content-card-header">
                 <h5>
-                    <i class="bi bi-person-circle me-2 text-success"></i>
                     Khách hàng
                 </h5>
                 @if (Model.CanUpdateInfo)
                 {
-                    <a asp-controller="Customer" asp-action="Edit" asp-route-id="@Model.CustomerId" target="_blank"
-                           class="btn btn-sm btn-light">
-                        <i class="bi bi-eye small"></i>
+                    <a asp-controller="Customer" asp-action="Edit" asp-route-id="@Model.CustomerId" target="_blank" class="btn btn-sm btn-light">
                         Xem
                     </a>
                 }
             </div>
-            <div class="content-card-body">
-                <div class="mb-3">
-                    <div class="fw-bold text-dark">@Model.CustomerName</div>
-                </div>
+            <div class="content-card-body pb-0 pt-2">
+                <div class="fw-bold text-dark">@Model.CustomerName</div>
                 @if (!string.IsNullOrEmpty(Model.CustomerPhoneNumber))
                 {
                     <div class="detail-row" style="border-top: none;">
@@ -301,40 +275,12 @@
                     </div>
                 }
             </div>
-        </div>
-        <div class="content-card mb-3">
             <div class="content-card-header">
-                <h5><i class="bi bi-sticky me-2 text-secondary"></i>Ghi chú</h5>
+                <h5>Vận chuyển</h5>
                 @if (Model.CanUpdateInfo)
                 {
-                    <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal"
-                            data-bs-target="#changeNoteModal">
-                        <i class="bi bi-pencil small"></i>
+                    <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#shippingModal">
                         Sửa
-                    </button>
-                }
-            </div>
-            <div class="content-card-body">
-                @if (!string.IsNullOrEmpty(Model.Note))
-                {
-                    <div class="fw-medium">
-                        @Model.Note
-                    </div>
-                }
-                else
-                {
-                    <span class="text-muted fst-italic small" id="orderNoteText">Không có ghi chú</span>
-                }
-            </div>
-        </div>
-        <div class="content-card mb-3">
-            <div class="content-card-header">
-                <h5><i class="bi bi-truck me-2 text-warning"></i>Vận chuyển</h5>
-                @if (Model.CanUpdateInfo)
-                {
-                    <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal"
-                            data-bs-target="#shippingModal">
-                        <i class="bi bi-pencil small me-1"></i>Sửa
                     </button>
                 }
             </div>
@@ -342,8 +288,14 @@
                 <div class="detail-row" style="border-top: none;">
                     <span class="detail-label">Ngày dự kiến</span>
                     <span class="detail-value fw-600">
-                        @(Model.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat)
-                                                                                                                                                                                                                                                                                                                                            ?? "—")
+                        @if (Model.ExpectedShippingDate.HasValue)
+                        {
+                            @Model.ExpectedShippingDate.Value.ToString(ViewConstants.DefaultDateFormat)
+                        }
+                        else
+                        {
+                            @:-
+                        }
                     </span>
                 </div>
                 <div class="detail-row">
@@ -365,24 +317,16 @@
                     </span>
                 </div>
             </div>
-        </div>
-
-        @{
-            // Check if order is not locked
-            var isOrderLocked = Model.Status == (int)OrderStatus.Locked;
-            // Check if there are delivery notes
-            var hasDeliveryNotes = Model.DeliveryNotes.Count > 0;
-            // Check if all items are fully covered
-            var allItemsCovered = Model.AreAllItemsFullyCovered;
-            // Show create button only if order is not locked and not all items are covered
-            var canCreateDeliveryNotes = !isOrderLocked && !allItemsCovered;
-        }
-
-        @if (!isOrderLocked || hasDeliveryNotes)
-        {
-            <div class="content-card mb-3">
+            @if (!isOrderLocked || hasDeliveryNotes)
+            {
                 <div class="content-card-header">
-                    <h5><i class="bi bi-box-seam me-2 text-info"></i>Phiếu xuất kho</h5>
+                    <h5>Phiếu xuất kho</h5>
+                    @if (canCreateDeliveryNotes)
+                    {
+                        <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#createDeliveryNoteModal">
+                            Tạo
+                        </button>
+                    }
                 </div>
                 <div class="content-card-body">
                     @if (hasDeliveryNotes)
@@ -407,25 +351,43 @@
                             }
                         </div>
                     }
-                    @if (canCreateDeliveryNotes)
+                    else
                     {
-                        <button type="button" class="btn btn-sm btn-outline-info w-100" data-bs-toggle="modal"
-                                data-bs-target="#createDeliveryNoteModal">
-                            <i class="bi bi-plus-lg me-1"></i>Tạo phiếu xuất kho
-                        </button>
+                        <span class="text-muted fst-italic small">Không có phiếu xuất nào.</span>
                     }
                 </div>
+            }
+            <div class="content-card-header">
+                <h5><i class="bi bi-sticky me-2 text-secondary"></i>Ghi chú</h5>
+                @if (Model.CanUpdateInfo)
+                {
+                    <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#changeNoteModal">
+                        Sửa
+                    </button>
+                }
             </div>
-        }
-        @if (Model.CanLockOrder)
-        {
-            <div class="d-none d-lg-grid">
-                <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal" data-bs-target="#lockModal">
-                    <i class="bi bi-lock me-1"></i>
-                    Khóa đơn
-                </button>
+            <div class="content-card-body">
+                @if (!string.IsNullOrEmpty(Model.Note))
+                {
+                    <div class="fw-medium">
+                        @Model.Note
+                    </div>
+                }
+                else
+                {
+                    <span class="text-muted fst-italic small" id="orderNoteText">Không có ghi chú</span>
+                }
             </div>
-        }
+            <div class="content-card-footer">
+                @if (Model.CanLockOrder)
+                {
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#lockModal">
+                        <i class="bi bi-lock me-1"></i>
+                        Khóa đơn
+                    </button>
+                }
+            </div>
+        </div>
     </div>
 </div>
 

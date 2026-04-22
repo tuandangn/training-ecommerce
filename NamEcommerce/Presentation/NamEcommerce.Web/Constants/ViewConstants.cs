@@ -4,6 +4,11 @@ public static class ViewConstants
 {
     public const string PageTitle = "Title";
 
+    public const string TitleSection = "TitleSection";
+    public const string MessageSection = "MessageSection";
+    public const string StyleSection = "Styles";
+    public const string ScriptSection = "Scripts";
+
     public const string GlobalSuccessMessage = "Messages.Global.Success";
     public const string GlobalErrorMessage = "Messages.Global.Error";
 
