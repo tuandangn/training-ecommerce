@@ -69,7 +69,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new CreatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Nhà cung cấp không tồn tại"
+                    ErrorMessage = "Error.VendorIsNotFound"
                 };
             }
         }
@@ -82,7 +82,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new CreatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Kho hàng không tồn tại"
+                    ErrorMessage = "Error.WarehouseIsNotFound"
                 };
             }
         }
@@ -95,7 +95,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new CreatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"User with ID {dto.CreatedByUserId} does not exist."
+                    ErrorMessage = "Error.UserIsNotFound"
                 };
             }
         }
@@ -153,7 +153,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new UpdatePurchaseOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Đơn nhập hàng không tồn tại"
+                ErrorMessage = "Error.PurchaseOrderIsNotFound"
             };
         }
 
@@ -164,7 +164,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new UpdatePurchaseOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Đơn nhập hàng ở trạng thái hiện tại không thể chỉnh sửa thông tin"
+                ErrorMessage = "Error.PurchaseOrderCannotUpdateInfo"
             };
         }
 
@@ -175,7 +175,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Đơn nhập hàng ở trạng thái hiện tại không thể đổi nhà cung cấp"
+                    ErrorMessage = "Error.PurchaseOrderCannotUpdateVendor"
                 };
             }
             if (dto.WarehouseId != purchaseOrder.WarehouseId)
@@ -183,7 +183,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Đơn nhập hàng ở trạng thái hiện tại không thể đổi kho"
+                    ErrorMessage = "Error.PurchaseOrderCannotUpdateWarehouse"
                 };
             }
             if (dto.ExpectedDeliveryDateUtc?.Date != purchaseOrder.ExpectedDeliveryDateUtc?.Date)
@@ -191,7 +191,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Đơn nhập hàng ở trạng thái hiện tại không thể đổi ngày giao"
+                    ErrorMessage = "Error.PurchaseOrderCannotUpdateDeliveryDate"
                 };
             }
         }
@@ -203,7 +203,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Đơn hàng chưa có sản phẩm, không thể thiết lập phí vận chuyển"
+                    ErrorMessage = "Error.PurchaseOrderHasNoItemsForShipping"
                 };
             }
             if (dto.TaxAmount > 0)
@@ -211,7 +211,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Đơn hàng chưa có sản phẩm, không thể thiết lập tiền thuế"
+                    ErrorMessage = "Error.PurchaseOrderHasNoItemsForTax"
                 };
             }
         }
@@ -224,7 +224,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Nhà cung cấp không tồn tại"
+                    ErrorMessage = "Error.VendorIsNotFound"
                 };
             }
         }
@@ -237,7 +237,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new UpdatePurchaseOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Kho hàng không tồn tại"
+                    ErrorMessage = "Error.WarehouseIsNotFound"
                 };
             }
         }
@@ -281,7 +281,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new AddPurchaseOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Purchase order with ID {dto.PurchaseOrderId} does not exist."
+                ErrorMessage = "Error.PurchaseOrderIsNotFound"
             };
         }
         if (!await _purchaseOrderManager.CanAddPurchaseOrderItemsAsync(dto.PurchaseOrderId).ConfigureAwait(false))
@@ -289,7 +289,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new AddPurchaseOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Cannot add item to purchase order with status {purchaseOrder.Status}."
+                ErrorMessage = "Error.PurchaseOrderCannotAddItems"
             };
         }
 
@@ -298,7 +298,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new AddPurchaseOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Product with ID {dto.ProductId} does not exist."
+                ErrorMessage = "Error.ProductIsNotFound"
             };
 
         var result = await _purchaseOrderManager.AddPurchaseOrderItemAsync(new AddPurchaseOrderItemDto
@@ -321,10 +321,10 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     {
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
-            return (false, $"Purchase order with ID {purchaseOrderId} does not exist.");
+            return (false, "Error.PurchaseOrderIsNotFound");
 
         if (!await _purchaseOrderManager.CanChangeStatusToAsync(purchaseOrderId, (PurchaseOrderStatus)status))
-            return (false, $"Cannot change purchase order status from {purchaseOrder.Status} to {(PurchaseOrderStatus)status}.");
+            return (false, "Error.OrderCannotChangeStatus");
 
         await _purchaseOrderManager.ChangeStatusAsync(purchaseOrderId, (PurchaseOrderStatus)status).ConfigureAwait(false);
 
@@ -351,7 +351,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new ReceivedGoodsForItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Purchase order with ID {dto.PurchaseOrderId} does not exist."
+                ErrorMessage = "Error.PurchaseOrderIsNotFound"
             };
         }
         if (!await _purchaseOrderManager.CanReceiveGoodsAsync(dto.PurchaseOrderId).ConfigureAwait(false))
@@ -359,7 +359,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new ReceivedGoodsForItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Cannot receive goods to purchase order {dto.PurchaseOrderId}."
+                ErrorMessage = "Error.PurchaseOrderCannotReceiveGoods"
             };
         }
 
@@ -369,7 +369,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new ReceivedGoodsForItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Purchase order item with ID {dto.PurchaseOrderItemId} does not exist in purchase order {dto.PurchaseOrderId}."
+                ErrorMessage = "Error.PurchaseOrderItemIsNotFound"
             };
         }
 
@@ -378,7 +378,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new ReceivedGoodsForItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Cannot receive quantity {dto.ReceivedQuantity} for purchase order item {dto.PurchaseOrderItemId} because it exceeds the quantity ordered."
+                ErrorMessage = "Error.PurchaseOrderReceiveQuantityExceedsOrdered"
             };
         }
 
@@ -388,7 +388,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new ReceivedGoodsForItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Product with ID {purchaseOrderItem.ProductId} does not exist."
+                ErrorMessage = "Error.ProductIsNotFound"
             };
         }
 
@@ -400,7 +400,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new ReceivedGoodsForItemResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"User with ID {dto.ReceivedByUserId} does not exist."
+                    ErrorMessage = "Error.UserIsNotFound"
                 };
             }
         }
@@ -411,7 +411,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new ReceivedGoodsForItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Warehouse is required."
+                ErrorMessage = "Error.WarehouseRequired"
             };
         }
         else
@@ -422,7 +422,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return new ReceivedGoodsForItemResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Warehouse with ID {dto.WarehouseId} does not exist."
+                    ErrorMessage = "Error.WarehouseIsNotFound"
                 };
             }
         }
@@ -458,10 +458,10 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     {
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(id).ConfigureAwait(false);
         if (purchaseOrder is null)
-            return (false, $"Đơn nhập hàng không tồn tại");
+            return (false, "Error.PurchaseOrderIsNotFound");
 
         if (!await _purchaseOrderManager.CanChangeStatusToAsync(id, PurchaseOrderStatus.Submitted))
-            return (false, "Không thể xác nhận đơn nhập hàng ở trạng thái hiện tại");
+            return (false, "Error.PurchaseOrderCannotSubmit");
 
         await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Submitted).ConfigureAwait(false);
 
@@ -472,10 +472,10 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     {
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(id).ConfigureAwait(false);
         if (purchaseOrder is null)
-            return (false, $"Đơn nhập hàng không tồn tại");
+            return (false, "Error.PurchaseOrderIsNotFound");
 
         if (!await _purchaseOrderManager.CanChangeStatusToAsync(id, PurchaseOrderStatus.Cancelled))
-            return (false, "Không thể hủy đơn nhập hàng ở trạng thái hiện tại");
+            return (false, "Error.PurchaseOrderCannotCancel");
 
         await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Cancelled).ConfigureAwait(false);
 
@@ -492,7 +492,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new DeletePurchaseOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Purchase order with ID {dto.PurchaseOrderId} does not exist."
+                ErrorMessage = "Error.PurchaseOrderIsNotFound"
             };
         }
 
@@ -502,7 +502,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new DeletePurchaseOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = $"Item with ID {dto.ItemId} does not exist in purchase order {dto.PurchaseOrderId}."
+                ErrorMessage = "Error.PurchaseOrderItemIsNotFound"
             };
         }
 
@@ -512,7 +512,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return new DeletePurchaseOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Can only delete items from purchase orders in Draft status."
+                ErrorMessage = "Error.PurchaseOrderCannotDeleteItems"
             };
         }
 

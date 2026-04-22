@@ -43,7 +43,7 @@ public sealed class OrderAppService(
             return new UpdateOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order is not found."
+                ErrorMessage = "Error.OrderIsNotFound"
             };
         }
 
@@ -52,7 +52,7 @@ public sealed class OrderAppService(
             return new UpdateOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order cannot update info."
+                ErrorMessage = "Error.OrderCannotUpdateInfo"
             };
         }
 
@@ -61,7 +61,7 @@ public sealed class OrderAppService(
             return new UpdateOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order discount cannot exceed order sub total."
+                ErrorMessage = "Error.OrderDiscountExceedsTotal"
             };
         }
 
@@ -99,7 +99,7 @@ public sealed class OrderAppService(
             return new AddOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order is not found."
+                ErrorMessage = "Error.OrderIsNotFound"
             };
         }
 
@@ -108,7 +108,7 @@ public sealed class OrderAppService(
             return new AddOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order cannot add items."
+                ErrorMessage = "Error.OrderCannotUpdateOrderItems"
             };
         }
 
@@ -118,7 +118,7 @@ public sealed class OrderAppService(
             return new AddOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Product is not found."
+                ErrorMessage = "Error.ProductIsNotFound"
             };
         }
 
@@ -156,7 +156,7 @@ public sealed class OrderAppService(
             return new UpdateOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order is not found."
+                ErrorMessage = "Error.OrderIsNotFound"
             };
         }
 
@@ -165,7 +165,7 @@ public sealed class OrderAppService(
             return new UpdateOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order cannot update items."
+                ErrorMessage = "Error.OrderCannotUpdateOrderItems"
             };
         }
 
@@ -175,7 +175,7 @@ public sealed class OrderAppService(
             return new UpdateOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order item is not found."
+                ErrorMessage = "Error.OrderItemIsNotFound"
             };
         }
 
@@ -185,7 +185,7 @@ public sealed class OrderAppService(
             return new UpdateOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order discount cannot exceed order sub total."
+                ErrorMessage = "Error.OrderDiscountExceedsTotal"
             };
         }
 
@@ -201,7 +201,7 @@ public sealed class OrderAppService(
             return new UpdateOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Updated order item quantity cannot less than its delivering quantity."
+                ErrorMessage = "Error.OrderItemQuantityInvalid_Delivering"
             };
         }
         if (deliveryNoteOrderItems.Any(item => item.UnitPrice != dto.UnitPrice))
@@ -209,7 +209,7 @@ public sealed class OrderAppService(
             return new UpdateOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Updated order item cannot change unit price of items that are already in delivery notes."
+                ErrorMessage = "Error.OrderItemUnitPriceCannotChange_InDelivery"
             };
         }
 
@@ -239,7 +239,7 @@ public sealed class OrderAppService(
             return new DeleteOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order is not found."
+                ErrorMessage = "Error.OrderIsNotFound"
             };
         }
 
@@ -248,7 +248,7 @@ public sealed class OrderAppService(
             return new DeleteOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order cannot delete items."
+                ErrorMessage = "Error.OrderCannotUpdateOrderItems"
             };
         }
 
@@ -258,7 +258,7 @@ public sealed class OrderAppService(
             return new DeleteOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order item is not found."
+                ErrorMessage = "Error.OrderItemIsNotFound"
             };
         }
 
@@ -268,7 +268,7 @@ public sealed class OrderAppService(
             return new DeleteOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order discount cannot exceed order sub total."
+                ErrorMessage = "Error.OrderDiscountExceedsTotal"
             };
         }
 
@@ -280,7 +280,7 @@ public sealed class OrderAppService(
             return new DeleteOrderItemResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order item cannot be removed because it is processing in delivery note."
+                ErrorMessage = "Error.OrderItemCannotRemove_InDelivery"
             };
         }
 
@@ -312,7 +312,7 @@ public sealed class OrderAppService(
             return new UpdateOrderShippingResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order is not found."
+                ErrorMessage = "Error.OrderIsNotFound"
             };
         }
 
@@ -321,7 +321,7 @@ public sealed class OrderAppService(
             return new UpdateOrderShippingResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order cannot be change shipping status."
+                ErrorMessage = "Error.OrderCannotUpdateShipping"
             };
         }
 
@@ -348,7 +348,7 @@ public sealed class OrderAppService(
             return new LockOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order is not found."
+                ErrorMessage = "Error.OrderIsNotFound"
             };
         }
 
@@ -357,7 +357,7 @@ public sealed class OrderAppService(
             return new LockOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order cannot be change shipping status."
+                ErrorMessage = "Error.OrderCannotUpdateShipping"
             };
         }
 
@@ -411,7 +411,7 @@ public sealed class OrderAppService(
             return new CreateOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Customer is not found."
+                ErrorMessage = "Error.CustomerIsNotFound"
             };
         }
 
@@ -423,7 +423,7 @@ public sealed class OrderAppService(
                 return new CreateOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = "Created user is not found."
+                    ErrorMessage = "Error.UserIsNotFound"
                 };
             }
         }
@@ -468,7 +468,7 @@ public sealed class OrderAppService(
             return new MarkOrderItemDeliveredResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Không tìm thấy đơn hàng."
+                ErrorMessage = "Error.OrderIsNotFound"
             };
         }
 
@@ -478,7 +478,7 @@ public sealed class OrderAppService(
             return new MarkOrderItemDeliveredResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Không tìm thấy hàng hóa trong đơn."
+                ErrorMessage = "Error.OrderItemIsNotFound"
             };
         }
 
@@ -487,7 +487,7 @@ public sealed class OrderAppService(
             return new MarkOrderItemDeliveredResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Hàng hóa đã được đánh dấu giao rồi."
+                ErrorMessage = "Error.OrderItemAlreadyDelivered"
             };
         }
 
@@ -534,7 +534,7 @@ public sealed class OrderAppService(
             return new DeleteOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order is not found."
+                ErrorMessage = "Error.OrderIsNotFound"
             };
         }
 
@@ -543,7 +543,7 @@ public sealed class OrderAppService(
             return new DeleteOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order cannot delete."
+                ErrorMessage = "Error.OrderCannotDelete"
             };
         }
 
@@ -555,7 +555,7 @@ public sealed class OrderAppService(
             return new DeleteOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Order cannot deleted because it is processing."
+                ErrorMessage = "Error.OrderCannotDelete_Processing"
             };
         }
 

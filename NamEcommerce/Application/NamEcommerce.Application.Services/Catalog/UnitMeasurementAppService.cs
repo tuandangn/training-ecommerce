@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Application.Contracts.Catalog;
+using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Services.Extensions;
@@ -70,7 +70,7 @@ public sealed class UnitMeasurementAppService : IUnitMeasurementAppService
             return new CreateUnitMeasurementResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Name already exists."
+                ErrorMessage = "Error.UnitMeasurementNameAlreadyExists"
             };
         }
 
@@ -107,7 +107,7 @@ public sealed class UnitMeasurementAppService : IUnitMeasurementAppService
             return new UpdateUnitMeasurementResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Không tìm thấy đơn vị tính"
+                ErrorMessage = "Error.UnitMeasurementIsNotFound"
             };
         }
 
@@ -116,7 +116,7 @@ public sealed class UnitMeasurementAppService : IUnitMeasurementAppService
             return new UpdateUnitMeasurementResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Tên đơn vị tính trùng lặp"
+                ErrorMessage = "Error.UnitMeasurementNameAlreadyExists"
             };
         }
 
@@ -143,7 +143,7 @@ public sealed class UnitMeasurementAppService : IUnitMeasurementAppService
             return new DeleteUnitMeasurementResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Unit measurement is not found."
+                ErrorMessage = "Error.UnitMeasurementIsNotFound"
             };
         }
 

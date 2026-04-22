@@ -7,12 +7,12 @@ namespace NamEcommerce.Web.Validators.Orders;
 
 public sealed class EditOrderDiscountValidator : AbstractValidator<EditOrderDiscountModel>
 {
-    public EditOrderDiscountValidator(IStringLocalizer<ValidationResource> localizer)
+    public EditOrderDiscountValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(m => m.OrderId)
-            .NotEmpty().WithMessage(m => localizer["Order.Id.NotFound"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Invalid", localizer["Label.Code"]]);
 
         RuleFor(m => m.OrderDiscount)
-            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Order.Discount.Invalid"]);
+            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.Discount"]]);
     }
 }

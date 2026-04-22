@@ -1,4 +1,4 @@
-﻿namespace NamEcommerce.Application.Contracts.Dtos.Users;
+namespace NamEcommerce.Application.Contracts.Dtos.Users;
 
 [Serializable]
 public sealed record UserAppDto
@@ -28,16 +28,16 @@ public sealed record CreateUserAppDto
     public static (bool valid, string? errorMessage) Validate(CreateUserAppDto dto)
     {
         if (dto is null)
-            return (false, "CreateUserDto cannot be null.");
+            return (false, "Error.UserDtoRequired");
 
         if (string.IsNullOrEmpty(dto.Username))
-            return (false, "Username cannot be null or empty.");
+            return (false, "Error.UsernameRequired");
         if (string.IsNullOrEmpty(dto.Password))
-            return (false, "Password cannot be null or empty.");
+            return (false, "Error.PasswordRequired");
         if (string.IsNullOrEmpty(dto.FullName))
-            return (false, "FullName cannot be null or empty.");
+            return (false, "Error.FullNameRequired");
         if (string.IsNullOrEmpty(dto.PhoneNumber))
-            return (false, "PhoneNumber cannot be null or empty.");
+            return (false, "Error.PhoneNumberRequired");
 
         return (true, null);
     }

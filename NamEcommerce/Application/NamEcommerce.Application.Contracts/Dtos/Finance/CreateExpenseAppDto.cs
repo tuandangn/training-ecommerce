@@ -4,14 +4,14 @@ namespace NamEcommerce.Application.Contracts.Dtos.Finance;
 
 public class CreateExpenseAppDto
 {
-    [Required(ErrorMessage = "Vui lòng nhập tên khoản chi.")]
-    [StringLength(255, ErrorMessage = "Tên khoản chi không được vượt quá 255 ký tự.")]
+    [Required(ErrorMessage = "Error.ExpenseTitleRequired")]
+    [StringLength(255, ErrorMessage = "Error.ExpenseTitleTooLong")]
     public string Title { get; set; } = string.Empty;
 
     public string? Description { get; set; }
 
-    [Required(ErrorMessage = "Vui lòng nhập số tiền.")]
-    [Range(0.01, double.MaxValue, ErrorMessage = "Số tiền phải lớn hơn 0.")]
+    [Required(ErrorMessage = "Error.ExpenseAmountRequired")]
+    [Range(0.01, double.MaxValue, ErrorMessage = "Error.ExpenseAmountMustBePositive")]
     public decimal Amount { get; set; }
 
     public int ExpenseType { get; set; }
@@ -22,8 +22,8 @@ public class CreateExpenseAppDto
 
     public (bool isValid, string? errorMessage) Validate()
     {
-        if (string.IsNullOrWhiteSpace(Title)) return (false, "Title is required.");
-        if (Amount < 0) return (false, "Amount cannot be negative.");
+        if (string.IsNullOrWhiteSpace(Title)) return (false, "Error.ExpenseTitleRequired");
+        if (Amount < 0) return (false, "Error.ExpenseAmountMustBePositive");
         return (true, null);
     }
 }

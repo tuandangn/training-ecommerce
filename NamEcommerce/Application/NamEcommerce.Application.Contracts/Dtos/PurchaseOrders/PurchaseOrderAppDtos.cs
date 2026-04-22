@@ -14,11 +14,11 @@ public abstract record BasePurchaseOrderAppDto
     public virtual (bool valid, string? errorMessage) Validate()
     {
         if (ExpectedDeliveryDateUtc.HasValue && ExpectedDeliveryDateUtc.Value < DateTime.UtcNow.Date)
-            return (false, "Ngày giao hàng dự kiến không được ở quá khứ");
+            return (false, "Error.ExpectedDeliveryDateCannotBeInPast");
         if (TaxAmount < 0)
-            return (false, "Tiền thuế không được âm");
+            return (false, "Error.TaxAmountCannotBeNegative");
         if (ShippingAmount < 0)
-            return (false, "Phí vận chuyển không được âm");
+            return (false, "Error.ShippingAmountCannotBeNegative");
 
         return (true, string.Empty);
     }

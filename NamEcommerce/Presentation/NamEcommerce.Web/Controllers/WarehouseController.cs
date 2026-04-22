@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Inventory;
@@ -54,12 +54,12 @@ public sealed class WarehouseController : BaseAuthorizedController
         });
         if (!createWarehouseResult.Success)
         {
-            ModelState.AddModelError(string.Empty, createWarehouseResult.ErrorMessage!);
+            AddLocalizedModelError(createWarehouseResult.ErrorMessage!);
             model = await _warehouseModelFactory.PrepareCreateWarehouseModel(model);
             return View(model);
         }
 
-        TempData[ViewConstants.WarehouseSuccessMessage] = "Thêm mới kho hàng thành công!";
+        TempData[ViewConstants.WarehouseSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -68,7 +68,7 @@ public sealed class WarehouseController : BaseAuthorizedController
         var model = await _warehouseModelFactory.PrepareEditWarehouseModel(id);
         if (model == null)
         {
-            TempData[ViewConstants.WarehouseErrorMessage] = "Không tìm thấy kho hàng.";
+            TempData[ViewConstants.WarehouseErrorMessage] = LocalizeError("Error.WarehouseIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -87,7 +87,7 @@ public sealed class WarehouseController : BaseAuthorizedController
         var warehouse = await _mediator.Send(new GetWarehouseQuery { Id = model.Id });
         if (warehouse == null)
         {
-            TempData[ViewConstants.WarehouseErrorMessage] = "Không tìm thấy kho hàng.";
+            TempData[ViewConstants.WarehouseErrorMessage] = LocalizeError("Error.WarehouseIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -103,12 +103,12 @@ public sealed class WarehouseController : BaseAuthorizedController
         });
         if (!updateWarehouseResult.Success)
         {
-            ModelState.AddModelError(string.Empty, updateWarehouseResult.ErrorMessage!);
+            AddLocalizedModelError(updateWarehouseResult.ErrorMessage!);
             model = (await _warehouseModelFactory.PrepareEditWarehouseModel(model.Id, model))!;
             return View(model);
         }
 
-        TempData[ViewConstants.WarehouseSuccessMessage] = "Chỉnh sửa kho hàng thành công!";
+        TempData[ViewConstants.WarehouseSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -118,9 +118,9 @@ public sealed class WarehouseController : BaseAuthorizedController
         var resultDto = await _mediator.Send(new DeleteWarehouseCommand(id));
 
         if (!resultDto.Success)
-            TempData[ViewConstants.WarehouseErrorMessage] = resultDto.ErrorMessage;
+            TempData[ViewConstants.WarehouseErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
         else 
-            TempData[ViewConstants.WarehouseSuccessMessage] = "Xóa kho hàng thành công!";
+            TempData[ViewConstants.WarehouseSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }
 }

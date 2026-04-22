@@ -32,6 +32,9 @@ public static class ViewConstants
     public const string WarehouseSuccessMessage = "Messages.Warehouse.Success";
     public const string WarehouseErrorMessage = "Messages.Warehouse.Error";
 
+    public const string InventorySuccessMessage = "Messages.Inventory.Success";
+    public const string InventoryErrorMessage = "Messages.Inventory.Error";
+
     public const string PurchaseOrderSuccessMessage = "Messages.PurchaseOrder.Success";
     public const string PurchaseOrderErrorMessage = "Messages.PurchaseOrder.Error";
     public const string PurchaseOrderAddItemErrorMessage = "Messages.PurchaseOrder.AddItem.Error";

@@ -50,7 +50,7 @@ public class ExpenseController : BaseAuthorizedController
         var (isValid, errorMessage) = dto.Validate();
         if (!isValid)
         {
-            ModelState.AddModelError(string.Empty, errorMessage!);
+            AddLocalizedModelError(errorMessage);
             return View(dto);
         }
 
@@ -58,7 +58,7 @@ public class ExpenseController : BaseAuthorizedController
         if (result.Success)
             return RedirectToAction(nameof(List));
 
-        ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "Thêm mới thất bại.");
+        AddLocalizedModelError(result.ErrorMessage ?? "Error.ExpenseCreateFailed");
         return View(dto);
     }
 
@@ -92,7 +92,7 @@ public class ExpenseController : BaseAuthorizedController
         var (isValid, errorMessage) = dto.Validate();
         if (!isValid)
         {
-            ModelState.AddModelError(string.Empty, errorMessage!);
+            AddLocalizedModelError(errorMessage);
             return View(dto);
         }
 
@@ -100,7 +100,7 @@ public class ExpenseController : BaseAuthorizedController
         if (result.Success)
             return RedirectToAction(nameof(List));
 
-        ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "Mã lỗi cập nhật.");
+        AddLocalizedModelError(result.ErrorMessage ?? "Error.ExpenseUpdateFailed");
         return View(dto);
     }
 

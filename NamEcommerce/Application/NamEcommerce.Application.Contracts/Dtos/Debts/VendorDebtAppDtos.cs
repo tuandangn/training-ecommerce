@@ -98,11 +98,11 @@ public sealed record CreateVendorDebtAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (VendorId == Guid.Empty)
-            return (false, "VendorId is required.");
+            return (false, "Error.VendorRequired");
         if (PurchaseOrderId == Guid.Empty)
-            return (false, "PurchaseOrderId is required.");
+            return (false, "Error.PurchaseOrderRequired");
         if (TotalAmount <= 0)
-            return (false, "TotalAmount must be greater than 0.");
+            return (false, "Error.PaymentAmountMustBePositive");
 
         return (true, string.Empty);
     }
@@ -127,11 +127,11 @@ public sealed record CreateVendorPaymentAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (VendorId == Guid.Empty)
-            return (false, "VendorId is required.");
+            return (false, "Error.VendorRequired");
         if (Amount <= 0)
-            return (false, "Amount must be greater than 0.");
+            return (false, "Error.PaymentAmountMustBePositive");
         if (PaidOnUtc == default)
-            return (false, "PaidOnUtc is required.");
+            return (false, "Error.PaymentDateRequired");
 
         return (true, string.Empty);
     }

@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Exceptions;
 
 namespace NamEcommerce.Domain.Shared.Dtos.Debts;
 
@@ -78,11 +79,11 @@ public sealed record CreateCustomerDebtDto
     public void Verify()
     {
         if (CustomerId == Guid.Empty)
-            throw new ArgumentException("Mã khách hàng không được để trống");
+            throw new NamEcommerceDomainException("Error.CustomerRequired");
         if (DeliveryNoteId == Guid.Empty)
-            throw new ArgumentException("Mã phiếu giao hàng không được để trống");
+            throw new NamEcommerceDomainException("Error.DeliveryNoteCodeRequired");
         if (TotalAmount <= 0)
-            throw new ArgumentException("Tổng tiền phải lớn hơn 0");
+            throw new NamEcommerceDomainException("Error.TotalAmountMustBePositive");
     }
 }
 
@@ -133,10 +134,10 @@ public sealed record CreateCustomerPaymentDto
     public void Verify()
     {
         if (CustomerId == Guid.Empty)
-            throw new ArgumentException("Mã khách hàng không được để trống");
+            throw new NamEcommerceDomainException("Error.CustomerRequired");
         if (Amount <= 0)
-            throw new ArgumentException("Số tiền thanh toán phải lớn hơn 0");
+            throw new NamEcommerceDomainException("Error.PaymentAmountMustBePositive");
         if (PaidOnUtc == default)
-            throw new ArgumentException("Ngày thanh toán không được để trống");
+            throw new NamEcommerceDomainException("Error.PaymentDateRequired");
     }
 }

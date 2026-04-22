@@ -5,6 +5,8 @@ using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Exceptions.Customers;
+using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Common;
 
@@ -44,8 +46,8 @@ public sealed class CustomerDebtManager(
         var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
         var deliveryNote = await deliveryNoteReader.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
         
-        if (customer == null) throw new ArgumentException("Khách hàng không tồn tại");
-        if (deliveryNote == null) throw new ArgumentException("Phiếu giao hàng không tồn tại");
+        if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
+        if (deliveryNote == null) throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
 
         var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
         
@@ -87,7 +89,7 @@ public sealed class CustomerDebtManager(
         dto.Verify();
 
         var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
-        if (customer == null) throw new ArgumentException("Khách hàng không tồn tại");
+        if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
 
         var code = await GeneratePaymentCodeAsync().ConfigureAwait(false);
         
@@ -188,7 +190,7 @@ public sealed class CustomerDebtManager(
         dto.Verify();
 
         var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
-        if (customer == null) throw new ArgumentException("Khách hàng không tồn tại");
+        if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
 
         // Lấy tất cả debts chưa trả hết, sắp xếp cũ nhất trước (FIFO)
         var pendingDebts = debtReader.DataSource

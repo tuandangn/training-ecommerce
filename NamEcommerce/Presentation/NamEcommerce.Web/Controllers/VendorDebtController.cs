@@ -29,7 +29,7 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
         var model = await _mediator.Send(new GetVendorDebtDetailsQuery { VendorId = vendorId }).ConfigureAwait(false);
         if (model == null)
         {
-            TempData[ViewConstants.CustomerErrorMessage] = "Không tìm thấy thông tin công nợ nhà cung cấp.";
+            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError("Error.VendorDebtNotFound");
             return RedirectToAction(nameof(Index));
         }
         return View(model);
@@ -40,12 +40,12 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
     public async Task<IActionResult> RecordPayment(RecordVendorPaymentModel model)
     {
         if (!ModelState.IsValid)
-            return Json(new { success = false, message = "Thông tin không hợp lệ." });
+            return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
 
         var result = await _mediator.Send(new RecordVendorPaymentCommand { Model = model }).ConfigureAwait(false);
         return result.Success
-            ? Json(new { success = true, message = "Đã ghi nhận chi tiền thành công." })
-            : Json(new { success = false, message = result.ErrorMessage });
+            ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
+            : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
     /// <summary>Thanh toán linh động FIFO — phân bổ vào các phiếu nợ còn lại (POST).</summary>
@@ -53,12 +53,12 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
     public async Task<IActionResult> RecordFlexiblePayment(RecordVendorPaymentModel model)
     {
         if (!ModelState.IsValid)
-            return Json(new { success = false, message = "Thông tin không hợp lệ." });
+            return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
 
         var result = await _mediator.Send(new RecordFlexibleVendorPaymentCommand { Model = model }).ConfigureAwait(false);
         return result.Success
-            ? Json(new { success = true, message = result.SuccessMessage ?? "Đã ghi nhận chi tiền thành công." })
-            : Json(new { success = false, message = result.ErrorMessage });
+            ? Json(new { success = true, message = result.SuccessMessage ?? LocalizeError("Msg.SaveSuccess") })
+            : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
     /// <summary>Ghi nhận tiền ứng trước cho NCC (POST).</summary>
@@ -66,12 +66,12 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
     public async Task<IActionResult> RecordAdvance(RecordVendorPaymentModel model)
     {
         if (!ModelState.IsValid)
-            return Json(new { success = false, message = "Thông tin không hợp lệ." });
+            return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
 
         var result = await _mediator.Send(new RecordVendorAdvancePaymentCommand { Model = model }).ConfigureAwait(false);
         return result.Success
-            ? Json(new { success = true, message = "Đã ghi nhận tiền ứng trước thành công." })
-            : Json(new { success = false, message = result.ErrorMessage });
+            ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
+            : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
     /// <summary>In phiếu chi cho 1 lần thanh toán NCC.</summary>

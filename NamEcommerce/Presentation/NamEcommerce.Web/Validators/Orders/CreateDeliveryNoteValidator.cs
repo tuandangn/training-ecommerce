@@ -7,26 +7,26 @@ namespace NamEcommerce.Web.Validators.Orders;
 
 public sealed class CreateDeliveryNoteValidator : AbstractValidator<CreateDeliveryNoteModel>
 {
-    public CreateDeliveryNoteValidator(IStringLocalizer<ValidationResource> localizer)
+    public CreateDeliveryNoteValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(x => x.OrderId)
-            .NotEmpty().WithMessage(x => localizer["DeliveryNote.OrderId.Required"]);
+            .NotEmpty().WithMessage(x => localizer["Error.Invalid", localizer["Label.Code"]]);
 
         RuleFor(x => x.WarehouseId)
-            .NotEmpty().WithMessage(x => localizer["DeliveryNote.WarehouseId.Required"]);
+            .NotEmpty().WithMessage(x => localizer["Error.Required", localizer["Label.Warehouse"]]);
 
         RuleFor(x => x.ShippingAddress)
-            .NotEmpty().WithMessage(x => localizer["DeliveryNote.ShippingAddress.Required"])
-            .MaximumLength(500).WithMessage(x => localizer["DeliveryNote.ShippingAddress.MaxLength"]);
+            .NotEmpty().WithMessage(x => localizer["Error.Required", localizer["Label.Address"]])
+            .MaximumLength(500).WithMessage(x => localizer["Error.MaxLength", localizer["Label.Address"], 500]);
 
         RuleFor(x => x.Note)
-            .MaximumLength(1000).WithMessage(x => localizer["DeliveryNote.Note.MaxLength"]);
+            .MaximumLength(1000).WithMessage(x => localizer["Error.MaxLength", localizer["Label.Note"], 1000]);
 
         RuleFor(x => x.Surcharge)
-            .GreaterThanOrEqualTo(0).WithMessage(x => localizer["DeliveryNote.Surcharge.Invalid"]);
+            .GreaterThanOrEqualTo(0).WithMessage(x => localizer["Error.Invalid", localizer["Label.Surcharge"]]);
 
         RuleFor(x => x.AmountToCollect)
-            .GreaterThanOrEqualTo(0).WithMessage(x => localizer["DeliveryNote.AmountToCollect.Invalid"]);
+            .GreaterThanOrEqualTo(0).WithMessage(x => localizer["Error.Invalid", localizer["Label.Amount"]]);
 
         RuleForEach(x => x.Items)
             .SetValidator(new CreateDeliveryNoteItemValidator(localizer));
@@ -35,10 +35,10 @@ public sealed class CreateDeliveryNoteValidator : AbstractValidator<CreateDelive
 
 public sealed class CreateDeliveryNoteItemValidator : AbstractValidator<CreateDeliveryNoteItemModel>
 {
-    public CreateDeliveryNoteItemValidator(IStringLocalizer<ValidationResource> localizer)
+    public CreateDeliveryNoteItemValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(x => x.Quantity)
             .GreaterThan(0).When(x => x.Selected)
-            .WithMessage(x => localizer["DeliveryNote.Item.Quantity.Invalid"]);
+            .WithMessage(x => localizer["Error.Invalid", localizer["Label.Quantity"]]);
     }
 }

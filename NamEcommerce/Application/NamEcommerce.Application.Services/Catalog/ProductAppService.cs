@@ -45,7 +45,7 @@ public sealed class ProductAppService : IProductAppService
             return new CreateProductResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Tên hàng hóa trùng lặp."
+                ErrorMessage = "Error.ProductNameAlreadyExists"
             };
         }
 
@@ -57,7 +57,7 @@ public sealed class ProductAppService : IProductAppService
                 return new CreateProductResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = "Không tìm thấy đơn vị tính."
+                    ErrorMessage = "Error.UnitMeasurementIsNotFound"
                 };
             }
         }
@@ -108,7 +108,7 @@ public sealed class ProductAppService : IProductAppService
             return new DeleteProductResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Không tìm thấy hàng hóa."
+                ErrorMessage = "Error.ProductIsNotFound"
             };
         }
 
@@ -175,7 +175,7 @@ public sealed class ProductAppService : IProductAppService
             return new UpdateProductResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Không tìm thấy hàng hóa"
+                ErrorMessage = "Error.ProductIsNotFound"
             };
         }
 
@@ -184,7 +184,7 @@ public sealed class ProductAppService : IProductAppService
             return new UpdateProductResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Tên hàng hóa trùng lặp."
+                ErrorMessage = "Error.ProductNameAlreadyExists"
             };
         }
 
@@ -196,7 +196,7 @@ public sealed class ProductAppService : IProductAppService
                 return new UpdateProductResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = "Không tìm thấy đơn vị tính."
+                    ErrorMessage = "Error.UnitMeasurementIsNotFound"
                 };
             }
         }

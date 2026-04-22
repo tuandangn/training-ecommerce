@@ -88,15 +88,15 @@ public sealed class InventoryAppService : IInventoryAppService
         }
         catch (InvalidStockOperationException ex)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.Message };
+            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
         }
         catch (WarehouseCapacityExceededException ex)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = $"Cảnh báo vượt quá dung lượng kho: {ex.Message}" };
+            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = "Lỗi khi điều chỉnh tồn kho. Vui lòng thử lại." };
+            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockAdjustmentFailed" };
         }
     }
 
@@ -110,15 +110,15 @@ public sealed class InventoryAppService : IInventoryAppService
         }
         catch (InsufficientStockException ex)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = $"Không đủ hàng: {ex.Message}" };
+            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
         }
         catch (InvalidStockOperationException ex)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.Message };
+            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = "Lỗi khi giữ hàng. Vui lòng thử lại." };
+            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockReservationFailed" };
         }
     }
 
@@ -132,15 +132,15 @@ public sealed class InventoryAppService : IInventoryAppService
         }
         catch (StockNotFoundException ex)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.Message };
+            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
         }
         catch (InvalidStockOperationException ex)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.Message };
+            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = "Lỗi khi giải phóng hàng. Vui lòng thử lại." };
+            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockReleaseFailed" };
         }
     }
 
@@ -154,15 +154,15 @@ public sealed class InventoryAppService : IInventoryAppService
         }
         catch (InsufficientStockException ex)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = $"Không đủ hàng để xuất: {ex.Message}" };
+            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
         }
         catch (InvalidStockOperationException ex)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.Message };
+            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = "Lỗi khi xuất kho. Vui lòng thử lại." };
+            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockDispatchFailed" };
         }
     }
 
@@ -176,15 +176,15 @@ public sealed class InventoryAppService : IInventoryAppService
         }
         catch (WarehouseCapacityExceededException ex)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = $"Vượt quá dung lượng kho: {ex.Message}" };
+            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
         }
         catch (InvalidStockOperationException ex)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.Message };
+            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = "Lỗi khi nhập kho. Vui lòng thử lại." };
+            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockReceiveFailed" };
         }
     }
 }

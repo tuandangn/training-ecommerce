@@ -1,5 +1,6 @@
-﻿namespace NamEcommerce.Domain.Shared.Exceptions.Catalog;
+namespace NamEcommerce.Domain.Shared.Exceptions.Catalog;
 
 [Serializable]
-public sealed class VendorDataIsInvalidException(string? message)  : NamEcommerceDomainException("Error.VendorDataIsInvalidException", message);
+public sealed class VendorDataIsInvalidException(string errorCode, params object[] parameters) : NamEcommerceDomainException(errorCode, parameters);
+
 

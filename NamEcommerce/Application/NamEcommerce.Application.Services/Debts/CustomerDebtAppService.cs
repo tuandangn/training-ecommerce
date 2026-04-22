@@ -5,6 +5,7 @@ using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Services.Debts;
 
 namespace NamEcommerce.Application.Services.Debts;
@@ -17,7 +18,7 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
     {
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
-            throw new Exception(errorMessage);
+            throw new NamEcommerceDomainException(errorMessage!);
 
         var domainDto = MapToDomainDto(dto);
         var result = await _debtManager.RecordPaymentAsync(domainDto).ConfigureAwait(false);
@@ -28,7 +29,7 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
     {
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
-            throw new Exception(errorMessage);
+            throw new NamEcommerceDomainException(errorMessage!);
 
         var domainDto = MapToDomainDto(dto);
         var results = await _debtManager.RecordFlexiblePaymentForCustomerAsync(domainDto).ConfigureAwait(false);

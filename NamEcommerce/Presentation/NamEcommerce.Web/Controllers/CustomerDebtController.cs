@@ -29,7 +29,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
         var model = await _mediator.Send(new GetCustomerDebtDetailsQuery { CustomerId = customerId }).ConfigureAwait(false);
         if (model == null)
         {
-            TempData[ViewConstants.CustomerErrorMessage] = "Không tìm thấy thông tin công nợ khách hàng.";
+            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError("Error.CustomerIsNotFound");
             return RedirectToAction(nameof(List));
         }
         return View(model);
@@ -47,12 +47,12 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
     public async Task<IActionResult> RecordPayment(RecordPaymentModel model)
     {
         if (!ModelState.IsValid)
-            return Json(new { success = false, message = "Thông tin không hợp lệ." });
+            return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
 
         var result = await _mediator.Send(new RecordCustomerPaymentCommand { Model = model }).ConfigureAwait(false);
         return result.Success
-            ? Json(new { success = true, message = "Đã ghi nhận thanh toán thành công." })
-            : Json(new { success = false, message = result.ErrorMessage });
+            ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
+            : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
     /// <summary>Thu tiền linh động — phân bổ FIFO vào các khoản nợ còn lại.</summary>
@@ -60,12 +60,12 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
     public async Task<IActionResult> RecordFlexiblePayment(RecordPaymentModel model)
     {
         if (!ModelState.IsValid)
-            return Json(new { success = false, message = "Thông tin không hợp lệ." });
+            return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
 
         var result = await _mediator.Send(new RecordFlexiblePaymentCommand { Model = model }).ConfigureAwait(false);
         return result.Success
-            ? Json(new { success = true, message = result.SuccessMessage ?? "Đã ghi nhận thanh toán thành công." })
-            : Json(new { success = false, message = result.ErrorMessage });
+            ? Json(new { success = true, message = result.SuccessMessage ?? LocalizeError("Msg.SaveSuccess") })
+            : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
     /// <summary>In biên lai cho 1 lần thanh toán cụ thể.</summary>

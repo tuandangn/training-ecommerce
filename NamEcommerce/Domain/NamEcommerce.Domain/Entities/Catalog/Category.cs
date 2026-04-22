@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
@@ -10,7 +10,8 @@ public sealed record Category : AppAggregateEntity
 {
     internal Category(Guid id, string name) : base(id)
     {
-        ArgumentException.ThrowIfNullOrEmpty(name);
+        if (string.IsNullOrEmpty(name))
+            throw new CategoryNameRequiredException();
 
         Name = name;
         NormalizedName = TextHelper.Normalize(Name);
@@ -34,10 +35,11 @@ public sealed record Category : AppAggregateEntity
             return;
 
         ArgumentNullException.ThrowIfNull(checker);
-        ArgumentException.ThrowIfNullOrEmpty(name);
+        if (string.IsNullOrEmpty(name))
+            throw new CategoryNameRequiredException();
 
         if (await checker.DoesNameExistAsync(name, Id).ConfigureAwait(false))
-            throw new UnitMeasurementNameExistsException(name);
+            throw new CategoryNameExistsException(name);
 
         Name = name;
         NormalizedName = TextHelper.Normalize(name);

@@ -7,11 +7,11 @@ namespace NamEcommerce.Web.Validators.Users;
 
 public sealed class LoginModelValidator : AbstractValidator<LoginModel>
 {
-    public LoginModelValidator(IStringLocalizer<ValidationResource> localizer)
+    public LoginModelValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(m => m.Username)
-            .NotEmpty().WithMessage(m => localizer["Login.Username.Required"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Username"]]);
         RuleFor(m => m.Password)
-            .NotEmpty().WithMessage(m => localizer["Login.Password.Required"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Password"]]);
     }
 }

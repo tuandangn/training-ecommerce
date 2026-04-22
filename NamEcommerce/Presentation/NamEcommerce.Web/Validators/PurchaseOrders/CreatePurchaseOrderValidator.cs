@@ -7,12 +7,12 @@ namespace NamEcommerce.Web.Validators.PurchaseOrders;
 
 public sealed class CreatePurchaseOrderValidator : AbstractValidator<CreatePurchaseOrderModel>
 {
-    public CreatePurchaseOrderValidator(IStringLocalizer<ValidationResource> localizer)
+    public CreatePurchaseOrderValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(p => p.VendorId)
-            .NotEmpty().WithMessage(p => localizer["PurchaseOrder.VendorId.Required"]);
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Vendor"]]);
 
         RuleFor(p => p.ExpectedDeliveryDate)
-            .GreaterThanOrEqualTo(DateTime.Now).WithMessage(p => localizer["PurchaseOrder.ExpectedDate.Invalid"]);
+            .GreaterThanOrEqualTo(DateTime.Now).WithMessage(p => localizer["Error.Invalid", localizer["Label.ExpectedDate"]]);
     }
 }

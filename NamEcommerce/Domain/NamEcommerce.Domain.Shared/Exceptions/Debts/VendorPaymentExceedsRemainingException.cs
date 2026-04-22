@@ -2,5 +2,6 @@
 
 [Serializable]
 public sealed class VendorPaymentExceedsRemainingException(decimal paymentAmount, decimal remainingAmount)
-     : NamEcommerceDomainException("Error.VendorPaymentExceedsRemainingException", paymentAmount, remainingAmount);
+     : NamEcommerceDomainException("Error.VendorPaymentExceedsRemaining", paymentAmount, remainingAmount);
+
 

@@ -1,5 +1,6 @@
-﻿namespace NamEcommerce.Domain.Shared.Exceptions.Catalog;
+namespace NamEcommerce.Domain.Shared.Exceptions.Catalog;
 
 [Serializable]
-public sealed class CategoryDataIsInvalidException(string? message)  : NamEcommerceDomainException("Error.CategoryDataIsInvalidException", message);
+public sealed class CategoryDataIsInvalidException(string errorCode, params object[] parameters) : NamEcommerceDomainException(errorCode, parameters);
+
 

@@ -17,7 +17,7 @@ public abstract record BaseProductDto
     public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Name))
-            throw new ProductDataIsInvalidException("Tên sản phẩm không được để trống");
+            throw new ProductDataIsInvalidException("Error.ProductNameRequired");
     }
 }
 

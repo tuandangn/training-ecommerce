@@ -65,7 +65,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         }
         catch (Exception ex)
         {
-            TempData[ViewConstants.CustomerErrorMessage] = "Lỗi khi tạo phiếu xuất: " + ex.Message;
+            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError("Error.DeliveryNoteCreateFailed");
             return RedirectToAction("List", "Order");
         }
     }
@@ -84,7 +84,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         var orderItems = model.Items.Where(i => i.Selected && i.Quantity > 0);
         if (!orderItems.Any())
         {
-            ModelState.AddModelError(string.Empty, "Vui lòng chọn ít nhất một sản phẩm với số lượng hợp lệ.");
+            AddLocalizedModelError("Error.DeliveryNoteItemRequired");
             var refModel = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId).ConfigureAwait(false);
             model.OrderCode = refModel.OrderCode;
             model.CustomerName = refModel.CustomerName;
@@ -110,11 +110,11 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
         if (result)
         {
-            TempData[ViewConstants.CustomerSuccessMessage] = "Tạo phiếu xuất kho thành công.";
+            TempData[ViewConstants.CustomerSuccessMessage] = LocalizeError("Msg.SaveSuccess");
             return RedirectToAction(nameof(List));
         }
 
-        ModelState.AddModelError(string.Empty, "Có lỗi xảy ra khi tạo phiếu xuất kho.");
+        AddLocalizedModelError("Error.DeliveryNoteCreateFailed");
         var refModel2 = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId).ConfigureAwait(false);
         model.OrderCode = refModel2.OrderCode;
         model.CustomerName = refModel2.CustomerName;
@@ -130,7 +130,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         }
         catch
         {
-            TempData[ViewConstants.CustomerErrorMessage] = "Không tìm thấy phiếu xuất kho.";
+            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError("Error.DeliveryNoteNotFound");
             return RedirectToAction(nameof(List));
         }
     }
@@ -144,7 +144,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         }
         catch
         {
-            TempData[ViewConstants.CustomerErrorMessage] = "Không tìm thấy phiếu xuất kho.";
+            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError("Error.DeliveryNoteNotFound");
             return RedirectToAction(nameof(List));
         }
     }
@@ -158,9 +158,9 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         }).ConfigureAwait(false);
 
         if (result.Success)
-            return Json(new { success = true, message = "Đã xác nhận phiếu xuất." });
+            return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
 
-        return Json(new { success = false, message = result.ErrorMessage });
+        return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
     [HttpPost]
@@ -172,9 +172,9 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         }).ConfigureAwait(false);
 
         if (result.Success)
-            return Json(new { success = true, message = "Đang giao hàng." });
+            return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
 
-        return Json(new { success = false, message = result.ErrorMessage });
+        return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
     [HttpPost]
@@ -182,7 +182,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     {
         if (pictureFile == null || pictureFile.Length == 0)
         {
-            return Json(new { success = false, message = "Vui lòng chụp ảnh bằng chứng giao hàng." });
+            return Json(new { success = false, message = LocalizeError("Error.DeliveryProofRequired") });
         }
 
         using var memoryStream = new MemoryStream();
@@ -200,10 +200,10 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
         if (result.Success)
         {
-            return Json(new { success = true, message = "Đã giao hàng thành công." });
+            return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
         }
 
-        return Json(new { success = false, message = result.ErrorMessage });
+        return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
     [HttpPost]
@@ -215,9 +215,9 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         }).ConfigureAwait(false);
 
         if (result.Success)
-            return Json(new { success = true, message = "Đã hủy phiếu xuất kho." });
+            return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
 
-        return Json(new { success = false, message = result.ErrorMessage });
+        return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
     [HttpPost]
@@ -226,7 +226,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     {
         if (request == null || !request.SelectedItems.Any())
         {
-            return Json(new { success = false, message = "Không có mặt hàng được chọn." });
+            return Json(new { success = false, message = LocalizeError("Error.DeliveryNoteItemRequired") });
         }
 
         try
@@ -237,15 +237,15 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             foreach (var selectedItem in request.SelectedItems)
             {
                 if (selectedItem.Quantity <= 0)
-                    return Json(new { success = false, message = "Số lượng xuất phải lớn hơn 0." });
+                    return Json(new { success = false, message = LocalizeError("Error.OrderItemQuantityMustBePositive") });
 
                 var orderItem = model.Items.FirstOrDefault(i => i.OrderItemId == selectedItem.OrderItemId);
                 if (orderItem == null)
-                    return Json(new { success = false, message = $"Mặt hàng không được tìm thấy trong đơn hàng." });
+                    return Json(new { success = false, message = LocalizeError("Error.OrderItemIsNotFound") });
 
                 var remainingQty = orderItem.Quantity;
                 if (selectedItem.Quantity > remainingQty)
-                    return Json(new { success = false, message = $"Số lượng xuất vượt quá số lượng còn lại. {orderItem.ProductName}: Còn {remainingQty} để xuất." });
+                    return Json(new { success = false, message = LocalizeError("Error.QuantityExceedsRemaining", orderItem.ProductName, remainingQty) });
             }
 
             // Update items with user-selected quantities
@@ -287,9 +287,9 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             }).ConfigureAwait(false);
 
             if (createResult)
-                return Json(new { success = true, message = "Tạo phiếu xuất kho thành công." });
+                return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
 
-            return Json(new { success = false, message = "Có lỗi xảy ra khi tạo phiếu xuất kho." });
+            return Json(new { success = false, message = LocalizeError("Error.DeliveryNoteCreateFailed") });
         }
         catch (Exception ex)
         {

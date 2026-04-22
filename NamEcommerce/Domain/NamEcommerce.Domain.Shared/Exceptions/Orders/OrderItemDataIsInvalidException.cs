@@ -1,5 +1,6 @@
-﻿namespace NamEcommerce.Domain.Shared.Exceptions.Orders;
+namespace NamEcommerce.Domain.Shared.Exceptions.Orders;
 
 [Serializable]
-public sealed class OrderItemDataIsInvalidException(string? message)  : NamEcommerceDomainException("Error.OrderItemDataIsInvalidException", message);
+public sealed class OrderItemDataIsInvalidException(string errorCode, params object[] parameters) : NamEcommerceDomainException(errorCode, parameters);
+
 

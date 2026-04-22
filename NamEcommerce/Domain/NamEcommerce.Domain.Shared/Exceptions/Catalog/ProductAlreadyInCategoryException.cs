@@ -1,10 +1,5 @@
 ﻿namespace NamEcommerce.Domain.Shared.Exceptions.Catalog;
 
 [Serializable]
-public sealed class ProductAlreadyInCategoryException : Exception
-{
-    public ProductAlreadyInCategoryException(Guid categoryId, string productName)
-        : base($"Product '{productName}' already have been in product with id '{categoryId}'")
-    {
-    }
-}
+public sealed class ProductAlreadyInCategoryException(Guid categoryId, string productName)
+    : NamEcommerceDomainException("Error.ProductAlreadyInCategory", productName, categoryId);

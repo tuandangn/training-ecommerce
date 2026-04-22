@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
@@ -63,11 +63,11 @@ public sealed class VendorController : BaseAuthorizedController
         });
         if (!createVendorResult.Success)
         {
-            ModelState.AddModelError(string.Empty, createVendorResult.ErrorMessage!);
+            AddLocalizedModelError(createVendorResult.ErrorMessage);
             return View(model);
         }
 
-        TempData[ViewConstants.VendorSuccessMessage] = "Thêm mới nhà cung cấp thành công!";
+        TempData[ViewConstants.VendorSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -76,7 +76,7 @@ public sealed class VendorController : BaseAuthorizedController
         var vendor = await _mediator.Send(new GetVendorQuery { Id = id });
         if (vendor == null)
         {
-            TempData[ViewConstants.VendorErrorMessage] = "Không tìm thấy nhà cung cấp.";
+            TempData[ViewConstants.VendorErrorMessage] = LocalizeError("Error.VendorIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -101,7 +101,7 @@ public sealed class VendorController : BaseAuthorizedController
         var vendor = await _mediator.Send(new GetVendorQuery { Id = model.Id });
         if (vendor == null)
         {
-            TempData[ViewConstants.VendorErrorMessage] = "Không tìm thấy nhà cung cấp.";
+            TempData[ViewConstants.VendorErrorMessage] = LocalizeError("Error.VendorIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -115,11 +115,11 @@ public sealed class VendorController : BaseAuthorizedController
         });
         if (!updateVendorResult.Success)
         {
-            ModelState.AddModelError(string.Empty, updateVendorResult.ErrorMessage!);
+            AddLocalizedModelError(updateVendorResult.ErrorMessage);
             return View(model);
         }
 
-        TempData[ViewConstants.VendorSuccessMessage] = "Chỉnh sửa nhà cung cấp thành công!";
+        TempData[ViewConstants.VendorSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -127,11 +127,11 @@ public sealed class VendorController : BaseAuthorizedController
     public async Task<IActionResult> Delete(Guid id)
     {
         var resultDto = await _mediator.Send(new DeleteVendorCommand(id));
-        
+
         if (!resultDto.Success)
-            TempData[ViewConstants.VendorErrorMessage] = resultDto.ErrorMessage;
+            TempData[ViewConstants.VendorErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
         else
-            TempData[ViewConstants.VendorSuccessMessage] = "Xóa nhà cung cấp thành công!";
+            TempData[ViewConstants.VendorSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }
 

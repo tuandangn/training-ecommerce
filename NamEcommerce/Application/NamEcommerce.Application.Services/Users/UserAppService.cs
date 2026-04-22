@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Application.Contracts.Dtos.Users;
+using NamEcommerce.Application.Contracts.Dtos.Users;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Shared.Dtos.Users;
@@ -35,7 +35,7 @@ public sealed class UserAppService : IUserAppService
             return new CreateUserResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Username already exists."
+                ErrorMessage = "Error.UsernameAlreadyExists"
             };
         }
         var user = await _userManager.CreateUserAsync(
@@ -52,7 +52,7 @@ public sealed class UserAppService : IUserAppService
         {
             Success = user != null,
             CreatedId = user?.CreatedId,
-            ErrorMessage = user == null ? "Failed to create user." : null
+            ErrorMessage = user == null ? "Error.UserCreateFailed" : null
         };
     }
 

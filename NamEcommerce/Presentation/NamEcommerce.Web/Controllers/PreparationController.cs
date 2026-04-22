@@ -58,16 +58,16 @@ public sealed class PreparationController : BaseAuthorizedController
         });
 
         if (!result.Success)
-            return Json(new { success = false, message = result.ErrorMessage });
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
-        return Json(new { success = true, message = "Đã tạo đơn nhập hàng thành công.", purchaseOrderId = result.CreatedId });
+        return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess"), purchaseOrderId = result.CreatedId });
     }
 
     [HttpPost]
     public async Task<IActionResult> MarkDelivered(Guid orderId, Guid orderItemId, IFormFile? proofImage)
     {
         if (proofImage is null || proofImage.Length == 0)
-            return Json(new { success = false, message = "Hình ảnh bằng chứng giao hàng là bắt buộc." });
+            return Json(new { success = false, message = LocalizeError("Error.DeliveryProofRequired") });
 
         byte[] pictureData;
         using (var memoryStream = new MemoryStream())
@@ -84,8 +84,8 @@ public sealed class PreparationController : BaseAuthorizedController
             proofImage.ContentType));
 
         if (!result.Success)
-            return Json(new { success = false, message = result.ErrorMessage });
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
-        return Json(new { success = true, message = "Đã đánh dấu giao hàng thành công." });
+        return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
     }
 }

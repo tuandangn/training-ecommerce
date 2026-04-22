@@ -1,4 +1,4 @@
-﻿namespace NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
+namespace NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 
 [Serializable]
 public abstract record BasePurchaseOrderItemAppDto
@@ -14,9 +14,9 @@ public abstract record BasePurchaseOrderItemAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (QuantityOrdered <= 0)
-            return (false, "Item quantity ordered must be greater than 0");
+            return (false, "Error.PurchaseOrderQuantityMustBePositive");
         if (UnitCost < 0)
-            return (false, "Item unit cost must be greater than or equal to 0");
+            return (false, "Error.PurchaseOrderUnitCostCannotBeNegative");
 
         return (true, string.Empty);
     }
@@ -56,9 +56,9 @@ public sealed record ReceivedGoodsForItemAppDto(Guid PurchaseOrderId, Guid Purch
     public (bool valid, string? errorMessage) Validate()
     {
         if (ReceivedQuantity <= 0)
-            return (false, "Received quantity must be greater than 0.");
+            return (false, "Error.PurchaseOrderQuantityMustBePositive");
         if (SellingPrice.HasValue && SellingPrice.Value < 0)
-            return (false, "Selling price must be greater than or equal to 0.");
+            return (false, "Error.ProductUnitPriceCannotBeNegative");
 
         return (true, string.Empty);
     }

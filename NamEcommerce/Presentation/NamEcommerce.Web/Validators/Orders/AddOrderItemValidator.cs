@@ -7,20 +7,20 @@ namespace NamEcommerce.Web.Validators.Orders;
 
 public sealed class AddOrderItemValidator : AbstractValidator<AddOrderItemModel>
 {
-    public AddOrderItemValidator(IStringLocalizer<ValidationResource> localizer)
+    public AddOrderItemValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(m => m.OrderId)
-            .NotEmpty().WithMessage(m => localizer["Order.Id.NotFound"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Invalid", localizer["Label.Code"]]);
 
         RuleFor(m => m.ProductId)
-            .NotEmpty().WithMessage(m => localizer["Order.ProductId.NotFound"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Product"]]);
 
         RuleFor(m => m.Quantity)
-            .NotEmpty().WithMessage(m => localizer["Order.Quantity.Required"])
-            .GreaterThan(0).WithMessage(m => localizer["Order.Quantity.Invalid"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Quantity"]])
+            .GreaterThan(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.Quantity"]]);
 
         RuleFor(m => m.UnitPrice)
-            .NotEmpty().WithMessage(m => localizer["Order.UnitPrice.Required"])
-            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Order.UnitPrice.Invalid"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.UnitPrice"]])
+            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.UnitPrice"]]);
     }
 }

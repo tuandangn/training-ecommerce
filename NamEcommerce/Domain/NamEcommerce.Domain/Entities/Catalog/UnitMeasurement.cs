@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
@@ -10,7 +10,8 @@ public sealed record UnitMeasurement : AppAggregateEntity
 {
     internal UnitMeasurement(Guid id, string name) : base(id)
     {
-        ArgumentException.ThrowIfNullOrEmpty(name);
+        if (string.IsNullOrEmpty(name))
+            throw new UnitMeasurementNameRequiredException();
 
         Name = name;
         NormalizedName = TextHelper.Normalize(Name);
@@ -29,7 +30,8 @@ public sealed record UnitMeasurement : AppAggregateEntity
             return;
 
         ArgumentNullException.ThrowIfNull(checker);
-        ArgumentException.ThrowIfNullOrEmpty(name);
+        if (string.IsNullOrEmpty(name))
+            throw new UnitMeasurementNameRequiredException();
 
         if (await checker.DoesNameExistAsync(name, Id).ConfigureAwait(false))
             throw new UnitMeasurementNameExistsException(name);

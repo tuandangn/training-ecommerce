@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Exceptions.Users;
 
 namespace NamEcommerce.Domain.Shared.Dtos.Users;
 
@@ -13,11 +13,11 @@ public abstract record BaseUserDto
     public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Username))
-            throw new UserDataIsInvalidException("Username cannot be null or empty.");
+            throw new UserDataIsInvalidException("Error.UsernameRequired");
         if (string.IsNullOrEmpty(FullName))
-            throw new UserDataIsInvalidException("Fullname cannot be null or empty.");
+            throw new UserDataIsInvalidException("Error.FullNameRequired");
         if (string.IsNullOrEmpty(PhoneNumber))
-            throw new UserDataIsInvalidException("Phone number cannot be null or empty.");
+            throw new UserDataIsInvalidException("Error.PhoneNumberRequired");
     }
 }
 
@@ -37,7 +37,7 @@ public sealed record CreateUserDto : BaseUserDto
         base.Verify();
 
         if (string.IsNullOrEmpty(Password))
-            throw new UserDataIsInvalidException("Password cannot be null or empty.");
+            throw new UserDataIsInvalidException("Error.PasswordRequired");
     }
 }
 [Serializable]

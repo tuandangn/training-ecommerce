@@ -73,6 +73,7 @@ using NamEcommerce.Web.Services.Orders;
 using NamEcommerce.Web.Services.Preparations;
 using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Validators.Users;
+using NamEcommerce.Web.Mvc.Filters;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -202,6 +203,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     //mvc
     var mvcBuilder = services.AddMvc(options =>
     {
+        options.Filters.Add<GlobalExceptionFilter>();
         options.ModelBinderProviders.Insert(0, new TrimModelBinderProvider());
         options.ModelBinderProviders.Insert(0, new DecimalModelBinderProvider());
     }).AddSessionStateTempDataProvider();

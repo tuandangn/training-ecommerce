@@ -12,7 +12,8 @@ public record Product : AppAggregateEntity
 {
     internal Product(Guid id, string name) : base(id)
     {
-        ArgumentException.ThrowIfNullOrEmpty(name);
+        if (string.IsNullOrEmpty(name))
+            throw new ProductNameRequiredException();
 
         Name = name;
         NormalizedName = TextHelper.Normalize(Name);
@@ -62,7 +63,8 @@ public record Product : AppAggregateEntity
             return;
 
         ArgumentNullException.ThrowIfNull(checker);
-        ArgumentException.ThrowIfNullOrEmpty(name);
+        if (string.IsNullOrEmpty(name))
+            throw new ProductNameRequiredException();
 
         if (await checker.DoesNameExistAsync(name, Id).ConfigureAwait(false))
             throw new ProductNameExistsException(name);
@@ -86,7 +88,7 @@ public record Product : AppAggregateEntity
 
         var unitMeassurement = await byIdGetter.GetByIdAsync(unitMeasurementId.Value).ConfigureAwait(false);
         if (unitMeassurement is null)
-            throw new ArgumentException($"Không tìm thấy đơn vị tính với id {unitMeasurementId}", nameof(unitMeasurementId));
+            throw new UnitMeasurementIsNotFoundException(unitMeasurementId.Value);
 
         UnitMeasurementId = unitMeasurementId;
     }
@@ -155,10 +157,10 @@ public record Product : AppAggregateEntity
     internal void UpdatePrice(decimal unitPrice, decimal costPrice)
     {
         if (unitPrice < 0)
-            throw new ArgumentOutOfRangeException(nameof(unitPrice), "Giá bán không được âm");
+            throw new ProductUnitPriceCannotBeNegativeException();
 
         if (costPrice < 0)
-            throw new ArgumentOutOfRangeException(nameof(costPrice), "Giá vốn không được âm");
+            throw new ProductCostPriceCannotBeNegativeException();
 
         if (unitPrice == UnitPrice && costPrice == CostPrice)
             return;

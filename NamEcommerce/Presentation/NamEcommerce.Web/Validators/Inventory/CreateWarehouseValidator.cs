@@ -7,20 +7,20 @@ namespace NamEcommerce.Web.Validators;
 
 public sealed class CreateWarehouseValidator : AbstractValidator<CreateWarehouseModel>
 {
-    public CreateWarehouseValidator(IStringLocalizer<ValidationResource> localizer)
+    public CreateWarehouseValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(m => m.Code)
-            .NotEmpty().WithMessage(m => localizer["Warehouse.Code.Required"])
-            .MaximumLength(50).WithMessage(m => localizer["Warehouse.Code.MaxLength"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Code"]])
+            .MaximumLength(50).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Code"], 50]);
 
         RuleFor(m => m.Name)
-            .NotEmpty().WithMessage(m => localizer["Warehouse.Name.Required"])
-            .MaximumLength(200).WithMessage(m => localizer["Warehouse.Name.MaxLength"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Name"]])
+            .MaximumLength(200).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Name"], 200]);
 
         RuleFor(m => m.PhoneNumber)
-            .Matches(@"\s*|(0\d{9,10})").WithMessage(m => localizer["Warehouse.Phone.Invalid"]);
+            .Matches(@"\s*|(0\d{9,10})").WithMessage(m => localizer["Error.PhoneNumberInvalid"]);
 
         RuleFor(m => m.Address)
-            .MaximumLength(800).WithMessage(m => localizer["Warehouse.Address.MaxLength"]);
+            .MaximumLength(800).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Address"], 800]);
     }
 }

@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Application.Contracts.Catalog;
+using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Services.Extensions;
@@ -39,7 +39,7 @@ public sealed class CategoryAppService : ICategoryAppService
             return new CreateCategoryResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Name already exists."
+                ErrorMessage = "Error.CategoryNameAlreadyExists"
             };
         }
 
@@ -51,7 +51,7 @@ public sealed class CategoryAppService : ICategoryAppService
                 return new CreateCategoryResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = "Parent category is not found."
+                    ErrorMessage = "Error.CategoryIsNotFound"
                 };
             }
         }
@@ -80,7 +80,7 @@ public sealed class CategoryAppService : ICategoryAppService
             return new DeleteCategoryResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Category is not found."
+                ErrorMessage = "Error.CategoryIsNotFound"
             };
         }
 
@@ -149,7 +149,7 @@ public sealed class CategoryAppService : ICategoryAppService
             return new UpdateCategoryResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Không tìm thấy nhà cung cấp"
+                ErrorMessage = "Error.CategoryIsNotFound"
             };
         }
 
@@ -158,7 +158,7 @@ public sealed class CategoryAppService : ICategoryAppService
             return new UpdateCategoryResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Tên nhà cung cấp trùng lặp"
+                ErrorMessage = "Error.CategoryNameAlreadyExists"
             };
         }
 
@@ -170,7 +170,7 @@ public sealed class CategoryAppService : ICategoryAppService
                 return new UpdateCategoryResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = "Parent category is not found."
+                    ErrorMessage = "Error.CategoryIsNotFound"
                 };
             }
             if (parent.ParentId == dto.Id)
@@ -178,7 +178,7 @@ public sealed class CategoryAppService : ICategoryAppService
                 return new UpdateCategoryResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = $"Category '{dto.Name}' and category '{parent.Name}' are circular relationship"
+                    ErrorMessage = "Error.CategoryCircularRelationship"
                 };
             }
         }
@@ -196,4 +196,4 @@ public sealed class CategoryAppService : ICategoryAppService
             UpdatedId = result.Id
         };
     }
-}
+}

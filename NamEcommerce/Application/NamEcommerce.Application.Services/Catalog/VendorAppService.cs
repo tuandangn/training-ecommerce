@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Application.Contracts.Catalog;
+using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Services.Extensions;
@@ -39,7 +39,7 @@ public sealed class VendorAppService : IVendorAppService
             return new CreateVendorResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Name already exists."
+                ErrorMessage = "Error.VendorNameAlreadyExists"
             };
         }
 
@@ -68,7 +68,7 @@ public sealed class VendorAppService : IVendorAppService
             return new DeleteVendorResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Vendor is not found."
+                ErrorMessage = "Error.VendorIsNotFound"
             };
         }
 
@@ -119,7 +119,7 @@ public sealed class VendorAppService : IVendorAppService
             return new UpdateVendorResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Không tìm thấy nhà cung cấp"
+                ErrorMessage = "Error.VendorIsNotFound"
             };
         }
 
@@ -128,7 +128,7 @@ public sealed class VendorAppService : IVendorAppService
             return new UpdateVendorResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Tên nhà cung cấp trùng lặp"
+                ErrorMessage = "Error.VendorNameAlreadyExists"
             };
         }
 

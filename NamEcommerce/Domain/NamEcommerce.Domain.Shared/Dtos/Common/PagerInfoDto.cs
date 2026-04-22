@@ -1,4 +1,6 @@
-﻿namespace NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Exceptions;
+
+namespace NamEcommerce.Domain.Shared.Dtos.Common;
 
 [Serializable]
 public sealed record PagerInfoDto
@@ -10,7 +12,7 @@ public sealed record PagerInfoDto
         {
             field = value >= 0
                 ? value
-                : throw new ArgumentException("PageIndex must greater than or equal 0");
+                : throw new NamEcommerceDomainException("Error.PageIndexInvalid");
         }
     }
     public int PageNumber => PageIndex + 1;
@@ -21,7 +23,7 @@ public sealed record PagerInfoDto
         {
             field = value > 0
                 ? value
-                : throw new ArgumentException("PageSize must greater than 0");
+                : throw new NamEcommerceDomainException("Error.PageSizeInvalid");
         }
     }
     public int TotalPages => PageSize == 0 ? 0 : (int)Math.Ceiling((double)TotalCount / PageSize);
@@ -32,7 +34,7 @@ public sealed record PagerInfoDto
         {
             field = value >= 0
                 ? value
-                : throw new ArgumentException("TotalCount must greater than or equal 0");
+                : throw new NamEcommerceDomainException("Error.TotalCountInvalid");
         }
     }
 }

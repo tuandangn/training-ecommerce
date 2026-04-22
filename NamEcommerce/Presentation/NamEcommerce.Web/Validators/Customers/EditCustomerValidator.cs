@@ -7,18 +7,18 @@ namespace NamEcommerce.Web.Validators;
 
 public sealed class EditCustomerValidator : AbstractValidator<EditCustomerModel>
 {
-    public EditCustomerValidator(IStringLocalizer<ValidationResource> localizer)
+    public EditCustomerValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(m => m.FullName)
-            .NotEmpty().WithMessage(m => localizer["Customer.FullName.Required"])
-            .MaximumLength(200).WithMessage(m => localizer["Customer.FullName.MaxLength"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.FullName"]])
+            .MaximumLength(200).WithMessage(m => localizer["Error.MaxLength", localizer["Label.FullName"], 200]);
 
         RuleFor(m => m.Address)
-            .NotEmpty().WithMessage(m => localizer["Customer.Address.Required"])
-            .MaximumLength(500).WithMessage(m => localizer["Customer.Address.MaxLength"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Address"]])
+            .MaximumLength(500).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Address"], 500]);
 
         RuleFor(m => m.PhoneNumber)
-            .NotEmpty().WithMessage(m => localizer["Customer.Phone.Required"])
-            .Matches(@"0\d{9,10}").WithMessage(m => localizer["Customer.Phone.Invalid"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Phone"]])
+            .Matches(@"0\d{9,10}").WithMessage(m => localizer["Error.PhoneNumberInvalid"]);
     }
 }

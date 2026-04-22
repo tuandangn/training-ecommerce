@@ -1,4 +1,4 @@
-﻿namespace NamEcommerce.Application.Contracts.Dtos.Catalog;
+namespace NamEcommerce.Application.Contracts.Dtos.Catalog;
 
 [Serializable]
 public record BaseUnitMeasurementAppDto
@@ -9,7 +9,7 @@ public record BaseUnitMeasurementAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (string.IsNullOrEmpty(Name))
-            return (false, "Name cannot be null or empty.");
+            return (false, "Error.UnitMeasurementNameRequired");
 
         return (true, null);
     }

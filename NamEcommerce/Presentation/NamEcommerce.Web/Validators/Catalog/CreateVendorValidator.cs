@@ -7,17 +7,17 @@ namespace NamEcommerce.Web.Validators.Catalog;
 
 public sealed class CreateVendorValidator : AbstractValidator<CreateVendorModel>
 {
-    public CreateVendorValidator(IStringLocalizer<ValidationResource> localizer)
+    public CreateVendorValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(m => m.Name)
-            .NotEmpty().WithMessage(m => localizer["Vendor.Name.Required"])
-            .MaximumLength(200).WithMessage(m => localizer["Vendor.Name.MaxLength"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Name"]])
+            .MaximumLength(200).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Name"], 200]);
 
         RuleFor(m => m.PhoneNumber)
-            .NotEmpty().WithMessage(m => localizer["Vendor.Phone.Required"])
-            .Matches(@"0\d{9,10}").WithMessage(m => localizer["Vendor.Phone.Invalid"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Phone"]])
+            .Matches(@"0\d{9,10}").WithMessage(m => localizer["Error.PhoneNumberInvalid"]);
 
         RuleFor(m => m.Address)
-            .MaximumLength(400).WithMessage(m => localizer["Vendor.Address.MaxLength"]);
+            .MaximumLength(400).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Address"], 400]);
     }
 }

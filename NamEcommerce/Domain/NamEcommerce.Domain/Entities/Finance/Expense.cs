@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.Finance;
+using NamEcommerce.Domain.Shared.Exceptions.Finance;
 
 namespace NamEcommerce.Domain.Entities.Finance;
 
@@ -8,8 +9,8 @@ public record Expense : AppAggregateEntity
 {
     internal Expense(Guid id, string title, decimal amount, ExpenseType expenseType, DateTime incurredDate, Guid? recordedByUserId) : base(id)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(title);
-        if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Số tiền không được âm");
+        if (string.IsNullOrWhiteSpace(title)) throw new ExpenseTitleRequiredException();
+        if (amount < 0) throw new ExpenseAmountCannotBeNegativeException();
 
         Title = title;
         Amount = amount;
@@ -32,8 +33,8 @@ public record Expense : AppAggregateEntity
 
     public void UpdateInfo(string title, string? description, decimal amount, ExpenseType expenseType, DateTime incurredDate)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(title);
-        if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount), "Số tiền không được âm");
+        if (string.IsNullOrWhiteSpace(title)) throw new ExpenseTitleRequiredException();
+        if (amount < 0) throw new ExpenseAmountCannotBeNegativeException();
 
         Title = title;
         Description = description;

@@ -12,7 +12,7 @@ public abstract record BaseCategoryAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (string.IsNullOrEmpty(Name))
-            return (false, "Tên danh mục không được để trống");
+            return (false, "Error.CategoryNameRequired");
         return (true, string.Empty);
     }
 }

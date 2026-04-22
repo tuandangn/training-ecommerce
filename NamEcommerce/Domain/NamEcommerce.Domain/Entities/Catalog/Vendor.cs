@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
@@ -10,8 +10,10 @@ public sealed record Vendor : AppAggregateEntity
 {
     internal Vendor(Guid id, string name, string phoneNumber) : base(id)
     {
-        ArgumentException.ThrowIfNullOrEmpty(name);
-        ArgumentException.ThrowIfNullOrEmpty(phoneNumber);
+        if (string.IsNullOrEmpty(name))
+            throw new VendorNameRequiredException();
+        if (string.IsNullOrEmpty(phoneNumber))
+            throw new VendorPhoneNumberRequiredException();
 
         (Name, PhoneNumber) = (name, phoneNumber);
         NormalizedName = TextHelper.Normalize(Name);
@@ -42,7 +44,8 @@ public sealed record Vendor : AppAggregateEntity
             return;
 
         ArgumentNullException.ThrowIfNull(checker);
-        ArgumentException.ThrowIfNullOrEmpty(name);
+        if (string.IsNullOrEmpty(name))
+            throw new VendorNameRequiredException();
 
         if (await checker.DoesNameExistAsync(name, Id).ConfigureAwait(false))
             throw new VendorNameExistsException(name);

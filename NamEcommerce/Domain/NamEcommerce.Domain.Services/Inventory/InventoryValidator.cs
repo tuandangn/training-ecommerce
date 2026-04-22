@@ -1,6 +1,7 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 
@@ -41,21 +42,21 @@ public sealed class InventoryValidator : IInventoryValidator
     {
         // Validate IDs are not empty
         if (productId == Guid.Empty)
-            throw new InvalidStockOperationException("Mã sản phẩm không được để trống");
+            throw new InvalidStockOperationException("Error.StockProductIdCannotBeEmpty");
 
         if (warehouseId == Guid.Empty)
-            throw new InvalidStockOperationException("Mã kho không được để trống");
+            throw new InvalidStockOperationException("Error.StockWarehouseIdCannotBeEmpty");
 
         // Validate quantity
         if (quantity <= 0)
-            throw new InvalidStockOperationException("Số lượng phải lớn hơn 0");
+            throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
 
         // Check if product exists
         if (!await ValidateProductExistsAsync(productId))
-            throw new InvalidStockOperationException($"Sản phẩm không tồn tại");
+            throw new ProductIsNotFoundException(productId);
 
-        // Check if warehouse exists  
+        // Check if warehouse exists
         if (!await ValidateWarehouseExistsAsync(warehouseId))
-            throw new InvalidStockOperationException($"Kho không tồn tại");
+            throw new WarehouseIsNotFoundException(warehouseId);
     }
 }

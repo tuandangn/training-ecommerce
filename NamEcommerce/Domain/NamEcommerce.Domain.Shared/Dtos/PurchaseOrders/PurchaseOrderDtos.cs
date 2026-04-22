@@ -17,13 +17,13 @@ public abstract record BasePurchaseOrderDto
     public virtual void Verify()
     {
         if (!VendorId.HasValue)
-            throw new PurchaseOrderDataIsInvalidException("Nhà cung cấp không được để trống");
+            throw new PurchaseOrderDataIsInvalidException("Error.VendorRequired");
         if (ExpectedDeliveryDateUtc.HasValue && ExpectedDeliveryDateUtc.Value < DateTime.UtcNow.Date)
-            throw new PurchaseOrderDataIsInvalidException("Ngày giao hàng dự kiến không được ở quá khứ");
+            throw new PurchaseOrderDataIsInvalidException("Error.ExpectedDeliveryDateInPast");
         if (TaxAmount < 0)
-            throw new PurchaseOrderDataIsInvalidException("Tiền thuế không được âm");
+            throw new PurchaseOrderDataIsInvalidException("Error.TaxAmountCannotBeNegative");
         if (ShippingAmount < 0)
-            throw new PurchaseOrderDataIsInvalidException("Phí vận chuyển không được âm");
+            throw new PurchaseOrderDataIsInvalidException("Error.ShippingAmountCannotBeNegative");
     }
 }
 
@@ -52,7 +52,7 @@ public sealed record CreatePurchaseOrderDto : BasePurchaseOrderDto
     public override void Verify()
     {
         if (string.IsNullOrEmpty(Code))
-            throw new PurchaseOrderDataIsInvalidException("Mã đơn nhập hàng không được để trống");
+            throw new PurchaseOrderDataIsInvalidException("Error.PurchaseOrderCodeRequired");
 
         foreach (var item in Items)
             item.Verify();

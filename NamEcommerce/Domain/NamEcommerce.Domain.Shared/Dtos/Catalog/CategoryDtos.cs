@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 
 namespace NamEcommerce.Domain.Shared.Dtos.Catalog;
 
@@ -12,7 +12,7 @@ public abstract record BaseCategoryDto
     public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Name))
-            throw new CategoryDataIsInvalidException("Tên danh mục không được để trống");
+            throw new CategoryDataIsInvalidException("Error.CategoryNameRequired");
     }
 }
 

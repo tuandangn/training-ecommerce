@@ -2,5 +2,6 @@
 
 [Serializable]
 public sealed class VendorDebtAlreadyExistsForPurchaseOrderException(Guid purchaseOrderId)
-     : NamEcommerceDomainException("Error.VendorDebtAlreadyExistsForPurchaseOrderException", purchaseOrderId);
+     : NamEcommerceDomainException("Error.VendorDebtAlreadyExistsForPurchaseOrder", purchaseOrderId);
+
 

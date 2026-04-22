@@ -98,7 +98,7 @@ public class ExpenseAppService : IExpenseAppService
         if (!valid) return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = errorMessage };
 
         var expense = await _expenseDataReader.GetByIdAsync(dto.Id);
-        if (expense is null) return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = "Expense not found." };
+        if (expense is null) return new UpdateExpenseResultAppDto { Success = false, ErrorMessage = "Error.ExpenseIsNotFound" };
 
         await _expenseManager.UpdateExpenseAsync(new UpdateExpenseDto(dto.Id)
         {
@@ -115,7 +115,7 @@ public class ExpenseAppService : IExpenseAppService
     public async Task<DeleteExpenseResultAppDto> DeleteExpenseAsync(Guid id)
     {
         var expense = await _expenseDataReader.GetByIdAsync(id);
-        if (expense is null) return new DeleteExpenseResultAppDto { Success = false, ErrorMessage = "Expense not found." };
+        if (expense is null) return new DeleteExpenseResultAppDto { Success = false, ErrorMessage = "Error.ExpenseIsNotFound" };
 
         await _expenseManager.DeleteExpenseAsync(id);
         return new DeleteExpenseResultAppDto { Success = true };

@@ -82,11 +82,11 @@ public sealed class CustomerController : BaseAuthorizedController
 
         if (!result.Success)
         {
-            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            AddLocalizedModelError(result.ErrorMessage);
             return View(model);
         }
 
-        TempData[ViewConstants.CustomerSuccessMessage] = "Thêm mới khách hàng thành công!";
+        TempData[ViewConstants.CustomerSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -95,7 +95,7 @@ public sealed class CustomerController : BaseAuthorizedController
         var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = id });
         if (customer == null)
         {
-            TempData[ViewConstants.CustomerErrorMessage] = "Không tìm thấy khách hàng.";
+            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError("Error.CustomerIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -130,11 +130,11 @@ public sealed class CustomerController : BaseAuthorizedController
 
         if (!result.Success)
         {
-            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            AddLocalizedModelError(result.ErrorMessage);
             return View(model);
         }
 
-        TempData[ViewConstants.CustomerSuccessMessage] = "Cập nhật khách hàng thành công!";
+        TempData[ViewConstants.CustomerSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -144,9 +144,9 @@ public sealed class CustomerController : BaseAuthorizedController
         var result = await _mediator.Send(new DeleteCustomerCommand { Id = id });
 
         if (!result.Success)
-            TempData[ViewConstants.CustomerErrorMessage] = result.ErrorMessage;
+            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError(result.ErrorMessage!);
         else
-            TempData[ViewConstants.CustomerSuccessMessage] = "Xóa khách hàng thành công!";
+            TempData[ViewConstants.CustomerSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }
 }

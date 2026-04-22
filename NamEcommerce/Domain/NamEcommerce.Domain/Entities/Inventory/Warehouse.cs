@@ -11,8 +11,10 @@ public sealed record Warehouse : AppAggregateEntity
 {
     internal Warehouse(string code, string name, WarehouseType warehouseType) : base(Guid.NewGuid())
     {
-        ArgumentException.ThrowIfNullOrEmpty(code);
-        ArgumentException.ThrowIfNullOrEmpty(name);
+        if (string.IsNullOrEmpty(code))
+            throw new WarehouseCodeRequiredException();
+        if (string.IsNullOrEmpty(name))
+            throw new WarehouseNameRequiredException();
 
         Code = code;
         Name = name;
@@ -51,7 +53,8 @@ public sealed record Warehouse : AppAggregateEntity
             return;
 
         ArgumentNullException.ThrowIfNull(checker);
-        ArgumentException.ThrowIfNullOrEmpty(name);
+        if (string.IsNullOrEmpty(name))
+            throw new WarehouseNameRequiredException();
 
         if (await checker.DoesNameExistAsync(name, Id).ConfigureAwait(false))
             throw new WarehouseNameExistsException(name);
@@ -66,7 +69,8 @@ public sealed record Warehouse : AppAggregateEntity
             return;
 
         ArgumentNullException.ThrowIfNull(checker);
-        ArgumentException.ThrowIfNullOrEmpty(code);
+        if (string.IsNullOrEmpty(code))
+            throw new WarehouseCodeRequiredException();
 
         if (await checker.DoesCodeExistAsync(code, Id).ConfigureAwait(false))
             throw new WarehouseCodeExistsException(code);

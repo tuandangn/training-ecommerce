@@ -62,11 +62,11 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
         if (!result.Success)
         {
-            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            AddLocalizedModelError(result.ErrorMessage);
             model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
             return View(model);
         }
-        TempData[ViewConstants.PurchaseOrderSuccessMessage] = "Thêm mới đơn nhập thành công!";
+        TempData[ViewConstants.PurchaseOrderSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
@@ -75,14 +75,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     {
         if (!ModelState.IsValid)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Dữ liệu không hợp lệ";
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.InvalidRequest");
             return RedirectToAction(nameof(Details), new { id = model.Id });
         }
 
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.Id });
         if (purchaseOrder is null)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -99,10 +99,10 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
         if (!updatePurchaseOrderResult.Success)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = updatePurchaseOrderResult.ErrorMessage;
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError(updatePurchaseOrderResult.ErrorMessage!);
             return RedirectToAction(nameof(Details), new { id = model.Id });
         }
-        TempData[ViewConstants.PurchaseOrderSuccessMessage] = "Chỉnh sửa đơn nhập hàng thành công!";
+        TempData[ViewConstants.PurchaseOrderSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(Details), new { id = model.Id });
     }
 
@@ -111,7 +111,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         var model = await _purchaseOrderModelFactory.PreparePurchaseOrderDetailsModel(id);
         if (model == null)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -126,7 +126,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
         if (purchaseOrder is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn nhập hàng." });
+            return Json(new { success = false, message = LocalizeError("Error.PurchaseOrderIsNotFound") });
 
         var result = await _mediator.Send(new AddPurchaseOrderItemCommand
         {
@@ -138,7 +138,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         });
 
         if (!result.Success)
-            return Json(new { success = false, message = result.ErrorMessage });
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
         return Json(new { success = true, message = string.Empty });
     }
     [HttpPost]
@@ -146,14 +146,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     {
         if (!ModelState.IsValid)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Dữ liệu không hợp lệ";
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.InvalidRequest");
             return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
         if (purchaseOrder is null)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -167,9 +167,9 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         });
 
         if (!result.Success)
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = result.ErrorMessage;
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError(result.ErrorMessage!);
         else
-            TempData[ViewConstants.PurchaseOrderSuccessMessage] = $"Nhập kho {model.ReceivedQuantity.DisplayQuantity()} sản phẩm thành công!";
+            TempData[ViewConstants.PurchaseOrderSuccessMessage] = LocalizeError("Msg.SaveSuccess");
 
         return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
     }
@@ -178,18 +178,18 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     public async Task<IActionResult> RemovePurchaseOrderItem([FromBody] DeletePurchaseOrderItemModel model)
     {
         if (!ModelState.IsValid)
-            return Json(new { success = false, errorMessage = "Dữ liệu không hợp lệ" });
+            return Json(new { success = false, errorMessage = LocalizeError("Error.InvalidRequest") });
 
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
         if (purchaseOrder is null)
-            return Json(new { success = false, errorMessage = "Không tìm thấy đơn nhập hàng." });
+            return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderIsNotFound") });
 
         var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == model.PurchaseOrderItemId);
         if (purchaseOrderItem is null)
-            return Json(new { success = false, errorMessage = "Không tìm thấy hàng hóa." });
+            return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderItemIsNotFound") });
 
         if (!purchaseOrder.CanAddItems)
-            return Json(new { success = false, errorMessage = "Không thể cập nhật hàng hóa." });
+            return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderCannotUpdateOrderItems") });
 
         var result = await _mediator.Send(new DeletePurchaseOrderItemCommand
         {
@@ -198,7 +198,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         });
 
         if (!result.Success)
-            return Json(new { success = false, errorMessage = result.ErrorMessage });
+            return Json(new { success = false, errorMessage = LocalizeError(result.ErrorMessage!) });
         return Json(new { success = true });
     }
 
@@ -208,7 +208,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -217,7 +217,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             PurchaseOrderId = id
         });
 
-        TempData[success ? ViewConstants.PurchaseOrderSuccessMessage : ViewConstants.PurchaseOrderErrorMessage] = errorMessage;
+        TempData[success ? ViewConstants.PurchaseOrderSuccessMessage : ViewConstants.PurchaseOrderErrorMessage] = success ? errorMessage : LocalizeError(errorMessage!);
         return RedirectToAction(nameof(Details), new { id });
     }
     [HttpPost]
@@ -226,7 +226,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -235,7 +235,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             PurchaseOrderId = id
         });
 
-        TempData[success ? ViewConstants.PurchaseOrderSuccessMessage : ViewConstants.PurchaseOrderErrorMessage] = errorMessage;
+        TempData[success ? ViewConstants.PurchaseOrderSuccessMessage : ViewConstants.PurchaseOrderErrorMessage] = success ? errorMessage : LocalizeError(errorMessage!);
         return RedirectToAction(nameof(Details), new { id });
     }
     /// <summary>
@@ -268,7 +268,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = "Không tìm thấy đơn nhập hàng.";
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -279,9 +279,9 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         });
 
         if (!result.Success)
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = result.ErrorMessage;
+            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError(result.ErrorMessage!);
         else
-            TempData[ViewConstants.PurchaseOrderSuccessMessage] = "Cập nhật trạng thái thành công!";
+            TempData[ViewConstants.PurchaseOrderSuccessMessage] = LocalizeError("Msg.SaveSuccess");
 
         return RedirectToAction(nameof(Details), new { id });
     }

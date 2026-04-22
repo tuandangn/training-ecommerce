@@ -11,9 +11,9 @@ public record BaseOrderItemAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (Quantity <= 0)
-            return (false, "Quantity must be greater than 0");
+            return (false, "Error.OrderItemQuantityMustBePositive");
         if (UnitPrice < 0)
-            return (false, "Unit price must be >= 0");
+            return (false, "Error.OrderItemUnitPriceCannotBeNegative");
 
         return (true, string.Empty);
     }
@@ -54,9 +54,9 @@ public sealed record UpdateOrderItemAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (Quantity <= 0)
-            return (false, "Quantity must be greater than 0");
+            return (false, "Error.OrderItemQuantityMustBePositive");
         if (UnitPrice < 0)
-            return (false, "Unit price must be >= 0");
+            return (false, "Error.OrderItemUnitPriceCannotBeNegative");
 
         return (true, string.Empty);
     }

@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- ===== General ===== -->
+  <data name="Error.InvalidRequest" xml:space="preserve">
+    <value>Request data is invalid.</value>
+  </data>
+  <data name="Error.PhoneNumberInvalid" xml:space="preserve">
+    <value>Phone number is invalid.</value>
+  </data>
+
+  <!-- ===== Pagination ===== -->
+  <data name="Error.PaginationPageIndexInvalid" xml:space="preserve">
+    <value>Page index must be greater than or equal to 0.</value>
+  </data>
+  <data name="Error.PaginationPageSizeInvalid" xml:space="preserve">
+    <value>Page size must be greater than 0.</value>
+  </data>
+  <data name="Error.PaginationTotalCountInvalid" xml:space="preserve">
+    <value>Total count must be greater than or equal to 0.</value>
+  </data>
+
+  <!-- ===== Catalog - Category ===== -->
+  <data name="Error.CategoryIsNotFound" xml:space="preserve">
+    <value>Category not found.</value>
+  </data>
+  <data name="Error.CategoryNameExists" xml:space="preserve">
+    <value>Category name already exists.</value>
+  </data>
+  <data name="Error.CategoryNameAlreadyExists" xml:space="preserve">
+    <value>Category name already exists.</value>
+  </data>
+  <data name="Error.CategoryNameRequired" xml:space="preserve">
+    <value>Category name is required.</value>
+  </data>
+  <data name="Error.CategoryCircularRelationship" xml:space="preserve">
+    <value>Category '{0}' and category '{1}' are in a circular relationship.</value>
+  </data>
+
+  <!-- ===== Catalog - Product ===== -->
+  <data name="Error.ProductIsNotFound" xml:space="preserve">
+    <value>Product not found.</value>
+  </data>
+  <data name="Error.ProductNameExists" xml:space="preserve">
+    <value>Product name already exists.</value>
+  </data>
+  <data name="Error.ProductNameAlreadyExists" xml:space="preserve">
+    <value>Product name already exists.</value>
+  </data>
+  <data name="Error.ProductNameRequired" xml:space="preserve">
+    <value>Product name is required.</value>
+  </data>
+  <data name="Error.ProductAlreadyInCategory" xml:space="preserve">
+    <value>Product '{0}' is already in category '{1}'.</value>
+  </data>
+  <data name="Error.ProductUnitPriceCannotBeNegative" xml:space="preserve">
+    <value>Unit price cannot be negative.</value>
+  </data>
+  <data name="Error.ProductCostPriceCannotBeNegative" xml:space="preserve">
+    <value>Cost price cannot be negative.</value>
+  </data>
+
+  <!-- ===== Catalog - Unit of Measurement ===== -->
+  <data name="Error.UnitMeasurementIsNotFound" xml:space="preserve">
+    <value>Unit of measurement not found.</value>
+  </data>
+  <data name="Error.UnitMeasurementNameExists" xml:space="preserve">
+    <value>Unit of measurement name already exists.</value>
+  </data>
+  <data name="Error.UnitMeasurementNameAlreadyExists" xml:space="preserve">
+    <value>Unit of measurement name already exists.</value>
+  </data>
+
+  <!-- ===== Catalog - Vendor ===== -->
+  <data name="Error.VendorIsNotFound" xml:space="preserve">
+    <value>Vendor not found.</value>
+  </data>
+  <data name="Error.VendorNameExists" xml:space="preserve">
+    <value>Vendor name already exists.</value>
+  </data>
+  <data name="Error.VendorNameAlreadyExists" xml:space="preserve">
+    <value>Vendor name already exists.</value>
+  </data>
+  <data name="Error.VendorNameRequired" xml:space="preserve">
+    <value>Vendor name is required.</value>
+  </data>
+  <data name="Error.VendorPhoneNumberRequired" xml:space="preserve">
+    <value>Vendor phone number is required.</value>
+  </data>
+
+  <!-- ===== Inventory - Warehouse ===== -->
+  <data name="Error.WarehouseIsNotFound" xml:space="preserve">
+    <value>Warehouse not found.</value>
+  </data>
+  <data name="Error.WarehouseCodeExists" xml:space="preserve">
+    <value>Warehouse code already exists.</value>
+  </data>
+  <data name="Error.WarehouseCodeRequired" xml:space="preserve">
+    <value>Warehouse code is required.</value>
+  </data>
+  <data name="Error.WarehouseNameExists" xml:space="preserve">
+    <value>Warehouse name already exists.</value>
+  </data>
+  <data name="Error.WarehouseNameAlreadyExists" xml:space="preserve">
+    <value>Warehouse name already exists.</value>
+  </data>
+  <data name="Error.WarehouseNameRequired" xml:space="preserve">
+    <value>Warehouse name is required.</value>
+  </data>
+  <data name="Error.WarehouseCapacityExceeded" xml:space="preserve">
+    <value>Warehouse capacity exceeded. Maximum: {0}, requested: {1}.</value>
+  </data>
+
+  <!-- ===== Inventory - Stock ===== -->
+  <data name="Error.StockNotFound" xml:space="preserve">
+    <value>Stock not found for product '{0}' in warehouse '{1}'.</value>
+  </data>
+  <data name="Error.StockProductIdCannotBeEmpty" xml:space="preserve">
+    <value>Product ID cannot be empty.</value>
+  </data>
+  <data name="Error.StockWarehouseIdCannotBeEmpty" xml:space="preserve">
+    <value>Warehouse ID cannot be empty.</value>
+  </data>
+  <data name="Error.StockQuantityCannotBeNegative" xml:space="preserve">
+    <value>Stock quantity cannot be negative.</value>
+  </data>
+  <data name="Error.StockQuantityMustBePositive" xml:space="preserve">
+    <value>Stock quantity must be greater than 0.</value>
+  </data>
+  <data name="Error.InsufficientStock" xml:space="preserve">
+    <value>Insufficient stock for product '{0}' in warehouse '{1}'. Required: {2}, available: {3}.</value>
+  </data>
+  <data name="Error.CannotReleaseMoreThanReserved" xml:space="preserve">
+    <value>Cannot release more than reserved quantity. Reserved: {0}, requested: {1}.</value>
+  </data>
+  <data name="Error.StockAdjustmentFailed" xml:space="preserve">
+    <value>Stock adjustment failed.</value>
+  </data>
+  <data name="Error.StockReservationFailed" xml:space="preserve">
+    <value>Stock reservation failed.</value>
+  </data>
+  <data name="Error.StockReleaseFailed" xml:space="preserve">
+    <value>Stock release failed.</value>
+  </data>
+  <data name="Error.StockDispatchFailed" xml:space="preserve">
+    <value>Stock dispatch failed.</value>
+  </data>
+  <data name="Error.StockReceiveFailed" xml:space="preserve">
+    <value>Stock receive failed.</value>
+  </data>
+
+  <!-- ===== Customers ===== -->
+  <data name="Error.CustomerIsNotFound" xml:space="preserve">
+    <value>Customer not found.</value>
+  </data>
+  <data name="Error.CustomerCannotBeDeleted" xml:space="preserve">
+    <value>Customer cannot be deleted because they have existing orders.</value>
+  </data>
+
+  <!-- ===== Orders ===== -->
+  <data name="Error.OrderItemRequired" xml:space="preserve">
+    <value>Order must have at least one item.</value>
+  </data>
+  <data name="Error.OrderCannotLock" xml:space="preserve">
+    <value>Order cannot be locked at current state.</value>
+  </data>
+  <data name="Error.DeliveryNoteItemRequired" xml:space="preserve">
+    <value>Delivery note must have at least one valid item.</value>
+  </data>
+  <data name="Error.DeliveryNoteCreateFailed" xml:space="preserve">
+    <value>An error occurred while creating the delivery note.</value>
+  </data>
+  <data name="Error.OrderIsNotFound" xml:space="preserve">
+    <value>Order not found.</value>
+  </data>
+  <data name="Error.OrderCodeExists" xml:space="preserve">
+    <value>Order code already exists.</value>
+  </data>
+  <data name="Error.OrderCannotChangeStatus" xml:space="preserve">
+    <value>Order cannot change status at current state.</value>
+  </data>
+  <data name="Error.OrderCannotUpdateInfo" xml:space="preserve">
+    <value>Order information cannot be updated at current state.</value>
+  </data>
+  <data name="Error.OrderCannotUpdateOrderItems" xml:space="preserve">
+    <value>Order items cannot be updated at current state.</value>
+  </data>
+  <data name="Error.OrderDiscountCannotBeNegative" xml:space="preserve">
+    <value>Order discount cannot be negative.</value>
+  </data>
+  <data name="Error.OrderDiscountExceedsTotal" xml:space="preserve">
+    <value>Order discount cannot exceed the total amount.</value>
+  </data>
+  <data name="Error.OrderItemIsNotFound" xml:space="preserve">
+    <value>Order item not found.</value>
+  </data>
+  <data name="Error.OrderItemAlreadyDelivered" xml:space="preserve">
+    <value>Order item has already been delivered.</value>
+  </data>
+  <data name="Error.OrderItemQuantityMustBePositive" xml:space="preserve">
+    <value>Order item quantity must be greater than 0.</value>
+  </data>
+  <data name="Error.OrderItemUnitPriceCannotBeNegative" xml:space="preserve">
+    <value>Order item unit price cannot be negative.</value>
+  </data>
+  <data name="Error.ExpectedShippingDateInvalid" xml:space="preserve">
+    <value>Expected shipping date is invalid.</value>
+  </data>
+  <data name="Error.QuantityExceedsRemaining" xml:space="preserve">
+    <value>Quantity exceeds remaining quantity. {0}: Remaining {1}.</value>
+  </data>
+  <data name="Error.OrderItemQuantityInvalid_Delivering" xml:space="preserve">
+    <value>Updated order item quantity cannot less than its delivering quantity.</value>
+  </data>
+  <data name="Error.OrderItemUnitPriceCannotChange_InDelivery" xml:space="preserve">
+    <value>Updated order item cannot change unit price of items that are already in delivery notes.</value>
+  </data>
+  <data name="Error.OrderItemCannotRemove_InDelivery" xml:space="preserve">
+    <value>Order item cannot be removed because it is processing in delivery note.</value>
+  </data>
+  <data name="Error.OrderCannotDelete" xml:space="preserve">
+    <value>Order cannot be deleted.</value>
+  </data>
+  <data name="Error.OrderCannotDelete_Processing" xml:space="preserve">
+    <value>Order cannot be deleted because it is being processed.</value>
+  </data>
+  <data name="Error.UserIsNotFound" xml:space="preserve">
+    <value>User not found.</value>
+  </data>
+
+  <!-- ===== Purchase Orders ===== -->
+  <data name="Error.PurchaseOrderIsNotFound" xml:space="preserve">
+    <value>Purchase order not found.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotSubmit" xml:space="preserve">
+    <value>Purchase order cannot be submitted at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotCancel" xml:space="preserve">
+    <value>Purchase order cannot be cancelled at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotUpdateInfo" xml:space="preserve">
+    <value>Purchase order information cannot be updated at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotUpdateVendor" xml:space="preserve">
+    <value>Purchase order vendor cannot be updated at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotUpdateWarehouse" xml:space="preserve">
+    <value>Purchase order warehouse cannot be updated at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotUpdateDeliveryDate" xml:space="preserve">
+    <value>Purchase order delivery date cannot be updated at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderHasNoItemsForShipping" xml:space="preserve">
+    <value>Purchase order has no items to apply shipping amount.</value>
+  </data>
+  <data name="Error.PurchaseOrderHasNoItemsForTax" xml:space="preserve">
+    <value>Purchase order has no items to apply tax amount.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotAddItems" xml:space="preserve">
+    <value>Cannot add items to purchase order with status {0}.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotReceiveGoods" xml:space="preserve">
+    <value>Cannot receive goods to purchase order {0}.</value>
+  </data>
+  <data name="Error.PurchaseOrderItemIsNotFound" xml:space="preserve">
+    <value>Purchase order item with ID {0} not found in purchase order {1}.</value>
+  </data>
+  <data name="Error.PurchaseOrderReceiveQuantityExceedsOrdered" xml:space="preserve">
+    <value>Cannot receive quantity {0} because it exceeds the ordered quantity.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotDeleteItems" xml:space="preserve">
+    <value>Can only delete items from purchase orders in Draft status.</value>
+  </data>
+  <data name="Error.WarehouseRequired" xml:space="preserve">
+    <value>Warehouse is required.</value>
+  </data>
+  <data name="Error.PurchaseOrderCodeExists" xml:space="preserve">
+    <value>Purchase order code already exists.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotSubmit" xml:space="preserve">
+    <value>Purchase order cannot be submitted at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotCancel" xml:space="preserve">
+    <value>Purchase order cannot be cancelled at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotChangeStatus" xml:space="preserve">
+    <value>Purchase order cannot change status at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotReceiveGoods" xml:space="preserve">
+    <value>Purchase order cannot receive goods at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotUpdateInfo" xml:space="preserve">
+    <value>Purchase order information cannot be updated at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotUpdateVendor" xml:space="preserve">
+    <value>Vendor cannot be changed at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotUpdateWarehouse" xml:space="preserve">
+    <value>Warehouse cannot be changed at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotUpdateDeliveryDate" xml:space="preserve">
+    <value>Delivery date cannot be changed at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotUpdateOrderItems" xml:space="preserve">
+    <value>Purchase order items cannot be updated at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderCannotAddItem" xml:space="preserve">
+    <value>Cannot add items to purchase order at current state.</value>
+  </data>
+  <data name="Error.PurchaseOrderHasNoItemsForShipping" xml:space="preserve">
+    <value>Purchase order has no items. Cannot set shipping fee.</value>
+  </data>
+  <data name="Error.PurchaseOrderHasNoItemsForTax" xml:space="preserve">
+    <value>Purchase order has no items. Cannot set tax amount.</value>
+  </data>
+  <data name="Error.PurchaseOrderItemIsNotFound" xml:space="preserve">
+    <value>Purchase order item not found.</value>
+  </data>
+  <data name="Error.PurchaseOrderReceiveQuantityExceedsOrderedQuantity" xml:space="preserve">
+    <value>Receive quantity exceeds the ordered quantity.</value>
+  </data>
+  <data name="Error.ExpectedDeliveryDateCannotBeInPast" xml:space="preserve">
+    <value>Expected delivery date cannot be in the past.</value>
+  </data>
+  <data name="Error.TaxAmountCannotBeNegative" xml:space="preserve">
+    <value>Tax amount cannot be negative.</value>
+  </data>
+  <data name="Error.ShippingAmountCannotBeNegative" xml:space="preserve">
+    <value>Shipping amount cannot be negative.</value>
+  </data>
+
+  <!-- ===== Delivery Notes ===== -->
+  <data name="Error.DeliveryNoteNotFound" xml:space="preserve">
+    <value>Delivery note not found.</value>
+  </data>
+  <data name="Error.DeliveryNoteCannotChangeStatus" xml:space="preserve">
+    <value>Delivery note cannot change status from '{0}' to '{1}'.</value>
+  </data>
+  <data name="Error.DeliveryProofRequired" xml:space="preserve">
+    <value>Delivery proof is required.</value>
+  </data>
+
+  <!-- ===== Finance - Expense ===== -->
+  <data name="Error.ExpenseTitleRequired" xml:space="preserve">
+    <value>Expense title is required.</value>
+  </data>
+  <data name="Error.ExpenseTitleTooLong" xml:space="preserve">
+    <value>Expense title is too long (maximum 255 characters).</value>
+  </data>
+  <data name="Error.ExpenseAmountRequired" xml:space="preserve">
+    <value>Expense amount is required.</value>
+  </data>
+  <data name="Error.ExpenseAmountMustBePositive" xml:space="preserve">
+    <value>Expense amount must be greater than 0.</value>
+  </data>
+  <data name="Error.ExpenseIsNotFound" xml:space="preserve">
+    <value>Expense record not found.</value>
+  </data>
+
+  <!-- ===== Debts ===== -->
+  <data name="Error.VendorDebtNotFound" xml:space="preserve">
+    <value>Vendor debt not found.</value>
+  </data>
+  <data name="Error.VendorDebtAlreadyExistsForPurchaseOrderException" xml:space="preserve">
+    <value>Vendor debt already exists for this purchase order.</value>
+  </data>
+  <data name="Error.VendorPaymentExceedsRemainingException" xml:space="preserve">
+    <value>Payment amount {0} exceeds remaining debt {1}.</value>
+  </data>
+
+  <!-- ===== Media ===== -->
+  <data name="Error.PictureIsNotFound" xml:space="preserve">
+    <value>Picture not found.</value>
+  </data>
+
+  <!-- ===== Users ===== -->
+  <data name="Error.UserRegistrationDisabled" xml:space="preserve">
+    <value>User registration is not allowed at this time.</value>
+  </data>
+  <data name="Error.UserIsNotFound" xml:space="preserve">
+    <value>User not found.</value>
+  </data>
+  <data name="Error.UsernameExistsException" xml:space="preserve">
+    <value>Username already exists.</value>
+  </data>
+  <data name="Error.UserAlreadyHaveRole" xml:space="preserve">
+    <value>User '{1}' already has role '{0}'.</value>
+  </data>
+  <data name="Error.UserDtoRequired" xml:space="preserve">
+    <value>User data is required.</value>
+  </data>
+  <data name="Error.UsernameRequired" xml:space="preserve">
+    <value>Username is required.</value>
+  </data>
+  <data name="Error.PasswordRequired" xml:space="preserve">
+    <value>Password is required.</value>
+  </data>
+  <data name="Error.FullNameRequired" xml:space="preserve">
+    <value>Full name is required.</value>
+  </data>
+  <data name="Error.PhoneNumberRequired" xml:space="preserve">
+    <value>Phone number is required.</value>
+  </data>
+  <data name="Error.UserCreateFailed" xml:space="preserve">
+    <value>Failed to create user.</value>
+  </data>
+  <data name="Error.UsernameAlreadyExists" xml:space="preserve">
+    <value>Username already exists.</value>
+  </data>
+  <data name="Error.PaymentAmountMustBePositive" xml:space="preserve">
+    <value>Payment amount must be greater than 0.</value>
+  </data>
+  <data name="Error.PaymentDateRequired" xml:space="preserve">
+    <value>Payment date is required.</value>
+  </data>
+  <data name="Error.VendorRequired" xml:space="preserve">
+    <value>Vendor is required.</value>
+  </data>
+  <data name="Error.PurchaseOrderRequired" xml:space="preserve">
+    <value>Purchase order is required.</value>
+  </data>
+  <data name="Error.OrderRequired" xml:space="preserve">
+    <value>Order is required.</value>
+  </data>
+  <data name="Error.ShippingAddressRequired" xml:space="preserve">
+    <value>Shipping address is required.</value>
+  </data>
+  <data name="Error.DeliveryNoteItemsRequired" xml:space="preserve">
+    <value>At least one item is required for the delivery note.</value>
+  </data>
+  <data name="Error.DeliveryNoteQuantityMustBePositive" xml:space="preserve">
+    <value>All delivery note items must have a quantity greater than 0.</value>
+  </data>
+  <data name="Error.SurchargeCannotBeNegative" xml:space="preserve">
+    <value>Surcharge cannot be negative.</value>
+  </data>
+  <data name="Error.AmountToCollectCannotBeNegative" xml:space="preserve">
+    <value>Amount to collect cannot be negative.</value>
+  </data>
+  <data name="Error.PurchaseOrderQuantityMustBePositive" xml:space="preserve">
+    <value>Quantity must be greater than 0.</value>
+  </data>
+  <data name="Error.PurchaseOrderUnitCostCannotBeNegative" xml:space="preserve">
+    <value>Unit cost cannot be negative.</value>
+  </data>
+
+</root>

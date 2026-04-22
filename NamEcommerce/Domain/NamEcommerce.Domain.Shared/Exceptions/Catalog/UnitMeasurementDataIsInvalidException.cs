@@ -1,5 +1,6 @@
-﻿namespace NamEcommerce.Domain.Shared.Exceptions.Catalog;
+namespace NamEcommerce.Domain.Shared.Exceptions.Catalog;
 
 [Serializable]
-public sealed class UnitMeasurementDataIsInvalidException(string? message)  : NamEcommerceDomainException("Error.UnitMeasurementDataIsInvalidException", message);
+public sealed class UnitMeasurementDataIsInvalidException(string errorCode, params object[] parameters) : NamEcommerceDomainException(errorCode, parameters);
+
 

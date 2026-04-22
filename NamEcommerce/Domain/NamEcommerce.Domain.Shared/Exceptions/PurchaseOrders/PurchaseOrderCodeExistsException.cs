@@ -1,6 +1,7 @@
 ﻿namespace NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 
 [Serializable]
-public sealed class PurchaseOrderCodeExistsException(string code)  : NamEcommerceDomainException("Error.PurchaseOrderCodeExistsException", code);
+public sealed class PurchaseOrderCodeExistsException(string code)  : NamEcommerceDomainException("Error.PurchaseOrderCodeExists", code);
+
 
 

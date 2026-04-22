@@ -50,7 +50,7 @@ public sealed class OrderController : BaseAuthorizedController
 
         if (model.Items.Count == 0)
         {
-            ModelState.AddModelError(string.Empty, "Vui lòng chọn hàng hóa.");
+            AddLocalizedModelError("Error.OrderItemRequired");
             model = await _orderModelFactory.PrepareCreateOrderModel(model);
             return View(model);
         }
@@ -58,7 +58,7 @@ public sealed class OrderController : BaseAuthorizedController
         var orderSubTotal = model.Items.Sum(item => item.ItemSubTotal);
         if ((model.OrderDiscount ?? 0) > orderSubTotal)
         {
-            ModelState.AddModelError(nameof(model.OrderDiscount), $"Giảm giá tối đa không quá {orderSubTotal.DisplayCurrency()}");
+            ModelState.AddModelError(nameof(model.OrderDiscount), LocalizeError("Error.OrderDiscountExceedsTotal"));
             model = await _orderModelFactory.PrepareCreateOrderModel(model);
             return View(model);
         }
@@ -80,12 +80,12 @@ public sealed class OrderController : BaseAuthorizedController
 
         if (!result.Success)
         {
-            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            AddLocalizedModelError(result.ErrorMessage);
             model = await _orderModelFactory.PrepareCreateOrderModel(model);
             return View(model);
         }
 
-        TempData[ViewConstants.OrderSuccessMessage] = "Tạo đơn bán thành công!";
+        TempData[ViewConstants.OrderSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -94,7 +94,7 @@ public sealed class OrderController : BaseAuthorizedController
         var model = await _orderModelFactory.PrepareOrderDetailsModel(id);
         if (model is null)
         {
-            TempData[ViewConstants.OrderErrorMessage] = "Không tìm thấy đơn bán.";
+            TempData[ViewConstants.OrderErrorMessage] = LocalizeError("Error.OrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -112,15 +112,15 @@ public sealed class OrderController : BaseAuthorizedController
             Id = model.OrderId
         });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
 
         if (!order.CanLockOrder)
-            return Json(new { success = false, message = "Đơn bán không thể khóa lúc này." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderCannotLock") });
 
         var result = await _mediator.Send(new LockOrderCommand(model.OrderId, model.Reason!));
 
         if (!result.Success)
-            return Json(new { success = false, message = result.ErrorMessage });
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
         return Json(new { success = true, message = string.Empty });
     }
@@ -133,14 +133,14 @@ public sealed class OrderController : BaseAuthorizedController
 
         var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
 
         if (!order.CanUpdateOrderItems)
-            return Json(new { success = false, message = "Không thể cập nhật hàng hóa." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderCannotUpdateOrderItems") });
 
         var product = await _mediator.Send(new GetProductByIdQuery { Id = model.ProductId });
         if (product is null)
-            return Json(new { success = false, message = "Không tìm thấy hàng hóa." });
+            return Json(new { success = false, message = LocalizeError("Error.ProductIsNotFound") });
 
         var result = await _mediator.Send(new AddOrderItemCommand
         {
@@ -151,7 +151,7 @@ public sealed class OrderController : BaseAuthorizedController
         });
 
         if (!result.Success)
-            return Json(new { success = false, message = result.ErrorMessage });
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
         return Json(new { success = true, message = string.Empty });
     }
@@ -164,14 +164,14 @@ public sealed class OrderController : BaseAuthorizedController
 
         var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
 
         var orderItem = order.Items.FirstOrDefault(orderItem => orderItem.Id == model.ItemId);
         if (orderItem is null)
-            return Json(new { success = false, message = "Không tìm thấy hàng hóa." });
+            return Json(new { success = false, message = LocalizeError("Error.ProductIsNotFound") });
 
         if (!order.CanUpdateOrderItems)
-            return Json(new { success = false, message = "Không thể cập nhật hàng hóa." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderCannotUpdateOrderItems") });
 
         var result = await _mediator.Send(new UpdateOrderItemCommand
         {
@@ -181,7 +181,7 @@ public sealed class OrderController : BaseAuthorizedController
             UnitPrice = model.UnitPrice
         });
         if (!result.Success)
-            return Json(new { success = false, message = result.ErrorMessage });
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
         return Json(new { success = true, message = string.Empty });
     }
@@ -194,14 +194,14 @@ public sealed class OrderController : BaseAuthorizedController
 
         var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
 
         var orderItem = order.Items.FirstOrDefault(orderItem => orderItem.Id == model.ItemId);
         if (orderItem is null)
-            return Json(new { success = false, message = "Không tìm thấy hàng hóa." });
+            return Json(new { success = false, message = LocalizeError("Error.ProductIsNotFound") });
 
         if (!order.CanUpdateOrderItems)
-            return Json(new { success = false, message = "Không thể cập nhật hàng hóa." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderCannotUpdateOrderItems") });
 
         var result = await _mediator.Send(new DeleteOrderItemCommand
         {
@@ -210,7 +210,7 @@ public sealed class OrderController : BaseAuthorizedController
         });
 
         if (!result.Success)
-            return Json(new { success = false, message = result.ErrorMessage });
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
         return Json(new { success = true });
     }
 
@@ -225,15 +225,15 @@ public sealed class OrderController : BaseAuthorizedController
             Id = model.OrderId
         });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
 
         if (!order.CanUpdateInfo)
-            return Json(new { success = false, message = "Đơn bán không thể thay đổi lúc này." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderCannotUpdateInfo") });
 
         var result = await _mediator.Send(new UpdateOrderNoteCommand(model.OrderId, model.Note!));
 
         if (!result.Success)
-            return Json(new { success = false, message = result.ErrorMessage });
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
         return Json(new { success = true, message = string.Empty });
     }
@@ -248,18 +248,18 @@ public sealed class OrderController : BaseAuthorizedController
             Id = model.OrderId
         });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
 
         if (!order.CanUpdateInfo)
-            return Json(new { success = false, message = "Đơn bán không thể thay đổi lúc này." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderCannotUpdateInfo") });
 
         if ((model.OrderDiscount ?? 0) > order.OrderSubTotal)
-            return Json(new { success = false, message = "Giảm giá không được lớn hơn tổng đơn." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderDiscountExceedsTotal") });
 
         var result = await _mediator.Send(new UpdateOrderDiscountCommand(model.OrderId, model.OrderDiscount));
 
         if (!result.Success)
-            return Json(new { success = false, message = result.ErrorMessage });
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
         return Json(new { success = true, message = string.Empty });
     }
@@ -275,15 +275,15 @@ public sealed class OrderController : BaseAuthorizedController
             Id = model.OrderId
         });
         if (order is null)
-            return Json(new { success = false, message = "Không tìm thấy đơn bán." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
 
         if (!order.CanUpdateInfo)
-            return Json(new { success = false, message = "Đơn bán không thể thay đổi lúc này." });
+            return Json(new { success = false, message = LocalizeError("Error.OrderCannotUpdateInfo") });
 
         var result = await _mediator.Send(new UpdateOrderShippingCommand(model.OrderId, model.ExpectedShippingDate, model.Address));
 
         if (!result.Success)
-            return Json(new { success = false, message = result.ErrorMessage });
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
         return Json(new { success = true, message = string.Empty });
     }
@@ -293,9 +293,9 @@ public sealed class OrderController : BaseAuthorizedController
     {
         var resultDto = await _mediator.Send(new DeleteOrderCommand(id));
         if (!resultDto.Success)
-            TempData[ViewConstants.OrderErrorMessage] = resultDto.ErrorMessage;
+            TempData[ViewConstants.OrderErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
         else
-            TempData[ViewConstants.OrderSuccessMessage] = "Xóa đơn bán thành công!";
+            TempData[ViewConstants.OrderSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
 
         return RedirectToAction(nameof(List));
     }

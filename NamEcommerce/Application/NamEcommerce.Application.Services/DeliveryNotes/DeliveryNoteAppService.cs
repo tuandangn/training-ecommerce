@@ -4,6 +4,7 @@ using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 
 namespace NamEcommerce.Application.Services.DeliveryNotes;
@@ -23,7 +24,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
     {
         var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(dto.WarehouseId);
         if (warehouse is null)
-            throw new Exception("Kho hàng không tồn tại"); //*TODO*
+            throw new WarehouseIsNotFoundException(dto.WarehouseId);
 
         var domainDto = new CreateDeliveryNoteDto
         {

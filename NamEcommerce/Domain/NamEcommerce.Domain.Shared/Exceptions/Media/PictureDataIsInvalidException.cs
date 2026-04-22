@@ -1,5 +1,6 @@
-﻿namespace NamEcommerce.Domain.Shared.Exceptions.Media;
+namespace NamEcommerce.Domain.Shared.Exceptions.Media;
 
 [Serializable]
-public sealed class PictureDataIsInvalidException(string? message)  : NamEcommerceDomainException("Error.PictureDataIsInvalidException", message);
+public sealed class PictureDataIsInvalidException(string errorCode, params object[] parameters) : NamEcommerceDomainException(errorCode, parameters);
+
 

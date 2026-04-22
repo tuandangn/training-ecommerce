@@ -7,39 +7,39 @@ namespace NamEcommerce.Web.Validators.Orders;
 
 public sealed class CreateOrderValidator : AbstractValidator<CreateOrderModel>
 {
-    public CreateOrderValidator(IStringLocalizer<ValidationResource> localizer)
+    public CreateOrderValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(p => p.CustomerId)
-            .NotEmpty().WithMessage(p => localizer["Order.CustomerId.Required"]);
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Customer"]]);
 
         RuleFor(p => p.OrderDiscount)
-            .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Order.Discount.Invalid"]);
+            .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.Discount"]]);
 
         RuleFor(p => p.ExpectedShippingDate)
-            .GreaterThanOrEqualTo(DateTime.Now.Date).WithMessage(p => localizer["Order.ExpectedDate.Invalid"]);
+            .GreaterThanOrEqualTo(DateTime.Now.Date).WithMessage(p => localizer["Error.Invalid", localizer["Label.ExpectedDate"]]);
 
         RuleFor(p => p.ShippingAddress)
-            .NotEmpty().WithMessage(p => localizer["Order.ShippingAddress.Required"])
-            .MaximumLength(1000).WithMessage(p => localizer["Order.ShippingAddress.MaxLength"]);
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Address"]])
+            .MaximumLength(1000).WithMessage(p => localizer["Error.MaxLength", localizer["Label.Address"], 1000]);
 
         RuleFor(p => p.Items)
-            .NotEmpty().WithMessage(p => localizer["Order.Items.Required"]);
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Items"]]);
     }
 }
 
 public sealed class CreateOrderItemValidator : AbstractValidator<CreateOrderItemModel>
 {
-    public CreateOrderItemValidator(IStringLocalizer<ValidationResource> localizer)
+    public CreateOrderItemValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(p => p.ProductId)
-            .NotEmpty().WithMessage(p => localizer["Order.ProductId.Required"]);
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Product"]]);
 
         RuleFor(p => p.Quantity)
-            .NotEmpty().WithMessage(p => localizer["Order.Quantity.Required"])
-            .GreaterThan(0).WithMessage(p => localizer["Order.Quantity.Invalid"]);
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Quantity"]])
+            .GreaterThan(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.Quantity"]]);
 
         RuleFor(p => p.UnitPrice)
-            .NotEmpty().WithMessage(p => localizer["Order.UnitPrice.Required"])
-            .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Order.UnitPrice.Invalid"]);
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.UnitPrice"]])
+            .GreaterThanOrEqualTo(0).WithMessage(p => localizer["Error.Invalid", localizer["Label.UnitPrice"]]);
     }
 }

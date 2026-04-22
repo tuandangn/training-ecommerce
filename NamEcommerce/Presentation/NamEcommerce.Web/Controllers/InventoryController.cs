@@ -70,11 +70,11 @@ public sealed class InventoryController : BaseAuthorizedController
 
         if (!result.Success)
         {
-            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            AddLocalizedModelError(result.ErrorMessage);
             return View(model);
         }
 
-        TempData[ViewConstants.VendorSuccessMessage] = "Điều chỉnh tồn kho thành công!";
+        TempData[ViewConstants.InventorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(StockList));
     }
 
@@ -125,11 +125,11 @@ public sealed class InventoryController : BaseAuthorizedController
 
         if (!result.Success)
         {
-            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            AddLocalizedModelError(result.ErrorMessage);
             return View(model);
         }
 
-        TempData[ViewConstants.VendorSuccessMessage] = "Giữ hàng thành công!";
+        TempData[ViewConstants.InventorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(StockList));
     }
 
@@ -167,11 +167,11 @@ public sealed class InventoryController : BaseAuthorizedController
 
         if (!result.Success)
         {
-            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            AddLocalizedModelError(result.ErrorMessage);
             return View(model);
         }
 
-        TempData[ViewConstants.VendorSuccessMessage] = "Giải phóng hàng giữ thành công!";
+        TempData[ViewConstants.InventorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(StockList));
     }
 
@@ -209,11 +209,11 @@ public sealed class InventoryController : BaseAuthorizedController
 
         if (!result.Success)
         {
-            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            AddLocalizedModelError(result.ErrorMessage);
             return View(model);
         }
 
-        TempData[ViewConstants.VendorSuccessMessage] = "Xuất kho thành công!";
+        TempData[ViewConstants.InventorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(StockList));
     }
 
@@ -253,11 +253,11 @@ public sealed class InventoryController : BaseAuthorizedController
 
         if (!result.Success)
         {
-            ModelState.AddModelError(string.Empty, result.ErrorMessage!);
+            AddLocalizedModelError(result.ErrorMessage);
             return View(model);
         }
 
-        TempData[ViewConstants.VendorSuccessMessage] = "Nhập kho thành công!";
+        TempData[ViewConstants.InventorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(StockList));
     }
 

@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Users;
@@ -35,7 +35,7 @@ public sealed class UserController : BaseController
         var authenticateUserResult = await _mediator.Send(new AuthenticateUserCommand(model.Username!, model.Password!));
         if (!authenticateUserResult.Success)
         {
-            ModelState.AddModelError(string.Empty, authenticateUserResult.ErrorMessage!);
+            AddLocalizedModelError(authenticateUserResult.ErrorMessage);
             return View(model);
         }
 
@@ -54,7 +54,7 @@ public sealed class UserController : BaseController
     {
         if (!_appConfig.AllowRegisterUser)
         {
-            TempData[ViewConstants.GlobalErrorMessage] = "Đăng ký người dùng mới không được phép lúc này.";
+            TempData[ViewConstants.GlobalErrorMessage] = LocalizeError("Error.UserRegistrationDisabled");
             return RedirectToHome();
         }
 
@@ -80,11 +80,11 @@ public sealed class UserController : BaseController
 
         if (registerUserResult.CreatedId is not null)
         {
-            TempData[ViewConstants.LoginErrorMessage] = registerUserResult.ErrorMessage;
+            TempData[ViewConstants.LoginErrorMessage] = LocalizeError(registerUserResult.ErrorMessage!);
             return RedirectToAction(nameof(Login));
         }
 
-        ModelState.AddModelError(string.Empty, registerUserResult.ErrorMessage!);
+        AddLocalizedModelError(registerUserResult.ErrorMessage);
         return View(model);
     }
 }

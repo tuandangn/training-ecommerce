@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared.Exceptions.Inventory;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 
 namespace NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 
@@ -16,9 +16,9 @@ public abstract record BasePurchaseOrderItemDto
     public void Verify()
     {
         if (QuantityOrdered <= 0)
-            throw new PurchaseOrderItemDataIsInvalidException("Item quantity ordered must be greater than 0");
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemQuantityMustBePositive");
         if (UnitCost < 0)
-            throw new PurchaseOrderItemDataIsInvalidException("Item unit cost must be greater than or equal to 0");
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemUnitCostCannotBeNegative");
     }
 }
 
@@ -54,9 +54,9 @@ public sealed record ReceivedGoodsForItemDto(Guid PurchaseOrderId, Guid Purchase
     public void Verify()
     {
         if (ReceivedQuantity <= 0)
-            throw new InvalidOperationException("Received quantity must be greater than 0");
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderReceiveQuantityMustBePositive");
         if (SellingPrice.HasValue && SellingPrice.Value < 0)
-            throw new InvalidOperationException("Selling price must be greater than or equal to 0");
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderSellingPriceCannotBeNegative");
     }
 }
 [Serializable]

@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using System.Text.RegularExpressions;
 
@@ -19,11 +19,11 @@ public abstract record BaseWarehouseDto
     public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Code))
-            throw new WarehouseDataIsInvalidException("Mã kho không được để trống");
+            throw new WarehouseDataIsInvalidException("Error.WarehouseCodeRequired");
         if (string.IsNullOrEmpty(Name))
-            throw new WarehouseDataIsInvalidException("Tên kho không được để trống");
+            throw new WarehouseDataIsInvalidException("Error.WarehouseNameRequired");
         if (!string.IsNullOrEmpty(PhoneNumber) && !Regex.IsMatch(PhoneNumber, @"0\d{9,10}"))
-            throw new WarehouseDataIsInvalidException("Số điện thoại kho không hợp lệ");
+            throw new WarehouseDataIsInvalidException("Error.PhoneNumberInvalid");
     }
 }
 

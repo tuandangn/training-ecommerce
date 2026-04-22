@@ -105,11 +105,11 @@ public sealed record CreateCustomerPaymentAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (CustomerId == Guid.Empty)
-            return (false, "CustomerId is required.");
+            return (false, "Error.CustomerRequired");
         if (Amount <= 0)
-            return (false, "Amount must be greater than 0.");
+            return (false, "Error.PaymentAmountMustBePositive");
         if (PaidOnUtc == default)
-            return (false, "PaidOnUtc is required.");
+            return (false, "Error.PaymentDateRequired");
 
         return (true, string.Empty);
     }

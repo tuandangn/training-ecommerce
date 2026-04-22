@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
@@ -61,11 +61,11 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
         });
         if (!createUnitMeasurementResult.Success)
         {
-            ModelState.AddModelError(string.Empty, createUnitMeasurementResult.ErrorMessage!);
+            AddLocalizedModelError(createUnitMeasurementResult.ErrorMessage);
             return View(model);
         }
 
-        TempData[ViewConstants.UnitMeasurementSuccessMessage] = "Thêm mới đơn vị tính thành công!";
+        TempData[ViewConstants.UnitMeasurementSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -74,7 +74,7 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
         var unitMeasurement = await _mediator.Send(new GetUnitMeasurementQuery { Id = id });
         if (unitMeasurement == null)
         {
-            TempData[ViewConstants.UnitMeasurementErrorMessage] = "Không tìm thấy đơn vị tính.";
+            TempData[ViewConstants.UnitMeasurementErrorMessage] = LocalizeError("Error.UnitMeasurementIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -97,7 +97,7 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
         var unitMeasurement = await _mediator.Send(new GetUnitMeasurementQuery { Id = model.Id });
         if (unitMeasurement == null)
         {
-            TempData[ViewConstants.UnitMeasurementErrorMessage] = "Không tìm thấy đơn vị tính.";
+            TempData[ViewConstants.UnitMeasurementErrorMessage] = LocalizeError("Error.UnitMeasurementIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -109,11 +109,11 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
         });
         if (!updateUnitMeasurementResult.Success)
         {
-            ModelState.AddModelError(string.Empty, updateUnitMeasurementResult.ErrorMessage!);
+            AddLocalizedModelError(updateUnitMeasurementResult.ErrorMessage);
             return View(model);
         }
 
-        TempData[ViewConstants.UnitMeasurementSuccessMessage] = "Chỉnh sửa đơn vị tính thành công!";
+        TempData[ViewConstants.UnitMeasurementSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -123,9 +123,9 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
         var resultDto = await _mediator.Send(new DeleteUnitMeasurementCommand(id));
 
         if (!resultDto.Success)
-            TempData[ViewConstants.UnitMeasurementErrorMessage] = resultDto.ErrorMessage;
+            TempData[ViewConstants.UnitMeasurementErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
         else
-            TempData[ViewConstants.UnitMeasurementSuccessMessage] = "Xóa đơn vị tính thành công!";
+            TempData[ViewConstants.UnitMeasurementSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }
 }

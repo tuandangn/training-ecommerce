@@ -56,7 +56,7 @@ public sealed class ProductController : BaseAuthorizedController
         } : null;
         if (imageFileInfo is not null && imageFileInfo.Data.Length > _appConfig.UploadFileMaxSizeInBytes)
         {
-            ModelState.AddModelError(string.Empty, $"Kích thước hình ảnh phải nhỏ hơn {(int)Math.Floor(_appConfig.UploadFileMaxSizeInBytes / 1024m / 1024)}Mb.");
+            ModelState.AddModelError(string.Empty, LocalizeError("Msg.ImageSizeLimit", (int)Math.Floor(_appConfig.UploadFileMaxSizeInBytes / 1024m / 1024)));
             model = await _productModelFactory.PrepareCreateProductModel(model);
             return View(model);
         }
@@ -75,12 +75,12 @@ public sealed class ProductController : BaseAuthorizedController
         });
         if (!createProductResult.Success)
         {
-            ModelState.AddModelError(string.Empty, createProductResult.ErrorMessage!);
+            AddLocalizedModelError(createProductResult.ErrorMessage);
             model = await _productModelFactory.PrepareCreateProductModel(model);
             return View(model);
         }
 
-        TempData[ViewConstants.ProductSuccessMessage] = "Thêm mới hàng hóa thành công!";
+        TempData[ViewConstants.ProductSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -89,7 +89,7 @@ public sealed class ProductController : BaseAuthorizedController
         var model = await _productModelFactory.PrepareEditProductModel(id);
         if (model == null)
         {
-            TempData[ViewConstants.ProductErrorMessage] = "Không tìm thấy hàng hóa.";
+            TempData[ViewConstants.ProductErrorMessage] = LocalizeError("Error.ProductIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -108,7 +108,7 @@ public sealed class ProductController : BaseAuthorizedController
         var product = await _mediator.Send(new GetProductByIdQuery { Id = model.Id });
         if (product == null)
         {
-            TempData[ViewConstants.ProductErrorMessage] = "Không tìm thấy hàng hóa.";
+            TempData[ViewConstants.ProductErrorMessage] = LocalizeError("Error.ProductIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -121,7 +121,7 @@ public sealed class ProductController : BaseAuthorizedController
         } : null;
         if (imageFileInfo is not null && imageFileInfo.Data.Length > _appConfig.UploadFileMaxSizeInBytes)
         {
-            ModelState.AddModelError(string.Empty, $"Kích thước hình ảnh phải nhỏ hơn {(int)Math.Floor(_appConfig.UploadFileMaxSizeInBytes / 1024m / 1024)}Mb.");
+            ModelState.AddModelError(string.Empty, LocalizeError("Msg.ImageSizeLimit", (int)Math.Floor(_appConfig.UploadFileMaxSizeInBytes / 1024m / 1024)));
             model = (await _productModelFactory.PrepareEditProductModel(model.Id, model))!;
             return View(model);
         }
@@ -142,12 +142,12 @@ public sealed class ProductController : BaseAuthorizedController
         });
         if (!updateProductResult.Success)
         {
-            ModelState.AddModelError(string.Empty, updateProductResult.ErrorMessage!);
+            AddLocalizedModelError(updateProductResult.ErrorMessage);
             model = (await _productModelFactory.PrepareEditProductModel(model.Id, model))!;
             return View(model);
         }
 
-        TempData[ViewConstants.ProductSuccessMessage] = "Chỉnh sửa hàng hóa thành công!";
+        TempData[ViewConstants.ProductSuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -180,9 +180,9 @@ public sealed class ProductController : BaseAuthorizedController
     {
         var resultDto = await _mediator.Send(new DeleteProductCommand(id));
         if (!resultDto.Success)
-            TempData[ViewConstants.ProductErrorMessage] = resultDto.ErrorMessage;
+            TempData[ViewConstants.ProductErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
         else
-            TempData[ViewConstants.ProductSuccessMessage] = "Xóa hàng hóa thành công!";
+            TempData[ViewConstants.ProductSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }
 

@@ -7,10 +7,10 @@ namespace NamEcommerce.Web.Validators.Catalog;
 
 public sealed class EditUnitMeasurementValidator : AbstractValidator<EditUnitMeasurementModel>
 {
-    public EditUnitMeasurementValidator(IStringLocalizer<ValidationResource> localizer)
+    public EditUnitMeasurementValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(m => m.Name)
-            .NotEmpty().WithMessage(m => localizer["UnitMeasurement.Name.Required"])
-            .MaximumLength(200).WithMessage(m => localizer["UnitMeasurement.Name.MaxLength"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Name"]])
+            .MaximumLength(200).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Name"], 200]);
     }
 }

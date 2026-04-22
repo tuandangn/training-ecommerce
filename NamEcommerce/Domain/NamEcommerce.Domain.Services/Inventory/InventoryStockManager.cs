@@ -36,7 +36,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         Guid modifiedByUserId)
     {
         if (newQuantity < 0)
-            throw new InvalidStockOperationException("Số lượng tồn kho không được âm");
+            throw new InvalidStockOperationException("Error.StockQuantityCannotBeNegative");
 
         var stockList = await _dbContext.GetDataAsync<InventoryStock>();
         var stock = stockList.FirstOrDefault(s => s.ProductId == productId && s.WarehouseId == warehouseId);
@@ -56,8 +56,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
 
         // Validate against max stock level if increasing
         if (newQuantity > quantityBefore && stock.MaxStockLevel > 0 && newQuantity > stock.MaxStockLevel)
-            throw new WarehouseCapacityExceededException(
-                $"Adjustment exceeds maximum stock level. Max: {stock.MaxStockLevel}, Adjusted: {newQuantity}");
+            throw new WarehouseCapacityExceededException("Error.WarehouseCapacityExceeded", stock.MaxStockLevel, newQuantity);
 
         stock.QuantityOnHand = newQuantity;
         stock.UpdatedOnUtc = DateTime.UtcNow;
@@ -115,7 +114,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
     public async Task<StockMovementLogDto?> ReceiveStockAsync(Guid productId, Guid warehouseId, decimal receivedQuantity, string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId)
     {
         if (receivedQuantity <= 0)
-            throw new InvalidStockOperationException("Số lượng nhập kho phải lớn hơn 0");
+            throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
 
         var stockList = await _dbContext.GetDataAsync<InventoryStock>();
         var stock = stockList.FirstOrDefault(s => s.ProductId == productId && s.WarehouseId == warehouseId);
@@ -128,8 +127,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         
         // Validate against max stock level if set
         if (stock.MaxStockLevel > 0 && quantityAfter > stock.MaxStockLevel)
-            throw new WarehouseCapacityExceededException(
-                $"Nhập hàng sẽ vượt mức tồn kho tối đa. Tối đa: {stock.MaxStockLevel}, Dự kiến: {quantityAfter}");
+            throw new WarehouseCapacityExceededException("Error.WarehouseCapacityExceeded", stock.MaxStockLevel, quantityAfter);
 
         stock.QuantityOnHand = quantityAfter;
         stock.UpdatedOnUtc = DateTime.UtcNow;
@@ -247,7 +245,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
     public async Task<bool> ReserveStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, int? reservationDaysValid = null)
     {
         if (quantity <= 0)
-            throw new InvalidStockOperationException("Quantity must be greater than 0");
+            throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
 
         var stockList = await _dbContext.GetDataAsync<InventoryStock>();
         var stock = stockList.FirstOrDefault(s => s.ProductId == productId && s.WarehouseId == warehouseId);
@@ -281,18 +279,17 @@ public sealed class InventoryStockManager : IInventoryStockManager
     public async Task<bool> ReleaseReservedStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null)
     {
         if (quantity <= 0)
-            throw new InvalidStockOperationException("Quantity must be greater than 0");
+            throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
 
         var stockList = await _dbContext.GetDataAsync<InventoryStock>();
         var stock = stockList.FirstOrDefault(s => s.ProductId == productId && s.WarehouseId == warehouseId);
 
         if (stock == null)
-            throw new StockNotFoundException($"Stock not found for product {productId} in warehouse {warehouseId}");
+            throw new StockNotFoundException("Error.StockNotFound", productId, warehouseId);
 
         // Cannot release more than what's reserved
         if (stock.QuantityReserved < quantity)
-            throw new InvalidStockOperationException(
-                $"Cannot release more than reserved. Reserved: {stock.QuantityReserved}, Requested: {quantity}");
+            throw new InvalidStockOperationException("Error.CannotReleaseMoreThanReserved", stock.QuantityReserved, quantity);
 
         stock.QuantityReserved = Math.Max(0, stock.QuantityReserved - quantity);
         stock.UpdatedOnUtc = DateTime.UtcNow;

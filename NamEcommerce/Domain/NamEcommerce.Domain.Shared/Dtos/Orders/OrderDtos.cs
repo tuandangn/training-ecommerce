@@ -13,7 +13,7 @@ public abstract record BaseOrderDto
     public virtual void Verify()
     {
         if (OrderDiscount.HasValue && OrderDiscount < 0)
-            throw new OrderDataIsInvalidException("Order discount cannot less than 0");
+            throw new OrderDataIsInvalidException("Error.OrderDiscountCannotBeNegative");
     }
 }
 
@@ -58,7 +58,7 @@ public sealed record CreateOrderDto : BaseOrderDto
     public override void Verify()
     {
         if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
-            throw new OrderDataIsInvalidException("Ngày giao hàng dự kiến không hợp lệ");
+            throw new OrderDataIsInvalidException("Error.ExpectedShippingDateInvalid");
 
         foreach (var item in Items)
             item.Verify();
@@ -95,7 +95,7 @@ public sealed record UpdateShippingDto
     public void Verify()
     {
         if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
-            throw new OrderDataIsInvalidException("Ngày giao hàng dự kiến không hợp lệ");
+            throw new OrderDataIsInvalidException("Error.ExpectedShippingDateInvalid");
     }
 }
 

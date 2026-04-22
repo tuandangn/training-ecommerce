@@ -1,4 +1,5 @@
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Exceptions;
 
 namespace NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 
@@ -71,19 +72,19 @@ public sealed record CreateDeliveryNoteDto
     public void Verify()
     {
         if (OrderId == Guid.Empty)
-            throw new ArgumentException("Mã đơn hàng không được để trống");
+            throw new NamEcommerceDomainException("Error.OrderRequired");
         if (WarehouseId == Guid.Empty)
-            throw new ArgumentException("Mã kho không được để trống");
+            throw new NamEcommerceDomainException("Error.WarehouseRequired");
         if (string.IsNullOrEmpty(ShippingAddress))
-            throw new ArgumentException("Địa chỉ giao hàng không được để trống");
+            throw new NamEcommerceDomainException("Error.ShippingAddressRequired");
         if (Items == null || !Items.Any())
-            throw new ArgumentException("Phiếu giao hàng phải có ít nhất một mặt hàng");
+            throw new NamEcommerceDomainException("Error.DeliveryNoteItemsRequired");
         if (Items.Any(i => i.Quantity <= 0))
-            throw new ArgumentException("Số lượng phải lớn hơn 0");
+            throw new NamEcommerceDomainException("Error.QuantityMustBePositive");
         if (Surcharge < 0)
-            throw new ArgumentException("Phụ phí không được âm");
+            throw new NamEcommerceDomainException("Error.SurchargeCannotBeNegative");
         if (AmountToCollect < 0)
-            throw new ArgumentException("Số tiền thu không được âm");
+            throw new NamEcommerceDomainException("Error.AmountToCollectCannotBeNegative");
     }
 }
 

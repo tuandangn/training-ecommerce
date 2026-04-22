@@ -1,5 +1,6 @@
-﻿namespace NamEcommerce.Domain.Shared.Exceptions.Catalog;
+namespace NamEcommerce.Domain.Shared.Exceptions.Users;
 
 [Serializable]
-public sealed class UserDataIsInvalidException(string? message)  : NamEcommerceDomainException("Error.UserDataIsInvalidException", message);
+public sealed class UserDataIsInvalidException(string errorCode, params object[] parameters) : NamEcommerceDomainException(errorCode, parameters);
+
 

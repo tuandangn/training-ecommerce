@@ -71,19 +71,19 @@ public sealed record CreateDeliveryNoteAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (OrderId == Guid.Empty)
-            return (false, "OrderId is required.");
+            return (false, "Error.OrderRequired");
         if (WarehouseId == Guid.Empty)
-            return (false, "WarehouseId is required.");
+            return (false, "Error.WarehouseRequired");
         if (string.IsNullOrEmpty(ShippingAddress))
-            return (false, "ShippingAddress is required.");
+            return (false, "Error.ShippingAddressRequired");
         if (Items == null || !Items.Any())
-            return (false, "At least one item is required.");
+            return (false, "Error.DeliveryNoteItemsRequired");
         if (Items.Any(i => i.Quantity <= 0))
-            return (false, "All items must have a quantity greater than 0.");
+            return (false, "Error.DeliveryNoteQuantityMustBePositive");
         if (Surcharge < 0)
-            return (false, "Surcharge cannot be negative.");
+            return (false, "Error.SurchargeCannotBeNegative");
         if (AmountToCollect < 0)
-            return (false, "Amount to collect cannot be negative.");
+            return (false, "Error.AmountToCollectCannotBeNegative");
 
         return (true, string.Empty);
     }

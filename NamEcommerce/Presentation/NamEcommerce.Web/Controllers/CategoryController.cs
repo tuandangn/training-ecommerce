@@ -1,4 +1,4 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
@@ -52,13 +52,13 @@ public sealed class CategoryController : BaseAuthorizedController
         });
         if (!createCategoryResult.Success)
         {
-            ModelState.AddModelError(string.Empty, createCategoryResult.ErrorMessage!);
+            AddLocalizedModelError(createCategoryResult.ErrorMessage);
 
             model = await _categoryModelFactory.PrepareCreateCategoryModel(model);
             return View(model);
         }
 
-        TempData[ViewConstants.CategorySuccessMessage] = "Thêm mới danh mục thành công!";
+        TempData[ViewConstants.CategorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -67,7 +67,7 @@ public sealed class CategoryController : BaseAuthorizedController
         var model = await _categoryModelFactory.PrepareEditCategoryModel(id);
         if (model == null)
         {
-            TempData[ViewConstants.CategoryErrorMessage] = "Không tìm thấy danh mục.";
+            TempData[ViewConstants.CategoryErrorMessage] = LocalizeError("Error.CategoryIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -86,7 +86,7 @@ public sealed class CategoryController : BaseAuthorizedController
         var category = await _mediator.Send(new GetCategoryQuery { Id = model.Id });
         if (category == null)
         {
-            TempData[ViewConstants.CategoryErrorMessage] = "Không tìm thấy danh mục.";
+            TempData[ViewConstants.CategoryErrorMessage] = LocalizeError("Error.CategoryIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -99,13 +99,13 @@ public sealed class CategoryController : BaseAuthorizedController
         });
         if (!updateCategoryResult.Success)
         {
-            ModelState.AddModelError(string.Empty, updateCategoryResult.ErrorMessage!);
+            AddLocalizedModelError(updateCategoryResult.ErrorMessage);
 
             model = (await _categoryModelFactory.PrepareEditCategoryModel(model.Id, model))!;
             return View(model);
         }
 
-        TempData[ViewConstants.CategorySuccessMessage] = "Chỉnh sửa danh mục thành công!";
+        TempData[ViewConstants.CategorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -114,9 +114,9 @@ public sealed class CategoryController : BaseAuthorizedController
     {
         var resultDto = await _mediator.Send(new DeleteCategoryCommand(id));
         if (!resultDto.Success)
-            TempData[ViewConstants.CategoryErrorMessage] = resultDto.ErrorMessage;
+            TempData[ViewConstants.CategoryErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
         else
-            TempData[ViewConstants.CategorySuccessMessage] = "Xóa danh mục thành công!";
+            TempData[ViewConstants.CategorySuccessMessage] = LocalizeError("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }
 }

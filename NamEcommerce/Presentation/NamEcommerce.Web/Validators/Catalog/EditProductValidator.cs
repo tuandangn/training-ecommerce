@@ -7,19 +7,19 @@ namespace NamEcommerce.Web.Validators.Catalog;
 
 public sealed class EditProductValidator : AbstractValidator<EditProductModel>
 {
-    public EditProductValidator(IStringLocalizer<ValidationResource> localizer)
+    public EditProductValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(m => m.Name)
-            .NotEmpty().WithMessage(m => localizer["Product.Name.Required"])
-            .MaximumLength(200).WithMessage(m => localizer["Product.Name.MaxLength"]);
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Name"]])
+            .MaximumLength(200).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Name"], 200]);
 
         RuleFor(m => m.ShortDesc)
-            .MaximumLength(800).WithMessage(m => localizer["Product.ShortDesc.MaxLength"]);
+            .MaximumLength(800).WithMessage(m => localizer["Error.MaxLength", localizer["Label.ShortDesc"], 800]);
 
         RuleFor(m => m.CostPrice)
-            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Product.CostPrice.Invalid"]);
+            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.CostPrice"]]);
 
         RuleFor(m => m.UnitPrice)
-            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Product.UnitPrice.Invalid"]);
+            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.UnitPrice"]]);
     }
 }

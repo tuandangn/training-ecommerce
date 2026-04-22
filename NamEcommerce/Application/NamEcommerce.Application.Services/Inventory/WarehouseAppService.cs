@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Application.Contracts.Dtos.Common;
+using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.Inventory;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Services.Extensions;
@@ -40,7 +40,7 @@ public sealed class WarehouseAppService : IWarehouseAppService
             return new CreateWarehouseResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Name already exists."
+                ErrorMessage = "Error.WarehouseNameAlreadyExists"
             };
         }
 
@@ -72,7 +72,7 @@ public sealed class WarehouseAppService : IWarehouseAppService
             return new DeleteWarehouseResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Warehouse is not found."
+                ErrorMessage = "Error.WarehouseIsNotFound"
             };
         }
 
@@ -129,7 +129,7 @@ public sealed class WarehouseAppService : IWarehouseAppService
             return new UpdateWarehouseResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Không tìm thấy kho hàng"
+                ErrorMessage = "Error.WarehouseIsNotFound"
             };
         }
 
@@ -138,7 +138,7 @@ public sealed class WarehouseAppService : IWarehouseAppService
             return new UpdateWarehouseResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Tên kho hàng trùng lặp"
+                ErrorMessage = "Error.WarehouseNameAlreadyExists"
             };
         }
 

@@ -3,6 +3,7 @@ using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Entities.Customers;
+using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Services.Customers;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Dtos.Customers;
@@ -41,7 +42,7 @@ public sealed class CustomerManager : ICustomerManager
     {
         ArgumentNullException.ThrowIfNull(dto);
         var customer = await _customerDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
-        if (customer == null) throw new ArgumentException("Khách hàng không tồn tại");
+        if (customer == null) throw new CustomerIsNotFoundException(dto.Id);
 
         customer.FullName = dto.FullName;
         customer.PhoneNumber = dto.PhoneNumber;
@@ -56,7 +57,7 @@ public sealed class CustomerManager : ICustomerManager
     public async Task DeleteCustomerAsync(Guid id)
     {
         var hasOrders = await Task.Run(() => _orderDataReader.DataSource.Any(o => o.CustomerId == id)).ConfigureAwait(false);
-        if (hasOrders) throw new InvalidOperationException("Không thể xóa khách hàng đã có đơn hàng");
+        if (hasOrders) throw new CustomerCannotBeDeletedException(id);
 
         var customer = await _customerDataReader.GetByIdAsync(id).ConfigureAwait(false);
         if (customer != null)

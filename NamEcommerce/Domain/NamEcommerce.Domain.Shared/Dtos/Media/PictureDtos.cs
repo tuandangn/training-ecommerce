@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared.Exceptions.Media;
+using NamEcommerce.Domain.Shared.Exceptions.Media;
 
 namespace NamEcommerce.Domain.Shared.Dtos.Catalog;
 
@@ -13,9 +13,9 @@ public abstract record BasePictureDto
     public virtual void Verify()
     {
         if (Data is null || Data.Length == 0)
-            throw new PictureDataIsInvalidException("Dữ liệu hình ảnh không được để trống");
+            throw new PictureDataIsInvalidException("Error.PictureDataRequired");
         if (string.IsNullOrEmpty(MimeType))
-            throw new PictureDataIsInvalidException("Loại file (MIME type) không được để trống");
+            throw new PictureDataIsInvalidException("Error.MimeTypeRequired");
     }
 }
 

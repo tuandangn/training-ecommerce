@@ -1,4 +1,4 @@
-﻿using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using System.Text.RegularExpressions;
 
 namespace NamEcommerce.Domain.Shared.Dtos.Catalog;
@@ -14,11 +14,11 @@ public abstract record BaseVendorDto
     public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Name))
-            throw new VendorDataIsInvalidException("Tên nhà cung cấp không được để trống");
+            throw new VendorDataIsInvalidException("Error.VendorNameRequired");
         if (string.IsNullOrEmpty(PhoneNumber))
-            throw new VendorDataIsInvalidException("Số điện thoại nhà cung cấp không được để trống");
+            throw new VendorDataIsInvalidException("Error.VendorPhoneNumberRequired");
         if (!Regex.IsMatch(PhoneNumber, @"0\d{9,10}"))
-            throw new VendorDataIsInvalidException("Số điện thoại nhà cung cấp không hợp lệ");
+            throw new VendorDataIsInvalidException("Error.PhoneNumberInvalid");
     }
 }
 

@@ -13,9 +13,9 @@ public record BaseOrderItemDto
     public void Verify()
     {
         if (Quantity <= 0)
-            throw new OrderItemDataIsInvalidException("Quantity must be greater than 0");
+            throw new OrderItemDataIsInvalidException("Error.OrderItemQuantityMustBePositive");
         if (UnitPrice < 0)
-            throw new OrderItemDataIsInvalidException("Unit price must be >= 0");
+            throw new OrderItemDataIsInvalidException("Error.OrderItemUnitPriceCannotBeNegative");
     }
 }
 
@@ -44,9 +44,9 @@ public sealed record UpdateOrderItemDto
     public void Verify()
     {
         if (Quantity <= 0)
-            throw new OrderItemDataIsInvalidException("Quantity must be greater than 0");
+            throw new OrderItemDataIsInvalidException("Error.OrderItemQuantityMustBePositive");
         if (UnitPrice < 0)
-            throw new OrderItemDataIsInvalidException("Unit price must be >= 0");
+            throw new OrderItemDataIsInvalidException("Error.OrderItemUnitPriceCannotBeNegative");
     }
 }
 
