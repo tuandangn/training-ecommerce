@@ -74,6 +74,9 @@ using NamEcommerce.Web.Services.Preparations;
 using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Validators.Users;
 using NamEcommerce.Web.Mvc.Filters;
+using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
+using NamEcommerce.Domain.Services.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Settings;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -93,31 +96,18 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     //options
     var appConfig = new AppConfig();
     configuration.GetSection(AppConstants.AppConfigSectionName).Bind(appConfig);
+    services.Configure<AppConfig>(options => builder.Configuration.Bind(AppConstants.AppConfigSectionName, options));
+    services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<AppConfig>>().Value);
 
-    services.Configure<AppConfig>(options =>
-    {
-        builder.Configuration.Bind(AppConstants.AppConfigSectionName, options);
-    });
-    services.AddScoped(services
-        => services.GetRequiredService<IOptionsSnapshot<AppConfig>>().Value);
+    services.Configure<InfoOptions>(options => builder.Configuration.Bind(AppConstants.InfoSectionName, options));
+    services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<InfoOptions>>().Value);
 
-    services.Configure<InfoOptions>(options =>
-    {
-        builder.Configuration.Bind(AppConstants.InfoSectionName, options);
-    });
-    services.AddScoped(services
-        => services.GetRequiredService<IOptionsSnapshot<InfoOptions>>().Value);
+    services.Configure<CultureConfig>(options => builder.Configuration.Bind(AppConstants.CultureConfigSectionName, options));
+    services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<CultureConfig>>().Value);
 
-    services.Configure<CultureConfig>(options =>
-    {
-        builder.Configuration.Bind(AppConstants.CultureConfigSectionName, options);
-    });
-    services.AddScoped(services
-        => services.GetRequiredService<IOptionsSnapshot<CultureConfig>>().Value);
+    services.Configure<WarehouseSettings>(options => builder.Configuration.Bind(AppConstants.WarehouseSettingSectionName, options));
+    services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<WarehouseSettings>>().Value);
 
-    services.AddLocalization(options => options.ResourcesPath = "Resources");
-
-    //infrastructure services
     services.AddDbContext<NamEcommerceEfDbContext>(opts =>
         opts.UseSqlServer(configuration.GetConnectionString(nameof(NamEcommerceEfDbContext)),
             opt => opt.MigrationsAssembly("NamEcommerce.Data.SqlServer"))
@@ -125,15 +115,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IDbContext, NamEcommerceEfDbContext>();
     services.AddScoped(typeof(IRepository<>), typeof(NamEcommerceEfRepository<>));
     services.AddScoped(typeof(IEntityDataReader<>), typeof(EntityDataReader<>));
-
-    services.AddAuthentication(opts =>
-        opts.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme
-    ).AddCookie(opts =>
-    {
-        opts.LoginPath = "/User/Login";
-        opts.LogoutPath = "/User/Logout";
-    });
-    services.AddHttpContextAccessor();
 
     services.AddScoped<IUserManager, UserManager>();
     services.AddScoped<ICategoryManager, CategoryManager>();
@@ -151,9 +132,11 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IOrderManager, OrderManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
     services.AddScoped<IVendorDebtManager, VendorDebtManager>();
+    services.AddScoped<IGoodsReceiptManager, GoodsReceiptManager>();
 
     services.AddScoped<ISecurityService, SecurityService>();
     services.AddScoped<IEventPublisher, EventPublisher>();
+    services.AddScoped<ICurrentUserAccessor, CurrentUserService>();
 
     services.AddScoped<ICategoryAppService, CategoryAppService>();
     services.AddScoped<IUnitMeasurementAppService, UnitMeasurementAppService>();
@@ -198,23 +181,33 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         config.RegisterServicesFromAssemblyContaining<CookieAuthenticateUserHandler>();
     });
 
+    services.AddLocalization(options => options.ResourcesPath = "Resources");
+
+    services.AddAuthentication(opts =>
+        opts.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme
+    ).AddCookie(opts =>
+    {
+        opts.LoginPath = "/User/Login";
+        opts.LogoutPath = "/User/Logout";
+    });
+
+    services.AddHttpContextAccessor();
+
     services.AddSession();
 
-    //mvc
+    services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
+    services.AddValidatorsFromAssemblyContaining<LoginModelValidator>();
+
     var mvcBuilder = services.AddMvc(options =>
     {
         options.Filters.Add<GlobalExceptionFilter>();
         options.ModelBinderProviders.Insert(0, new TrimModelBinderProvider());
         options.ModelBinderProviders.Insert(0, new DecimalModelBinderProvider());
     }).AddSessionStateTempDataProvider();
-
     if (builder.Environment.IsDevelopment())
     {
         mvcBuilder.AddRazorRuntimeCompilation();
     }
-
-    services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
-    services.AddValidatorsFromAssemblyContaining<LoginModelValidator>();
 }
 
 void Configure(WebApplication app)

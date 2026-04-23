@@ -1,0 +1,106 @@
+﻿using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.Inventory;
+using NamEcommerce.Domain.Entities.Media;
+using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Users;
+using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Exceptions.Media;
+using NamEcommerce.Domain.Shared.Helpers;
+using NamEcommerce.Domain.Shared.Services.Users;
+using NamEcommerce.Domain.Shared.Settings;
+
+namespace NamEcommerce.Domain.Entities.GoodsReceipts;
+
+[Serializable]
+public sealed record GoodsReceipt : AppAggregateEntity
+{
+    private GoodsReceipt(Guid id, CurrentUserInfoDto? createdByUser) : base(id)
+    {
+        CreatedByUserId = createdByUser?.Id;
+        CreatedByUsername = createdByUser?.Username;
+    }
+
+    public DateTime CreatedOnUtc { get; private set; }
+
+    public string? TruckDriverName
+    {
+        get;
+        internal set
+        {
+            field = value;
+            TruckDriverNameNormalized = TextHelper.Normalize(value);
+        }
+    }
+    internal string? TruckDriverNameNormalized { get; private set; }
+    public string? TruckNumberSerial { get; internal set; }
+
+    private readonly IList<GoodsReceiptItem> _items = [];
+    public IReadOnlyCollection<GoodsReceiptItem> Items => _items.AsReadOnly();
+
+    private readonly IList<Guid> _pictureIds = [];
+    public IReadOnlyCollection<Guid> PictureIds => _pictureIds.AsReadOnly();
+
+    public string? Note { get; init; }
+
+    public Guid? CreatedByUserId { get; private set; }
+    public string? CreatedByUsername { get; private set; }
+
+    #region Methods
+
+    public bool IsPendingCosting() => Items.Any(item => item.IsPendingCosting());
+
+    internal void SetCreationDate(DateTime createdOnUtc)
+        => CreatedOnUtc = createdOnUtc;
+
+    internal async Task AddItemAsync(Guid productId, Guid? warehouseId, decimal quantity, decimal? unitCost,
+        IGetByIdService<Product> productByIdGetter, WarehouseSettings warehouseSettings, IGetByIdService<Warehouse> warehouseByIdGetter)
+    {
+        var hasSameProductAndWarehouse = Items.Any(item => item.ProductId == productId && item.WarehouseId == warehouseId);
+        if (hasSameProductAndWarehouse)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.SameProductAndWarehouseExisting");
+
+        var item = await GoodsReceiptItem.CreateAsync(productId, warehouseId, quantity, unitCost, productByIdGetter, warehouseSettings, warehouseByIdGetter).ConfigureAwait(false);
+        _items.Add(item);
+    }
+
+    internal void ItemUnitCost(Guid itemId, decimal unitCost)
+    {
+        var item = Items.FirstOrDefault(item => item.Id == itemId);
+        if (item is null)
+            throw new GoodsReceiptItemIsNotFoundException(itemId);
+
+        if (!item.IsPendingCosting())
+            throw new GoodsReceiptItemCannotSetUnitCostException();
+
+        item.SetUnitCost(unitCost);
+    }
+
+    internal void ClearPictures() => _items.Clear();
+    internal async Task AddPictureAsync(Guid pictureId, IGetByIdService<Picture> pictureByIdGetter)
+    {
+        var picture = await pictureByIdGetter.GetByIdAsync(pictureId).ConfigureAwait(false);
+        if (picture is null)
+            throw new PictureIsNotFoundException(pictureId);
+
+        _pictureIds.Add(pictureId);
+    }
+
+    internal static async Task<GoodsReceipt> CreateAsync(Guid id, IGetByIdService<GoodsReceipt> byIdGetter, ICurrentUserAccessor currentUserAccessor)
+    {
+        ArgumentNullException.ThrowIfNull(byIdGetter);
+        ArgumentNullException.ThrowIfNull(currentUserAccessor);
+
+        var sameIdGoodsReceipt = await byIdGetter.GetByIdAsync(id).ConfigureAwait(false);
+        if (sameIdGoodsReceipt is not null)
+            throw new GoodsReceiptIdIsExistingException(id);
+
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        var goodsReceipt = new GoodsReceipt(id, currentUser);
+
+        return goodsReceipt;
+    }
+
+    #endregion
+
+}

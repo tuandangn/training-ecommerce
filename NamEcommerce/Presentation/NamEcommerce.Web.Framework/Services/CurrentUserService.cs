@@ -1,17 +1,29 @@
 ﻿using Microsoft.AspNetCore.Http;
+using NamEcommerce.Domain.Shared.Dtos.Users;
+using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Web.Contracts.Models.Users;
 using NamEcommerce.Web.Contracts.Services;
 using System.Security.Claims;
 
 namespace NamEcommerce.Web.Framework.Services;
 
-public sealed class CurrentUserService : ICurrentUserService
+public sealed class CurrentUserService : ICurrentUserService, ICurrentUserAccessor
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public CurrentUserService(IHttpContextAccessor httpContextAccessor)
     {
         _httpContextAccessor = httpContextAccessor;
+    }
+
+    public async Task<CurrentUserInfoDto?> GetCurrentUserAsync()
+    {
+        var currentUser = await GetCurrentUserInfoAsync();
+
+        if (currentUser is null)
+            return null;
+
+        return new CurrentUserInfoDto(currentUser.Id, currentUser.Username, currentUser.FullName);
     }
 
     public async ValueTask<CurrentUserInfoModel?> GetCurrentUserInfoAsync()
@@ -21,7 +33,7 @@ public sealed class CurrentUserService : ICurrentUserService
             return null;
 
         var claimsPrincipal = httpContext.User;
-        if(claimsPrincipal is null)
+        if (claimsPrincipal is null)
             return null;
 
         var isValidId = Guid.TryParse(claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier), out var id);

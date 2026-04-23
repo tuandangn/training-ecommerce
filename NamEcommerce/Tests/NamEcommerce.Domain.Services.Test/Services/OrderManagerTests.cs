@@ -3,6 +3,7 @@ using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Services.Orders;
 using NamEcommerce.Domain.Services.Test.Helpers;
+using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Events;
