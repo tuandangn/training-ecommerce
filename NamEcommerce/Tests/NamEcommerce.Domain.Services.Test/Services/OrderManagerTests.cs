@@ -6,7 +6,6 @@ using NamEcommerce.Domain.Services.Test.Helpers;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Events;
-using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Exceptions.Users;

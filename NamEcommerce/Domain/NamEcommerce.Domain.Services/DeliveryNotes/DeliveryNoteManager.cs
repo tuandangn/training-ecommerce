@@ -8,7 +8,6 @@ using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
-
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Services.Extensions;

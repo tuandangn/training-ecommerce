@@ -13,7 +13,7 @@ namespace NamEcommerce.Domain.Entities.Orders;
 [Serializable]
 public sealed record Order : AppAggregateEntity
 {
-    public const string OrderCodePrefix = "ORD";
+    public const string OrderCodePrefix = "DB";
 
     internal Order(string code) : base(Guid.NewGuid())
     {
@@ -22,21 +22,6 @@ public sealed record Order : AppAggregateEntity
     }
 
     public string Code { get; }
-    public Guid CustomerId { get; private set; }
-    internal string? CustomerName { get; private set; }
-    internal string? CustomerPhone { get; private set; }
-    internal string? CustomerAddress { get; private set; }
-
-    public Guid? CreatedByUserId { get; init; }
-    internal string? CreatedByUsername { get; set; }
-
-    public decimal OrderTotal { get; private set; }
-    public decimal OrderSubTotal { get; private set; }
-    public decimal OrderDiscount { get; private set; }
-    public OrderStatus OrderStatus { get; private set; }
-    public string? LockOrderReason { get; private set; }
-    public string? Note { get; internal set; }
-
     public DateTime? ExpectedShippingDateUtc { get; internal set; }
     public string? ShippingAddress
     {
@@ -48,9 +33,22 @@ public sealed record Order : AppAggregateEntity
         }
     }
     internal string NormalizedShippingAddress { get; private set; } = "";
-
     private readonly List<OrderItem> _orderItems = [];
     public IEnumerable<OrderItem> OrderItems => _orderItems.AsReadOnly();
+    public decimal OrderSubTotal { get; private set; }
+    public decimal OrderTotal { get; private set; }
+    public decimal OrderDiscount { get; private set; }
+    public OrderStatus OrderStatus { get; private set; }
+    public string? LockOrderReason { get; private set; }
+    public string? Note { get; internal set; }
+
+    public Guid CustomerId { get; private set; }
+    internal string? CustomerName { get; private set; }
+    internal string? CustomerPhone { get; private set; }
+    internal string? CustomerAddress { get; private set; }
+
+    public Guid? CreatedByUserId { get; init; }
+    internal string? CreatedByUsername { get; set; }
 
     public DateTime CreatedOnUtc { get; }
     public DateTime? UpdatedOnUtc { get; internal set; }
@@ -195,8 +193,6 @@ public sealed record Order : AppAggregateEntity
         LockOrderReason = reason;
     }
 
-    internal bool AllItemsDelivered => _orderItems.Count > 0 && _orderItems.All(i => i.IsDelivered);
-
     internal void MarkOrderItemDelivered(Guid orderItemId, Guid pictureId)
     {
         var orderItem = _orderItems.FirstOrDefault(i => i.Id == orderItemId);
@@ -205,22 +201,18 @@ public sealed record Order : AppAggregateEntity
 
         orderItem.MarkDelivered(pictureId);
     }
-
-    /// <summary>
-    /// Automatically locks the order if all items have been delivered.
-    /// Returns true if the order was locked.
-    /// </summary>
     internal bool TryAutoLock()
     {
         if (OrderStatus == OrderStatus.Locked)
             return false;
 
-        if (!AllItemsDelivered)
+        if (!AreAllItemsDelivered())
             return false;
 
         LockOrder("Tất cả hàng hóa đã được giao.");
         return true;
     }
+    private bool AreAllItemsDelivered() => _orderItems.Count > 0 && _orderItems.All(i => i.IsDelivered);
 
     #endregion
 }
