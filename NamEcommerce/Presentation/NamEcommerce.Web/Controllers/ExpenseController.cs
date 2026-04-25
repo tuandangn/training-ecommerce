@@ -13,6 +13,8 @@ public class ExpenseController : BaseAuthorizedController
         _expenseAppService = expenseAppService;
     }
 
+    public IActionResult Index() => RedirectToAction(nameof(List));
+
     public async Task<IActionResult> List(int page = 1, string? keywords = null, DateTime? fromDate = null, DateTime? toDate = null, int? expenseType = null)
     {
         const int pageSize = 20;

@@ -3,7 +3,6 @@
 @{
     var isAuthPage = WebHelper.IsLoginPage() || WebHelper.IsRegisterPage();
     var pageTitle = ViewData[ViewConstants.PageTitle] as string ?? Information.Name;
-    var errorMessage = TempData[ViewConstants.GlobalErrorMessage] as string;
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -50,17 +49,9 @@
                 @await Component.InvokeAsync("UserHeaderLinksComponent")
             </header>
             <div class="page-content">
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="alert alert-warning alert-dismissible fade show mb-3" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                }
                 <main role="main">
                     @RenderBody()
                 </main>
-                <partial name="_Messages" />
             </div>
 
             <footer class="footer-main">
@@ -72,6 +63,7 @@
     </div>
     <partial name="_ReusedModals" />
     <partial name="_Scripts" />
+    <partial name="_Notifications" />
     @await RenderSectionAsync(ViewConstants.ScriptSection, required: false)
 </body>
 </html>

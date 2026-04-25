@@ -23,8 +23,6 @@ public sealed class UpdateProductHandler : IRequestHandler<UpdateProductCommand,
             Name = request.Name,
             ShortDesc = request.ShortDesc,
             UnitMeasurementId = request.UnitMeasurementId,
-            UnitPrice = request.UnitPrice,
-            CostPrice = request.CostPrice,
             Categories = request.CategoryId.HasValue
                 ? [new ProductCategoryAppDto(request.CategoryId.Value, request.DisplayOrder)]
                 : [],
@@ -36,6 +34,7 @@ public sealed class UpdateProductHandler : IRequestHandler<UpdateProductCommand,
                 Extension = request.ImageFile.Extension,
                 FileName = request.ImageFile.FileName
             } : null,
+            NewUnitPrice = request.NewUnitPrice,
             ChangePriceReason = request.ChangePriceReason
         });
 

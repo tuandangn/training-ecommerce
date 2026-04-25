@@ -12,22 +12,6 @@
     </div>
 </div>
 
-@if (TempData[ViewConstants.CustomerSuccessMessage] != null)
-{
-    <div class="alert alert-success alert-dismissible fade show alert-global mb-3" role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i>@TempData[ViewConstants.CustomerSuccessMessage]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
-@if (TempData[ViewConstants.CustomerErrorMessage] != null)
-{
-    <div class="alert alert-danger alert-dismissible fade show alert-global mb-3" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>@TempData[ViewConstants.CustomerErrorMessage]
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-}
-
 <div class="content-card">
     <div class="action-toolbar">
         <partial name="_Search" model="query" />

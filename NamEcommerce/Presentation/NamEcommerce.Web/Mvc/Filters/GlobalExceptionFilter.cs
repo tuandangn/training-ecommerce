@@ -1,31 +1,31 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Localization;
 using NamEcommerce.Domain.Shared.Exceptions;
+using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Resources;
-using NamEcommerce.Web.Constants;
+using NamEcommerce.Web.Services.Notifications;
 
 namespace NamEcommerce.Web.Mvc.Filters;
 
 public class GlobalExceptionFilter : IExceptionFilter
 {
     private readonly IStringLocalizer<SharedResource> _localizer;
-    private readonly ITempDataDictionaryFactory _tempDataDictionaryFactory;
+    private readonly INotificationService _notificationService;
 
     public GlobalExceptionFilter(
         IStringLocalizer<SharedResource> localizer,
-        ITempDataDictionaryFactory tempDataDictionaryFactory)
+        INotificationService notificationService)
     {
         _localizer = localizer;
-        _tempDataDictionaryFactory = tempDataDictionaryFactory;
+        _notificationService = notificationService;
     }
 
     public void OnException(ExceptionContext context)
     {
         if (context.Exception is NamEcommerceDomainException domainEx)
         {
-            var localizedParams = domainEx.Parameters?.Select(p => 
+            var localizedParams = domainEx.Parameters?.Select(p =>
                 p is string s && (s.StartsWith("Label.") || s.StartsWith("Error.") || s.StartsWith("Msg."))
                 ? _localizer[s].Value
                 : p).ToArray();
@@ -36,18 +36,26 @@ public class GlobalExceptionFilter : IExceptionFilter
 
             // If it's an AJAX request expecting JSON
             var request = context.HttpContext.Request;
-            bool isAjax = request.Headers["X-Requested-With"] == "XMLHttpRequest" || 
+            bool isAjax = request.Headers["X-Requested-With"] == "XMLHttpRequest" ||
                           request.Headers["Accept"].ToString().Contains("application/json");
 
             if (isAjax)
             {
-                context.Result = new JsonResult(new { success = false, message = localizedMessage });
+                // Trả về theo chuẩn JsonNotificationResult — ajax-helper.js sẽ tự render notification
+                context.Result = new JsonResult(new JsonNotificationResult
+                {
+                    Success = false,
+                    Notification = new NotificationModel
+                    {
+                        Type = NotificationType.Error,
+                        Message = localizedMessage,
+                        DurationMs = 5000
+                    }
+                });
             }
             else
             {
-                // Set TempData
-                var tempData = _tempDataDictionaryFactory.GetTempData(context.HttpContext);
-                tempData[ViewConstants.GlobalErrorMessage] = localizedMessage;
+                _notificationService.Error(localizedMessage);
 
                 // Optionally, we could redirect back to the referer
                 var referer = request.Headers["Referer"].ToString();

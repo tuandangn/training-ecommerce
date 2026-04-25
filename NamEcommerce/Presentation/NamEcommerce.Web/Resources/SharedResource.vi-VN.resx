@@ -1,18 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
 <root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
     <xsd:element name="root" msdata:IsDataSet="true">
       <xsd:complexType>
         <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
           <xsd:element name="data">
             <xsd:complexType>
               <xsd:sequence>
                 <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
                 <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
               </xsd:sequence>
-              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="1" />
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
               <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
               <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
             </xsd:complexType>
           </xsd:element>
           <xsd:element name="resheader">
@@ -39,202 +117,20 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Btn.Add" xml:space="preserve">
-    <value>Thêm mới</value>
-  </data>
-  <data name="Btn.Edit" xml:space="preserve">
-    <value>Chỉnh sửa</value>
-  </data>
-  <data name="Btn.Delete" xml:space="preserve">
-    <value>Xóa</value>
-  </data>
-  <data name="Btn.Save" xml:space="preserve">
-    <value>Lưu</value>
-  </data>
-  <data name="Btn.Cancel" xml:space="preserve">
-    <value>Hủy</value>
-  </data>
-  <data name="Btn.Search" xml:space="preserve">
-    <value>Tìm kiếm</value>
-  </data>
-  <data name="Btn.ClearFilter" xml:space="preserve">
-    <value>Xóa bộ lọc</value>
-  </data>
-  <data name="Btn.Export" xml:space="preserve">
-    <value>Xuất file</value>
-  </data>
-  <data name="Btn.Print" xml:space="preserve">
-    <value>In</value>
-  </data>
-  <data name="Btn.Back" xml:space="preserve">
-    <value>Quay lại</value>
-  </data>
-  <data name="Btn.Confirm" xml:space="preserve">
-    <value>Xác nhận</value>
-  </data>
-  <data name="Btn.Close" xml:space="preserve">
-    <value>Đóng</value>
-  </data>
-  <data name="Label.All" xml:space="preserve">
-    <value>Tất cả</value>
-  </data>
-  <data name="Label.None" xml:space="preserve">
-    <value>Không</value>
-  </data>
-  <data name="Label.Status" xml:space="preserve">
-    <value>Trạng thái</value>
-  </data>
-  <data name="Label.CreatedDate" xml:space="preserve">
-    <value>Ngày tạo</value>
-  </data>
-  <data name="Label.Note" xml:space="preserve">
-    <value>Ghi chú</value>
-  </data>
-  <data name="Label.Action" xml:space="preserve">
-    <value>Thao tác</value>
-  </data>
-  <data name="Label.Code" xml:space="preserve">
-    <value>Mã</value>
-  </data>
-  <data name="Label.Name" xml:space="preserve">
-    <value>Tên</value>
-  </data>
-  <data name="Label.DisplayOrder" xml:space="preserve">
-    <value>Thứ tự hiển thị</value>
-  </data>
-  <data name="Label.Phone" xml:space="preserve">
-    <value>Số điện thoại</value>
-  </data>
-  <data name="Label.Address" xml:space="preserve">
-    <value>Địa chỉ</value>
-  </data>
-  <data name="Label.Price" xml:space="preserve">
-    <value>Đơn giá</value>
-  </data>
-  <data name="Label.Quantity" xml:space="preserve">
-    <value>Số lượng</value>
-  </data>
-  <data name="Label.Amount" xml:space="preserve">
-    <value>Số tiền</value>
-  </data>
-  <data name="Label.Total" xml:space="preserve">
-    <value>Tổng cộng</value>
-  </data>
-  <data name="Label.Discount" xml:space="preserve">
-    <value>Chiết khấu</value>
-  </data>
-  <data name="Label.Username" xml:space="preserve">
-    <value>Tên đăng nhập</value>
-  </data>
-  <data name="Label.Password" xml:space="preserve">
-    <value>Mật khẩu</value>
-  </data>
-  <data name="Label.ConfirmPassword" xml:space="preserve">
-    <value>Xác nhận mật khẩu</value>
-  </data>
-  <data name="Label.FullName" xml:space="preserve">
-    <value>Họ tên</value>
-  </data>
-  <data name="Label.ShortDesc" xml:space="preserve">
-    <value>Mô tả ngắn</value>
-  </data>
-  <data name="Label.CostPrice" xml:space="preserve">
-    <value>Giá vốn</value>
-  </data>
-  <data name="Label.UnitPrice" xml:space="preserve">
-    <value>Giá bán</value>
-  </data>
-  <data name="Label.Description" xml:space="preserve">
-    <value>Mô tả</value>
-  </data>
-  <data name="Label.Customer" xml:space="preserve">
-    <value>Khách hàng</value>
-  </data>
-  <data name="Label.ExpectedDate" xml:space="preserve">
-    <value>Ngày dự kiến</value>
-  </data>
-  <data name="Label.Product" xml:space="preserve">
-    <value>Hàng hóa</value>
-  </data>
-  <data name="Label.Items" xml:space="preserve">
-    <value>Danh sách hàng hóa</value>
-  </data>
-  <data name="Label.Vendor" xml:space="preserve">
-    <value>Nhà cung cấp</value>
-  </data>
-  <data name="Label.Warehouse" xml:space="preserve">
-    <value>Kho hàng</value>
-  </data>
-  <data name="Label.Surcharge" xml:space="preserve">
-    <value>Phụ phí</value>
-  </data>
-  <data name="Label.ShippingAmount" xml:space="preserve">
-    <value>Phí vận chuyển</value>
-  </data>
-  <data name="Label.TaxAmount" xml:space="preserve">
-    <value>Tổng thuế</value>
-  </data>
-  <data name="Label.UnitCost" xml:space="preserve">
-    <value>Giá nhập</value>
-  </data>
-  <data name="Label.Reason" xml:space="preserve">
-    <value>Lý do</value>
-  </data>
-  <data name="Msg.DeleteConfirmTitle" xml:space="preserve">
-    <value>Xác nhận xóa</value>
-  </data>
-  <data name="Msg.SaveSuccess" xml:space="preserve">
-    <value>Lưu thành công</value>
-  </data>
-  <data name="Msg.ImageSizeLimit" xml:space="preserve">
-    <value>Kích thước hình ảnh phải nhỏ hơn {0}Mb.</value>
-  </data>
-  <data name="Msg.DeleteSuccess" xml:space="preserve">
-    <value>Đã xóa thành công</value>
-  </data>
-  <data name="Msg.SaveFailed" xml:space="preserve">
-    <value>Lưu thất bại</value>
-  </data>
-  <data name="Msg.OperationFailed" xml:space="preserve">
-    <value>Thao tác thất bại</value>
-  </data>
-  <data name="Empty.Default" xml:space="preserve">
-    <value>Chưa có dữ liệu</value>
-  </data>
-  <data name="Empty.SearchResult" xml:space="preserve">
-    <value>Không tìm thấy kết quả phù hợp</value>
-  </data>
-  <data name="Pager.TotalCount" xml:space="preserve">
-    <value>Tổng: {0} mục</value>
-  </data>
-  <data name="Pager.Page" xml:space="preserve">
-    <value>Trang {0}/{1}</value>
-  </data>
-
-  <!-- ===== General ===== -->
-  <data name="Error.InvalidRequest" xml:space="preserve">
-    <value>Dữ liệu không hợp lệ.</value>
-  </data>
-  <data name="Error.PhoneNumberInvalid" xml:space="preserve">
-    <value>Số điện thoại không hợp lệ.</value>
-  </data>
   <data name="Error.Required" xml:space="preserve">
     <value>Vui lòng nhập {0}.</value>
-  </data>
-  <data name="Error.MaxLength" xml:space="preserve">
-    <value>{0} không được vượt quá {1} ký tự.</value>
-  </data>
-  <data name="Error.MinLength" xml:space="preserve">
-    <value>{0} phải có ít nhất {1} ký tự.</value>
-  </data>
-  <data name="Error.NotMatch" xml:space="preserve">
-    <value>{0} không khớp.</value>
   </data>
   <data name="Error.Invalid" xml:space="preserve">
     <value>{0} không hợp lệ.</value>
   </data>
-  <data name="Error.PhoneNumberRequired" xml:space="preserve">
-    <value>Số điện thoại không được để trống.</value>
+  <data name="Error.MinLength" xml:space="preserve">
+    <value>{0} phải có ít nhất {1} ký tự.</value>
+  </data>
+  <data name="Error.MaxLength" xml:space="preserve">
+    <value>{0} không được vượt quá {1} ký tự.</value>
+  </data>
+  <data name="Error.NotMatch" xml:space="preserve">
+    <value>{0} không khớp.</value>
   </data>
   <data name="Error.QuantityMustBePositive" xml:space="preserve">
     <value>Số lượng phải lớn hơn 0.</value>
@@ -242,8 +138,21 @@
   <data name="Error.TotalAmountMustBePositive" xml:space="preserve">
     <value>Tổng tiền phải lớn hơn 0.</value>
   </data>
-
-  <!-- ===== Pagination ===== -->
+  <data name="Error.TotalCountInvalid" xml:space="preserve">
+    <value>Tổng số bản ghi phải lớn hơn hoặc bằng 0.</value>
+  </data>
+  <data name="Error.PageIndexInvalid" xml:space="preserve">
+    <value>Chỉ số trang phải lớn hơn hoặc bằng 0.</value>
+  </data>
+  <data name="Error.PageSizeInvalid" xml:space="preserve">
+    <value>Kích thước trang phải lớn hơn 0.</value>
+  </data>
+  <data name="Error.InvalidRequest" xml:space="preserve">
+    <value>Dữ liệu không hợp lệ.</value>
+  </data>
+  <data name="Error.PhoneNumberInvalid" xml:space="preserve">
+    <value>Số điện thoại không hợp lệ.</value>
+  </data>
   <data name="Error.PaginationPageIndexInvalid" xml:space="preserve">
     <value>Chỉ số trang phải lớn hơn hoặc bằng 0.</value>
   </data>
@@ -253,17 +162,6 @@
   <data name="Error.PaginationTotalCountInvalid" xml:space="preserve">
     <value>Tổng số bản ghi phải lớn hơn hoặc bằng 0.</value>
   </data>
-  <data name="Error.PageIndexInvalid" xml:space="preserve">
-    <value>Chỉ số trang phải lớn hơn hoặc bằng 0.</value>
-  </data>
-  <data name="Error.PageSizeInvalid" xml:space="preserve">
-    <value>Kích thước trang phải lớn hơn 0.</value>
-  </data>
-  <data name="Error.TotalCountInvalid" xml:space="preserve">
-    <value>Tổng số bản ghi phải lớn hơn hoặc bằng 0.</value>
-  </data>
-
-  <!-- ===== Catalog - Category ===== -->
   <data name="Error.CategoryIsNotFound" xml:space="preserve">
     <value>Danh mục không tồn tại.</value>
   </data>
@@ -279,8 +177,6 @@
   <data name="Error.CategoryCircularRelationship" xml:space="preserve">
     <value>Danh mục '{0}' và danh mục '{1}' có mối quan hệ vòng tròn.</value>
   </data>
-
-  <!-- ===== Catalog - Product ===== -->
   <data name="Error.ProductIsNotFound" xml:space="preserve">
     <value>Sản phẩm không tồn tại.</value>
   </data>
@@ -302,8 +198,9 @@
   <data name="Error.ProductCostPriceCannotBeNegative" xml:space="preserve">
     <value>Giá vốn không được âm.</value>
   </data>
-
-  <!-- ===== Catalog - Unit of Measurement ===== -->
+  <data name="Error.UnitMeasurementNameRequired" xml:space="preserve">
+    <value>Tên đơn vị tính không được để trống.</value>
+  </data>
   <data name="Error.UnitMeasurementIsNotFound" xml:space="preserve">
     <value>Đơn vị tính không tồn tại.</value>
   </data>
@@ -313,11 +210,6 @@
   <data name="Error.UnitMeasurementNameAlreadyExists" xml:space="preserve">
     <value>Tên đơn vị tính đã tồn tại.</value>
   </data>
-  <data name="Error.UnitMeasurementNameRequired" xml:space="preserve">
-    <value>Tên đơn vị tính không được để trống.</value>
-  </data>
-
-  <!-- ===== Catalog - Vendor ===== -->
   <data name="Error.VendorIsNotFound" xml:space="preserve">
     <value>Nhà cung cấp không tồn tại.</value>
   </data>
@@ -333,11 +225,6 @@
   <data name="Error.VendorPhoneNumberRequired" xml:space="preserve">
     <value>Số điện thoại nhà cung cấp không được để trống.</value>
   </data>
-  <data name="Error.VendorRequired" xml:space="preserve">
-    <value>Nhà cung cấp không được để trống.</value>
-  </data>
-
-  <!-- ===== Inventory - Warehouse ===== -->
   <data name="Error.WarehouseIsNotFound" xml:space="preserve">
     <value>Kho hàng không tồn tại.</value>
   </data>
@@ -359,11 +246,6 @@
   <data name="Error.WarehouseCapacityExceeded" xml:space="preserve">
     <value>Vượt quá sức chứa kho hàng. Tối đa: {0}, yêu cầu: {1}.</value>
   </data>
-  <data name="Error.WarehouseRequired" xml:space="preserve">
-    <value>Kho hàng không được để trống.</value>
-  </data>
-
-  <!-- ===== Inventory - Stock ===== -->
   <data name="Error.StockNotFound" xml:space="preserve">
     <value>Không tìm thấy tồn kho cho sản phẩm '{0}' trong kho '{1}'.</value>
   </data>
@@ -400,16 +282,12 @@
   <data name="Error.StockReceiveFailed" xml:space="preserve">
     <value>Nhập kho thất bại.</value>
   </data>
-
-  <!-- ===== Customers ===== -->
   <data name="Error.CustomerIsNotFound" xml:space="preserve">
     <value>Khách hàng không tồn tại.</value>
   </data>
   <data name="Error.CustomerCannotBeDeleted" xml:space="preserve">
     <value>Không thể xóa khách hàng đã có đơn hàng.</value>
   </data>
-
-  <!-- ===== Orders ===== -->
   <data name="Error.OrderItemRequired" xml:space="preserve">
     <value>Vui lòng chọn ít nhất một hàng hóa.</value>
   </data>
@@ -479,6 +357,21 @@
   <data name="Error.UserIsNotFound" xml:space="preserve">
     <value>Không tìm thấy người dùng.</value>
   </data>
+  <data name="Error.PurchaseOrderCodeRequired" xml:space="preserve">
+    <value>Mã đơn nhập hàng không được để trống.</value>
+  </data>
+  <data name="Error.PurchaseOrderItemQuantityMustBePositive" xml:space="preserve">
+    <value>Số lượng đặt hàng phải lớn hơn 0.</value>
+  </data>
+  <data name="Error.PurchaseOrderItemUnitCostCannotBeNegative" xml:space="preserve">
+    <value>Giá nhập mặt hàng không được âm.</value>
+  </data>
+  <data name="Error.PurchaseOrderReceiveQuantityMustBePositive" xml:space="preserve">
+    <value>Số lượng nhận hàng phải lớn hơn 0.</value>
+  </data>
+  <data name="Error.PurchaseOrderSellingPriceCannotBeNegative" xml:space="preserve">
+    <value>Giá bán không được âm.</value>
+  </data>
   <data name="Error.PurchaseOrderIsNotFound" xml:space="preserve">
     <value>Không tìm thấy đơn mua hàng.</value>
   </data>
@@ -522,54 +415,19 @@
     <value>Chỉ có thể xóa sản phẩm trong đơn mua hàng ở trạng thái Nháp.</value>
   </data>
   <data name="Error.WarehouseRequired" xml:space="preserve">
-    <value>Vui lòng chọn kho hàng.</value>
-  </data>
-
-  <!-- ===== Purchase Orders ===== -->
-  <data name="Error.PurchaseOrderIsNotFound" xml:space="preserve">
-    <value>Đơn nhập hàng không tồn tại.</value>
+    <value>Kho hàng không được để trống.</value>
   </data>
   <data name="Error.PurchaseOrderCodeExists" xml:space="preserve">
     <value>Mã đơn nhập hàng đã tồn tại.</value>
   </data>
-  <data name="Error.PurchaseOrderCannotSubmit" xml:space="preserve">
-    <value>Không thể xác nhận đơn nhập hàng ở trạng thái hiện tại.</value>
-  </data>
-  <data name="Error.PurchaseOrderCannotCancel" xml:space="preserve">
-    <value>Không thể hủy đơn nhập hàng ở trạng thái hiện tại.</value>
-  </data>
   <data name="Error.PurchaseOrderCannotChangeStatus" xml:space="preserve">
     <value>Không thể thay đổi trạng thái đơn nhập hàng ở trạng thái hiện tại.</value>
-  </data>
-  <data name="Error.PurchaseOrderCannotReceiveGoods" xml:space="preserve">
-    <value>Không thể nhận hàng cho đơn nhập hàng ở trạng thái hiện tại.</value>
-  </data>
-  <data name="Error.PurchaseOrderCannotUpdateInfo" xml:space="preserve">
-    <value>Đơn nhập hàng ở trạng thái hiện tại không thể chỉnh sửa thông tin.</value>
-  </data>
-  <data name="Error.PurchaseOrderCannotUpdateVendor" xml:space="preserve">
-    <value>Đơn nhập hàng ở trạng thái hiện tại không thể đổi nhà cung cấp.</value>
-  </data>
-  <data name="Error.PurchaseOrderCannotUpdateWarehouse" xml:space="preserve">
-    <value>Đơn nhập hàng ở trạng thái hiện tại không thể đổi kho.</value>
-  </data>
-  <data name="Error.PurchaseOrderCannotUpdateDeliveryDate" xml:space="preserve">
-    <value>Đơn nhập hàng ở trạng thái hiện tại không thể đổi ngày giao.</value>
   </data>
   <data name="Error.PurchaseOrderCannotUpdateOrderItems" xml:space="preserve">
     <value>Không thể cập nhật chi tiết đơn nhập hàng ở trạng thái hiện tại.</value>
   </data>
   <data name="Error.PurchaseOrderCannotAddItem" xml:space="preserve">
     <value>Không thể thêm sản phẩm vào đơn nhập hàng ở trạng thái hiện tại.</value>
-  </data>
-  <data name="Error.PurchaseOrderHasNoItemsForShipping" xml:space="preserve">
-    <value>Đơn hàng chưa có sản phẩm, không thể thiết lập phí vận chuyển.</value>
-  </data>
-  <data name="Error.PurchaseOrderHasNoItemsForTax" xml:space="preserve">
-    <value>Đơn hàng chưa có sản phẩm, không thể thiết lập tiền thuế.</value>
-  </data>
-  <data name="Error.PurchaseOrderItemIsNotFound" xml:space="preserve">
-    <value>Chi tiết đơn nhập hàng không tồn tại.</value>
   </data>
   <data name="Error.PurchaseOrderReceiveQuantityExceedsOrderedQuantity" xml:space="preserve">
     <value>Số lượng nhận vượt quá số lượng đặt hàng.</value>
@@ -583,26 +441,12 @@
   <data name="Error.ShippingAmountCannotBeNegative" xml:space="preserve">
     <value>Phí vận chuyển không được âm.</value>
   </data>
-  <data name="Error.PurchaseOrderCodeRequired" xml:space="preserve">
-    <value>Mã đơn nhập hàng không được để trống.</value>
-  </data>
-  <data name="Error.PurchaseOrderItemQuantityMustBePositive" xml:space="preserve">
-    <value>Số lượng đặt hàng phải lớn hơn 0.</value>
-  </data>
-  <data name="Error.PurchaseOrderItemUnitCostCannotBeNegative" xml:space="preserve">
-    <value>Giá nhập mặt hàng không được âm.</value>
-  </data>
-  <data name="Error.PurchaseOrderReceiveQuantityMustBePositive" xml:space="preserve">
-    <value>Số lượng nhận hàng phải lớn hơn 0.</value>
-  </data>
-  <data name="Error.PurchaseOrderSellingPriceCannotBeNegative" xml:space="preserve">
-    <value>Giá bán không được âm.</value>
+  <data name="Error.DeliveryNoteCodeRequired" xml:space="preserve">
+    <value>Mã phiếu giao hàng không được để trống.</value>
   </data>
   <data name="Error.ExpectedDeliveryDateInPast" xml:space="preserve">
     <value>Ngày giao hàng dự kiến không được ở quá khứ.</value>
   </data>
-
-  <!-- ===== Delivery Notes ===== -->
   <data name="Error.DeliveryNoteNotFound" xml:space="preserve">
     <value>Phiếu giao hàng không tồn tại.</value>
   </data>
@@ -612,20 +456,6 @@
   <data name="Error.DeliveryProofRequired" xml:space="preserve">
     <value>Bằng chứng giao hàng là bắt buộc.</value>
   </data>
-  <data name="Error.DeliveryNoteItemsRequired" xml:space="preserve">
-    <value>Phiếu giao hàng phải có ít nhất một mặt hàng.</value>
-  </data>
-  <data name="Error.DeliveryNoteCodeRequired" xml:space="preserve">
-    <value>Mã phiếu giao hàng không được để trống.</value>
-  </data>
-  <data name="Error.SurchargeCannotBeNegative" xml:space="preserve">
-    <value>Phụ phí không được âm.</value>
-  </data>
-  <data name="Error.AmountToCollectCannotBeNegative" xml:space="preserve">
-    <value>Số tiền thu không được âm.</value>
-  </data>
-
-  <!-- ===== Finance - Expense ===== -->
   <data name="Error.ExpenseTitleRequired" xml:space="preserve">
     <value>Tên khoản chi không được để trống.</value>
   </data>
@@ -641,8 +471,15 @@
   <data name="Error.ExpenseIsNotFound" xml:space="preserve">
     <value>Không tìm thấy phiếu chi.</value>
   </data>
-
-  <!-- ===== Debts ===== -->
+  <data name="Error.ExpenseCreateFailed" xml:space="preserve">
+    <value>Thêm mới khoản chi thất bại.</value>
+  </data>
+  <data name="Error.ExpenseUpdateFailed" xml:space="preserve">
+    <value>Cập nhật khoản chi thất bại.</value>
+  </data>
+  <data name="Error.VendorDebtTotalAmountMustBePositive" xml:space="preserve">
+    <value>Tổng nợ nhà cung cấp phải lớn hơn 0.</value>
+  </data>
   <data name="Error.VendorDebtNotFound" xml:space="preserve">
     <value>Công nợ nhà cung cấp không tồn tại.</value>
   </data>
@@ -652,33 +489,17 @@
   <data name="Error.VendorPaymentExceedsRemainingException" xml:space="preserve">
     <value>Số tiền thanh toán {0} vượt quá công nợ còn lại {1}.</value>
   </data>
-  <data name="Error.VendorDebtTotalAmountMustBePositive" xml:space="preserve">
-    <value>Tổng nợ nhà cung cấp phải lớn hơn 0.</value>
-  </data>
-  <data name="Error.PaymentAmountMustBePositive" xml:space="preserve">
-    <value>Số tiền thanh toán phải lớn hơn 0.</value>
-  </data>
-  <data name="Error.PaymentDateRequired" xml:space="preserve">
-    <value>Ngày thanh toán không được để trống.</value>
-  </data>
-
-  <!-- ===== Media ===== -->
-  <data name="Error.PictureIsNotFound" xml:space="preserve">
-    <value>Ảnh không tồn tại.</value>
+  <data name="Error.MimeTypeRequired" xml:space="preserve">
+    <value>Loại file (MIME type) không được để trống.</value>
   </data>
   <data name="Error.PictureDataRequired" xml:space="preserve">
     <value>Dữ liệu hình ảnh không được để trống.</value>
   </data>
-  <data name="Error.MimeTypeRequired" xml:space="preserve">
-    <value>Loại file (MIME type) không được để trống.</value>
+  <data name="Error.PictureIsNotFound" xml:space="preserve">
+    <value>Ảnh không tồn tại.</value>
   </data>
-
-  <!-- ===== Users ===== -->
   <data name="Error.UserRegistrationDisabled" xml:space="preserve">
     <value>Đăng ký người dùng mới không được phép lúc này.</value>
-  </data>
-  <data name="Error.UserIsNotFound" xml:space="preserve">
-    <value>Người dùng không tồn tại.</value>
   </data>
   <data name="Error.UsernameExistsException" xml:space="preserve">
     <value>Tên đăng nhập đã tồn tại.</value>
@@ -699,7 +520,7 @@
     <value>Họ tên là bắt buộc.</value>
   </data>
   <data name="Error.PhoneNumberRequired" xml:space="preserve">
-    <value>Số điện thoại là bắt buộc.</value>
+    <value>Số điện thoại không được để trống.</value>
   </data>
   <data name="Error.UserCreateFailed" xml:space="preserve">
     <value>Không thể tạo người dùng.</value>
@@ -711,10 +532,10 @@
     <value>Số tiền thanh toán phải lớn hơn 0.</value>
   </data>
   <data name="Error.PaymentDateRequired" xml:space="preserve">
-    <value>Ngày thanh toán là bắt buộc.</value>
+    <value>Ngày thanh toán không được để trống.</value>
   </data>
   <data name="Error.VendorRequired" xml:space="preserve">
-    <value>Nhà cung cấp là bắt buộc.</value>
+    <value>Nhà cung cấp không được để trống.</value>
   </data>
   <data name="Error.PurchaseOrderRequired" xml:space="preserve">
     <value>Đơn mua hàng là bắt buộc.</value>
@@ -726,7 +547,7 @@
     <value>Địa chỉ giao hàng là bắt buộc.</value>
   </data>
   <data name="Error.DeliveryNoteItemsRequired" xml:space="preserve">
-    <value>Phải có ít nhất một sản phẩm trong phiếu xuất kho.</value>
+    <value>Phiếu giao hàng phải có ít nhất một mặt hàng.</value>
   </data>
   <data name="Error.DeliveryNoteQuantityMustBePositive" xml:space="preserve">
     <value>Tất cả sản phẩm trong phiếu xuất kho phải có số lượng lớn hơn 0.</value>
@@ -735,12 +556,210 @@
     <value>Phụ phí không được âm.</value>
   </data>
   <data name="Error.AmountToCollectCannotBeNegative" xml:space="preserve">
-    <value>Số tiền cần thu không được âm.</value>
+    <value>Số tiền thu không được âm.</value>
   </data>
   <data name="Error.PurchaseOrderQuantityMustBePositive" xml:space="preserve">
     <value>Số lượng phải lớn hơn 0.</value>
   </data>
   <data name="Error.PurchaseOrderUnitCostCannotBeNegative" xml:space="preserve">
     <value>Giá nhập không được âm.</value>
+  </data>
+  <data name="Msg.DeleteConfirmTitle" xml:space="preserve">
+    <value>Xác nhận xóa</value>
+  </data>
+  <data name="Msg.SaveSuccess" xml:space="preserve">
+    <value>Lưu thành công</value>
+  </data>
+  <data name="Msg.ImageSizeLimit" xml:space="preserve">
+    <value>Kích thước hình ảnh phải nhỏ hơn {0}Mb.</value>
+  </data>
+  <data name="Msg.DeleteSuccess" xml:space="preserve">
+    <value>Đã xóa thành công</value>
+  </data>
+  <data name="Msg.SaveFailed" xml:space="preserve">
+    <value>Lưu thất bại</value>
+  </data>
+  <data name="Msg.OperationFailed" xml:space="preserve">
+    <value>Thao tác thất bại</value>
+  </data>
+  <data name="Label.Action" xml:space="preserve">
+    <value>Thao tác</value>
+  </data>
+  <data name="Label.Address" xml:space="preserve">
+    <value>Địa chỉ</value>
+  </data>
+  <data name="Label.All" xml:space="preserve">
+    <value>Tất cả</value>
+  </data>
+  <data name="Label.Amount" xml:space="preserve">
+    <value>Số tiền</value>
+  </data>
+  <data name="Label.Code" xml:space="preserve">
+    <value>Mã</value>
+  </data>
+  <data name="Label.ConfirmPassword" xml:space="preserve">
+    <value>Xác nhận mật khẩu</value>
+  </data>
+  <data name="Label.CostPrice" xml:space="preserve">
+    <value>Giá vốn</value>
+  </data>
+  <data name="Label.CreatedDate" xml:space="preserve">
+    <value>Ngày tạo</value>
+  </data>
+  <data name="Label.CreatedOn" xml:space="preserve">
+    <value>Ngày tạo</value>
+  </data>
+  <data name="Label.Customer" xml:space="preserve">
+    <value>Khách hàng</value>
+  </data>
+  <data name="Label.Description" xml:space="preserve">
+    <value>Mô tả</value>
+  </data>
+  <data name="Label.Discount" xml:space="preserve">
+    <value>Chiết khấu</value>
+  </data>
+  <data name="Label.DisplayOrder" xml:space="preserve">
+    <value>Thứ tự hiển thị</value>
+  </data>
+  <data name="Label.ExpectedDate" xml:space="preserve">
+    <value>Ngày dự kiến</value>
+  </data>
+  <data name="Label.FullName" xml:space="preserve">
+    <value>Họ tên</value>
+  </data>
+  <data name="Label.Items" xml:space="preserve">
+    <value>Danh sách hàng hóa</value>
+  </data>
+  <data name="Label.Name" xml:space="preserve">
+    <value>Tên</value>
+  </data>
+  <data name="Label.None" xml:space="preserve">
+    <value>Không</value>
+  </data>
+  <data name="Label.Note" xml:space="preserve">
+    <value>Ghi chú</value>
+  </data>
+  <data name="Label.Password" xml:space="preserve">
+    <value>Mật khẩu</value>
+  </data>
+  <data name="Label.Phone" xml:space="preserve">
+    <value>Số điện thoại</value>
+  </data>
+  <data name="Label.Price" xml:space="preserve">
+    <value>Đơn giá</value>
+  </data>
+  <data name="Label.Product" xml:space="preserve">
+    <value>Hàng hóa</value>
+  </data>
+  <data name="Label.Quantity" xml:space="preserve">
+    <value>Số lượng</value>
+  </data>
+  <data name="Label.Reason" xml:space="preserve">
+    <value>Lý do</value>
+  </data>
+  <data name="Label.ShippingAmount" xml:space="preserve">
+    <value>Phí vận chuyển</value>
+  </data>
+  <data name="Label.ShortDesc" xml:space="preserve">
+    <value>Mô tả ngắn</value>
+  </data>
+  <data name="Label.Status" xml:space="preserve">
+    <value>Trạng thái</value>
+  </data>
+  <data name="Label.Surcharge" xml:space="preserve">
+    <value>Phụ phí</value>
+  </data>
+  <data name="Label.TaxAmount" xml:space="preserve">
+    <value>Tổng thuế</value>
+  </data>
+  <data name="Label.Total" xml:space="preserve">
+    <value>Tổng cộng</value>
+  </data>
+  <data name="Label.UnitCost" xml:space="preserve">
+    <value>Giá nhập</value>
+  </data>
+  <data name="Label.UnitPrice" xml:space="preserve">
+    <value>Giá bán</value>
+  </data>
+  <data name="Label.Username" xml:space="preserve">
+    <value>Tên đăng nhập</value>
+  </data>
+  <data name="Label.Vendor" xml:space="preserve">
+    <value>Nhà cung cấp</value>
+  </data>
+  <data name="Label.Warehouse" xml:space="preserve">
+    <value>Kho hàng</value>
+  </data>
+  <data name="Error.GoodsReceipt.IsNotFound" xml:space="preserve">
+    <value>Không tìm thấy phiếu nhập kho.</value>
+  </data>
+  <data name="Error.GoodsReceipt.CreationDateInvalid" xml:space="preserve">
+    <value>Ngày tạo không được là ngày trong tương lai.</value>
+  </data>
+  <data name="Error.GoodsReceipt.ProofPictureRequired" xml:space="preserve">
+    <value>Cần ít nhất một ảnh chứng từ.</value>
+  </data>
+  <data name="Error.GoodsReceipt.ItemsRequired" xml:space="preserve">
+    <value>Cần ít nhất một mặt hàng.</value>
+  </data>
+  <data name="Error.GoodsReceipt.Item.QuantityMustBePositive" xml:space="preserve">
+    <value>Số lượng hàng phải lớn hơn 0.</value>
+  </data>
+  <data name="Error.GoodsReceipt.Item.UnitCostCannotBeNegative" xml:space="preserve">
+    <value>Giá nhập hàng không được âm.</value>
+  </data>
+  <data name="Btn.Add" xml:space="preserve">
+    <value>Thêm mới</value>
+  </data>
+  <data name="Btn.Edit" xml:space="preserve">
+    <value>Chỉnh sửa</value>
+  </data>
+  <data name="Btn.Delete" xml:space="preserve">
+    <value>Xóa</value>
+  </data>
+  <data name="Btn.Save" xml:space="preserve">
+    <value>Lưu</value>
+  </data>
+  <data name="Btn.Cancel" xml:space="preserve">
+    <value>Hủy</value>
+  </data>
+  <data name="Btn.Search" xml:space="preserve">
+    <value>Tìm kiếm</value>
+  </data>
+  <data name="Btn.ClearFilter" xml:space="preserve">
+    <value>Xóa bộ lọc</value>
+  </data>
+  <data name="Btn.Export" xml:space="preserve">
+    <value>Xuất file</value>
+  </data>
+  <data name="Btn.Print" xml:space="preserve">
+    <value>In</value>
+  </data>
+  <data name="Btn.Back" xml:space="preserve">
+    <value>Quay lại</value>
+  </data>
+  <data name="Btn.Confirm" xml:space="preserve">
+    <value>Xác nhận</value>
+  </data>
+  <data name="Btn.Close" xml:space="preserve">
+    <value>Đóng</value>
+  </data>
+  <data name="Empty.Default" xml:space="preserve">
+    <value>Chưa có dữ liệu</value>
+  </data>
+  <data name="Empty.SearchResult" xml:space="preserve">
+    <value>Không tìm thấy kết quả phù hợp</value>
+  </data>
+  <data name="Pager.TotalCount" xml:space="preserve">
+    <value>Tổng: {0} mục</value>
+  </data>
+  <data name="Pager.Page" xml:space="preserve">
+    <value>Trang {0}/{1}</value>
+  </data>
+  <data name="Error.UnitPriceRequired" xml:space="preserve">
+    <value>Giá bán là bắt buộc</value>
+  </data>
+  <data name="Error.CostPriceRequired" xml:space="preserve">
+    <value>Giá vốn là bắt buộc</value>
   </data>
 </root>

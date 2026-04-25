@@ -95,13 +95,13 @@
         <div class="collapse @(WebHelper.IsHasController("Category", "Product", "Warehouse", "UnitMeasurement") ? "show" : "")" id="collapseCatalog">
             <ul class="nav flex-column sub-menu">
                 <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Warehouse") ? "active" : "")" asp-controller="Warehouse" asp-action="Index">Kho hàng</a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("Product") ? "active" : "")" asp-controller="Product" asp-action="Index">Sản phẩm</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("Category") ? "active" : "")" asp-controller="Category" asp-action="Index">Danh mục</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Warehouse") ? "active" : "")" asp-controller="Warehouse" asp-action="Index">Kho hàng</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("UnitMeasurement") ? "active" : "")" asp-controller="UnitMeasurement" asp-action="Index">Đơn vị tính</a>

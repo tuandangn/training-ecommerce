@@ -101,16 +101,6 @@
                                     }
                                     <span asp-validation-for="VendorIds" class="text-danger small"></span>
                                 </div>
-                                <div class="col-12 col-md-6">
-                                    <label asp-for="CostPrice" class="form-label"></label>
-                                    @Html.EditorFor(m => m.CostPrice)
-                                    <span asp-validation-for="CostPrice" class="text-danger small"></span>
-                                </div>
-                                <div class="col-12 col-md-6">
-                                    <label asp-for="UnitPrice" class="form-label"></label>
-                                    @Html.EditorFor(m => m.UnitPrice)
-                                    <span asp-validation-for="UnitPrice" class="text-danger small"></span>
-                                </div>
                                 <div class="col-12">
                                     <label asp-for="ShortDesc" class="form-label"></label>
                                     <textarea asp-for="ShortDesc" class="form-control" rows="3" placeholder="Mô tả ngắn về hàng hóa..."></textarea>

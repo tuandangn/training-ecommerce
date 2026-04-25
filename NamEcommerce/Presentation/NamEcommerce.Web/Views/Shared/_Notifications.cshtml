@@ -1,0 +1,33 @@
+@using System.Text.Json
+@using NamEcommerce.Web.Services.Notifications
+@inject INotificationService NotificationService
+@{
+    var pendingNotifications = NotificationService.ConsumeAll();
+}
+@if (pendingNotifications.Count > 0)
+{
+    var json = JsonSerializer.Serialize(pendingNotifications, new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    });
+    <script>
+        (function () {
+            var payload = @Html.Raw(json);
+            function render() {
+                if (window.NotificationCenter && typeof window.NotificationCenter.showAll === 'function') {
+                    window.NotificationCenter.showAll(payload);
+                } else {
+                    // NotificationCenter chưa load (script defer chưa chạy) — chờ DOM ready
+                    document.addEventListener('DOMContentLoaded', function () {
+                        if (window.NotificationCenter) window.NotificationCenter.showAll(payload);
+                    });
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', render);
+            } else {
+                render();
+            }
+        })();
+    </script>
+}

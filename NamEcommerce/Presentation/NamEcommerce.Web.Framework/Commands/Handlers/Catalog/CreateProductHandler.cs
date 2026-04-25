@@ -23,8 +23,6 @@ public sealed class CreateProductHandler : IRequestHandler<CreateProductCommand,
             Name = request.Name,
             ShortDesc = request.ShortDesc,
             UnitMeasurementId = request.UnitMeasurementId,
-            UnitPrice = request.UnitPrice,
-            CostPrice = request.CostPrice,
             Categories = request.CategoryId.HasValue
                 ? [new ProductCategoryAppDto(request.CategoryId.Value, request.DisplayOrder)]
                 : [],
@@ -35,7 +33,10 @@ public sealed class CreateProductHandler : IRequestHandler<CreateProductCommand,
                 MimeType = request.ImageFile.MimeType,
                 Extension = request.ImageFile.Extension,
                 FileName = request.ImageFile.FileName
-            } : null
+            } : null,
+            UnitPrice = request.UnitPrice,
+            CostPrice = request.CostPrice,
+            ProductStocks = request.ProductStocks.Select(productStock => new ProductStockAppDto(productStock.WarehouseId, productStock.Quantity))
         };
 
         var result = await _productAppService.CreateProductAsync(dto).ConfigureAwait(false);

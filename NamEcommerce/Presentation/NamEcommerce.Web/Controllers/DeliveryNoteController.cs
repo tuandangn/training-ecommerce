@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Models.DeliveryNotes;
@@ -63,9 +62,9 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
             return View(model);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError("Error.DeliveryNoteCreateFailed");
+            NotifyError("Error.DeliveryNoteCreateFailed");
             return RedirectToAction("List", "Order");
         }
     }
@@ -110,7 +109,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
         if (result)
         {
-            TempData[ViewConstants.CustomerSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+            NotifySuccess("Msg.SaveSuccess");
             return RedirectToAction(nameof(List));
         }
 
@@ -130,7 +129,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         }
         catch
         {
-            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError("Error.DeliveryNoteNotFound");
+            NotifyError("Error.DeliveryNoteNotFound");
             return RedirectToAction(nameof(List));
         }
     }
@@ -144,7 +143,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         }
         catch
         {
-            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError("Error.DeliveryNoteNotFound");
+            NotifyError("Error.DeliveryNoteNotFound");
             return RedirectToAction(nameof(List));
         }
     }

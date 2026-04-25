@@ -299,19 +299,14 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             product.UpdatedOnUtc = DateTime.UtcNow;
             await _productRepository.UpdateAsync(product).ConfigureAwait(false);
 
-            if (_priceHistoryRepository is not null)
-            {
-                await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(
-                    product.Id,
-                    oldUnitPrice, newUnitPrice,
-                    oldCostPrice, newCostPrice,
-                    $"Nhập hàng từ PO {purchaseOrder.Code}")
-                ).ConfigureAwait(false);
-            }
+            await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(
+                product.Id, oldUnitPrice, newUnitPrice, oldCostPrice, newCostPrice,
+                $"Nhập hàng từ PO {purchaseOrder.Code}")
+            ).ConfigureAwait(false);
         }
 
         await _stockManager.ReceiveStockAsync(purchaseOrderItem.ProductId,
-            warehouseId!.Value, dto.ReceivedQuantity,
+            warehouseId.Value, dto.ReceivedQuantity,
             $"Nhập hàng từ PO {purchaseOrder.Code}", dto.ReceivedByUserId,
             (int)StockReferenceType.PurchaseOrder, purchaseOrder.Id).ConfigureAwait(false);
 

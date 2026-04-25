@@ -2,6 +2,7 @@ using MediatR;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Models.Catalog;
 
 namespace NamEcommerce.Web.Services.Catalog;
@@ -22,19 +23,22 @@ public sealed class ProductModelFactory : IProductModelFactory
         var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
         var unitMeasurementOptions = await _mediator.Send(new GetUnitMeasurementOptionListQuery()).ConfigureAwait(false);
         var vendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
+        var warehouseOptions = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+
         var model = oldModel ?? new CreateProductModel
         {
-            DisplayOrder = 1,
-            AvailableCategories = categoryOptions,
-            AvailableUnitMeasurements = unitMeasurementOptions,
-            AvailableVendors = vendorOptions
+            DisplayOrder = 1
         };
-        if (oldModel is not null)
+        model.AvailableCategories = categoryOptions;
+        model.AvailableUnitMeasurements = unitMeasurementOptions;
+        model.AvailableVendors = vendorOptions;
+        model.ProductInventory ??= new CreateProductModel.ProductInventoryModel
         {
-            model.AvailableCategories = categoryOptions;
-            model.AvailableUnitMeasurements = unitMeasurementOptions;
-            model.AvailableVendors = vendorOptions;
-        }
+            ProductStocks = warehouseOptions.Select(warehouse => new CreateProductModel.ProductStockModel
+            {
+                WarehouseId = warehouse.Id
+            })
+        };
 
         return model;
     }

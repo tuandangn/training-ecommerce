@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Customers;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
@@ -86,7 +85,7 @@ public sealed class CustomerController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.CustomerSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -95,7 +94,7 @@ public sealed class CustomerController : BaseAuthorizedController
         var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = id });
         if (customer == null)
         {
-            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError("Error.CustomerIsNotFound");
+            NotifyError("Error.CustomerIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -134,7 +133,7 @@ public sealed class CustomerController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.CustomerSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -144,9 +143,9 @@ public sealed class CustomerController : BaseAuthorizedController
         var result = await _mediator.Send(new DeleteCustomerCommand { Id = id });
 
         if (!result.Success)
-            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError(result.ErrorMessage!);
+            NotifyError(result.ErrorMessage!);
         else
-            TempData[ViewConstants.CustomerSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
+            NotifySuccess("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }
 }

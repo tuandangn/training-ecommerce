@@ -8,8 +8,6 @@ public abstract record BaseProductDto
     public required string Name { get; init; }
     public required string? ShortDesc { get; init; }
     public Guid? UnitMeasurementId { get; set; }
-    public decimal UnitPrice { get; set; }
-    public decimal CostPrice { get; set; }
     public IEnumerable<ProductCategoryDto> Categories { get; set; } = [];
     public IEnumerable<ProductVendorDto> Vendors { get; set; } = [];
     public IEnumerable<Guid> Pictures { get; set; } = [];
@@ -22,7 +20,11 @@ public abstract record BaseProductDto
 }
 
 [Serializable]
-public sealed record ProductDto(Guid Id) : BaseProductDto;
+public sealed record ProductDto(Guid Id) : BaseProductDto
+{
+    public decimal CostPrice { get; set; }
+    public decimal UnitPrice { get; set; }
+}
 
 [Serializable]
 public sealed record CreateProductDto : BaseProductDto;
@@ -35,10 +37,33 @@ public sealed record CreateProductResultDto
 [Serializable]
 public sealed record UpdateProductDto(Guid Id) : BaseProductDto
 {
-    public string? ChangePriceReason { get; set; }
 }
+
 [Serializable]
 public sealed record UpdateProductResultDto(Guid Id) : BaseProductDto;
+
+[Serializable]
+public sealed record UpdateProductPriceDto(Guid Id)
+{
+    public decimal UnitCost { get; set; }
+    public decimal UnitPrice { get; set; }
+    public string? ChangePriceReason { get; set; }
+
+    public void Verify()
+    {
+        if (UnitCost < 0)
+            throw new ProductCostPriceCannotBeNegativeException();
+        if (UnitPrice < 0)
+            throw new ProductUnitPriceCannotBeNegativeException();
+    }
+}
+[Serializable]
+public sealed record UpdateProductPriceResultDto
+{
+    public required bool Success { get; init; }
+    public string? ErrorMessage { get; set; }
+    public Guid UpdatedId { get; set; }
+}
 
 [Serializable]
 public sealed record ProductCategoryDto(Guid CategoryId, int DisplayOrder);

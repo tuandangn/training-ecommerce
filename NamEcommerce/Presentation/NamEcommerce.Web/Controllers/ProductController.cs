@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Common;
@@ -61,18 +60,24 @@ public sealed class ProductController : BaseAuthorizedController
             return View(model);
         }
 
-        var createProductResult = await _mediator.Send(new CreateProductCommand
+        var createProductCommand = new CreateProductCommand
         {
             Name = model.Name!,
             ShortDesc = model.ShortDesc,
             CategoryId = model.CategoryId,
             VendorIds = model.VendorIds,
             UnitMeasurementId = model.UnitMeasurementId,
-            UnitPrice = model.UnitPrice,
-            CostPrice = model.CostPrice,
             DisplayOrder = model.DisplayOrder,
             ImageFile = imageFileInfo
-        });
+        };
+        if (model.HasExistingStockQuantity)
+        {
+            createProductCommand.UnitPrice = model.ProductInventory!.UnitPrice;
+            createProductCommand.CostPrice = model.ProductInventory!.CostPrice;
+            createProductCommand.ProductStocks = model.ProductInventory!.ProductStocks.Where(stock => stock.Quantity > 0)
+                .Select(stock => new CreateProductCommand.ProductStockModel(stock.WarehouseId, stock.Quantity));
+        }
+        var createProductResult = await _mediator.Send(createProductCommand);
         if (!createProductResult.Success)
         {
             AddLocalizedModelError(createProductResult.ErrorMessage);
@@ -80,7 +85,7 @@ public sealed class ProductController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.ProductSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -89,7 +94,7 @@ public sealed class ProductController : BaseAuthorizedController
         var model = await _productModelFactory.PrepareEditProductModel(id);
         if (model == null)
         {
-            TempData[ViewConstants.ProductErrorMessage] = LocalizeError("Error.ProductIsNotFound");
+            NotifyError("Error.ProductIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -108,7 +113,7 @@ public sealed class ProductController : BaseAuthorizedController
         var product = await _mediator.Send(new GetProductByIdQuery { Id = model.Id });
         if (product == null)
         {
-            TempData[ViewConstants.ProductErrorMessage] = LocalizeError("Error.ProductIsNotFound");
+            NotifyError("Error.ProductIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -134,8 +139,7 @@ public sealed class ProductController : BaseAuthorizedController
             CategoryId = model.CategoryId,
             VendorIds = model.VendorIds,
             UnitMeasurementId = model.UnitMeasurementId,
-            UnitPrice = model.UnitPrice,
-            CostPrice = model.CostPrice,
+            NewUnitPrice = model.UnitPrice,
             DisplayOrder = model.DisplayOrder,
             ImageFile = imageFileInfo,
             ChangePriceReason = model.ChangePriceReason
@@ -147,7 +151,7 @@ public sealed class ProductController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.ProductSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -182,9 +186,9 @@ public sealed class ProductController : BaseAuthorizedController
     {
         var resultDto = await _mediator.Send(new DeleteProductCommand(id));
         if (!resultDto.Success)
-            TempData[ViewConstants.ProductErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
+            NotifyError(resultDto.ErrorMessage!);
         else
-            TempData[ViewConstants.ProductSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
+            NotifySuccess("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }
 

@@ -3,10 +3,13 @@ using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Services.Catalog;
+using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Media;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Application.Services.Catalog;
 
@@ -16,14 +19,22 @@ public sealed class ProductAppService : IProductAppService
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
     private readonly IPictureManager _pictureManager;
+    private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
+    private readonly IInventoryStockManager _inventoryStockManager;
+    private readonly ICurrentUserAccessor _currentUserAccessor;
 
     public ProductAppService(IProductManager productManager, IEntityDataReader<Product> productDataReader,
-        IPictureManager pictureManager, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader)
+        IPictureManager pictureManager, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
+        IEntityDataReader<Warehouse> warehouseDataReader, IInventoryStockManager inventoryStockManager,
+        ICurrentUserAccessor currentUserAccessor)
     {
         _productManager = productManager;
         _productDataReader = productDataReader;
         _pictureManager = pictureManager;
         _unitMeasurementDataReader = unitMeasurementDataReader;
+        _warehouseDataReader = warehouseDataReader;
+        _inventoryStockManager = inventoryStockManager;
+        _currentUserAccessor = currentUserAccessor;
     }
 
     public async Task<CreateProductResultAppDto> CreateProductAsync(CreateProductAppDto dto)
@@ -76,25 +87,78 @@ public sealed class ProductAppService : IProductAppService
             pictureId = insertedPicture.CreatedId;
         }
 
-        var createDto = new CreateProductDto
+        if (dto.ProductStocks.Any())
+        {
+            if (!dto.UnitPrice.HasValue)
+            {
+                return new CreateProductResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.UnitPriceRequired"
+                };
+            }
+            if (!dto.CostPrice.HasValue)
+            {
+                return new CreateProductResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.CostPriceRequired"
+                };
+            }
+        }
+        foreach (var productStock in dto.ProductStocks)
+        {
+            if (!productStock.WarehouseId.HasValue)
+                continue;
+
+            var warehouse = await _warehouseDataReader.GetByIdAsync(productStock.WarehouseId.Value);
+            if (warehouse is null)
+            {
+                return new CreateProductResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.WarehouseIsNotFound"
+                };
+            }
+        }
+
+        var createProductDto = new CreateProductDto
         {
             Name = dto.Name,
             ShortDesc = dto.ShortDesc,
             UnitMeasurementId = dto.UnitMeasurementId,
-            UnitPrice = dto.UnitPrice,
-            CostPrice = dto.CostPrice,
             Categories = dto.Categories.Select(item => new ProductCategoryDto(item.CategoryId, item.DisplayOrder)),
             Vendors = dto.Vendors.Select(item => new ProductVendorDto(item.VendorId, item.DisplayOrder)),
             Pictures = pictureId.HasValue ? [pictureId.Value] : [],
 
         };
-        var result = await _productManager.CreateProductAsync(createDto).ConfigureAwait(false);
+        var creationResult = await _productManager.CreateProductAsync(createProductDto).ConfigureAwait(false);
 
+        if (dto.ProductStocks.Any())
+        {
+            await _productManager.UpdateProductPriceAsync(new UpdateProductPriceDto(creationResult.CreatedId)
+            {
+                UnitCost = dto.CostPrice!.Value,
+                UnitPrice = dto.UnitPrice!.Value,
+                ChangePriceReason = "Giá bán khi tạo mới hàng hóa"
+            });
+
+            var currentUser = await _currentUserAccessor.GetCurrentUserAsync();
+            foreach (var productStock in dto.ProductStocks)
+            {
+                if (!productStock.WarehouseId.HasValue)
+                    continue;
+
+                await _inventoryStockManager.AdjustStockAsync(creationResult.CreatedId, productStock.WarehouseId.Value,
+                    productStock.Quantity, "Số lượng khi tạo hàng hóa", currentUser?.Id ?? Guid.Empty);
+            }
+
+        }
 
         return new CreateProductResultAppDto
         {
             Success = true,
-            CreatedId = result.CreatedId
+            CreatedId = creationResult.CreatedId
         };
     }
 
@@ -220,13 +284,20 @@ public sealed class ProductAppService : IProductAppService
             Name = dto.Name,
             ShortDesc = dto.ShortDesc,
             UnitMeasurementId = dto.UnitMeasurementId,
-            UnitPrice = dto.UnitPrice,
-            CostPrice = dto.CostPrice,
             Categories = dto.Categories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
             Vendors = dto.Vendors.Select(pv => new ProductVendorDto(pv.VendorId, pv.DisplayOrder)),
-            Pictures = pictureId.HasValue ? [pictureId.Value] : [],
-            ChangePriceReason = dto.ChangePriceReason
+            Pictures = pictureId.HasValue ? [pictureId.Value] : []
         }).ConfigureAwait(false);
+
+        if (dto.NewUnitPrice.HasValue)
+        {
+            await _productManager.UpdateProductPriceAsync(new UpdateProductPriceDto(product.Id)
+            {
+                UnitCost = product.CostPrice,
+                UnitPrice = dto.NewUnitPrice.Value,
+                ChangePriceReason = dto.ChangePriceReason
+            }).ConfigureAwait(false);
+        }
 
         return new UpdateProductResultAppDto
         {

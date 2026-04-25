@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Users;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Users;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Models.Users;
@@ -54,7 +53,7 @@ public sealed class UserController : BaseController
     {
         if (!_appConfig.AllowRegisterUser)
         {
-            TempData[ViewConstants.GlobalErrorMessage] = LocalizeError("Error.UserRegistrationDisabled");
+            NotifyError("Error.UserRegistrationDisabled");
             return RedirectToHome();
         }
 
@@ -80,7 +79,7 @@ public sealed class UserController : BaseController
 
         if (registerUserResult.CreatedId is not null)
         {
-            TempData[ViewConstants.LoginErrorMessage] = LocalizeError(registerUserResult.ErrorMessage!);
+            NotifyError(registerUserResult.ErrorMessage!);
             return RedirectToAction(nameof(Login));
         }
 

@@ -72,6 +72,7 @@ using NamEcommerce.Web.Services;
 using NamEcommerce.Web.Services.Catalog;
 using NamEcommerce.Web.Services.DeliveryNotes;
 using NamEcommerce.Web.Services.Inventory;
+using NamEcommerce.Web.Services.Notifications;
 using NamEcommerce.Web.Services.Orders;
 using NamEcommerce.Web.Services.Preparations;
 using NamEcommerce.Web.Services.PurchaseOrders;
@@ -170,6 +171,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IInformationService, InformationService>();
     services.AddScoped<ICurrentUserService, CurrentUserService>();
     services.AddScoped<IWebHelper, WebHelper>();
+    services.AddScoped<INotificationService, TempDataNotificationService>();
 
     services.AddScoped<ICategoryModelFactory, CategoryModelFactory>();
     services.AddScoped<IProductModelFactory, ProductModelFactory>();

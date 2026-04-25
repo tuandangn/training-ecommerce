@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -65,7 +64,7 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.UnitMeasurementSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -74,7 +73,7 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
         var unitMeasurement = await _mediator.Send(new GetUnitMeasurementQuery { Id = id });
         if (unitMeasurement == null)
         {
-            TempData[ViewConstants.UnitMeasurementErrorMessage] = LocalizeError("Error.UnitMeasurementIsNotFound");
+            NotifyError("Error.UnitMeasurementIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -97,7 +96,7 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
         var unitMeasurement = await _mediator.Send(new GetUnitMeasurementQuery { Id = model.Id });
         if (unitMeasurement == null)
         {
-            TempData[ViewConstants.UnitMeasurementErrorMessage] = LocalizeError("Error.UnitMeasurementIsNotFound");
+            NotifyError("Error.UnitMeasurementIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -113,7 +112,7 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.UnitMeasurementSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -123,9 +122,9 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
         var resultDto = await _mediator.Send(new DeleteUnitMeasurementCommand(id));
 
         if (!resultDto.Success)
-            TempData[ViewConstants.UnitMeasurementErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
+            NotifyError(resultDto.ErrorMessage!);
         else
-            TempData[ViewConstants.UnitMeasurementSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
+            NotifySuccess("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }
 }

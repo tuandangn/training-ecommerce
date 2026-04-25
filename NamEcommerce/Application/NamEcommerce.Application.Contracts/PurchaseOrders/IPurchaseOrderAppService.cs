@@ -24,9 +24,5 @@ public interface IPurchaseOrderAppService
 
     Task<ReceivedGoodsForItemResultAppDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto);
 
-    /// <summary>
-    /// Lấy giá nhập gần nhất của một hàng hóa, nhóm theo nhà cung cấp.
-    /// Dùng để gợi ý giá khi thêm sản phẩm vào đơn nhập mới.
-    /// </summary>
     Task<IList<RecentPurchasePriceAppDto>> GetRecentPurchasePricesAsync(Guid productId);
 }

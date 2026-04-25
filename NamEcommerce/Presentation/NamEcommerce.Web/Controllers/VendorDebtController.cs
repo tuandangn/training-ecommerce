@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Debts;
 using NamEcommerce.Web.Contracts.Models.Debts;
 using NamEcommerce.Web.Contracts.Queries.Models.Debts;
@@ -29,7 +28,7 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
         var model = await _mediator.Send(new GetVendorDebtDetailsQuery { VendorId = vendorId }).ConfigureAwait(false);
         if (model == null)
         {
-            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError("Error.VendorDebtNotFound");
+            NotifyError("Error.VendorDebtNotFound");
             return RedirectToAction(nameof(Index));
         }
         return View(model);

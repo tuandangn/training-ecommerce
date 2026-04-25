@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using NamEcommerce.Web.Contracts.Models.Common;
 using System.ComponentModel.DataAnnotations;
@@ -17,29 +16,49 @@ public sealed class CreateProductModel
     [Display(Name = "Danh mục")]
     public Guid? CategoryId { get; set; }
     [ValidateNever]
-    public required EntityOptionListModel AvailableCategories { get; set; }
+    public EntityOptionListModel? AvailableCategories { get; set; }
 
     [Display(Name = "Đơn vị tính")]
     public Guid? UnitMeasurementId { get; set; }
     [ValidateNever]
-    public required EntityOptionListModel AvailableUnitMeasurements { get; set; }
+    public EntityOptionListModel? AvailableUnitMeasurements { get; set; }
 
     [Display(Name = "Nhà cung cấp")]
     public IList<Guid> VendorIds { get; set; } = [];
     [ValidateNever]
-    public required EntityOptionListModel AvailableVendors { get; set; }
-
-    [Display(Name = "Giá nhập")]
-    [UIHint("Currency")]
-    public decimal CostPrice { get; set; }
-
-    [Display(Name = "Giá bán")]
-    [UIHint("Currency")]
-    public decimal UnitPrice { get; set; }
+    public EntityOptionListModel? AvailableVendors { get; set; }
 
     [Display(Name = "Thứ tự hiển thị")]
     public int DisplayOrder { get; set; }
 
     [Display(Name = "Hình ảnh")]
-    public Base64ImageModel? ImageFile { get; set; } = new();
+    public Base64ImageModel? ImageFile { get; set; }
+
+    [Display(Name = "Quản lý hàng tồn")]
+    public bool HasExistingStockQuantity { get; set; }
+    public ProductInventoryModel? ProductInventory { get; set; }
+
+    [Serializable]
+    public sealed class ProductInventoryModel
+    {
+        [Display(Name = "Giá nhập")]
+        [UIHint("Currency")]
+        public decimal CostPrice { get; set; }
+
+        [Display(Name = "Giá bán")]
+        [UIHint("Currency")]
+        public decimal UnitPrice { get; set; }
+
+        public IEnumerable<ProductStockModel> ProductStocks { get; set; } = [];
+    }
+
+    [Serializable]
+    public sealed class ProductStockModel
+    {
+        [Display(Name = "Kho hàng")]
+        public Guid? WarehouseId { get; set; }
+
+        [Display(Name = "Số lượng")]
+        public decimal Quantity { get; set; }
+    }
 }

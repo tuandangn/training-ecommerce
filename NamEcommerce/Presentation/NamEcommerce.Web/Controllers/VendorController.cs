@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -67,7 +66,7 @@ public sealed class VendorController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.VendorSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -76,7 +75,7 @@ public sealed class VendorController : BaseAuthorizedController
         var vendor = await _mediator.Send(new GetVendorQuery { Id = id });
         if (vendor == null)
         {
-            TempData[ViewConstants.VendorErrorMessage] = LocalizeError("Error.VendorIsNotFound");
+            NotifyError("Error.VendorIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -101,7 +100,7 @@ public sealed class VendorController : BaseAuthorizedController
         var vendor = await _mediator.Send(new GetVendorQuery { Id = model.Id });
         if (vendor == null)
         {
-            TempData[ViewConstants.VendorErrorMessage] = LocalizeError("Error.VendorIsNotFound");
+            NotifyError("Error.VendorIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -119,7 +118,7 @@ public sealed class VendorController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.VendorSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -129,9 +128,9 @@ public sealed class VendorController : BaseAuthorizedController
         var resultDto = await _mediator.Send(new DeleteVendorCommand(id));
 
         if (!resultDto.Success)
-            TempData[ViewConstants.VendorErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
+            NotifyError(resultDto.ErrorMessage!);
         else
-            TempData[ViewConstants.VendorSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
+            NotifySuccess("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }
 

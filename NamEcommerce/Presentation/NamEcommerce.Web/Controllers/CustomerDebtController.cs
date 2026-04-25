@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Debts;
 using NamEcommerce.Web.Contracts.Queries.Models.Debts;
 using NamEcommerce.Web.Contracts.Models.Debts;
@@ -29,7 +28,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
         var model = await _mediator.Send(new GetCustomerDebtDetailsQuery { CustomerId = customerId }).ConfigureAwait(false);
         if (model == null)
         {
-            TempData[ViewConstants.CustomerErrorMessage] = LocalizeError("Error.CustomerIsNotFound");
+            NotifyError("Error.CustomerIsNotFound");
             return RedirectToAction(nameof(List));
         }
         return View(model);

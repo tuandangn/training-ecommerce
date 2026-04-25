@@ -16,10 +16,20 @@ public sealed class CreateProductValidator : AbstractValidator<CreateProductMode
         RuleFor(m => m.ShortDesc)
             .MaximumLength(800).WithMessage(m => localizer["Error.MaxLength", localizer["Label.ShortDesc"], 800]);
 
-        RuleFor(m => m.CostPrice)
-            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.CostPrice"]]);
+        RuleFor(m => m.ProductInventory).ChildRules(info =>
+        {
+            info.RuleFor(inventory => inventory!.CostPrice)
+                .GreaterThanOrEqualTo(0)
+                .WithMessage(m => localizer["Error.Invalid", localizer["Label.CostPrice"]]);
 
-        RuleFor(m => m.UnitPrice)
-            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.UnitPrice"]]);
+            info.RuleFor(inventory => inventory!.UnitPrice)
+                .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.UnitPrice"]]);
+
+            info.RuleForEach(inventory => inventory!.ProductStocks).ChildRules(stock =>
+            {
+                stock.RuleFor(s => s.Quantity)
+                    .GreaterThan(0).WithMessage(m => localizer["Error.QuantityMustBePositive"]);
+            });
+        }).When(m => m.HasExistingStockQuantity);
     }
 }

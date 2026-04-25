@@ -56,10 +56,7 @@ public sealed class ProductManager : IProductManager
         {
             ShortDesc = dto.ShortDesc
         };
-        product.UpdatePrice(dto.UnitPrice, dto.CostPrice);
-
         await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, _unitMeasurementDataReader).ConfigureAwait(false);
-
         foreach (var categoryInfo in dto.Categories)
             await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, _categoryDataReader).ConfigureAwait(false);
         foreach (var pictureId in dto.Pictures)
@@ -68,12 +65,6 @@ public sealed class ProductManager : IProductManager
             await product.AddVendorAsync(vendorInfo.VendorId, vendorInfo.DisplayOrder, _vendorDataReader).ConfigureAwait(false);
 
         var insertedProduct = await _productRepository.InsertAsync(product).ConfigureAwait(false);
-
-        await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(
-            insertedProduct.Id, 0, insertedProduct.UnitPrice,
-            0, insertedProduct.CostPrice,
-            "Giá bán ban đầu")
-        ).ConfigureAwait(false);
 
         await _eventPublisher.EntityCreated(insertedProduct).ConfigureAwait(false);
 
@@ -221,7 +212,6 @@ public sealed class ProductManager : IProductManager
 
         await product.SetNameAsync(dto.Name, this).ConfigureAwait(false);
         await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, _unitMeasurementDataReader).ConfigureAwait(false);
-        product.UpdatePrice(dto.UnitPrice, dto.CostPrice);
 
         product.ClearCategories();
         foreach (var categoryInfo in dto.Categories)
@@ -236,17 +226,6 @@ public sealed class ProductManager : IProductManager
         foreach (var vendorInfo in dto.Vendors)
             await product.AddVendorAsync(vendorInfo.VendorId, vendorInfo.DisplayOrder, _vendorDataReader).ConfigureAwait(false);
 
-        if (oldCostPrice != product.CostPrice || oldUnitPrice != product.UnitPrice)
-        {
-            await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(
-                product.Id,
-                oldUnitPrice,
-                product.UnitPrice,
-                oldCostPrice,
-                product.CostPrice,
-                dto.ChangePriceReason ?? "Cập nhật hàng hóa")).ConfigureAwait(false);
-        }
-
         await _productRepository.UpdateAsync(product).ConfigureAwait(false);
 
         await _eventPublisher.EntityUpdated(product, deletedPictureIds).ConfigureAwait(false);
@@ -256,8 +235,6 @@ public sealed class ProductManager : IProductManager
             Name = product.Name,
             ShortDesc = product.ShortDesc,
             UnitMeasurementId = product.UnitMeasurementId,
-            UnitPrice = product.UnitPrice,
-            CostPrice = product.CostPrice,
             Categories = product.ProductCategories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
             Vendors = product.ProductVendors.Select(pv => new ProductVendorDto(pv.VendorId, pv.DisplayOrder)),
             Pictures = product.ProductPictures.Select(pp => pp.PictureId)
@@ -290,5 +267,32 @@ public sealed class ProductManager : IProductManager
 
             return (IEnumerable<ProductPriceHistoryDto>)data;
         });
+    }
+
+    public async Task UpdateProductPriceAsync(UpdateProductPriceDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        dto.Verify();
+
+        var product = await _productDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        if (product is null)
+            throw new ProductIsNotFoundException(dto.Id);
+
+        var oldUnitPrice = product.UnitPrice;
+        var oldCostPrice = product.CostPrice;
+
+        var priceChanged = oldCostPrice != dto.UnitCost || oldUnitPrice != dto.UnitPrice;
+        if (!priceChanged)
+            return;
+
+        product.UpdatePrice(dto.UnitPrice, dto.UnitCost);
+        await _productRepository.UpdateAsync(product).ConfigureAwait(false);
+
+        await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(
+            product.Id, oldUnitPrice, product.UnitPrice, oldCostPrice, product.CostPrice,
+            dto.ChangePriceReason ?? "Cập nhật giá hàng hóa")).ConfigureAwait(false);
+
+        await _eventPublisher.EntityUpdated(product).ConfigureAwait(false);
     }
 }

@@ -30,7 +30,7 @@ public sealed record EditProductModel
     [ValidateNever]
     public required EntityOptionListModel AvailableVendors { get; set; }
 
-    [Display(Name = "Giá nhập")]
+    [Display(Name = "Giá vốn")]
     [UIHint("Currency")]
     public decimal CostPrice { get; set; }
 

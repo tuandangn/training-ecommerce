@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Models.Catalog;
@@ -58,7 +57,7 @@ public sealed class CategoryController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.CategorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -67,7 +66,7 @@ public sealed class CategoryController : BaseAuthorizedController
         var model = await _categoryModelFactory.PrepareEditCategoryModel(id);
         if (model == null)
         {
-            TempData[ViewConstants.CategoryErrorMessage] = LocalizeError("Error.CategoryIsNotFound");
+            NotifyError("Error.CategoryIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -86,7 +85,7 @@ public sealed class CategoryController : BaseAuthorizedController
         var category = await _mediator.Send(new GetCategoryQuery { Id = model.Id });
         if (category == null)
         {
-            TempData[ViewConstants.CategoryErrorMessage] = LocalizeError("Error.CategoryIsNotFound");
+            NotifyError("Error.CategoryIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -105,7 +104,7 @@ public sealed class CategoryController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.CategorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -122,9 +121,9 @@ public sealed class CategoryController : BaseAuthorizedController
     {
         var resultDto = await _mediator.Send(new DeleteCategoryCommand(id));
         if (!resultDto.Success)
-            TempData[ViewConstants.CategoryErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
+            NotifyError(resultDto.ErrorMessage!);
         else
-            TempData[ViewConstants.CategorySuccessMessage] = LocalizeError("Msg.DeleteSuccess");
+            NotifySuccess("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }
 }

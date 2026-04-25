@@ -5,8 +5,6 @@
 @model CustomerListModel
 @{
     ViewData[ViewConstants.PageTitle] = "Khách hàng";
-    var successMessage = TempData[ViewConstants.CustomerSuccessMessage] as string;
-    var errorMessage = TempData[ViewConstants.CustomerErrorMessage] as string;
     string? query = Model.Keywords;
 }
 
@@ -19,21 +17,6 @@
         <i class="bi bi-person-plus-fill me-1"></i>Thêm mới
     </a>
 </div>
-
-@if (!string.IsNullOrEmpty(successMessage))
-{
-    <div class="alert alert-success alert-dismissible fade show alert-global mb-3" role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i>@successMessage
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger alert-dismissible fade show alert-global mb-3" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
 
 <div class="content-card">
     <div class="action-toolbar">

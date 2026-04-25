@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Models.Catalog;
@@ -66,7 +65,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
             return View(model);
         }
-        TempData[ViewConstants.PurchaseOrderSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
@@ -75,14 +74,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     {
         if (!ModelState.IsValid)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.InvalidRequest");
+            NotifyError("Error.InvalidRequest");
             return RedirectToAction(nameof(Details), new { id = model.Id });
         }
 
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.Id });
         if (purchaseOrder is null)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.PurchaseOrderIsNotFound");
+            NotifyError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -99,10 +98,10 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
         if (!updatePurchaseOrderResult.Success)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError(updatePurchaseOrderResult.ErrorMessage!);
+            NotifyError(updatePurchaseOrderResult.ErrorMessage!);
             return RedirectToAction(nameof(Details), new { id = model.Id });
         }
-        TempData[ViewConstants.PurchaseOrderSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(Details), new { id = model.Id });
     }
 
@@ -111,7 +110,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         var model = await _purchaseOrderModelFactory.PreparePurchaseOrderDetailsModel(id);
         if (model == null)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.PurchaseOrderIsNotFound");
+            NotifyError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -146,14 +145,14 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     {
         if (!ModelState.IsValid)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.InvalidRequest");
+            NotifyError("Error.InvalidRequest");
             return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
         if (purchaseOrder is null)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.PurchaseOrderIsNotFound");
+            NotifyError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -167,9 +166,9 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         });
 
         if (!result.Success)
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError(result.ErrorMessage!);
+            NotifyError(result.ErrorMessage!);
         else
-            TempData[ViewConstants.PurchaseOrderSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+            NotifySuccess("Msg.SaveSuccess");
 
         return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
     }
@@ -208,7 +207,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.PurchaseOrderIsNotFound");
+            NotifyError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -217,7 +216,10 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             PurchaseOrderId = id
         });
 
-        TempData[success ? ViewConstants.PurchaseOrderSuccessMessage : ViewConstants.PurchaseOrderErrorMessage] = success ? errorMessage : LocalizeError(errorMessage!);
+        if (success)
+            NotificationService.Success(errorMessage ?? LocalizeError("Msg.SaveSuccess"));
+        else
+            NotifyError(errorMessage!);
         return RedirectToAction(nameof(Details), new { id });
     }
     [HttpPost]
@@ -226,7 +228,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.PurchaseOrderIsNotFound");
+            NotifyError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -235,7 +237,10 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             PurchaseOrderId = id
         });
 
-        TempData[success ? ViewConstants.PurchaseOrderSuccessMessage : ViewConstants.PurchaseOrderErrorMessage] = success ? errorMessage : LocalizeError(errorMessage!);
+        if (success)
+            NotificationService.Success(errorMessage ?? LocalizeError("Msg.SaveSuccess"));
+        else
+            NotifyError(errorMessage!);
         return RedirectToAction(nameof(Details), new { id });
     }
     /// <summary>
@@ -268,7 +273,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = id });
         if (purchaseOrder is null)
         {
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError("Error.PurchaseOrderIsNotFound");
+            NotifyError("Error.PurchaseOrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -279,9 +284,9 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         });
 
         if (!result.Success)
-            TempData[ViewConstants.PurchaseOrderErrorMessage] = LocalizeError(result.ErrorMessage!);
+            NotifyError(result.ErrorMessage!);
         else
-            TempData[ViewConstants.PurchaseOrderSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+            NotifySuccess("Msg.SaveSuccess");
 
         return RedirectToAction(nameof(Details), new { id });
     }

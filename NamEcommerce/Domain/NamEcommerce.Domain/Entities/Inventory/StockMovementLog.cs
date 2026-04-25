@@ -51,10 +51,11 @@ public enum StockMovementType
 
 public enum StockReferenceType
 {
-    None,
-    PurchaseOrder,
-    SalesOrder,
-    StockIssue,
-    StockTransfer,
-    Adjustment
+    None = 0,
+    PurchaseOrder = 1,
+    SalesOrder = 2,
+    StockIssue = 3,
+    StockTransfer = 4,
+    Adjustment = 5,
+    GoodsReceipt = 6
 }

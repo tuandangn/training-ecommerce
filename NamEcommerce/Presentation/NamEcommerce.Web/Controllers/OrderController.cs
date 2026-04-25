@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Domain.Shared.Enums.Orders;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Web.Contracts.Models.Orders;
@@ -85,7 +84,7 @@ public sealed class OrderController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.OrderSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -94,7 +93,7 @@ public sealed class OrderController : BaseAuthorizedController
         var model = await _orderModelFactory.PrepareOrderDetailsModel(id);
         if (model is null)
         {
-            TempData[ViewConstants.OrderErrorMessage] = LocalizeError("Error.OrderIsNotFound");
+            NotifyError("Error.OrderIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -293,9 +292,9 @@ public sealed class OrderController : BaseAuthorizedController
     {
         var resultDto = await _mediator.Send(new DeleteOrderCommand(id));
         if (!resultDto.Success)
-            TempData[ViewConstants.OrderErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
+            NotifyError(resultDto.ErrorMessage!);
         else
-            TempData[ViewConstants.OrderSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
+            NotifySuccess("Msg.DeleteSuccess");
 
         return RedirectToAction(nameof(List));
     }

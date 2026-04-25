@@ -24,6 +24,7 @@ public sealed class GoodsReceiptManager(
     IEntityDataReader<Warehouse> warehouseDataReader,
     ICurrentUserAccessor currentUserAccessor,
     IEntityDataReader<Picture> pictureDataReader,
+    IEntityDataReader<StockMovementLog> stockMovementLogDataReader,
     IEventPublisher eventPublisher) : IGoodsReceiptManager
 {
     public async Task<CreateGoodsReceiptResultDto> CreateGoodsReceiptAsync(CreateGoodsReceiptDto dto)
@@ -144,6 +145,13 @@ public sealed class GoodsReceiptManager(
         var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId).ConfigureAwait(false);
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(dto.GoodsReceiptId);
+
+        // Cấm xóa nếu phiếu đã sinh StockMovementLog (đã cộng tồn) — tránh tồn kho ảo.
+        var hasStockMovements = stockMovementLogDataReader.DataSource
+            .Any(log => log.ReferenceType == StockReferenceType.GoodsReceipt
+                     && log.ReferenceId == dto.GoodsReceiptId);
+        if (hasStockMovements)
+            throw new GoodsReceiptHasStockMovementsException(dto.GoodsReceiptId);
 
         await goodsReceiptRepository.DeleteAsync(goodsReceipt).ConfigureAwait(false);
 

@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Domain.Shared.Settings;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Queries.Models.GoodsReceipts;
 using NamEcommerce.Web.Models.GoodsReceipts;
@@ -72,7 +71,7 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.GoodsReceiptSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
@@ -83,7 +82,7 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
         var model = await _goodsReceiptModelFactory.PrepareGoodsReceiptDetailsModel(id);
         if (model is null)
         {
-            TempData[ViewConstants.GoodsReceiptErrorMessage] = LocalizeError("Error.GoodsReceipt.IsNotFound");
+            NotifyError("Error.GoodsReceipt.IsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -173,9 +172,9 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
         var result = await _mediator.Send(new DeleteGoodsReceiptCommand { Id = id });
 
         if (!result.Success)
-            TempData[ViewConstants.GoodsReceiptErrorMessage] = LocalizeError(result.ErrorMessage!);
+            NotifyError(result.ErrorMessage!);
         else
-            TempData[ViewConstants.GoodsReceiptSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
+            NotifySuccess("Msg.DeleteSuccess");
 
         return RedirectToAction(nameof(List));
     }

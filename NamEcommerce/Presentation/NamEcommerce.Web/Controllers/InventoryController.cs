@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
@@ -74,7 +73,7 @@ public sealed class InventoryController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.InventorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(StockList));
     }
 
@@ -129,7 +128,7 @@ public sealed class InventoryController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.InventorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(StockList));
     }
 
@@ -171,7 +170,7 @@ public sealed class InventoryController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.InventorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(StockList));
     }
 
@@ -213,7 +212,7 @@ public sealed class InventoryController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.InventorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(StockList));
     }
 
@@ -257,7 +256,7 @@ public sealed class InventoryController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.InventorySuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(StockList));
     }
 

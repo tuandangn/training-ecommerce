@@ -1,9 +1,6 @@
 @model PurchaseOrderDetailsModel
 @{
     ViewData[ViewConstants.PageTitle] = $"Đơn nhập - {Model.Info.Code}";
-    
-    var successMessage = TempData[ViewConstants.PurchaseOrderSuccessMessage] as string;
-    var errorMessage = TempData[ViewConstants.PurchaseOrderErrorMessage] as string;
 }
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
@@ -75,21 +72,6 @@
         </div>
     </div>
 </div>
-@if (!string.IsNullOrEmpty(successMessage))
-{
-    <div class="alert alert-success alert-dismissible fade show alert-global mb-3" role="alert">
-        <i class="bi bi-check-circle-fill me-2"></i>@successMessage
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger alert-dismissible fade show alert-global mb-3" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-2"></i>@errorMessage
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
-}
-
 <div class="row g-3">
     <div class="col-lg-8">
         <div class="content-card mb-3">

@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Models.Inventory;
@@ -59,7 +58,7 @@ public sealed class WarehouseController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.WarehouseSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -68,7 +67,7 @@ public sealed class WarehouseController : BaseAuthorizedController
         var model = await _warehouseModelFactory.PrepareEditWarehouseModel(id);
         if (model == null)
         {
-            TempData[ViewConstants.WarehouseErrorMessage] = LocalizeError("Error.WarehouseIsNotFound");
+            NotifyError("Error.WarehouseIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -87,7 +86,7 @@ public sealed class WarehouseController : BaseAuthorizedController
         var warehouse = await _mediator.Send(new GetWarehouseQuery { Id = model.Id });
         if (warehouse == null)
         {
-            TempData[ViewConstants.WarehouseErrorMessage] = LocalizeError("Error.WarehouseIsNotFound");
+            NotifyError("Error.WarehouseIsNotFound");
             return RedirectToAction(nameof(List));
         }
 
@@ -108,7 +107,7 @@ public sealed class WarehouseController : BaseAuthorizedController
             return View(model);
         }
 
-        TempData[ViewConstants.WarehouseSuccessMessage] = LocalizeError("Msg.SaveSuccess");
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
     }
 
@@ -126,9 +125,9 @@ public sealed class WarehouseController : BaseAuthorizedController
         var resultDto = await _mediator.Send(new DeleteWarehouseCommand(id));
 
         if (!resultDto.Success)
-            TempData[ViewConstants.WarehouseErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
+            NotifyError(resultDto.ErrorMessage!);
         else
-            TempData[ViewConstants.WarehouseSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
+            NotifySuccess("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }
 }
