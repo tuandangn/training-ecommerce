@@ -152,13 +152,14 @@ public sealed class ProductController : BaseAuthorizedController
     }
 
     [HttpGet]
-    public async Task<IActionResult> Search(string q, Guid? w, Guid? vendorId)
+    public async Task<IActionResult> Search(string q, Guid? w, Guid? vendorId, Guid? categoryId)
     {
         var model = await _mediator.Send(new GetProductListForOrderQuery
         {
             Keywords = q,
             VendorId = vendorId,
-            WarehouseId = w
+            WarehouseId = w,
+            CategoryId = categoryId
         });
 
         var products = model.Data.Items.Select(productInfo => new
@@ -167,6 +168,7 @@ public sealed class ProductController : BaseAuthorizedController
             name = productInfo.Name,
             picture = productInfo.PictureUrl,
             availableQty = productInfo.QuantityAvailable,
+            categoryName = productInfo.CategoryName,
             avaialbeWarehouses = productInfo.AvailableWarehouseIds,
             vendorCount = productInfo.AvailableVendors.Count,
             firstVendorId = productInfo.AvailableVendors.FirstOrDefault()?.Id.ToString(),

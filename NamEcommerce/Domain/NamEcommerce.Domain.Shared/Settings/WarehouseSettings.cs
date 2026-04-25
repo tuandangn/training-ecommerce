@@ -3,5 +3,5 @@
 [Serializable]
 public sealed class WarehouseSettings
 {
-    public bool AllowNoWarehouse { get; }
+    public bool AllowNonWarehouse { get; init; }
 }

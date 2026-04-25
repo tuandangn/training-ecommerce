@@ -1,0 +1,69 @@
+﻿@using System.Text.Json
+@inject CultureConfig CultureCfg
+@inject WarehouseSettings WarehouseSettings
+
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/lib/lightbox/js/lightbox.min.js" defer></script>
+<script src="~/lib/sweet-alert-2/sweetalert2.js" defer></script>
+<script src="~/js/site.js" asp-append-version="true" defer></script>
+<script src="~/js/currency-hint.js" asp-append-version="true" defer></script>
+<script src="~/js/decimal-field.js" asp-append-version="true" defer></script>
+<script type="module">
+    import { setWarehouseSettings } from '/modules/Settings.js';
+    setWarehouseSettings(@Html.Raw(JsonSerializer.Serialize(WarehouseSettings)))
+</script>
+<script>
+    // Cấu hình Flatpickr từ server (appsettings.json → CultureConfig)
+    window._fp = {
+        locale:   '@CultureCfg.FlatpickrLocale',
+        dateFmt:  '@CultureCfg.FlatpickrDateFormat',
+        dtFmt:    '@CultureCfg.FlatpickrDateTimeFormat'
+    };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/l10n/@(CultureCfg.FlatpickrLocale).js" defer></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var cfg = window._fp;
+
+        // input[type="date"] → altInput hiện cfg.dateFmt, hidden submit Y-m-d
+        flatpickr('input[type="date"]', {
+            locale:     cfg.locale,
+            dateFormat: 'Y-m-d',
+            altInput:   true,
+            altFormat:  cfg.dateFmt,
+            allowInput: true
+        });
+
+        // input[type="datetime-local"] → altInput hiện cfg.dtFmt, hidden submit Y-m-d\TH:i
+        flatpickr('input[type="datetime-local"]', {
+            locale:      cfg.locale,
+            dateFormat:  'Y-m-d\\TH:i',
+            altInput:    true,
+            altFormat:   cfg.dtFmt,
+            enableTime:  true,
+            time_24hr:   true,
+            allowInput:  true
+        });
+
+        // Sidebar toggle (mobile)
+        var toggle  = document.getElementById('sidebarToggle');
+        var sidebar = document.getElementById('appSidebar');
+        var overlay = document.getElementById('sidebarOverlay');
+
+        if (toggle && sidebar) {
+            toggle.addEventListener('click', function () {
+                    sidebar.classList.toggle('open');
+                    if (overlay) overlay.classList.toggle('active');
+                    });
+            if (overlay) {
+                overlay.addEventListener('click', function () {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('active');
+                });
+            }
+        }
+    });
+</script>
+

@@ -18,6 +18,9 @@ public abstract record BaseGoodsReceiptDto
     {
         if (!PictureIds.Any())
             throw new GoodsReceiptProofPictureRequired();
+
+        if (CreatedOnUtc > DateTime.UtcNow)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.CreationDateGreaterThanNow");
     }
 }
 
@@ -32,7 +35,7 @@ public sealed record GoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto
 public sealed record CreateGoodsReceiptDto : BaseGoodsReceiptDto
 {
     public required IList<AddGoodsReceiptItemDto> Items { get; init; }
-    
+
     public override void Verify()
     {
         foreach (var item in Items)

@@ -10,7 +10,7 @@ public class BaseController : Controller
     [FromServices]
     public IStringLocalizer<SharedResource> Localizer { get; set; } = default!;
 
-    public IActionResult RedirectToHome() => RedirectToAction(MvcConstants.Index, MvcConstants.Home);
+    public IActionResult RedirectToHome() => RedirectToAction(ControllerConstants.Index, ControllerConstants.Home);
 
     /// <summary>
     /// Localizes an error code and adds it to ModelState.

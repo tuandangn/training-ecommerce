@@ -15,6 +15,8 @@ namespace NamEcommerce.Domain.Entities.GoodsReceipts;
 [Serializable]
 public sealed record GoodsReceipt : AppAggregateEntity
 {
+    private GoodsReceipt() : base(Guid.Empty) { }
+
     private GoodsReceipt(Guid id, CurrentUserInfoDto? createdByUser) : base(id)
     {
         CreatedByUserId = createdByUser?.Id;
@@ -41,7 +43,7 @@ public sealed record GoodsReceipt : AppAggregateEntity
     private readonly IList<Guid> _pictureIds = [];
     public IReadOnlyCollection<Guid> PictureIds => _pictureIds.AsReadOnly();
 
-    public string? Note { get; init; }
+    public string? Note { get; internal set; }
 
     public Guid? CreatedByUserId { get; private set; }
     public string? CreatedByUsername { get; private set; }
@@ -51,7 +53,11 @@ public sealed record GoodsReceipt : AppAggregateEntity
     public bool IsPendingCosting() => Items.Any(item => item.IsPendingCosting());
 
     internal void SetCreationDate(DateTime createdOnUtc)
-        => CreatedOnUtc = createdOnUtc;
+    {
+        if (createdOnUtc > DateTime.UtcNow)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.CreationDateGreaterThanNow");
+        CreatedOnUtc = createdOnUtc;
+    }
 
     internal async Task AddItemAsync(Guid productId, Guid? warehouseId, decimal quantity, decimal? unitCost,
         IGetByIdService<Product> productByIdGetter, WarehouseSettings warehouseSettings, IGetByIdService<Warehouse> warehouseByIdGetter)
@@ -76,7 +82,7 @@ public sealed record GoodsReceipt : AppAggregateEntity
         item.SetUnitCost(unitCost);
     }
 
-    internal void ClearPictures() => _items.Clear();
+    internal void ClearPictures() => _pictureIds.Clear();
     internal async Task AddPictureAsync(Guid pictureId, IGetByIdService<Picture> pictureByIdGetter)
     {
         var picture = await pictureByIdGetter.GetByIdAsync(pictureId).ConfigureAwait(false);
@@ -102,5 +108,4 @@ public sealed record GoodsReceipt : AppAggregateEntity
     }
 
     #endregion
-
 }

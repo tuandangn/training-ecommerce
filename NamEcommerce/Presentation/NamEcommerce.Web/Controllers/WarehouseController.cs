@@ -112,6 +112,14 @@ public sealed class WarehouseController : BaseAuthorizedController
         return RedirectToAction(nameof(List));
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Options()
+    {
+        var options = await _mediator.Send(new GetWarehouseOptionListQuery());
+        var result = options.Options.Select(o => new { id = o.Id, name = o.Name }).ToList();
+        return Json(result);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Delete(Guid id)
     {
@@ -119,7 +127,7 @@ public sealed class WarehouseController : BaseAuthorizedController
 
         if (!resultDto.Success)
             TempData[ViewConstants.WarehouseErrorMessage] = LocalizeError(resultDto.ErrorMessage!);
-        else 
+        else
             TempData[ViewConstants.WarehouseSuccessMessage] = LocalizeError("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
     }

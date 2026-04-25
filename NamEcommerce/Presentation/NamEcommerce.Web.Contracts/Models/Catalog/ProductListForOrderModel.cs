@@ -22,6 +22,8 @@ public sealed class ProductListForOrderModel
         public decimal QuantityReserved { get; set; }
         public decimal QuantityAvailable { get; set; }
 
+        public string? CategoryName { get; set; }
+
         public IList<Guid> AvailableWarehouseIds { get; set; } = [];
         public IList<VendorOptionModel> AvailableVendors { get; set; } = [];
     }

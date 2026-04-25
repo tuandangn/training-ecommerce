@@ -61,6 +61,7 @@ public sealed class GoodsReceiptManager(
         goodsReceipt.SetCreationDate(dto.CreatedOnUtc);
         goodsReceipt.TruckDriverName = dto.TruckDriverName;
         goodsReceipt.TruckNumberSerial = dto.TruckNumberSerial;
+        goodsReceipt.Note = dto.Note;
         var deletedPictureIds = goodsReceipt.PictureIds.AsEnumerable();
         goodsReceipt.ClearPictures();
         foreach (var pictureId in dto.PictureIds)

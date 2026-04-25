@@ -42,6 +42,9 @@ public static class ViewConstants
     public const string OrderSuccessMessage = "Messages.Order.Success";
     public const string OrderErrorMessage = "Messages.Order.Error";
 
+    public const string GoodsReceiptSuccessMessage = "Messages.GoodsReceipt.Success";
+    public const string GoodsReceiptErrorMessage = "Messages.GoodsReceipt.Error";
+
     public const string NumberCustomFormat = "#,##0.##";
     public const string CurrencyDisplayFormat = $"#,##0.## {DefaultCurrencySymbol}";
     public const string DefaultDateFormat = "dd/MM/yyyy";

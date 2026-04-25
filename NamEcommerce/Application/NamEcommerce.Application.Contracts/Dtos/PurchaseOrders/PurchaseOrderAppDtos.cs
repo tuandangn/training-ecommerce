@@ -2,7 +2,8 @@ namespace NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 
 [Serializable]
 public abstract record BasePurchaseOrderAppDto
-{    public Guid? VendorId { get; set; }
+{
+    public Guid? VendorId { get; set; }
     public Guid? WarehouseId { get; set; }
 
     public decimal TaxAmount { get; set; }
@@ -27,8 +28,6 @@ public abstract record BasePurchaseOrderAppDto
 [Serializable]
 public sealed record PurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto
 {
-    public Guid? WarehouseId { get; set; }
-
     public required string Code { get; set; }
     public decimal TotalAmount { get; set; }
     public int Status { get; set; }

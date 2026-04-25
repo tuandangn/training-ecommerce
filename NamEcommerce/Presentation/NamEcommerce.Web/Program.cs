@@ -1,10 +1,10 @@
+using System.Globalization;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using System.Globalization;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Communication;
 using NamEcommerce.Application.Contracts.Customers;
@@ -46,6 +46,7 @@ using NamEcommerce.Domain.Services.Orders;
 using NamEcommerce.Domain.Services.PurchaseOrders;
 using NamEcommerce.Domain.Services.Security;
 using NamEcommerce.Domain.Services.Users;
+using NamEcommerce.Domain.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Services.Catalog;
@@ -59,6 +60,8 @@ using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Security;
 using NamEcommerce.Domain.Shared.Services.Users;
+using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Services;
@@ -74,9 +77,9 @@ using NamEcommerce.Web.Services.Preparations;
 using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Validators.Users;
 using NamEcommerce.Web.Mvc.Filters;
-using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
-using NamEcommerce.Domain.Services.GoodsReceipts;
-using NamEcommerce.Domain.Shared.Settings;
+using NamEcommerce.Application.Contracts.GoodsReceipts;
+using NamEcommerce.Application.Services.GoodsReceipts;
+using NamEcommerce.Web.Services.GoodsReceipts;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -156,6 +159,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IOrderAppService, OrderAppService>();
     services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
     services.AddScoped<IVendorDebtAppService, VendorDebtAppService>();
+    services.AddScoped<IGoodsReceiptAppService, GoodsReceiptAppService>();
 
     builder.Services.AddHttpClient<IN8nAppService, N8nAppService>(client =>
     {
@@ -174,6 +178,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IOrderModelFactory, OrderModelFactory>();
     services.AddScoped<IPreparationModelFactory, PreparationModelFactory>();
     services.AddScoped<IDeliveryNoteModelFactory, DeliveryNoteModelFactory>();
+    services.AddScoped<IGoodsReceiptModelFactory, GoodsReceiptModelFactory>();
 
     services.AddMediatR(config =>
     {

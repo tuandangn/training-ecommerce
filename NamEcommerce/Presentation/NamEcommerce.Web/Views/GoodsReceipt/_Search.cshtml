@@ -1,0 +1,29 @@
+@model GoodsReceiptListSearchModel
+<form method="get" class="d-flex flex-wrap align-items-center gap-2">
+    <div class="search-input-group flex-grow-1">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+                <i class="bi bi-search text-muted"></i>
+            </span>
+            <input asp-for="Keywords" id="Keywords" class="form-control border-start-0 ps-0"
+                   placeholder="Tìm theo tài xế, biển số xe..." />
+            @if (!string.IsNullOrEmpty(Model.Keywords))
+            {
+                <a asp-action="List" class="btn btn-outline-secondary" title="Xóa tìm kiếm">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+            }
+        </div>
+    </div>
+    <div class="d-flex align-items-center gap-1">
+        <input type="date" asp-for="FromDate" class="form-control form-control-sm" style="width:150px;" title="Từ ngày" placeholder="Từ ngày" />
+        <span class="text-muted small px-1">—</span>
+        <input type="date" asp-for="ToDate" class="form-control form-control-sm" style="width:150px;" title="Đến ngày" placeholder="Đến ngày" />
+        @if (Model.FromDate.HasValue || Model.ToDate.HasValue)
+        {
+            <a asp-action="List" asp-route-keywords="@Model.Keywords" class="btn btn-sm btn-outline-secondary" title="Xóa lọc ngày">
+                <i class="bi bi-x-lg"></i>
+            </a>
+        }
+    </div>
+</form>

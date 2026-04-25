@@ -1,0 +1,445 @@
+@model GoodsReceiptDetailsModel
+@{
+    ViewData[ViewConstants.PageTitle] = $"Phiếu nhập - {Model.CreatedOn.ToString(ViewConstants.DefaultDateFormat)}";
+    var totalValue = Model.IsPendingCosting ? (decimal?)null : Model.Items.Sum(i => i.Quantity * (i.UnitCost ?? 0));
+}
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Phiếu nhập hàng
+        <span class="text-muted fw-normal">@Model.CreatedOn.ToString(ViewConstants.DefaultDateFormat)</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="GoodsReceipt" class="text-decoration-none">Phiếu nhập hàng</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Chi tiết</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-8 order-1 order-lg-0">
+        <div class="content-card">
+            <div class="content-card-header">
+                <h5 class="mb-0">
+                    Danh sách hàng hóa
+                    <span class="badge bg-light text-muted border ms-1" style="font-size:.72rem;font-weight:500;">
+                        @Model.Items.Count mặt hàng
+                    </span>
+                </h5>
+                @if (Model.IsPendingCosting)
+                {
+                    <span class="badge bg-warning text-dark">
+                        <i class="bi bi-hourglass-split me-1"></i>Chờ định giá
+                    </span>
+                }
+                else
+                {
+                    <span class="badge bg-success">
+                        <i class="bi bi-check-circle me-1"></i>Đã định giá
+                    </span>
+                }
+            </div>
+            <div class="content-card-body-flush">
+                <table class="table data-table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Sản phẩm</th>
+                            <th style="width:130px">Kho</th>
+                            <th class="text-end" style="width:100px">SL nhập</th>
+                            <th class="text-end pe-4" style="width:160px">Đơn giá nhập</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr class="align-middle" data-item-id="@item.Id">
+                                <td class="ps-4">
+                                    <a href="@Url.Action("StockList", "Inventory", new { keywords = item.ProductName })"
+                                       class="fw-medium text-body text-decoration-none details-product-link">
+                                        @item.ProductName
+                                    </a>
+                                </td>
+                                <td class="text-muted small">
+                                    @if (!string.IsNullOrEmpty(item.WarehouseName))
+                                    {
+                                        <i class="bi bi-building me-1"></i>@item.WarehouseName
+                                    }
+                                    else
+                                    {
+                                        <span class="fst-italic">—</span>
+                                    }
+                                </td>
+                                <td class="text-end fw-medium">
+                                    @item.Quantity.DisplayQuantity()
+                                </td>
+                                <td class="text-end pe-4">
+                                    @if (item.IsPendingCosting)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-warning btnSetUnitCost"
+                                                data-item-id="@item.Id"
+                                                data-product-name="@item.ProductName">
+                                            <i class="bi bi-pencil-square me-1"></i>Định giá
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <div class="fw-semibold">@item.UnitCost!.Value.DisplayCurrency()</div>
+                                        <div class="text-muted" style="font-size:.75rem;">
+                                            = @((item.Quantity * item.UnitCost.Value).DisplayCurrency())
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    @if (totalValue.HasValue)
+                    {
+                        <tfoot>
+                            <tr class="table-light">
+                                <td colspan="3" class="ps-4 text-end text-muted small fw-medium pe-3">Tổng giá trị phiếu</td>
+                                <td class="text-end pe-4 fw-bold text-dark">@totalValue.Value.DisplayCurrency()</td>
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+            </div>
+            <div class="content-card-footer py-2 d-flex align-items-center justify-content-between">
+                <a asp-action="List" class="btn btn-link text-decoration-none text-muted">
+                    <i class="bi bi-arrow-left me-1"></i>Trở về
+                </a>
+                <form method="post" asp-action="Delete" asp-route-id="@Model.Id"
+                      onsubmit="return confirm('Bạn có chắc muốn xóa phiếu nhập này?')">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash me-1"></i>Xóa phiếu
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 order-0 order-lg-1">
+
+        <!-- Thông tin phiếu -->
+        <div class="content-card mb-3">
+            <div class="content-card-header">
+                <h5 class="mb-0">Thông tin phiếu</h5>
+                <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#editInfoModal">
+                    <i class="bi bi-pencil me-1"></i>Sửa
+                </button>
+            </div>
+            <div class="content-card-body p-0">
+                <dl class="receipt-info-list mb-0">
+                    <div class="receipt-info-row">
+                        <dt>Ngày nhập</dt>
+                        <dd class="fw-semibold">@Model.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</dd>
+                    </div>
+                    <div class="receipt-info-row">
+                        <dt>Tài xế</dt>
+                        <dd>
+                            @if (!string.IsNullOrEmpty(Model.TruckDriverName))
+                            {
+                                @Model.TruckDriverName
+                            }
+                            else { <span class="text-muted fst-italic">—</span> }
+                        </dd>
+                    </div>
+                    <div class="receipt-info-row">
+                        <dt>Biển số</dt>
+                        <dd>
+                            @if (!string.IsNullOrEmpty(Model.TruckNumberSerial))
+                            {
+                                <i class="bi bi-truck me-1 text-muted"></i>@Model.TruckNumberSerial
+                            }
+                            else { <span class="text-muted fst-italic">—</span> }
+                        </dd>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.Note))
+                    {
+                        <div class="receipt-info-row">
+                            <dt>Ghi chú</dt>
+                            <dd class="text-secondary">@Model.Note</dd>
+                        </div>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <!-- Ảnh chụp -->
+        <div class="content-card">
+            <div class="content-card-header">
+                <h5 class="mb-0">Ảnh chụp</h5>
+            </div>
+            <div class="content-card-body">
+                <div class="d-flex align-items-center">
+                    <div id="inlinePictureList" class="d-flex flex-wrap"></div>
+                    <div id="inlinePicturePicker" class="d-flex flex-wrap gap-2"></div>
+                </div>
+                <div id="inlinePictureSaving" class="d-none mt-2">
+                    <span class="spinner-border spinner-border-sm text-secondary me-1"></span>
+                    <span class="text-muted small">Đang lưu...</span>
+                </div>
+                <div id="inlinePictureError" class="text-danger small mt-1 d-none"></div>
+                <div id="inlinePictureData" data-receipt-id="@Model.Id"
+                     data-picture-ids="@string.Join(",", Model.PictureIds)"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ── Modal: Sửa thông tin ── -->
+<div class="modal fade" id="editInfoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Cập nhật thông tin</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <form id="editInfoForm">
+                    <input type="hidden" name="Id" value="@Model.Id" />
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium text-muted" for="editCreatedOn">Ngày nhập hàng</label>
+                        <input type="datetime-local" id="editCreatedOn" name="CreatedOn"
+                               value="@Model.CreatedOn.ToString("s")" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium text-muted" for="editTruckDriverName">Tên tài xế</label>
+                        <input id="editTruckDriverName" name="TruckDriverName" class="form-control"
+                               value="@Model.TruckDriverName" placeholder="Nhập tên tài xế" maxlength="500" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium text-muted" for="editTruckNumberSerial">Biển số xe</label>
+                        <input id="editTruckNumberSerial" name="TruckNumberSerial" class="form-control"
+                               value="@Model.TruckNumberSerial" placeholder="Nhập biển số xe" maxlength="100" />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label small fw-medium text-muted" for="editNote">Ghi chú</label>
+                        <textarea id="editNote" name="Note" class="form-control" rows="2"
+                                  placeholder="Ghi chú..." maxlength="2000">@Model.Note</textarea>
+                    </div>
+                </form>
+                <div id="editInfoError" class="alert alert-danger d-none mt-3 py-2 mb-0"></div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnSaveInfo" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Định giá nhập ── -->
+<div class="modal fade" id="setUnitCostModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Định giá nhập</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3" id="setUnitCostProductName"></p>
+                <form id="setUnitCostForm">
+                    <input type="hidden" name="GoodsReceiptId" value="@Model.Id" />
+                    <input type="hidden" name="ItemId" id="setUnitCostItemId" />
+                    <label class="form-label small fw-medium text-muted" for="setUnitCostValue">Đơn giá nhập</label>
+                    <input type="number" id="setUnitCostValue" name="UnitCost" class="form-control"
+                           min="0" step="any" placeholder="0" />
+                </form>
+                <div id="setUnitCostError" class="alert alert-danger d-none mt-2 py-2 mb-0"></div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnSaveUnitCost" class="btn btn-warning">
+                    <i class="bi bi-check-lg me-1"></i>Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+<style>
+    /* ── Receipt info DL ── */
+    .receipt-info-list { margin: 0; }
+    .receipt-info-row {
+        display: flex;
+        align-items: baseline;
+        padding: .6rem 1.25rem;
+        border-bottom: 1px solid var(--bs-border-color-translucent);
+        gap: .75rem;
+    }
+    .receipt-info-row:last-child { border-bottom: none; }
+    .receipt-info-row dt {
+        font-size: .75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        color: var(--bs-secondary);
+        width: 72px;
+        flex-shrink: 0;
+    }
+    .receipt-info-row dd { margin: 0; font-size: .875rem; }
+
+    /* ── Product links ── */
+    .details-product-link:hover { color: var(--bs-primary) !important; text-decoration: underline !important; }
+
+    /* ── Picture picker ── */
+    .picture-upload-slot {
+        position: relative; width: 100px; height: 100px;
+        border-radius: 10px; overflow: hidden; flex-shrink: 0;
+    }
+    .picture-upload-label {
+        display: flex; flex-direction: column; align-items: center;
+        justify-content: center; width: 100px; height: 100px;
+        border: 2px dashed var(--bs-border-color); border-radius: 10px;
+        cursor: pointer; background: #f8f9fa;
+        transition: border-color .15s, background .15s;
+        font-size: .7rem; color: var(--bs-secondary); gap: 3px;
+    }
+    .picture-upload-label:hover, .picture-upload-label.drag-over {
+        border-color: var(--bs-primary); background: #eef3ff; color: var(--bs-primary);
+    }
+    .picture-upload-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; pointer-events: none; }
+    .picture-thumbnail-wrapper { position: relative; width: 100px; height: 100px; margin-right:.5rem; flex-shrink: 0; }
+    .picture-thumbnail-img { width: 100px; height: 100px; object-fit: cover; border-radius: 10px; border: 1px solid var(--bs-border-color); display: block; }
+    .btn-remove-picture {
+        position: absolute; top: 3px; right: 3px; width: 18px; height: 18px;
+        border-radius: 50%; border: none; background: rgba(0,0,0,.55); color: #fff;
+        font-size: .6rem; display: flex; align-items: center; justify-content: center;
+        cursor: pointer; padding: 0; transition: background .15s;
+    }
+    .btn-remove-picture:hover { background: var(--bs-danger); }
+</style>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script type="module">
+        const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+        // ── Inline Picture Picker ──────────────────────────────────────────────
+        (function initInlinePictures() {
+            const dataEl   = document.getElementById('inlinePictureData');
+            const listEl   = document.getElementById('inlinePictureList');
+            const pickEl   = document.getElementById('inlinePicturePicker');
+            const savingEl = document.getElementById('inlinePictureSaving');
+            const errorEl  = document.getElementById('inlinePictureError');
+            if (!dataEl || !listEl || !pickEl) return;
+
+            const receiptId = dataEl.dataset.receiptId;
+            const MAX = 2;
+            let ids = (dataEl.dataset.pictureIds || '').split(',').map(s => s.trim()).filter(Boolean);
+
+            function render() {
+                listEl.innerHTML = '';
+                ids.forEach(id => addThumb(id));
+                renderSlots();
+            }
+
+            function renderSlots() {
+                pickEl.innerHTML = '';
+                for (let i = 0; i < MAX - ids.length; i++) pickEl.appendChild(buildSlot());
+            }
+
+            function addThumb(id) {
+                const w = document.createElement('div');
+                w.className = 'picture-thumbnail-wrapper';
+                w.innerHTML = `<a href="/Picture/${id}" target="_blank"><img src="/Picture/${id}" class="picture-thumbnail-img" alt="Ảnh chụp"/></a>
+                    <button type="button" class="btn-remove-picture"><i class="bi bi-x-lg"></i></button>`;
+                w.querySelector('.btn-remove-picture').onclick = async () => {
+                    ids = ids.filter(x => x !== id);
+                    w.remove(); renderSlots(); await save();
+                };
+                listEl.appendChild(w);
+            }
+
+            function buildSlot() {
+                const s = document.createElement('div');
+                s.className = 'picture-upload-slot';
+                s.innerHTML = `<label class="picture-upload-label"><input type="file" class="d-none" accept="image/*"/>
+                    <div class="picture-upload-placeholder"><i class="bi bi-camera fs-5"></i></div></label>`;
+                s.querySelector('input').onchange = async e => { if (e.target.files?.[0]) await upload(e.target.files[0], s); };
+                s.addEventListener('dragover', e => { e.preventDefault(); s.querySelector('.picture-upload-label').classList.add('drag-over'); });
+                s.addEventListener('dragleave', () => s.querySelector('.picture-upload-label').classList.remove('drag-over'));
+                s.addEventListener('drop', async e => { e.preventDefault(); s.querySelector('.picture-upload-label').classList.remove('drag-over'); if (e.dataTransfer?.files?.[0]) await upload(e.dataTransfer.files[0], s); });
+                return s;
+            }
+
+            async function upload(file, slot) {
+                const ph = slot.querySelector('.picture-upload-placeholder');
+                if (ph) ph.innerHTML = `<div class="spinner-border spinner-border-sm text-primary"></div>`;
+                try {
+                    const fd = new FormData(); fd.append('file', file);
+                    const data = await fetch('/Picture/Upload', { method: 'POST', headers: { 'RequestVerificationToken': antiForgeryToken }, body: fd }).then(r => r.json());
+                    if (!data.success) { if (ph) ph.innerHTML = `<i class="bi bi-x-circle text-danger"></i>`; return; }
+                    slot.remove(); ids.push(data.id); addThumb(data.id); renderSlots(); await save();
+                } catch { if (ph) ph.innerHTML = `<i class="bi bi-x-circle text-danger"></i>`; }
+            }
+
+            async function save() {
+                savingEl?.classList.remove('d-none'); errorEl?.classList.add('d-none');
+                try {
+                    const fd = new FormData(); fd.append('id', receiptId);
+                    ids.forEach(id => fd.append('pictureIds', id));
+                    fd.append('__RequestVerificationToken', antiForgeryToken);
+                    const data = await fetch('@Url.Action("UpdatePictures")', { method: 'POST', body: fd }).then(r => r.json());
+                    if (!data.success && errorEl) { errorEl.textContent = data.message ?? 'Lưu thất bại'; errorEl.classList.remove('d-none'); }
+                } catch { if (errorEl) { errorEl.textContent = 'Lỗi kết nối'; errorEl.classList.remove('d-none'); } }
+                finally { savingEl?.classList.add('d-none'); }
+            }
+
+            render();
+        })();
+
+        // ── Định giá ──────────────────────────────────────────────────────────
+        document.querySelectorAll('.btnSetUnitCost').forEach(btn => {
+            btn.onclick = () => {
+                document.getElementById('setUnitCostItemId').value = btn.dataset.itemId;
+                document.getElementById('setUnitCostProductName').textContent = btn.dataset.productName;
+                document.getElementById('setUnitCostValue').value = '';
+                document.getElementById('setUnitCostError').classList.add('d-none');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('setUnitCostModal')).show();
+            };
+        });
+
+        document.getElementById('btnSaveUnitCost')?.addEventListener('click', async () => {
+            const val = document.getElementById('setUnitCostValue').value;
+            if (!val || parseFloat(val) < 0) {
+                document.getElementById('setUnitCostError').textContent = 'Vui lòng nhập đơn giá hợp lệ.';
+                document.getElementById('setUnitCostError').classList.remove('d-none'); return;
+            }
+            const fd = new FormData(document.getElementById('setUnitCostForm'));
+            fd.append('__RequestVerificationToken', antiForgeryToken);
+            try {
+                const json = await fetch('@Url.Action("SetItemUnitCost")', { method: 'POST', body: fd }).then(r => r.json());
+                if (json.success) location.reload();
+                else { document.getElementById('setUnitCostError').textContent = json.message; document.getElementById('setUnitCostError').classList.remove('d-none'); }
+            } catch {
+                document.getElementById('setUnitCostError').textContent = 'Đã xảy ra lỗi.';
+                document.getElementById('setUnitCostError').classList.remove('d-none');
+            }
+        });
+
+        // ── Lưu thông tin ─────────────────────────────────────────────────────
+        document.getElementById('btnSaveInfo')?.addEventListener('click', async () => {
+            const fd = new FormData(document.getElementById('editInfoForm'));
+            fd.append('__RequestVerificationToken', antiForgeryToken);
+            document.getElementById('editInfoError').classList.add('d-none');
+            try {
+                const json = await fetch('@Url.Action("EditInfo")', { method: 'POST', body: fd }).then(r => r.json());
+                if (json.success) location.reload();
+                else { document.getElementById('editInfoError').textContent = json.message; document.getElementById('editInfoError').classList.remove('d-none'); }
+            } catch {
+                document.getElementById('editInfoError').textContent = 'Đã xảy ra lỗi.';
+                document.getElementById('editInfoError').classList.remove('d-none');
+            }
+        });
+    </script>
+}

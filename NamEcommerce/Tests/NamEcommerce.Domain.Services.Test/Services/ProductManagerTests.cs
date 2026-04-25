@@ -140,7 +140,6 @@ public sealed class ProductManagerTests
     public async Task CreateProductAsync_AddingUnitMeasurementIsFound_SetUnitMeasurementForProduct()
     {
         var unitMeasurementId = Guid.NewGuid();
-        var displayOrder = 1;
         var dto = new CreateProductDto
         {
             Name = "product-name",

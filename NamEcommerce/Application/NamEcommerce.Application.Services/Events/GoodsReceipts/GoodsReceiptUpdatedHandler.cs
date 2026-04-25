@@ -11,20 +11,21 @@ public sealed class GoodsReceiptUpdatedHandler(IRepository<Picture> pictureRepos
 {
     public async Task Handle(EntityUpdatedNotification<GoodsReceipt> notification, CancellationToken cancellationToken)
     {
-        if (notification.AdditionalData is null || !typeof(IEnumerable<Guid>).IsAssignableFrom(notification.AdditionalData.GetType()))
-            return;
+        //if (notification.AdditionalData is null || !typeof(IEnumerable<Guid>).IsAssignableFrom(notification.AdditionalData.GetType()))
+        //    return;
 
-        var deletedPictureIds = (IEnumerable<Guid>)notification.AdditionalData;
-        if (!deletedPictureIds.Any())
-            return;
+        //var deletedPictureIds = (IEnumerable<Guid>)notification.AdditionalData;
+        //if (!deletedPictureIds.Any())
+        //    return;
 
-        foreach (var pictureId in deletedPictureIds)
-        {
-            var picture = await pictureDataReader.GetByIdAsync(pictureId).ConfigureAwait(false);
-            if (picture is null)
-                continue;
+        //foreach (var pictureId in deletedPictureIds)
+        //{
+        //    var picture = await pictureDataReader.GetByIdAsync(pictureId).ConfigureAwait(false);
+        //    if (picture is null)
+        //        continue;
 
-            await pictureRepository.DeleteAsync(picture).ConfigureAwait(false);
-        }
+        //    await pictureRepository.DeleteAsync(picture).ConfigureAwait(false);
+        //}
+        return;
     }
 }

@@ -109,6 +109,14 @@ public sealed class CategoryController : BaseAuthorizedController
         return RedirectToAction(nameof(List));
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Options()
+    {
+        var options = await _mediator.Send(new GetCategoryOptionListQuery());
+        var result = options.Options.Select(o => new { id = o.Id, name = o.Name }).ToList();
+        return Json(result);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Delete(Guid id)
     {

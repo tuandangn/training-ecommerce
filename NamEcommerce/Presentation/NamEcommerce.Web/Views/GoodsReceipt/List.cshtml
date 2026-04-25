@@ -1,0 +1,161 @@
+@model GoodsReceiptListModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Phiếu nhập hàng";
+}
+@section TitleSection {
+    <h1 class="topbar-page-title">Phiếu nhập hàng</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Phiếu nhập hàng</li>
+            </ol>
+        </nav>
+    </div>
+}
+<div class="content-card">
+    <div class="action-toolbar">
+        <partial name="_Search" model="@(new GoodsReceiptListSearchModel { Keywords = Model.Keywords, FromDate = Model.FromDate, ToDate = Model.ToDate })" />
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Tạo phiếu
+        </a>
+    </div>
+    <div class="content-card-body-flush">
+        <div class="table-responsive">
+            <table class="table data-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width:160px">Ngày nhập</th>
+                        <th>Hàng hóa nhập</th>
+                        <th class="text-end">Giá trị đơn</th>
+                        <th class="text-center">Định giá</th>
+                        <th>Tài xế / Biển số</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Data.Pagination.TotalCount > 0)
+                    {
+                        @foreach (var receipt in Model.Data)
+                        {
+                            <tr class="align-top">
+                                <td class="ps-4 pt-3">
+                                    <a asp-action="Details" asp-route-id="@receipt.Id"
+                                           class="fw-semibold text-decoration-none d-block lh-sm">
+                                        @receipt.CreatedOn.ToString(ViewConstants.DefaultDateFormat)
+                                    </a>
+                                    <span class="text-muted">
+                                        @receipt.CreatedOn.ToString("HH:mm")
+                                    </span>
+                                </td>
+                                <td class="pt-2 pb-2">
+                                    @if (receipt.Items.Count == 0)
+                                    {
+                                        <span class="text-muted fst-italic small">Chưa có hàng</span>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex flex-column gap-1">
+                                            @foreach (var item in receipt.Items)
+                                            {
+                                                <div class="d-flex align-items-baseline gap-2">
+                                                    <a asp-action="StockList" asp-controller="Inventory" asp-route-keywords="@item.ProductName" class="text-decoration-none fw-bold text-body fw-medium lh-sm receipt-item-link" title="Xem tồn kho">
+                                                        @item.ProductName
+                                                    </a>
+                                                    <span class="text-muted text-nowrap">
+                                                        × @item.Quantity.DisplayQuantity()
+                                                        @if (item.UnitCost.HasValue)
+                                                        {
+                                                            <span class="ms-1 text-secondary">(@item.UnitCost.Value.DisplayCurrency())</span>
+                                                        }
+                                                    </span>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </td>
+                                <td class="text-end pt-3">
+                                    @if (receipt.TotalValue.HasValue)
+                                    {
+                                        <span class="fw-semibold text-dark">@receipt.TotalValue.Value.DisplayCurrency()</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted fst-italic small">—</span>
+                                    }
+                                </td>
+                                <td class="text-center pt-3">
+                                    @if (receipt.IsPendingCosting)
+                                    {
+                                        <i class="bi bi-hourglass-split text-warning fs-5" title="Chờ định giá"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success fs-5" title="Đã định giá"></i>
+                                    }
+                                </td>
+
+                                <td class="pt-3">
+                                    @if (!string.IsNullOrEmpty(receipt.TruckDriverName))
+                                    {
+                                        <div class="fw-medium lh-sm">@receipt.TruckDriverName</div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(receipt.TruckNumberSerial))
+                                    {
+                                        <span class="text-muted" style="font-size:.8rem;">
+                                            <i class="bi bi-truck me-1"></i>@receipt.TruckNumberSerial
+                                        </span>
+                                    }
+                                    @if (string.IsNullOrEmpty(receipt.TruckDriverName) && string.IsNullOrEmpty(receipt.TruckNumberSerial))
+                                    {
+                                        <span class="text-muted fst-italic small">—</span>
+                                    }
+                                </td>                                <td class="text-end pe-3 pt-3">
+                                    <a class="btn btn-sm btn-light text-primary"
+                                           asp-action="Details" asp-route-id="@receipt.Id">
+                                        Xem
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <span class="text-muted">Không có phiếu nhập hàng nào</span>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (Model.Data.Pagination.TotalCount > 0)
+        {
+            <partial name="_Pager" model="Model.Data.Pagination" />
+        }
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .receipt-item-link:hover {
+            color: var(--bs-primary) !important;
+            text-decoration: underline !important;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script type="module">
+        const txtKeywords = document.getElementById('Keywords');
+        const form = txtKeywords?.closest('form');
+        if (txtKeywords && form) {
+        const onSearchChanged = debounce(() => form.submit(), 700);
+        txtKeywords.addEventListener('input', onSearchChanged);
+        if (txtKeywords.value) focusEnd(txtKeywords);
+        }
+    </script>
+}

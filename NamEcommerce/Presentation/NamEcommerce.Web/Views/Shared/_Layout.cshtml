@@ -1,5 +1,4 @@
 @using NamEcommerce.Web.Contracts.Configurations
-@inject CultureConfig CultureCfg
 @inject IWebHelper WebHelper
 @{
     var isAuthPage = WebHelper.IsLoginPage() || WebHelper.IsRegisterPage();
@@ -12,24 +11,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData[ViewConstants.PageTitle] - @Information.Name</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/lib/bootstrap-icons-1.13.1/bootstrap-icons.min.css" />
-    <link rel="stylesheet" href="~/lib/lightbox/css/lightbox.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/decimal-field.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/NamEcommerce.Web.styles.css" asp-append-version="true" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css" />
-
+    <partial name="_Styles" />
     @await RenderSectionAsync(ViewConstants.StyleSection, required: false)
 </head>
 <body>
     <div class="app-layout">
         <!-- Sidebar overlay cho mobile -->
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
         <aside class="sidebar" id="appSidebar">
             <a class="sidebar-brand" asp-controller="Home" asp-action="Index">
                 <div class="sidebar-brand-icon">
@@ -44,7 +32,6 @@
                 @await Component.InvokeAsync("MenuNavigationComponent")
             </nav>
         </aside>
-
         <div class="main-area">
             <header class="topbar">
                 <button class="topbar-toggle" id="sidebarToggle" type="button" aria-label="Mở/đóng menu">
@@ -62,7 +49,6 @@
                 </div>
                 @await Component.InvokeAsync("UserHeaderLinksComponent")
             </header>
-
             <div class="page-content">
                 @if (!string.IsNullOrEmpty(errorMessage))
                 {
@@ -84,71 +70,8 @@
             </footer>
         </div>
     </div>
-
     <partial name="_ReusedModals" />
-
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/lib/lightbox/js/lightbox.min.js" defer></script>
-    <script src="~/lib/sweet-alert-2/sweetalert2.js" defer></script>
-    <script src="~/js/site.js" asp-append-version="true" defer></script>
-    <script src="~/js/currency-hint.js" asp-append-version="true" defer></script>
-    <script src="~/js/decimal-field.js" asp-append-version="true" defer></script>
-
-    <script>
-            // Cấu hình Flatpickr từ server (appsettings.json → CultureConfig)
-            window._fp = {
-                locale:   '@CultureCfg.FlatpickrLocale',
-                dateFmt:  '@CultureCfg.FlatpickrDateFormat',
-                dtFmt:    '@CultureCfg.FlatpickrDateTimeFormat'
-            };
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/l10n/@(CultureCfg.FlatpickrLocale).js" defer></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-        var cfg = window._fp;
-
-        // input[type="date"] → altInput hiện cfg.dateFmt, hidden submit Y-m-d
-        flatpickr('input[type="date"]', {
-        locale:     cfg.locale,
-        dateFormat: 'Y-m-d',
-        altInput:   true,
-        altFormat:  cfg.dateFmt,
-        allowInput: true
-        });
-
-        // input[type="datetime-local"] → altInput hiện cfg.dtFmt, hidden submit Y-m-d\TH:i
-        flatpickr('input[type="datetime-local"]', {
-        locale:      cfg.locale,
-        dateFormat:  'Y-m-d\\TH:i',
-        altInput:    true,
-        altFormat:   cfg.dtFmt,
-        enableTime:  true,
-        time_24hr:   true,
-        allowInput:  true
-        });
-
-        // Sidebar toggle (mobile)
-        var toggle  = document.getElementById('sidebarToggle');
-        var sidebar = document.getElementById('appSidebar');
-        var overlay = document.getElementById('sidebarOverlay');
-
-        if (toggle && sidebar) {
-        toggle.addEventListener('click', function () {
-        sidebar.classList.toggle('open');
-        if (overlay) overlay.classList.toggle('active');
-        });
-        if (overlay) {
-        overlay.addEventListener('click', function () {
-        sidebar.classList.remove('open');
-        overlay.classList.remove('active');
-        });
-        }
-        }
-        });
-    </script>
-
+    <partial name="_Scripts" />
     @await RenderSectionAsync(ViewConstants.ScriptSection, required: false)
 </body>
 </html>

@@ -16,6 +16,8 @@ public abstract record BaseGoodsReceiptAppDto
     {
         if (!PictureIds.Any())
             return (false, "Error.GoodsReceipt.ProofPictureRequired");
+        if (CreatedOnUtc > DateTime.UtcNow)
+            return (false, "Error.GoodsReceipt.CreationDateGreaterThanNow");
 
         return (true, null);
     }

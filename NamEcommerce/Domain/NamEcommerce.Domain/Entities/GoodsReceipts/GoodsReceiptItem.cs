@@ -57,14 +57,14 @@ public sealed record GoodsReceiptItem : AppEntity
     {
         ArgumentNullException.ThrowIfNull(productByIdGetter);
         ArgumentNullException.ThrowIfNull(warehouseSettings);
-        if (!warehouseSettings.AllowNoWarehouse || warehouseId.HasValue)
+        if (!warehouseSettings.AllowNonWarehouse || warehouseId.HasValue)
             ArgumentNullException.ThrowIfNull(warehouseByIdGetter);
 
         var product = await productByIdGetter.GetByIdAsync(productId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(productId);
 
-        if (!warehouseSettings.AllowNoWarehouse && !warehouseId.HasValue)
+        if (!warehouseSettings.AllowNonWarehouse && !warehouseId.HasValue)
             throw new WarehouseIsRequiredException();
 
         Warehouse? warehouse = null;

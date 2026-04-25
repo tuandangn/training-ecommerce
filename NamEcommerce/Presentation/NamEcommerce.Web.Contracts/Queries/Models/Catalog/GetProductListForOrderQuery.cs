@@ -9,4 +9,5 @@ public sealed class GetProductListForOrderQuery : IRequest<ProductListForOrderMo
     public required string? Keywords { get; set; }
     public Guid? VendorId { get; set; }
     public Guid? WarehouseId { get; set; }
+    public Guid? CategoryId { get; set; }
 }

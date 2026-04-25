@@ -47,15 +47,26 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
             products = pagedData;
         }
 
+        // Filter by category if provided
+        if (request.CategoryId.HasValue)
+            products = products.Where(p => p.Categories.Any(c => c.CategoryId == request.CategoryId.Value));
+
         var allVendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
+        var allCategoryOptions = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
 
         var productListItems = new List<ProductListForOrderModel.ProductItemModel>();
         foreach (var productInfo in products)
         {
+            var firstCategoryId = productInfo.Categories.FirstOrDefault()?.CategoryId;
+            var categoryName = firstCategoryId.HasValue
+                ? allCategoryOptions.Options.FirstOrDefault(c => c.Id == firstCategoryId.Value)?.Name
+                : null;
+
             var productModel = new ProductListForOrderModel.ProductItemModel(productInfo.Id)
             {
                 Name = productInfo.Name,
-                UnitPrice = productInfo.UnitPrice
+                UnitPrice = productInfo.UnitPrice,
+                CategoryName = categoryName
             };
 
             if (productInfo.Pictures.Any())

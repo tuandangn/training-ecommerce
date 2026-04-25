@@ -131,11 +131,13 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         // Kiểm tra phiếu nhập tồn tại
         var goodsReceipt = await _goodsReceiptManager.GetGoodsReceiptByIdAsync(dto.Id).ConfigureAwait(false);
         if (goodsReceipt is null)
+        {
             return new UpdateGoodsReceiptResultAppDto
             {
                 Success = false,
                 ErrorMessage = "Error.GoodsReceipt.IsNotFound"
             };
+        }
 
         // Kiểm tra ảnh chứng từ tồn tại
         foreach (var pictureId in dto.PictureIds)
