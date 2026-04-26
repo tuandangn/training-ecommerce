@@ -11,6 +11,8 @@ public sealed class CreateGoodsReceiptCommand : IRequest<CreateGoodsReceiptResul
     public string? TruckNumberSerial { get; init; }
     public required IList<Guid> PictureIds { get; init; }
     public string? Note { get; init; }
+    /// <summary>Nhà cung cấp (optional) — bỏ qua nếu chưa biết, gắn sau ở Details.</summary>
+    public Guid? VendorId { get; init; }
     public IList<CreateGoodsReceiptItemCommand> Items { get; init; } = [];
 }
 

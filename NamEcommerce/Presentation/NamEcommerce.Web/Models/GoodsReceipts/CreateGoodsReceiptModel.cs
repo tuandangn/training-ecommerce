@@ -25,6 +25,22 @@ public sealed class CreateGoodsReceiptModel
     [ValidateNever]
     public EntityOptionListModel? AvailableWarehouses { get; set; }
 
+    /// <summary>
+    /// Nhà cung cấp (optional) — có thể gắn lúc tạo hoặc bỏ qua, gắn sau ở Details.
+    /// Khi định giá đủ tất cả items + có vendor → tự động sinh VendorDebt.
+    /// </summary>
+    [ValidateNever]
+    [Display(Name = "Nhà cung cấp")]
+    public Guid? VendorId { get; set; }
+
+    /// <summary>Snapshot tên NCC để hiển thị lại sau khi ModelState fail.</summary>
+    [ValidateNever]
+    public string? VendorDisplayName { get; set; }
+    [ValidateNever]
+    public string? VendorDisplayPhone { get; set; }
+    [ValidateNever]
+    public string? VendorDisplayAddress { get; set; }
+
     public IList<Guid> PictureIds { get; set; } = [];
 
     public IList<CreateGoodsReceiptItemModel> Items { get; set; } = [];

@@ -25,6 +25,7 @@ public sealed class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsRecei
             TruckNumberSerial = request.TruckNumberSerial,
             PictureIds = request.PictureIds,
             Note = request.Note,
+            VendorId = request.VendorId,
             Items = request.Items.Select(i => new CreateGoodsReceiptItemAppDto
             {
                 ProductId = i.ProductId,

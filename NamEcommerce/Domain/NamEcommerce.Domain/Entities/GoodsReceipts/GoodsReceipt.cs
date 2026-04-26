@@ -45,6 +45,12 @@ public sealed record GoodsReceipt : AppAggregateEntity
 
     public string? Note { get; internal set; }
 
+    /// <summary>Nhà cung cấp — nullable, có thể gắn sau khi tạo phiếu.</summary>
+    public Guid? VendorId { get; private set; }
+    public string? VendorName { get; private set; }
+    public string? VendorPhone { get; private set; }
+    public string? VendorAddress { get; private set; }
+
     public Guid? CreatedByUserId { get; private set; }
     public string? CreatedByUsername { get; private set; }
 
@@ -80,6 +86,25 @@ public sealed record GoodsReceipt : AppAggregateEntity
             throw new GoodsReceiptItemCannotSetUnitCostException();
 
         item.SetUnitCost(unitCost);
+    }
+
+    internal void SetVendor(Guid vendorId, string vendorName, string? vendorPhone, string? vendorAddress)
+    {
+        if (vendorId == Guid.Empty)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.VendorIdRequired");
+
+        VendorId = vendorId;
+        VendorName = vendorName;
+        VendorPhone = vendorPhone;
+        VendorAddress = vendorAddress;
+    }
+
+    internal void ClearVendor()
+    {
+        VendorId = null;
+        VendorName = null;
+        VendorPhone = null;
+        VendorAddress = null;
     }
 
     internal void ClearPictures() => _pictureIds.Clear();

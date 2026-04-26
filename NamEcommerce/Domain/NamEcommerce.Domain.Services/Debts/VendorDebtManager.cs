@@ -1,6 +1,7 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Debts;
+using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
@@ -20,6 +21,7 @@ public sealed class VendorDebtManager(
     IEntityDataReader<VendorPayment> paymentReader,
     IEntityDataReader<Vendor> vendorReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
+    IEntityDataReader<GoodsReceipt> goodsReceiptReader,
     IEventPublisher eventPublisher) : IVendorDebtManager
 {
     private async Task<string> GenerateDebtCodeAsync()
@@ -88,6 +90,63 @@ public sealed class VendorDebtManager(
             advance.VendorDebtId = debt.Id;
             advance.PurchaseOrderId = purchaseOrder.Id;
             advance.PurchaseOrderCode = purchaseOrder.Code;
+            await paymentRepository.UpdateAsync(advance).ConfigureAwait(false);
+        }
+
+        var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
+        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
+        return inserted.ToDto();
+    }
+
+    public async Task<VendorDebtDto> CreateDebtFromGoodsReceiptAsync(CreateVendorDebtFromGoodsReceiptDto dto)
+    {
+        dto.Verify();
+
+        // Idempotency: trả về existing nếu đã có debt cho GoodsReceipt này
+        var existing = debtReader.DataSource.FirstOrDefault(d => d.GoodsReceiptId == dto.GoodsReceiptId);
+        if (existing != null)
+            return existing.ToDto();
+
+        var vendor = await vendorReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        if (vendor == null)
+            throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
+
+        var goodsReceipt = await goodsReceiptReader.GetByIdAsync(dto.GoodsReceiptId).ConfigureAwait(false);
+        if (goodsReceipt == null)
+            throw new ArgumentException($"GoodsReceipt with id '{dto.GoodsReceiptId}' is not found");
+
+        var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
+
+        var debt = new VendorDebt(
+            code: code,
+            vendorId: vendor.Id,
+            vendorName: vendor.Name,
+            goodsReceiptId: goodsReceipt.Id,
+            totalAmount: dto.TotalAmount,
+            dueDateUtc: dto.DueDateUtc,
+            createdByUserId: dto.CreatedByUserId
+        )
+        {
+            VendorPhone = vendor.PhoneNumber,
+            VendorAddress = vendor.Address
+        };
+
+        // Auto-apply AdvancePayments chưa dùng của NCC này
+        var advancePayments = paymentReader.DataSource
+            .Where(p => p.VendorId == vendor.Id
+                     && p.PaymentType == PaymentType.AdvancePayment
+                     && !p.IsApplied)
+            .OrderBy(p => p.PaidOnUtc)
+            .ToList();
+
+        foreach (var advance in advancePayments)
+        {
+            if (debt.RemainingAmount <= 0) break;
+
+            var applyAmount = Math.Min(advance.Amount, debt.RemainingAmount);
+            debt.ApplyPayment(applyAmount);
+            advance.MarkAsApplied();
+            advance.VendorDebtId = debt.Id;
             await paymentRepository.UpdateAsync(advance).ConfigureAwait(false);
         }
 
@@ -260,6 +319,22 @@ public sealed class VendorDebtManager(
         return dto with { Payments = payments.Select(p => p.ToDto()).ToList() };
     }
 
+    public async Task<VendorDebtDto?> GetDebtByGoodsReceiptIdAsync(Guid goodsReceiptId)
+    {
+        // Idempotency của CreateDebtFromGoodsReceiptAsync đảm bảo chỉ có tối đa 1 debt cho mỗi GoodsReceipt.
+        var debt = debtReader.DataSource
+            .FirstOrDefault(d => d.GoodsReceiptId == goodsReceiptId);
+        if (debt == null) return null;
+
+        var payments = paymentReader.DataSource
+            .Where(p => p.VendorDebtId == debt.Id)
+            .OrderBy(p => p.PaidOnUtc)
+            .ToList();
+
+        var dto = debt.ToDto();
+        return dto with { Payments = payments.Select(p => p.ToDto()).ToList() };
+    }
+
     public async Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId)
     {
         var payment = await paymentReader.GetByIdAsync(paymentId).ConfigureAwait(false);
@@ -398,7 +473,7 @@ public sealed class VendorDebtManager(
         if (!string.IsNullOrWhiteSpace(keywords))
             query = query.Where(d => d.Code.Contains(keywords)
                 || d.VendorName.Contains(keywords)
-                || d.PurchaseOrderCode.Contains(keywords));
+                || (d.PurchaseOrderCode != null && d.PurchaseOrderCode.Contains(keywords)));
 
         query = query.OrderByDescending(d => d.CreatedOnUtc);
 

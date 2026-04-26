@@ -102,6 +102,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
             TruckNumberSerial = dto.TruckNumberSerial,
             PictureIds = dto.PictureIds,
             Note = dto.Note,
+            VendorId = dto.VendorId,
             Items = dto.Items.Select(item => new AddGoodsReceiptItemDto
             {
                 ProductId = item.ProductId,
@@ -157,7 +158,8 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
             TruckDriverName = dto.TruckDriverName,
             TruckNumberSerial = dto.TruckNumberSerial,
             PictureIds = dto.PictureIds,
-            Note = dto.Note
+            Note = dto.Note,
+            VendorId = dto.VendorId
         };
 
         var result = await _goodsReceiptManager.UpdateGoodsReceiptAsync(updateDto).ConfigureAwait(false);
@@ -231,5 +233,27 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         await _goodsReceiptManager.SetGoodsReceiptItemUnitCostAsync(domainDto).ConfigureAwait(false);
 
         return new SetGoodsReceiptItemUnitCostResultAppDto { Success = true };
+    }
+
+    public async Task<SetGoodsReceiptVendorResultAppDto> SetGoodsReceiptVendorAsync(SetGoodsReceiptVendorAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return new SetGoodsReceiptVendorResultAppDto { Success = false, ErrorMessage = errorMessage };
+
+        var domainDto = new SetGoodsReceiptVendorDto(dto.GoodsReceiptId)
+        {
+            VendorId = dto.VendorId
+        };
+
+        var result = await _goodsReceiptManager.SetGoodsReceiptVendorAsync(domainDto).ConfigureAwait(false);
+
+        return new SetGoodsReceiptVendorResultAppDto
+        {
+            Success = true,
+            UpdatedId = result.UpdatedId
+        };
     }
 }

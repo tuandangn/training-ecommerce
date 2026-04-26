@@ -46,8 +46,10 @@ public sealed record VendorDebtAppDto
     public string? VendorPhone { get; init; }
     public string? VendorAddress { get; init; }
 
-    public required Guid PurchaseOrderId { get; init; }
-    public required string PurchaseOrderCode { get; init; }
+    public Guid? PurchaseOrderId { get; init; }
+    public string? PurchaseOrderCode { get; init; }
+
+    public Guid? GoodsReceiptId { get; init; }
 
     public decimal TotalAmount { get; init; }
     public decimal PaidAmount { get; init; }

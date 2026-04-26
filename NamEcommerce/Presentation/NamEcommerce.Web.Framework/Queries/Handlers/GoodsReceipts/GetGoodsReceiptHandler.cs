@@ -1,4 +1,5 @@
 using MediatR;
+using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Models.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Queries.Models.GoodsReceipts;
@@ -8,10 +9,14 @@ namespace NamEcommerce.Web.Framework.Queries.Handlers.GoodsReceipts;
 public sealed class GetGoodsReceiptHandler : IRequestHandler<GetGoodsReceiptQuery, GoodsReceiptModel?>
 {
     private readonly IGoodsReceiptAppService _goodsReceiptAppService;
+    private readonly IVendorDebtAppService _vendorDebtAppService;
 
-    public GetGoodsReceiptHandler(IGoodsReceiptAppService goodsReceiptAppService)
+    public GetGoodsReceiptHandler(
+        IGoodsReceiptAppService goodsReceiptAppService,
+        IVendorDebtAppService vendorDebtAppService)
     {
         _goodsReceiptAppService = goodsReceiptAppService;
+        _vendorDebtAppService = vendorDebtAppService;
     }
 
     public async Task<GoodsReceiptModel?> Handle(GetGoodsReceiptQuery request, CancellationToken cancellationToken)
@@ -19,6 +24,9 @@ public sealed class GetGoodsReceiptHandler : IRequestHandler<GetGoodsReceiptQuer
         var goodsReceipt = await _goodsReceiptAppService.GetGoodsReceiptByIdAsync(request.Id).ConfigureAwait(false);
         if (goodsReceipt is null)
             return null;
+
+        // Hiển thị trạng thái sinh công nợ NCC để UI render badge "Đã ghi nợ" + link sang trang VendorDebt.
+        var vendorDebt = await _vendorDebtAppService.GetDebtByGoodsReceiptIdAsync(request.Id).ConfigureAwait(false);
 
         var model = new GoodsReceiptModel
         {
@@ -28,7 +36,14 @@ public sealed class GetGoodsReceiptHandler : IRequestHandler<GetGoodsReceiptQuer
             TruckNumberSerial = goodsReceipt.TruckNumberSerial,
             PictureIds = goodsReceipt.PictureIds,
             Note = goodsReceipt.Note,
-            IsPendingCosting = goodsReceipt.IsPendingCosting
+            IsPendingCosting = goodsReceipt.IsPendingCosting,
+            VendorId = goodsReceipt.VendorId,
+            VendorName = goodsReceipt.VendorName,
+            VendorPhone = goodsReceipt.VendorPhone,
+            VendorAddress = goodsReceipt.VendorAddress,
+            HasVendorDebt = vendorDebt is not null,
+            VendorDebtId = vendorDebt?.Id,
+            VendorDebtTotalAmount = vendorDebt?.TotalAmount
         };
 
         foreach (var item in goodsReceipt.Items)

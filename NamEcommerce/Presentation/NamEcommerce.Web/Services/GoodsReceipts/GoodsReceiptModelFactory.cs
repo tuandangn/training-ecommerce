@@ -59,6 +59,24 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
             }
         }
 
+        // Re-populate vendor display info nếu user đã chọn vendor và submit fail
+        // (browser submit form chỉ gửi VendorId, các trường display không được round-trip).
+        if (model.VendorId.HasValue && string.IsNullOrEmpty(model.VendorDisplayName))
+        {
+            var vendor = await _mediator.Send(new GetVendorQuery { Id = model.VendorId.Value }).ConfigureAwait(false);
+            if (vendor is not null)
+            {
+                model.VendorDisplayName = vendor.Name;
+                model.VendorDisplayPhone = vendor.PhoneNumber;
+                model.VendorDisplayAddress = vendor.Address;
+            }
+            else
+            {
+                // Vendor đã bị xoá giữa chừng → clear khỏi model.
+                model.VendorId = null;
+            }
+        }
+
         return model;
     }
 
@@ -76,7 +94,16 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
             TruckNumberSerial = goodsReceipt.TruckNumberSerial,
             PictureIds = goodsReceipt.PictureIds,
             Note = goodsReceipt.Note,
-            IsPendingCosting = goodsReceipt.IsPendingCosting
+            IsPendingCosting = goodsReceipt.IsPendingCosting,
+            // Vendor snapshot
+            VendorId = goodsReceipt.VendorId,
+            VendorName = goodsReceipt.VendorName,
+            VendorPhone = goodsReceipt.VendorPhone,
+            VendorAddress = goodsReceipt.VendorAddress,
+            // Vendor debt linkage (đã sinh nợ chưa, link sang trang Debts/Detail)
+            HasVendorDebt = goodsReceipt.HasVendorDebt,
+            VendorDebtId = goodsReceipt.VendorDebtId,
+            VendorDebtTotalAmount = goodsReceipt.VendorDebtTotalAmount
         };
 
         foreach (var item in goodsReceipt.Items)

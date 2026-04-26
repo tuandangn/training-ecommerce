@@ -16,6 +16,12 @@ public sealed class GoodsReceiptMapping : IEntityTypeConfiguration<GoodsReceipt>
         builder.Property(g => g.TruckNumberSerial).HasMaxLength(100);
         builder.Property(g => g.Note).HasMaxLength(2000);
 
+        // Vendor snapshot — nullable
+        builder.Property(g => g.VendorId);
+        builder.Property(g => g.VendorName).HasMaxLength(500);
+        builder.Property(g => g.VendorPhone).HasMaxLength(50);
+        builder.Property(g => g.VendorAddress).HasMaxLength(1000);
+
         builder.Property(g => g.CreatedByUserId);
         builder.Property(g => g.CreatedByUsername).HasMaxLength(500);
 

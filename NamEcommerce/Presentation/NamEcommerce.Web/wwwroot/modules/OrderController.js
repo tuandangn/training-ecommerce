@@ -1,4 +1,5 @@
 import { toast } from "/modules/modals.js";
+import { apiGet } from "/modules/ajax-helper.js";
 import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
 
@@ -470,9 +471,11 @@ export class AddItemController {
         toggleBtn?.classList.add('d-none');
 
         try {
-            const res = await fetch(`/Product/PriceHistory?ProductId=${productId}`);
-            if (!res.ok) throw new Error('Failed to fetch price history');
-            const data = await res.json();
+            // apiGet trả `{ success, data }` cho payload không có shape JsonNotificationResult.
+            // Endpoint /Product/PriceHistory trả `{ items: [...] }` ở root → nằm trong `result.data`.
+            const result = await apiGet(`/Product/PriceHistory?ProductId=${productId}`);
+            if (!result.success) throw new Error('Failed to fetch price history');
+            const data = result.data ?? result;
 
             loading.classList.add('d-none');
 

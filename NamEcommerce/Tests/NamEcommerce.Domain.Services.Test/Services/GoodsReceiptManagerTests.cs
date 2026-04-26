@@ -9,6 +9,9 @@ using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Events;
+using NamEcommerce.Domain.Shared.Events.Entities;
+using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.Media;
 using NamEcommerce.Domain.Shared.Services.Users;
@@ -88,7 +91,7 @@ public sealed class GoodsReceiptManagerTests
     [Fact]
     public async Task CreateGoodsReceiptAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
             manager.CreateGoodsReceiptAsync(null!));
@@ -112,7 +115,7 @@ public sealed class GoodsReceiptManagerTests
                 }
             ]
         };
-        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<GoodsReceiptItemDataIsInvalidException>(() =>
             manager.CreateGoodsReceiptAsync(dto));
@@ -136,7 +139,7 @@ public sealed class GoodsReceiptManagerTests
                 }
             ]
         };
-        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<GoodsReceiptItemDataIsInvalidException>(() =>
             manager.CreateGoodsReceiptAsync(dto));
@@ -159,7 +162,7 @@ public sealed class GoodsReceiptManagerTests
                 }
             ]
         };
-        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<GoodsReceiptProofPictureRequired>(() =>
             manager.CreateGoodsReceiptAsync(dto));
@@ -209,7 +212,7 @@ public sealed class GoodsReceiptManagerTests
             null!, goodsReceiptDataReaderStub.Object,
             productDataReaderStub.Object, warehouseSettings,
             warehouseDataReaderStub.Object, currentUserStub.Object,
-            pictureDataReaderMock.Object, null!, null!);
+            pictureDataReaderMock.Object, null!, null!, null!);
 
         await Assert.ThrowsAsync<PictureIsNotFoundException>(() =>
             manager.CreateGoodsReceiptAsync(dto));
@@ -266,7 +269,7 @@ public sealed class GoodsReceiptManagerTests
             goodsReceiptRepositoryMock.Object, goodsReceiptDataReaderStub.Object,
             productDataReaderStub.Object, warehouseSettings,
             warehouseDataReaderStub.Object, currentUserStub.Object,
-            pictureDataReaderStub.Object, null!, Mock.Of<IEventPublisher>());
+            pictureDataReaderStub.Object, null!, null!, Mock.Of<IEventPublisher>());
 
         var result = await manager.CreateGoodsReceiptAsync(dto);
 
@@ -285,7 +288,7 @@ public sealed class GoodsReceiptManagerTests
     [Fact]
     public async Task UpdateGoodsReceiptAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
             manager.UpdateGoodsReceiptAsync(null!));
@@ -299,7 +302,7 @@ public sealed class GoodsReceiptManagerTests
             CreatedOnUtc = DateTime.UtcNow,
             PictureIds = []             // không có ảnh chứng từ
         };
-        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<GoodsReceiptProofPictureRequired>(() =>
             manager.UpdateGoodsReceiptAsync(dto));
@@ -316,7 +319,7 @@ public sealed class GoodsReceiptManagerTests
         };
         var goodsReceiptDataReaderMock = GoodsReceiptDataReader.NotFound(notFoundId);
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<GoodsReceiptIsNotFoundException>(() =>
             manager.UpdateGoodsReceiptAsync(dto));
@@ -343,7 +346,7 @@ public sealed class GoodsReceiptManagerTests
         var manager = new GoodsReceiptManager(
             null!, goodsReceiptDataReaderStub.Object,
             null!, null!, null!, null!,
-            pictureDataReaderMock.Object, null!, null!);
+            pictureDataReaderMock.Object, null!, null!, null!);
 
         await Assert.ThrowsAsync<PictureIsNotFoundException>(() =>
             manager.UpdateGoodsReceiptAsync(dto));
@@ -376,7 +379,7 @@ public sealed class GoodsReceiptManagerTests
         var manager = new GoodsReceiptManager(
             goodsReceiptRepositoryMock.Object, goodsReceiptDataReaderStub.Object,
             null!, null!, null!, null!,
-            pictureDataReaderStub.Object, null!, Mock.Of<IEventPublisher>());
+            pictureDataReaderStub.Object, null!, null!, Mock.Of<IEventPublisher>());
 
         var result = await manager.UpdateGoodsReceiptAsync(dto);
 
@@ -403,7 +406,7 @@ public sealed class GoodsReceiptManagerTests
         };
         var goodsReceiptDataReaderMock = GoodsReceiptDataReader.NotFound(notFoundId);
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<GoodsReceiptIsNotFoundException>(() =>
             manager.DeleteGoodsReceiptAsync(dto));
@@ -426,7 +429,7 @@ public sealed class GoodsReceiptManagerTests
 
         var manager = new GoodsReceiptManager(
             goodsReceiptRepositoryMock.Object, goodsReceiptDataReaderStub.Object,
-            null!, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>());
+            null!, null!, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>());
 
         await manager.DeleteGoodsReceiptAsync(dto);
 
@@ -444,7 +447,7 @@ public sealed class GoodsReceiptManagerTests
     [Fact]
     public async Task SetGoodsReceiptItemUnitCostAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
             manager.SetGoodsReceiptItemUnitCostAsync(null!));
@@ -459,7 +462,7 @@ public sealed class GoodsReceiptManagerTests
             GoodsReceiptItemId = Guid.NewGuid(),
             UnitCost = -1m              // không hợp lệ
         };
-        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<GoodsReceiptItemDataIsInvalidException>(() =>
             manager.SetGoodsReceiptItemUnitCostAsync(dto));
@@ -477,7 +480,7 @@ public sealed class GoodsReceiptManagerTests
         };
         var goodsReceiptDataReaderMock = GoodsReceiptDataReader.NotFound(notFoundId);
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<GoodsReceiptIsNotFoundException>(() =>
             manager.SetGoodsReceiptItemUnitCostAsync(dto));
@@ -498,7 +501,7 @@ public sealed class GoodsReceiptManagerTests
         };
         var goodsReceiptDataReaderStub = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<GoodsReceiptItemIsNotFoundException>(() =>
             manager.SetGoodsReceiptItemUnitCostAsync(dto));
@@ -528,12 +531,53 @@ public sealed class GoodsReceiptManagerTests
 
         var manager = new GoodsReceiptManager(
             goodsReceiptRepositoryMock.Object, goodsReceiptDataReaderStub.Object,
-            null!, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>());
+            null!, null!, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>());
 
         await manager.SetGoodsReceiptItemUnitCostAsync(dto);
 
         Assert.Equal(200_000m, goodsReceipt.Items.First().UnitCost);
         goodsReceiptRepositoryMock.Verify();
+    }
+
+    [Fact]
+    public async Task SetGoodsReceiptItemUnitCostAsync_ValidDto_PublishesEntityUpdatedWithItemIdAsAdditionalData()
+    {
+        // Mục đích test: GoodsReceiptUpdatedHandler cần phân biệt được "đây là SetUnitCost"
+        // thông qua AdditionalData == item.Id để chạy Full Recalculation AverageCost.
+        var (goodsReceipt, _, _) = await BuildGoodsReceiptWithItemAsync();
+
+        var itemId = goodsReceipt.Items.First().Id;
+        var dto = new SetGoodsReceiptItemUnitCostDto
+        {
+            GoodsReceiptId = goodsReceipt.Id,
+            GoodsReceiptItemId = itemId,
+            UnitCost = 200_000m
+        };
+
+        var goodsReceiptDataReaderStub = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
+
+        var goodsReceiptRepositoryStub = new Mock<IRepository<GoodsReceipt>>();
+        goodsReceiptRepositoryStub
+            .Setup(r => r.UpdateAsync(It.IsAny<GoodsReceipt>(), default))
+            .ReturnsAsync(goodsReceipt);
+
+        // Verify rằng PublishEvent được gọi với EntityUpdatedEvent có AdditionalData == itemId.
+        // Dùng PublishEvent (low-level) thay vì extension method EntityUpdated() vì extension không mock được.
+        var eventPublisherMock = new Mock<IEventPublisher>();
+        eventPublisherMock
+            .Setup(p => p.PublishEvent<EntityUpdatedEvent<GoodsReceipt>, GoodsReceipt>(
+                It.Is<EntityUpdatedEvent<GoodsReceipt>>(e =>
+                    e.Entity.Id == goodsReceipt.Id && (Guid)e.AdditionalData! == itemId)))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
+
+        var manager = new GoodsReceiptManager(
+            goodsReceiptRepositoryStub.Object, goodsReceiptDataReaderStub.Object,
+            null!, null!, null!, null!, null!, null!, null!, eventPublisherMock.Object);
+
+        await manager.SetGoodsReceiptItemUnitCostAsync(dto);
+
+        eventPublisherMock.Verify();
     }
 
     #endregion
@@ -550,7 +594,7 @@ public sealed class GoodsReceiptManagerTests
         var notFoundId = Guid.NewGuid();
         var goodsReceiptDataReaderMock = GoodsReceiptDataReader.NotFound(notFoundId);
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await manager.GetGoodsReceiptByIdAsync(notFoundId);
 
@@ -564,7 +608,7 @@ public sealed class GoodsReceiptManagerTests
         var goodsReceipt = await BuildGoodsReceiptAsync();
         var goodsReceiptDataReaderMock = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await manager.GetGoodsReceiptByIdAsync(goodsReceipt.Id);
 
@@ -584,7 +628,7 @@ public sealed class GoodsReceiptManagerTests
     [Fact]
     public async Task GetGoodsReceiptsAsync_PageIndexLessThan0_ThrowsArgumentOutOfRangeException()
     {
-        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             manager.GetGoodsReceiptsAsync(pageIndex: -1, pageSize: 10,
@@ -594,7 +638,7 @@ public sealed class GoodsReceiptManagerTests
     [Fact]
     public async Task GetGoodsReceiptsAsync_PageSizeLessThanOrEqualTo0_ThrowsArgumentOutOfRangeException()
     {
-        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             manager.GetGoodsReceiptsAsync(pageIndex: 0, pageSize: 0,
@@ -614,7 +658,7 @@ public sealed class GoodsReceiptManagerTests
 
         var goodsReceiptDataReaderStub = GoodsReceiptDataReader.WithData(gr1, gr2, gr3);
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await manager.GetGoodsReceiptsAsync(
             pageIndex: 0, pageSize: 1, keywords: null, fromDateUtc: null, toDateUtc: null);
@@ -634,7 +678,7 @@ public sealed class GoodsReceiptManagerTests
 
         var goodsReceiptDataReaderStub = GoodsReceiptDataReader.WithData(matchedGr, unmatchedGr);
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await manager.GetGoodsReceiptsAsync(
             pageIndex: 0, pageSize: 10, keywords: "Tai Xe", fromDateUtc: null, toDateUtc: null);
@@ -654,7 +698,7 @@ public sealed class GoodsReceiptManagerTests
 
         var goodsReceiptDataReaderStub = GoodsReceiptDataReader.WithData(matchedGr, unmatchedGr);
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await manager.GetGoodsReceiptsAsync(
             pageIndex: 0, pageSize: 10, keywords: "51K", fromDateUtc: null, toDateUtc: null);
@@ -674,7 +718,7 @@ public sealed class GoodsReceiptManagerTests
 
         var goodsReceiptDataReaderStub = GoodsReceiptDataReader.WithData(oldGr, newGr);
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var fromDate = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var result = await manager.GetGoodsReceiptsAsync(
@@ -695,7 +739,7 @@ public sealed class GoodsReceiptManagerTests
 
         var goodsReceiptDataReaderStub = GoodsReceiptDataReader.WithData(oldGr, newGr);
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var toDate = new DateTime(2024, 12, 31, 23, 59, 59, DateTimeKind.Utc);
         var result = await manager.GetGoodsReceiptsAsync(
@@ -718,7 +762,7 @@ public sealed class GoodsReceiptManagerTests
 
         var goodsReceiptDataReaderStub = GoodsReceiptDataReader.WithData(earlyGr, midGr, lateGr);
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var fromDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var toDate = new DateTime(2024, 12, 31, 23, 59, 59, DateTimeKind.Utc);
@@ -743,7 +787,7 @@ public sealed class GoodsReceiptManagerTests
 
         var goodsReceiptDataReaderStub = GoodsReceiptDataReader.WithData(receipts.ToArray());
         var manager = new GoodsReceiptManager(
-            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!);
+            null!, goodsReceiptDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await manager.GetGoodsReceiptsAsync(
             pageIndex: 1, pageSize: 2, keywords: null, fromDateUtc: null, toDateUtc: null);
@@ -751,6 +795,160 @@ public sealed class GoodsReceiptManagerTests
         Assert.Equal(5, result.PagerInfo.TotalCount);   // tổng vẫn là 5
         Assert.Equal(2, result.Count());                // trang 2 có 2 items
         goodsReceiptDataReaderStub.Verify();
+    }
+
+    #endregion
+
+    // ───────────────────────────────────────────────────────────────────────
+    // SetGoodsReceiptVendorAsync
+    // ───────────────────────────────────────────────────────────────────────
+
+    #region SetGoodsReceiptVendorAsync
+
+    [Fact]
+    public async Task SetGoodsReceiptVendorAsync_DtoIsNull_ThrowsArgumentNullException()
+    {
+        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            manager.SetGoodsReceiptVendorAsync(null!));
+    }
+
+    [Fact]
+    public async Task SetGoodsReceiptVendorAsync_GoodsReceiptIdIsEmpty_ThrowsGoodsReceiptIsNotFoundException()
+    {
+        var dto = new SetGoodsReceiptVendorDto(Guid.Empty)
+        {
+            VendorId = Guid.NewGuid()
+        };
+        var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+
+        await Assert.ThrowsAsync<GoodsReceiptIsNotFoundException>(() =>
+            manager.SetGoodsReceiptVendorAsync(dto));
+    }
+
+    [Fact]
+    public async Task SetGoodsReceiptVendorAsync_GoodsReceiptNotFound_ThrowsGoodsReceiptIsNotFoundException()
+    {
+        var notFoundId = Guid.NewGuid();
+        var dto = new SetGoodsReceiptVendorDto(notFoundId)
+        {
+            VendorId = Guid.NewGuid()
+        };
+        var goodsReceiptDataReaderMock = GoodsReceiptDataReader.NotFound(notFoundId);
+        var manager = new GoodsReceiptManager(
+            null!, goodsReceiptDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+
+        await Assert.ThrowsAsync<GoodsReceiptIsNotFoundException>(() =>
+            manager.SetGoodsReceiptVendorAsync(dto));
+    }
+
+    [Fact]
+    public async Task SetGoodsReceiptVendorAsync_VendorNotFound_ThrowsVendorIsNotFoundException()
+    {
+        var goodsReceipt = await BuildGoodsReceiptAsync();
+        var notFoundVendorId = Guid.NewGuid();
+
+        var dto = new SetGoodsReceiptVendorDto(goodsReceipt.Id)
+        {
+            VendorId = notFoundVendorId
+        };
+
+        var goodsReceiptDataReaderStub = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
+        var vendorDataReaderMock = VendorDataReader.NotFound(notFoundVendorId);
+
+        var manager = new GoodsReceiptManager(
+            null!, goodsReceiptDataReaderStub.Object,
+            null!, null!, null!, null!, null!, null!,
+            vendorDataReaderMock.Object, null!);
+
+        await Assert.ThrowsAsync<VendorIsNotFoundException>(() =>
+            manager.SetGoodsReceiptVendorAsync(dto));
+    }
+
+    [Fact]
+    public async Task SetGoodsReceiptVendorAsync_ValidVendorId_SetsVendorAndPublishesEvent()
+    {
+        var goodsReceipt = await BuildGoodsReceiptAsync();
+        var vendorId = Guid.NewGuid();
+        var vendor = new Vendor(vendorId, "Nhà cung cấp ABC", "0901234567");
+
+        var dto = new SetGoodsReceiptVendorDto(goodsReceipt.Id)
+        {
+            VendorId = vendorId
+        };
+
+        var goodsReceiptDataReaderStub = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
+        var vendorDataReaderStub = VendorDataReader.VendorById(vendorId, vendor);
+
+        var goodsReceiptRepositoryMock = new Mock<IRepository<GoodsReceipt>>();
+        goodsReceiptRepositoryMock
+            .Setup(r => r.UpdateAsync(It.Is<GoodsReceipt>(gr =>
+                gr.Id == goodsReceipt.Id
+                && gr.VendorId == vendorId
+                && gr.VendorName == vendor.Name), default))
+            .ReturnsAsync(goodsReceipt)
+            .Verifiable();
+
+        var eventPublisherMock = new Mock<IEventPublisher>();
+        eventPublisherMock
+            .Setup(e => e.EntityUpdated(
+                It.Is<EntityUpdatedNotification<GoodsReceipt>>(n =>
+                    n.Entity.Id == goodsReceipt.Id
+                    && (string)n.AdditionalData! == "vendor-updated")))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
+
+        var manager = new GoodsReceiptManager(
+            goodsReceiptRepositoryMock.Object, goodsReceiptDataReaderStub.Object,
+            null!, null!, null!, null!, null!, null!,
+            vendorDataReaderStub.Object, eventPublisherMock.Object);
+
+        var result = await manager.SetGoodsReceiptVendorAsync(dto);
+
+        Assert.Equal(goodsReceipt.Id, result.UpdatedId);
+        goodsReceiptRepositoryMock.Verify();
+        eventPublisherMock.Verify();
+    }
+
+    [Fact]
+    public async Task SetGoodsReceiptVendorAsync_NullVendorId_ClearsVendorAndPublishesEvent()
+    {
+        var goodsReceipt = await BuildGoodsReceiptAsync();
+        var existingVendorId = Guid.NewGuid();
+        // Set vendor trước
+        goodsReceipt.SetVendor(existingVendorId, "Old Vendor", "0900000000", null);
+
+        var dto = new SetGoodsReceiptVendorDto(goodsReceipt.Id)
+        {
+            VendorId = null    // null = xoá vendor
+        };
+
+        var goodsReceiptDataReaderStub = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
+
+        var goodsReceiptRepositoryMock = new Mock<IRepository<GoodsReceipt>>();
+        goodsReceiptRepositoryMock
+            .Setup(r => r.UpdateAsync(It.Is<GoodsReceipt>(gr =>
+                gr.Id == goodsReceipt.Id
+                && gr.VendorId == null), default))
+            .ReturnsAsync(goodsReceipt)
+            .Verifiable();
+
+        var eventPublisherMock = new Mock<IEventPublisher>();
+        eventPublisherMock
+            .Setup(e => e.EntityUpdated(It.IsAny<EntityUpdatedNotification<GoodsReceipt>>()))
+            .Returns(Task.CompletedTask)
+            .Verifiable();
+
+        var manager = new GoodsReceiptManager(
+            goodsReceiptRepositoryMock.Object, goodsReceiptDataReaderStub.Object,
+            null!, null!, null!, null!, null!, null!, null!, eventPublisherMock.Object);
+
+        var result = await manager.SetGoodsReceiptVendorAsync(dto);
+
+        Assert.Equal(goodsReceipt.Id, result.UpdatedId);
+        goodsReceiptRepositoryMock.Verify();
+        eventPublisherMock.Verify();
     }
 
     #endregion

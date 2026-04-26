@@ -1,4 +1,5 @@
 import { toast } from "/modules/modals.js";
+import { apiGet } from "/modules/ajax-helper.js";
 import VendorPicker from "/modules/VendorPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
 
@@ -446,12 +447,12 @@ export class AddItemController {
         this.state.recentPrices = [];
 
         if (productInfo) {
-            // Fetch giá gần nhất
+            // Fetch giá gần nhất qua apiGet (auto antiforgery + CSRF + chuẩn hoá lỗi mạng)
             try {
-                const res = await fetch(`/PurchaseOrder/RecentPurchasePrices?productId=${productInfo.id}`);
-                if (res.ok) {
-                    this.state.recentPrices = await res.json();
-                }
+                const result = await apiGet(`/PurchaseOrder/RecentPurchasePrices?productId=${productInfo.id}`);
+                // apiGet trả về parsed JSON nếu shape có `success`; ngược lại trả `{ success, data }`.
+                // Endpoint này trả mảng thuần → dữ liệu nằm ở `result.data`.
+                this.state.recentPrices = Array.isArray(result) ? result : (result.data ?? []);
             } catch {
                 this.state.recentPrices = [];
             }

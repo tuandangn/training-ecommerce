@@ -149,6 +149,25 @@ public sealed class InventoryStockManager : IInventoryStockManager
         };
     }
 
+    public async Task UpdateAverageCostAsync(Guid productId, Guid warehouseId, decimal newAverageCost)
+    {
+        if (newAverageCost < 0)
+            throw new InvalidStockOperationException("Error.StockAverageCostCannotBeNegative");
+
+        var stock = await GetInventoryStockForProductAsync(productId, warehouseId).ConfigureAwait(false);
+        if (stock is null)
+            throw new StockNotFoundException("Error.StockNotFound", productId, warehouseId);
+
+        // Idempotent — nếu giá trị không đổi thì không cần update để tránh sinh dirty record vô ích.
+        if (stock.AverageCost == newAverageCost)
+            return;
+
+        stock.AverageCost = newAverageCost;
+        stock.UpdatedOnUtc = DateTime.UtcNow;
+
+        await _inventoryStockRepository.UpdateAsync(stock).ConfigureAwait(false);
+    }
+
     public async Task<(int Total, List<InventoryStockDto> Items)> GetInventoryStocksAsync(string? keywords, Guid? warehouseId, int pageIndex, int pageSize)
     {
         var inventoryStockQuery = _inventoryStockDataReader.DataSource;

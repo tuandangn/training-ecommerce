@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Debts;
+using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Services.Debts;
 using NamEcommerce.Domain.Services.Test.Helpers;
@@ -22,6 +23,7 @@ public sealed class VendorDebtManagerTests
         Mock<IEntityDataReader<VendorPayment>>? paymentReader = null,
         Mock<IEntityDataReader<Vendor>>? vendorReader = null,
         Mock<IEntityDataReader<PurchaseOrder>>? purchaseOrderReader = null,
+        Mock<IEntityDataReader<GoodsReceipt>>? goodsReceiptReader = null,
         IEventPublisher? eventPublisher = null)
         => new VendorDebtManager(
             debtRepo?.Object ?? null!,
@@ -30,6 +32,7 @@ public sealed class VendorDebtManagerTests
             paymentReader?.Object ?? null!,
             vendorReader?.Object ?? null!,
             purchaseOrderReader?.Object ?? null!,
+            goodsReceiptReader?.Object ?? null!,
             eventPublisher ?? Mock.Of<IEventPublisher>());
 
     #region CreateDebtFromPurchaseOrderAsync
@@ -726,6 +729,93 @@ public sealed class VendorDebtManagerTests
         Assert.Equal(debt.Id, result.Id);
         Assert.Single(result.Payments);
         debtReaderMock.Verify();
+    }
+
+    #endregion
+
+    #region GetDebtByGoodsReceiptIdAsync
+
+    [Fact]
+    public async Task GetDebtByGoodsReceiptIdAsync_NotSinhYet_ReturnsNull()
+    {
+        // Phiếu nhập chưa sinh công nợ NCC (chưa định giá đủ hoặc chưa có vendor) → null.
+        var goodsReceiptId = Guid.NewGuid();
+        var debtReaderStub = VendorDebtDataReader.Empty();
+        var paymentReaderStub = VendorPaymentDataReader.Empty();
+        var manager = CreateManager(
+            debtReader: debtReaderStub,
+            paymentReader: paymentReaderStub);
+
+        var result = await manager.GetDebtByGoodsReceiptIdAsync(goodsReceiptId);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task GetDebtByGoodsReceiptIdAsync_DebtExistsForGoodsReceipt_ReturnsDtoWithPayments()
+    {
+        // Phiếu nhập đã sinh nợ → trả VendorDebtDto kèm payments tương ứng.
+        var vendor = new Vendor(Guid.NewGuid(), "NCC Có Nợ", "0911111111");
+        var goodsReceiptId = Guid.NewGuid();
+        var debt = new VendorDebt(
+            code: "CNNCC-GR-001",
+            vendorId: vendor.Id,
+            vendorName: vendor.Name,
+            goodsReceiptId: goodsReceiptId,
+            totalAmount: 5_000_000,
+            dueDateUtc: null,
+            createdByUserId: null);
+        var payment = new VendorPayment(
+            code: "PCNCC-GR-001",
+            vendorId: vendor.Id,
+            vendorName: vendor.Name,
+            amount: 1_000_000,
+            paymentMethod: PaymentMethod.BankTransfer,
+            paymentType: PaymentType.VendorDebtPayment,
+            paidOnUtc: DateTime.UtcNow,
+            recordedByUserId: null,
+            note: null)
+        { VendorDebtId = debt.Id };
+
+        var debtReaderStub = VendorDebtDataReader.WithData(debt);
+        var paymentReaderStub = VendorPaymentDataReader.WithData(payment);
+        var manager = CreateManager(
+            debtReader: debtReaderStub,
+            paymentReader: paymentReaderStub);
+
+        var result = await manager.GetDebtByGoodsReceiptIdAsync(goodsReceiptId);
+
+        Assert.NotNull(result);
+        Assert.Equal(debt.Id, result.Id);
+        Assert.Equal(goodsReceiptId, result.GoodsReceiptId);
+        Assert.Equal(5_000_000m, result.TotalAmount);
+        Assert.Single(result.Payments);
+        Assert.Equal(payment.Id, result.Payments[0].Id);
+    }
+
+    [Fact]
+    public async Task GetDebtByGoodsReceiptIdAsync_OtherGoodsReceiptHasDebt_ReturnsNullForUnrelatedId()
+    {
+        // Có phiếu nợ trong DB nhưng KHÔNG cho goodsReceiptId tra cứu → null.
+        var unrelatedDebt = new VendorDebt(
+            code: "CNNCC-GR-002",
+            vendorId: Guid.NewGuid(),
+            vendorName: "NCC Khác",
+            goodsReceiptId: Guid.NewGuid(),
+            totalAmount: 100_000,
+            dueDateUtc: null,
+            createdByUserId: null);
+        var queriedGoodsReceiptId = Guid.NewGuid();
+
+        var debtReaderStub = VendorDebtDataReader.WithData(unrelatedDebt);
+        var paymentReaderStub = VendorPaymentDataReader.Empty();
+        var manager = CreateManager(
+            debtReader: debtReaderStub,
+            paymentReader: paymentReaderStub);
+
+        var result = await manager.GetDebtByGoodsReceiptIdAsync(queriedGoodsReceiptId);
+
+        Assert.Null(result);
     }
 
     #endregion

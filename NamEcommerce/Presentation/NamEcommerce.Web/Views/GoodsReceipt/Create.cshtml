@@ -173,6 +173,20 @@
                             <span asp-validation-for="WarehouseId" class="small text-danger"></span>
                         </div>
                         <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Nhà cung cấp <span class="text-muted text-lowercase fw-normal">(không bắt buộc)</span>
+                            </label>
+                            <input type="hidden" asp-for="VendorId" id="VendorId" />
+                            <div id="vendorPicker"
+                                 data-id="@Model.VendorId"
+                                 data-name="@Model.VendorDisplayName"
+                                 data-phone="@Model.VendorDisplayPhone"
+                                 data-address="@Model.VendorDisplayAddress"></div>
+                            <div class="form-text small">
+                                Chọn nhà cung cấp tại đây hoặc gắn sau ở trang chi tiết. Khi định giá đủ tất cả mặt hàng, hệ thống sẽ tự động sinh phiếu nợ.
+                            </div>
+                        </div>
+                        <div class="mb-3">
                             <label asp-for="TruckDriverName" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <input asp-for="TruckDriverName" class="form-control" placeholder="Nhập tên tài xế" />
                             <span asp-validation-for="TruckDriverName" class="small text-danger"></span>
@@ -461,7 +475,36 @@
     <partial name="_ValidationScriptsPartial" />
     <script type="module">
         import GoodsReceiptCreateController from "/modules/GoodsReceiptCreateController.js";
+        import VendorPicker from "/modules/VendorPicker.js";
+
         new GoodsReceiptCreateController();
+
+        // ── Vendor picker (optional) ──────────────────────────────────────────
+        const vendorPickerEl = document.getElementById('vendorPicker');
+        const vendorIdInput  = document.getElementById('VendorId');
+        if (vendorPickerEl && vendorIdInput) {
+            const vendorPicker = new VendorPicker(vendorPickerEl);
+
+            vendorPickerEl.addEventListener('select', (e) => {
+                vendorIdInput.value = e.detail?.vendor?.id ?? '';
+            });
+            vendorPickerEl.addEventListener('remove', () => {
+                vendorIdInput.value = '';
+            });
+
+            // Initial vendor (re-render khi ModelState fail hoặc reload form).
+            // Pass plain object trực tiếp (không qua Vendor constructor) để giữ field
+            // `address` — Vendor class hiện chỉ destructure {id, name, phone}.
+            const initial = vendorPickerEl.dataset;
+            if (initial.id) {
+                vendorPicker.displayVendor({
+                    id: initial.id,
+                    name: initial.name ?? '',
+                    phone: initial.phone ?? '',
+                    address: initial.address ?? ''
+                });
+            }
+        }
 
         document.getElementById('@Html.IdFor(m => m.WarehouseId)').addEventListener('change', function(e) {
         const value = e.target.value;

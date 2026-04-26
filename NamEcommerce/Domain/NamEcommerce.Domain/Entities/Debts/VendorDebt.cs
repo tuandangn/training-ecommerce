@@ -11,9 +11,9 @@ public sealed record VendorDebt : AppAggregateEntity
     {
         Code = string.Empty;
         VendorName = string.Empty;
-        PurchaseOrderCode = string.Empty;
     }
 
+    /// <summary>Constructor cho công nợ từ đơn nhập hàng (PurchaseOrder).</summary>
     internal VendorDebt(string code, Guid vendorId, string vendorName,
         Guid purchaseOrderId, string purchaseOrderCode,
         decimal totalAmount, DateTime? dueDateUtc, Guid? createdByUserId) : base(Guid.NewGuid())
@@ -23,6 +23,24 @@ public sealed record VendorDebt : AppAggregateEntity
         VendorName = vendorName;
         PurchaseOrderId = purchaseOrderId;
         PurchaseOrderCode = purchaseOrderCode;
+        TotalAmount = totalAmount;
+        RemainingAmount = totalAmount;
+        PaidAmount = 0;
+        Status = DebtStatus.Outstanding;
+        DueDateUtc = dueDateUtc;
+        CreatedByUserId = createdByUserId;
+        CreatedOnUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>Constructor cho công nợ từ phiếu nhập kho (GoodsReceipt).</summary>
+    internal VendorDebt(string code, Guid vendorId, string vendorName,
+        Guid goodsReceiptId,
+        decimal totalAmount, DateTime? dueDateUtc, Guid? createdByUserId) : base(Guid.NewGuid())
+    {
+        Code = code;
+        VendorId = vendorId;
+        VendorName = vendorName;
+        GoodsReceiptId = goodsReceiptId;
         TotalAmount = totalAmount;
         RemainingAmount = totalAmount;
         PaidAmount = 0;
@@ -69,8 +87,11 @@ public sealed record VendorDebt : AppAggregateEntity
     }
     internal string NormalizedVendorAddress { get; private set; } = "";
 
-    public Guid PurchaseOrderId { get; private set; }
-    public string PurchaseOrderCode { get; private set; }
+    public Guid? PurchaseOrderId { get; private set; }
+    public string? PurchaseOrderCode { get; private set; }
+
+    /// <summary>Phiếu nhập kho liên kết — nullable (chỉ có nếu sinh từ GoodsReceipt).</summary>
+    public Guid? GoodsReceiptId { get; private set; }
 
     public decimal TotalAmount { get; private set; }
     public decimal PaidAmount { get; private set; }

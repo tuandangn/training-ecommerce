@@ -55,6 +55,7 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
             TruckNumberSerial = model.TruckNumberSerial,
             Note = model.Note,
             PictureIds = model.PictureIds,
+            VendorId = model.VendorId,
             Items = model.Items.Select(i => new CreateGoodsReceiptItemCommand
             {
                 ProductId = i.ProductId!.Value,
@@ -162,6 +163,27 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
         return Json(new { success = true, message = string.Empty });
+    }
+
+    // ─────────────────────────── SET VENDOR (JSON) ───────────────────────────
+
+    /// <summary>
+    /// Gắn hoặc xoá nhà cung cấp khỏi phiếu nhập kho.
+    /// POST body: { goodsReceiptId: Guid, vendorId: Guid? }
+    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> SetVendor(Guid goodsReceiptId, Guid? vendorId)
+    {
+        var result = await _mediator.Send(new SetGoodsReceiptVendorCommand
+        {
+            GoodsReceiptId = goodsReceiptId,
+            VendorId = vendorId
+        });
+
+        if (!result.Success)
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+
+        return Json(new { success = true, updatedId = result.UpdatedId });
     }
 
     // ─────────────────────────── DELETE ───────────────────────────

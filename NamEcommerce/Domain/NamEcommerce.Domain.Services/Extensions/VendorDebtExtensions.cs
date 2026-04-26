@@ -16,6 +16,7 @@ public static class VendorDebtExtensions
             VendorAddress = debt.VendorAddress,
             PurchaseOrderId = debt.PurchaseOrderId,
             PurchaseOrderCode = debt.PurchaseOrderCode,
+            GoodsReceiptId = debt.GoodsReceiptId,
             TotalAmount = debt.TotalAmount,
             PaidAmount = debt.PaidAmount,
             RemainingAmount = debt.RemainingAmount,

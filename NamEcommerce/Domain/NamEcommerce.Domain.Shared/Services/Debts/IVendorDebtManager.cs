@@ -11,6 +11,12 @@ public interface IVendorDebtManager
     Task<VendorDebtDto> CreateDebtFromPurchaseOrderAsync(CreateVendorDebtDto dto);
 
     /// <summary>
+    /// Tạo công nợ từ phiếu nhập kho (idempotent — trả về existing nếu đã tồn tại).
+    /// Chỉ gọi khi phiếu đã có vendor và tất cả items đã được set UnitCost.
+    /// </summary>
+    Task<VendorDebtDto> CreateDebtFromGoodsReceiptAsync(CreateVendorDebtFromGoodsReceiptDto dto);
+
+    /// <summary>
     /// Ghi nhận thanh toán cho 1 phiếu nợ cụ thể.
     /// </summary>
     Task<VendorPaymentDto> RecordPaymentAsync(CreateVendorPaymentDto dto);
@@ -27,6 +33,12 @@ public interface IVendorDebtManager
     Task<VendorPaymentDto> RecordAdvancePaymentAsync(CreateVendorPaymentDto dto);
 
     Task<VendorDebtDto?> GetDebtByIdAsync(Guid id);
+
+    /// <summary>
+    /// Lấy phiếu nợ NCC sinh từ một <c>GoodsReceipt</c> cụ thể (nếu đã sinh).
+    /// Trả <c>null</c> nếu phiếu nhập đó chưa sinh nợ.
+    /// </summary>
+    Task<VendorDebtDto?> GetDebtByGoodsReceiptIdAsync(Guid goodsReceiptId);
 
     Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId);
 

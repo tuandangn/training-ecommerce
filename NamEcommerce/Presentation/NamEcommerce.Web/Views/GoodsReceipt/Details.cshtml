@@ -168,6 +168,81 @@
             </div>
         </div>
 
+        <!-- Nhà cung cấp -->
+        <div class="content-card mb-3">
+            <div class="content-card-header">
+                <h5 class="mb-0">Nhà cung cấp</h5>
+                <button type="button" class="btn btn-sm btn-light" id="btnEditVendor"
+                        data-bs-toggle="modal" data-bs-target="#editVendorModal">
+                    <i class="bi bi-pencil me-1"></i>@(Model.VendorId.HasValue ? "Thay đổi" : "Gắn NCC")
+                </button>
+            </div>
+            <div class="content-card-body p-0">
+                @if (Model.VendorId.HasValue)
+                {
+                    <dl class="receipt-info-list mb-0">
+                        <div class="receipt-info-row">
+                            <dt>Tên NCC</dt>
+                            <dd class="fw-semibold">
+                                <i class="bi bi-building-fill me-1 text-primary"></i>@Model.VendorName
+                            </dd>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.VendorPhone))
+                        {
+                            <div class="receipt-info-row">
+                                <dt>SĐT</dt>
+                                <dd>
+                                    <i class="bi bi-telephone me-1 text-muted"></i>@Model.VendorPhone
+                                </dd>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.VendorAddress))
+                        {
+                            <div class="receipt-info-row">
+                                <dt>Địa chỉ</dt>
+                                <dd class="text-secondary">
+                                    <i class="bi bi-geo-alt me-1"></i>@Model.VendorAddress
+                                </dd>
+                            </div>
+                        }
+                        @if (Model.HasVendorDebt && Model.VendorDebtId.HasValue)
+                        {
+                            <div class="receipt-info-row">
+                                <dt>Công nợ</dt>
+                                <dd>
+                                    @* Trang VendorDebt/Details liệt kê toàn bộ công nợ của 1 NCC theo vendorId.
+                                       Phiếu nợ cụ thể từ phiếu nhập này nằm trong list đó. *@
+                                    <a asp-controller="VendorDebt" asp-action="Details" asp-route-vendorId="@Model.VendorId"
+                                       class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none">
+                                        <i class="bi bi-check-circle-fill me-1"></i>
+                                        Đã ghi nợ @(Model.VendorDebtTotalAmount?.DisplayCurrency() ?? "")
+                                    </a>
+                                </dd>
+                            </div>
+                        }
+                        else if (Model.IsPendingCosting)
+                        {
+                            <div class="receipt-info-row">
+                                <dt>Công nợ</dt>
+                                <dd>
+                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                        <i class="bi bi-hourglass-split me-1"></i>
+                                        Sẽ ghi sau khi định giá xong
+                                    </span>
+                                </dd>
+                            </div>
+                        }
+                    </dl>
+                }
+                else
+                {
+                    <div class="px-3 py-3 text-center text-muted small fst-italic">
+                        — Chưa có nhà cung cấp
+                    </div>
+                }
+            </div>
+        </div>
+
         <!-- Ảnh chụp -->
         <div class="content-card">
             <div class="content-card-header">
@@ -229,6 +304,36 @@
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" id="btnSaveInfo" class="btn btn-primary">
                     <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Gắn / đổi nhà cung cấp ── -->
+<div class="modal fade" id="editVendorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">@(Model.VendorId.HasValue ? "Thay đổi nhà cung cấp" : "Gắn nhà cung cấp")</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p class="text-muted small mb-2">
+                    Tìm theo tên hoặc số điện thoại. Để trống và nhấn <em>Lưu</em> nếu muốn gỡ NCC khỏi phiếu.
+                </p>
+                <div id="vendorPicker"
+                     data-id="@Model.VendorId"
+                     data-name="@Model.VendorName"
+                     data-phone="@Model.VendorPhone"
+                     data-address="@Model.VendorAddress"></div>
+                <input type="hidden" id="selectedVendorId" value="@(Model.VendorId?.ToString() ?? "")" />
+                <div id="editVendorError" class="alert alert-danger d-none mt-3 py-2 mb-0"></div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnSaveVendor" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>Lưu
                 </button>
             </div>
         </div>
@@ -322,7 +427,85 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script type="module">
+        import VendorPicker from "/modules/VendorPicker.js";
+        import { apiPost } from "/modules/ajax-helper.js";
+        import { toast } from "/modules/modals.js";
+
         const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+        // ── Vendor picker (modal) ────────────────────────────────────────────
+        (function initVendorPicker() {
+            const pickerEl = document.getElementById('vendorPicker');
+            const selectedIdInput = document.getElementById('selectedVendorId');
+            const errorEl = document.getElementById('editVendorError');
+            const saveBtn = document.getElementById('btnSaveVendor');
+            if (!pickerEl || !selectedIdInput || !saveBtn) return;
+
+            const picker = new VendorPicker(pickerEl);
+
+            pickerEl.addEventListener('select', (e) => {
+                selectedIdInput.value = e.detail?.vendor?.id ?? '';
+                errorEl?.classList.add('d-none');
+            });
+            pickerEl.addEventListener('remove', () => {
+                selectedIdInput.value = '';
+                errorEl?.classList.add('d-none');
+            });
+
+            // Initial vendor (nếu phiếu đã có).
+            // Pass plain object trực tiếp (không qua Vendor constructor) để giữ field
+            // `address` — Vendor class hiện chỉ destructure {id, name, phone}.
+            const initial = pickerEl.dataset;
+            if (initial.id) {
+                picker.displayVendor({
+                    id: initial.id,
+                    name: initial.name ?? '',
+                    phone: initial.phone ?? '',
+                    address: initial.address ?? ''
+                });
+            }
+
+            saveBtn.addEventListener('click', async () => {
+                errorEl?.classList.add('d-none');
+                const vendorIdRaw = (selectedIdInput.value || '').trim();
+                const vendorId = vendorIdRaw === '' ? null : vendorIdRaw;
+
+                // No-op nếu vendor không thay đổi
+                const currentVendorId = (initial.id || '') || null;
+                if ((vendorId ?? '') === (currentVendorId ?? '')) {
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('editVendorModal')).hide();
+                    return;
+                }
+
+                saveBtn.disabled = true;
+                try {
+                    const fd = new FormData();
+                    fd.append('goodsReceiptId', '@Model.Id');
+                    if (vendorId) fd.append('vendorId', vendorId);
+
+                    const result = await apiPost('@Url.Action("SetVendor")', fd);
+                    if (result.success) {
+                        toast('Thành công', vendorId
+                            ? 'Đã cập nhật nhà cung cấp.'
+                            : 'Đã gỡ nhà cung cấp khỏi phiếu.', 'success');
+                        // Reload để: hiển thị vendor mới + cập nhật badge "Đã ghi nợ" nếu trigger sinh nợ.
+                        location.reload();
+                    } else {
+                        if (errorEl) {
+                            errorEl.textContent = result.message || 'Cập nhật thất bại.';
+                            errorEl.classList.remove('d-none');
+                        }
+                    }
+                } catch (err) {
+                    if (errorEl) {
+                        errorEl.textContent = 'Lỗi kết nối. Vui lòng thử lại.';
+                        errorEl.classList.remove('d-none');
+                    }
+                } finally {
+                    saveBtn.disabled = false;
+                }
+            });
+        })();
 
         // ── Inline Picture Picker ──────────────────────────────────────────────
         (function initInlinePictures() {

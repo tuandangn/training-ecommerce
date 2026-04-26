@@ -1,6 +1,21 @@
 import { confirm, toast } from "/modules/modals.js";
+import { apiPost } from "/modules/ajax-helper.js";
 import PromiseModal from "/modules/PromiseModal.js";
 import ProductPicker from "/modules/ProductPicker.js";
+
+/**
+ * Submit a form via apiPost.
+ * Sends body as FormData (server vẫn nhận form-binding như trước),
+ * auto attach antiforgery token, auto-render notification nếu server
+ * trả `JsonNotificationResult`.
+ *
+ * @param {HTMLFormElement} form
+ * @returns {Promise<{success:boolean, message?:string}>}
+ */
+async function submitFormAsync(form) {
+    const formData = new FormData(form);
+    return apiPost(form.action, formData);
+}
 
 (function () {
     // ─── Add item via modal (matching Create Order pattern) ───────────────────
@@ -56,14 +71,7 @@ import ProductPicker from "/modules/ProductPicker.js";
             await addProductModal.hide();
 
             try {
-                const data = $(this).serialize();
-
-                const res = await fetch('/Order/AddOrderItem', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: data
-                });
-                const result = await res.json();
+                const result = await apiPost('/Order/AddOrderItem', new FormData(this));
 
                 if (result.success) {
                     await toast('Thành công', 'Đã thêm hàng hóa vào đơn hàng.', 'success');
@@ -112,14 +120,8 @@ import ProductPicker from "/modules/ProductPicker.js";
 
             await editModal.hide();
 
-            const data = $(this).serialize();
             try {
-                const res = await fetch(this.action, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: data
-                });
-                const result = await res.json();
+                const result = await submitFormAsync(this);
 
                 if (result.success) {
                     await toast('Thành công', 'Đã cập nhật hàng hóa của đơn hàng.', 'success');
@@ -143,12 +145,12 @@ import ProductPicker from "/modules/ProductPicker.js";
         const confirmed = await confirm('Xác nhận xóa', `Bạn có chắc chắn muốn xóa <strong>${name}</strong> khỏi đơn hàng không?`);
         if (confirmed) {
             try {
-                const res = await fetch('/Order/RemoveOrderItem', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `OrderId=${orderId}&ItemId=${id}`
-                });
-                const result = await res.json();
+                // Gửi qua FormData để server tiếp tục dùng default model-binding
+                // (controller không dùng [FromBody]).
+                const formData = new FormData();
+                formData.append('OrderId', orderId);
+                formData.append('ItemId', id);
+                const result = await apiPost('/Order/RemoveOrderItem', formData);
                 if (result.success) {
                     location.reload();
                 } else {
@@ -171,14 +173,8 @@ import ProductPicker from "/modules/ProductPicker.js";
         const lockModal = new PromiseModal('#lockModal');
         await lockModal.hide();
 
-        const data = $(this).serialize();
         try {
-            const res = await fetch(this.action, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: data
-            });
-            const result = await res.json();
+            const result = await submitFormAsync(this);
 
             if (result.success) {
                 await toast('Thành công', 'Đã khóa đơn hàng này.', 'success');
@@ -204,14 +200,8 @@ import ProductPicker from "/modules/ProductPicker.js";
             const editDiscountModal = new PromiseModal('#editDiscountModal');
             await editDiscountModal.hide();
 
-            const data = $(this).serialize();
             try {
-                const res = await fetch(this.action, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: data
-                });
-                const result = await res.json();
+                const result = await submitFormAsync(this);
 
                 if (result.success) {
                     await toast('Thành công', 'Đã cập nhật giảm giá cho đơn hàng.', 'success');
@@ -242,14 +232,8 @@ import ProductPicker from "/modules/ProductPicker.js";
 
             var note = $(this).find('[name="Note"]');
 
-            const data = $(this).serialize();
             try {
-                const res = await fetch(this.action, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: data
-                });
-                const result = await res.json();
+                const result = await submitFormAsync(this);
 
                 if (result.success) {
                     if (note)
@@ -279,14 +263,8 @@ import ProductPicker from "/modules/ProductPicker.js";
             const shippingModal = new PromiseModal('#shippingModal');
             await shippingModal.hide();
 
-            const data = $(this).serialize();
             try {
-                const res = await fetch(this.action, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: data
-                });
-                const result = await res.json();
+                const result = await submitFormAsync(this);
 
                 if (result.success) {
                     await toast('Thành công', 'Đã cập nhật thông tin giao hàng.', 'success');
@@ -406,19 +384,13 @@ import ProductPicker from "/modules/ProductPicker.js";
 
             try {
                 const orderId = document.querySelector('[name="OrderId"]')?.value;
-                const res = await fetch('/DeliveryNote/CreateFromPreparation', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        orderId: orderId,
-                        selectedItems: selectedItems.map(item => ({
-                            orderItemId: item.orderItemId,
-                            quantity: item.quantity
-                        }))
-                    })
+                const result = await apiPost('/DeliveryNote/CreateFromPreparation', {
+                    orderId: orderId,
+                    selectedItems: selectedItems.map(item => ({
+                        orderItemId: item.orderItemId,
+                        quantity: item.quantity
+                    }))
                 });
-
-                const result = await res.json();
 
                 if (result.success) {
                     const createModal = new PromiseModal('#createDeliveryNoteModal');

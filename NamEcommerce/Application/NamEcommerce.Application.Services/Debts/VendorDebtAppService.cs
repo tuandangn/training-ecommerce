@@ -114,6 +114,12 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
         return result?.ToDto();
     }
 
+    public async Task<VendorDebtAppDto?> GetDebtByGoodsReceiptIdAsync(Guid goodsReceiptId)
+    {
+        var result = await _debtManager.GetDebtByGoodsReceiptIdAsync(goodsReceiptId).ConfigureAwait(false);
+        return result?.ToDto();
+    }
+
     public async Task<VendorPaymentAppDto?> GetPaymentByIdAsync(Guid paymentId)
     {
         var result = await _debtManager.GetPaymentByIdAsync(paymentId).ConfigureAwait(false);

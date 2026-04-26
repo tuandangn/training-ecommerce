@@ -134,6 +134,30 @@ public sealed class VendorController : BaseAuthorizedController
         return RedirectToAction(nameof(List));
     }
 
+    /// <summary>
+    /// Trả về danh sách nhà cung cấp dạng { value, label } để render trong dropdown.
+    /// GET /Vendor/Options?q=abc
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> Options(string? q)
+    {
+        var model = await _mediator.Send(new GetVendorListQuery
+        {
+            Keywords = q,
+            PageIndex = 0,
+            PageSize = 50
+        });
+
+        var options = model.Data.Items.Select(v => new
+        {
+            value = v.Id,
+            label = string.IsNullOrEmpty(v.PhoneNumber)
+                ? v.Name
+                : $"{v.Name} ({v.PhoneNumber})"
+        });
+        return Json(options);
+    }
+
     [HttpGet]
     public async Task<IActionResult> Search(string q)
     {

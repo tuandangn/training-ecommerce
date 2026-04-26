@@ -23,9 +23,12 @@ public sealed class VendorDebtMapping : IEntityTypeConfiguration<VendorDebt>
         builder.Property(x => x.VendorAddress).IsRequired(false).HasMaxLength(500);
         builder.Property(x => x.NormalizedVendorAddress).HasMaxLength(1000);
 
-        builder.Property(x => x.PurchaseOrderId).IsRequired();
+        builder.Property(x => x.PurchaseOrderId).IsRequired(false);
         builder.HasIndex(x => x.PurchaseOrderId);
-        builder.Property(x => x.PurchaseOrderCode).IsRequired().HasMaxLength(100);
+        builder.Property(x => x.PurchaseOrderCode).IsRequired(false).HasMaxLength(100);
+
+        builder.Property(x => x.GoodsReceiptId).IsRequired(false);
+        builder.HasIndex(x => x.GoodsReceiptId);
 
         builder.Property(x => x.TotalAmount).IsRequired().HasColumnType("decimal(18,2)");
         builder.Property(x => x.PaidAmount).IsRequired().HasColumnType("decimal(18,2)");

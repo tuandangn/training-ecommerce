@@ -658,8 +658,6 @@ public sealed class ProductManagerTests
     public async Task UpdateProductAsync_PriceChanged_InsertPriceHistory()
     {
         var productId = Guid.NewGuid();
-        var oldPrice = 1000m;
-        var oldCost = 800m;
         var newPrice = 1200m;
         var newCost = 900m;
 
@@ -672,9 +670,7 @@ public sealed class ProductManagerTests
         var dto = new UpdateProductDto(productId)
         {
             Name = "product",
-            ShortDesc = "desc",
-            UnitPrice = newPrice,
-            CostPrice = newCost
+            ShortDesc = "desc"
         };
 
         var historyRepoMock = new Mock<IRepository<ProductPriceHistory>>();

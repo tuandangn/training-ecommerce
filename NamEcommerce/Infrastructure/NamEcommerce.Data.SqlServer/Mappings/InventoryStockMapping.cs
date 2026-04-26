@@ -13,5 +13,6 @@ public sealed class InventoryStockMapping : IEntityTypeConfiguration<InventorySt
         builder.Property(p => p.QuantityReserved).HasColumnType("decimal(18,2)");
         builder.Property(p => p.ReorderLevel).HasColumnType("decimal(18,2)");
         builder.Property(p => p.MaxStockLevel).HasColumnType("decimal(18,2)");
+        builder.Property(p => p.AverageCost).HasColumnType("decimal(18,2)");
     }
 }

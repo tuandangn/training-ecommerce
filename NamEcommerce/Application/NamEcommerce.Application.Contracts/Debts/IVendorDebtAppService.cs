@@ -32,6 +32,13 @@ public interface IVendorDebtAppService
 
     Task<VendorDebtAppDto?> GetDebtByIdAsync(Guid id);
 
+    /// <summary>
+    /// Lấy phiếu nợ NCC sinh từ một <c>GoodsReceipt</c> cụ thể (nếu đã sinh).
+    /// Dùng cho UI hiển thị badge "Đã ghi nợ" trên trang Details của phiếu nhập.
+    /// Trả <c>null</c> nếu phiếu nhập đó chưa sinh nợ.
+    /// </summary>
+    Task<VendorDebtAppDto?> GetDebtByGoodsReceiptIdAsync(Guid goodsReceiptId);
+
     Task<VendorPaymentAppDto?> GetPaymentByIdAsync(Guid paymentId);
 
     Task<VendorDebtSummaryAppDto?> GetVendorDebtSummaryAsync(Guid vendorId);

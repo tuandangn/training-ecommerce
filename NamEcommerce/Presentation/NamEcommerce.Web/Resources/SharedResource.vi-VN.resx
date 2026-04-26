@@ -258,6 +258,9 @@
   <data name="Error.StockQuantityCannotBeNegative" xml:space="preserve">
     <value>Số lượng tồn kho không được âm.</value>
   </data>
+  <data name="Error.StockAverageCostCannotBeNegative" xml:space="preserve">
+    <value>Giá vốn bình quân không được âm.</value>
+  </data>
   <data name="Error.StockQuantityMustBePositive" xml:space="preserve">
     <value>Số lượng tồn kho phải lớn hơn 0.</value>
   </data>
@@ -707,6 +710,9 @@
   </data>
   <data name="Error.GoodsReceipt.Item.UnitCostCannotBeNegative" xml:space="preserve">
     <value>Giá nhập hàng không được âm.</value>
+  </data>
+  <data name="Error.GoodsReceipt.CannotDeleteHasStockMovements" xml:space="preserve">
+    <value>Không thể xóa phiếu nhập đã phát sinh tồn kho. Hãy điều chỉnh tồn (Adjust) hoặc tạo phiếu xuất bù trừ thay vì xóa.</value>
   </data>
   <data name="Btn.Add" xml:space="preserve">
     <value>Thêm mới</value>

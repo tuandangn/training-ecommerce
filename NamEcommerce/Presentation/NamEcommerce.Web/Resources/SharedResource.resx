@@ -258,6 +258,9 @@
   <data name="Error.StockQuantityCannotBeNegative" xml:space="preserve">
     <value>Stock quantity cannot be negative.</value>
   </data>
+  <data name="Error.StockAverageCostCannotBeNegative" xml:space="preserve">
+    <value>Stock average cost cannot be negative.</value>
+  </data>
   <data name="Error.StockQuantityMustBePositive" xml:space="preserve">
     <value>Stock quantity must be greater than 0.</value>
   </data>
@@ -707,6 +710,9 @@
   </data>
   <data name="Error.GoodsReceipt.Item.UnitCostCannotBeNegative" xml:space="preserve">
     <value>Item unit cost cannot be negative.</value>
+  </data>
+  <data name="Error.GoodsReceipt.CannotDeleteHasStockMovements" xml:space="preserve">
+    <value>Cannot delete a goods receipt that has stock movements. Please use stock adjustment or create an offsetting issue note instead.</value>
   </data>
   <data name="Error.UnitPriceRequired" xml:space="preserve">
     <value>Unit price is required</value>

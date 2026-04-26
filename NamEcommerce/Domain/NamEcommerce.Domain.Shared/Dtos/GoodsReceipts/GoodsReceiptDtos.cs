@@ -14,6 +14,9 @@ public abstract record BaseGoodsReceiptDto
 
     public string? Note { get; set; }
 
+    /// <summary>Nhà cung cấp — nullable.</summary>
+    public Guid? VendorId { get; set; }
+
     public virtual void Verify()
     {
         if (!PictureIds.Any())
@@ -29,6 +32,11 @@ public sealed record GoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto
 {
     public required IEnumerable<GoodsReceiptItemDto> Items { get; init; }
     public bool IsPendingCosting { get; init; }
+
+    // Vendor snapshot — chỉ có trong DTO đọc, không phải DTO ghi
+    public string? VendorName { get; init; }
+    public string? VendorPhone { get; init; }
+    public string? VendorAddress { get; init; }
 }
 
 [Serializable]
@@ -62,3 +70,22 @@ public sealed record UpdateGoodsReceiptResultDto
 
 [Serializable]
 public sealed record DeleteGoodsReceiptDto(Guid GoodsReceiptId) : BaseGoodsReceiptDto;
+
+[Serializable]
+public sealed record SetGoodsReceiptVendorDto(Guid GoodsReceiptId)
+{
+    /// <summary>null = xoá vendor khỏi phiếu.</summary>
+    public Guid? VendorId { get; init; }
+
+    public void Verify()
+    {
+        if (GoodsReceiptId == Guid.Empty)
+            throw new GoodsReceiptIsNotFoundException(GoodsReceiptId);
+    }
+}
+
+[Serializable]
+public sealed record SetGoodsReceiptVendorResultDto
+{
+    public required Guid UpdatedId { get; init; }
+}

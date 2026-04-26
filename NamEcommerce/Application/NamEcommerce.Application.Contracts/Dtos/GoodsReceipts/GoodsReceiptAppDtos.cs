@@ -12,6 +12,9 @@ public abstract record BaseGoodsReceiptAppDto
 
     public string? Note { get; set; }
 
+    /// <summary>Nhà cung cấp — nullable, có thể để trống.</summary>
+    public Guid? VendorId { get; set; }
+
     public virtual (bool valid, string? errorMessage) Validate()
     {
         if (!PictureIds.Any())
@@ -28,6 +31,11 @@ public sealed record GoodsReceiptAppDto(Guid Id) : BaseGoodsReceiptAppDto
 {
     public IList<GoodsReceiptItemAppDto> Items { get; } = [];
     public bool IsPendingCosting { get; init; }
+
+    // Vendor snapshot
+    public string? VendorName { get; init; }
+    public string? VendorPhone { get; init; }
+    public string? VendorAddress { get; init; }
 }
 
 [Serializable]
@@ -64,6 +72,28 @@ public sealed record UpdateGoodsReceiptAppDto(Guid Id) : BaseGoodsReceiptAppDto;
 
 [Serializable]
 public sealed record UpdateGoodsReceiptResultAppDto
+{
+    public required bool Success { get; init; }
+    public Guid? UpdatedId { get; set; }
+    public string? ErrorMessage { get; set; }
+}
+
+[Serializable]
+public sealed record SetGoodsReceiptVendorAppDto(Guid GoodsReceiptId)
+{
+    /// <summary>null = xoá vendor khỏi phiếu.</summary>
+    public Guid? VendorId { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (GoodsReceiptId == Guid.Empty)
+            return (false, "Error.GoodsReceipt.NotFound");
+        return (true, null);
+    }
+}
+
+[Serializable]
+public sealed record SetGoodsReceiptVendorResultAppDto
 {
     public required bool Success { get; init; }
     public Guid? UpdatedId { get; set; }

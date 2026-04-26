@@ -50,8 +50,10 @@ public sealed record VendorDebtDto
     public string? VendorPhone { get; init; }
     public string? VendorAddress { get; init; }
 
-    public required Guid PurchaseOrderId { get; init; }
-    public required string PurchaseOrderCode { get; init; }
+    public Guid? PurchaseOrderId { get; init; }
+    public string? PurchaseOrderCode { get; init; }
+
+    public Guid? GoodsReceiptId { get; init; }
 
     public decimal TotalAmount { get; init; }
     public decimal PaidAmount { get; init; }
@@ -81,6 +83,26 @@ public sealed record CreateVendorDebtDto
             throw new NamEcommerceDomainException("Error.VendorRequired");
         if (PurchaseOrderId == Guid.Empty)
             throw new NamEcommerceDomainException("Error.PurchaseOrderCodeRequired");
+        if (TotalAmount <= 0)
+            throw new NamEcommerceDomainException("Error.VendorDebtTotalAmountMustBePositive");
+    }
+}
+
+[Serializable]
+public sealed record CreateVendorDebtFromGoodsReceiptDto
+{
+    public required Guid VendorId { get; init; }
+    public required Guid GoodsReceiptId { get; init; }
+    public required decimal TotalAmount { get; init; }
+    public DateTime? DueDateUtc { get; init; }
+    public Guid? CreatedByUserId { get; init; }
+
+    public void Verify()
+    {
+        if (VendorId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.VendorRequired");
+        if (GoodsReceiptId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.GoodsReceiptRequired");
         if (TotalAmount <= 0)
             throw new NamEcommerceDomainException("Error.VendorDebtTotalAmountMustBePositive");
     }

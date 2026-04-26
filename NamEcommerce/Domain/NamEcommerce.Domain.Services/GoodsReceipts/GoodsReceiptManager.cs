@@ -8,6 +8,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Events;
+using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
@@ -25,6 +26,7 @@ public sealed class GoodsReceiptManager(
     ICurrentUserAccessor currentUserAccessor,
     IEntityDataReader<Picture> pictureDataReader,
     IEntityDataReader<StockMovementLog> stockMovementLogDataReader,
+    IEntityDataReader<Vendor> vendorDataReader,
     IEventPublisher eventPublisher) : IGoodsReceiptManager
 {
     public async Task<CreateGoodsReceiptResultDto> CreateGoodsReceiptAsync(CreateGoodsReceiptDto dto)
@@ -41,6 +43,13 @@ public sealed class GoodsReceiptManager(
             await goodsReceipt.AddItemAsync(item.ProductId, item.WarehouseId, item.Quantity, item.UnitCost, productDataReader, warehouseSettings, warehouseDataReader).ConfigureAwait(false);
         foreach (var pictureId in dto.PictureIds)
             await goodsReceipt.AddPictureAsync(pictureId, pictureDataReader).ConfigureAwait(false);
+
+        if (dto.VendorId.HasValue)
+        {
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
+            if (vendor is not null)
+                goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
+        }
 
         var insertedGoodsReceipt = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
 
@@ -68,6 +77,17 @@ public sealed class GoodsReceiptManager(
         foreach (var pictureId in dto.PictureIds)
             await goodsReceipt.AddPictureAsync(pictureId, pictureDataReader).ConfigureAwait(false);
 
+        if (dto.VendorId.HasValue)
+        {
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
+            if (vendor is not null)
+                goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
+        }
+        else
+        {
+            goodsReceipt.ClearVendor();
+        }
+
         var updatedGoodsReceipt = await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
 
         await eventPublisher.EntityUpdated(updatedGoodsReceipt, deletedPictureIds).ConfigureAwait(false);
@@ -92,7 +112,9 @@ public sealed class GoodsReceiptManager(
         item.SetUnitCost(dto.UnitCost);
         var updatedGoodsReceipt = await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
 
-        await eventPublisher.EntityUpdated(updatedGoodsReceipt).ConfigureAwait(false);
+        // Pass item.Id qua AdditionalData để GoodsReceiptUpdatedHandler phân biệt được
+        // đây là một lần SetUnitCost (cần Full Recalculation AverageCost) thay vì các loại update khác.
+        await eventPublisher.EntityUpdated(updatedGoodsReceipt, item.Id).ConfigureAwait(false);
     }
 
     public async Task<GoodsReceiptDto?> GetGoodsReceiptByIdAsync(Guid id)
@@ -138,6 +160,36 @@ public sealed class GoodsReceiptManager(
 
         var pagedData = PagedDataDto.Create(data.Select(goodsReceipt => goodsReceipt.ToDto()), pageIndex, pageSize, total);
         return pagedData;
+    }
+
+    public async Task<SetGoodsReceiptVendorResultDto> SetGoodsReceiptVendorAsync(SetGoodsReceiptVendorDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        dto.Verify();
+
+        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId).ConfigureAwait(false);
+        if (goodsReceipt is null)
+            throw new GoodsReceiptIsNotFoundException(dto.GoodsReceiptId);
+
+        if (dto.VendorId.HasValue)
+        {
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
+            if (vendor is null)
+                throw new VendorIsNotFoundException(dto.VendorId.Value);
+
+            goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
+        }
+        else
+        {
+            goodsReceipt.ClearVendor();
+        }
+
+        var updatedGoodsReceipt = await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
+
+        await eventPublisher.EntityUpdated(updatedGoodsReceipt, "vendor-updated").ConfigureAwait(false);
+
+        return new SetGoodsReceiptVendorResultDto { UpdatedId = updatedGoodsReceipt.Id };
     }
 
     public async Task DeleteGoodsReceiptAsync(DeleteGoodsReceiptDto dto)

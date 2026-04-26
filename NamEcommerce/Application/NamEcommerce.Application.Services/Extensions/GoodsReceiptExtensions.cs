@@ -14,7 +14,11 @@ public static class GoodsReceiptExtensions
             TruckNumberSerial = goodsReceipt.TruckNumberSerial,
             PictureIds = goodsReceipt.PictureIds,
             Note = goodsReceipt.Note,
-            IsPendingCosting = goodsReceipt.IsPendingCosting
+            IsPendingCosting = goodsReceipt.IsPendingCosting,
+            VendorId = goodsReceipt.VendorId,
+            VendorName = goodsReceipt.VendorName,
+            VendorPhone = goodsReceipt.VendorPhone,
+            VendorAddress = goodsReceipt.VendorAddress
         };
 
         foreach (var item in goodsReceipt.Items)

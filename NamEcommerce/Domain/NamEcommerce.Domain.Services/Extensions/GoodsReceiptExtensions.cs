@@ -22,7 +22,11 @@ public static class GoodsReceiptExtensions
             Note = goodsReceipt.Note,
             PictureIds = goodsReceipt.PictureIds,
             TruckDriverName = goodsReceipt.TruckDriverName,
-            TruckNumberSerial = goodsReceipt.TruckNumberSerial
+            TruckNumberSerial = goodsReceipt.TruckNumberSerial,
+            VendorId = goodsReceipt.VendorId,
+            VendorName = goodsReceipt.VendorName,
+            VendorPhone = goodsReceipt.VendorPhone,
+            VendorAddress = goodsReceipt.VendorAddress
         };
 
         return dto;

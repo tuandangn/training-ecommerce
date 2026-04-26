@@ -13,4 +13,5 @@ public interface IGoodsReceiptAppService
     Task<(bool success, string? errorMessage)> DeleteGoodsReceiptAsync(Guid id);
 
     Task<SetGoodsReceiptItemUnitCostResultAppDto> SetGoodsReceiptItemUnitCostAsync(SetGoodsReceiptItemUnitCostAppDto dto);
+    Task<SetGoodsReceiptVendorResultAppDto> SetGoodsReceiptVendorAsync(SetGoodsReceiptVendorAppDto dto);
 }
