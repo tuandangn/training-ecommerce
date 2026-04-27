@@ -4,5 +4,5 @@
 public sealed record UpdatePurchaseOrderResultModel
 {
     public required bool Success { get; init; }
-    public required string? ErrorMessage { get; init; }
+    public string? ErrorMessage { get; init; }
 }

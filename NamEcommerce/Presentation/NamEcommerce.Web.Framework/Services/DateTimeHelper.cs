@@ -27,7 +27,14 @@ public sealed class DateTimeHelper
     /// Chuyển một DateTime (được nhập theo giờ Việt Nam) sang UTC để lưu vào database.
     /// </summary>
     public static DateTime ToUniversalTime(DateTime vietnamTime)
-        => ToUniversalTime((DateTime?)vietnamTime)!.Value;
+    {
+        // Nếu Kind đã là Utc thì không chuyển lại
+        if (vietnamTime.Kind == DateTimeKind.Utc)
+            return vietnamTime;
+
+        var unspecified = DateTime.SpecifyKind(vietnamTime, DateTimeKind.Unspecified);
+        return TimeZoneInfo.ConvertTimeToUtc(unspecified, VietnamTimeZone);
+    }
 
     /// <summary>
     /// Chuyển một DateTime? (được nhập theo giờ Việt Nam) sang UTC để lưu vào database.
@@ -37,19 +44,17 @@ public sealed class DateTimeHelper
         if (!vietnamTime.HasValue)
             return null;
 
-        // Nếu Kind đã là Utc thì không chuyển lại
-        if (vietnamTime.Value.Kind == DateTimeKind.Utc)
-            return vietnamTime.Value;
-
-        var unspecified = DateTime.SpecifyKind(vietnamTime.Value, DateTimeKind.Unspecified);
-        return TimeZoneInfo.ConvertTimeToUtc(unspecified, VietnamTimeZone);
+        return ToUniversalTime(vietnamTime.Value);
     }
 
     /// <summary>
     /// Chuyển UTC từ database sang giờ Việt Nam để hiển thị.
     /// </summary>
     public static DateTime ToLocalTime(DateTime utcTime)
-        => ToLocalTime((DateTime?)utcTime)!.Value;
+    {
+        var asUtc = DateTime.SpecifyKind(utcTime, DateTimeKind.Utc);
+        return TimeZoneInfo.ConvertTimeFromUtc(asUtc, VietnamTimeZone);
+    }
 
     /// <summary>
     /// Chuyển UTC? từ database sang giờ Việt Nam để hiển thị.
@@ -59,7 +64,6 @@ public sealed class DateTimeHelper
         if (!utcTime.HasValue)
             return null;
 
-        var asUtc = DateTime.SpecifyKind(utcTime.Value, DateTimeKind.Utc);
-        return TimeZoneInfo.ConvertTimeFromUtc(asUtc, VietnamTimeZone);
+        return ToLocalTime(utcTime.Value);
     }
 }

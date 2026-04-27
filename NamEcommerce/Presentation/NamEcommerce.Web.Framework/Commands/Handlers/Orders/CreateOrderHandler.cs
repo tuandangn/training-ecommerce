@@ -5,6 +5,7 @@ using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Contracts.Models.Orders;
+using NamEcommerce.Web.Contracts.Extensions;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 
@@ -27,7 +28,7 @@ public sealed class CreateOrderHandler : IRequestHandler<CreateOrderCommand, Cre
             CustomerId = request.CustomerId,
             OrderDiscount = request.OrderDiscount,
             Note = request.Note,
-            ExpectedShippingDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedShippingDate),
+            ExpectedShippingDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedShippingDate.ToEndOfDate()),
             ShippingAddress = request.ShippingAddress,
             CreatedByUserId = currentUser?.Id
         };

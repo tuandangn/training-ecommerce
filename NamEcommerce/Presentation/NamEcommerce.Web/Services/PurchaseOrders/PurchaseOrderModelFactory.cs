@@ -1,5 +1,4 @@
 using MediatR;
-using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -94,9 +93,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             Info = purchaseOrderInfo,
             AvailableWarehouses = availableWarehouses
         };
-        model.CanModifyInfo = purchaseOrderInfo.Status != (int)PurchaseOrderStatus.Submitted
-            && purchaseOrderInfo.Status != (int)PurchaseOrderStatus.Completed
-            && purchaseOrderInfo.Status != (int)PurchaseOrderStatus.Cancelled;
+        model.CanModifyInfo = purchaseOrderInfo.CanModifyInfo;
         if (model.CanModifyInfo)
         {
             model.ModifyInfo = new EditPurchaseOrderModel
@@ -113,9 +110,9 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 ExpectedDeliveryDate = purchaseOrderInfo.ExpectedDeliveryDate,
                 ShippingAmount = purchaseOrderInfo.ShippingAmount,
                 TaxAmount = purchaseOrderInfo.TaxAmount,
-                CanChangeVendor = purchaseOrderInfo.Status == (int)PurchaseOrderStatus.Draft,
-                CanChangeDate = purchaseOrderInfo.Status == (int)PurchaseOrderStatus.Draft,
-                CanChangeFees = purchaseOrderInfo.Items.Count > 0,
+                CanChangeVendor = purchaseOrderInfo.CanChangeVendor,
+                CanChangeDate = purchaseOrderInfo.CanChangeDate,
+                CanChangeFees = purchaseOrderInfo.CanChangeFees,
                 TotalAmount = purchaseOrderInfo.TotalAmount,
                 CreatedOn = purchaseOrderInfo.CreatedOn
             };

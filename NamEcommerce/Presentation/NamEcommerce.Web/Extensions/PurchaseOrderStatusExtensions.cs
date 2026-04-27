@@ -27,10 +27,10 @@ public static class PurchaseOrderStatusExtensions
         {
             PurchaseOrderStatus.Draft => "bg-secondary text-light",
             PurchaseOrderStatus.Submitted => "bg-primary text-light",
-            PurchaseOrderStatus.Approved => "bg-info",
+            PurchaseOrderStatus.Approved => "bg-info text-light",
             PurchaseOrderStatus.Receiving => "bg-warning text-dark",
             PurchaseOrderStatus.Completed => "bg-success text-light",
-            PurchaseOrderStatus.Cancelled => "bg-danger light",
+            PurchaseOrderStatus.Cancelled => "bg-danger text-light",
             _ => throw new InvalidDataException(nameof(status)),
         };
     }

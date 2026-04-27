@@ -129,6 +129,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
         _items.Remove(orderItem);
     }
+
     public bool CanUpdatePurchaseOrderItems() => Status == PurchaseOrderStatus.Draft;
     public bool CanUpdateInfo() => Status != PurchaseOrderStatus.Draft;
     public bool CanReceiveGoods() => Status == PurchaseOrderStatus.Approved || Status == PurchaseOrderStatus.Receiving;
@@ -178,6 +179,10 @@ public sealed record PurchaseOrder : AppAggregateEntity
         return false;
     }
 
+    #endregion
+
+    #region Builder
+
     internal static PurchaseOrderBuilder CreateBuilder() => new PurchaseOrderBuilder();
     internal sealed class PurchaseOrderBuilder
     {
@@ -185,7 +190,6 @@ public sealed record PurchaseOrder : AppAggregateEntity
         private string? code;
         private Guid? vendorId;
         private Guid? warehouseId;
-        private DateTime? placedOn;
 
         private IGetByIdService<PurchaseOrder>? purchaseOrderByIdGetter;
         private ICodeExistCheckingService? purchaseOrderCodeChecker;
@@ -239,8 +243,6 @@ public sealed record PurchaseOrder : AppAggregateEntity
                 throw new PurchaseOrderDataIsInvalidException("Error.DataInvalid.Required", "Id");
             if (!vendorId.HasValue)
                 throw new PurchaseOrderDataIsInvalidException("Error.DataInvalid.Required", "VendorId");
-            if (!placedOn.HasValue)
-                throw new PurchaseOrderDataIsInvalidException("Error.DataInvalid.Required", "PlacedOnUtc");
 
             ArgumentNullException.ThrowIfNull(purchaseOrderByIdGetter);
             ArgumentNullException.ThrowIfNull(purchaseOrderCodeChecker);

@@ -5,8 +5,6 @@ using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Models.Catalog;
 using NamEcommerce.Web.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
-using NamEcommerce.Web.Models.CustomerDebts;
-using NamEcommerce.Web.Extensions;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -48,8 +46,6 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             PlacedOn = model.PlacedOn,
             VendorId = model.VendorId,
             WarehouseId = model.WarehouseId,
-            ShippingAmount = 0,
-            TaxAmount = 0,
             Note = model.Note,
             ExpectedDeliveryDate = model.ExpectedDeliveryDate,
             Items = model.Items?.Where(i => i.ProductId.HasValue && (i.Quantity ?? 0) > 0).Select(i => new CreatePurchaseOrderItemCommand
@@ -75,23 +71,16 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     {
         if (!ModelState.IsValid)
         {
-            NotifyError("Error.InvalidRequest");
+            NotifyError("Error.InvalidRequest", GetErrorMessage());
             return RedirectToAction(nameof(Details), new { id = model.Id });
-        }
-
-        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.Id });
-        if (purchaseOrder is null)
-        {
-            NotifyError("Error.PurchaseOrderIsNotFound");
-            return RedirectToAction(nameof(List));
         }
 
         var updatePurchaseOrderResult = await _mediator.Send(new UpdatePurchaseOrderCommand
         {
-            PurchaseOrderId = purchaseOrder.Id,
+            PurchaseOrderId = model.Id,
             PlacedOn = model.PlacedOn,
-            ShippingAmount = model.ShippingAmount,
-            TaxAmount = model.TaxAmount,
+            ShippingAmount = model.ShippingAmount ?? 0,
+            TaxAmount = model.TaxAmount ?? 0,
             VendorId = model.VendorId,
             WarehouseId = model.WarehouseId,
             ExpectedDeliveryDate = model.ExpectedDeliveryDate,
@@ -142,12 +131,13 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
         return Json(new { success = true, message = string.Empty });
     }
+
     [HttpPost]
     public async Task<IActionResult> Receive(ReceivePurchaseOrderItemModel model)
     {
         if (!ModelState.IsValid)
         {
-            NotifyError("Error.InvalidRequest");
+            NotifyError("Error.InvalidRequest", GetErrorMessage());
             return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
         }
 
@@ -179,7 +169,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     public async Task<IActionResult> RemovePurchaseOrderItem([FromBody] DeletePurchaseOrderItemModel model)
     {
         if (!ModelState.IsValid)
-            return Json(new { success = false, errorMessage = LocalizeError("Error.InvalidRequest") });
+            return Json(new { success = false, errorMessage = LocalizeError("Error.InvalidRequest", GetErrorMessage()) });
 
         var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
         if (purchaseOrder is null)
@@ -224,6 +214,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             NotifyError(errorMessage!);
         return RedirectToAction(nameof(Details), new { id });
     }
+
     [HttpPost]
     public async Task<IActionResult> CancelPurchaseOrder(Guid id)
     {
@@ -245,10 +236,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             NotifyError(errorMessage!);
         return RedirectToAction(nameof(Details), new { id });
     }
-    /// <summary>
-    /// AJAX: Lấy giá nhập gần nhất của một sản phẩm theo từng nhà cung cấp.
-    /// Dùng để gợi ý và tự động điền giá khi tạo đơn nhập.
-    /// </summary>
+
     [HttpGet]
     public async Task<IActionResult> RecentPurchasePrices(Guid productId)
     {

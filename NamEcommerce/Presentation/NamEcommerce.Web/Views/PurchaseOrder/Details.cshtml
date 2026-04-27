@@ -18,7 +18,7 @@
         </li>
     </ol>
 </nav>
-<div class="content-card mb-3">
+<div class="content-card mb-3 position-relative">
     <div class="content-card-header">
         <div>
             <h1 class="page-header-title">
@@ -164,7 +164,7 @@
                                     @if (Model.Info.CanAddItems || (Model.Info.CanReceiveGoods && item.RemainingQuantity > 0))
                                     {
                                         <td class="text-end pe-4">
-                                            <div class="dropdown">
+                                            <div>
                                                 <button class="btn-table-action" type="button" data-bs-toggle="dropdown">
                                                     <i class="bi bi-three-dots-vertical"></i>
                                                 </button>

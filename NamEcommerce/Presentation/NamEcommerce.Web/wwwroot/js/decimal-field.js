@@ -189,8 +189,10 @@
 
     function createCurrencyInput(options) {
         var opts = Object.assign({
-            name: '', value: null, id: null,
-            placeholder: '0', cssClass: '', showHint: true
+            name: '', value: null,
+            id: null, cssClass: '',
+            placeholder: '0', 
+            showHint: false
         }, options);
 
         var wrapper = document.createElement('div');
@@ -212,19 +214,20 @@
         if (opts.id) input.id = opts.id;
         if (opts.value != null) input.value = formatCurrency(String(opts.value));
 
-        if (!opts.noPrefix)
+        if (opts.includeSuffix || input.classList.contains('include-suffix'))
             wrapper.appendChild(prefix);
         wrapper.appendChild(input);
         bindInput(input);
 
-        var hint = opts.showHint ? attachHint(wrapper, input) : null;
+        var hint = (opts.showHint || input.classList.contains('include-hint')) ? attachHint(wrapper, input) : null;
         return { wrapper: wrapper, input: input, hint: hint };
     }
 
     function createQuantityInput(options) {
         var opts = Object.assign({
-            name: '', value: null, id: null,
-            placeholder: '0,00', cssClass: ''
+            name: '', value: null,
+            id: null, cssClass: '',
+            placeholder: '0,00'
         }, options);
 
         var wrapper = document.createElement('div');
@@ -246,7 +249,7 @@
         if (opts.id) input.id = opts.id;
         if (opts.value != null) input.value = formatQuantity(String(opts.value));
 
-        if (!opt.noSuffix)
+        if (opts.includeSuffix || input.classList.contains('include-suffix'))
             wrapper.appendChild(suffix);
         wrapper.appendChild(input);
         bindInput(input);
@@ -279,7 +282,7 @@
         if (!input) throw new Error('DecimalFields.wrapExistingInput: khong tim thay input');
         if (input.dataset.decimalBound === '1') return { input: input };
 
-        var opts = Object.assign({ showHint: true }, options);
+        var opts = Object.assign({ showHint: false }, options);
         var isCurr = (type === 'currency');
         var decimals = isCurr ? 0 : 2;
 
@@ -298,9 +301,7 @@
         wrapper.appendChild(input);
 
         // 4. Them prefix hoac suffix
-        if (opts.noAdditionalElement || input.classList.contains('no-additional-element')) {
-            input.style.paddingRight = '0.5rem';
-        } else {
+        if (opts.includeSuffix || input.classList.contains('include-suffix')) {
             if (isCurr) {
                 var prefix = document.createElement('span');
                 prefix.className = 'field-prefix';
@@ -312,6 +313,8 @@
                 suffix.innerHTML = SUFFIX_SVG;
                 wrapper.appendChild(suffix);
             }
+        } else {
+            input.style.paddingRight = '0.5rem';
         }
 
         // 5. Format gia tri hien tai
@@ -321,7 +324,7 @@
         // 6. Bind events
         bindInput(input);
         // 7. Hint doc bang chu
-        var hint = (isCurr && opts.showHint && !input.classList.contains('no-hint')) ? attachHint(wrapper, input) : null;
+        var hint = (isCurr && (opts.showHint || input.classList.contains('include-hint'))) ? attachHint(wrapper, input) : null;
 
         return { wrapper: wrapper, input: input, hint: hint };
     }

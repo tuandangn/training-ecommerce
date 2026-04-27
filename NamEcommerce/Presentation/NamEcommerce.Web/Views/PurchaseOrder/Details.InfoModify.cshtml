@@ -84,7 +84,7 @@
                     <label asp-for="ShippingAmount" class="form-label small fw-medium mb-2">Phí vận chuyển</label>
                     <div>
                         <input asp-for="ShippingAmount" class="form-control no-additional-element no-hint" placeholder="Nhập phí vận chuyển"
-                               value="@Model.ShippingAmount.DisplayCurrency()" data-decimal="currency" autocomplete="off"
+                               value="@Model.ShippingAmount?.DisplayCurrency()" data-decimal="currency" autocomplete="off"
                                data-val-range="Phí vận chuyển phải lớn hơn hoặc bằng 0." data-val-range-min="0"
                                data-val-number="Phí vận chuyển không đúng." />
                     </div>
@@ -95,7 +95,7 @@
                     <label asp-for="TaxAmount" class="form-label small fw-medium mb-2">Thuế VAT</label>
                     <div>
                         <input asp-for="TaxAmount" class="form-control no-additional-element no-hint" placeholder="Nhập tổng tiền thuế"
-                               value="@Model.TaxAmount.DisplayCurrency()" data-decimal="currency" autocomplete="off"
+                               value="@Model.TaxAmount?.DisplayCurrency()" data-decimal="currency" autocomplete="off"
                                data-val-range="Tổng thuế phải lớn hơn hoặc bằng 0." data-val-range-min="0"
                                data-val-number="Tổng thuế không đúng." />
                     </div>

@@ -1,6 +1,8 @@
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using System.Reflection;
 
 namespace NamEcommerce.Application.Services.Extensions;
 
@@ -60,7 +62,13 @@ public static class PurchaseOrderExtensions
             CreatedOnUtc = purchaseOrder.CreatedOnUtc,
             TotalAmount = purchaseOrder.TotalAmount,
             CanAddItems = purchaseOrder.CanAddItems,
-            CanReceiveGoods = purchaseOrder.CanReceiveGoods
+            CanReceiveGoods = purchaseOrder.CanReceiveGoods,
+            CanModifyInfo = purchaseOrder.Status != PurchaseOrderStatus.Submitted
+                && purchaseOrder.Status != PurchaseOrderStatus.Completed
+                && purchaseOrder.Status != PurchaseOrderStatus.Cancelled,
+            CanChangeVendor = purchaseOrder.Status == PurchaseOrderStatus.Draft,
+            CanChangeDate = purchaseOrder.Status == PurchaseOrderStatus.Draft,
+            CanChangeFees = purchaseOrder.Items.Count > 0 && purchaseOrder.Status == PurchaseOrderStatus.Receiving,
         };
 
         foreach (var item in purchaseOrder.Items)

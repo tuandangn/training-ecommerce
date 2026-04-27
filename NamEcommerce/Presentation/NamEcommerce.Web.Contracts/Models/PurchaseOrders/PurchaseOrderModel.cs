@@ -27,8 +27,12 @@ public sealed class PurchaseOrderModel
 
     public IList<ItemModel> Items { get; set; } = [];
 
+    public bool CanModifyInfo { get; set; }
     public bool CanAddItems { get; set; }
     public bool CanReceiveGoods { get; set; }
+    public bool CanChangeDate { get; set; }
+    public bool CanChangeFees { get; set; }
+    public bool CanChangeVendor { get; set; }
 
     [Serializable]
     public sealed record ItemModel(Guid Id)

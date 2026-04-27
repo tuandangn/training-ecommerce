@@ -42,8 +42,12 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             TaxAmount = purchaseOrder.TaxAmount,
             TotalAmount = purchaseOrder.TotalAmount,
             CreatedOn = purchaseOrder.CreatedOnUtc.ToLocalTime(),
+            CanModifyInfo = purchaseOrder.CanModifyInfo,
             CanAddItems = purchaseOrder.CanAddItems,
-            CanReceiveGoods = purchaseOrder.CanReceiveGoods
+            CanReceiveGoods = purchaseOrder.CanReceiveGoods,
+            CanChangeDate = purchaseOrder.CanChangeDate,
+            CanChangeFees = purchaseOrder.CanChangeFees,
+            CanChangeVendor = purchaseOrder.CanChangeVendor
         };
 
         foreach (var item in purchaseOrder.Items)

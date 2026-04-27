@@ -82,6 +82,7 @@ using NamEcommerce.Web.Mvc.Filters;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
 using NamEcommerce.Application.Services.GoodsReceipts;
 using NamEcommerce.Web.Services.GoodsReceipts;
+using NamEcommerce.Web.Services.Users;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -145,7 +146,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddScoped<ISecurityService, SecurityService>();
     services.AddScoped<IEventPublisher, EventPublisher>();
-    services.AddScoped<ICurrentUserAccessor, CurrentUserService>();
+    services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
 
     services.AddScoped<ICategoryAppService, CategoryAppService>();
     services.AddScoped<IUnitMeasurementAppService, UnitMeasurementAppService>();

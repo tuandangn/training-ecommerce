@@ -5,6 +5,7 @@ using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Contracts.Services;
+using NamEcommerce.Web.Contracts.Extensions;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.PurchaseOrders;
 
@@ -28,9 +29,7 @@ public sealed class CreatePurchaseOrderHandler : IRequestHandler<CreatePurchaseO
             VendorId = request.VendorId,
             WarehouseId = request.WarehouseId,
             Note = request.Note,
-            ExpectedDeliveryDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedDeliveryDate),
-            ShippingAmount = request.ShippingAmount,
-            TaxAmount = request.TaxAmount,
+            ExpectedDeliveryDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedDeliveryDate.ToEndOfDate()),
             CreatedByUserId = currentUser?.Id,
             Items = request.Items?.Select(i => new CreatePurchaseOrderItemAppDto
             {

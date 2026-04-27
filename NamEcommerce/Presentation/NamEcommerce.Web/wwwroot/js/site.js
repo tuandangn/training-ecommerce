@@ -16,7 +16,10 @@ $(function () {
     });
 
     $('.alert-dismissible').each(function () {
-        setTimeout(() => $(this).slideUp(), 3000);
+        let time = 3000;
+        if (this.classList.contains('long-time-waiting') || this.classList.contains('validation-summary-errors'))
+            time = 20000;
+        setTimeout(() => $(this).slideUp(), time);
     });
 
     var tooltipTriggerList = Array.from(document.querySelectorAll('[data-bs-toggle="tooltip"]'));

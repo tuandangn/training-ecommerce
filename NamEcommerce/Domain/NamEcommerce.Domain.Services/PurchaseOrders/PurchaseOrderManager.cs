@@ -89,8 +89,6 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             .BuildAsync(_purchaseOrderDataReader, _currentUserAccessor);
         purchaseOrder.Note = dto.Note;
         purchaseOrder.ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc;
-        purchaseOrder.ShippingAmount = dto.ShippingAmount;
-        purchaseOrder.TaxAmount = dto.TaxAmount;
         purchaseOrder.SetPlacedDate(dto.PlacedOnUtc);
         foreach (var orderItem in dto.Items)
         {
@@ -123,6 +121,9 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         var vendor = await _vendorOrderDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
         if (vendor is null)
             throw new VendorIsNotFoundException(dto.VendorId);
+
+        if (dto.ExpectedDeliveryDateUtc < DateTime.UtcNow && dto.ExpectedDeliveryDateUtc != purchaseOrder.ExpectedDeliveryDateUtc)
+            throw new PurchaseOrderDataIsInvalidException("Error.ExpectedDeliveryDateCannotBeInPast");
 
         if (dto.WarehouseId.HasValue)
         {

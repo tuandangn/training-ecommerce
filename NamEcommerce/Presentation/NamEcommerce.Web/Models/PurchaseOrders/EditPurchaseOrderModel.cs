@@ -32,11 +32,10 @@ public sealed class EditPurchaseOrderModel
     public string? Note { get; set; }
 
     [Display(Name = "Tổng thuế")]
-    public decimal TaxAmount { get; set; }
+    public decimal? TaxAmount { get; set; }
 
     [Display(Name = "Phí vận chuyển")]
-    public decimal ShippingAmount { get; set; }
-
+    public decimal? ShippingAmount { get; set; }
 
     [ValidateNever]
     public bool CanChangeDate { get; set; }

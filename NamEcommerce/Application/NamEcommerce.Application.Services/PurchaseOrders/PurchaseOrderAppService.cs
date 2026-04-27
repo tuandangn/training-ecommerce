@@ -8,6 +8,7 @@ using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
@@ -61,6 +62,9 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             };
         }
 
+        if (dto.ExpectedDeliveryDateUtc < DateTime.UtcNow)
+            throw new PurchaseOrderDataIsInvalidException("Error.ExpectedDeliveryDateCannotBeInPast");
+
         var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
         if (vendor is null)
         {
@@ -106,9 +110,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             VendorId = dto.VendorId,
             WarehouseId = dto.WarehouseId,
             ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
-            Note = dto.Note,
-            ShippingAmount = dto.ShippingAmount,
-            TaxAmount = dto.TaxAmount
+            Note = dto.Note
         };
 
         foreach (var item in dto.Items)
@@ -155,9 +157,14 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             };
         }
 
-        if (purchaseOrder.Status == PurchaseOrderStatus.Submitted
-            || purchaseOrder.Status == PurchaseOrderStatus.Cancelled
-            || purchaseOrder.Status == PurchaseOrderStatus.Completed)
+        var canModifyInfo = purchaseOrder.Status != PurchaseOrderStatus.Submitted
+            && purchaseOrder.Status != PurchaseOrderStatus.Completed
+            && purchaseOrder.Status != PurchaseOrderStatus.Cancelled;
+        var canChangeVendor = purchaseOrder.Status == PurchaseOrderStatus.Draft;
+        var canChangeDate = purchaseOrder.Status == PurchaseOrderStatus.Draft;
+        var canChangeFees = purchaseOrder.Items.Count > 0 && purchaseOrder.Status == PurchaseOrderStatus.Receiving;
+
+        if (!canModifyInfo)
         {
             return new UpdatePurchaseOrderResultAppDto
             {
@@ -166,7 +173,16 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             };
         }
 
-        if (purchaseOrder.Status != PurchaseOrderStatus.Draft)
+        if (dto.ExpectedDeliveryDateUtc < DateTime.UtcNow && dto.ExpectedDeliveryDateUtc != purchaseOrder.ExpectedDeliveryDateUtc)
+        {
+            return new UpdatePurchaseOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.ExpectedDeliveryDateCannotBeInPast"
+            };
+        }
+
+        if (canChangeVendor)
         {
             if (dto.VendorId != purchaseOrder.VendorId)
             {
@@ -176,52 +192,60 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                     ErrorMessage = "Error.PurchaseOrderCannotUpdateVendor"
                 };
             }
-            if (dto.WarehouseId != purchaseOrder.WarehouseId)
+            else
             {
-                return new UpdatePurchaseOrderResultAppDto
+                var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+                if (vendor is null)
                 {
-                    Success = false,
-                    ErrorMessage = "Error.PurchaseOrderCannotUpdateWarehouse"
-                };
-            }
-            if (dto.ExpectedDeliveryDateUtc?.Date != purchaseOrder.ExpectedDeliveryDateUtc?.Date)
-            {
-                return new UpdatePurchaseOrderResultAppDto
-                {
-                    Success = false,
-                    ErrorMessage = "Error.PurchaseOrderCannotUpdateDeliveryDate"
-                };
+                    return new UpdatePurchaseOrderResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Error.VendorIsNotFound"
+                    };
+                }
             }
         }
 
-        if (purchaseOrder.Items.Count == 0)
+        if (canChangeFees)
         {
-            if (dto.ShippingAmount > 0)
+            if (purchaseOrder.Items.Count == 0)
             {
-                return new UpdatePurchaseOrderResultAppDto
+                if (dto.ShippingAmount > 0)
                 {
-                    Success = false,
-                    ErrorMessage = "Error.PurchaseOrderHasNoItemsForShipping"
-                };
-            }
-            if (dto.TaxAmount > 0)
-            {
-                return new UpdatePurchaseOrderResultAppDto
+                    return new UpdatePurchaseOrderResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Error.PurchaseOrderHasNoItemsForShipping"
+                    };
+                }
+                if (dto.TaxAmount > 0)
                 {
-                    Success = false,
-                    ErrorMessage = "Error.PurchaseOrderHasNoItemsForTax"
-                };
+                    return new UpdatePurchaseOrderResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Error.PurchaseOrderHasNoItemsForTax"
+                    };
+                }
             }
-        }
-
-        var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
-        if (vendor is null)
-        {
-            return new UpdatePurchaseOrderResultAppDto
+            else
             {
-                Success = false,
-                ErrorMessage = "Error.VendorIsNotFound"
-            };
+                if (dto.TaxAmount < 0)
+                {
+                    return new UpdatePurchaseOrderResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Error.TaxAmountCannotBeNegative"
+                    };
+                }
+                if (dto.ShippingAmount < 0)
+                {
+                    return new UpdatePurchaseOrderResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Error.ShippingAmountCannotBeNegative"
+                    };
+                }
+            }
         }
 
         if (dto.WarehouseId.HasValue)
@@ -239,13 +263,13 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
         var updatePurchaseOrderDto = new UpdatePurchaseOrderDto(dto.Id)
         {
-            PlacedOnUtc = dto.PlacedOnUtc,
-            VendorId = dto.VendorId,
+            PlacedOnUtc = canChangeDate ? dto.PlacedOnUtc : purchaseOrder.PlacedOnUtc,
+            VendorId = canChangeVendor ? dto.VendorId : purchaseOrder.VendorId,
             WarehouseId = dto.WarehouseId,
             ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
             Note = dto.Note,
-            ShippingAmount = dto.ShippingAmount,
-            TaxAmount = dto.TaxAmount
+            ShippingAmount = canChangeFees ? dto.ShippingAmount : purchaseOrder.ShippingAmount,
+            TaxAmount = canChangeFees ? dto.TaxAmount : purchaseOrder.TaxAmount
         };
 
         var result = await _purchaseOrderManager.UpdatePurchaseOrderAsync(updatePurchaseOrderDto).ConfigureAwait(false);

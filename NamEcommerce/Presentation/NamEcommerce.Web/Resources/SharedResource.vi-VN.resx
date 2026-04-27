@@ -148,7 +148,7 @@
     <value>Kích thước trang phải lớn hơn 0.</value>
   </data>
   <data name="Error.InvalidRequest" xml:space="preserve">
-    <value>Dữ liệu không hợp lệ.</value>
+    <value>Dữ liệu không hợp lệ. {0}</value>
   </data>
   <data name="Error.PhoneNumberInvalid" xml:space="preserve">
     <value>Số điện thoại không hợp lệ.</value>
@@ -446,9 +446,6 @@
   </data>
   <data name="Error.DeliveryNoteCodeRequired" xml:space="preserve">
     <value>Mã phiếu giao hàng không được để trống.</value>
-  </data>
-  <data name="Error.ExpectedDeliveryDateInPast" xml:space="preserve">
-    <value>Ngày giao hàng dự kiến không được ở quá khứ.</value>
   </data>
   <data name="Error.DeliveryNoteNotFound" xml:space="preserve">
     <value>Phiếu giao hàng không tồn tại.</value>
@@ -776,5 +773,23 @@
   </data>
   <data name="Error.DataInvalid.Required" xml:space="preserve">
     <value>{0} là bắt buộc</value>
+  </data>
+  <data name="Error.ExpectedDeliveryDateLessThanPlaceOrderDate" xml:space="preserve">
+    <value>Ngày giao dự kiến không được nhỏ hơn ngày đặt hàng</value>
+  </data>
+  <data name="Error.PlacedOrderDateCannotBeInFuture" xml:space="preserve">
+    <value>Ngày đặt hàng không lớn hơn hiện tại</value>
+  </data>
+  <data name="Label.PlaceOrderDate" xml:space="preserve">
+    <value>Ngày đặt hàng</value>
+  </data>
+  <data name="Error.MustGreaterThanNow" xml:space="preserve">
+    <value>{0} phải lớn hơn bây giờ</value>
+  </data>
+  <data name="Error.MustBeLessThanOrEqualToNow" xml:space="preserve">
+    <value>{0} phải nhỏ hơn bây giờ</value>
+  </data>
+  <data name="Label.ExpectedDeliveryDate" xml:space="preserve">
+    <value>Ngày giao dự kiến</value>
   </data>
 </root>

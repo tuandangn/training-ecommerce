@@ -7,20 +7,16 @@ public abstract record BasePurchaseOrderAppDto
     public required Guid VendorId { get; init; }
     public required Guid? WarehouseId { get; init; }
 
-    public decimal TaxAmount { get; set; }
-    public decimal ShippingAmount { get; set; }
-
     public DateTime? ExpectedDeliveryDateUtc { get; set; }
     public string? Note { get; set; }
 
     public virtual (bool valid, string? errorMessage) Validate()
     {
-        if (ExpectedDeliveryDateUtc.HasValue && ExpectedDeliveryDateUtc.Value < DateTime.UtcNow.Date)
-            return (false, "Error.ExpectedDeliveryDateCannotBeInPast");
-        if (TaxAmount < 0)
-            return (false, "Error.TaxAmountCannotBeNegative");
-        if (ShippingAmount < 0)
-            return (false, "Error.ShippingAmountCannotBeNegative");
+        if (PlacedOnUtc > DateTime.UtcNow)
+            return (false, "Error.PlacedOrderDateCannotBeInFuture");
+
+        if (ExpectedDeliveryDateUtc.HasValue && ExpectedDeliveryDateUtc.Value < PlacedOnUtc)
+            return (false, "Error.ExpectedDeliveryDateCannotBeLessThanPlaceOrderDate");
 
         return (true, string.Empty);
     }
@@ -29,18 +25,24 @@ public abstract record BasePurchaseOrderAppDto
 [Serializable]
 public sealed record PurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto
 {
-    public required string Code { get; set; }
+    public required string Code { get; init; }
     public required int Status { get; init; }
 
+    public decimal TaxAmount { get; set; }
+    public decimal ShippingAmount { get; set; }
     public decimal TotalAmount { get; set; }
 
     public IList<PurchaseOrderItemAppDto> Items { get; } = [];
 
-    public DateTime CreatedOnUtc { get; set; }
-    public Guid? CreatedByUserId { get; set; }
+    public DateTime CreatedOnUtc { get; init; }
+    public Guid? CreatedByUserId { get; init; }
 
-    public bool CanAddItems { get; set; }
-    public bool CanReceiveGoods { get; set; }
+    public bool CanAddItems { get; init; }
+    public bool CanReceiveGoods { get; init; }
+    public bool CanModifyInfo { get; init; }
+    public bool CanChangeDate { get; init; }
+    public bool CanChangeFees { get; init; }
+    public bool CanChangeVendor { get; init; }
 }
 
 [Serializable]
@@ -58,7 +60,11 @@ public sealed record CreatePurchaseOrderResultAppDto
 }
 
 [Serializable]
-public sealed record UpdatePurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto;
+public sealed record UpdatePurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto
+{
+    public decimal TaxAmount { get; set; }
+    public decimal ShippingAmount { get; set; }
+}
 [Serializable]
 public sealed record UpdatePurchaseOrderResultAppDto
 {

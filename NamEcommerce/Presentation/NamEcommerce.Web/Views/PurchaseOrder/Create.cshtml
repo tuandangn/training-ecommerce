@@ -20,7 +20,7 @@
     </div>
 </div>
 <div>
-    <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible"></div>
+    <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
     <form method="post" id="createPurchaseOrderForm" asp-antiforgery="true">
         <div class="row g-3">
             <div class="col-lg-8">
@@ -53,7 +53,7 @@
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
-                                        <tr id="row-@i">
+                                        <tr id="row-@i" class="align-top">
                                             <td class="ps-3">
                                                 <div class="d-flex align-items-center gap-2">
                                                     @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))
@@ -73,27 +73,32 @@
                                                 <input type="text" class="visually-hidden product-id"
                                                        name="Items[@i].ProductId" value="@item.ProductId" data-val="true"
                                                        data-val-required="Vui lòng chọn hàng hóa." />
-                                                <span class="small text-danger field-validation-valid"
-                                                      data-valmsg-for="Items[@i].ProductId" data-valmsg-replace="true"></span>
-                                            </td>
-                                            <td class="text-center">
-                                                <input type="number" asp-for="Items[@i].Quantity" data-decimal="quantity"
-                                                       class="form-control form-control-sm text-center row-qty" />
-                                                <span class="small text-danger field-validation-valid"
-                                                      data-valmsg-for="Items[@i].Quantity" data-valmsg-replace="true"></span>
+                                                <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].ProductId" data-valmsg-replace="true"></span>
                                             </td>
                                             <td class="text-end">
-                                                <input type="number" asp-for="Items[@i].UnitCost" data-decimal="currency"
-                                                       class="form-control form-control-sm text-end row-price no-additional-element" min="0"
-                                                       data-val="true" data-val-required="Vui lòng nhập đơn giá."
-                                                       placeholder="0" />
+                                                <input name="Items[@i].Quantity" data-decimal="quantity"
+                                                       class="row-qty no-additional-element" value="@item.Quantity.DisplayQuantity()" autocomplete="off"
+                                                       data-val="true" data-val-required="Vui lòng nhập số lượng."
+                                                       data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
+                                                       data-val-number="Số lượng phải là số" />
                                                 <span class="small text-danger field-validation-valid"
-                                                      data-valmsg-for="Items[@i].UnitCost" data-valmsg-replace="true"></span>
+                                                      data-valmsg-for="Items[@i].Quantity"
+                                                      data-valmsg-replace="true"></span>
                                             </td>
-                                            <td class="text-end fw-bold text-danger row-total text-nowrap d-none d-lg-table-cell">
+                                            <td class="text-end">
+                                                <input name="Items[@i].UnitCost" data-decimal="currency"
+                                                       class="row-price no-additional-element" value="@item.UnitCost.DisplayCurrency()"
+                                                       data-val="true" autocomplete="off"
+                                                       data-val-required="Vui lòng nhập đơn giá"
+                                                       data-val-number="Đơn giá phải là số" />
+                                                <span class="small text-danger field-validation-valid"
+                                                      data-valmsg-for="Items[@i].UnitCost"
+                                                      data-valmsg-replace="true"></span>
+                                            </td>
+                                            <td class="text-end fw-bold text-danger px-3 row-total text-nowrap d-none d-lg-table-cell">
                                                 @item.ItemSubTotal.DisplayCurrency()
                                             </td>
-                                            <td class="text-end pe-3">
+                                            <td class="text-end pe-3 w-auto">
                                                 <button type="button"
                                                         class="btn-table-action danger border-0 bg-transparent shadow-none">
                                                     <i class="bi bi-trash"></i>
@@ -136,7 +141,7 @@
                     <div class="content-card-body">
                         <div class="mb-3">
                             <label asp-for="PlacedOn" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <input type="datetime-local" asp-for="PlacedOn" class="form-control" placeholder="Ngày đặt hàng"/>
+                            <input type="datetime-local" asp-for="PlacedOn" value="@Model.PlacedOn.ToString("s")" class="form-control" placeholder="Ngày đặt hàng"/>
                             <span asp-validation-for="PlacedOn" class="text-danger small"></span>
                         </div>
                         <div class="mb-3">
@@ -162,7 +167,7 @@
                                 </div>
                                 <div class="col-12">
                                     <label asp-for="ExpectedDeliveryDate" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                    <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" placeholder="Ngày giao dự kiến" />
+                                    <input asp-for="ExpectedDeliveryDate" class="form-control" value="@Model.ExpectedDeliveryDate?.ToString("s")" type="date" placeholder="Ngày giao dự kiến" />
                                     <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
                                 </div>
                             </div>
@@ -269,12 +274,12 @@
         const addProductContainer = document.getElementById('addProductModal');
         const addProductModal = bootstrap.Modal.getOrCreateInstance(addProductContainer);
         addProductContainer.addEventListener('hidden.bs.modal', () => {
-        const searchInput = addProductContainer.querySelector('.productSearch');
-        if (searchInput)
-        searchInput.value = '';
+            const searchInput = addProductContainer.querySelector('.productSearch');
+            if (searchInput)
+                searchInput.value = '';
         });
         document.addEventListener('purchaseOrder:itemAdded', () => {
-        addProductModal.hide();
+            addProductModal.hide();
         });
     </script>
 }

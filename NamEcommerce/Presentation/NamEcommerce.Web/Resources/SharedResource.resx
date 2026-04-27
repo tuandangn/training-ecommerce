@@ -148,7 +148,7 @@
     <value>Page size must be greater than 0.</value>
   </data>
   <data name="Error.InvalidRequest" xml:space="preserve">
-    <value>Request data is invalid.</value>
+    <value>Request data is invalid. {0}</value>
   </data>
   <data name="Error.PhoneNumberInvalid" xml:space="preserve">
     <value>Phone number is invalid.</value>
@@ -446,9 +446,6 @@
   </data>
   <data name="Error.DeliveryNoteCodeRequired" xml:space="preserve">
     <value>Delivery note code is required.</value>
-  </data>
-  <data name="Error.ExpectedDeliveryDateInPast" xml:space="preserve">
-    <value>Expected delivery date cannot be in the past.</value>
   </data>
   <data name="Error.DeliveryNoteNotFound" xml:space="preserve">
     <value>Delivery note not found.</value>
@@ -776,5 +773,23 @@
   </data>
   <data name="Error.DataInvalid.Required" xml:space="preserve">
     <value>Invalid data. {0} is required.</value>
+  </data>
+  <data name="Error.ExpectedDeliveryDateLessThanPlaceOrderDate" xml:space="preserve">
+    <value>Expected delivery date cannot be less than placed order date</value>
+  </data>
+  <data name="Error.PlacedOrderDateCannotBeInFuture" xml:space="preserve">
+    <value>Placed order date cannot be in the future.</value>
+  </data>
+  <data name="Label.PlaceOrderDate" xml:space="preserve">
+    <value>Place order date</value>
+  </data>
+  <data name="Error.MustGreaterThanNow" xml:space="preserve">
+    <value>{0} must greater than now</value>
+  </data>
+  <data name="Error.MustBeLessThanOrEqualToNow" xml:space="preserve">
+    <value>{0} must be less than or equal to now</value>
+  </data>
+  <data name="Label.ExpectedDeliveryDate" xml:space="preserve">
+    <value>Expected delivery date</value>
   </data>
 </root>

@@ -2,6 +2,7 @@ using MediatR;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Extensions;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Framework.Services;
 
@@ -20,10 +21,10 @@ public sealed class UpdatePurchaseOrderHandler : IRequestHandler<UpdatePurchaseO
     {
         var updatePurchaseOrderResult = await _purchaseOrderAppService.UpdatePurchaseOrderAsync(new UpdatePurchaseOrderAppDto(request.PurchaseOrderId)
         {
-            PlacedOnUtc = DateTimeHelper.ToUniversalTime(request.PlacedOn),
+            PlacedOnUtc =  DateTimeHelper.ToUniversalTime(request.PlacedOn),
             VendorId = request.VendorId,
             WarehouseId = request.WarehouseId,
-            ExpectedDeliveryDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedDeliveryDate),
+            ExpectedDeliveryDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedDeliveryDate.ToEndOfDate()),
             Note = request.Note,
             TaxAmount = request.TaxAmount,
             ShippingAmount = request.ShippingAmount

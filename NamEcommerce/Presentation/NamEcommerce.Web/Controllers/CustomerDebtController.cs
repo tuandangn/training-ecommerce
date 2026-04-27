@@ -46,7 +46,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
     public async Task<IActionResult> RecordPayment(RecordPaymentModel model)
     {
         if (!ModelState.IsValid)
-            return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
+            return Json(new { success = false, message = LocalizeError("Error.InvalidRequest", GetErrorMessage()) });
 
         var result = await _mediator.Send(new RecordCustomerPaymentCommand { Model = model }).ConfigureAwait(false);
         return result.Success
@@ -59,7 +59,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
     public async Task<IActionResult> RecordFlexiblePayment(RecordPaymentModel model)
     {
         if (!ModelState.IsValid)
-            return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
+            return Json(new { success = false, message = LocalizeError("Error.InvalidRequest", GetErrorMessage()) });
 
         var result = await _mediator.Send(new RecordFlexiblePaymentCommand { Model = model }).ConfigureAwait(false);
         return result.Success

@@ -11,8 +11,6 @@ public sealed class CreatePurchaseOrderCommand : IRequest<CreatePurchaseOrderRes
     public required Guid? WarehouseId { get; init; }
 
     public DateTime? ExpectedDeliveryDate { get; set; }
-    public decimal ShippingAmount { get; set; }
-    public decimal TaxAmount { get; set; }
     public string? Note { get; set; }
 
     public IList<CreatePurchaseOrderItemCommand> Items { get; set; } = [];
