@@ -8,7 +8,7 @@ namespace NamEcommerce.Web.Models.GoodsReceipts;
 public sealed class CreateGoodsReceiptModel
 {
     [Display(Name = "Ngày nhập hàng")]
-    public DateTime CreatedOn { get; set; } = DateTime.Now;
+    public DateTime ReceivedOn { get; set; } = DateTime.Now;
 
     [Display(Name = "Tên tài xế")]
     public string? TruckDriverName { get; set; }

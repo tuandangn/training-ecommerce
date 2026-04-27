@@ -11,6 +11,7 @@ public sealed class PurchaseOrderListModel
     [Serializable]
     public sealed record ItemModel(Guid Id)
     {
+        public required DateTime PlacedOn { get; set; }
         public required string Code { get; init; }
         public string? VendorName { get; set; }
         public string? VendorPhone { get; set; }

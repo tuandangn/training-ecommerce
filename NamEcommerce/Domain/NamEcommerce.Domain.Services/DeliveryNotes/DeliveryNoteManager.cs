@@ -9,9 +9,7 @@ using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Inventory;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Services.Extensions;
-using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
 
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
 
@@ -20,8 +18,7 @@ public sealed class DeliveryNoteManager(
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<Order> orderReader,
     IRepository<Order> orderRepository,
-    IInventoryStockManager stockManager,
-    IEventPublisher eventPublisher) : IDeliveryNoteManager
+    IInventoryStockManager stockManager) : IDeliveryNoteManager
 {
     private Task<string> GenerateCodeAsync()
     {
@@ -74,10 +71,9 @@ public sealed class DeliveryNoteManager(
             );
         }
 
+        deliveryNote.MarkCreated();
         var inserted = await deliveryNoteRepository.InsertAsync(deliveryNote).ConfigureAwait(false);
 
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
-        
         return MapToDto(inserted);
     }
 
@@ -100,9 +96,7 @@ public sealed class DeliveryNoteManager(
         }
 
         deliveryNote.Confirm();
-        var updated = await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
-
-        await eventPublisher.PublishEvent(new DeliveryNoteConfirmedEvent(deliveryNote.Id)).ConfigureAwait(false);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
     }
 
     public async Task MarkDeliveringAsync(Guid id)
@@ -156,8 +150,6 @@ public sealed class DeliveryNoteManager(
             order.TryAutoLock();
             await orderRepository.UpdateAsync(order).ConfigureAwait(false);
         }
-
-        await eventPublisher.PublishEvent(new DeliveryNoteDeliveredEvent(deliveryNote.Id)).ConfigureAwait(false);
     }
 
     public async Task CancelAsync(Guid id)

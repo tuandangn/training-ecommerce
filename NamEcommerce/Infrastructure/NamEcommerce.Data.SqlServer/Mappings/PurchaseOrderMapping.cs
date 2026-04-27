@@ -11,6 +11,7 @@ public sealed class PurchaseOrderMapping : IEntityTypeConfiguration<PurchaseOrde
 
         builder.Property(p => p.Code).HasMaxLength(50).IsRequired();
         builder.HasIndex(p => p.Code).IsUnique();
+        builder.Property(p => p.VendorId).IsRequired();
         builder.Property(p => p.Status).IsRequired();
         builder.Property(p => p.ExpectedDeliveryDateUtc);
         builder.Property(p => p.Note).HasMaxLength(1000);
@@ -19,7 +20,6 @@ public sealed class PurchaseOrderMapping : IEntityTypeConfiguration<PurchaseOrde
         builder.Property(p => p.CreatedOnUtc).IsRequired();
         builder.Property(p => p.UpdatedOnUtc);
 
-        builder.Property(p => p.VendorId);
         builder.Property(p => p.WarehouseId);
         builder.Property(p => p.CreatedByUserId);
 

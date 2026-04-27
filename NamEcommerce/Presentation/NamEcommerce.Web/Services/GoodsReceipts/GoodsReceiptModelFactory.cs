@@ -25,7 +25,7 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
 
         model ??= new CreateGoodsReceiptModel
         {
-            CreatedOn = DateTime.Now,
+            ReceivedOn = DateTime.Now,
         };
 
         model.AvailableWarehouses = warehouses;
@@ -89,7 +89,7 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
         var model = new GoodsReceiptDetailsModel
         {
             Id = goodsReceipt.Id,
-            CreatedOn = goodsReceipt.CreatedOn,
+            CreatedOn = goodsReceipt.ReceivedOn,
             TruckDriverName = goodsReceipt.TruckDriverName,
             TruckNumberSerial = goodsReceipt.TruckNumberSerial,
             PictureIds = goodsReceipt.PictureIds,

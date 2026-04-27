@@ -10,7 +10,6 @@ using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
@@ -26,7 +25,6 @@ public sealed class OrderManager(
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
     IEntityDataReader<User> userDataReader,
-    IEventPublisher eventPublisher,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader) : IOrderManager
 {
     public async Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderDto dto)
@@ -63,9 +61,12 @@ public sealed class OrderManager(
             await order.AddOrderItemAsync(item.ProductId, item.UnitPrice, item.Quantity, productDataReader).ConfigureAwait(false);
         order.SetOrderDiscount(dto.OrderDiscount);
 
-        var insertedOrder = await orderRepository.InsertAsync(order).ConfigureAwait(false);
+        // Clear các event AddOrderItem raised trong lúc setup — phiếu chưa được "place" thực sự,
+        // chỉ event OrderPlaced cuối cùng mới phản ánh lifecycle bắt đầu.
+        order.ClearDomainEvents();
+        order.Place();
 
-        await eventPublisher.EntityCreated(insertedOrder).ConfigureAwait(false);
+        var insertedOrder = await orderRepository.InsertAsync(order).ConfigureAwait(false);
 
         return new CreateOrderResultDto { CreatedId = insertedOrder.Id };
     }
@@ -88,10 +89,9 @@ public sealed class OrderManager(
         order.Note = dto.Note;
 
         order.UpdatedOnUtc = DateTime.UtcNow;
+        order.MarkInfoUpdated();
 
         var updatedOrder = await orderRepository.UpdateAsync(order).ConfigureAwait(false);
-
-        await eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
 
         return new UpdateOrderResultDto { UpdatedId = updatedOrder.Id };
     }
@@ -114,9 +114,7 @@ public sealed class OrderManager(
 
         order.UpdatedOnUtc = DateTime.UtcNow;
 
-        var updatedOrder = await orderRepository.UpdateAsync(order).ConfigureAwait(false);
-
-        await eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
     public async Task UpdateOrderItemAsync(UpdateOrderItemDto dto)
@@ -144,9 +142,7 @@ public sealed class OrderManager(
         order.UpdateOrderItem(dto.OrderItemId, dto.Quantity, dto.UnitPrice);
         order.UpdatedOnUtc = DateTime.UtcNow;
 
-        var updatedOrder = await orderRepository.UpdateAsync(order).ConfigureAwait(false);
-
-        await eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
     public async Task DeleteOrderItemAsync(DeleteOrderItemDto dto)
@@ -170,9 +166,7 @@ public sealed class OrderManager(
         order.RemoveOrderItem(dto.OrderItemId);
         order.UpdatedOnUtc = DateTime.UtcNow;
 
-        var updatedOrder = await orderRepository.UpdateAsync(order).ConfigureAwait(false);
-
-        await eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
     public async Task LockOrderAsync(LockOrderDto dto)
@@ -186,9 +180,7 @@ public sealed class OrderManager(
         order.LockOrder(dto.Reason);
         order.UpdatedOnUtc = DateTime.UtcNow;
 
-        var updatedOrder = await orderRepository.UpdateAsync(order).ConfigureAwait(false);
-
-        await eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
     public async Task<OrderDto?> GetOrderByIdAsync(Guid id)
@@ -271,10 +263,9 @@ public sealed class OrderManager(
             order.ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc.Value;
         order.ShippingAddress = dto.Address;
         order.UpdatedOnUtc = DateTime.UtcNow;
+        order.MarkShippingUpdated();
 
-        var updatedOrder = await orderRepository.UpdateAsync(order).ConfigureAwait(false);
-
-        await eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
     public async Task MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredDto dto)
@@ -289,9 +280,7 @@ public sealed class OrderManager(
         order.TryAutoLock();
         order.UpdatedOnUtc = DateTime.UtcNow;
 
-        var updatedOrder = await orderRepository.UpdateAsync(order).ConfigureAwait(false);
-
-        await eventPublisher.EntityUpdated(updatedOrder).ConfigureAwait(false);
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
     public async Task DeleteOrderAsync(DeleteOrderDto dto)
@@ -309,8 +298,8 @@ public sealed class OrderManager(
         if (processingDeliveryNotes.Any())
             throw new InvalidOperationException("Order cannot deleted because it is processing.");
 
-        await orderRepository.DeleteAsync(order).ConfigureAwait(false);
+        order.MarkDeleted();
 
-        await eventPublisher.EntityDeleted(order).ConfigureAwait(false);
+        await orderRepository.DeleteAsync(order).ConfigureAwait(false);
     }
 }

@@ -61,17 +61,14 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             };
         }
 
-        if (dto.VendorId.HasValue)
+        var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        if (vendor is null)
         {
-            var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
-            if (vendor is null)
+            return new CreatePurchaseOrderResultAppDto
             {
-                return new CreatePurchaseOrderResultAppDto
-                {
-                    Success = false,
-                    ErrorMessage = "Error.VendorIsNotFound"
-                };
-            }
+                Success = false,
+                ErrorMessage = "Error.VendorIsNotFound"
+            };
         }
 
         if (dto.WarehouseId.HasValue)
@@ -104,6 +101,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         var createPurchaseOrderDto = new CreatePurchaseOrderDto
         {
             Code = code,
+            PlacedOnUtc = dto.PlacedOnUtc,
             CreatedByUserId = dto.CreatedByUserId,
             VendorId = dto.VendorId,
             WarehouseId = dto.WarehouseId,
@@ -216,17 +214,14 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             }
         }
 
-        if (dto.VendorId.HasValue)
+        var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        if (vendor is null)
         {
-            var vendor = await _vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
-            if (vendor is null)
+            return new UpdatePurchaseOrderResultAppDto
             {
-                return new UpdatePurchaseOrderResultAppDto
-                {
-                    Success = false,
-                    ErrorMessage = "Error.VendorIsNotFound"
-                };
-            }
+                Success = false,
+                ErrorMessage = "Error.VendorIsNotFound"
+            };
         }
 
         if (dto.WarehouseId.HasValue)
@@ -244,6 +239,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
         var updatePurchaseOrderDto = new UpdatePurchaseOrderDto(dto.Id)
         {
+            PlacedOnUtc = dto.PlacedOnUtc,
             VendorId = dto.VendorId,
             WarehouseId = dto.WarehouseId,
             ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
@@ -261,45 +257,24 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         };
     }
 
-    public async Task<AddPurchaseOrderItemResultAppDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemAppDto dto)
+    public async Task<CommonActionResultDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
-        {
-            return new AddPurchaseOrderItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = errorMessage
-            };
-        }
+            return CommonActionResultDto.CreateError(errorMessage);
 
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
-        {
-            return new AddPurchaseOrderItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Error.PurchaseOrderIsNotFound"
-            };
-        }
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderIsNotFound");
+
         if (!await _purchaseOrderManager.CanAddPurchaseOrderItemsAsync(dto.PurchaseOrderId).ConfigureAwait(false))
-        {
-            return new AddPurchaseOrderItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Error.PurchaseOrderCannotAddItems"
-            };
-        }
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotAddItems");
 
         var product = await _productDataReader.GetByIdAsync(dto.ProductId).ConfigureAwait(false);
         if (product is null)
-            return new AddPurchaseOrderItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Error.ProductIsNotFound"
-            };
+            return CommonActionResultDto.CreateError("Error.ProductIsNotFound");
 
         var result = await _purchaseOrderManager.AddPurchaseOrderItemAsync(new AddPurchaseOrderItemDto
         {
@@ -309,122 +284,66 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             UnitCost = dto.UnitCost,
             Note = dto.Note
         });
-        return new AddPurchaseOrderItemResultAppDto
-        {
-            Success = true,
-            PurchaseOrderId = result.PurchaseOrderId,
-            CreatedItemId = result.CreatedItemId
-        };
+        return CommonActionResultDto.CreateSuccess();
     }
 
-    public async Task<(bool success, string? errorMessage)> ChangeStatusAsync(Guid purchaseOrderId, int status)
+    public async Task<CommonActionResultDto> ChangeStatusAsync(Guid purchaseOrderId, int status)
     {
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(purchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
-            return (false, "Error.PurchaseOrderIsNotFound");
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderIsNotFound");
 
         if (!await _purchaseOrderManager.CanChangeStatusToAsync(purchaseOrderId, (PurchaseOrderStatus)status))
-            return (false, "Error.OrderCannotChangeStatus");
+            return CommonActionResultDto.CreateError("Error.OrderCannotChangeStatus");
 
         await _purchaseOrderManager.ChangeStatusAsync(purchaseOrderId, (PurchaseOrderStatus)status).ConfigureAwait(false);
 
-        return (true, null);
+        return CommonActionResultDto.CreateSuccess();
     }
 
-    public async Task<ReceivedGoodsForItemResultAppDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto)
+    public async Task<CommonActionResultDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
-        {
-            return new ReceivedGoodsForItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = errorMessage
-            };
-        }
+            return CommonActionResultDto.CreateError(errorMessage);
 
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
-        {
-            return new ReceivedGoodsForItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Error.PurchaseOrderIsNotFound"
-            };
-        }
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderIsNotFound");
+
         if (!await _purchaseOrderManager.CanReceiveGoodsAsync(dto.PurchaseOrderId).ConfigureAwait(false))
-        {
-            return new ReceivedGoodsForItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Error.PurchaseOrderCannotReceiveGoods"
-            };
-        }
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotReceiveGoods");
 
         var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == dto.PurchaseOrderItemId);
         if (purchaseOrderItem is null)
-        {
-            return new ReceivedGoodsForItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Error.PurchaseOrderItemIsNotFound"
-            };
-        }
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderItemIsNotFound");
 
         if (purchaseOrderItem.QuantityReceived + dto.ReceivedQuantity > purchaseOrderItem.QuantityOrdered)
-        {
-            return new ReceivedGoodsForItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Error.PurchaseOrderReceiveQuantityExceedsOrdered"
-            };
-        }
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderReceiveQuantityExceedsOrdered");
 
         var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
         if (product is null)
-        {
-            return new ReceivedGoodsForItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Error.ProductIsNotFound"
-            };
-        }
+            return CommonActionResultDto.CreateError("Error.ProductIsNotFound");
+
 
         if (dto.ReceivedByUserId.HasValue)
         {
             var user = await _userDataReader.GetByIdAsync(dto.ReceivedByUserId.Value).ConfigureAwait(false);
             if (user is null)
-            {
-                return new ReceivedGoodsForItemResultAppDto
-                {
-                    Success = false,
-                    ErrorMessage = "Error.UserIsNotFound"
-                };
-            }
+                return CommonActionResultDto.CreateError("Error.UserIsNotFound");
         }
 
         Guid? warehouseId = purchaseOrder.WarehouseId ?? dto.WarehouseId ?? null;
         if (!warehouseId.HasValue)
-        {
-            return new ReceivedGoodsForItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Error.WarehouseRequired"
-            };
-        }
+            return CommonActionResultDto.CreateError("Error.WarehouseRequired");
+
         else
         {
             var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
             if (warehouse is null)
-            {
-                return new ReceivedGoodsForItemResultAppDto
-                {
-                    Success = false,
-                    ErrorMessage = "Error.WarehouseIsNotFound"
-                };
-            }
+                return CommonActionResultDto.CreateError("Error.WarehouseIsNotFound");
         }
 
         var result = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
@@ -434,11 +353,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             WarehouseId = warehouseId,
             SellingPrice = dto.SellingPrice
         });
-        return new ReceivedGoodsForItemResultAppDto
-        {
-            Success = true,
-            ReceivedQuantity = result.ReceivedQuantity
-        };
+        return CommonActionResultDto.CreateSuccess();
     }
 
     public async Task<string> NextPurchaseOrderCodeAsync()
@@ -454,74 +369,53 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         return code;
     }
 
-    public async Task<(bool success, string? errorMessage)> SubmitsPurchaseOrderAsync(Guid id)
+    public async Task<CommonActionResultDto> SubmitsPurchaseOrderAsync(Guid id)
     {
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(id).ConfigureAwait(false);
         if (purchaseOrder is null)
-            return (false, "Error.PurchaseOrderIsNotFound");
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderIsNotFound");
 
         if (!await _purchaseOrderManager.CanChangeStatusToAsync(id, PurchaseOrderStatus.Submitted))
-            return (false, "Error.PurchaseOrderCannotSubmit");
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotSubmit");
 
         await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Submitted).ConfigureAwait(false);
 
-        return (true, null);
+        return CommonActionResultDto.CreateSuccess();
     }
 
-    public async Task<(bool success, string? errorMessage)> CancelPurchaseOrderAsync(Guid id)
+    public async Task<CommonActionResultDto> CancelPurchaseOrderAsync(Guid id)
     {
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(id).ConfigureAwait(false);
         if (purchaseOrder is null)
-            return (false, "Error.PurchaseOrderIsNotFound");
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderIsNotFound");
 
         if (!await _purchaseOrderManager.CanChangeStatusToAsync(id, PurchaseOrderStatus.Cancelled))
-            return (false, "Error.PurchaseOrderCannotCancel");
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotCancel");
 
         await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Cancelled).ConfigureAwait(false);
 
-        return (true, null);
+        return CommonActionResultDto.CreateSuccess();
     }
 
-    public async Task<DeletePurchaseOrderItemResultAppDto> DeletePurchaseOrderItemAsync(DeletePurchaseOrderItemAppDto dto)
+    public async Task<CommonActionResultDto> DeletePurchaseOrderItemAsync(DeletePurchaseOrderItemAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
-        {
-            return new DeletePurchaseOrderItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Error.PurchaseOrderIsNotFound"
-            };
-        }
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderIsNotFound");
 
         var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == dto.ItemId);
         if (purchaseOrderItem is null)
-        {
-            return new DeletePurchaseOrderItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Error.PurchaseOrderItemIsNotFound"
-            };
-        }
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderItemIsNotFound");
 
         // Can only delete items from Draft status
         if (purchaseOrder.Status != PurchaseOrderStatus.Draft)
-        {
-            return new DeletePurchaseOrderItemResultAppDto
-            {
-                Success = false,
-                ErrorMessage = "Error.PurchaseOrderCannotDeleteItems"
-            };
-        }
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotDeleteItems");
 
         await _purchaseOrderManager.DeleteOrderItemAsync(dto.PurchaseOrderId, dto.ItemId).ConfigureAwait(false);
 
-        return new DeletePurchaseOrderItemResultAppDto
-        {
-            Success = true
-        };
+        return CommonActionResultDto.CreateSuccess();
     }
 
     public async Task<IList<RecentPurchasePriceAppDto>> GetRecentPurchasePricesAsync(Guid productId)

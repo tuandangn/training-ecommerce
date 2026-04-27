@@ -46,7 +46,7 @@ public sealed class GoodsReceiptManagerTests
         var goodsReceipt = await GoodsReceipt.CreateAsync(
             receiptId, noExistingReceiptStub.Object, currentUserStub.Object);
 
-        goodsReceipt.SetCreationDate(DateTime.UtcNow);
+        goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         return goodsReceipt;
     }
 
@@ -102,7 +102,7 @@ public sealed class GoodsReceiptManagerTests
     {
         var dto = new CreateGoodsReceiptDto
         {
-            CreatedOnUtc = DateTime.UtcNow,
+            ReceivedOnUtc = DateTime.UtcNow,
             PictureIds = [Guid.NewGuid()],
             Items =
             [
@@ -126,7 +126,7 @@ public sealed class GoodsReceiptManagerTests
     {
         var dto = new CreateGoodsReceiptDto
         {
-            CreatedOnUtc = DateTime.UtcNow,
+            ReceivedOnUtc = DateTime.UtcNow,
             PictureIds = [Guid.NewGuid()],
             Items =
             [
@@ -150,7 +150,7 @@ public sealed class GoodsReceiptManagerTests
     {
         var dto = new CreateGoodsReceiptDto
         {
-            CreatedOnUtc = DateTime.UtcNow,
+            ReceivedOnUtc = DateTime.UtcNow,
             PictureIds = [],            // không có ảnh chứng từ
             Items =
             [
@@ -194,7 +194,7 @@ public sealed class GoodsReceiptManagerTests
 
         var dto = new CreateGoodsReceiptDto
         {
-            CreatedOnUtc = DateTime.UtcNow,
+            ReceivedOnUtc = DateTime.UtcNow,
             TruckDriverName = "Nguyễn Văn A",
             PictureIds = [notFoundPictureId],
             Items =
@@ -250,7 +250,7 @@ public sealed class GoodsReceiptManagerTests
 
         var dto = new CreateGoodsReceiptDto
         {
-            CreatedOnUtc = DateTime.UtcNow,
+            ReceivedOnUtc = DateTime.UtcNow,
             TruckDriverName = "Nguyễn Văn A",
             TruckNumberSerial = "51K-123.45",
             PictureIds = [pictureId],
@@ -299,7 +299,7 @@ public sealed class GoodsReceiptManagerTests
     {
         var dto = new UpdateGoodsReceiptDto(Guid.NewGuid())
         {
-            CreatedOnUtc = DateTime.UtcNow,
+            ReceivedOnUtc = DateTime.UtcNow,
             PictureIds = []             // không có ảnh chứng từ
         };
         var manager = new GoodsReceiptManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
@@ -314,7 +314,7 @@ public sealed class GoodsReceiptManagerTests
         var notFoundId = Guid.NewGuid();
         var dto = new UpdateGoodsReceiptDto(notFoundId)
         {
-            CreatedOnUtc = DateTime.UtcNow,
+            ReceivedOnUtc = DateTime.UtcNow,
             PictureIds = [Guid.NewGuid()]
         };
         var goodsReceiptDataReaderMock = GoodsReceiptDataReader.NotFound(notFoundId);
@@ -335,7 +335,7 @@ public sealed class GoodsReceiptManagerTests
 
         var dto = new UpdateGoodsReceiptDto(goodsReceipt.Id)
         {
-            CreatedOnUtc = DateTime.UtcNow,
+            ReceivedOnUtc = DateTime.UtcNow,
             TruckDriverName = "Trần B",
             PictureIds = [notFoundPictureId]
         };
@@ -361,7 +361,7 @@ public sealed class GoodsReceiptManagerTests
 
         var dto = new UpdateGoodsReceiptDto(goodsReceipt.Id)
         {
-            CreatedOnUtc = DateTime.UtcNow,
+            ReceivedOnUtc = DateTime.UtcNow,
             TruckDriverName = "Lê Văn C",
             TruckNumberSerial = "60K-999.88",
             PictureIds = [pictureId]
@@ -401,7 +401,7 @@ public sealed class GoodsReceiptManagerTests
         var notFoundId = Guid.NewGuid();
         var dto = new DeleteGoodsReceiptDto(notFoundId)
         {
-            CreatedOnUtc = DateTime.UtcNow,
+            ReceivedOnUtc = DateTime.UtcNow,
             PictureIds = []
         };
         var goodsReceiptDataReaderMock = GoodsReceiptDataReader.NotFound(notFoundId);
@@ -420,7 +420,7 @@ public sealed class GoodsReceiptManagerTests
         var goodsReceipt = await BuildGoodsReceiptAsync();
         var dto = new DeleteGoodsReceiptDto(goodsReceipt.Id)
         {
-            CreatedOnUtc = DateTime.UtcNow,
+            ReceivedOnUtc = DateTime.UtcNow,
             PictureIds = []
         };
 
@@ -650,11 +650,11 @@ public sealed class GoodsReceiptManagerTests
     {
         // Tạo 3 phiếu; phiếu tạo cuối cùng phải đứng đầu kết quả (desc)
         var gr1 = await BuildGoodsReceiptAsync();
-        gr1.SetCreationDate(new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        gr1.SetReceivedDate(new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         var gr2 = await BuildGoodsReceiptAsync();
-        gr2.SetCreationDate(new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+        gr2.SetReceivedDate(new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc));
         var gr3 = await BuildGoodsReceiptAsync();
-        gr3.SetCreationDate(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)); // mới nhất
+        gr3.SetReceivedDate(new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)); // mới nhất
 
         var goodsReceiptDataReaderStub = GoodsReceiptDataReader.WithData(gr1, gr2, gr3);
         var manager = new GoodsReceiptManager(
@@ -712,9 +712,9 @@ public sealed class GoodsReceiptManagerTests
     public async Task GetGoodsReceiptsAsync_FromDateFilter_ReturnsOnlyReceiptsOnOrAfterFromDate()
     {
         var oldGr = await BuildGoodsReceiptAsync();
-        oldGr.SetCreationDate(new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        oldGr.SetReceivedDate(new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         var newGr = await BuildGoodsReceiptAsync();
-        newGr.SetCreationDate(new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+        newGr.SetReceivedDate(new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc));
 
         var goodsReceiptDataReaderStub = GoodsReceiptDataReader.WithData(oldGr, newGr);
         var manager = new GoodsReceiptManager(
@@ -733,9 +733,9 @@ public sealed class GoodsReceiptManagerTests
     public async Task GetGoodsReceiptsAsync_ToDateFilter_ReturnsOnlyReceiptsOnOrBeforeToDate()
     {
         var oldGr = await BuildGoodsReceiptAsync();
-        oldGr.SetCreationDate(new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        oldGr.SetReceivedDate(new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         var newGr = await BuildGoodsReceiptAsync();
-        newGr.SetCreationDate(new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+        newGr.SetReceivedDate(new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc));
 
         var goodsReceiptDataReaderStub = GoodsReceiptDataReader.WithData(oldGr, newGr);
         var manager = new GoodsReceiptManager(
@@ -754,11 +754,11 @@ public sealed class GoodsReceiptManagerTests
     public async Task GetGoodsReceiptsAsync_DateRangeFilter_ReturnsOnlyReceiptsWithinRange()
     {
         var earlyGr = await BuildGoodsReceiptAsync();
-        earlyGr.SetCreationDate(new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+        earlyGr.SetReceivedDate(new DateTime(2023, 6, 1, 0, 0, 0, DateTimeKind.Utc));
         var midGr = await BuildGoodsReceiptAsync();
-        midGr.SetCreationDate(new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+        midGr.SetReceivedDate(new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc));
         var lateGr = await BuildGoodsReceiptAsync();
-        lateGr.SetCreationDate(new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc));
+        lateGr.SetReceivedDate(new DateTime(2025, 6, 1, 0, 0, 0, DateTimeKind.Utc));
 
         var goodsReceiptDataReaderStub = GoodsReceiptDataReader.WithData(earlyGr, midGr, lateGr);
         var manager = new GoodsReceiptManager(
@@ -781,7 +781,7 @@ public sealed class GoodsReceiptManagerTests
         for (var i = 0; i < 5; i++)
         {
             var gr = await BuildGoodsReceiptAsync();
-            gr.SetCreationDate(new DateTime(2024, 1, i + 1, 0, 0, 0, DateTimeKind.Utc));
+            gr.SetReceivedDate(new DateTime(2024, 1, i + 1, 0, 0, 0, DateTimeKind.Utc));
             receipts.Add(gr);
         }
 
@@ -890,25 +890,15 @@ public sealed class GoodsReceiptManagerTests
             .ReturnsAsync(goodsReceipt)
             .Verifiable();
 
-        var eventPublisherMock = new Mock<IEventPublisher>();
-        eventPublisherMock
-            .Setup(e => e.EntityUpdated(
-                It.Is<EntityUpdatedNotification<GoodsReceipt>>(n =>
-                    n.Entity.Id == goodsReceipt.Id
-                    && (string)n.AdditionalData! == "vendor-updated")))
-            .Returns(Task.CompletedTask)
-            .Verifiable();
-
         var manager = new GoodsReceiptManager(
             goodsReceiptRepositoryMock.Object, goodsReceiptDataReaderStub.Object,
             null!, null!, null!, null!, null!, null!,
-            vendorDataReaderStub.Object, eventPublisherMock.Object);
+            vendorDataReaderStub.Object, null!);
 
         var result = await manager.SetGoodsReceiptVendorAsync(dto);
 
         Assert.Equal(goodsReceipt.Id, result.UpdatedId);
         goodsReceiptRepositoryMock.Verify();
-        eventPublisherMock.Verify();
     }
 
     [Fact]
@@ -934,21 +924,14 @@ public sealed class GoodsReceiptManagerTests
             .ReturnsAsync(goodsReceipt)
             .Verifiable();
 
-        var eventPublisherMock = new Mock<IEventPublisher>();
-        eventPublisherMock
-            .Setup(e => e.EntityUpdated(It.IsAny<EntityUpdatedNotification<GoodsReceipt>>()))
-            .Returns(Task.CompletedTask)
-            .Verifiable();
-
         var manager = new GoodsReceiptManager(
             goodsReceiptRepositoryMock.Object, goodsReceiptDataReaderStub.Object,
-            null!, null!, null!, null!, null!, null!, null!, eventPublisherMock.Object);
+            null!, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await manager.SetGoodsReceiptVendorAsync(dto);
 
         Assert.Equal(goodsReceipt.Id, result.UpdatedId);
         goodsReceiptRepositoryMock.Verify();
-        eventPublisherMock.Verify();
     }
 
     #endregion

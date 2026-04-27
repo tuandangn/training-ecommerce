@@ -6,18 +6,18 @@ namespace NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 [Serializable]
 public abstract record BasePurchaseOrderDto
 {
-    public Guid? VendorId { get; init; }
+    public required DateTime PlacedOnUtc { get; init; }
+    public required Guid VendorId { get; init; }
     public required Guid? WarehouseId { get; init; }
 
     public DateTime? ExpectedDeliveryDateUtc { get; set; }
     public string? Note { get; set; }
+
     public decimal TaxAmount { get; set; }
     public decimal ShippingAmount { get; set; }
 
     public virtual void Verify()
     {
-        if (!VendorId.HasValue)
-            throw new PurchaseOrderDataIsInvalidException("Error.VendorRequired");
         if (ExpectedDeliveryDateUtc.HasValue && ExpectedDeliveryDateUtc.Value < DateTime.UtcNow.Date)
             throw new PurchaseOrderDataIsInvalidException("Error.ExpectedDeliveryDateInPast");
         if (TaxAmount < 0)
@@ -32,8 +32,8 @@ public sealed record PurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
 {
     public required string Code { get; init; }
     public required Guid? CreatedByUserId { get; init; }
-    public PurchaseOrderStatus Status { get; set; }
-    public DateTime CreatedOnUtc { get; set; }
+    public required PurchaseOrderStatus Status { get; init; }
+    public required DateTime CreatedOnUtc { get; init; }
     public decimal TotalAmount { get; set; }
     public bool CanAddItems { get; set; }
     public bool CanReceiveGoods { get; set; }

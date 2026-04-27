@@ -47,7 +47,9 @@ public sealed class PreparationController : BaseAuthorizedController
     {
         var result = await _mediator.Send(new CreatePurchaseOrderCommand
         {
+            PlacedOn = DateTime.Now,
             VendorId = model.VendorId,
+            WarehouseId = null,
             Note = model.Note,
             Items = [new CreatePurchaseOrderItemCommand
             {

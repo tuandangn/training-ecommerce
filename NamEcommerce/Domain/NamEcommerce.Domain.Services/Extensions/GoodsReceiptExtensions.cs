@@ -9,7 +9,7 @@ public static class GoodsReceiptExtensions
     {
         var dto = new GoodsReceiptDto(goodsReceipt.Id)
         {
-            CreatedOnUtc = goodsReceipt.CreatedOnUtc,
+            ReceivedOnUtc = goodsReceipt.ReceivedOnUtc,
             IsPendingCosting = goodsReceipt.IsPendingCosting(),
             Items = goodsReceipt.Items.Select(item => new GoodsReceiptItemDto(item.Id) {
                 ProductId = item.ProductId,

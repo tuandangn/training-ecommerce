@@ -31,7 +31,7 @@ public sealed class GetGoodsReceiptListHandler : IRequestHandler<GetGoodsReceipt
 
         var items = result.Select(dto => new GoodsReceiptListModel.ItemModel(dto.Id)
         {
-            CreatedOn = dto.CreatedOnUtc.ToLocalTime(),
+            ReceivedOn = dto.ReceivedOnUtc.ToLocalTime(),
             TruckDriverName = dto.TruckDriverName,
             TruckNumberSerial = dto.TruckNumberSerial,
             IsPendingCosting = dto.IsPendingCosting,

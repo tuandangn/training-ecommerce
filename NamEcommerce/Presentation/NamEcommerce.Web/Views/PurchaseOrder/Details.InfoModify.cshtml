@@ -1,9 +1,26 @@
 @model EditPurchaseOrderModel
+@inject WarehouseSettings WarehouseSettings
 <form asp-action="Edit">
     <input type="hidden" asp-for="Id" id="modifyInfoId" />
     <div class="mb-3">
         <div class="row g-3">
-            <div class="col-lg-12">
+            <div class="col-12">
+                @if (Model.CanChangeDate)
+                {
+                    <label asp-for="PlacedOn" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                    <input asp-for="PlacedOn" class="form-control" type="datetime-local" placeholder="Ngày giao dự kiến" />
+                    <span asp-validation-for="PlacedOn" class="text-danger small"></span>
+                }
+                else
+                {
+                    <input type="hidden" asp-for="PlacedOn" value="@Model.PlacedOn.ToString("s")"/>
+                    <label asp-for="PlacedOn" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                    <div class="p-2 bg-light rounded border">
+                        <span class="text-dark fw-500">@(Model.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat))</span>
+                    </div>
+                }
+            </div>
+            <div class="col-12">
                 @if (Model.CanChangeVendor)
                 {
                     <label for="vendorSearch" class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
@@ -37,12 +54,12 @@
                 @if (Model.CanChangeDate)
                 {
                     <label asp-for="ExpectedDeliveryDate" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                    <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" />
+                    <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" placeholder="Ngày giao dự kiến"/>
                     <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
                 }
                 else
                 {
-                    <input type="hidden" asp-for="ExpectedDeliveryDate" />
+                    <input type="hidden" asp-for="ExpectedDeliveryDate" value="@Model.ExpectedDeliveryDate?.ToString("s")"/>
                     <label asp-for="ExpectedDeliveryDate" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                     <div class="p-2 bg-light rounded border">
                         <span class="text-dark fw-500">@(Model.ExpectedDeliveryDate?.ToString("dd/MM/yyyy") ?? "-")</span>
@@ -54,7 +71,7 @@
 
     <div class="mb-3">
         <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-        <textarea asp-for="Note" class="form-control" rows="2" placeholder="Nhập ghi chú về đơn nhập..."></textarea>
+        <textarea asp-for="Note" class="form-control" rows="2" placeholder="Nhập ghi chú"></textarea>
         <span asp-validation-for="Note" class="text-danger small"></span>
     </div>
 
@@ -66,8 +83,8 @@
                 <div class="col-md-6">
                     <label asp-for="ShippingAmount" class="form-label small fw-medium mb-2">Phí vận chuyển</label>
                     <div>
-                        <input asp-for="ShippingAmount" class="form-control no-additional-element no-hint" placeholder="0"
-                               value="@Model.ShippingAmount.ToString("#0")" data-decimal="currency" autocomplete="off"
+                        <input asp-for="ShippingAmount" class="form-control no-additional-element no-hint" placeholder="Nhập phí vận chuyển"
+                               value="@Model.ShippingAmount.DisplayCurrency()" data-decimal="currency" autocomplete="off"
                                data-val-range="Phí vận chuyển phải lớn hơn hoặc bằng 0." data-val-range-min="0"
                                data-val-number="Phí vận chuyển không đúng." />
                     </div>
@@ -77,8 +94,8 @@
                 <div class="col-md-6">
                     <label asp-for="TaxAmount" class="form-label small fw-medium mb-2">Thuế VAT</label>
                     <div>
-                        <input asp-for="TaxAmount" class="form-control no-additional-element no-hint" placeholder="0"
-                               value="@Model.TaxAmount.ToString("#0")" data-decimal="currency" autocomplete="off"
+                        <input asp-for="TaxAmount" class="form-control no-additional-element no-hint" placeholder="Nhập tổng tiền thuế"
+                               value="@Model.TaxAmount.DisplayCurrency()" data-decimal="currency" autocomplete="off"
                                data-val-range="Tổng thuế phải lớn hơn hoặc bằng 0." data-val-range-min="0"
                                data-val-number="Tổng thuế không đúng." />
                     </div>
@@ -105,7 +122,8 @@
     </div>
     <div class="d-grid">
         <button type="submit" class="btn btn-outline-secondary">
-            <i class="bi bi-pencil-square me-1"></i>Cập nhật thông tin
+            <i class="bi bi-pencil-square me-1"></i>
+            Cập nhật thông tin
         </button>
     </div>
 </form>

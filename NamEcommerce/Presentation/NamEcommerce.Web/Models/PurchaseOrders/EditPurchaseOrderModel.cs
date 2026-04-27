@@ -9,8 +9,11 @@ public sealed class EditPurchaseOrderModel
 {
     public Guid Id { get; set; }
 
+    [Display(Name = "Ngày đặt")]
+    public DateTime PlacedOn { get; set; }
+
     [Display(Name = "Nhà cung cấp")]
-    public Guid? VendorId { get; set; }
+    public Guid VendorId { get; set; }
     [ValidateNever]
     public string? VendorName { get; set; }
     [ValidateNever]

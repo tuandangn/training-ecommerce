@@ -52,8 +52,8 @@ public sealed record VendorDebtItemModel
 {
     public required Guid Id { get; init; }
     public required string Code { get; init; }
-    public required string PurchaseOrderCode { get; init; }
-    public required Guid PurchaseOrderId { get; init; }
+    public required string? PurchaseOrderCode { get; init; }
+    public required Guid? PurchaseOrderId { get; init; }
 
     public decimal TotalAmount { get; init; }
     public decimal PaidAmount { get; init; }

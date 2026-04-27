@@ -720,4 +720,61 @@
   <data name="Error.CostPriceRequired" xml:space="preserve">
     <value>Cost price is required</value>
   </data>
+  <data name="Btn.Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Btn.Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Btn.Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Btn.Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Btn.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Btn.Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Btn.ClearFilter" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Btn.Export" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="Btn.Print" xml:space="preserve">
+    <value>Print</value>
+  </data>
+  <data name="Btn.Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Btn.Confirm" xml:space="preserve">
+    <value>Confirm</value>
+  </data>
+  <data name="Btn.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Empty.Default" xml:space="preserve">
+    <value>Data is empty</value>
+  </data>
+  <data name="Empty.SearchResult" xml:space="preserve">
+    <value>Data is empty</value>
+  </data>
+  <data name="Pager.TotalCount" xml:space="preserve">
+    <value>Total {0} items</value>
+  </data>
+  <data name="Pager.Page" xml:space="preserve">
+    <value>Page {0}/{1}</value>
+  </data>
+  <data name="Error.PurchaseOrders.IdExisting" xml:space="preserve">
+    <value>Purchase order with same id is existing</value>
+  </data>
+  <data name="Error.GoodsReceipt.IdExisting" xml:space="preserve">
+    <value>Goods receipt with same ID is existing</value>
+  </data>
+  <data name="Error.DataInvalid.Required" xml:space="preserve">
+    <value>Invalid data. {0} is required.</value>
+  </data>
 </root>

@@ -3,7 +3,7 @@ namespace NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
 [Serializable]
 public abstract record BaseGoodsReceiptAppDto
 {
-    public required DateTime CreatedOnUtc { get; init; }
+    public required DateTime ReceivedOnUtc { get; init; }
 
     public string? TruckDriverName { get; set; }
     public string? TruckNumberSerial { get; set; }
@@ -19,8 +19,8 @@ public abstract record BaseGoodsReceiptAppDto
     {
         if (!PictureIds.Any())
             return (false, "Error.GoodsReceipt.ProofPictureRequired");
-        if (CreatedOnUtc > DateTime.UtcNow)
-            return (false, "Error.GoodsReceipt.CreationDateGreaterThanNow");
+        if (ReceivedOnUtc > DateTime.UtcNow)
+            return (false, "Error.GoodsReceipt.ReceivedDateGreaterThanNow");
 
         return (true, null);
     }

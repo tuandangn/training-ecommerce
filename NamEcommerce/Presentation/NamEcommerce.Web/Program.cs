@@ -34,6 +34,7 @@ using NamEcommerce.Application.Services.Report;
 using NamEcommerce.Application.Services.Users;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
+using NamEcommerce.Data.SqlServer.Interceptors;
 using NamEcommerce.Domain.Services.Catalog;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Customers;
@@ -112,13 +113,17 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.Configure<WarehouseSettings>(options => builder.Configuration.Bind(AppConstants.WarehouseSettingSectionName, options));
     services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<WarehouseSettings>>().Value);
 
-    services.AddDbContext<NamEcommerceEfDbContext>(opts =>
+    services.AddScoped<DomainEventDispatchInterceptor>();
+    services.AddDbContext<NamEcommerceEfDbContext>((sp, opts) =>
+    {
         opts.UseSqlServer(configuration.GetConnectionString(nameof(NamEcommerceEfDbContext)),
-            opt => opt.MigrationsAssembly("NamEcommerce.Data.SqlServer"))
-    );
+            opt => opt.MigrationsAssembly("NamEcommerce.Data.SqlServer"));
+        opts.AddInterceptors(sp.GetRequiredService<DomainEventDispatchInterceptor>());
+    });
     services.AddScoped<IDbContext, NamEcommerceEfDbContext>();
     services.AddScoped(typeof(IRepository<>), typeof(NamEcommerceEfRepository<>));
     services.AddScoped(typeof(IEntityDataReader<>), typeof(EntityDataReader<>));
+    services.AddScoped(typeof(IGetByIdService<>), typeof(EntityDataReader<>));
 
     services.AddScoped<IUserManager, UserManager>();
     services.AddScoped<ICategoryManager, CategoryManager>();

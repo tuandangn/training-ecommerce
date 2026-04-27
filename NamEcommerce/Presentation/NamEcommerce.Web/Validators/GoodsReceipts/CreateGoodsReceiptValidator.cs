@@ -9,7 +9,7 @@ public sealed class CreateGoodsReceiptValidator : AbstractValidator<CreateGoodsR
 {
     public CreateGoodsReceiptValidator(IStringLocalizer<SharedResource> localizer)
     {
-        RuleFor(m => m.CreatedOn)
+        RuleFor(m => m.ReceivedOn)
             .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.CreatedOn"]])
             .LessThanOrEqualTo(DateTime.Now).WithMessage(m => localizer["Error.GoodsReceipt.CreationDateInvalid"]);
 

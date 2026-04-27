@@ -24,6 +24,9 @@
             <thead>
                 <tr>
                     <th class="ps-4">Mã đơn</th>
+                    <th class="d-none d-lg-table-cell text-center">
+                        Ngày đặt
+                    </th>
                     <th>
                         Nhà cung cấp
                     </th>
@@ -37,7 +40,7 @@
                     <th class="text-center" style="width: 120px;">
                         Trạng thái
                     </th>
-                    <th class="d-none d-md-table-cell text-center">
+                    <th class="d-none d-xl-table-cell text-center">
                         Ngày tạo
                     </th>
                     <th style="width: 80px;"></th>
@@ -53,7 +56,12 @@
                                 <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="text-decoration-none fw-medium text-nowrap">
                                     @HighlighHelper.Highlight(purchaseOrder.Code, query)
                                 </a>
-                                <span class="text-muted small d-inline d-lg-none">@purchaseOrder.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                                <span class="text-muted small d-inline d-lg-none">
+                                    @purchaseOrder.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                                </span>
+                            </td>
+                            <td class="d-none d-lg-table-cell text-center">
+                                @purchaseOrder.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
                             </td>
                             <td>
                                 <div class="position-relative">
@@ -91,7 +99,7 @@
                                     @purchaseOrderStatus.GetDisplayText()
                                 </span>
                             </td>
-                            <td class="d-none d-md-table-cell text-muted text-center">
+                            <td class="d-none d-xl-table-cell text-muted text-center">
                                 @purchaseOrder.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
                             </td>
                             <td class="text-end pe-3">

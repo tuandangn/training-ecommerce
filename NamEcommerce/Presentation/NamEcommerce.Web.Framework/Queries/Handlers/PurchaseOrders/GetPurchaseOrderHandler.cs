@@ -32,6 +32,7 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
         {
             Id = purchaseOrder.Id,
             Code = purchaseOrder.Code,
+            PlacedOn = purchaseOrder.PlacedOnUtc.ToLocalTime(),
             VendorId = purchaseOrder.VendorId,
             WarehouseId = purchaseOrder.WarehouseId,
             Status = purchaseOrder.Status,
@@ -40,7 +41,7 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             ShippingAmount = purchaseOrder.ShippingAmount,
             TaxAmount = purchaseOrder.TaxAmount,
             TotalAmount = purchaseOrder.TotalAmount,
-            CreatedOn =  purchaseOrder.CreatedOnUtc.ToLocalTime(),
+            CreatedOn = purchaseOrder.CreatedOnUtc.ToLocalTime(),
             CanAddItems = purchaseOrder.CanAddItems,
             CanReceiveGoods = purchaseOrder.CanReceiveGoods
         };
@@ -64,13 +65,10 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             model.Items.Add(itemModel);
         }
 
-        if (model.VendorId.HasValue)
-        {
-            var vendor = await _vendorAppService.GetVendorByIdAsync(model.VendorId.Value).ConfigureAwait(false);
-            model.VendorName = vendor?.Name;
-            model.VendorPhone = vendor?.PhoneNumber;
-            model.VendorAddress = vendor?.Address;
-        }
+        var vendor = await _vendorAppService.GetVendorByIdAsync(model.VendorId).ConfigureAwait(false);
+        model.VendorName = vendor?.Name;
+        model.VendorPhone = vendor?.PhoneNumber;
+        model.VendorAddress = vendor?.Address;
 
         if (model.WarehouseId.HasValue)
         {

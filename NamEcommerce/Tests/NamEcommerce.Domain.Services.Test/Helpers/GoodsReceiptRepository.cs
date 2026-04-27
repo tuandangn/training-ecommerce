@@ -9,7 +9,7 @@ public static class GoodsReceiptRepository
             r.InsertAsync(It.Is<GoodsReceipt>(entity =>
                 entity.TruckDriverName == @return.TruckDriverName
                 && entity.TruckNumberSerial == @return.TruckNumberSerial
-                && entity.CreatedOnUtc == @return.CreatedOnUtc
+                && entity.ReceivedOnUtc == @return.ReceivedOnUtc
                 && entity.PictureIds.Count == @return.PictureIds.Count
                 && entity.Items.Count == @return.Items.Count))
         , @return);

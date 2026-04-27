@@ -21,9 +21,10 @@ public sealed record GoodsReceipt : AppAggregateEntity
     {
         CreatedByUserId = createdByUser?.Id;
         CreatedByUsername = createdByUser?.Username;
+        CreatedOnUtc = DateTime.UtcNow;
     }
 
-    public DateTime CreatedOnUtc { get; private set; }
+    public DateTime ReceivedOnUtc { get; private set; }
 
     public string? TruckDriverName
     {
@@ -45,7 +46,6 @@ public sealed record GoodsReceipt : AppAggregateEntity
 
     public string? Note { get; internal set; }
 
-    /// <summary>Nhà cung cấp — nullable, có thể gắn sau khi tạo phiếu.</summary>
     public Guid? VendorId { get; private set; }
     public string? VendorName { get; private set; }
     public string? VendorPhone { get; private set; }
@@ -53,16 +53,17 @@ public sealed record GoodsReceipt : AppAggregateEntity
 
     public Guid? CreatedByUserId { get; private set; }
     public string? CreatedByUsername { get; private set; }
+    public DateTime CreatedOnUtc { get; set; }
 
     #region Methods
 
     public bool IsPendingCosting() => Items.Any(item => item.IsPendingCosting());
 
-    internal void SetCreationDate(DateTime createdOnUtc)
+    internal void SetReceivedDate(DateTime receivedOnUtc)
     {
-        if (createdOnUtc > DateTime.UtcNow)
-            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.CreationDateGreaterThanNow");
-        CreatedOnUtc = createdOnUtc;
+        if (receivedOnUtc > DateTime.UtcNow)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.ReceivedDateGreaterThanNow");
+        ReceivedOnUtc = receivedOnUtc;
     }
 
     internal async Task AddItemAsync(Guid productId, Guid? warehouseId, decimal quantity, decimal? unitCost,

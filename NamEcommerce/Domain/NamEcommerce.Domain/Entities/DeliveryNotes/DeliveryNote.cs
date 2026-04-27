@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 
 namespace NamEcommerce.Domain.Entities.DeliveryNotes;
@@ -83,6 +84,12 @@ public sealed record DeliveryNote : AppAggregateEntity
         _items.Add(new DeliveryNoteItem(Id, orderItemId, productId, productName, quantity, unitPrice));
     }
 
+    /// <summary>
+    /// Đánh dấu phiếu vừa được khởi tạo (status = Draft) — Manager gọi sau khi setup items để raise <see cref="DeliveryNoteCreated"/>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new DeliveryNoteCreated(Id, OrderId, CustomerId));
+
     internal void Confirm()
     {
         if (Status != DeliveryNoteStatus.Draft)
@@ -90,6 +97,8 @@ public sealed record DeliveryNote : AppAggregateEntity
 
         Status = DeliveryNoteStatus.Confirmed;
         UpdatedOnUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new DeliveryNoteConfirmed(Id));
     }
 
     internal void MarkDelivering()
@@ -99,6 +108,8 @@ public sealed record DeliveryNote : AppAggregateEntity
 
         Status = DeliveryNoteStatus.Delivering;
         UpdatedOnUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new DeliveryNoteDelivering(Id));
     }
 
     internal void MarkDelivered(Guid pictureId, string? receiverName)
@@ -114,6 +125,8 @@ public sealed record DeliveryNote : AppAggregateEntity
         DeliveryProofPictureId = pictureId;
         DeliveryReceiverName = receiverName;
         UpdatedOnUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
     }
 
     internal void Cancel()
@@ -121,7 +134,11 @@ public sealed record DeliveryNote : AppAggregateEntity
         if (Status == DeliveryNoteStatus.Delivered)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Cancelled);
 
+        var wasReservingStock = Status == DeliveryNoteStatus.Confirmed || Status == DeliveryNoteStatus.Delivering;
+
         Status = DeliveryNoteStatus.Cancelled;
         UpdatedOnUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new DeliveryNoteCancelled(Id, wasReservingStock));
     }
 }

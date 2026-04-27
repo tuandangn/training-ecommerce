@@ -550,6 +550,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<DateTime?>("DueDateUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<Guid?>("GoodsReceiptId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -572,11 +575,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("PurchaseOrderCode")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid>("PurchaseOrderId")
+                    b.Property<Guid?>("PurchaseOrderId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("RemainingAmount")
@@ -611,6 +613,8 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("GoodsReceiptId");
 
                     b.HasIndex("PurchaseOrderId");
 
@@ -902,6 +906,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
+                    b.Property<DateTime>("ReceivedOnUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("TruckDriverName")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -913,6 +920,21 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<string>("TruckNumberSerial")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("VendorAddress")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid?>("VendorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("VendorName")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("VendorPhone")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("_pictureIds")
                         .IsRequired()
@@ -968,6 +990,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AverageCost")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("DeletedOnUtc")
                         .HasColumnType("datetime2");
@@ -1319,6 +1344,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("PlacedOnUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<decimal>("ShippingAmount")
                         .HasColumnType("decimal(18,2)");

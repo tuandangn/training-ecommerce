@@ -16,6 +16,7 @@ using NamEcommerce.Domain.Shared.Exceptions.Users;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Domain.Services.PurchaseOrders;
 
@@ -32,12 +33,13 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private readonly IEntityDataReader<InventoryStock> _stockDataReader;
     private readonly IRepository<Product> _productRepository;
     private readonly IRepository<ProductPriceHistory> _priceHistoryRepository;
+    private readonly ICurrentUserAccessor _currentUserAccessor;
 
     public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IInventoryStockManager stockManager, IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
         IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader, IEventPublisher eventPublisher,
         IEntityDataReader<InventoryStock> stockDataReader, IRepository<Product> productRepository,
-        IRepository<ProductPriceHistory> priceHistoryRepository)
+        IRepository<ProductPriceHistory> priceHistoryRepository, ICurrentUserAccessor currentUserAccessor)
     {
         _purchaseOrderRepository = poRepository;
         _stockManager = stockManager;
@@ -50,6 +52,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         _stockDataReader = stockDataReader;
         _productRepository = productRepository;
         _priceHistoryRepository = priceHistoryRepository;
+        _currentUserAccessor = currentUserAccessor;
     }
 
     public async Task<CreatePurchaseOrderResultDto> CreatePurchaseOrderAsync(CreatePurchaseOrderDto dto)
@@ -61,12 +64,9 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (await DoesCodeExistAsync(dto.Code).ConfigureAwait(false))
             throw new PurchaseOrderCodeExistsException(dto.Code);
 
-        if (dto.VendorId.HasValue)
-        {
-            var vendor = await _vendorOrderDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
-            if (vendor is null)
-                throw new VendorIsNotFoundException(dto.VendorId.Value);
-        }
+        var vendor = await _vendorOrderDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        if (vendor is null)
+            throw new VendorIsNotFoundException(dto.VendorId);
 
         if (dto.WarehouseId.HasValue)
         {
@@ -82,22 +82,25 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 throw new UserIsNotFoundException(dto.CreatedByUserId.Value);
         }
 
-        var po = new PurchaseOrder(dto.Code, dto.VendorId, dto.WarehouseId, dto.CreatedByUserId)
-        {
-            Note = dto.Note,
-            ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
-            ShippingAmount = dto.ShippingAmount,
-            TaxAmount = dto.TaxAmount
-        };
+        var purchaseOrder = await PurchaseOrder.CreateBuilder()
+            .WithCode(dto.Code, this)
+            .WithVendor(dto.VendorId, _vendorOrderDataReader)
+            .WithWarehouse(dto.WarehouseId, _warehouseOrderDataReader)
+            .BuildAsync(_purchaseOrderDataReader, _currentUserAccessor);
+        purchaseOrder.Note = dto.Note;
+        purchaseOrder.ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc;
+        purchaseOrder.ShippingAmount = dto.ShippingAmount;
+        purchaseOrder.TaxAmount = dto.TaxAmount;
+        purchaseOrder.SetPlacedDate(dto.PlacedOnUtc);
         foreach (var orderItem in dto.Items)
         {
-            await po.AddPurchaseOrderItemAsync(new PurchaseOrderItem(po.Id, orderItem.ProductId, orderItem.QuantityOrdered, orderItem.UnitCost)
+            await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, orderItem.ProductId, orderItem.QuantityOrdered, orderItem.UnitCost)
             {
                 Note = orderItem.Note
             }, _productDataReader).ConfigureAwait(false);
         }
 
-        var insertedPurchaseOrder = await _purchaseOrderRepository.InsertAsync(po).ConfigureAwait(false);
+        var insertedPurchaseOrder = await _purchaseOrderRepository.InsertAsync(purchaseOrder).ConfigureAwait(false);
 
         await _eventPublisher.EntityCreated(insertedPurchaseOrder).ConfigureAwait(false);
 
@@ -117,12 +120,9 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.Id);
 
-        if (dto.VendorId.HasValue)
-        {
-            var vendor = await _vendorOrderDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
-            if (vendor is null)
-                throw new VendorIsNotFoundException(dto.VendorId.Value);
-        }
+        var vendor = await _vendorOrderDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        if (vendor is null)
+            throw new VendorIsNotFoundException(dto.VendorId);
 
         if (dto.WarehouseId.HasValue)
         {
@@ -131,6 +131,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 throw new WarehouseIsNotFoundException(dto.WarehouseId.Value);
         }
 
+        purchaseOrder.SetPlacedDate(dto.PlacedOnUtc);
         purchaseOrder.Note = dto.Note;
         purchaseOrder.ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc;
         purchaseOrder.ShippingAmount = dto.ShippingAmount;
@@ -144,6 +145,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         return new UpdatePurchaseOrderResultDto(updatedPurchaseOrder.Id)
         {
+            PlacedOnUtc = updatedPurchaseOrder.PlacedOnUtc,
             VendorId = updatedPurchaseOrder.VendorId,
             WarehouseId = updatedPurchaseOrder.WarehouseId,
             TaxAmount = updatedPurchaseOrder.TaxAmount,
@@ -418,7 +420,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         var purchaseOrders = _purchaseOrderDataReader.DataSource
             .Where(po => po.Status != PurchaseOrderStatus.Cancelled
                       && po.Items.Any(item => item.ProductId == productId))
-            .OrderByDescending(po => po.CreatedOnUtc)
+            .OrderByDescending(po => po.PlacedOnUtc)
             .ToList();
 
         // Gom nhóm theo VendorId, lấy lần nhập gần nhất của mỗi nhà cung cấp
@@ -430,11 +432,11 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                     po.VendorId,
                     item.UnitCost,
                     po.Code,
-                    po.CreatedOnUtc
+                    po.PlacedOnUtc
                 }))
             .GroupBy(x => x.VendorId)
-            .Select(g => g.OrderByDescending(x => x.CreatedOnUtc).First())
-            .OrderByDescending(x => x.CreatedOnUtc)
+            .Select(g => g.OrderByDescending(x => x.PlacedOnUtc).First())
+            .OrderByDescending(x => x.PlacedOnUtc)
             .ToList();
 
         if (groupedByVendor.Count == 0)
@@ -442,8 +444,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         // Lấy tên nhà cung cấp theo batch
         var vendorIds = groupedByVendor
-            .Where(x => x.VendorId.HasValue)
-            .Select(x => x.VendorId!.Value)
+            .Select(x => x.VendorId)
             .Distinct()
             .ToList();
 
@@ -456,12 +457,12 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         return groupedByVendor
             .Select(x => new RecentPurchasePriceDto(
                 VendorId: x.VendorId,
-                VendorName: x.VendorId.HasValue && vendorMap.TryGetValue(x.VendorId.Value, out var name)
+                VendorName: vendorMap.TryGetValue(x.VendorId, out var name)
                     ? name
                     : "Không rõ nhà cung cấp",
                 UnitCost: x.UnitCost,
                 PurchaseOrderCode: x.Code,
-                PurchaseDateUtc: x.CreatedOnUtc))
+                PurchaseDateUtc: x.PlacedOnUtc))
             .ToList();
     }
 }

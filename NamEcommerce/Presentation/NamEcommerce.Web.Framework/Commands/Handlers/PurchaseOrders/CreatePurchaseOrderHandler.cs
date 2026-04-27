@@ -24,6 +24,7 @@ public sealed class CreatePurchaseOrderHandler : IRequestHandler<CreatePurchaseO
         var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
         var result = await _purchaseOrderAppService.CreatePurchaseOrderAsync(new CreatePurchaseOrderAppDto
         {
+            PlacedOnUtc = DateTimeHelper.ToUniversalTime(request.PlacedOn),
             VendorId = request.VendorId,
             WarehouseId = request.WarehouseId,
             Note = request.Note,

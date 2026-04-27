@@ -31,7 +31,7 @@ public sealed class GetGoodsReceiptHandler : IRequestHandler<GetGoodsReceiptQuer
         var model = new GoodsReceiptModel
         {
             Id = goodsReceipt.Id,
-            CreatedOn = goodsReceipt.CreatedOnUtc.ToLocalTime(),
+            ReceivedOn = goodsReceipt.ReceivedOnUtc.ToLocalTime(),
             TruckDriverName = goodsReceipt.TruckDriverName,
             TruckNumberSerial = goodsReceipt.TruckNumberSerial,
             PictureIds = goodsReceipt.PictureIds,

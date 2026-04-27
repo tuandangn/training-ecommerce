@@ -7,21 +7,22 @@ namespace NamEcommerce.Web.Models.Catalog;
 [Serializable]
 public sealed class CreatePurchaseOrderModel
 {
+    [Display(Name = "Ngày đặt")]
+    public DateTime PlacedOn { get; set; }
+
     [Display(Name = "Nhà cung cấp")]
-    public Guid? VendorId { get; set; }
+    public Guid VendorId { get; set; }
     [ValidateNever]
     public string? VendorName { get; set; }
     [ValidateNever]
     public string? VendorPhone { get; set; }
     [ValidateNever]
     public string? VendorAddress { get; set; }
-    [ValidateNever]
-    public bool VendorIsLocked { get; set; }
 
     [Display(Name = "Kho nhập hàng")]
     public Guid? WarehouseId { get; set; }
     [ValidateNever]
-    public required EntityOptionListModel AvailableWarehouses { get; set; }
+    public EntityOptionListModel? AvailableWarehouses { get; set; }
 
     [Display(Name = "Ngày giao dự kiến")]
     public DateTime? ExpectedDeliveryDate { get; set; }

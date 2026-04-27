@@ -14,15 +14,15 @@ public interface IPurchaseOrderAppService
     Task<CreatePurchaseOrderResultAppDto> CreatePurchaseOrderAsync(CreatePurchaseOrderAppDto dto);
     Task<UpdatePurchaseOrderResultAppDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderAppDto dto);
 
-    Task<(bool success, string? errorMessage)> SubmitsPurchaseOrderAsync(Guid id);
-    Task<(bool success, string? errorMessage)> CancelPurchaseOrderAsync(Guid id);
-    Task<(bool success, string? errorMessage)> ChangeStatusAsync(Guid purchaseOrderId, int newStatus);
+    Task<CommonActionResultDto> SubmitsPurchaseOrderAsync(Guid id);
+    Task<CommonActionResultDto> CancelPurchaseOrderAsync(Guid id);
+    Task<CommonActionResultDto> ChangeStatusAsync(Guid purchaseOrderId, int newStatus);
 
-    Task<AddPurchaseOrderItemResultAppDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemAppDto dto);
+    Task<CommonActionResultDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemAppDto dto);
 
-    Task<DeletePurchaseOrderItemResultAppDto> DeletePurchaseOrderItemAsync(DeletePurchaseOrderItemAppDto dto);
+    Task<CommonActionResultDto> DeletePurchaseOrderItemAsync(DeletePurchaseOrderItemAppDto dto);
 
-    Task<ReceivedGoodsForItemResultAppDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto);
+    Task<CommonActionResultDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto);
 
     Task<IList<RecentPurchasePriceAppDto>> GetRecentPurchasePricesAsync(Guid productId);
 }

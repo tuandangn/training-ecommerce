@@ -3,11 +3,9 @@ using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
-using NamEcommerce.Web.Contracts.Queries.Models.Customers;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Models.Catalog;
-using NamEcommerce.Web.Models.CustomerDebts;
 using NamEcommerce.Web.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Services.PurchaseOrders;
@@ -23,30 +21,40 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         _appConfig = appConfig;
     }
 
+    public async Task<PurchaseOrderListModel> PreparePurchaseOrderListModel(PurchaseOrderListSearchModel searchModel)
+    {
+        var pageNumber = searchModel?.PageNumber ?? 1;
+        var pageSize = searchModel?.PageSize ?? 0;
+        if (pageNumber <= 0) pageNumber = 1;
+        if (pageSize <= 0) pageSize = _appConfig.DefaultPageSize;
+        if (_appConfig.PageSizeOptions.Contains(pageSize)) pageSize = _appConfig.DefaultPageSize;
+
+        var model = await _mediator.Send(new GetPurchaseOrderListQuery
+        {
+            Keywords = searchModel?.Keywords,
+            PageIndex = pageNumber - 1,
+            PageSize = pageSize
+        });
+
+        return model;
+    }
+
     public async Task<CreatePurchaseOrderModel> PrepareCreatePurchaseOrderModel(CreatePurchaseOrderModel? oldModel = null)
     {
         var vendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
         var warehouseOptions = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new CreatePurchaseOrderModel
         {
-            AvailableWarehouses = warehouseOptions,
+            PlacedOn = DateTime.Now
         };
-        if (oldModel is not null)
-        {
-            model.AvailableWarehouses = warehouseOptions;
-        }
+        model.AvailableWarehouses = warehouseOptions;
 
-        if (model.VendorId.HasValue)
+        var vendor = await _mediator.Send(new GetVendorQuery { Id = model.VendorId }).ConfigureAwait(false);
+        if (vendor is not null)
         {
-            var vendor = await _mediator.Send(new GetVendorQuery { Id = model.VendorId.Value }).ConfigureAwait(false);
-            if (vendor is null)
-                model.VendorId = null;
-            else
-            {
-                model.VendorName = vendor.Name;
-                model.VendorPhone = vendor.PhoneNumber;
-                model.VendorAddress = vendor.Address;
-            }
+            model.VendorName = vendor.Name;
+            model.VendorPhone = vendor.PhoneNumber;
+            model.VendorAddress = vendor.Address;
         }
 
         if (model.Items.Count > 0)
@@ -73,24 +81,6 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         return model;
     }
 
-    public async Task<PurchaseOrderListModel> PreparePurchaseOrderListModel(PurchaseOrderListSearchModel searchModel)
-    {
-        var pageNumber = searchModel?.PageNumber ?? 1;
-        var pageSize = searchModel?.PageSize ?? 0;
-        if (pageNumber <= 0) pageNumber = 1;
-        if (pageSize <= 0) pageSize = _appConfig.DefaultPageSize;
-        if (_appConfig.PageSizeOptions.Contains(pageSize)) pageSize = _appConfig.DefaultPageSize;
-
-        var model = await _mediator.Send(new GetPurchaseOrderListQuery
-        {
-            Keywords = searchModel?.Keywords,
-            PageIndex = pageNumber - 1,
-            PageSize = pageSize
-        });
-
-        return model;
-    }
-
     public async Task<PurchaseOrderDetailsModel?> PreparePurchaseOrderDetailsModel(Guid id)
     {
         var purchaseOrderInfo = await _mediator.Send(new GetPurchaseOrderQuery { Id = id }).ConfigureAwait(false);
@@ -104,14 +94,15 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             Info = purchaseOrderInfo,
             AvailableWarehouses = availableWarehouses
         };
-        model.CanModifyInfo = purchaseOrderInfo.Status != (int) PurchaseOrderStatus.Submitted
-            && purchaseOrderInfo.Status != (int) PurchaseOrderStatus.Completed 
-            && purchaseOrderInfo.Status != (int) PurchaseOrderStatus.Cancelled;
+        model.CanModifyInfo = purchaseOrderInfo.Status != (int)PurchaseOrderStatus.Submitted
+            && purchaseOrderInfo.Status != (int)PurchaseOrderStatus.Completed
+            && purchaseOrderInfo.Status != (int)PurchaseOrderStatus.Cancelled;
         if (model.CanModifyInfo)
         {
             model.ModifyInfo = new EditPurchaseOrderModel
             {
                 Id = purchaseOrderInfo.Id,
+                PlacedOn = purchaseOrderInfo.PlacedOn,
                 VendorId = purchaseOrderInfo.VendorId,
                 VendorName = purchaseOrderInfo.VendorName,
                 VendorAddress = purchaseOrderInfo.VendorAddress,
@@ -122,8 +113,8 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 ExpectedDeliveryDate = purchaseOrderInfo.ExpectedDeliveryDate,
                 ShippingAmount = purchaseOrderInfo.ShippingAmount,
                 TaxAmount = purchaseOrderInfo.TaxAmount,
-                CanChangeVendor = purchaseOrderInfo.Status == (int) PurchaseOrderStatus.Draft,
-                CanChangeDate = purchaseOrderInfo.Status == (int) PurchaseOrderStatus.Draft,
+                CanChangeVendor = purchaseOrderInfo.Status == (int)PurchaseOrderStatus.Draft,
+                CanChangeDate = purchaseOrderInfo.Status == (int)PurchaseOrderStatus.Draft,
                 CanChangeFees = purchaseOrderInfo.Items.Count > 0,
                 TotalAmount = purchaseOrderInfo.TotalAmount,
                 CreatedOn = purchaseOrderInfo.CreatedOn

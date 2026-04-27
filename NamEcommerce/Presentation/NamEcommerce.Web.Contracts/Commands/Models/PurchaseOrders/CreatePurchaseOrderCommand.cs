@@ -6,13 +6,16 @@ namespace NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 [Serializable]
 public sealed class CreatePurchaseOrderCommand : IRequest<CreatePurchaseOrderResultModel>
 {
-    public Guid? VendorId { get; init; }
-    public Guid? WarehouseId { get; init; }
-    public string? Note { get; init; }
-    public DateTime? ExpectedDeliveryDate { get; init; }
+    public required DateTime PlacedOn { get; init; }
+    public required Guid VendorId { get; init; }
+    public required Guid? WarehouseId { get; init; }
+
+    public DateTime? ExpectedDeliveryDate { get; set; }
     public decimal ShippingAmount { get; set; }
     public decimal TaxAmount { get; set; }
-    public IList<CreatePurchaseOrderItemCommand> Items { get; init; } = [];
+    public string? Note { get; set; }
+
+    public IList<CreatePurchaseOrderItemCommand> Items { get; set; } = [];
 }
 
 [Serializable]

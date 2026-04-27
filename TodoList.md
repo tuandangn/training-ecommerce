@@ -94,7 +94,7 @@ Thay vì reverse stock (phức tạp, dễ âm tồn nếu đã bán một phầ
 
 ---
 
-### 📌 Trạng thái hiện tại (cập nhật 2026-04-26)
+### 📌 Trạng thái hiện tại (cập nhật 2026-04-27)
 
 **Đã làm xong session này:**
 - ✅ Toàn bộ module **UI/UX Notification** (Phase 1 → 4) — đã hoàn tất cả phần JS module migrate optional ở Phase 4
@@ -103,6 +103,8 @@ Thay vì reverse stock (phức tạp, dễ âm tồn nếu đã bán một phầ
 - ✅ GoodsReceipt **Vấn đề 3** (Cấm xóa) — đã thêm localization key vào cả `SharedResource.vi-VN.resx` và `SharedResource.resx` ngày 2026-04-26
 - ✅ JS module migrate apiPost/apiGet (`order.details.js`, `CreatePurchaseOrderController.js`, `OrderController.js`) — 2026-04-26 (scheduled task)
 - ✅ **Vendor + Sinh công nợ tự động** — Phase 1 Domain + Phase 2 Application + Phase 3 backend & UI — **2026-04-26 scheduled task (3 lần làm)**. UI Views Create.cshtml + Details.cshtml + VendorPicker integration đều đã hoàn thành.
+- ✅ **Event Refactor Phase 1 Foundation** — `IDomainEvent`/`DomainEvent`/`AppAggregateEntity.RaiseDomainEvent`/`DomainEventDispatchInterceptor` + 6 unit tests — **2026-04-27 scheduled task**.
+- ✅ **Event Refactor Phase 2 Migrate Orders + DeliveryNotes** — 14 concrete domain events, 2 aggregate refactor, 2 manager bỏ `IEventPublisher`, 2 handler refactor sang `INotificationHandler<TDomainEvent>`, 47 OrderManager constructor calls trong test — **2026-04-27 scheduled task**.
 
 **Lượt sau bắt đầu từ:**
 1. **Build verify** toàn bộ solution — `dotnet build` để chắc:
@@ -123,7 +125,68 @@ Thay vì reverse stock (phức tạp, dễ âm tồn nếu đã bán một phầ
      - Tạo phiếu CÓ vendor nhưng items chưa định giá → KHÔNG sinh nợ; sau khi set UnitCost cho item cuối → sinh nợ
      - Phiếu CÓ items định giá đầy đủ nhưng KHÔNG vendor → POST `/GoodsReceipt/SetVendor` với `vendorId` → sinh nợ
      - Gọi POST `/GoodsReceipt/SetVendor` 2 lần liên tiếp với cùng vendor → CHỈ 1 phiếu nợ (idempotency)
-3. **Sau cùng** — Module **System - Event Refactor** (Khó + HIGH, ~1 tuần) — bắt đầu từ Phase 1 Foundation
+3. **Sau cùng** — Module **System - Event Refactor** (Khó + HIGH, ~1 tuần) — Phase 1 Foundation + Phase 2 Migrate Orders + DeliveryNotes đã hoàn tất (2026-04-27, scheduled task), tiếp theo Phase 3 migrate các module còn lại (Catalog, Inventory, PurchaseOrders, GoodsReceipts, Debts, Customers, Media)
+
+---
+
+### 📝 Session 2026-04-27 (scheduled task) — Event Refactor Phase 1 Foundation
+
+**Files mới tạo:**
+- `Domain/NamEcommerce.Domain.Shared/Events/IDomainEvent.cs` — marker interface kế thừa `MediatR.INotification` với `EventId` + `OccurredOnUtc`
+- `Domain/NamEcommerce.Domain.Shared/Events/DomainEvent.cs` — `abstract record DomainEvent : IDomainEvent`, constructor tự sinh `EventId = Guid.NewGuid()` + `OccurredOnUtc = DateTime.UtcNow`
+- `Infrastructure/NamEcommerce.Data.SqlServer/Interceptors/DomainEventDispatchInterceptor.cs` — `SaveChangesInterceptor` quét `ChangeTracker.Entries<AppAggregateEntity>()`, clear events trước khi publish (tránh re-publish nếu handler gây nested SaveChanges), skip nếu `eventData.Context == null`. Override cả `SavedChangesAsync` và `SavedChanges` (sync block-on-async cho parity).
+- `Tests/NamEcommerce.Data.SqlServer.Test/Interceptors/DomainEventDispatchInterceptorTests.cs` — 6 tests TDD: ctor null-check, single event publish + clear, multiple events in-order, aggregate không có event skip publish (`MockBehavior.Strict`), không aggregate tracked skip publish, save lần 2 không re-publish event đã dispatch. Dùng `FakeDomainEvent` + `FakeAggregate` (expose `Raise(...)` public) + `FakeDbContext` in-memory.
+
+**Files đã sửa:**
+- `Domain/NamEcommerce.Domain.Shared/NamEcommerce.Domain.Shared.csproj` — thêm `MediatR.Contracts` 2.0.1 (chỉ cần `INotification` interface, không cần full MediatR)
+- `Domain/NamEcommerce.Domain.Shared/AppAggregateEntity.cs` — thêm `private readonly List<IDomainEvent> _domainEvents` + `[NotMapped] public IReadOnlyCollection<IDomainEvent> DomainEvents` + `protected void RaiseDomainEvent(IDomainEvent)` + `public void ClearDomainEvents()`
+- `Infrastructure/NamEcommerce.Data.SqlServer/NamEcommerce.Data.SqlServer.csproj` — thêm `MediatR` 14.1.0 (cần full `IPublisher`)
+- `Presentation/NamEcommerce.Web/Program.cs` — `using NamEcommerce.Data.SqlServer.Interceptors`; thêm `services.AddScoped<DomainEventDispatchInterceptor>()`; chuyển `AddDbContext<NamEcommerceEfDbContext>(opts =>)` sang `(sp, opts) =>` để gọi `opts.AddInterceptors(sp.GetRequiredService<DomainEventDispatchInterceptor>())`
+- `Tests/NamEcommerce.Data.SqlServer.Test/NamEcommerce.Data.SqlServer.Test.csproj` — thêm `MediatR` 14.1.0 + `Microsoft.EntityFrameworkCore.InMemory` 10.0.5 + `Moq` 4.18.1
+
+**Pattern decision:**
+- Aggregate raise event qua `protected RaiseDomainEvent(...)` (chỉ subclass gọi được — không leak ra Manager/AppService)
+- Interceptor clear events TRƯỚC khi publish — defensive cho trường hợp handler gây nested SaveChanges (tránh stack overflow / re-publish)
+- `IEventPublisher` cũ giữ nguyên để Phase 2/3 migrate dần từng module — chưa break Manager nào hiện tại
+
+⚠️ **Tuấn cần làm sau khi merge session 2026-04-27 (Phase 1 + Phase 2):**
+- Restore packages: `dotnet restore NamEcommerce.sln` (3 csproj có thay đổi package reference: `Domain.Shared`, `Data.SqlServer`, `Data.SqlServer.Test`)
+- Build verify: `dotnet build NamEcommerce.sln` — đặc biệt verify `Microsoft.EntityFrameworkCore.InMemory` 10.0.5 download được; nếu không có thì hạ xuống version EF Core compatible
+- Run unit tests:
+  - `dotnet test Tests/NamEcommerce.Data.SqlServer.Test/` — 6 tests mới cho `DomainEventDispatchInterceptor`
+  - `dotnet test Tests/NamEcommerce.Domain.Services.Test/` — `OrderManagerTests` đã đổi 47 constructor calls (7→6 args) sau khi bỏ `IEventPublisher` dependency
+- Smoke test app start + flows nghiệp vụ:
+  - App start lên + SaveChanges hoạt động bình thường với interceptor mới đăng ký
+  - **Order flow:** Tạo Order với items + discount → kiểm tra log/debug `DomainEvents` collection raise đúng `OrderPlaced` (1 event duy nhất sau khi `ClearDomainEvents()` clear các `OrderItemAdded` lúc setup)
+  - **DeliveryNote confirmed flow:** Confirm phiếu xuất → n8n nhận notification (`DeliveryNoteConfirmedEventHandler` đã refactor handle `DeliveryNoteConfirmed` record mới)
+  - **DeliveryNote delivered flow:** Mark delivered → công nợ khách hàng được sinh tự động (`DeliveryNoteDeliveredEventHandler` đã refactor handle `DeliveryNoteDelivered` record mới + tận dụng payload event)
+
+---
+
+### 📝 Session 2026-04-27 (scheduled task) — Event Refactor Phase 2 Migrate Orders + DeliveryNotes
+
+**Files mới tạo:**
+- `Domain/NamEcommerce.Domain.Shared/Events/Orders/OrderEvents.cs` — 9 sealed records `: DomainEvent` (OrderPlaced/OrderInfoUpdated/OrderItemAdded/OrderItemUpdated/OrderItemRemoved/OrderLocked/OrderShippingUpdated/OrderItemDelivered/OrderDeleted)
+- `Domain/NamEcommerce.Domain.Shared/Events/DeliveryNotes/DeliveryNoteEvents.cs` — 5 sealed records `: DomainEvent` (DeliveryNoteCreated/Confirmed/Delivering/Delivered/Cancelled). Lưu ý: `DeliveryNoteConfirmed`/`DeliveryNoteDelivered` (record mới) khác tên với `DeliveryNoteConfirmedEvent`/`DeliveryNoteDeliveredEvent` (class cũ kế thừa `BaseEvent`) — cùng namespace, không trùng tên.
+
+**Files đã sửa:**
+- `Domain/NamEcommerce.Domain/Entities/Orders/Order.cs` — thêm 4 method `Place()`, `MarkInfoUpdated()`, `MarkShippingUpdated()`, `MarkDeleted()` để Manager gọi tại các điểm cần raise event không thuộc business method có sẵn. Raise event in-place trong `AddOrderItemAsync`/`UpdateOrderItem`/`RemoveOrderItem`/`LockOrder`/`MarkOrderItemDelivered` — sau khi state đã thay đổi.
+- `Domain/NamEcommerce.Domain/Entities/DeliveryNotes/DeliveryNote.cs` — thêm `MarkCreated()` cho flow create; raise event trong `Confirm()`/`MarkDelivering()`/`MarkDelivered()`/`Cancel()`. `Cancel()` capture `wasReservingStock` (bool) trước khi đổi status để event payload có đủ context cho handler quyết định release stock.
+- `Domain/NamEcommerce.Domain.Services/Orders/OrderManager.cs` — bỏ `IEventPublisher eventPublisher` khỏi constructor (giảm 7 → 6 deps). Trong `CreateOrderAsync` gọi `order.ClearDomainEvents()` TRƯỚC `order.Place()` — vì `AddOrderItemAsync` đã raise `OrderItemAdded` events lúc setup, nhưng phiếu chưa thật sự "placed" → clear hết để chỉ còn `OrderPlaced` đại diện lifecycle bắt đầu. Bỏ tất cả call `eventPublisher.EntityCreated/Updated/Deleted` (9 chỗ).
+- `Domain/NamEcommerce.Domain.Services/DeliveryNotes/DeliveryNoteManager.cs` — bỏ `IEventPublisher eventPublisher` khỏi constructor. Manager gọi `deliveryNote.MarkCreated()` trong `CreateFromOrderAsync` trước khi insert. `Confirm()`/`MarkDelivering()`/`MarkDelivered()`/`Cancel()` đều tự raise event qua aggregate — Manager chỉ orchestrate.
+- `Application/NamEcommerce.Application.Services/Events/DeliveryNotes/DeliveryNoteConfirmedEventHandler.cs` — chuyển từ `INotificationHandler<DeliveryNoteConfirmedNotification>` (class trong Application.Contracts/Events) → `INotificationHandler<DeliveryNoteConfirmed>` (record DomainEvent). Logic notify n8n giữ nguyên.
+- `Application/NamEcommerce.Application.Services/Events/DeliveryNotes/DeliveryNoteDeliveredEventHandler.cs` — chuyển sang `INotificationHandler<DeliveryNoteDelivered>`. Tận dụng payload event (`OrderId/CustomerId/TotalAmount`) cho `CreateCustomerDebtDto` — vẫn fetch `deliveryNote` để lấy `CreatedByUserId` (audit).
+- `Tests/NamEcommerce.Domain.Services.Test/Services/OrderManagerTests.cs` — replace_all 8 lần `Mock.Of<IEventPublisher>(), ` → empty; thay 47 OrderManager constructor calls từ 7-args (có IEventPublisher position 5) → 6-args; thêm assertion `o.DomainEvents.OfType<OrderPlaced>().Any(...) && o.DomainEvents.Count == 1` cho `CreateOrderAsync_ValidDto_*`. Thay `using NamEcommerce.Domain.Shared.Events;` → `using NamEcommerce.Domain.Shared.Events.Orders;`.
+
+**Pattern decisions:**
+- Không raise event trong constructor — vì lúc đó OrderTotal/CustomerId chưa biết. Thêm method `Place()` để Manager gọi sau khi setup xong (kiểu factory style).
+- Trong `CreateOrderAsync`, `AddOrderItemAsync` (gọi từ trong setup) raise `OrderItemAdded` events — nhưng lifecycle đơn chưa "place". Manager `ClearDomainEvents()` trước `Place()` để chỉ event `OrderPlaced` cuối cùng được dispatch. Quyết định này tránh việc handler reserve stock chạy trước khi order được commit → tránh inconsistency.
+- Notification cũ (`DeliveryNoteConfirmedNotification`, `DeliveryNoteDeliveredNotification`) trong `Application.Contracts/Events/DeliveryNotes/` chưa xoá — Phase 5 cleanup. Hiện không có publisher gọi → không impact.
+- `EventPublisher.cs` (switch + NotSupportedException) chưa xoá — vẫn được Manager khác dùng (User/PurchaseOrder/Picture/Warehouse/GoodsReceipt/VendorDebt/Vendor/UnitMeasurement/Product/Category). Phase 3 sẽ migrate dần.
+- `OrderCreatedEventHandler` + `OrderUpdatedEventHandler` (đang trống) chưa xoá — Manager Order hiện không publish `EntityCreatedNotification<Order>`/`EntityUpdatedNotification<Order>` nữa, 2 handler đó sẽ KHÔNG bao giờ trigger → an toàn để giữ tới Phase 5.
+
+⚠️ **Lưu ý record equality cho Tuấn:**
+`AppAggregateEntity` giờ có private field `_domainEvents`. Record's synthesized `Equals` sẽ so sánh field này (List → reference equality). 2 instance có cùng Id + state nhưng `_domainEvents` khác reference → KHÔNG equal nữa. Existing tests dùng cùng reference cho 2 vế của `Assert.Equal` → vẫn pass. Nếu future test tạo 2 instance riêng và expect equal → cần override Equals (chưa làm vì chưa cần).
 
 **Files đã chạm session 2026-04-26:**
 - `Presentation/NamEcommerce.Web/Resources/SharedResource.vi-VN.resx` — thêm key `Error.GoodsReceipt.CannotDeleteHasStockMovements` + `Error.StockAverageCostCannotBeNegative` (VI)
@@ -348,40 +411,46 @@ Mở rộng `GoodsReceiptUpdatedHandler` (đã có logic AverageCost):
 
 #### Phase 1 — Foundation (1-2 ngày)
 
-- [ ] Tạo `IDomainEvent : INotification` trong `NamEcommerce.Domain.Shared/Events/`
-- [ ] Tạo `abstract record DomainEvent : IDomainEvent` với `EventId`, `OccurredOnUtc`
-- [ ] Cập nhật `AppAggregateEntity`:
-  - Thêm `private readonly List<IDomainEvent> _domainEvents`
-  - Expose `IReadOnlyCollection<IDomainEvent> DomainEvents` với `[NotMapped]`
-  - Method `protected void RaiseDomainEvent(IDomainEvent)` và `public void ClearDomainEvents()`
-- [ ] Viết `DomainEventDispatchInterceptor : SaveChangesInterceptor` trong `NamEcommerce.Data.SqlServer/Interceptors/`
-- [ ] Đăng ký Interceptor trong `Program.cs` / `DbContext` configuration
-- [ ] Unit test cho Interceptor (mock `IPublisher`, verify dispatch + clear events)
+- [x] Tạo `IDomainEvent : INotification` trong `NamEcommerce.Domain.Shared/Events/` *(2026-04-27 — thêm package `MediatR.Contracts` 2.0.1 vào `Domain.Shared.csproj`)*
+- [x] Tạo `abstract record DomainEvent : IDomainEvent` với `EventId`, `OccurredOnUtc` *(2026-04-27 — `EventId = Guid.NewGuid()`, `OccurredOnUtc = DateTime.UtcNow` trong constructor; `init` setters để concrete record có thể override khi cần test/replay)*
+- [x] Cập nhật `AppAggregateEntity`: *(2026-04-27)*
+  - [x] Thêm `private readonly List<IDomainEvent> _domainEvents`
+  - [x] Expose `IReadOnlyCollection<IDomainEvent> DomainEvents` với `[NotMapped]`
+  - [x] Method `protected void RaiseDomainEvent(IDomainEvent)` và `public void ClearDomainEvents()`
+- [x] Viết `DomainEventDispatchInterceptor : SaveChangesInterceptor` trong `NamEcommerce.Data.SqlServer/Interceptors/` *(2026-04-27 — quét `ChangeTracker.Entries<AppAggregateEntity>()` trong `SavedChangesAsync`/`SavedChanges`. Clear events trên aggregate TRƯỚC khi publish để tránh re-publish nếu handler trigger `SaveChanges` lồng nhau. Defensive: skip nếu `eventData.Context == null`. Thêm package `MediatR` 14.1.0 vào `NamEcommerce.Data.SqlServer.csproj`)*
+- [x] Đăng ký Interceptor trong `Program.cs` / `DbContext` configuration *(2026-04-27 — `services.AddScoped<DomainEventDispatchInterceptor>()` + chuyển `AddDbContext` sang overload `(sp, opts) =>` để resolve interceptor từ scope)*
+- [x] Unit test cho Interceptor (mock `IPublisher`, verify dispatch + clear events) *(2026-04-27 — 6 test cases TDD trong `NamEcommerce.Data.SqlServer.Test/Interceptors/DomainEventDispatchInterceptorTests.cs` dùng `Microsoft.EntityFrameworkCore.InMemory` với `FakeDbContext` + `FakeAggregate` test fixture: constructor null-check, single event, multiple events in-order, no events skip publish, no aggregate tracked skip publish, second SaveChanges không re-publish. Thêm packages `MediatR` + `EFCore.InMemory` + `Moq` vào test csproj)*
 - [ ] Giữ song song `IEventPublisher` cũ — không xoá ngay để tránh break code hiện tại
 
 #### Phase 2 — Migrate Orders + DeliveryNotes (2-3 ngày)
 
-- [ ] Định nghĩa concrete events cho Orders:
-  - `OrderPlaced(OrderId, CustomerId, TotalAmount, WarehouseId?)`
-  - `OrderItemAdded(OrderId, OrderItemId, ProductId, Quantity)`
-  - `OrderItemRemoved(OrderId, OrderItemId)`
-  - `OrderLocked(OrderId)`
-  - `OrderCancelled(OrderId, Reason)`
-  - Thêm các event khác tương ứng với 7 chỗ gọi `EntityUpdated` hiện tại
-- [ ] Định nghĩa concrete events cho DeliveryNotes:
-  - `DeliveryNoteCreated(DeliveryNoteId, OrderId, CustomerId)`
-  - `DeliveryNoteConfirmed(DeliveryNoteId)` — đã có, chuẩn hoá lại
-  - `DeliveryNoteDelivered(DeliveryNoteId, CustomerId, TotalAmount)`
-  - `DeliveryNoteCancelled(DeliveryNoteId)`
-- [ ] Refactor `Order` aggregate: gọi `RaiseDomainEvent(...)` trong constructor + các method nghiệp vụ
-- [ ] Refactor `DeliveryNote` aggregate tương tự
-- [ ] Xoá `eventPublisher.EntityCreated/Updated/Deleted(...)` trong `OrderManager` và `DeliveryNoteManager`
-- [ ] Refactor handler hiện tại theo từng concrete event:
-  - `OrderPlacedReserveStockHandler` (thay cho `OrderCreatedEventHandler` đang trống)
-  - `OrderCancelledReleaseStockHandler`
-  - `DeliveryNoteDeliveredCreateDebtHandler` (refactor từ `DeliveryNoteDeliveredEventHandler`)
-- [ ] Update unit test Manager: assert `aggregate.DomainEvents` chứa event mong đợi thay vì verify `eventPublisher.EntityCreated(...)`
-- [ ] Smoke test end-to-end: tạo order → confirm delivery note → mark delivered → verify công nợ tự động tạo
+- [x] Định nghĩa concrete events cho Orders: *(2026-04-27 — `Domain.Shared/Events/Orders/OrderEvents.cs` — 9 sealed records)*
+  - [x] `OrderPlaced(OrderId, OrderCode, CustomerId, OrderTotal)` *(thiếu WarehouseId vì Order entity hiện không có field này — bỏ qua)*
+  - [x] `OrderInfoUpdated(OrderId)` — flow `UpdateOrderAsync` (note/discount/expectedShipping)
+  - [x] `OrderItemAdded(OrderId, OrderItemId, ProductId, Quantity, UnitPrice)`
+  - [x] `OrderItemUpdated(OrderId, OrderItemId, Quantity, UnitPrice)`
+  - [x] `OrderItemRemoved(OrderId, OrderItemId)`
+  - [x] `OrderLocked(OrderId, Reason)` — cả manual lock + auto-lock khi tất cả items đã giao
+  - [x] `OrderShippingUpdated(OrderId)` — flow `UpdateShippingAsync`
+  - [x] `OrderItemDelivered(OrderId, OrderItemId, PictureId)` — flow `MarkOrderItemDeliveredAsync`
+  - [x] `OrderDeleted(OrderId, OrderCode)` — flow `DeleteOrderAsync`
+  - ~~`OrderCancelled`~~ — bỏ (Order hiện không có method Cancel, chỉ Lock/Delete)
+- [x] Định nghĩa concrete events cho DeliveryNotes: *(2026-04-27 — `Domain.Shared/Events/DeliveryNotes/DeliveryNoteEvents.cs` — 5 sealed records, KHÔNG xoá `DeliveryNoteConfirmedEvent`/`DeliveryNoteDeliveredEvent` cũ — Phase 5 cleanup)*
+  - [x] `DeliveryNoteCreated(DeliveryNoteId, OrderId, CustomerId)`
+  - [x] `DeliveryNoteConfirmed(DeliveryNoteId)` — record mới (cũ là class kế thừa `BaseEvent`)
+  - [x] `DeliveryNoteDelivering(DeliveryNoteId)` — bonus, raise từ `MarkDelivering()`
+  - [x] `DeliveryNoteDelivered(DeliveryNoteId, OrderId, CustomerId, TotalAmount)` — payload đầy đủ để handler không cần fetch lại nếu không muốn
+  - [x] `DeliveryNoteCancelled(DeliveryNoteId, WasReservingStock)` — `WasReservingStock` để handler quyết định có release stock hay không
+- [x] Refactor `Order` aggregate: gọi `RaiseDomainEvent(...)` trong các method nghiệp vụ *(2026-04-27 — không raise trong constructor; thêm 4 method `Place()`, `MarkInfoUpdated()`, `MarkShippingUpdated()`, `MarkDeleted()` để Manager gọi sau khi setup xong; raise event trong các method có sẵn `AddOrderItemAsync`/`UpdateOrderItem`/`RemoveOrderItem`/`LockOrder`/`MarkOrderItemDelivered`)*
+- [x] Refactor `DeliveryNote` aggregate tương tự *(2026-04-27 — thêm `MarkCreated()` cho flow create; raise event trong `Confirm()`, `MarkDelivering()`, `MarkDelivered()`, `Cancel()`)*
+- [x] Xoá `eventPublisher.EntityCreated/Updated/Deleted(...)` trong `OrderManager` và `DeliveryNoteManager` *(2026-04-27 — bỏ tham số `IEventPublisher` khỏi constructor cả 2 manager; trong `CreateOrderAsync` gọi `order.ClearDomainEvents()` trước `Place()` để các event AddOrderItem raise lúc setup không bị double-publish — chỉ event `OrderPlaced` cuối cùng phản ánh lifecycle bắt đầu)*
+- [x] Refactor handler hiện tại theo từng concrete event: *(2026-04-27)*
+  - [x] `DeliveryNoteConfirmedEventHandler` — chuyển từ `INotificationHandler<DeliveryNoteConfirmedNotification>` → `INotificationHandler<DeliveryNoteConfirmed>`. Logic giữ nguyên (notify n8n).
+  - [x] `DeliveryNoteDeliveredEventHandler` — chuyển sang `INotificationHandler<DeliveryNoteDelivered>`. Tận dụng payload event (`OrderId/CustomerId/TotalAmount`) — chỉ fetch lại để lấy `CreatedByUserId`.
+  - [ ] `OrderPlacedReserveStockHandler` (thay cho `OrderCreatedEventHandler` đang trống) *(skip — code hiện chưa có ReserveStock logic, là TODO comment cũ. Để Phase 3 hoặc khi có warehouse trên Order)*
+  - [ ] `OrderCancelledReleaseStockHandler` *(skip — chưa có concrete event `OrderCancelled`; aggregate Order không có method Cancel)*
+- [x] Update unit test Manager: assert `aggregate.DomainEvents` chứa event mong đợi thay vì verify `eventPublisher.EntityCreated(...)` *(2026-04-27 — `OrderManagerTests.cs` đã update toàn bộ 47 OrderManager constructor calls từ 7-args (có IEventPublisher) → 6-args; thêm assertion `o.DomainEvents.OfType<OrderPlaced>().Any(...) && o.DomainEvents.Count == 1` cho `CreateOrderAsync_ValidDto_*`. KHÔNG có `DeliveryNoteManagerTests` hiện tại — không cần update)*
+- [ ] Smoke test end-to-end: tạo order → confirm delivery note → mark delivered → verify công nợ tự động tạo *(cần sandbox dotnet để chạy, Tuấn xác nhận sau khi merge)*
 
 #### Phase 3 — Migrate các module còn lại (2 ngày)
 

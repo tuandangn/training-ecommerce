@@ -97,7 +97,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
 
         var createDto = new CreateGoodsReceiptDto
         {
-            CreatedOnUtc = dto.CreatedOnUtc,
+            ReceivedOnUtc = dto.ReceivedOnUtc,
             TruckDriverName = dto.TruckDriverName,
             TruckNumberSerial = dto.TruckNumberSerial,
             PictureIds = dto.PictureIds,
@@ -111,7 +111,6 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
                 UnitCost = item.UnitCost
             }).ToList()
         };
-
         var result = await _goodsReceiptManager.CreateGoodsReceiptAsync(createDto).ConfigureAwait(false);
 
         return new CreateGoodsReceiptResultAppDto
@@ -154,7 +153,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
 
         var updateDto = new UpdateGoodsReceiptDto(dto.Id)
         {
-            CreatedOnUtc = dto.CreatedOnUtc,
+            ReceivedOnUtc = dto.ReceivedOnUtc,
             TruckDriverName = dto.TruckDriverName,
             TruckNumberSerial = dto.TruckNumberSerial,
             PictureIds = dto.PictureIds,
@@ -179,7 +178,7 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
 
         var deleteDto = new DeleteGoodsReceiptDto(id)
         {
-            CreatedOnUtc = goodsReceipt.CreatedOnUtc,
+            ReceivedOnUtc = goodsReceipt.ReceivedOnUtc,
             PictureIds = goodsReceipt.PictureIds
         };
 

@@ -18,8 +18,9 @@ public sealed class UpdatePurchaseOrderHandler : IRequestHandler<UpdatePurchaseO
 
     public async Task<UpdatePurchaseOrderResultModel> Handle(UpdatePurchaseOrderCommand request, CancellationToken cancellationToken)
     {
-        var updatePurchaseOrderResult = await _purchaseOrderAppService.UpdatePurchaseOrderAsync(new UpdatePurchaseOrderAppDto(request.Id)
+        var updatePurchaseOrderResult = await _purchaseOrderAppService.UpdatePurchaseOrderAsync(new UpdatePurchaseOrderAppDto(request.PurchaseOrderId)
         {
+            PlacedOnUtc = DateTimeHelper.ToUniversalTime(request.PlacedOn),
             VendorId = request.VendorId,
             WarehouseId = request.WarehouseId,
             ExpectedDeliveryDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedDeliveryDate),

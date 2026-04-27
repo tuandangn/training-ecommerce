@@ -10,6 +10,7 @@ public static class PurchaseOrderExtensions
         var dto = new PurchaseOrderDto(purchaseOrder.Id)
         {
             Code = purchaseOrder.Code,
+            PlacedOnUtc = purchaseOrder.PlacedOnUtc,
             CreatedByUserId = purchaseOrder.CreatedByUserId,
             VendorId = purchaseOrder.VendorId,
             WarehouseId = purchaseOrder.WarehouseId,

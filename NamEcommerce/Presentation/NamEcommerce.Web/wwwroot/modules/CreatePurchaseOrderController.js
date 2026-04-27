@@ -166,7 +166,7 @@ export default class CreatePurchaseOrderController {
             </td>
             <td class="text-center">
                 <input name="Items[${index}].Quantity" data-decimal="quantity"
-                    class="row-qty no-additional-element" value="${quantity}"
+                    class="row-qty no-additional-element" value="${quantity}" autocomplete="off"
                     data-val="true" data-val-required="Vui lòng nhập số lượng." 
                     data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001" 
                     data-val-number="Số lượng phải là số" />
@@ -177,7 +177,7 @@ export default class CreatePurchaseOrderController {
             <td class="text-end">
                 <input name="Items[${index}].UnitCost" data-decimal="currency"
                     class="row-price no-additional-element" value="${unitCost}"
-                    data-val="true"
+                    data-val="true" autocomplete="off"
                     data-val-required="Vui lòng nhập đơn giá"
                     data-val-number="Đơn giá phải là số" />
                 <span class="small text-danger field-validation-valid"

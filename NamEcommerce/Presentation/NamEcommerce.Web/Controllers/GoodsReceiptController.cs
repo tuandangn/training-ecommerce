@@ -50,7 +50,7 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
 
         var result = await _mediator.Send(new CreateGoodsReceiptCommand
         {
-            CreatedOn = model.CreatedOn,
+            ReceivedOn = model.ReceivedOn,
             TruckDriverName = model.TruckDriverName,
             TruckNumberSerial = model.TruckNumberSerial,
             Note = model.Note,
@@ -128,7 +128,7 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
         var result = await _mediator.Send(new UpdateGoodsReceiptCommand
         {
             Id = id,
-            CreatedOn = goodsReceipt.CreatedOn,
+            CreatedOn = goodsReceipt.ReceivedOn,
             TruckDriverName = goodsReceipt.TruckDriverName,
             TruckNumberSerial = goodsReceipt.TruckNumberSerial,
             Note = goodsReceipt.Note,

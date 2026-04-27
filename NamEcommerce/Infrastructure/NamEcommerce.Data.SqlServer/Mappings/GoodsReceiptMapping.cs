@@ -9,7 +9,7 @@ public sealed class GoodsReceiptMapping : IEntityTypeConfiguration<GoodsReceipt>
         builder.ToTable(nameof(GoodsReceipt), DbScheme);
         builder.HasKey(g => g.Id);
 
-        builder.Property(g => g.CreatedOnUtc).IsRequired();
+        builder.Property(g => g.ReceivedOnUtc).IsRequired();
 
         builder.Property(g => g.TruckDriverName).HasMaxLength(500);
         builder.Property("TruckDriverNameNormalized").HasMaxLength(500);

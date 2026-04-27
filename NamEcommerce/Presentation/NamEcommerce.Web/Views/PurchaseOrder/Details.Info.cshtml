@@ -8,6 +8,14 @@
     </div>
     <div class="content-card-body">
         <div class="mb-3">
+            <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Ngày đặt</span>
+            <div class="d-flex align-items-center">
+                <div class="fw-bold text-dark fs-6">
+                    @Model.Info.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                </div>
+            </div>
+        </div>
+        <div class="mb-3">
             <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Nhà cung cấp</span>
             <div class="d-flex align-items-center">
                 <div class="bg-light rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
@@ -32,11 +40,11 @@
                 </div>
             </div>
         </div>
-        @if (Model.Info.WarehouseId.HasValue)
-        {
-            <div class="mb-3">
-                <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Kho nhập hàng</span>
-                <div class="d-flex align-items-center">
+        <div class="mb-3">
+            <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Kho nhập hàng</span>
+            <div class="d-flex align-items-center">
+                @if (Model.Info.WarehouseId.HasValue)
+                {
                     <div class="bg-light rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
                         <i class="bi bi-geo-alt text-info fs-4"></i>
                     </div>
@@ -50,19 +58,27 @@
                             </div>
                         }
                     </div>
+                }
+            </div>
+        </div>
+        <div class="mb-3">
+            <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Ngày giao dự kiến</span>
+            <div class="d-flex align-items-center">
+                <div class="fw-bold text-dark fs-6">
+                    @Model.Info.ExpectedDeliveryDate?.ToString(ViewConstants.DefaultDateTimeFormat)
                 </div>
             </div>
-        }
-        @if (!string.IsNullOrEmpty(Model.Info.Note))
-        {
-            <div>
-                <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Ghi chú</span>
-                <div class="d-flex align-items-center">
+        </div>
+        <div>
+            <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Ghi chú</span>
+            <div class="d-flex align-items-center">
+                @if (!string.IsNullOrEmpty(Model.Info.Note))
+                {
                     <div class="fw-medium">
                         @Model.Info.Note
                     </div>
-                </div>
+                }
             </div>
-        }
+        </div>
     </div>
 </div>

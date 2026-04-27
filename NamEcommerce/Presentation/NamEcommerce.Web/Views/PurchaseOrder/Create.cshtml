@@ -1,5 +1,6 @@
 @model CreatePurchaseOrderModel
 @using System.Text.Json
+@inject WarehouseSettings WarehouseSettings
 @{
     ViewData["Title"] = "Thêm đơn nhập";
 }
@@ -58,7 +59,7 @@
                                                     @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))
                                                     {
                                                         <img src="@item.ProductDisplayPicture" class="rounded product-picture"
-                                                             style="width:40px; height:40px; object-fit:cover;" alt="@item.ProductDisplayName"/>
+                                                             style="width:40px; height:40px; object-fit:cover;" alt="@item.ProductDisplayName" />
                                                     }
                                                     else
                                                     {
@@ -134,6 +135,11 @@
                     </div>
                     <div class="content-card-body">
                         <div class="mb-3">
+                            <label asp-for="PlacedOn" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <input type="datetime-local" asp-for="PlacedOn" class="form-control" placeholder="Ngày đặt hàng"/>
+                            <span asp-validation-for="PlacedOn" class="text-danger small"></span>
+                        </div>
+                        <div class="mb-3">
                             <div class="row g-3">
                                 <div class="col-12">
                                     <label for="vendorSearch" class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
@@ -147,7 +153,7 @@
                                     <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                                     <select asp-for="WarehouseId" class="form-select">
                                         <option value="" selected="@(!Model.WarehouseId.HasValue)">(Không chọn)</option>
-                                        @foreach (var warehouse in Model.AvailableWarehouses)
+                                        @foreach (var warehouse in Model.AvailableWarehouses!)
                                         {
                                             <option value="@warehouse.Id" selected="@(Model.WarehouseId == warehouse.Id)">@warehouse.Name</option>
                                         }
@@ -156,14 +162,14 @@
                                 </div>
                                 <div class="col-12">
                                     <label asp-for="ExpectedDeliveryDate" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                    <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" />
+                                    <input asp-for="ExpectedDeliveryDate" class="form-control" type="date" placeholder="Ngày giao dự kiến" />
                                     <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
                             <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <textarea asp-for="Note" class="form-control" rows="2" placeholder="Nhập ghi chú về đơn nhập..."></textarea>
+                            <textarea asp-for="Note" class="form-control" rows="2" placeholder="Nhập ghi chú"></textarea>
                             <span asp-validation-for="Note" class="text-danger small"></span>
                         </div>
                         <div class="d-grid">
@@ -195,7 +201,7 @@
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted" for="itemQuantity">Số lượng</label>
                                 <input id="itemQuantity" name="itemProductQuantity" class="form-control no-additional-element"
-                                       data-decimal="quantity" value="1"
+                                       data-decimal="quantity" value="1" autocomplete="off"
                                        data-val="true" data-val-required="Vui lòng nhập số lượng"
                                        data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
                                        data-val-number="Số lượng phải là số" />
@@ -207,7 +213,7 @@
                                     Đơn giá
                                 </label>
                                 <input id="itemUnitPrice" name="itemUnitPrice" class="form-control no-additional-element"
-                                       data-decimal="currency"
+                                       data-decimal="currency" autocomplete="off"
                                        data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                        data-val-number="Đơn giá phải là số" />
                                 <span class="small text-danger field-validation-valid"
@@ -263,12 +269,12 @@
         const addProductContainer = document.getElementById('addProductModal');
         const addProductModal = bootstrap.Modal.getOrCreateInstance(addProductContainer);
         addProductContainer.addEventListener('hidden.bs.modal', () => {
-            const searchInput = addProductContainer.querySelector('.productSearch');
-            if (searchInput)
-                searchInput.value = '';
+        const searchInput = addProductContainer.querySelector('.productSearch');
+        if (searchInput)
+        searchInput.value = '';
         });
         document.addEventListener('purchaseOrder:itemAdded', () => {
-            addProductModal.hide();
+        addProductModal.hide();
         });
     </script>
 }

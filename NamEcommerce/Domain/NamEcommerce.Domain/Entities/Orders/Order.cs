@@ -3,6 +3,7 @@ using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Events.Orders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
@@ -53,6 +54,33 @@ public sealed record Order : AppAggregateEntity
     public DateTime CreatedOnUtc { get; }
     public DateTime? UpdatedOnUtc { get; internal set; }
 
+    #region Events
+
+    /// <summary>
+    /// Đánh dấu đơn vừa được khởi tạo xong (sau khi setup customer + items + discount).
+    /// Manager gọi method này NGAY TRƯỚC khi insert vào repository để raise <see cref="OrderPlaced"/>.
+    /// </summary>
+    internal void Place() => RaiseDomainEvent(new OrderPlaced(Id, Code, CustomerId, OrderTotal));
+
+    /// <summary>
+    /// Đánh dấu thông tin chung (note, expected shipping date, discount...) vừa được cập nhật.
+    /// Manager gọi method này sau khi set properties để raise <see cref="OrderInfoUpdated"/>.
+    /// </summary>
+    internal void MarkInfoUpdated() => RaiseDomainEvent(new OrderInfoUpdated(Id));
+
+    /// <summary>
+    /// Đánh dấu thông tin shipping (address / expected date) vừa được cập nhật để raise <see cref="OrderShippingUpdated"/>.
+    /// </summary>
+    internal void MarkShippingUpdated() => RaiseDomainEvent(new OrderShippingUpdated(Id));
+
+    /// <summary>
+    /// Đánh dấu đơn đang bị xoá (soft delete) — raise <see cref="OrderDeleted"/>.
+    /// Manager gọi TRƯỚC khi <c>repository.DeleteAsync</c>.
+    /// </summary>
+    internal void MarkDeleted() => RaiseDomainEvent(new OrderDeleted(Id, Code));
+
+    #endregion
+
     #region Methods
 
     internal async Task SetCustomerAsync(Guid customerId, IGetByIdService<Customer> byIdGetter)
@@ -90,6 +118,8 @@ public sealed record Order : AppAggregateEntity
         _orderItems.Add(orderItem);
 
         RecalculateTotal();
+
+        RaiseDomainEvent(new OrderItemAdded(Id, orderItem.Id, productId, quantity, unitPrice));
     }
 
     internal void UpdateOrderItem(Guid orderItemId, decimal quantity, decimal unitPrice)
@@ -108,6 +138,8 @@ public sealed record Order : AppAggregateEntity
         orderItem.Update(quantity, unitPrice);
 
         RecalculateTotal();
+
+        RaiseDomainEvent(new OrderItemUpdated(Id, orderItemId, quantity, unitPrice));
     }
 
     internal void RemoveOrderItem(Guid itemId)
@@ -126,6 +158,8 @@ public sealed record Order : AppAggregateEntity
         _orderItems.Remove(orderItem);
 
         RecalculateTotal();
+
+        RaiseDomainEvent(new OrderItemRemoved(Id, itemId));
     }
 
     internal void SetOrderDiscount(decimal? orderDiscount)
@@ -191,6 +225,8 @@ public sealed record Order : AppAggregateEntity
 
         ChangeStatus(OrderStatus.Locked);
         LockOrderReason = reason;
+
+        RaiseDomainEvent(new OrderLocked(Id, reason));
     }
 
     internal void MarkOrderItemDelivered(Guid orderItemId, Guid pictureId)
@@ -200,6 +236,8 @@ public sealed record Order : AppAggregateEntity
             throw new OrderItemIsNotFoundException(orderItemId);
 
         orderItem.MarkDelivered(pictureId);
+
+        RaiseDomainEvent(new OrderItemDelivered(Id, orderItemId, pictureId));
     }
     internal bool TryAutoLock()
     {

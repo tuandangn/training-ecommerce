@@ -1,20 +1,57 @@
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
+using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Services.Debts;
 using NamEcommerce.Domain.Services.Test.Helpers;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
+using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Debts;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Domain.Services.Test.Services;
 
 public sealed class VendorDebtManagerTests
 {
+
+    #region Helper
+
+    private Task<PurchaseOrder> CreatePurchaseOrder(string code, Guid vendorId, Guid? warehouseId)
+        => CreatePurchaseOrderWithId(Guid.NewGuid(), code, vendorId, warehouseId);
+
+    private async Task<PurchaseOrder> CreatePurchaseOrderWithId(Guid id, string code, Guid vendorId, Guid? warehouseId)
+    {
+        var purchaseOrderByIdGetterMock = new Mock<IGetByIdService<PurchaseOrder>>();
+        purchaseOrderByIdGetterMock.Setup(getter => getter.GetByIdAsync(id)).ReturnsAsync((PurchaseOrder)null!);
+
+        var codeCheckerMock = new Mock<ICodeExistCheckingService>();
+        codeCheckerMock.Setup(checker => checker.DoesCodeExistAsync(code)).ReturnsAsync(false);
+
+        var currentUserAccessorMock = new Mock<ICurrentUserAccessor>();
+        currentUserAccessorMock.Setup(accessor => accessor.GetCurrentUserAsync()).ReturnsAsync(new CurrentUserInfoDto(Guid.NewGuid(), "username", "fullname"));
+
+        var vendorByIdGetterMock = new Mock<IGetByIdService<Vendor>>();
+        vendorByIdGetterMock.Setup(getter => getter.GetByIdAsync(vendorId)).ReturnsAsync(It.IsAny<Vendor>());
+
+        Mock<IGetByIdService<Warehouse>> warehouseByIdGetterMock = null!;
+        if (warehouseId.HasValue)
+        {
+            warehouseByIdGetterMock = new Mock<IGetByIdService<Warehouse>>();
+            warehouseByIdGetterMock.Setup(getter => getter.GetByIdAsync(warehouseId.Value)).ReturnsAsync(It.IsAny<Warehouse>());
+        }
+
+        return await PurchaseOrder.CreateBuilder()
+            .WithCode(code, codeCheckerMock.Object)
+            .WithVendor(vendorId, vendorByIdGetterMock.Object)
+            .WithWarehouse(warehouseId, warehouseByIdGetterMock.Object)
+            .BuildAsync(purchaseOrderByIdGetterMock.Object, currentUserAccessorMock.Object);
+    }
+
     // Helper: tạo VendorDebtManager với các tham số đơn giản nhất
     private static VendorDebtManager CreateManager(
         Mock<IRepository<VendorDebt>>? debtRepo = null,
@@ -34,6 +71,8 @@ public sealed class VendorDebtManagerTests
             purchaseOrderReader?.Object ?? null!,
             goodsReceiptReader?.Object ?? null!,
             eventPublisher ?? Mock.Of<IEventPublisher>());
+
+    #endregion
 
     #region CreateDebtFromPurchaseOrderAsync
 
@@ -149,7 +188,7 @@ public sealed class VendorDebtManagerTests
     public async Task CreateDebtFromPurchaseOrderAsync_ValidInput_CreatesDebt()
     {
         var vendor = new Vendor(Guid.NewGuid(), "NCC Minh Hòa", "0901234567");
-        var purchaseOrder = new PurchaseOrder("PO-20260101-001", vendor.Id, null, null);
+        var purchaseOrder = await CreatePurchaseOrder("PO-20260101-001", vendor.Id, null);
         var dto = new CreateVendorDebtDto
         {
             VendorId = vendor.Id,
@@ -195,7 +234,7 @@ public sealed class VendorDebtManagerTests
     public async Task CreateDebtFromPurchaseOrderAsync_WithAdvancePayments_AutoApplies()
     {
         var vendor = new Vendor(Guid.NewGuid(), "NCC B", "0902222222");
-        var purchaseOrder = new PurchaseOrder("PO-20260101-002", vendor.Id, null, null);
+        var purchaseOrder = await CreatePurchaseOrder("code", vendor.Id, null);
         var totalAmount = 1_000_000m;
         var advanceAmount = 300_000m;
 

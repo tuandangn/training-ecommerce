@@ -220,8 +220,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateFromPreparation(
-        [FromBody] CreateFromPreparationRequest request)
+    public async Task<IActionResult> CreateFromPreparation([FromBody] CreateFromPreparationRequest request)
     {
         if (request == null || !request.SelectedItems.Any())
         {

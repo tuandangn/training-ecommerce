@@ -20,7 +20,7 @@ public sealed class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsRecei
     {
         var result = await _goodsReceiptAppService.CreateGoodsReceiptAsync(new CreateGoodsReceiptAppDto
         {
-            CreatedOnUtc = DateTimeHelper.ToUniversalTime(request.CreatedOn),
+            ReceivedOnUtc = DateTimeHelper.ToUniversalTime(request.ReceivedOn),
             TruckDriverName = request.TruckDriverName,
             TruckNumberSerial = request.TruckNumberSerial,
             PictureIds = request.PictureIds,

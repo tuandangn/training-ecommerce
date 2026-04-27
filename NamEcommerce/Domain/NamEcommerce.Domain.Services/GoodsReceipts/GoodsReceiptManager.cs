@@ -36,7 +36,7 @@ public sealed class GoodsReceiptManager(
         dto.Verify();
 
         var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), goodsReceiptDataReader, currentUserAccessor);
-        goodsReceipt.SetCreationDate(dto.CreatedOnUtc);
+        goodsReceipt.SetReceivedDate(dto.ReceivedOnUtc);
         goodsReceipt.TruckDriverName = dto.TruckDriverName;
         goodsReceipt.TruckNumberSerial = dto.TruckNumberSerial;
         foreach (var item in dto.Items)
@@ -68,7 +68,7 @@ public sealed class GoodsReceiptManager(
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(dto.Id);
 
-        goodsReceipt.SetCreationDate(dto.CreatedOnUtc);
+        goodsReceipt.SetReceivedDate(dto.ReceivedOnUtc);
         goodsReceipt.TruckDriverName = dto.TruckDriverName;
         goodsReceipt.TruckNumberSerial = dto.TruckNumberSerial;
         goodsReceipt.Note = dto.Note;
@@ -147,10 +147,10 @@ public sealed class GoodsReceiptManager(
         }
 
         if (fromDateUtc.HasValue)
-            query = query.Where(goodsReceipt => goodsReceipt.CreatedOnUtc >= fromDateUtc);
+            query = query.Where(goodsReceipt => goodsReceipt.ReceivedOnUtc >= fromDateUtc);
 
         if (toDateUtc.HasValue)
-            query = query.Where(goodsReceipt => goodsReceipt.CreatedOnUtc <= toDateUtc);
+            query = query.Where(goodsReceipt => goodsReceipt.ReceivedOnUtc <= toDateUtc);
 
         var total = query.Count();
         var data = query

@@ -45,6 +45,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
         var result = await _mediator.Send(new CreatePurchaseOrderCommand
         {
+            PlacedOn = model.PlacedOn,
             VendorId = model.VendorId,
             WarehouseId = model.WarehouseId,
             ShippingAmount = 0,
@@ -87,7 +88,8 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
         var updatePurchaseOrderResult = await _mediator.Send(new UpdatePurchaseOrderCommand
         {
-            Id = purchaseOrder.Id,
+            PurchaseOrderId = purchaseOrder.Id,
+            PlacedOn = model.PlacedOn,
             ShippingAmount = model.ShippingAmount,
             TaxAmount = model.TaxAmount,
             VendorId = model.VendorId,

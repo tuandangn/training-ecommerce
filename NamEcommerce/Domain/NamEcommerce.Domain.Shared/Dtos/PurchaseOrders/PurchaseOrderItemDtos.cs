@@ -5,12 +5,11 @@ namespace NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 [Serializable]
 public abstract record BasePurchaseOrderItemDto
 {
-    public required Guid PurchaseOrderId { get; set; }
+    public required Guid PurchaseOrderId { get; init; }
     public required Guid ProductId { get; init; }
+    public required decimal QuantityOrdered { get; init; }
 
-    public decimal QuantityOrdered { get; set; }
     public decimal UnitCost { get; set; }
-
     public string? Note { get; set; }
 
     public void Verify()
@@ -42,9 +41,9 @@ public sealed record AddPurchaseOrderItemResultDto
 [Serializable]
 public sealed record ReceivedGoodsForItemDto(Guid PurchaseOrderId, Guid PurchaseOrderItemId)
 {
-    public decimal ReceivedQuantity { get; set; }
+    public required decimal ReceivedQuantity { get; init; }
+    public required Guid? WarehouseId { get; init; }
     public Guid? ReceivedByUserId { get; set; }
-    public Guid? WarehouseId { get; set; }
 
     /// <summary>
     /// Giá bán mới cho sản phẩm (tùy chọn). Nếu null thì giữ nguyên UnitPrice hiện tại của Product.
@@ -62,5 +61,5 @@ public sealed record ReceivedGoodsForItemDto(Guid PurchaseOrderId, Guid Purchase
 [Serializable]
 public sealed record ReceivedGoodsForItemResultDto(Guid PurchaseOrderId, Guid PurchaseOrderItemId)
 {
-    public decimal ReceivedQuantity { get; set; }
+    public required decimal ReceivedQuantity { get; init; }
 }

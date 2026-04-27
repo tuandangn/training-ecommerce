@@ -1,10 +1,13 @@
-﻿using MediatR;
+using MediatR;
 using NamEcommerce.Application.Contracts.Communication;
-using NamEcommerce.Application.Contracts.Events.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
 
 namespace NamEcommerce.Application.Services.Events.DeliveryNotes;
 
-public sealed class DeliveryNoteConfirmedEventHandler : INotificationHandler<DeliveryNoteConfirmedNotification>
+/// <summary>
+/// Khi phiếu giao hàng được duyệt — gửi notification ra n8n để báo cho team giao nhận.
+/// </summary>
+public sealed class DeliveryNoteConfirmedEventHandler : INotificationHandler<DeliveryNoteConfirmed>
 {
     private readonly IN8nAppService _n8nAppService;
 
@@ -13,8 +16,8 @@ public sealed class DeliveryNoteConfirmedEventHandler : INotificationHandler<Del
         _n8nAppService = n8nAppService;
     }
 
-    public async Task Handle(DeliveryNoteConfirmedNotification notification, CancellationToken cancellationToken)
+    public async Task Handle(DeliveryNoteConfirmed notification, CancellationToken cancellationToken)
     {
-        await _n8nAppService.NotifyDeliveryNoteIsConfirmed(notification.Id).ConfigureAwait(false);
+        await _n8nAppService.NotifyDeliveryNoteIsConfirmed(notification.DeliveryNoteId).ConfigureAwait(false);
     }
 }

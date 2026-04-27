@@ -5,7 +5,7 @@ namespace NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 [Serializable]
 public abstract record BaseGoodsReceiptDto
 {
-    public required DateTime CreatedOnUtc { get; init; }
+    public required DateTime ReceivedOnUtc { get; init; }
 
     public string? TruckDriverName { get; set; }
     public string? TruckNumberSerial { get; set; }
@@ -22,8 +22,8 @@ public abstract record BaseGoodsReceiptDto
         if (!PictureIds.Any())
             throw new GoodsReceiptProofPictureRequired();
 
-        if (CreatedOnUtc > DateTime.UtcNow)
-            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.CreationDateGreaterThanNow");
+        if (ReceivedOnUtc > DateTime.UtcNow)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.ReceivedDateGreaterThanNow");
     }
 }
 

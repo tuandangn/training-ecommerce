@@ -1,33 +1,40 @@
 using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
-using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
-using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Domain.Entities.PurchaseOrders;
 
 [Serializable]
 public sealed record PurchaseOrder : AppAggregateEntity
 {
-    internal PurchaseOrder(string code, Guid? vendorId, Guid? warehouseId, Guid? createdByUserId) : base(Guid.NewGuid())
+    private PurchaseOrder() : base(Guid.Empty)
+    {
+        Code = string.Empty;
+    }
+
+    private PurchaseOrder(Guid id, string code, Guid vendorId, Guid? warehouseId, CurrentUserInfoDto? createdByUser) : base(id)
     {
         Code = code;
         VendorId = vendorId;
         WarehouseId = warehouseId;
-        CreatedByUserId = createdByUserId;
+        CreatedByUserId = createdByUser?.Id;
 
         Status = PurchaseOrderStatus.Draft;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
-    public string Code { get; }
+    public DateTime PlacedOnUtc { get; private set; }
+    public string Code { get; private set; }
 
-    public Guid? VendorId { get; private set; }
+    public Guid VendorId { get; private set; }
     public Guid? WarehouseId { get; private set; }
     public Guid? CreatedByUserId { get; }
 
@@ -50,29 +57,29 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
     #region Methods
 
-    internal async Task ChangeVendorAsync(Guid? vendorId, IGetByIdService<Vendor> byIdGetter)
+    internal void SetPlacedDate(DateTime placedOnUtc)
+    {
+        if (placedOnUtc > DateTime.UtcNow)
+            throw new PurchaseOrderDataIsInvalidException("Error.PurchaseOrder.PlacedDateGreaterThanNow");
+        PlacedOnUtc = placedOnUtc;
+    }
+
+    internal async Task ChangeVendorAsync(Guid vendorId, IGetByIdService<Vendor> byIdGetter)
     {
         if (VendorId == vendorId)
             return;
 
-        if (_items.Any())
+        if (_items.Count is 0)
             throw new InvalidOperationException("Cannot change vendor when there are items in the purchase order.");
-
-        if (!vendorId.HasValue)
-        {
-            RemoveVendor();
-            return;
-        }
 
         ArgumentNullException.ThrowIfNull(byIdGetter);
 
-        var vendor = await byIdGetter.GetByIdAsync(vendorId.Value).ConfigureAwait(false);
+        var vendor = await byIdGetter.GetByIdAsync(vendorId).ConfigureAwait(false);
         if (vendor is null)
-            throw new VendorIsNotFoundException(vendorId.Value);
+            throw new VendorIsNotFoundException(vendorId);
 
         VendorId = vendorId;
     }
-    internal void RemoveVendor() => VendorId = null;
 
     internal async Task ChangeWarehouse(Guid? warehouseId, IGetByIdService<Warehouse> byIdGetter)
     {
@@ -81,7 +88,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
         if (!warehouseId.HasValue)
         {
-            RemoveVendor();
+            RemoveWarehouse();
             return;
         }
 
@@ -106,7 +113,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
         if (product is null)
             throw new ProductIsNotFoundException(item.ProductId);
 
-        if (VendorId.HasValue && !product.ProductVendors.Any(v => v.VendorId == VendorId.Value))
+        if (!product.ProductVendors.Any(v => v.VendorId == VendorId))
             throw new InvalidOperationException("The product does not belong to the selected vendor.");
 
         _items.Add(item);
@@ -123,8 +130,8 @@ public sealed record PurchaseOrder : AppAggregateEntity
         _items.Remove(orderItem);
     }
     public bool CanUpdatePurchaseOrderItems() => Status == PurchaseOrderStatus.Draft;
+    public bool CanUpdateInfo() => Status != PurchaseOrderStatus.Draft;
     public bool CanReceiveGoods() => Status == PurchaseOrderStatus.Approved || Status == PurchaseOrderStatus.Receiving;
-
     private bool CanUpdateStatus() => Status != PurchaseOrderStatus.Completed && Status != PurchaseOrderStatus.Cancelled;
     public bool CanChangeStatusTo(PurchaseOrderStatus toStatus)
     {
@@ -143,6 +150,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
         return Enum.IsDefined(toStatus);
     }
+
     internal void ChangeStatus(PurchaseOrderStatus status)
     {
         if (!CanChangeStatusTo(status))
@@ -168,6 +176,100 @@ public sealed record PurchaseOrder : AppAggregateEntity
         }
 
         return false;
+    }
+
+    internal static PurchaseOrderBuilder CreateBuilder() => new PurchaseOrderBuilder();
+    internal sealed class PurchaseOrderBuilder
+    {
+        private Guid? id;
+        private string? code;
+        private Guid? vendorId;
+        private Guid? warehouseId;
+        private DateTime? placedOn;
+
+        private IGetByIdService<PurchaseOrder>? purchaseOrderByIdGetter;
+        private ICodeExistCheckingService? purchaseOrderCodeChecker;
+        private IGetByIdService<Vendor>? vendorByIdGetter;
+        private IGetByIdService<Warehouse>? warehouseByIdGetter;
+
+        public PurchaseOrderBuilder WithId(Guid id, IGetByIdService<PurchaseOrder> purchaseOrderByIdGetter)
+        {
+            ArgumentNullException.ThrowIfNull(purchaseOrderByIdGetter);
+            this.id = id;
+            this.purchaseOrderByIdGetter = purchaseOrderByIdGetter;
+
+            return this;
+        }
+        public PurchaseOrderBuilder WithCode(string code, ICodeExistCheckingService codeChecker)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(code);
+            ArgumentNullException.ThrowIfNull(codeChecker);
+            this.code = code;
+            this.purchaseOrderCodeChecker = codeChecker;
+
+            return this;
+        }
+        public PurchaseOrderBuilder WithVendor(Guid vendorId, IGetByIdService<Vendor> vendorByIdGetter)
+        {
+            ArgumentNullException.ThrowIfNull(vendorByIdGetter);
+            this.vendorId = vendorId;
+            this.vendorByIdGetter = vendorByIdGetter;
+
+            return this;
+        }
+        public PurchaseOrderBuilder WithWarehouse(Guid? warehouseId, IGetByIdService<Warehouse> warehouseByIdGetter)
+        {
+            ArgumentNullException.ThrowIfNull(warehouseByIdGetter);
+            this.warehouseId = warehouseId;
+            this.warehouseByIdGetter = warehouseByIdGetter;
+
+            return this;
+        }
+
+        public Task<PurchaseOrder> BuildAsync(IGetByIdService<PurchaseOrder> byIdGetter, ICurrentUserAccessor currentUserAccessor)
+        {
+            id = Guid.NewGuid();
+            purchaseOrderByIdGetter = byIdGetter;
+            return BuildAsync(currentUserAccessor);
+        }
+
+        public async Task<PurchaseOrder> BuildAsync(ICurrentUserAccessor currentUserAccessor)
+        {
+            if (!id.HasValue)
+                throw new PurchaseOrderDataIsInvalidException("Error.DataInvalid.Required", "Id");
+            if (!vendorId.HasValue)
+                throw new PurchaseOrderDataIsInvalidException("Error.DataInvalid.Required", "VendorId");
+            if (!placedOn.HasValue)
+                throw new PurchaseOrderDataIsInvalidException("Error.DataInvalid.Required", "PlacedOnUtc");
+
+            ArgumentNullException.ThrowIfNull(purchaseOrderByIdGetter);
+            ArgumentNullException.ThrowIfNull(purchaseOrderCodeChecker);
+            ArgumentNullException.ThrowIfNull(vendorByIdGetter);
+            ArgumentNullException.ThrowIfNull(currentUserAccessor);
+            if (warehouseId.HasValue)
+                ArgumentNullException.ThrowIfNull(warehouseByIdGetter);
+
+            var purchaseOrder = await purchaseOrderByIdGetter.GetByIdAsync(id.Value).ConfigureAwait(false);
+            if (purchaseOrder is not null)
+                throw new PurchaseOrdersIdIsExistingException(id.Value);
+
+            if (await purchaseOrderCodeChecker.DoesCodeExistAsync(code!).ConfigureAwait(false))
+                throw new PurchaseOrderCodeExistsException(code!);
+
+            var vendor = await vendorByIdGetter.GetByIdAsync(vendorId.Value).ConfigureAwait(false);
+            if (vendor is null)
+                throw new VendorIsNotFoundException(vendorId.Value);
+
+            if (warehouseId.HasValue)
+            {
+                var warehouse = await warehouseByIdGetter!.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+                if (warehouse is null)
+                    throw new WarehouseIsNotFoundException(warehouseId.Value);
+            }
+
+            var currentUser = await currentUserAccessor.GetCurrentUserAsync();
+            return new PurchaseOrder(id.Value, code!, vendorId.Value, warehouseId, currentUser);
+        }
     }
 
     #endregion

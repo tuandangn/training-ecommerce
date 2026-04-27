@@ -267,7 +267,6 @@
         }
     </div>
 </div>
-
 @if (Model.Info.CanAddItems)
 {
     <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
@@ -547,7 +546,7 @@
         } catch {}
 
         // VendorId của đơn nhập hiện tại (server-side)
-        const currentVendorId = '@Model.Info.VendorId?.ToString()';
+        const currentVendorId = '@Model.Info.VendorId.ToString()';
 
         // Tự động điền giá theo NCC đang chọn
         if (currentVendorId) {

@@ -11,6 +11,7 @@ public static class PurchaseOrderExtensions
         var dto = new PurchaseOrderAppDto(purchaseOrder.Id)
         {
             Code = purchaseOrder.Code,
+            PlacedOnUtc = purchaseOrder.PlacedOnUtc,
             VendorId = purchaseOrder.VendorId,
             WarehouseId = purchaseOrder.WarehouseId,
             CreatedByUserId = purchaseOrder.CreatedByUserId,
@@ -47,6 +48,7 @@ public static class PurchaseOrderExtensions
         var dto = new PurchaseOrderAppDto(purchaseOrder.Id)
         {
             Code = purchaseOrder.Code,
+            PlacedOnUtc = purchaseOrder.PlacedOnUtc,
             VendorId = purchaseOrder.VendorId,
             WarehouseId = purchaseOrder.WarehouseId,
             CreatedByUserId = purchaseOrder.CreatedByUserId,

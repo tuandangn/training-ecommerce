@@ -3,7 +3,9 @@ using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Services.PurchaseOrders;
 using NamEcommerce.Domain.Services.Test.Helpers;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Events;
@@ -11,17 +13,53 @@ using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Users;
 using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Domain.Services.Test.Services;
 
 public sealed class PurchaseOrderManagerTests
 {
+    #region Helper
+
+    private Task<PurchaseOrder> CreatePurchaseOrder(string code, Guid vendorId, Guid? warehouseId)
+        => CreatePurchaseOrderWithId(Guid.NewGuid(), code, vendorId, warehouseId);
+
+    private async Task<PurchaseOrder> CreatePurchaseOrderWithId(Guid id, string code, Guid vendorId, Guid? warehouseId)
+    {
+        var purchaseOrderByIdGetterMock = new Mock<IGetByIdService<PurchaseOrder>>();
+        purchaseOrderByIdGetterMock.Setup(getter => getter.GetByIdAsync(id)).ReturnsAsync((PurchaseOrder)null!);
+
+        var codeCheckerMock = new Mock<ICodeExistCheckingService>();
+        codeCheckerMock.Setup(checker => checker.DoesCodeExistAsync(code)).ReturnsAsync(false);
+
+        var currentUserAccessorMock = new Mock<ICurrentUserAccessor>();
+        currentUserAccessorMock.Setup(accessor => accessor.GetCurrentUserAsync()).ReturnsAsync(new CurrentUserInfoDto(Guid.NewGuid(), "username", "fullname"));
+
+        var vendorByIdGetterMock = new Mock<IGetByIdService<Vendor>>();
+        vendorByIdGetterMock.Setup(getter => getter.GetByIdAsync(vendorId)).ReturnsAsync(It.IsAny<Vendor>());
+
+        Mock<IGetByIdService<Warehouse>> warehouseByIdGetterMock = null!;
+        if (warehouseId.HasValue)
+        {
+            warehouseByIdGetterMock = new Mock<IGetByIdService<Warehouse>>();
+            warehouseByIdGetterMock.Setup(getter => getter.GetByIdAsync(warehouseId.Value)).ReturnsAsync(It.IsAny<Warehouse>());
+        }
+
+        return await PurchaseOrder.CreateBuilder()
+            .WithCode(code, codeCheckerMock.Object)
+            .WithVendor(vendorId, vendorByIdGetterMock.Object)
+            .WithWarehouse(warehouseId, warehouseByIdGetterMock.Object)
+            .BuildAsync(purchaseOrderByIdGetterMock.Object, currentUserAccessorMock.Object);
+    }
+
+    #endregion
+
     #region CreatePurchaseOrderAsync
 
     [Fact]
     public async Task CreatePurchaseOrderAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => purchaseOrderManager.CreatePurchaseOrderAsync(null!));
     }
@@ -30,10 +68,12 @@ public sealed class PurchaseOrderManagerTests
     public async Task CreatePurchaseOrderAsync_CodeIsExists_ThrowsPurchaseOrderCodeExistsException()
     {
         var existingCode = "existing-code";
-        var purchaseOrderDataReaderMock = PurchaseOrderDataReader.HasOne(new PurchaseOrder(existingCode, null!, null!, null!));
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var existingCodePurchaseOrder = await CreatePurchaseOrder(existingCode, default, null);
+        var purchaseOrderDataReaderMock = PurchaseOrderDataReader.HasOne(existingCodePurchaseOrder);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
         var dto = new CreatePurchaseOrderDto
         {
+            PlacedOnUtc = DateTime.UtcNow,
             Code = existingCode,
             CreatedByUserId = null,
             VendorId = Guid.NewGuid(),
@@ -50,6 +90,7 @@ public sealed class PurchaseOrderManagerTests
         var notFoundVendorId = Guid.NewGuid();
         var dto = new CreatePurchaseOrderDto
         {
+            PlacedOnUtc = DateTime.UtcNow,
             Code = "code",
             CreatedByUserId = null,
             VendorId = notFoundVendorId,
@@ -57,7 +98,7 @@ public sealed class PurchaseOrderManagerTests
         };
         var vendorDataReaderMock = VendorDataReader.NotFound(notFoundVendorId);
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.Empty();
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<VendorIsNotFoundException>(() => purchaseOrderManager.CreatePurchaseOrderAsync(dto));
         vendorDataReaderMock.Verify();
@@ -69,15 +110,16 @@ public sealed class PurchaseOrderManagerTests
         var notFoundWarehouseId = Guid.NewGuid();
         var dto = new CreatePurchaseOrderDto
         {
+            PlacedOnUtc = DateTime.UtcNow,
             Code = "code",
             CreatedByUserId = null,
             VendorId = Guid.NewGuid(),
             WarehouseId = notFoundWarehouseId
         };
-        var vendorDataReaderStub = VendorDataReader.VendorById(dto.VendorId.Value, new Vendor(dto.VendorId.Value, "vendor", "phone"));
+        var vendorDataReaderStub = VendorDataReader.VendorById(dto.VendorId, new Vendor(dto.VendorId, "vendor", "phone"));
         var warehouseDataReaderMock = WarehouseDataReader.NotFound(notFoundWarehouseId);
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.Empty();
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderStub.Object, warehouseDataReaderMock.Object, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderStub.Object, warehouseDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<WarehouseIsNotFoundException>(() => purchaseOrderManager.CreatePurchaseOrderAsync(dto));
         warehouseDataReaderMock.Verify();
@@ -89,15 +131,16 @@ public sealed class PurchaseOrderManagerTests
         var notFoundCreatedByUserId = Guid.NewGuid();
         var dto = new CreatePurchaseOrderDto
         {
+            PlacedOnUtc = DateTime.UtcNow,
             Code = "code",
             CreatedByUserId = notFoundCreatedByUserId,
             VendorId = Guid.NewGuid(),
             WarehouseId = null
         };
-        var vendorDataReaderStub = VendorDataReader.VendorById(dto.VendorId.Value, new Vendor(dto.VendorId.Value, "vendor", "phone"));
+        var vendorDataReaderStub = VendorDataReader.VendorById(dto.VendorId, new Vendor(dto.VendorId, "vendor", "phone"));
         var userDataReaderMock = UserDataReader.NotFound(notFoundCreatedByUserId);
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.Empty();
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderStub.Object, null!, userDataReaderMock.Object, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderStub.Object, null!, userDataReaderMock.Object, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<UserIsNotFoundException>(() => purchaseOrderManager.CreatePurchaseOrderAsync(dto));
         userDataReaderMock.Verify();
@@ -108,15 +151,16 @@ public sealed class PurchaseOrderManagerTests
     {
         var dto = new CreatePurchaseOrderDto
         {
+            PlacedOnUtc = default,
+            VendorId = default,
             Code = string.Empty,
             ExpectedDeliveryDateUtc = DateTime.UtcNow.AddDays(-1),
             TaxAmount = -1,
             ShippingAmount = -1,
             CreatedByUserId = null,
-            WarehouseId = null,
-            VendorId = null
+            WarehouseId = null
         };
-        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderDataIsInvalidException>(() => purchaseOrderManager.CreatePurchaseOrderAsync(dto));
     }
@@ -125,22 +169,21 @@ public sealed class PurchaseOrderManagerTests
     public async Task CreatePurchaseOrderAsync_CreatePurchaseOrder()
     {
         var warehouse = new Warehouse("warehouse-code", "warehouseName", WarehouseType.Main);
-        var purchaseOrder = new PurchaseOrder("code", Guid.NewGuid(), warehouse.Id, Guid.NewGuid())
-        {
-            ExpectedDeliveryDateUtc = DateTime.UtcNow.AddDays(1),
-            TaxAmount = 1,
-            ShippingAmount = 1,
-            Note = "note"
-        };
-        var vendorDataReaderStub = VendorDataReader.VendorById(purchaseOrder.VendorId!.Value, new Vendor(purchaseOrder.VendorId.Value, "vendor", "vendor-phone"));
+        var purchaseOrder = await CreatePurchaseOrder("code", default, warehouse.Id);
+        purchaseOrder.ExpectedDeliveryDateUtc = DateTime.UtcNow.AddDays(1);
+        purchaseOrder.TaxAmount = 1;
+        purchaseOrder.ShippingAmount = 1;
+        purchaseOrder.Note = "note";
+        var vendorDataReaderStub = VendorDataReader.VendorById(purchaseOrder.VendorId, new Vendor(purchaseOrder.VendorId, "vendor", "vendor-phone"));
         var userDataReaderStub = UserDataReader.UserById(purchaseOrder.CreatedByUserId!.Value, new User(purchaseOrder.CreatedByUserId.Value, "username", "fullName", "phoneNumber"));
         var warehouseDataReaderStub = WarehouseDataReader.WarehouseById(warehouse.Id, warehouse);
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.Empty();
         var purchaseOrderRepositoryMock = PurchaseOrderRepository.CreatePurchaseOrderWillReturns(purchaseOrder);
         var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderStub.Object,
-            null!, vendorDataReaderStub.Object, warehouseDataReaderStub.Object, userDataReaderStub.Object, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+            null!, vendorDataReaderStub.Object, warehouseDataReaderStub.Object, userDataReaderStub.Object, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
         var dto = new CreatePurchaseOrderDto
         {
+            PlacedOnUtc = DateTime.UtcNow,
             Code = purchaseOrder.Code,
             CreatedByUserId = purchaseOrder.CreatedByUserId,
             VendorId = purchaseOrder.VendorId,
@@ -164,7 +207,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task AddPurchaseOrderItemAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => purchaseOrderManager.AddPurchaseOrderItemAsync(null!));
     }
@@ -179,7 +222,7 @@ public sealed class PurchaseOrderManagerTests
             QuantityOrdered = 0,
             UnitCost = -1
         };
-        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderItemDataIsInvalidException>(() => purchaseOrderManager.AddPurchaseOrderItemAsync(invalidDataDto));
     }
@@ -195,7 +238,7 @@ public sealed class PurchaseOrderManagerTests
             QuantityOrdered = 1
         };
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.NotFound(notFoundPurchaseOrderId);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderIsNotFoundException>(() => purchaseOrderManager.AddPurchaseOrderItemAsync(dto));
 
@@ -213,8 +256,9 @@ public sealed class PurchaseOrderManagerTests
             QuantityOrdered = 1
         };
         var productDataReaderMock = ProductDataReader.NotFound(notFoundProductId);
-        var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(dto.PurchaseOrderId, new PurchaseOrder("code", null!, null!, null!));
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, productDataReaderMock.Object, null!, null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
+        var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(dto.PurchaseOrderId, purchaseOrder);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, productDataReaderMock.Object, null!, null!, null!, null!, null);
 
         await Assert.ThrowsAsync<ProductIsNotFoundException>(() => purchaseOrderManager.AddPurchaseOrderItemAsync(dto));
 
@@ -224,7 +268,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task AddPurchaseOrderItemAsync_PurchaseOrderStatusIsNotDraft_ThrowsPurchaseOrderCannotAddItemException()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var addedProductId = Guid.NewGuid();
         var productDataReaderStub = ProductDataReader.ProductById(addedProductId, new Product(addedProductId, "added-item-product"));
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, addedProductId, 1, 0), productDataReaderStub.Object);
@@ -237,7 +281,7 @@ public sealed class PurchaseOrderManagerTests
         };
         productDataReaderStub = ProductDataReader.ProductById(dto.ProductId, new Product(dto.ProductId, "product"));
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(dto.PurchaseOrderId, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, productDataReaderStub.Object, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, productDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderCannotAddItemException>(() => purchaseOrderManager.AddPurchaseOrderItemAsync(dto));
     }
@@ -245,7 +289,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task AddPurchaseOrderItemAsync_AddPurchaseOrderItem()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var dto = new AddPurchaseOrderItemDto
         {
             ProductId = Guid.NewGuid(),
@@ -259,7 +303,7 @@ public sealed class PurchaseOrderManagerTests
         {
             Note = "note"
         }, productDataReaderStub.Object);
-        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, productDataReaderStub.Object, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, productDataReaderStub.Object, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var _ = await purchaseOrderManager.AddPurchaseOrderItemAsync(dto);
 
@@ -275,7 +319,7 @@ public sealed class PurchaseOrderManagerTests
     {
         var notFoundPurchaseOrderId = Guid.NewGuid();
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.NotFound(notFoundPurchaseOrderId);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderIsNotFoundException>(() => purchaseOrderManager.ChangeStatusAsync(notFoundPurchaseOrderId, PurchaseOrderStatus.Draft));
 
@@ -287,10 +331,10 @@ public sealed class PurchaseOrderManagerTests
     {
         var fromStatus = PurchaseOrderStatus.Draft;
         var toStatus = PurchaseOrderStatus.Submitted;
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         purchaseOrder.ChangeStatus(fromStatus);
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderCannotChangeStatusException>(() => purchaseOrderManager.ChangeStatusAsync(purchaseOrder.Id, toStatus));
     }
@@ -301,19 +345,19 @@ public sealed class PurchaseOrderManagerTests
         var draftStatus = PurchaseOrderStatus.Draft;
         var submittedStatus = PurchaseOrderStatus.Submitted;
 
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var productId = Guid.NewGuid();
         var productDataReaderStub = ProductDataReader.ProductById(productId, new Product(productId, "product"));
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, productId, 1, 0), productDataReaderStub.Object);
         purchaseOrder.ChangeStatus(draftStatus);
 
-        var returnPurchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var returnPurchaseOrder = await CreatePurchaseOrder("code", default, null);
         await returnPurchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(returnPurchaseOrder.Id, productId, 1, 0), productDataReaderStub.Object);
         returnPurchaseOrder.ChangeStatus(submittedStatus);
 
         var purchaseOrderRepositoryMock = PurchaseOrderRepository.UpdatePurchaseOrderWillReturns(returnPurchaseOrder);
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         await purchaseOrderManager.ChangeStatusAsync(purchaseOrder.Id, submittedStatus);
 
@@ -324,7 +368,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task ChangeStatusAsync_PurchaseIsCompleted_CannotChangeStatus()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var productId = Guid.NewGuid();
         var productDataReaderStub = ProductDataReader.ProductById(productId, new Product(productId, "product"));
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, productId, 1, 0), productDataReaderStub.Object);
@@ -333,7 +377,7 @@ public sealed class PurchaseOrderManagerTests
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Completed);
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderCannotChangeStatusException>(() => purchaseOrderManager.ChangeStatusAsync(purchaseOrder.Id, PurchaseOrderStatus.Cancelled));
     }
@@ -341,7 +385,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task ChangeStatusAsync_PurchaseIsCancelled_CannotChangeStatus()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var productId = Guid.NewGuid();
         var productDataReaderStub = ProductDataReader.ProductById(productId, new Product(productId, "product"));
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, productId, 1, 0), productDataReaderStub.Object);
@@ -351,7 +395,7 @@ public sealed class PurchaseOrderManagerTests
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Cancelled);
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderCannotChangeStatusException>(() => purchaseOrderManager.ChangeStatusAsync(purchaseOrder.Id, PurchaseOrderStatus.Completed));
     }
@@ -365,7 +409,7 @@ public sealed class PurchaseOrderManagerTests
     {
         var notFoundPurchaseOrderId = Guid.NewGuid();
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.NotFound(notFoundPurchaseOrderId);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderIsNotFoundException>(() => purchaseOrderManager.CanChangeStatusToAsync(notFoundPurchaseOrderId, PurchaseOrderStatus.Draft));
 
@@ -377,10 +421,10 @@ public sealed class PurchaseOrderManagerTests
     {
         var fromStatus = PurchaseOrderStatus.Draft;
         var toStatus = PurchaseOrderStatus.Submitted;
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         purchaseOrder.ChangeStatus(fromStatus);
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var falseResult = await purchaseOrderManager.CanChangeStatusToAsync(purchaseOrder.Id, toStatus);
 
@@ -393,18 +437,18 @@ public sealed class PurchaseOrderManagerTests
         var draftStatus = PurchaseOrderStatus.Draft;
         var submittedStatus = PurchaseOrderStatus.Submitted;
 
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var productId = Guid.NewGuid();
         var productDataReaderStub = ProductDataReader.ProductById(productId, new Product(productId, "product"));
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, productId, 1, 0), productDataReaderStub.Object);
         purchaseOrder.ChangeStatus(draftStatus);
 
-        var returnPurchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var returnPurchaseOrder = await CreatePurchaseOrder("code", default, null);
         await returnPurchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(returnPurchaseOrder.Id, productId, 1, 0), productDataReaderStub.Object);
         returnPurchaseOrder.ChangeStatus(submittedStatus);
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var trueResult = await purchaseOrderManager.CanChangeStatusToAsync(purchaseOrder.Id, submittedStatus);
 
@@ -415,7 +459,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task CanChangeStatusToAsync_PurchaseIsCompleted_ReturnFalse()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var productId = Guid.NewGuid();
         var productDataReaderStub = ProductDataReader.ProductById(productId, new Product(productId, "product"));
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, productId, 1, 0), productDataReaderStub.Object);
@@ -424,7 +468,7 @@ public sealed class PurchaseOrderManagerTests
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Completed);
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var falseResult = await purchaseOrderManager.CanChangeStatusToAsync(purchaseOrder.Id, PurchaseOrderStatus.Cancelled);
 
@@ -434,7 +478,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task CanChangeStatusToAsync_PurchaseIsCancelled_CannotChangeStatus()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var productId = Guid.NewGuid();
         var productDataReaderStub = ProductDataReader.ProductById(productId, new Product(productId, "product"));
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, productId, 1, 0), productDataReaderStub.Object);
@@ -444,7 +488,7 @@ public sealed class PurchaseOrderManagerTests
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Cancelled);
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var falseResult = await purchaseOrderManager.CanChangeStatusToAsync(purchaseOrder.Id, PurchaseOrderStatus.Completed);
 
@@ -460,7 +504,7 @@ public sealed class PurchaseOrderManagerTests
     {
         var notFoundPurchaseOrderId = Guid.NewGuid();
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.NotFound(notFoundPurchaseOrderId);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderIsNotFoundException>(() => purchaseOrderManager.CanAddPurchaseOrderItemsAsync(notFoundPurchaseOrderId));
 
@@ -470,14 +514,14 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task CanAddPurchaseOrderItemsAsync_StatusNotIsDraft_ReturnsFalse()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var productId = Guid.NewGuid();
         var productDataReaderStub = ProductDataReader.ProductById(productId, new Product(productId, "product"));
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, productId, 1, 0), productDataReaderStub.Object);
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Submitted);
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var falseResult = await purchaseOrderManager.CanAddPurchaseOrderItemsAsync(purchaseOrder.Id);
 
@@ -488,11 +532,11 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task CanAddPurchaseOrderItemsAsync_StatusIsDraft_ReturnsTrue()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Draft);
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var falseResult = await purchaseOrderManager.CanAddPurchaseOrderItemsAsync(purchaseOrder.Id);
 
@@ -508,7 +552,7 @@ public sealed class PurchaseOrderManagerTests
     {
         var notFoundPurchaseOrderId = Guid.NewGuid();
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.NotFound(notFoundPurchaseOrderId);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderIsNotFoundException>(() => purchaseOrderManager.CanReceiveGoodsAsync(notFoundPurchaseOrderId));
 
@@ -518,14 +562,14 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task CanReceiveGoodsAsync_StatusNotApprovedOrReceiving_ReturnsFalse()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var productId = Guid.NewGuid();
         var productDataReaderStub = ProductDataReader.ProductById(productId, new Product(productId, "product"));
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, productId, 1, 0), productDataReaderStub.Object);
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Submitted);
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var falseResult = await purchaseOrderManager.CanReceiveGoodsAsync(purchaseOrder.Id);
 
@@ -535,7 +579,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task CanReceiveGoodsAsync_StatusIsApproved_ReturnsTrue()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, product.Id, 1, 0), productDataReaderStub.Object);
@@ -543,7 +587,7 @@ public sealed class PurchaseOrderManagerTests
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Approved);
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var trueResult = await purchaseOrderManager.CanReceiveGoodsAsync(purchaseOrder.Id);
 
@@ -553,7 +597,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task CanReceiveGoodsAsync_StatusIsReceiving_ReturnsTrue()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, product.Id, 1, 0), productDataReaderStub.Object);
@@ -561,7 +605,7 @@ public sealed class PurchaseOrderManagerTests
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Receiving);
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var trueResult = await purchaseOrderManager.CanReceiveGoodsAsync(purchaseOrder.Id);
 
@@ -576,8 +620,8 @@ public sealed class PurchaseOrderManagerTests
     public async Task DoesCodeExistAsync_ExistsAndNotCompareIds_ReturnTrue()
     {
         var existingCode = "exist-code";
-        var purchaseOrderDataReaderMock = PurchaseOrderDataReader.HasOne(new PurchaseOrder(existingCode, null!, null!, null!));
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderDataReaderMock = PurchaseOrderDataReader.HasOne(await CreatePurchaseOrder(existingCode, default, null));
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var trueResult = await purchaseOrderManager.DoesCodeExistAsync(existingCode, comparesWithCurrentId: null);
 
@@ -589,10 +633,10 @@ public sealed class PurchaseOrderManagerTests
     public async Task DoesCodeExistAsync_ExistsAndCompareIdsIsSame_ReturnFalse()
     {
         var existingCode = "exist-code";
-        var purchaseOrder = new PurchaseOrder(existingCode, null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder(existingCode, default, null);
         var existingId = purchaseOrder.Id;
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.HasOne(purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var falseResult = await purchaseOrderManager.DoesCodeExistAsync(existingCode, existingId);
 
@@ -605,7 +649,7 @@ public sealed class PurchaseOrderManagerTests
     {
         var notExistsCode = "not-exist-code";
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.Empty();
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var falseResult = await purchaseOrderManager.DoesCodeExistAsync(notExistsCode);
 
@@ -620,7 +664,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task ReceiveItemsAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => purchaseOrderManager.ReceiveItemsAsync(null!));
     }
@@ -630,9 +674,10 @@ public sealed class PurchaseOrderManagerTests
     {
         var invalidDto = new ReceivedGoodsForItemDto(Guid.NewGuid(), Guid.NewGuid())
         {
+            WarehouseId = null,
             ReceivedQuantity = 0
         };
-        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => purchaseOrderManager.ReceiveItemsAsync(invalidDto));
     }
@@ -643,10 +688,11 @@ public sealed class PurchaseOrderManagerTests
         var notFoundPurchaseOrderId = Guid.NewGuid();
         var dto = new ReceivedGoodsForItemDto(notFoundPurchaseOrderId, Guid.NewGuid())
         {
+            WarehouseId = null,
             ReceivedQuantity = 1
         };
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.NotFound(notFoundPurchaseOrderId);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderIsNotFoundException>(() => purchaseOrderManager.ReceiveItemsAsync(dto));
     }
@@ -654,7 +700,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task ReceiveItemsAsync_StatusIsNotApprovedOrReceiving_ThrowsPurchaseOrderCannotReceiveGoodsException()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, product.Id, 1, 0), productDataReaderStub.Object);
@@ -662,10 +708,11 @@ public sealed class PurchaseOrderManagerTests
 
         var dto = new ReceivedGoodsForItemDto(purchaseOrder.Id, Guid.NewGuid())
         {
+            WarehouseId = null,
             ReceivedQuantity = 1
         };
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderCannotReceiveGoodsException>(() => purchaseOrderManager.ReceiveItemsAsync(dto));
     }
@@ -674,7 +721,7 @@ public sealed class PurchaseOrderManagerTests
     public async Task ReceiveItemsAsync_PurchaseOrderItemsIsNotFound_ThrowsPurchaseOrderItemIsNotFoundException()
     {
         var notFoundOrderItemId = Guid.NewGuid();
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, product.Id, 1, 0), productDataReaderStub.Object);
@@ -682,10 +729,11 @@ public sealed class PurchaseOrderManagerTests
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Approved);
         var dto = new ReceivedGoodsForItemDto(purchaseOrder.Id, notFoundOrderItemId)
         {
+            WarehouseId = null,
             ReceivedQuantity = 1
         };
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderItemIsNotFoundException>(() => purchaseOrderManager.ReceiveItemsAsync(dto));
     }
@@ -696,7 +744,7 @@ public sealed class PurchaseOrderManagerTests
         var orderedQuantity = 100;
         var receivedQuantity = 99;
         var wrongReceivingQuantity = 2;
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, orderedQuantity, 0);
         purchaseOrderItem.AddQuantityReceived(receivedQuantity);
@@ -706,10 +754,11 @@ public sealed class PurchaseOrderManagerTests
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Approved);
         var dto = new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {
+            WarehouseId = null,
             ReceivedQuantity = wrongReceivingQuantity
         };
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderReceiveQuantityExceedsOrderedQuantityException>(() => purchaseOrderManager.ReceiveItemsAsync(dto));
     }
@@ -717,7 +766,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task ReceiveItemsAsync_ProductIsNotFound_ThrowsProductIsNotFoundException()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, 1, 0);
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
@@ -726,11 +775,12 @@ public sealed class PurchaseOrderManagerTests
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Approved);
         var dto = new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {
+            WarehouseId = null,
             ReceivedQuantity = 1
         };
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
         var productDataReaderMock = ProductDataReader.NotFound(product.Id);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, productDataReaderMock.Object, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, productDataReaderMock.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ProductIsNotFoundException>(() => purchaseOrderManager.ReceiveItemsAsync(dto));
     }
@@ -739,7 +789,7 @@ public sealed class PurchaseOrderManagerTests
     public async Task ReceiveItemsAsync_ProductTrackedAndWarehouseIdNotHaveValue_ThrowsArgumentException()
     {
 
-        var purchaseOrder = new PurchaseOrder("code", null!, warehouseId: null, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, 1, 0);
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
@@ -752,7 +802,7 @@ public sealed class PurchaseOrderManagerTests
             WarehouseId = null
         };
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, productDataReaderStub.Object, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, productDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentException>(() => purchaseOrderManager.ReceiveItemsAsync(dto));
     }
@@ -761,7 +811,7 @@ public sealed class PurchaseOrderManagerTests
     public async Task ReceiveItemsAsync_ProductTrackedAndWarehouseIsNotFound_ThrowsWarehouseIsNotFoundException()
     {
         var notFoundWarehouseId = Guid.NewGuid();
-        var purchaseOrder = new PurchaseOrder("code", null!, warehouseId: null, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, 1, 0);
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
@@ -775,7 +825,7 @@ public sealed class PurchaseOrderManagerTests
         };
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
         var warehouseDataReaderMock = WarehouseDataReader.NotFound(notFoundWarehouseId);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, warehouseDataReaderMock.Object, null!, productDataReaderStub.Object, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, warehouseDataReaderMock.Object, null!, productDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<WarehouseIsNotFoundException>(() => purchaseOrderManager.ReceiveItemsAsync(dto));
 
@@ -786,7 +836,7 @@ public sealed class PurchaseOrderManagerTests
     public async Task ReceiveItemsAsync_UpdatePurchaseOrder()
     {
         var warehouseId = Guid.NewGuid();
-        var purchaseOrder = new PurchaseOrder("code", null!, warehouseId, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, 100, 0);
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
@@ -805,7 +855,7 @@ public sealed class PurchaseOrderManagerTests
         var productRepositoryStub = new Mock<IRepository<Product>>();
         productRepositoryStub.Setup(r => r.UpdateAsync(It.IsAny<Product>(), default)).ReturnsAsync((Product p, CancellationToken _) => p);
         var priceHistoryRepositoryStub = new Mock<IRepository<ProductPriceHistory>>();
-        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderStub.Object, null!, null!, warehouseDataReaderMock.Object, null!, productDataReaderStub.Object, Mock.Of<IEventPublisher>(), stockDataReaderStub.Object, productRepositoryStub.Object, priceHistoryRepositoryStub.Object);
+        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderStub.Object, null!, null!, warehouseDataReaderMock.Object, null!, productDataReaderStub.Object, Mock.Of<IEventPublisher>(), stockDataReaderStub.Object, productRepositoryStub.Object, priceHistoryRepositoryStub.Object, null!);
 
         var receiveItemResult = await purchaseOrderManager.ReceiveItemsAsync(dto);
 
@@ -817,7 +867,7 @@ public sealed class PurchaseOrderManagerTests
     public async Task ReceiveItemsAsync_ProductIsTrackedInventory_AddStockReveive()
     {
         var warehouseId = Guid.NewGuid();
-        var purchaseOrder = new PurchaseOrder("code", null!, warehouseId, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, warehouseId);
         var product = new Product(Guid.NewGuid(), "product");
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, 100, 0);
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
@@ -839,7 +889,8 @@ public sealed class PurchaseOrderManagerTests
         var productRepositoryStub = new Mock<IRepository<Product>>();
         productRepositoryStub.Setup(r => r.UpdateAsync(It.IsAny<Product>(), default)).ReturnsAsync((Product p, CancellationToken _) => p);
         var priceHistoryRepositoryStub = new Mock<IRepository<ProductPriceHistory>>();
-        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryStub.Object, purchaseOrderDataReaderStub.Object, inventoryStockManagerMock.Object, null!, warehouseDataReaderMock.Object, null!, productDataReaderStub.Object, Mock.Of<IEventPublisher>(), stockDataReaderStub.Object, productRepositoryStub.Object, priceHistoryRepositoryStub.Object);
+        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryStub.Object, purchaseOrderDataReaderStub.Object, inventoryStockManagerMock.Object, null!, warehouseDataReaderMock.Object, null!, productDataReaderStub.Object, Mock.Of<IEventPublisher>(),
+                stockDataReaderStub.Object, productRepositoryStub.Object, priceHistoryRepositoryStub.Object, null!);
 
         var receiveItemResult = await purchaseOrderManager.ReceiveItemsAsync(dto);
 
@@ -851,7 +902,7 @@ public sealed class PurchaseOrderManagerTests
     public async Task ReceiveItemsAsync_SellingPriceIsNull_KeepsProductUnitPrice()
     {
         var warehouseId = Guid.NewGuid();
-        var purchaseOrder = new PurchaseOrder("code", null!, warehouseId, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, warehouseId);
         var product = new Product(Guid.NewGuid(), "product");
         product.UpdatePrice(unitPrice: 200, costPrice: 80);
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, 100, unitCost: 90);
@@ -861,6 +912,7 @@ public sealed class PurchaseOrderManagerTests
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Approved);
         var dto = new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {
+            WarehouseId = null,
             ReceivedQuantity = 100,
             SellingPrice = null // không nhập giá bán
         };
@@ -875,7 +927,7 @@ public sealed class PurchaseOrderManagerTests
         var purchaseOrderManager = new PurchaseOrderManager(
             purchaseOrderRepositoryStub.Object, purchaseOrderDataReaderStub.Object, null!, null!,
             warehouseDataReaderStub.Object, null!, productDataReaderStub.Object, Mock.Of<IEventPublisher>(),
-            stockDataReaderStub.Object, productRepositoryMock.Object, priceHistoryRepositoryMock.Object);
+            stockDataReaderStub.Object, productRepositoryMock.Object, priceHistoryRepositoryMock.Object, null!);
 
         await purchaseOrderManager.ReceiveItemsAsync(dto);
 
@@ -895,7 +947,7 @@ public sealed class PurchaseOrderManagerTests
     public async Task ReceiveItemsAsync_SellingPriceIsProvided_UpdatesProductUnitPriceAndInsertsHistory()
     {
         var warehouseId = Guid.NewGuid();
-        var purchaseOrder = new PurchaseOrder("PO-001", null!, warehouseId, null!);
+        var purchaseOrder = await CreatePurchaseOrder("PO-001", default, warehouseId);
         var product = new Product(Guid.NewGuid(), "product");
         product.UpdatePrice(unitPrice: 150, costPrice: 100);
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, 50, unitCost: 120);
@@ -905,6 +957,7 @@ public sealed class PurchaseOrderManagerTests
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Approved);
         var dto = new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {
+            WarehouseId = null,
             ReceivedQuantity = 50,
             SellingPrice = 180
         };
@@ -919,7 +972,7 @@ public sealed class PurchaseOrderManagerTests
         var purchaseOrderManager = new PurchaseOrderManager(
             purchaseOrderRepositoryStub.Object, purchaseOrderDataReaderStub.Object, null!, null!,
             warehouseDataReaderStub.Object, null!, productDataReaderStub.Object, Mock.Of<IEventPublisher>(),
-            stockDataReaderStub.Object, productRepositoryMock.Object, priceHistoryRepositoryMock.Object);
+            stockDataReaderStub.Object, productRepositoryMock.Object, priceHistoryRepositoryMock.Object, null!);
 
         await purchaseOrderManager.ReceiveItemsAsync(dto);
 
@@ -939,10 +992,11 @@ public sealed class PurchaseOrderManagerTests
     {
         var dto = new ReceivedGoodsForItemDto(Guid.NewGuid(), Guid.NewGuid())
         {
+            WarehouseId = null,
             ReceivedQuantity = 10,
             SellingPrice = -1
         };
-        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => purchaseOrderManager.ReceiveItemsAsync(dto));
     }
@@ -951,7 +1005,7 @@ public sealed class PurchaseOrderManagerTests
     public async Task ReceiveItemsAsync_SellingPriceEqualsCurrentUnitPriceAndCostPriceUnchanged_DoesNotInsertHistory()
     {
         var warehouseId = Guid.NewGuid();
-        var purchaseOrder = new PurchaseOrder("code", null!, warehouseId, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, warehouseId);
         var product = new Product(Guid.NewGuid(), "product");
         product.UpdatePrice(unitPrice: 200, costPrice: 100);
         // existing stock = 100 đơn vị với costPrice 100 → weighted avg giữ nguyên khi nhập tiếp 100 đơn vị với cost 100
@@ -966,6 +1020,7 @@ public sealed class PurchaseOrderManagerTests
         purchaseOrder.ChangeStatus(PurchaseOrderStatus.Approved);
         var dto = new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {
+            WarehouseId = null,
             ReceivedQuantity = 100,
             SellingPrice = 200 // bằng giá bán hiện tại
         };
@@ -980,7 +1035,7 @@ public sealed class PurchaseOrderManagerTests
         var purchaseOrderManager = new PurchaseOrderManager(
             purchaseOrderRepositoryStub.Object, purchaseOrderDataReaderStub.Object, null!, null!,
             warehouseDataReaderStub.Object, null!, productDataReaderStub.Object, Mock.Of<IEventPublisher>(),
-            stockDataReaderStub.Object, productRepositoryMock.Object, priceHistoryRepositoryMock.Object);
+            stockDataReaderStub.Object, productRepositoryMock.Object, priceHistoryRepositoryMock.Object, null!);
 
         await purchaseOrderManager.ReceiveItemsAsync(dto);
 
@@ -998,7 +1053,7 @@ public sealed class PurchaseOrderManagerTests
     {
         var notFoundPurchaseOrderId = Guid.NewGuid();
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.NotFound(notFoundPurchaseOrderId);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderIsNotFoundException>(() => purchaseOrderManager.VerifyStatusAsync(notFoundPurchaseOrderId));
 
@@ -1008,7 +1063,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task VerifyStatusAsync_StatusIsCompleted_Returns()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, product.Id, 1, 0), productDataReaderStub.Object);
@@ -1018,7 +1073,7 @@ public sealed class PurchaseOrderManagerTests
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
         var purchaseOrderRepositoryMock = PurchaseOrderRepository.UpdatePurchaseOrderWillReturns(purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await purchaseOrderManager.VerifyStatusAsync(purchaseOrder.Id);
 
@@ -1028,7 +1083,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task VerifyStatusAsync_StatusIsCancelled_Returns()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, product.Id, 1, 0), productDataReaderStub.Object);
@@ -1037,7 +1092,7 @@ public sealed class PurchaseOrderManagerTests
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
         var purchaseOrderRepositoryMock = PurchaseOrderRepository.UpdatePurchaseOrderWillReturns(purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await purchaseOrderManager.VerifyStatusAsync(purchaseOrder.Id);
 
@@ -1048,7 +1103,7 @@ public sealed class PurchaseOrderManagerTests
     public async Task VerifyStatusAsync_AllItemsReceived_ChangeStatusToCompletedAndUpdate()
     {
         var orderedQuantity = 100;
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, orderedQuantity, 0);
@@ -1060,7 +1115,7 @@ public sealed class PurchaseOrderManagerTests
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
         var purchaseOrderRepositoryMock = new Mock<IRepository<PurchaseOrder>>();
         purchaseOrderRepositoryMock.Setup(repository => repository.UpdateAsync(It.Is<PurchaseOrder>(po => po.Status == PurchaseOrderStatus.Completed)));
-        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await purchaseOrderManager.VerifyStatusAsync(purchaseOrder.Id);
 
@@ -1071,7 +1126,7 @@ public sealed class PurchaseOrderManagerTests
     public async Task VerifyStatusAsync_HasAnyItemsReceiveGoods_ChangeStatusToReceivingAndUpdate()
     {
         var receivedQuantity = 1;
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var product = new Product(Guid.NewGuid(), "product");
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         var purchaseOrderItem = new PurchaseOrderItem(purchaseOrder.Id, product.Id, 100, 0);
@@ -1082,7 +1137,7 @@ public sealed class PurchaseOrderManagerTests
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
         var purchaseOrderRepositoryMock = new Mock<IRepository<PurchaseOrder>>();
         purchaseOrderRepositoryMock.Setup(repository => repository.UpdateAsync(It.Is<PurchaseOrder>(po => po.Status == PurchaseOrderStatus.Receiving)));
-        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await purchaseOrderManager.VerifyStatusAsync(purchaseOrder.Id);
 
@@ -1098,7 +1153,7 @@ public sealed class PurchaseOrderManagerTests
     {
         var notFoundPurchaseOrderId = Guid.NewGuid();
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.NotFound(notFoundPurchaseOrderId);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var nullResult = await purchaseOrderManager.GetPurchaseOrderByIdAsync(notFoundPurchaseOrderId);
 
@@ -1109,9 +1164,9 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task GetPurchaseOrderByIdAsync_PurchaseOrderIsFound_ReturnsDto()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var dto = await purchaseOrderManager.GetPurchaseOrderByIdAsync(purchaseOrder.Id);
 
@@ -1128,7 +1183,7 @@ public sealed class PurchaseOrderManagerTests
     public async Task GetPurchaseOrdersAsync_PageIndexLessThan0_ThrowsArgumentOutOfRangeException()
     {
         var invalidPageIndex = -1;
-        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => purchaseOrderManager.GetPurchaseOrdersAsync("", invalidPageIndex, 1));
     }
@@ -1137,7 +1192,7 @@ public sealed class PurchaseOrderManagerTests
     public async Task GetPurchaseOrdersAsync_PageSizeLessThanOrEqualTo0_ThrowsArgumentOutOfRangeException()
     {
         var invalidPageSize = 0;
-        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => purchaseOrderManager.GetPurchaseOrdersAsync("", 0, invalidPageSize));
     }
@@ -1149,13 +1204,13 @@ public sealed class PurchaseOrderManagerTests
         var pageSize = 1;
         var data = new[]
         {
-            new PurchaseOrder("code-1", null!, null!, null!),
-            new PurchaseOrder("code-2", null!, null!, null!),
-            new PurchaseOrder("code-3", null!, null!, null!),
-            new PurchaseOrder("code-4", null!, null!, null!), //last insert
+            await CreatePurchaseOrder("code-1", default, null),
+            await CreatePurchaseOrder("code-2", default, null),
+            await CreatePurchaseOrder("code-3", default, null),
+            await CreatePurchaseOrder("code-4", default, null)
         };
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.WithData(data);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await purchaseOrderManager.GetPurchaseOrdersAsync(null, pageIndex, pageSize);
 
@@ -1174,15 +1229,15 @@ public sealed class PurchaseOrderManagerTests
         var warehouseHasKeywords = new Warehouse("code", $"{keywords}_def", default);
         var data = new[]
         {
-            new PurchaseOrder("code-1", vendorHasKeywords.Id, null!, null!),
-            new PurchaseOrder("code-2", null!, null!, null!),
-            new PurchaseOrder("code-3", null!, warehouseHasKeywords.Id, null!),
-            new PurchaseOrder("code-4", vendorHasKeywords.Id, warehouseHasKeywords.Id, null!),
+            await CreatePurchaseOrder("code-1", vendorHasKeywords.Id, null),
+            await CreatePurchaseOrder("code-2", default, null),
+            await CreatePurchaseOrder("code-3", default, warehouseHasKeywords.Id),
+            await CreatePurchaseOrder("code-4", vendorHasKeywords.Id, warehouseHasKeywords.Id) 
         };
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(data);
         var vendorDataReaderMock = VendorDataReader.WithData(vendorHasKeywords);
         var warehouseDataReaderMock = WarehouseDataReader.WithData(warehouseHasKeywords);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderMock.Object, warehouseDataReaderMock.Object, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderMock.Object, warehouseDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await purchaseOrderManager.GetPurchaseOrdersAsync(keywords, pageIndex, pageSize);
 
@@ -1199,7 +1254,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task UpdatePurchaseOrderAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => purchaseOrderManager.UpdatePurchaseOrderAsync(null!));
     }
@@ -1209,12 +1264,14 @@ public sealed class PurchaseOrderManagerTests
     {
         var invalidUpdatePurchaseOrderDto = new UpdatePurchaseOrderDto(default)
         {
+            PlacedOnUtc = default,
+            VendorId = default,
             TaxAmount = -1,
             ShippingAmount = -1,
             ExpectedDeliveryDateUtc = DateTime.UtcNow.AddDays(-1),
             WarehouseId = null
         };
-        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderDataIsInvalidException>(() => purchaseOrderManager.UpdatePurchaseOrderAsync(invalidUpdatePurchaseOrderDto));
     }
@@ -1225,11 +1282,12 @@ public sealed class PurchaseOrderManagerTests
         var notFoundPurchaseOrderId = Guid.NewGuid();
         var dto = new UpdatePurchaseOrderDto(notFoundPurchaseOrderId)
         {
+            PlacedOnUtc = DateTime.UtcNow,
             VendorId = Guid.NewGuid(),
             WarehouseId = null
         };
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.NotFound(notFoundPurchaseOrderId);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<PurchaseOrderIsNotFoundException>(() => purchaseOrderManager.UpdatePurchaseOrderAsync(dto));
 
@@ -1240,15 +1298,16 @@ public sealed class PurchaseOrderManagerTests
     public async Task UpdatePurchaseOrderAsync_VendorIsNotFound_ThrowsVendorIsNotFoundException()
     {
         var notFoundVendorId = Guid.NewGuid();
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
         var dto = new UpdatePurchaseOrderDto(purchaseOrder.Id)
         {
+            PlacedOnUtc = DateTime.UtcNow,
             VendorId = notFoundVendorId,
             WarehouseId = null
         };
         var vendorDataReaderMock = VendorDataReader.NotFound(notFoundVendorId);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<VendorIsNotFoundException>(() => purchaseOrderManager.UpdatePurchaseOrderAsync(dto));
 
@@ -1258,10 +1317,11 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task UpdatePurchaseOrderAsync_UpdateProductOrder()
     {
-        var purchaseOrder = new PurchaseOrder("code", null!, null!, null!);
+        var purchaseOrder = await CreatePurchaseOrder("code", default, null);
         var vendor = new Vendor(Guid.NewGuid(), "vendor", "phone");
         var dto = new UpdatePurchaseOrderDto(purchaseOrder.Id)
         {
+            PlacedOnUtc = DateTime.UtcNow,
             VendorId = vendor.Id,
             ShippingAmount = 100,
             TaxAmount = 200,
@@ -1270,7 +1330,7 @@ public sealed class PurchaseOrderManagerTests
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
         var vendorDataReaderStub = VendorDataReader.VendorById(vendor.Id, vendor);
         var purchaseOrderRepositoryMock = PurchaseOrderRepository.UpdatePurchaseOrderWillReturns(purchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderMock.Object, null!, vendorDataReaderStub.Object, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(purchaseOrderRepositoryMock.Object, purchaseOrderDataReaderMock.Object, null!, vendorDataReaderStub.Object, null!, null!, null!, Mock.Of<IEventPublisher>(), null!, null!, null!, null!);
 
         var updateResult = await purchaseOrderManager.UpdatePurchaseOrderAsync(dto);
 
@@ -1288,7 +1348,7 @@ public sealed class PurchaseOrderManagerTests
     {
         var productId = Guid.NewGuid();
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.Empty();
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await purchaseOrderManager.GetRecentPurchasePricesAsync(productId);
 
@@ -1301,7 +1361,7 @@ public sealed class PurchaseOrderManagerTests
         // Arrange: 1 đơn bị hủy (Draft → Cancelled) có chứa sản phẩm
         var productId = Guid.NewGuid();
         var vendorId = Guid.NewGuid();
-        var cancelledPo = new PurchaseOrder("PO-CANCELLED", vendorId, null, null);
+        var cancelledPo = await CreatePurchaseOrder("code", vendorId, null);
 
         var product = new Product(productId, "prod");
         var productDataReaderStub = ProductDataReader.ProductById(productId, product);
@@ -1313,7 +1373,7 @@ public sealed class PurchaseOrderManagerTests
 
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(cancelledPo);
         var vendorDataReaderStub = VendorDataReader.Empty();
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await purchaseOrderManager.GetRecentPurchasePricesAsync(productId);
 
@@ -1327,8 +1387,8 @@ public sealed class PurchaseOrderManagerTests
         var productId = Guid.NewGuid();
         var vendorId = Guid.NewGuid();
 
-        var olderPo = new PurchaseOrder("PO-OLDER", vendorId, null, null);
-        var newerPo = new PurchaseOrder("PO-NEWER", vendorId, null, null);
+        var olderPo = await CreatePurchaseOrder("code", vendorId, null);
+        var newerPo = await CreatePurchaseOrder("code-2", vendorId, null);
 
         var product = new Product(productId, "product");
         var productDataReaderStub = ProductDataReader.ProductById(productId, product);
@@ -1341,7 +1401,7 @@ public sealed class PurchaseOrderManagerTests
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(olderPo, newerPo);
         var vendorDataReaderStub = VendorDataReader.WithData(vendor);
 
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await purchaseOrderManager.GetRecentPurchasePricesAsync(productId);
 
@@ -1360,8 +1420,8 @@ public sealed class PurchaseOrderManagerTests
         var vendorId1 = Guid.NewGuid();
         var vendorId2 = Guid.NewGuid();
 
-        var po1 = new PurchaseOrder("PO-VENDOR1", vendorId1, null, null);
-        var po2 = new PurchaseOrder("PO-VENDOR2", vendorId2, null, null);
+        var po1 = await CreatePurchaseOrder("code-1", vendorId1, null);
+        var po2 = await CreatePurchaseOrder("code-2", vendorId2, null);
 
         var product = new Product(productId, "product");
         var productDataReaderStub = ProductDataReader.ProductById(productId, product);
@@ -1374,39 +1434,13 @@ public sealed class PurchaseOrderManagerTests
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(po1, po2);
         var vendorDataReaderStub = VendorDataReader.WithData(vendor1, vendor2);
 
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!, null!);
 
         var result = await purchaseOrderManager.GetRecentPurchasePricesAsync(productId);
 
         Assert.Equal(2, result.Count);
         Assert.Contains(result, r => r.VendorId == vendorId1 && r.UnitCost == 150_000);
         Assert.Contains(result, r => r.VendorId == vendorId2 && r.UnitCost == 145_000);
-    }
-
-    [Fact]
-    public async Task GetRecentPurchasePricesAsync_OrderWithNoVendor_ReturnsEntryWithNullVendorId()
-    {
-        // Arrange: đơn nhập không có NCC (mua lẻ / không ghi nhà cung cấp)
-        var productId = Guid.NewGuid();
-        var poNoVendor = new PurchaseOrder("PO-NO-VENDOR", null, null, null);
-
-        var product = new Product(productId, "product");
-        var productDataReaderStub = ProductDataReader.ProductById(productId, product);
-        await poNoVendor.AddPurchaseOrderItemAsync(
-            new PurchaseOrderItem(poNoVendor.Id, productId, 1, 200_000),
-            productDataReaderStub.Object);
-
-        var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(poNoVendor);
-        var vendorDataReaderStub = VendorDataReader.Empty();
-
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderStub.Object, null!, null!, null!, null!, null!, null!, null!);
-
-        var result = await purchaseOrderManager.GetRecentPurchasePricesAsync(productId);
-
-        Assert.Single(result);
-        Assert.Null(result[0].VendorId);
-        Assert.Equal("Không rõ nhà cung cấp", result[0].VendorName);
-        Assert.Equal(200_000, result[0].UnitCost);
     }
 
     #endregion

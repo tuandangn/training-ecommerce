@@ -23,30 +23,28 @@ public sealed class GetPurchaseOrderListHandler : IRequestHandler<GetPurchaseOrd
 
     public async Task<PurchaseOrderListModel> Handle(GetPurchaseOrderListQuery request, CancellationToken cancellationToken)
     {
-        var result = await _purchaseOrderAppService.GetPurchaseOrdersAsync(request.Keywords, request.PageIndex, request.PageSize).ConfigureAwait(false);
+        var pagedData = await _purchaseOrderAppService.GetPurchaseOrdersAsync(request.Keywords, request.PageIndex, request.PageSize).ConfigureAwait(false);
 
         var purchaseOrders = new List<PurchaseOrderListModel.ItemModel>();
-        foreach (var itemInfo in result)
+        foreach (var purchaseOrder in pagedData)
         {
-            var purchaseOrderModel = new PurchaseOrderListModel.ItemModel(itemInfo.Id)
+            var purchaseOrderModel = new PurchaseOrderListModel.ItemModel(purchaseOrder.Id)
             {
-                Code = itemInfo.Code,
-                Status = itemInfo.Status,
-                TotalAmount = itemInfo.TotalAmount,
-                ExpectedDeliveryDate = itemInfo.ExpectedDeliveryDateUtc?.ToLocalTime(),
-                CreatedOn = itemInfo.CreatedOnUtc.ToLocalTime()
+                Code = purchaseOrder.Code,
+                PlacedOn = purchaseOrder.PlacedOnUtc.ToLocalTime(),
+                Status = purchaseOrder.Status,
+                TotalAmount = purchaseOrder.TotalAmount,
+                ExpectedDeliveryDate = purchaseOrder.ExpectedDeliveryDateUtc?.ToLocalTime(),
+                CreatedOn = purchaseOrder.CreatedOnUtc.ToLocalTime()
             };
 
-            if (itemInfo.VendorId.HasValue)
-            {
-                var vendor = await _vendorAppService.GetVendorByIdAsync(itemInfo.VendorId.Value).ConfigureAwait(false);
-                purchaseOrderModel.VendorName = vendor?.Name;
-                purchaseOrderModel.VendorPhone = vendor?.PhoneNumber;
-            }
+            var vendor = await _vendorAppService.GetVendorByIdAsync(purchaseOrder.VendorId).ConfigureAwait(false);
+            purchaseOrderModel.VendorName = vendor?.Name;
+            purchaseOrderModel.VendorPhone = vendor?.PhoneNumber;
 
-            if (itemInfo.WarehouseId.HasValue)
+            if (purchaseOrder.WarehouseId.HasValue)
             {
-                var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(itemInfo.WarehouseId.Value).ConfigureAwait(false);
+                var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(purchaseOrder.WarehouseId.Value).ConfigureAwait(false);
                 purchaseOrderModel.WarehouseName = warehouse?.Name;
             }
 
@@ -56,7 +54,7 @@ public sealed class GetPurchaseOrderListHandler : IRequestHandler<GetPurchaseOrd
         return new PurchaseOrderListModel
         {
             Keywords = request.Keywords,
-            Data = PagedDataModel.Create(purchaseOrders, result.Pagination.PageIndex, result.Pagination.PageSize, result.Pagination.TotalCount)
+            Data = PagedDataModel.Create(purchaseOrders, pagedData.Pagination.PageIndex, pagedData.Pagination.PageSize, pagedData.Pagination.TotalCount)
         };
     }
 }

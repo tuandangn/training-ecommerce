@@ -3,8 +3,9 @@ namespace NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 [Serializable]
 public abstract record BasePurchaseOrderAppDto
 {
-    public Guid? VendorId { get; set; }
-    public Guid? WarehouseId { get; set; }
+    public required DateTime PlacedOnUtc { get; init; }
+    public required Guid VendorId { get; init; }
+    public required Guid? WarehouseId { get; init; }
 
     public decimal TaxAmount { get; set; }
     public decimal ShippingAmount { get; set; }
@@ -29,11 +30,13 @@ public abstract record BasePurchaseOrderAppDto
 public sealed record PurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto
 {
     public required string Code { get; set; }
-    public decimal TotalAmount { get; set; }
-    public int Status { get; set; }
-    public IList<PurchaseOrderItemAppDto> Items { get; } = [];
-    public DateTime CreatedOnUtc { get; set; }
+    public required int Status { get; init; }
 
+    public decimal TotalAmount { get; set; }
+
+    public IList<PurchaseOrderItemAppDto> Items { get; } = [];
+
+    public DateTime CreatedOnUtc { get; set; }
     public Guid? CreatedByUserId { get; set; }
 
     public bool CanAddItems { get; set; }
@@ -67,7 +70,7 @@ public sealed record UpdatePurchaseOrderResultAppDto
 [Serializable]
 public sealed record CreatePurchaseOrderItemAppDto
 {
-    public Guid? ProductId { get; init; }
-    public decimal Quantity { get; init; }
-    public decimal UnitCost { get; init; }
+    public required Guid? ProductId { get; init; }
+    public required decimal Quantity { get; init; }
+    public decimal UnitCost { get; set; }
 }

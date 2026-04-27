@@ -6,7 +6,7 @@ namespace NamEcommerce.Web.Contracts.Commands.Models.GoodsReceipts;
 [Serializable]
 public sealed class CreateGoodsReceiptCommand : IRequest<CreateGoodsReceiptResultModel>
 {
-    public required DateTime CreatedOn { get; init; }
+    public required DateTime ReceivedOn { get; init; }
     public string? TruckDriverName { get; init; }
     public string? TruckNumberSerial { get; init; }
     public required IList<Guid> PictureIds { get; init; }

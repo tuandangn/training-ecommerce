@@ -42,10 +42,10 @@
                                 <td class="ps-4 pt-3">
                                     <a asp-action="Details" asp-route-id="@receipt.Id"
                                            class="fw-semibold text-decoration-none d-block lh-sm">
-                                        @receipt.CreatedOn.ToString(ViewConstants.DefaultDateFormat)
+                                        @receipt.ReceivedOn.ToString(ViewConstants.DefaultDateFormat)
                                     </a>
                                     <span class="text-muted">
-                                        @receipt.CreatedOn.ToString("HH:mm")
+                                        @receipt.ReceivedOn.ToString("HH:mm")
                                     </span>
                                 </td>
                                 <td class="pt-2 pb-2">

@@ -42,7 +42,7 @@
                         <th class="ps-4">Mã đơn</th>
                         <th>Khách hàng</th>
                         <th class="text-end">Tổng đơn</th>
-                        <th>Ngày dự kiến</th>
+                        <th class="text-center">Ngày dự kiến</th>
                         <th class="text-center">Đã giao</th>
                         <th></th>
                     </tr>
@@ -79,15 +79,8 @@
                                 <td class="text-end fw-medium text-nowrap">
                                     @order.TotalAmount.DisplayCurrency()
                                 </td>
-                                <td class="text-muted">
-                                    @if (order.ExpectedShippingDate.HasValue)
-                                    {
-                                        @order.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat)
-                                    }
-                                    else
-                                    {
-                                        @:-
-                                    }
+                                <td class="text-muted text-center">
+                                    @order.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat)
                                 </td>
                                 <td class="text-center">
                                     @if (order.IsFinished)
@@ -137,7 +130,7 @@
         txtKeywords.addEventListener('input', onSearchChanged);
 
         if(txtKeywords.value){
-            focusEnd(txtKeywords);
+        focusEnd(txtKeywords);
         }
     </script>
 }
