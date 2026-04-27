@@ -155,8 +155,6 @@ public sealed class PurchaseOrderManagerTests
             VendorId = default,
             Code = string.Empty,
             ExpectedDeliveryDateUtc = DateTime.UtcNow.AddDays(-1),
-            TaxAmount = -1,
-            ShippingAmount = -1,
             CreatedByUserId = null,
             WarehouseId = null
         };
@@ -189,9 +187,7 @@ public sealed class PurchaseOrderManagerTests
             VendorId = purchaseOrder.VendorId,
             WarehouseId = warehouse.Id,
             Note = purchaseOrder.Note,
-            ExpectedDeliveryDateUtc = purchaseOrder.ExpectedDeliveryDateUtc,
-            ShippingAmount = purchaseOrder.ShippingAmount,
-            TaxAmount = purchaseOrder.TaxAmount
+            ExpectedDeliveryDateUtc = purchaseOrder.ExpectedDeliveryDateUtc
         };
 
         var insertResult = await purchaseOrderManager.CreatePurchaseOrderAsync(dto);

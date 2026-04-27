@@ -255,4 +255,30 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
             UpdatedId = result.UpdatedId
         };
     }
+
+    public async Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderAppDto dto)
+    {
+        try
+        {
+            await _goodsReceiptManager.SetGoodsReceiptToPurchaseOrder(new SetGoodsReceiptToPurchaseOrderDto(dto.Id, dto.PurchaseOrderId)).ConfigureAwait(false);
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (Exception ex)
+        {
+            return CommonActionResultDto.CreateError(ex.Message);
+        }
+    }
+
+    public async Task<CommonActionResultDto> RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderAppDto dto)
+    {
+        try
+        {
+            await _goodsReceiptManager.RemoveGoodsReceiptFromPurchaseOrder(new RemoveGoodsReceiptFromPurchaseOrderDto(dto.Id)).ConfigureAwait(false);
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (Exception ex)
+        {
+            return CommonActionResultDto.CreateError(ex.Message);
+        }
+    }
 }

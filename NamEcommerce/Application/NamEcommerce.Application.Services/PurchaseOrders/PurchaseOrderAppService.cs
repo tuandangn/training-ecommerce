@@ -48,6 +48,15 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         return purchaseOrder.ToDto();
     }
 
+    public async Task<PurchaseOrderAppDto?> GetPurchaseOrderByCodeAsync(string code)
+    {
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByCodeAsync(code).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            return null;
+
+        return purchaseOrder.ToDto();
+    }
+
     public async Task<CreatePurchaseOrderResultAppDto> CreatePurchaseOrderAsync(CreatePurchaseOrderAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);

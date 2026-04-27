@@ -1,4 +1,5 @@
 using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 
 namespace NamEcommerce.Domain.Entities.PurchaseOrders;
 
@@ -15,27 +16,33 @@ public record PurchaseOrderItem : AppEntity
         CreatedOnUtc = DateTime.UtcNow;
     }
 
-    public Guid PurchaseOrderId { get; }
-    public Guid ProductId { get; }
+    public Guid PurchaseOrderId { get; private set; }
+    public Guid ProductId { get; private set; }
 
     public decimal QuantityOrdered { get; internal set; }
-    public decimal UnitCost { get; internal set; }
     public decimal QuantityReceived { get; private set; }
+    public decimal UnitCost { get; internal set; }
     public decimal TotalCost => QuantityOrdered * UnitCost;
 
     public string? Note { get; internal set; }
 
-    public DateTime CreatedOnUtc { get; }
+    public DateTime CreatedOnUtc { get; private set; }
 
     #region Methods
 
-    public void AddQuantityReceived(decimal quantityReceived)
+    internal void AddQuantityReceived(decimal quantityReceived)
     {
         if (quantityReceived < 0)
             throw new ArgumentOutOfRangeException(nameof(quantityReceived), "Quantity received must be greater than or equal to 0");
 
+        if (!CanReceiveQuantity(quantityReceived))
+            throw new PurchaseOrderReceiveQuantityExceedsOrderedQuantityException();
+
         QuantityReceived += quantityReceived;
     }
+
+    internal bool CanReceiveQuantity(decimal receivingQuantity)
+        => QuantityReceived + receivingQuantity <= QuantityOrdered;
 
     #endregion
 }

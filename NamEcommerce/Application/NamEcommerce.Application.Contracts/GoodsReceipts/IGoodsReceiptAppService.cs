@@ -8,6 +8,9 @@ public interface IGoodsReceiptAppService
     Task<GoodsReceiptAppDto?> GetGoodsReceiptByIdAsync(Guid id);
     Task<IPagedDataAppDto<GoodsReceiptAppDto>> GetGoodsReceiptsAsync(int pageIndex, int pageSize, string? keywords, DateTime? fromDateUtc, DateTime? toDateUtc);
 
+    Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderAppDto dto);
+    Task<CommonActionResultDto> RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderAppDto dto);
+
     Task<CreateGoodsReceiptResultAppDto> CreateGoodsReceiptAsync(CreateGoodsReceiptAppDto dto);
     Task<UpdateGoodsReceiptResultAppDto> UpdateGoodsReceiptAsync(UpdateGoodsReceiptAppDto dto);
     Task<(bool success, string? errorMessage)> DeleteGoodsReceiptAsync(Guid id);

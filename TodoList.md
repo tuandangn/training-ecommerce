@@ -454,7 +454,7 @@ Mở rộng `GoodsReceiptUpdatedHandler` (đã có logic AverageCost):
 
 #### Phase 3 — Migrate các module còn lại (2 ngày)
 
-- [ ] Catalog: `Product`, `Category`, `Vendor`, `UnitMeasurement`
+- [ ] Catalog: `Product`, `Category`, `Vendor`, `UnitMeasurement` *(2026-04-28 — `UnitMeasurement` đang migrate, scheduled task)*
 - [ ] Inventory: `InventoryStock`, `Warehouse`, stock movements
 - [ ] PurchaseOrders: `PurchaseOrder` (note: `PurchaseOrderUpdatedEventHandler` hiện đang gọi `VerifyStatusAsync` — cần thay bằng concrete event như `PurchaseOrderItemReceived`)
 - [ ] GoodsReceipts: `GoodsReceipt` (dọn handler trống `GoodsReceiptUpdatedHandler`)

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Contracts.Commands.Models.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Queries.Models.GoodsReceipts;
+using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Models.GoodsReceipts;
 using NamEcommerce.Web.Services.GoodsReceipts;
 
@@ -199,5 +200,26 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
             NotifySuccess("Msg.DeleteSuccess");
 
         return RedirectToAction(nameof(List));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SetToPurchaseOrder(Guid id, string code)
+    {
+        if (code == null)
+            return Json(new { success = false, message = LocalizeError("Error.Required", LocalizeError("Label.Code")) });
+
+        var goodsReceipt = await _mediator.Send(new GetGoodsReceiptQuery { Id = id });
+        if (goodsReceipt is null)
+            return Json(new { success = false, message = LocalizeError("Error.GoodsReceipt.IsNotFound") });
+
+        var purchaseOrderId = await _mediator.Send(new GetPurchaseOrderByCodeQuery(code));
+        if (!purchaseOrderId.HasValue)
+            return Json(new { success = false, message = LocalizeError("Error.PurchaseOrderIsNotFound") });
+
+        var result = await _mediator.Send(new SetGoodsReceiptToPurchaseOrderCommand(id, purchaseOrderId.Value));
+        if (result.Success)
+            return Json(new { success = true, message = string.Empty });
+
+        return Json(new { success = false, message = !string.IsNullOrEmpty(result.ErrorMessage) ? LocalizeError(result.ErrorMessage) : "Process is error" });
     }
 }

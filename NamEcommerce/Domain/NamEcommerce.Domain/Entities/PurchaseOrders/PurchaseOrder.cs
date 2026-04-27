@@ -131,7 +131,6 @@ public sealed record PurchaseOrder : AppAggregateEntity
     }
 
     public bool CanUpdatePurchaseOrderItems() => Status == PurchaseOrderStatus.Draft;
-    public bool CanUpdateInfo() => Status != PurchaseOrderStatus.Draft;
     public bool CanReceiveGoods() => Status == PurchaseOrderStatus.Approved || Status == PurchaseOrderStatus.Receiving;
     private bool CanUpdateStatus() => Status != PurchaseOrderStatus.Completed && Status != PurchaseOrderStatus.Cancelled;
     public bool CanChangeStatusTo(PurchaseOrderStatus toStatus)

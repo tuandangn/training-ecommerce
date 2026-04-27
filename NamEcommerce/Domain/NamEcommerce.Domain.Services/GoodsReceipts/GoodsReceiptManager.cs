@@ -3,6 +3,7 @@ using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Media;
+using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
@@ -10,6 +11,7 @@ using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Users;
@@ -27,7 +29,7 @@ public sealed class GoodsReceiptManager(
     IEntityDataReader<Picture> pictureDataReader,
     IEntityDataReader<StockMovementLog> stockMovementLogDataReader,
     IEntityDataReader<Vendor> vendorDataReader,
-    IEventPublisher eventPublisher) : IGoodsReceiptManager
+    IEventPublisher eventPublisher, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader) : IGoodsReceiptManager
 {
     public async Task<CreateGoodsReceiptResultDto> CreateGoodsReceiptAsync(CreateGoodsReceiptDto dto)
     {
@@ -208,5 +210,65 @@ public sealed class GoodsReceiptManager(
         await goodsReceiptRepository.DeleteAsync(goodsReceipt).ConfigureAwait(false);
 
         await eventPublisher.EntityDeleted(goodsReceipt).ConfigureAwait(false);
+    }
+
+    public Task RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderDto dto)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        if (goodsReceipt is null)
+            throw new GoodsReceiptIsNotFoundException(dto.Id);
+
+        if (goodsReceipt.PurchaseOrderId.HasValue)
+            throw new GoodsReceiptCannotSetToPurchaseOrderException();
+
+        if (goodsReceipt.VendorId.HasValue)
+            throw new GoodsReceiptCannotSetToPurchaseOrderException();
+
+        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
+
+        if (!purchaseOrder.CanReceiveGoods())
+            throw new PurchaseOrderCannotReceiveGoodsException();
+
+        var grProductCostReceivingQtyMap = goodsReceipt.Items.GroupBy(
+            item => (item.ProductId, item.UnitCost),
+            item => item.Quantity,
+            (key, quantities) => (key, receivingQty: quantities.Sum()));
+        var poProductCostRemainingQtyMap = purchaseOrder.Items.GroupBy(
+            item => (item.ProductId, item.UnitCost),
+            item => item.QuantityOrdered - item.QuantityReceived,
+            (key, quantities) => (key, remainingQty: quantities.Sum())
+        );
+
+        foreach (var grItem in grProductCostReceivingQtyMap.Where(grItem => grItem.key.UnitCost.HasValue))
+        {
+            var poItem = poProductCostRemainingQtyMap.FirstOrDefault(poItem => poItem.key == grItem.key);
+            if (poItem.remainingQty < grItem.receivingQty)
+                throw new GoodsReceiptItemCannotResolvedWhenSetToPurchaseOrderException(grItem.key.ProductId, grItem.receivingQty);
+            poItem.remainingQty -= grItem.receivingQty;
+        }
+        foreach (var grItem in grProductCostReceivingQtyMap.Where(grItem => !grItem.key.UnitCost.HasValue))
+        {
+            var receivingQty = grItem.receivingQty;
+            foreach (var poItem in poProductCostRemainingQtyMap.Where(poItem => poItem.key.ProductId == grItem.key.ProductId && poItem.remainingQty > 0))
+            {
+                receivingQty -= Math.Min(receivingQty, poItem.remainingQty);
+                if (receivingQty == 0)
+                    break;
+            }
+            if (receivingQty > 0)
+                throw new GoodsReceiptItemCannotResolvedWhenSetToPurchaseOrderException(grItem.key.ProductId, grItem.receivingQty);
+        }
+
+        goodsReceipt.SetToPurchaseOrder(purchaseOrder.Id, purchaseOrder.Code);
+        await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
     }
 }

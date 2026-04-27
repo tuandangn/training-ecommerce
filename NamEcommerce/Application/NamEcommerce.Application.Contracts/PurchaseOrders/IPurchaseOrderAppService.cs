@@ -10,6 +10,7 @@ public interface IPurchaseOrderAppService
     Task<string> NextPurchaseOrderCodeAsync();
 
     Task<PurchaseOrderAppDto?> GetPurchaseOrderByIdAsync(Guid id);
+    Task<PurchaseOrderAppDto?> GetPurchaseOrderByCodeAsync(string code);
 
     Task<CreatePurchaseOrderResultAppDto> CreatePurchaseOrderAsync(CreatePurchaseOrderAppDto dto);
     Task<UpdatePurchaseOrderResultAppDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderAppDto dto);

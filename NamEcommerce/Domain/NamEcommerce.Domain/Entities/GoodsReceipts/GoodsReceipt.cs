@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Users;
+using NamEcommerce.Domain.Shared.Events.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.Media;
 using NamEcommerce.Domain.Shared.Helpers;
@@ -25,6 +26,9 @@ public sealed record GoodsReceipt : AppAggregateEntity
     }
 
     public DateTime ReceivedOnUtc { get; private set; }
+
+    public Guid? PurchaseOrderId { get; private set; }
+    public string? PurchaseOrderCode { get; private set; }
 
     public string? TruckDriverName
     {
@@ -59,13 +63,6 @@ public sealed record GoodsReceipt : AppAggregateEntity
 
     public bool IsPendingCosting() => Items.Any(item => item.IsPendingCosting());
 
-    internal void SetReceivedDate(DateTime receivedOnUtc)
-    {
-        if (receivedOnUtc > DateTime.UtcNow)
-            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.ReceivedDateGreaterThanNow");
-        ReceivedOnUtc = receivedOnUtc;
-    }
-
     internal async Task AddItemAsync(Guid productId, Guid? warehouseId, decimal quantity, decimal? unitCost,
         IGetByIdService<Product> productByIdGetter, WarehouseSettings warehouseSettings, IGetByIdService<Warehouse> warehouseByIdGetter)
     {
@@ -87,6 +84,31 @@ public sealed record GoodsReceipt : AppAggregateEntity
             throw new GoodsReceiptItemCannotSetUnitCostException();
 
         item.SetUnitCost(unitCost);
+    }
+
+    internal void SetReceivedDate(DateTime receivedOnUtc)
+    {
+        if (receivedOnUtc > DateTime.UtcNow)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.ReceivedDateGreaterThanNow");
+        ReceivedOnUtc = receivedOnUtc;
+    }
+
+    internal void SetToPurchaseOrder(Guid purchaseOrderId, string purchaseOrderCode)
+    {
+        PurchaseOrderId = purchaseOrderId;
+        PurchaseOrderCode = purchaseOrderCode;
+
+        MarkSetToPurchaseOrder(purchaseOrderId);
+    }
+    internal void RemoveFromPurchaseOrder()
+    {
+        if (!PurchaseOrderId.HasValue)
+            return;
+
+        var purchaseOrderId = PurchaseOrderId.Value;
+        PurchaseOrderId = null;
+
+        MarkRemovedFromPurchaseOrder(purchaseOrderId);
     }
 
     internal void SetVendor(Guid vendorId, string vendorName, string? vendorPhone, string? vendorAddress)
@@ -132,6 +154,14 @@ public sealed record GoodsReceipt : AppAggregateEntity
 
         return goodsReceipt;
     }
+
+    #endregion
+
+
+    #region Events
+
+    private void MarkSetToPurchaseOrder(Guid purchaseOrderId) => RaiseDomainEvent(new GoodsReceiptSetToPurchaseOrder(Id, purchaseOrderId));
+    private void MarkRemovedFromPurchaseOrder(Guid purchaseOrderId) => RaiseDomainEvent(new GoodsReceiptRemovedFromPurchaseOrder(Id, purchaseOrderId));
 
     #endregion
 }

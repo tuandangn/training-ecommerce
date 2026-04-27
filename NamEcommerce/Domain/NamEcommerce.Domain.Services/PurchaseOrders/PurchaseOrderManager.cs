@@ -256,9 +256,6 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrderItem is null)
             throw new PurchaseOrderItemIsNotFoundException(dto.PurchaseOrderItemId);
 
-        if (purchaseOrderItem.QuantityReceived + dto.ReceivedQuantity > purchaseOrderItem.QuantityOrdered)
-            throw new PurchaseOrderReceiveQuantityExceedsOrderedQuantityException();
-
         var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
         if (product is null)
             throw new ProductIsNotFoundException(purchaseOrderItem.ProductId);
@@ -465,5 +462,23 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 PurchaseOrderCode: x.Code,
                 PurchaseDateUtc: x.PlacedOnUtc))
             .ToList();
+    }
+
+    public Task<PurchaseOrderDto?> GetPurchaseOrderByCodeAsync(string code)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(code);
+
+        return Task.Run(() =>
+        {
+            var query = from po in _purchaseOrderDataReader.DataSource
+                        where po.Code == code
+                        select po;
+
+            var purchaseOrder = query.SingleOrDefault();
+            if (purchaseOrder is null)
+                return null;
+
+            return purchaseOrder.ToDto();
+        });
     }
 }
