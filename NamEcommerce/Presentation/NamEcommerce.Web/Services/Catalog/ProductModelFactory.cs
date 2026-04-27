@@ -27,7 +27,8 @@ public sealed class ProductModelFactory : IProductModelFactory
 
         var model = oldModel ?? new CreateProductModel
         {
-            DisplayOrder = 1
+            DisplayOrder = 1,
+            ImageFile = new()
         };
         model.AvailableCategories = categoryOptions;
         model.AvailableUnitMeasurements = unitMeasurementOptions;
