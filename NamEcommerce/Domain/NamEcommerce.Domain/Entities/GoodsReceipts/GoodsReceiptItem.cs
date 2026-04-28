@@ -12,6 +12,8 @@ namespace NamEcommerce.Domain.Entities.GoodsReceipts;
 [Serializable]
 public sealed record GoodsReceiptItem : AppEntity
 {
+    private GoodsReceiptItem() : base(Guid.Empty) { }
+
     private GoodsReceiptItem(Guid productId, Guid? warehouseId, decimal quantity, decimal? unitCost) : base(Guid.Empty)
     {
         (ProductId, WarehouseId, Quantity) = (productId, warehouseId, quantity);
@@ -19,6 +21,7 @@ public sealed record GoodsReceiptItem : AppEntity
         if (unitCost.HasValue)
             SetUnitCost(unitCost.Value);
     }
+
     private readonly Guid goodsReceiptId;
     public Guid GoodsReceiptId => goodsReceiptId;
 
@@ -30,10 +33,11 @@ public sealed record GoodsReceiptItem : AppEntity
 
     public decimal Quantity
     {
-        get; internal set
+        get; 
+        internal set
         {
             if (value <= 0)
-                throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityLessThanOrEqualToZero");
+                throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityMustBePositive");
 
             field = value;
         }
@@ -47,9 +51,21 @@ public sealed record GoodsReceiptItem : AppEntity
     internal void SetUnitCost(decimal unitCost)
     {
         if (unitCost < 0)
-            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.UnitCostLessThanZero");
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.UnitCostCannotBeNegative");
 
         UnitCost = unitCost;
+    }
+
+    internal GoodsReceiptItem CopyWithQuantity(decimal quantity)
+    {
+        if (quantity <= 0)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityMustBePositive");
+
+        return new GoodsReceiptItem(ProductId, WarehouseId, quantity, UnitCost)
+        {
+            ProductName = ProductName,
+            WarehouseName = WarehouseName
+        };
     }
 
     internal static async Task<GoodsReceiptItem> CreateAsync(Guid productId, Guid? warehouseId, decimal quantity, decimal? unitCost,

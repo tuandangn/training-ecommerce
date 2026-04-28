@@ -66,12 +66,34 @@ public sealed record GoodsReceipt : AppAggregateEntity
     internal async Task AddItemAsync(Guid productId, Guid? warehouseId, decimal quantity, decimal? unitCost,
         IGetByIdService<Product> productByIdGetter, WarehouseSettings warehouseSettings, IGetByIdService<Warehouse> warehouseByIdGetter)
     {
-        var hasSameProductAndWarehouse = Items.Any(item => item.ProductId == productId && item.WarehouseId == warehouseId);
-        if (hasSameProductAndWarehouse)
-            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.SameProductAndWarehouseExisting");
-
         var item = await GoodsReceiptItem.CreateAsync(productId, warehouseId, quantity, unitCost, productByIdGetter, warehouseSettings, warehouseByIdGetter).ConfigureAwait(false);
         _items.Add(item);
+    }
+
+    internal void AddItem(GoodsReceiptItem item)
+    {
+        if (item is null)
+            throw new ArgumentNullException(nameof(item));
+
+        _items.Add(item);
+    }
+
+    internal void SplitToNewItemWithQuantity(Guid itemId, decimal quantity)
+    {
+        var item = Items.FirstOrDefault(i => i.Id == itemId);
+        if (item is null) 
+            throw new GoodsReceiptItemIsNotFoundException(itemId);
+
+        if (quantity > item.Quantity) 
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.SplitQuantityTooLarge");
+
+        if (quantity == item.Quantity)
+            return;
+
+        item.Quantity -= quantity;
+        var newItem = item.CopyWithQuantity(quantity);
+
+        _items.Add(newItem);
     }
 
     internal void ItemUnitCost(Guid itemId, decimal unitCost)
@@ -156,7 +178,6 @@ public sealed record GoodsReceipt : AppAggregateEntity
     }
 
     #endregion
-
 
     #region Events
 

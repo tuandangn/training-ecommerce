@@ -326,6 +326,22 @@ public sealed class GoodsReceiptManager(
             .ToList();
     }
 
+    private record _GoodsReceiptProductCostReceivingQtyItem(Guid ProductId, decimal? UnitCost, IList<_GoodsReceiptReceivedItemInfo> ReceivedItems)
+    {
+        public decimal TotalReceivedQuantity { get; set; }
+    };
+    private record _GoodsReceiptReceivedItemInfo(Guid ItemId)
+    {
+        public decimal ReceivedQuantity { get; set; }
+    };
+    private record _PurchaseOrderProductCostRemainingQtyItem(Guid ProductId, decimal UnitCost, IList<_PurchaseOrderItemInfo> Participants)
+    {
+        public decimal TotalRemainingQuantity { get; set; }
+    };
+    private record _PurchaseOrderItemInfo(Guid ItemId)
+    {
+        public decimal RemainingQuantity { get; set; }
+    };
     public async Task SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -347,75 +363,105 @@ public sealed class GoodsReceiptManager(
         var grProductCostReceivingQtyMap = goodsReceipt.Items
             .GroupBy(
                 item => (item.ProductId, item.UnitCost),
-                item => item.Quantity,
-                (key, quantities) => (key, receivingQty: quantities.Sum()))
-            .ToList();
+                item => (receivingQuantity: item.Quantity, item.Id),
+                (key, infos) => new _GoodsReceiptProductCostReceivingQtyItem(
+                    key.ProductId, key.UnitCost,
+                    infos.Select(info => new _GoodsReceiptReceivedItemInfo(info.Id)
+                    {
+                        ReceivedQuantity = info.receivingQuantity
+                    }).ToList())
+                {
+                    TotalReceivedQuantity = infos.Sum(info => info.receivingQuantity)
+                }
+            ).ToList();
         var poProductCostRemainingQtyMap = purchaseOrder.Items
             .Where(item => item.QuantityOrdered > item.QuantityReceived)
             .GroupBy(
                 item => (item.ProductId, item.UnitCost),
                 item => (remainQuantity: item.QuantityOrdered - item.QuantityReceived, item.Id),
-                (key, infos) => (key, remainingQty: infos.Sum(info => info.remainQuantity),
-                    participants: infos.Select(info => (info.Id, quantity: info.remainQuantity))
-                .ToList())
-        ).ToList();
-
-        var resovedPoItems = new List<(Guid itemId, decimal qty)>();
-
-        foreach (var grItem in grProductCostReceivingQtyMap.Where(grItem => grItem.key.UnitCost.HasValue))
-        {
-            var poIndex = poProductCostRemainingQtyMap.FindIndex(po => po.key == grItem.key);
-
-            if (poIndex == -1 || poProductCostRemainingQtyMap[poIndex].remainingQty < grItem.receivingQty)
-                throw new GoodsReceiptItemCannotResolvedWhenSetToPurchaseOrderException(grItem.key.ProductId, grItem.receivingQty);
-
-            var poItem = poProductCostRemainingQtyMap[poIndex];
-
-            if (poItem.remainingQty < grItem.receivingQty)
-                throw new GoodsReceiptItemCannotResolvedWhenSetToPurchaseOrderException(grItem.key.ProductId, grItem.receivingQty);
-
-            var receivingQty = grItem.receivingQty;
-            for (var i = 0; i < poItem.participants.Count; i++)
-            {
-                var participant = poItem.participants[i];
-                if (receivingQty == 0) break;
-                var resolvedQty = Math.Min(participant.quantity, receivingQty);
-                participant.quantity -= resolvedQty;
-                poItem.participants[i] = participant;
-                resovedPoItems.Add((participant.Id, resolvedQty));
-                receivingQty -= resolvedQty;
-            }
-            poItem.remainingQty -= grItem.receivingQty;
-        }
-        foreach (var grItem in grProductCostReceivingQtyMap.Where(grItem => !grItem.key.UnitCost.HasValue))
-        {
-            var receivingQty = grItem.receivingQty;
-            foreach (var poItem in poProductCostRemainingQtyMap.Where(poItem => poItem.key.ProductId == grItem.key.ProductId && poItem.remainingQty > 0))
-            {
-                for (var i = 0; i < poItem.participants.Count; i++)
+                (key, infos) => new _PurchaseOrderProductCostRemainingQtyItem(key.ProductId, key.UnitCost, infos.Select(info => new _PurchaseOrderItemInfo(info.Id) { RemainingQuantity = info.remainQuantity }).ToList())
                 {
-                    var participant = poItem.participants[i];
-                    if (participant.quantity == 0) continue;
-                    var resolvedQty = Math.Min(participant.quantity, receivingQty);
-                    participant.quantity -= resolvedQty;
-                    poItem.participants[i] = participant;
-                    receivingQty -= resolvedQty;
-                    resovedPoItems.Add((participant.Id, resolvedQty));
-                    if (receivingQty == 0)
-                        break;
+                    TotalRemainingQuantity = infos.Sum(info => info.remainQuantity)
                 }
-                if (receivingQty == 0)
+            ).ToList();
+
+        var resolvePoItems = new List<(Guid itemId, decimal qty)>();
+        var needUpdateUnitCostItems = new List<(Guid itemId, decimal qty, decimal unitCost)>();
+
+        foreach (var grItem in grProductCostReceivingQtyMap.Where(gr => gr.UnitCost.HasValue))
+        {
+            var poItem = poProductCostRemainingQtyMap.FirstOrDefault(po =>
+                po.ProductId == grItem.ProductId && po.UnitCost == grItem.UnitCost);
+
+            if (poItem == null || poItem.TotalRemainingQuantity < grItem.TotalReceivedQuantity)
+                throw new GoodsReceiptItemCannotResolvedWhenSetToPurchaseOrderException(grItem.ProductId, grItem.TotalReceivedQuantity);
+
+            foreach (var participant in poItem.Participants.Where(p => p.RemainingQuantity > 0))
+            {
+                if (grItem.TotalReceivedQuantity <= 0)
                     break;
+
+                var resolvedQty = Math.Min(participant.RemainingQuantity, grItem.TotalReceivedQuantity);
+
+                participant.RemainingQuantity -= resolvedQty;
+                poItem.TotalRemainingQuantity -= resolvedQty;
+                grItem.TotalReceivedQuantity -= resolvedQty;
+
+                resolvePoItems.Add((participant.ItemId, resolvedQty));
             }
-            if (receivingQty > 0)
-                throw new GoodsReceiptItemCannotResolvedWhenSetToPurchaseOrderException(grItem.key.ProductId, grItem.receivingQty);
         }
 
+        foreach (var grItem in grProductCostReceivingQtyMap.Where(gr => !gr.UnitCost.HasValue))
+        {
+            foreach (var receivedItem in grItem.ReceivedItems.Where(ri => ri.ReceivedQuantity > 0))
+            {
+                var compatiblePos = poProductCostRemainingQtyMap.Where(po => po.ProductId == grItem.ProductId && po.TotalRemainingQuantity > 0);
+
+                foreach (var poItem in compatiblePos)
+                {
+                    if (receivedItem.ReceivedQuantity <= 0)
+                        break;
+
+                    foreach (var participant in poItem.Participants.Where(p => p.RemainingQuantity > 0))
+                    {
+                        if (receivedItem.ReceivedQuantity <= 0) break;
+
+                        var resolvedQty = Math.Min(participant.RemainingQuantity, receivedItem.ReceivedQuantity);
+
+                        receivedItem.ReceivedQuantity -= resolvedQty;
+                        participant.RemainingQuantity -= resolvedQty;
+                        poItem.TotalRemainingQuantity -= resolvedQty;
+                        grItem.TotalReceivedQuantity -= resolvedQty;
+
+                        needUpdateUnitCostItems.Add((receivedItem.ItemId, resolvedQty, poItem.UnitCost));
+                        resolvePoItems.Add((participant.ItemId, resolvedQty));
+                    }
+                }
+            }
+
+            if (grItem.TotalReceivedQuantity > 0)
+                throw new GoodsReceiptItemCannotResolvedWhenSetToPurchaseOrderException(grItem.ProductId, grItem.TotalReceivedQuantity);
+        }
+        foreach (var group in needUpdateUnitCostItems.GroupBy(i => i.itemId))
+        {
+            var goodsReceiptItem = goodsReceipt.Items.First(item => item.Id == group.Key);
+            for(var i = 0; i < group.Count(); i++)
+            {
+                var (itemId, qty, unitCost) = group.ElementAt(i);
+                if (i == group.Count() - 1)
+                    goodsReceiptItem.SetUnitCost(unitCost);
+                else
+                {
+                    goodsReceipt.SplitToNewItemWithQuantity(itemId, qty);
+                    var newItem = goodsReceipt.Items.Last();
+                    newItem.SetUnitCost(unitCost);
+                }
+            }
+        }
         goodsReceipt.SetToPurchaseOrder(purchaseOrder.Id, purchaseOrder.Code);
         await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
 
-        //*TOD* dung event để cập nhật số lượng đã nhận của PO item thay vì update trực tiếp ở đây
-        foreach (var (itemId, qty) in resovedPoItems)
+        foreach (var (itemId, qty) in resolvePoItems)
         {
             var purchaseOrderItem = purchaseOrder.Items.First(item => item.Id == itemId);
             purchaseOrderItem.AddQuantityReceived(qty);
