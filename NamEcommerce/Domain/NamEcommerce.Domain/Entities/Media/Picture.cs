@@ -1,4 +1,5 @@
 ﻿using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Events.Media;
 
 namespace NamEcommerce.Domain.Entities.Media;
 
@@ -19,4 +20,16 @@ public sealed record Picture : AppAggregateEntity
     public string? FileName { get; set; }
 
     public DateTime CreatedOnUtc { get; }
+
+    /// <summary>
+    /// Đánh dấu ảnh vừa được upload — Manager gọi trước <c>InsertAsync</c>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new PictureCreated(Id, MimeType));
+
+    /// <summary>
+    /// Đánh dấu ảnh bị xoá — Manager gọi trước <c>DeleteAsync</c>.
+    /// </summary>
+    internal void MarkDeleted()
+        => RaiseDomainEvent(new PictureDeleted(Id));
 }

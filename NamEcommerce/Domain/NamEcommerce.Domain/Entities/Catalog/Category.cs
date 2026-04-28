@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Events.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
 
@@ -68,6 +69,31 @@ public sealed record Category : AppAggregateEntity
 
         ParentId = parentId;
     }
+
+    /// <summary>
+    /// Đánh dấu danh mục vừa được khởi tạo — Manager gọi trước <c>InsertAsync</c>.
+    /// Event sẽ được dispatch sau khi <c>SaveChanges</c> thành công bởi <c>DomainEventDispatchInterceptor</c>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new CategoryCreated(Id, Name, ParentId));
+
+    /// <summary>
+    /// Đánh dấu danh mục vừa được cập nhật (tên / DisplayOrder / Parent) — raise <see cref="CategoryUpdated"/>.
+    /// </summary>
+    internal void MarkUpdated()
+        => RaiseDomainEvent(new CategoryUpdated(Id));
+
+    /// <summary>
+    /// Đánh dấu chỉ riêng quan hệ cha-con đổi (ví dụ kéo thả trên cây) — raise <see cref="CategoryParentChanged"/>.
+    /// </summary>
+    internal void MarkParentChanged()
+        => RaiseDomainEvent(new CategoryParentChanged(Id, ParentId));
+
+    /// <summary>
+    /// Đánh dấu danh mục bị xoá — Manager gọi trước <c>DeleteAsync</c> để raise <see cref="CategoryDeleted"/>.
+    /// </summary>
+    internal void MarkDeleted()
+        => RaiseDomainEvent(new CategoryDeleted(Id, Name));
 
     #endregion
 }

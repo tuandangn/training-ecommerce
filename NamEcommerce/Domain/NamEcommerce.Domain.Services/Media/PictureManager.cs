@@ -3,7 +3,6 @@ using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Services.Media;
 
 namespace NamEcommerce.Domain.Services.Media;
@@ -12,13 +11,11 @@ public sealed class PictureManager : IPictureManager
 {
     private readonly IRepository<Picture> _pictureRepository;
     private readonly IEntityDataReader<Picture> _pictureDataReader;
-    private readonly IEventPublisher _eventPublisher;
 
-    public PictureManager(IRepository<Picture> pictureRepository, IEntityDataReader<Picture> pictureEntityDataReader, IEventPublisher eventPublisher)
+    public PictureManager(IRepository<Picture> pictureRepository, IEntityDataReader<Picture> pictureEntityDataReader)
     {
         _pictureRepository = pictureRepository;
         _pictureDataReader = pictureEntityDataReader;
-        _eventPublisher = eventPublisher;
     }
 
     public async Task<CreatePictureResultDto> CreatePictureAsync(CreatePictureDto dto)
@@ -27,13 +24,14 @@ public sealed class PictureManager : IPictureManager
 
         dto.Verify();
 
-        var insertedPicture = await _pictureRepository.InsertAsync(new Picture(dto.Data, dto.MimeType)
+        var picture = new Picture(dto.Data, dto.MimeType)
         {
             FileName = dto.FileName,
             Extension = dto.Extension
-        }).ConfigureAwait(false);
+        };
+        picture.MarkCreated();
 
-        await _eventPublisher.EntityCreated(insertedPicture).ConfigureAwait(false);
+        var insertedPicture = await _pictureRepository.InsertAsync(picture).ConfigureAwait(false);
 
         return new CreatePictureResultDto
         {
@@ -47,9 +45,9 @@ public sealed class PictureManager : IPictureManager
         if (picture is null)
             throw new ArgumentException("Picture is not found", nameof(id));
 
-        await _pictureRepository.DeleteAsync(picture).ConfigureAwait(false);
+        picture.MarkDeleted();
 
-        await _eventPublisher.EntityDeleted(picture).ConfigureAwait(false);
+        await _pictureRepository.DeleteAsync(picture).ConfigureAwait(false);
     }
 
     public async Task<PictureDto?> GetPictureByIdAsync(Guid id)

@@ -4,7 +4,6 @@ using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Catalog;
@@ -15,13 +14,11 @@ public sealed class VendorManager : IVendorManager
 {
     private readonly IRepository<Vendor> _vendorRepository;
     private readonly IEntityDataReader<Vendor> _vendorDataReader;
-    private readonly IEventPublisher _eventPublisher;
 
-    public VendorManager(IRepository<Vendor> vendorRepository, IEntityDataReader<Vendor> vendorEntityDataReader, IEventPublisher eventPublisher)
+    public VendorManager(IRepository<Vendor> vendorRepository, IEntityDataReader<Vendor> vendorEntityDataReader)
     {
         _vendorRepository = vendorRepository;
         _vendorDataReader = vendorEntityDataReader;
-        _eventPublisher = eventPublisher;
     }
 
     public async Task<CreateVendorResultDto> CreateVendorAsync(CreateVendorDto dto)
@@ -33,13 +30,14 @@ public sealed class VendorManager : IVendorManager
         if (await DoesNameExistAsync(dto.Name).ConfigureAwait(false))
             throw new VendorNameExistsException(dto.Name);
 
-        var insertedVendor = await _vendorRepository.InsertAsync(new Vendor(Guid.NewGuid(), dto.Name, dto.PhoneNumber)
+        var vendor = new Vendor(Guid.NewGuid(), dto.Name, dto.PhoneNumber)
         {
             Address = dto.Address,
             DisplayOrder = dto.DisplayOrder,
-        }).ConfigureAwait(false);
+        };
+        vendor.MarkCreated();
 
-        await _eventPublisher.EntityCreated(insertedVendor).ConfigureAwait(false);
+        var insertedVendor = await _vendorRepository.InsertAsync(vendor).ConfigureAwait(false);
 
         return new CreateVendorResultDto
         {
@@ -53,9 +51,9 @@ public sealed class VendorManager : IVendorManager
         if (vendor is null)
             throw new ArgumentException("Vendor is not found", nameof(id));
 
-        await _vendorRepository.DeleteAsync(vendor).ConfigureAwait(false);
+        vendor.MarkDeleted();
 
-        await _eventPublisher.EntityDeleted(vendor).ConfigureAwait(false);
+        await _vendorRepository.DeleteAsync(vendor).ConfigureAwait(false);
     }
 
     public Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
@@ -121,10 +119,9 @@ public sealed class VendorManager : IVendorManager
         vendor.Address = dto.Address;
         vendor.PhoneNumber = dto.PhoneNumber;
         vendor.DisplayOrder = dto.DisplayOrder;
+        vendor.MarkUpdated();
 
         var result = await _vendorRepository.UpdateAsync(vendor).ConfigureAwait(false);
-
-        await _eventPublisher.EntityUpdated(vendor).ConfigureAwait(false);
 
         return new UpdateVendorResultDto(result.Id)
         {

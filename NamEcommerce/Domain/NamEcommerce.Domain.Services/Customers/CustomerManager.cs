@@ -34,6 +34,7 @@ public sealed class CustomerManager : ICustomerManager
             Email = dto.Email,
             Note = dto.Note
         };
+        customer.MarkCreated();
         var inserted = await _customerRepository.InsertAsync(customer).ConfigureAwait(false);
         return new CreateCustomerResultDto { CreatedId = inserted.Id };
     }
@@ -49,6 +50,7 @@ public sealed class CustomerManager : ICustomerManager
         customer.Email = dto.Email;
         customer.Address = dto.Address;
         customer.Note = dto.Note;
+        customer.MarkUpdated();
 
         await _customerRepository.UpdateAsync(customer).ConfigureAwait(false);
         return new UpdateCustomerResultDto { UpdatedId = customer.Id };
@@ -62,6 +64,7 @@ public sealed class CustomerManager : ICustomerManager
         var customer = await _customerDataReader.GetByIdAsync(id).ConfigureAwait(false);
         if (customer != null)
         {
+            customer.MarkDeleted();
             await _customerRepository.DeleteAsync(customer).ConfigureAwait(false);
         }
     }

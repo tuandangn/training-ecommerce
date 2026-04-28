@@ -4,7 +4,6 @@ using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Catalog;
@@ -15,13 +14,11 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
 {
     private readonly IRepository<UnitMeasurement> _unitMeasurementRepository;
     private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
-    private readonly IEventPublisher _eventPublisher;
 
-    public UnitMeasurementManager(IRepository<UnitMeasurement> unitMeasurementRepository, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader, IEventPublisher eventPublisher)
+    public UnitMeasurementManager(IRepository<UnitMeasurement> unitMeasurementRepository, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader)
     {
         _unitMeasurementRepository = unitMeasurementRepository;
         _unitMeasurementDataReader = unitMeasurementDataReader;
-        _eventPublisher = eventPublisher;
     }
 
     public async Task<CreateUnitMeasurementResultDto> CreateUnitMeasurementAsync(CreateUnitMeasurementDto dto)
@@ -33,13 +30,13 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
         if (await DoesNameExistAsync(dto.Name, null).ConfigureAwait(false))
             throw new UnitMeasurementNameExistsException(dto.Name);
 
-        var insertedUnitMeasurement = await _unitMeasurementRepository.InsertAsync(
-            new UnitMeasurement(Guid.NewGuid(), dto.Name)
-            {
-                DisplayOrder = dto.DisplayOrder
-            }).ConfigureAwait(false);
+        var unitMeasurement = new UnitMeasurement(Guid.NewGuid(), dto.Name)
+        {
+            DisplayOrder = dto.DisplayOrder
+        };
+        unitMeasurement.MarkCreated();
 
-        await _eventPublisher.EntityCreated(insertedUnitMeasurement).ConfigureAwait(false);
+        var insertedUnitMeasurement = await _unitMeasurementRepository.InsertAsync(unitMeasurement).ConfigureAwait(false);
 
         return new CreateUnitMeasurementResultDto
         {
@@ -53,9 +50,9 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
         if (unitMeasurement is null)
             throw new ArgumentException("Unit measurement is not found", nameof(id));
 
-        await _unitMeasurementRepository.DeleteAsync(unitMeasurement).ConfigureAwait(false);
+        unitMeasurement.MarkDeleted();
 
-        await _eventPublisher.EntityDeleted(unitMeasurement).ConfigureAwait(false);
+        await _unitMeasurementRepository.DeleteAsync(unitMeasurement).ConfigureAwait(false);
     }
 
     public async Task<UpdateUnitMeasurementResultDto> UpdateUnitMeasurementAsync(UpdateUnitMeasurementDto dto)
@@ -70,10 +67,9 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
 
         await unitMeasurement.SetNameAsync(dto.Name, this).ConfigureAwait(false);
         unitMeasurement.DisplayOrder = dto.DisplayOrder;
+        unitMeasurement.MarkUpdated();
 
         var result = await _unitMeasurementRepository.UpdateAsync(unitMeasurement).ConfigureAwait(false);
-
-        await _eventPublisher.EntityUpdated(result).ConfigureAwait(false);
 
         return new UpdateUnitMeasurementResultDto(result.Id)
         {

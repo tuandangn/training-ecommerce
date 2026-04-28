@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Events.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
 
@@ -53,6 +54,25 @@ public sealed record Vendor : AppAggregateEntity
         Name = name;
         NormalizedName = TextHelper.Normalize(name);
     }
+
+    /// <summary>
+    /// Đánh dấu vendor vừa được khởi tạo — Manager gọi trước <c>InsertAsync</c>.
+    /// Event sẽ được dispatch sau khi <c>SaveChanges</c> thành công bởi <c>DomainEventDispatchInterceptor</c>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new VendorCreated(Id, Name, PhoneNumber));
+
+    /// <summary>
+    /// Đánh dấu vendor vừa được cập nhật — raise <see cref="VendorUpdated"/>.
+    /// </summary>
+    internal void MarkUpdated()
+        => RaiseDomainEvent(new VendorUpdated(Id));
+
+    /// <summary>
+    /// Đánh dấu vendor bị xoá — Manager gọi trước <c>DeleteAsync</c> để raise <see cref="VendorDeleted"/>.
+    /// </summary>
+    internal void MarkDeleted()
+        => RaiseDomainEvent(new VendorDeleted(Id, Name));
 
     #endregion
 }

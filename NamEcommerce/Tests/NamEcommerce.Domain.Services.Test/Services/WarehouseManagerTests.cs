@@ -3,7 +3,7 @@ using NamEcommerce.Domain.Services.Inventory;
 using NamEcommerce.Domain.Services.Test.Helpers;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
-using NamEcommerce.Domain.Shared.Events;
+using NamEcommerce.Domain.Shared.Events.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 
 namespace NamEcommerce.Domain.Services.Test.Services;
@@ -15,7 +15,7 @@ public sealed class WarehouseManagerTests
     [Fact]
     public async Task CreateWarehouseAsync_DtoIsNull_ThrowArgumentNullException()
     {
-        var warehouseManager = new WarehouseManager(null!, null!, null!);
+        var warehouseManager = new WarehouseManager(null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => warehouseManager.CreateWarehouseAsync(null!));
     }
@@ -29,7 +29,7 @@ public sealed class WarehouseManagerTests
             Name = string.Empty,
             PhoneNumber = "invalid-phone",
         };
-        var warehouseManager = new WarehouseManager(null!, null!, null!);
+        var warehouseManager = new WarehouseManager(null!, null!);
 
         await Assert.ThrowsAsync<WarehouseDataIsInvalidException>(() => warehouseManager.CreateWarehouseAsync(invalidCreateWarehouseDto));
     }
@@ -44,7 +44,7 @@ public sealed class WarehouseManagerTests
             Name = existingName
         };
         var warehouseDataReaderMock = WarehouseDataReader.HasOne(new Warehouse("code-code", existingName, (WarehouseType)dto.WarehouseType));
-        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object, null!);
+        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object);
 
         await Assert.ThrowsAsync<WarehouseNameExistsException>(() => warehouseManager.CreateWarehouseAsync(dto));
     }
@@ -59,7 +59,7 @@ public sealed class WarehouseManagerTests
             Name = "warehouse-name"
         };
         var warehouseDataReaderMock = WarehouseDataReader.HasOne(new Warehouse(existingCode, "warehouse-name-1", (WarehouseType)dto.WarehouseType));
-        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object, null!);
+        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object);
 
         await Assert.ThrowsAsync<WarehouseCodeExistsException>(() => warehouseManager.CreateWarehouseAsync(dto));
     }
@@ -84,12 +84,15 @@ public sealed class WarehouseManagerTests
         };
         var warehouseRepositoryMock = WarehouseRepository.CreateWarehouseWillReturns(returnWarehouse);
         var warehouseDataReaderStub = WarehouseDataReader.Empty();
-        var warehouseManager = new WarehouseManager(warehouseRepositoryMock.Object, warehouseDataReaderStub.Object, Mock.Of<IEventPublisher>());
+        var warehouseManager = new WarehouseManager(warehouseRepositoryMock.Object, warehouseDataReaderStub.Object);
 
         var warehouseDto = await warehouseManager.CreateWarehouseAsync(dto);
 
         Assert.Equal(returnWarehouse.Id, warehouseDto.CreatedId);
         warehouseRepositoryMock.Verify();
+        warehouseRepositoryMock.Verify(r => r.InsertAsync(It.Is<Warehouse>(w =>
+            w.DomainEvents.OfType<WarehouseCreated>().Any(ev => ev.Code == dto.Code && ev.Name == dto.Name)
+            && w.DomainEvents.Count == 1)), Times.Once);
     }
 
     #endregion
@@ -99,7 +102,7 @@ public sealed class WarehouseManagerTests
     [Fact]
     public async Task DoesNameExistAsync_NameIsNull_ThrowsArgumentNullException()
     {
-        var warehouseManager = new WarehouseManager(null!, null!, null!);
+        var warehouseManager = new WarehouseManager(null!, null!);
 
         await Assert.ThrowsAnyAsync<ArgumentException>(() =>
             warehouseManager.DoesNameExistAsync(null!)
@@ -113,7 +116,7 @@ public sealed class WarehouseManagerTests
         var warehouse = new Warehouse("code", existingName, WarehouseType.Main);
         var hasNameWarehouseId = warehouse.Id;
         var warehouseDataReaderMock = WarehouseDataReader.HasOne(warehouse);
-        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object, null!);
+        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object);
 
         var nameExists = await warehouseManager.DoesNameExistAsync(existingName, comparesWithCurrentId: hasNameWarehouseId);
 
@@ -126,7 +129,7 @@ public sealed class WarehouseManagerTests
     {
         var testName = "test-name-existing";
         var warehouseDataReaderMock = WarehouseDataReader.HasOne(new Warehouse("code", testName, WarehouseType.Main));
-        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object, null!);
+        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object);
 
         var nameExists = await warehouseManager.DoesNameExistAsync(testName, comparesWithCurrentId: null);
 
@@ -141,7 +144,7 @@ public sealed class WarehouseManagerTests
     [Fact]
     public async Task DoesCodeExistAsync_CodeIsNull_ThrowsArgumentNullException()
     {
-        var warehouseManager = new WarehouseManager(null!, null!, null!);
+        var warehouseManager = new WarehouseManager(null!, null!);
 
         await Assert.ThrowsAnyAsync<ArgumentException>(() =>
             warehouseManager.DoesCodeExistAsync(null!)
@@ -155,7 +158,7 @@ public sealed class WarehouseManagerTests
         var warehouse = new Warehouse(existingCode, "warehouse-name", WarehouseType.Main);
         var hasCodeWarehouseId = warehouse.Id;
         var warehouseDataReaderMock = WarehouseDataReader.HasOne(warehouse);
-        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object, null!);
+        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object);
 
         var codeExists = await warehouseManager.DoesCodeExistAsync(existingCode, comparesWithCurrentId: hasCodeWarehouseId);
 
@@ -168,7 +171,7 @@ public sealed class WarehouseManagerTests
     {
         var testCode = "test-code-existing";
         var warehouseDataReaderMock = WarehouseDataReader.HasOne(new Warehouse(testCode, "warehouse-name", WarehouseType.Main));
-        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object, null!);
+        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object);
 
         var codeExists = await warehouseManager.DoesCodeExistAsync(testCode, comparesWithCurrentId: null);
 
@@ -183,7 +186,7 @@ public sealed class WarehouseManagerTests
     [Fact]
     public async Task UpdateWarehouseAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var warehouseManager = new WarehouseManager(null!, null!, null!);
+        var warehouseManager = new WarehouseManager(null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => warehouseManager.UpdateWarehouseAsync(null!));
     }
@@ -191,7 +194,7 @@ public sealed class WarehouseManagerTests
     [Fact]
     public async Task UpdateWarehouseAsync_DataIsInvalid_ThrowsWarehouseDataIsInvalidException()
     {
-        var warehouseManager = new WarehouseManager(null!, null!, null!);
+        var warehouseManager = new WarehouseManager(null!, null!);
 
         await Assert.ThrowsAsync<WarehouseDataIsInvalidException>(() =>
             warehouseManager.UpdateWarehouseAsync(new UpdateWarehouseDto(Guid.NewGuid())
@@ -208,7 +211,7 @@ public sealed class WarehouseManagerTests
     {
         var notFoundWarehouseId = Guid.NewGuid();
         var warehouseDataReaderMock = WarehouseDataReader.NotFound(notFoundWarehouseId);
-        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object, null!);
+        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object);
 
         await Assert.ThrowsAsync<ArgumentException>(()
             => warehouseManager.UpdateWarehouseAsync(new UpdateWarehouseDto(notFoundWarehouseId)
@@ -227,7 +230,7 @@ public sealed class WarehouseManagerTests
         var warehouseDataReaderMock = WarehouseDataReader
             .HasOne(new Warehouse("code", existingName, WarehouseType.Main))
             .WarehouseById(oldWarehouse.Id, oldWarehouse);
-        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object, null!);
+        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object);
 
         await Assert.ThrowsAsync<WarehouseNameExistsException>(()
             => warehouseManager.UpdateWarehouseAsync(new UpdateWarehouseDto(oldWarehouse.Id)
@@ -247,7 +250,7 @@ public sealed class WarehouseManagerTests
         var warehouseDataReaderMock = WarehouseDataReader
             .HasOne(new Warehouse(existingCode, "warehouse-name", WarehouseType.Main))
             .WarehouseById(oldWarehouse.Id, oldWarehouse);
-        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object, null!);
+        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object);
 
         await Assert.ThrowsAsync<WarehouseCodeExistsException>(()
             => warehouseManager.UpdateWarehouseAsync(new UpdateWarehouseDto(oldWarehouse.Id)
@@ -274,7 +277,7 @@ public sealed class WarehouseManagerTests
         };
         var warehouseRepositoryMock = WarehouseRepository.UpdateWarehouseWillReturns(updatedWarehouse);
         var warehouseDataReaderStub = WarehouseDataReader.WarehouseById(updatedWarehouse.Id, oldWarehouse);
-        var warehouseManager = new WarehouseManager(warehouseRepositoryMock.Object, warehouseDataReaderStub.Object, Mock.Of<IEventPublisher>());
+        var warehouseManager = new WarehouseManager(warehouseRepositoryMock.Object, warehouseDataReaderStub.Object);
 
         var resultWarehouse = await warehouseManager.UpdateWarehouseAsync(
             new UpdateWarehouseDto(updatedWarehouse.Id)
@@ -300,6 +303,8 @@ public sealed class WarehouseManagerTests
             PhoneNumber = updatedWarehouse.PhoneNumber
         });
         warehouseRepositoryMock.Verify();
+        Assert.Contains(oldWarehouse.DomainEvents, ev =>
+            ev is WarehouseUpdated updated && updated.WarehouseId == oldWarehouse.Id);
     }
 
     #endregion
@@ -311,7 +316,7 @@ public sealed class WarehouseManagerTests
     {
         var notFoundWarehouseId = Guid.NewGuid();
         var warehouseDataReaderMock = WarehouseDataReader.NotFound(notFoundWarehouseId);
-        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object, null!);
+        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object);
 
         await Assert.ThrowsAsync<WarehouseIsNotFoundException>(()
             => warehouseManager.DeleteWarehouseAsync(notFoundWarehouseId));
@@ -325,11 +330,16 @@ public sealed class WarehouseManagerTests
         var warehouse = new Warehouse("code", "warehouse", WarehouseType.Main);
         var warehouseDataRepositoryMock = WarehouseRepository.CanDeleteWarehouse(warehouse);
         var warehouseDataReaderMock = WarehouseDataReader.WarehouseById(warehouse.Id, warehouse);
-        var warehouseManager = new WarehouseManager(warehouseDataRepositoryMock.Object, warehouseDataReaderMock.Object, Mock.Of<IEventPublisher>());
+        var warehouseManager = new WarehouseManager(warehouseDataRepositoryMock.Object, warehouseDataReaderMock.Object);
 
         await warehouseManager.DeleteWarehouseAsync(warehouse.Id);
 
         warehouseDataReaderMock.Verify();
+        Assert.Contains(warehouse.DomainEvents, ev =>
+            ev is WarehouseDeleted deleted
+            && deleted.WarehouseId == warehouse.Id
+            && deleted.Code == warehouse.Code
+            && deleted.Name == warehouse.Name);
     }
 
     #endregion
@@ -340,7 +350,7 @@ public sealed class WarehouseManagerTests
     public async Task GetWarehousesAsync_PageIndexLessThanZero_ThrowsArgumentOutOfRangeException()
     {
         var invalidPageIndex = -1;
-        var warehouseManager = new WarehouseManager(null!, null!, null!);
+        var warehouseManager = new WarehouseManager(null!, null!);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             warehouseManager.GetWarehousesAsync("keywords", invalidPageIndex, int.MaxValue));
@@ -350,7 +360,7 @@ public sealed class WarehouseManagerTests
     public async Task GetWarehousesAsync_PageSizeLessThanOrEqualZero_ThrowsArgumentOutOfRangeException()
     {
         var invalidPageSize = 0;
-        var warehouseManager = new WarehouseManager(null!, null!, null!);
+        var warehouseManager = new WarehouseManager(null!, null!);
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
             warehouseManager.GetWarehousesAsync("keywords", 0, invalidPageSize));
@@ -365,7 +375,7 @@ public sealed class WarehouseManagerTests
         var warehouse2 = new Warehouse("code-2", "warehouse-2", WarehouseType.SubWarehouse);
         var warehouse3 = new Warehouse("code-3", "warehouse-3", WarehouseType.ReturnWarehouse);
         var warehouseDataReaderMock = WarehouseDataReader.WithData(warehouse1, warehouse2, warehouse3);
-        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object, null!);
+        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object);
 
         var pagedOrderedResult = await warehouseManager.GetWarehousesAsync("", pageIndex, pageSize);
 
@@ -385,7 +395,7 @@ public sealed class WarehouseManagerTests
         var warehouse2 = new Warehouse("code-2", "keywords-2", WarehouseType.SubWarehouse);
         var warehouse3 = new Warehouse("code-3", "warehouse-3", WarehouseType.ReturnWarehouse);
         var warehouseDataReaderMock = WarehouseDataReader.WithData(warehouse1, warehouse2, warehouse3);
-        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object, null!);
+        var warehouseManager = new WarehouseManager(null!, warehouseDataReaderMock.Object);
 
         var filteredResult = await warehouseManager.GetWarehousesAsync(keywords, pageIndex, pageSize);
 

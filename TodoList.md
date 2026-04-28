@@ -94,7 +94,7 @@ Thay vì reverse stock (phức tạp, dễ âm tồn nếu đã bán một phầ
 
 ---
 
-### 📌 Trạng thái hiện tại (cập nhật 2026-04-27)
+### 📌 Trạng thái hiện tại (cập nhật 2026-04-28)
 
 **Đã làm xong session này:**
 - ✅ Toàn bộ module **UI/UX Notification** (Phase 1 → 4) — đã hoàn tất cả phần JS module migrate optional ở Phase 4
@@ -105,6 +105,8 @@ Thay vì reverse stock (phức tạp, dễ âm tồn nếu đã bán một phầ
 - ✅ **Vendor + Sinh công nợ tự động** — Phase 1 Domain + Phase 2 Application + Phase 3 backend & UI — **2026-04-26 scheduled task (3 lần làm)**. UI Views Create.cshtml + Details.cshtml + VendorPicker integration đều đã hoàn thành.
 - ✅ **Event Refactor Phase 1 Foundation** — `IDomainEvent`/`DomainEvent`/`AppAggregateEntity.RaiseDomainEvent`/`DomainEventDispatchInterceptor` + 6 unit tests — **2026-04-27 scheduled task**.
 - ✅ **Event Refactor Phase 2 Migrate Orders + DeliveryNotes** — 14 concrete domain events, 2 aggregate refactor, 2 manager bỏ `IEventPublisher`, 2 handler refactor sang `INotificationHandler<TDomainEvent>`, 47 OrderManager constructor calls trong test — **2026-04-27 scheduled task**.
+- ✅ **Event Refactor Phase 3 — UnitMeasurement migrate** — `UnitMeasurement` aggregate thêm 3 method `MarkCreated/MarkUpdated/MarkDeleted`, `UnitMeasurementManager` bỏ `IEventPublisher` (3 → 2 deps), 18 test constructor updated + 3 test bổ sung DomainEvents assertion — **2026-04-28 scheduled task**.
+- ✅ **Event Refactor Phase 3 — Category/Vendor/Customer/Warehouse migrate** — 4 modules cùng pattern: tạo events file, aggregate thêm 3 method `Mark*`, Manager bỏ `IEventPublisher`, tests update 80+ constructor calls + 12 DomainEvents assertions — **2026-04-28 scheduled task (continuation)**.
 
 **Lượt sau bắt đầu từ:**
 1. **Build verify** toàn bộ solution — `dotnet build` để chắc:
@@ -160,6 +162,57 @@ Thay vì reverse stock (phức tạp, dễ âm tồn nếu đã bán một phầ
   - **Order flow:** Tạo Order với items + discount → kiểm tra log/debug `DomainEvents` collection raise đúng `OrderPlaced` (1 event duy nhất sau khi `ClearDomainEvents()` clear các `OrderItemAdded` lúc setup)
   - **DeliveryNote confirmed flow:** Confirm phiếu xuất → n8n nhận notification (`DeliveryNoteConfirmedEventHandler` đã refactor handle `DeliveryNoteConfirmed` record mới)
   - **DeliveryNote delivered flow:** Mark delivered → công nợ khách hàng được sinh tự động (`DeliveryNoteDeliveredEventHandler` đã refactor handle `DeliveryNoteDelivered` record mới + tận dụng payload event)
+
+---
+
+### 📝 Session 2026-04-28 (scheduled task) — Event Refactor Phase 3: Migrate Catalog + Customers + Inventory.Warehouse
+
+**Modules đã migrate trong session này:**
+- ✅ `UnitMeasurement` (Catalog)
+- ✅ `Category` (Catalog)
+- ✅ `Vendor` (Catalog)
+- ✅ `Customer` (Customers)
+- ✅ `Warehouse` (Inventory)
+- ✅ `Picture` (Media) — chỉ events base `PictureCreated`/`PictureDeleted`; `PictureOrphaned` sẽ làm khi migrate Product/GoodsReceipt
+
+**Pattern chung áp dụng cho mọi module:**
+1. Tạo `{Module}Events.cs` trong `Domain.Shared/Events/{Module}/` — 3 sealed records: `{Entity}Created`, `{Entity}Updated`, `{Entity}Deleted` (kế thừa `DomainEvent`)
+2. Aggregate entity thêm 3 internal method: `MarkCreated()`, `MarkUpdated()`, `MarkDeleted()` raise event tương ứng + `using NamEcommerce.Domain.Shared.Events.{Module};`
+3. Manager bỏ `IEventPublisher` khỏi constructor (3 deps → 2 deps, hoặc 4 → 3 nếu có dep khác); thay `_eventPublisher.EntityCreated/Updated/Deleted(...)` bằng `entity.MarkCreated/Updated/Deleted()` gọi TRƯỚC `Insert/Update/DeleteAsync`. Bỏ `using NamEcommerce.Domain.Shared.Events;`
+4. Test file: replace_all constructor calls (giảm 1 arg), replace_all `, Mock.Of<IEventPublisher>()` → `)`, đổi `using` sang sub-namespace cụ thể, thêm assertion `DomainEvents.OfType<TEvent>().Any(...)` cho test create/update/delete success
+
+**Files mới tạo (5):**
+- `Domain.Shared/Events/Catalog/CategoryEvents.cs` — `CategoryCreated`, `CategoryUpdated`, `CategoryParentChanged`, `CategoryDeleted`
+- `Domain.Shared/Events/Catalog/VendorEvents.cs` — `VendorCreated`, `VendorUpdated`, `VendorDeleted`
+- `Domain.Shared/Events/Customers/CustomerEvents.cs` — `CustomerCreated`, `CustomerUpdated`, `CustomerDeleted`
+- `Domain.Shared/Events/Inventory/WarehouseEvents.cs` — `WarehouseCreated`, `WarehouseUpdated`, `WarehouseDeleted`
+- (`Domain.Shared/Events/Catalog/UnitMeasurementEvents.cs` đã có từ 2026-04-27)
+
+**Files đã sửa entity (5):** `UnitMeasurement`, `Category`, `Vendor`, `Customer`, `Warehouse` — thêm 3-4 method `Mark*` + import events namespace tương ứng.
+
+**Files đã sửa manager (5):**
+- `UnitMeasurementManager` — 3 → 2 deps
+- `CategoryManager` — 3 → 2 deps. `SetParentCategoryAsync` raise `CategoryParentChanged` thay cho `EntityUpdated`. `DeleteCategoryAsync` raise `CategoryDeleted` rồi update children với `MarkParentChanged()`.
+- `VendorManager` — 3 → 2 deps
+- `CustomerManager` — không thay constructor (vốn không inject `IEventPublisher`), chỉ thêm gọi `Mark*` trên entity
+- `WarehouseManager` — 3 → 2 deps
+
+**Files đã sửa test (4 — `Customer` không có test sẵn):**
+- `UnitMeasurementManagerTests.cs` — 18 ctor → 2-args, 3 DomainEvents assertions
+- `CategoryManagerTests.cs` — 21 ctor → 2-args, 3 DomainEvents assertions
+- `VendorManagerTests.cs` — 18 ctor → 2-args, 3 DomainEvents assertions
+- `WarehouseManagerTests.cs` — 23 ctor → 2-args, 3 DomainEvents assertions
+
+**Pattern decisions:**
+- Mỗi module CRUD thuần dùng pattern `MarkCreated/MarkUpdated/MarkDeleted` đơn giản — không cần method `Place()` hay state machine như `Order`/`DeliveryNote`.
+- `Category` có thêm event `CategoryParentChanged` riêng cho flow `SetParentCategoryAsync` và auto-update children sau khi xoá parent (kéo thả trên cây khác về ngữ nghĩa với general update).
+- Tất cả events raise TRƯỚC `Insert/Update/DeleteAsync` — `DomainEventDispatchInterceptor` publish sau khi `SaveChanges` thành công.
+- KHÔNG có domain event handler nào cho 5 module này (đã grep verify) → không cần migrate handler.
+
+⚠️ **Tuấn cần làm sau merge session 2026-04-28:**
+- Build verify: `dotnet build NamEcommerce.sln` — đảm bảo 5 manager constructor đổi không vỡ DI registration (DI vẫn dùng open generic `IRepository<>`/`IEntityDataReader<>`).
+- Run unit tests: `dotnet test Tests/NamEcommerce.Domain.Services.Test/` — đặc biệt 4 file test bị thay đổi (UnitMeasurement/Category/Vendor/Warehouse).
+- Smoke test: tạo/sửa/xoá entity của 5 module qua UI → verify SaveChanges + dispatcher publish event không lỗi nested transaction.
 
 ---
 
@@ -454,13 +507,13 @@ Mở rộng `GoodsReceiptUpdatedHandler` (đã có logic AverageCost):
 
 #### Phase 3 — Migrate các module còn lại (2 ngày)
 
-- [ ] Catalog: `Product`, `Category`, `Vendor`, `UnitMeasurement` *(2026-04-28 — `UnitMeasurement` đang migrate, scheduled task)*
-- [ ] Inventory: `InventoryStock`, `Warehouse`, stock movements
+- [ ] Catalog: `Product`, ~~`Category`~~, ~~`Vendor`~~, ~~`UnitMeasurement`~~ *(2026-04-28 — `UnitMeasurement`/`Category`/`Vendor` ✅ DONE scheduled task; còn lại Product)*
+- [ ] Inventory: `InventoryStock`, ~~`Warehouse`~~, stock movements *(2026-04-28 — `Warehouse` ✅ DONE scheduled task)*
 - [ ] PurchaseOrders: `PurchaseOrder` (note: `PurchaseOrderUpdatedEventHandler` hiện đang gọi `VerifyStatusAsync` — cần thay bằng concrete event như `PurchaseOrderItemReceived`)
 - [ ] GoodsReceipts: `GoodsReceipt` (dọn handler trống `GoodsReceiptUpdatedHandler`)
 - [ ] Debts: `CustomerDebt`, `CustomerPayment`, `VendorDebt`
-- [ ] Customers: `Customer`
-- [ ] Media: `Picture` (event `PictureOrphaned` thay cho logic xoá ảnh hiện đang nằm trong `ProductDeletedEventHandler`, `ProductUpdatedEventHandler`, `GoodsReceiptDeletedEventHandler`)
+- [x] Customers: `Customer` *(2026-04-28 — ✅ DONE scheduled task; CustomerManager đã sẵn không có IEventPublisher từ trước, chỉ thêm 3 method Mark* + raise events)*
+- [x] Media: `Picture` *(2026-04-28 — ✅ DONE base events `PictureCreated`/`PictureDeleted`. Note: `PictureOrphaned` event chưa thêm — sẽ làm khi migrate `Product`/`GoodsReceipt` để thay thế `EntityDeletedNotification` flow trong các handler liên quan)*
 
 #### Phase 4 — Outbox Pattern cho Integration Event (1-2 ngày)
 

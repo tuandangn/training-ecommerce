@@ -4,7 +4,6 @@ using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Inventory;
@@ -15,13 +14,11 @@ public sealed class WarehouseManager : IWarehouseManager
 {
     private readonly IRepository<Warehouse> _warehouseRepository;
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
-    private readonly IEventPublisher _eventPublisher;
 
-    public WarehouseManager(IRepository<Warehouse> warehouseRepository, IEntityDataReader<Warehouse> warehouseEntityDataReader, IEventPublisher eventPublisher)
+    public WarehouseManager(IRepository<Warehouse> warehouseRepository, IEntityDataReader<Warehouse> warehouseEntityDataReader)
     {
         _warehouseRepository = warehouseRepository;
         _warehouseDataReader = warehouseEntityDataReader;
-        _eventPublisher = eventPublisher;
     }
 
     public async Task<CreateWarehouseResultDto> CreateWarehouseAsync(CreateWarehouseDto dto)
@@ -42,9 +39,9 @@ public sealed class WarehouseManager : IWarehouseManager
             ManagerUserId = dto.ManagerUserId
         };
         warehouse.SetActive(dto.IsActive);
-        var insertedWarehouse = await _warehouseRepository.InsertAsync(warehouse).ConfigureAwait(false);
+        warehouse.MarkCreated();
 
-        await _eventPublisher.EntityCreated(insertedWarehouse).ConfigureAwait(false);
+        var insertedWarehouse = await _warehouseRepository.InsertAsync(warehouse).ConfigureAwait(false);
 
         return new CreateWarehouseResultDto
         {
@@ -58,9 +55,9 @@ public sealed class WarehouseManager : IWarehouseManager
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(id);
 
-        await _warehouseRepository.DeleteAsync(warehouse).ConfigureAwait(false);
+        warehouse.MarkDeleted();
 
-        await _eventPublisher.EntityDeleted(warehouse).ConfigureAwait(false);
+        await _warehouseRepository.DeleteAsync(warehouse).ConfigureAwait(false);
     }
 
     public Task<bool> DoesCodeExistAsync(string code, Guid? comparesWithCurrentId = null)
@@ -142,10 +139,9 @@ public sealed class WarehouseManager : IWarehouseManager
         warehouse.ManagerUserId = dto.ManagerUserId;
         warehouse.ChangeType(dto.WarehouseType);
         warehouse.SetActive(dto.IsActive);
+        warehouse.MarkUpdated();
 
         var result = await _warehouseRepository.UpdateAsync(warehouse).ConfigureAwait(false);
-
-        await _eventPublisher.EntityUpdated(warehouse).ConfigureAwait(false);
 
         return new UpdateWarehouseResultDto(result.Id)
         {

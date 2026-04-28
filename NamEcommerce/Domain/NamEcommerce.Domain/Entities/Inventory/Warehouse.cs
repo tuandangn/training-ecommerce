@@ -1,6 +1,7 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Domain.Shared.Events.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Helpers;
 
@@ -81,6 +82,24 @@ public sealed record Warehouse : AppAggregateEntity
     internal void ChangeType(WarehouseType newType) => WarehouseType = newType;
 
     internal void SetActive(bool isActive) => IsActive = isActive;
+
+    /// <summary>
+    /// Đánh dấu kho vừa được khởi tạo — Manager gọi trước <c>InsertAsync</c>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new WarehouseCreated(Id, Code, Name));
+
+    /// <summary>
+    /// Đánh dấu kho vừa được cập nhật — raise <see cref="WarehouseUpdated"/>.
+    /// </summary>
+    internal void MarkUpdated()
+        => RaiseDomainEvent(new WarehouseUpdated(Id));
+
+    /// <summary>
+    /// Đánh dấu kho bị xoá — Manager gọi trước <c>DeleteAsync</c>.
+    /// </summary>
+    internal void MarkDeleted()
+        => RaiseDomainEvent(new WarehouseDeleted(Id, Code, Name));
 
     #endregion
 }

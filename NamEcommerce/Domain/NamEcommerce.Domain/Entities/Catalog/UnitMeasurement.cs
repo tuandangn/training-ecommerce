@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Events.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
 
@@ -39,6 +40,25 @@ public sealed record UnitMeasurement : AppAggregateEntity
         Name = name;
         NormalizedName = TextHelper.Normalize(name);
     }
+
+    /// <summary>
+    /// Đánh dấu đơn vị đo vừa được khởi tạo — Manager gọi trước <c>InsertAsync</c>.
+    /// Event sẽ được dispatch sau khi <c>SaveChanges</c> thành công bởi <c>DomainEventDispatchInterceptor</c>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new UnitMeasurementCreated(Id, Name));
+
+    /// <summary>
+    /// Đánh dấu đơn vị đo vừa được cập nhật (đổi tên hoặc DisplayOrder) — raise <see cref="UnitMeasurementUpdated"/>.
+    /// </summary>
+    internal void MarkUpdated()
+        => RaiseDomainEvent(new UnitMeasurementUpdated(Id));
+
+    /// <summary>
+    /// Đánh dấu đơn vị đo bị xoá — Manager gọi trước khi <c>DeleteAsync</c> để raise <see cref="UnitMeasurementDeleted"/>.
+    /// </summary>
+    internal void MarkDeleted()
+        => RaiseDomainEvent(new UnitMeasurementDeleted(Id, Name));
 
     #endregion
 }
