@@ -1,6 +1,7 @@
 using Moq;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
+using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Services.GoodsReceipts;
@@ -8,6 +9,7 @@ using NamEcommerce.Domain.Services.Test.Helpers;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Events.Entities;
 using NamEcommerce.Domain.Entities.Catalog;
@@ -16,6 +18,7 @@ using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.Media;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Domain.Shared.Settings;
+using System.Reflection;
 
 namespace NamEcommerce.Domain.Services.Test.Services;
 
@@ -932,6 +935,351 @@ public sealed class GoodsReceiptManagerTests
 
         Assert.Equal(goodsReceipt.Id, result.UpdatedId);
         goodsReceiptRepositoryMock.Verify();
+    }
+
+    #endregion
+
+    // ───────────────────────────────────────────────────────────────────────
+    // GetSuggestedPurchaseOrdersAsync
+    // ───────────────────────────────────────────────────────────────────────
+
+    #region GetSuggestedPurchaseOrdersAsync
+
+    /// <summary>
+    /// Tạo một <see cref="GoodsReceipt"/> đã có received date + nhiều items.
+    /// Dùng <see cref="WarehouseSettings.AllowNonWarehouse"/>=true để không phải mock warehouse.
+    /// </summary>
+    private static async Task<GoodsReceipt> BuildGoodsReceiptWithItemsAsync(
+        DateTime receivedOnUtc,
+        params (Guid ProductId, decimal? UnitCost, decimal Quantity)[] specs)
+    {
+        var goodsReceipt = await BuildGoodsReceiptAsync();
+        goodsReceipt.SetReceivedDate(receivedOnUtc);
+
+        var warehouseSettings = new WarehouseSettings { AllowNonWarehouse = true };
+
+        foreach (var (productId, unitCost, quantity) in specs)
+        {
+            var product = new Product(productId, $"product-{productId}");
+            var productReaderStub = ProductDataReader.ProductById(productId, product);
+
+            await goodsReceipt.AddItemAsync(
+                productId, warehouseId: null, quantity, unitCost,
+                productReaderStub.Object, warehouseSettings, warehouseByIdGetter: null!);
+        }
+
+        return goodsReceipt;
+    }
+
+    /// <summary>
+    /// Tạo một <see cref="PurchaseOrder"/> phục vụ kiểm thử logic gợi ý:
+    /// builder cho meta data + reflection để add items (bypass Product/Vendor lookup chains)
+    /// + ChangeStatus để đưa về status mong muốn.
+    /// </summary>
+    private static async Task<PurchaseOrder> BuildPurchaseOrderForSuggestionAsync(
+        string code, Guid vendorId, DateTime placedOnUtc, PurchaseOrderStatus status,
+        params (Guid ProductId, decimal UnitCost, decimal QuantityOrdered, decimal QuantityReceived)[] specs)
+    {
+        var purchaseOrderByIdGetterMock = new Mock<IGetByIdService<PurchaseOrder>>();
+        purchaseOrderByIdGetterMock
+            .Setup(g => g.GetByIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync((PurchaseOrder)null!);
+
+        var codeCheckerMock = new Mock<ICodeExistCheckingService>();
+        codeCheckerMock
+            .Setup(c => c.DoesCodeExistAsync(code))
+            .ReturnsAsync(false);
+
+        var vendorByIdGetterMock = new Mock<IGetByIdService<Vendor>>();
+        vendorByIdGetterMock
+            .Setup(g => g.GetByIdAsync(vendorId))
+            .ReturnsAsync(new Vendor(vendorId, "vendor-name", "0900000000"));
+
+        var currentUserMock = new Mock<ICurrentUserAccessor>();
+        currentUserMock
+            .Setup(u => u.GetCurrentUserAsync())
+            .ReturnsAsync((CurrentUserInfoDto?)null);
+
+        var purchaseOrder = await PurchaseOrder.CreateBuilder()
+            .WithCode(code, codeCheckerMock.Object)
+            .WithVendor(vendorId, vendorByIdGetterMock.Object)
+            .BuildAsync(purchaseOrderByIdGetterMock.Object, currentUserMock.Object);
+
+        purchaseOrder.SetPlacedDate(placedOnUtc);
+
+        // Thêm items qua reflection vào _items (private List<PurchaseOrderItem>) để bỏ qua
+        // các check Product/Vendor của AddPurchaseOrderItemAsync — không liên quan đến nghiệp vụ
+        // gợi ý PO.
+        var itemsField = typeof(PurchaseOrder)
+            .GetField("_items", BindingFlags.Instance | BindingFlags.NonPublic);
+        var itemsList = (List<PurchaseOrderItem>)itemsField!.GetValue(purchaseOrder)!;
+
+        foreach (var (productId, unitCost, qtyOrdered, qtyReceived) in specs)
+        {
+            var item = new PurchaseOrderItem(purchaseOrder.Id, productId, qtyOrdered, unitCost);
+            if (qtyReceived > 0)
+                item.AddQuantityReceived(qtyReceived);
+            itemsList.Add(item);
+        }
+
+        if (status != PurchaseOrderStatus.Draft)
+            purchaseOrder.ChangeStatus(status);
+
+        return purchaseOrder;
+    }
+
+    [Fact]
+    public async Task GetSuggestedPurchaseOrdersAsync_ExactMatchOnProductIdAndUnitCost_ReturnsScore100AndIsFullMatch()
+    {
+        // GR có 10 cái sản phẩm A với UnitCost = 50,000.
+        // PO Approved trước ngày nhận, có 20 cái A@50,000 (đủ remaining).
+        // → matched = 10, score = 100, IsFullMatch = true.
+        var productId = Guid.NewGuid();
+        var unitCost = 50_000m;
+
+        var goodsReceipt = await BuildGoodsReceiptWithItemsAsync(
+            receivedOnUtc: new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+            (productId, unitCost, 10m));
+
+        var purchaseOrder = await BuildPurchaseOrderForSuggestionAsync(
+            code: "PO-EXACT",
+            vendorId: Guid.NewGuid(),
+            placedOnUtc: new DateTime(2026, 4, 10, 0, 0, 0, DateTimeKind.Utc),
+            status: PurchaseOrderStatus.Approved,
+            (productId, unitCost, 20m, 0m));
+
+        var goodsReceiptDataReaderStub = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
+        var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(purchaseOrder);
+        var manager = new GoodsReceiptManager(
+            null!, goodsReceiptDataReaderStub.Object,
+            null!, null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object);
+
+        var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
+
+        Assert.Single(results);
+        Assert.Equal(100, results[0].MatchScore);
+        Assert.True(results[0].IsFullMatch);
+        Assert.Equal(purchaseOrder.Id, results[0].PurchaseOrderId);
+    }
+
+    [Fact]
+    public async Task GetSuggestedPurchaseOrdersAsync_GrItemHasNoUnitCost_PartialMatchByProductIdReturnsScoreLessThan100()
+    {
+        // GR yêu cầu 10 cái sản phẩm A nhưng chưa định giá (UnitCost = null).
+        // PO Approved chỉ còn 4 cái A (5 ordered - 1 received) → matched=4, score = 40, IsFullMatch = false.
+        var productId = Guid.NewGuid();
+
+        var goodsReceipt = await BuildGoodsReceiptWithItemsAsync(
+            receivedOnUtc: new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+            (productId, (decimal?)null, 10m));
+
+        var purchaseOrder = await BuildPurchaseOrderForSuggestionAsync(
+            code: "PO-PARTIAL",
+            vendorId: Guid.NewGuid(),
+            placedOnUtc: new DateTime(2026, 4, 10, 0, 0, 0, DateTimeKind.Utc),
+            status: PurchaseOrderStatus.Approved,
+            (productId, 50_000m, 5m, 1m));
+
+        var goodsReceiptDataReaderStub = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
+        var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(purchaseOrder);
+        var manager = new GoodsReceiptManager(
+            null!, goodsReceiptDataReaderStub.Object,
+            null!, null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object);
+
+        var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
+
+        Assert.Single(results);
+        Assert.Equal(40, results[0].MatchScore);
+        Assert.False(results[0].IsFullMatch);
+    }
+
+    [Fact]
+    public async Task GetSuggestedPurchaseOrdersAsync_PoPlacedAfterGrReceived_IsExcluded()
+    {
+        // PO có PlacedOnUtc > GR.ReceivedOnUtc → không thể là PO mà GR nhận hàng cho.
+        var productId = Guid.NewGuid();
+        var goodsReceipt = await BuildGoodsReceiptWithItemsAsync(
+            receivedOnUtc: new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc),
+            (productId, 50_000m, 10m));
+
+        var futurePurchaseOrder = await BuildPurchaseOrderForSuggestionAsync(
+            code: "PO-FUTURE",
+            vendorId: Guid.NewGuid(),
+            placedOnUtc: new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc),
+            status: PurchaseOrderStatus.Approved,
+            (productId, 50_000m, 10m, 0m));
+
+        var goodsReceiptDataReaderStub = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
+        var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(futurePurchaseOrder);
+        var manager = new GoodsReceiptManager(
+            null!, goodsReceiptDataReaderStub.Object,
+            null!, null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object);
+
+        var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task GetSuggestedPurchaseOrdersAsync_PoStatusIsDraftSubmittedCompletedOrCancelled_IsExcluded()
+    {
+        // Chỉ PO trong trạng thái Approved hoặc Receiving mới được gợi ý — các trạng thái còn lại bị loại.
+        var productId = Guid.NewGuid();
+        var goodsReceipt = await BuildGoodsReceiptWithItemsAsync(
+            receivedOnUtc: new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+            (productId, 50_000m, 10m));
+
+        var draftPurchaseOrder = await BuildPurchaseOrderForSuggestionAsync(
+            code: "PO-DRAFT", vendorId: Guid.NewGuid(),
+            placedOnUtc: new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc),
+            status: PurchaseOrderStatus.Draft,
+            (productId, 50_000m, 10m, 0m));
+
+        var submittedPurchaseOrder = await BuildPurchaseOrderForSuggestionAsync(
+            code: "PO-SUBMITTED", vendorId: Guid.NewGuid(),
+            placedOnUtc: new DateTime(2026, 4, 2, 0, 0, 0, DateTimeKind.Utc),
+            status: PurchaseOrderStatus.Submitted,
+            (productId, 50_000m, 10m, 0m));
+
+        var completedPurchaseOrder = await BuildPurchaseOrderForSuggestionAsync(
+            code: "PO-COMPLETED", vendorId: Guid.NewGuid(),
+            placedOnUtc: new DateTime(2026, 4, 3, 0, 0, 0, DateTimeKind.Utc),
+            status: PurchaseOrderStatus.Completed,
+            (productId, 50_000m, 10m, 0m));
+
+        var cancelledPurchaseOrder = await BuildPurchaseOrderForSuggestionAsync(
+            code: "PO-CANCELLED", vendorId: Guid.NewGuid(),
+            placedOnUtc: new DateTime(2026, 4, 4, 0, 0, 0, DateTimeKind.Utc),
+            status: PurchaseOrderStatus.Cancelled,
+            (productId, 50_000m, 10m, 0m));
+
+        var goodsReceiptDataReaderStub = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
+        var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(
+            draftPurchaseOrder, submittedPurchaseOrder, completedPurchaseOrder, cancelledPurchaseOrder);
+        var manager = new GoodsReceiptManager(
+            null!, goodsReceiptDataReaderStub.Object,
+            null!, null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object);
+
+        var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task GetSuggestedPurchaseOrdersAsync_NoCandidatePurchaseOrder_ReturnsEmptyListWithoutThrowing()
+    {
+        // Không có PO nào trong hệ thống → trả empty list, không throw.
+        var productId = Guid.NewGuid();
+        var goodsReceipt = await BuildGoodsReceiptWithItemsAsync(
+            receivedOnUtc: new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+            (productId, 50_000m, 10m));
+
+        var goodsReceiptDataReaderStub = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
+        var purchaseOrderDataReaderStub = PurchaseOrderDataReader.Empty();
+        var manager = new GoodsReceiptManager(
+            null!, goodsReceiptDataReaderStub.Object,
+            null!, null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object);
+
+        var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
+
+        Assert.NotNull(results);
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task GetSuggestedPurchaseOrdersAsync_MultiplePoWithDifferentScoresAndDates_OrdersByFullMatchThenScoreThenPlacedDateDesc()
+    {
+        // Sắp xếp: IsFullMatch desc → MatchScore desc → PlacedOnUtc desc.
+        // GR yêu cầu 10 cái A@50K.
+        //  - olderFullMatch:  10 ordered, 0 received → matched 10/10 = 100, placed 2026-04-01
+        //  - newerFullMatch:  10 ordered, 0 received → matched 10/10 = 100, placed 2026-04-20
+        //  - partialMatch:     5 ordered, 0 received → matched  5/10 =  50, placed 2026-04-15
+        // Expected order: newerFullMatch → olderFullMatch → partialMatch
+        var productId = Guid.NewGuid();
+        var unitCost = 50_000m;
+
+        var goodsReceipt = await BuildGoodsReceiptWithItemsAsync(
+            receivedOnUtc: new DateTime(2026, 4, 28, 0, 0, 0, DateTimeKind.Utc),
+            (productId, unitCost, 10m));
+
+        var olderFullMatch = await BuildPurchaseOrderForSuggestionAsync(
+            code: "PO-OLDER-FULL", vendorId: Guid.NewGuid(),
+            placedOnUtc: new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc),
+            status: PurchaseOrderStatus.Approved,
+            (productId, unitCost, 10m, 0m));
+
+        var newerFullMatch = await BuildPurchaseOrderForSuggestionAsync(
+            code: "PO-NEWER-FULL", vendorId: Guid.NewGuid(),
+            placedOnUtc: new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+            status: PurchaseOrderStatus.Approved,
+            (productId, unitCost, 10m, 0m));
+
+        var partialMatch = await BuildPurchaseOrderForSuggestionAsync(
+            code: "PO-PARTIAL", vendorId: Guid.NewGuid(),
+            placedOnUtc: new DateTime(2026, 4, 15, 0, 0, 0, DateTimeKind.Utc),
+            status: PurchaseOrderStatus.Approved,
+            (productId, unitCost, 5m, 0m));
+
+        var goodsReceiptDataReaderStub = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
+        var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(
+            partialMatch, olderFullMatch, newerFullMatch);
+        var manager = new GoodsReceiptManager(
+            null!, goodsReceiptDataReaderStub.Object,
+            null!, null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object);
+
+        var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
+
+        Assert.Equal(3, results.Count);
+        Assert.Equal(newerFullMatch.Id, results[0].PurchaseOrderId);
+        Assert.Equal(olderFullMatch.Id, results[1].PurchaseOrderId);
+        Assert.Equal(partialMatch.Id, results[2].PurchaseOrderId);
+        Assert.True(results[0].IsFullMatch);
+        Assert.True(results[1].IsFullMatch);
+        Assert.False(results[2].IsFullMatch);
+    }
+
+    [Fact]
+    public async Task GetSuggestedPurchaseOrdersAsync_PoVendorDifferentFromGr_StillSuggestedWhenItemsMatch()
+    {
+        // Bộ lọc gợi ý KHÔNG so sánh VendorId — PO khác Vendor với GR vẫn xuất hiện nếu items khớp.
+        var productId = Guid.NewGuid();
+        var unitCost = 50_000m;
+
+        var goodsReceipt = await BuildGoodsReceiptWithItemsAsync(
+            receivedOnUtc: new DateTime(2026, 4, 20, 0, 0, 0, DateTimeKind.Utc),
+            (productId, unitCost, 10m));
+
+        var goodsReceiptVendorId = Guid.NewGuid();
+        goodsReceipt.SetVendor(goodsReceiptVendorId, "GR Vendor", vendorPhone: null, vendorAddress: null);
+
+        var purchaseOrderVendorId = Guid.NewGuid();
+        var purchaseOrder = await BuildPurchaseOrderForSuggestionAsync(
+            code: "PO-DIFF-VENDOR",
+            vendorId: purchaseOrderVendorId,
+            placedOnUtc: new DateTime(2026, 4, 1, 0, 0, 0, DateTimeKind.Utc),
+            status: PurchaseOrderStatus.Approved,
+            (productId, unitCost, 10m, 0m));
+
+        Assert.NotEqual(goodsReceipt.VendorId, purchaseOrder.VendorId);
+
+        var goodsReceiptDataReaderStub = GoodsReceiptDataReader.GoodsReceiptById(goodsReceipt.Id, goodsReceipt);
+        var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(purchaseOrder);
+        var manager = new GoodsReceiptManager(
+            null!, goodsReceiptDataReaderStub.Object,
+            null!, null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object);
+
+        var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
+
+        Assert.Single(results);
+        Assert.Equal(purchaseOrder.Id, results[0].PurchaseOrderId);
+        Assert.Equal(purchaseOrderVendorId, results[0].VendorId);
     }
 
     #endregion

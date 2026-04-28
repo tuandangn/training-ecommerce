@@ -1,6 +1,7 @@
 using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Events.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Media;
 using NamEcommerce.Domain.Shared.Helpers;
@@ -168,6 +169,34 @@ public record Product : AppAggregateEntity
         UnitPrice = unitPrice;
         CostPrice = costPrice;
     }
+
+    /// <summary>
+    /// Đánh dấu sản phẩm vừa được khởi tạo — Manager gọi trước <c>InsertAsync</c>.
+    /// Event sẽ được dispatch sau khi <c>SaveChanges</c> thành công bởi <c>DomainEventDispatchInterceptor</c>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new ProductCreated(Id, Name));
+
+    /// <summary>
+    /// Đánh dấu sản phẩm vừa được cập nhật. <paramref name="deletedPictureIds"/> là các ảnh
+    /// không còn liên kết với product — handler sẽ dọn dẹp khỏi storage.
+    /// </summary>
+    internal void MarkUpdated(IEnumerable<Guid> deletedPictureIds)
+        => RaiseDomainEvent(new ProductUpdated(Id, deletedPictureIds.ToList().AsReadOnly()));
+
+    /// <summary>
+    /// Đánh dấu sản phẩm bị xoá — Manager gọi trước <c>DeleteAsync</c>.
+    /// Event mang theo toàn bộ <see cref="ProductPicture"/> hiện tại để handler dọn ảnh khỏi storage.
+    /// </summary>
+    internal void MarkDeleted()
+        => RaiseDomainEvent(new ProductDeleted(Id, Name, _productPictures.Select(p => p.PictureId).ToList().AsReadOnly()));
+
+    /// <summary>
+    /// Đánh dấu giá bán/giá vốn vừa thay đổi — Manager gọi sau khi <see cref="UpdatePrice"/> để raise
+    /// <see cref="ProductPriceChanged"/> với giá cũ + giá mới phục vụ ghi history.
+    /// </summary>
+    internal void MarkPriceChanged(decimal oldUnitPrice, decimal oldCostPrice)
+        => RaiseDomainEvent(new ProductPriceChanged(Id, oldUnitPrice, UnitPrice, oldCostPrice, CostPrice));
 
     #endregion
 }

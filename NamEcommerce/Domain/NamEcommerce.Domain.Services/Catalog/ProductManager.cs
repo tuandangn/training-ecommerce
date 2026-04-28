@@ -5,7 +5,6 @@ using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Dtos.Common;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Catalog;
@@ -22,11 +21,10 @@ public sealed class ProductManager : IProductManager
     private readonly IRepository<ProductPriceHistory> _priceHistoryRepository;
     private readonly IEntityDataReader<ProductPriceHistory> _priceHistoryDataReader;
     private readonly IEntityDataReader<Vendor> _vendorDataReader;
-    private readonly IEventPublisher _eventPublisher;
 
     public ProductManager(IRepository<Product> productRepository,
         IEntityDataReader<Product> productEntityDataReader, IEntityDataReader<Category> categoryDataReader,
-        IEntityDataReader<Picture> pictureDataReader, IEventPublisher eventPublisher,
+        IEntityDataReader<Picture> pictureDataReader,
         IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
         IRepository<ProductPriceHistory> priceHistoryRepository,
         IEntityDataReader<ProductPriceHistory> priceHistoryDataReader,
@@ -40,7 +38,6 @@ public sealed class ProductManager : IProductManager
         _priceHistoryRepository = priceHistoryRepository;
         _priceHistoryDataReader = priceHistoryDataReader;
         _vendorDataReader = vendorDataReader;
-        _eventPublisher = eventPublisher;
     }
 
     public async Task<CreateProductResultDto> CreateProductAsync(CreateProductDto dto)
@@ -64,9 +61,8 @@ public sealed class ProductManager : IProductManager
         foreach (var vendorInfo in dto.Vendors)
             await product.AddVendorAsync(vendorInfo.VendorId, vendorInfo.DisplayOrder, _vendorDataReader).ConfigureAwait(false);
 
+        product.MarkCreated();
         var insertedProduct = await _productRepository.InsertAsync(product).ConfigureAwait(false);
-
-        await _eventPublisher.EntityCreated(insertedProduct).ConfigureAwait(false);
 
         return new CreateProductResultDto
         {
@@ -80,9 +76,8 @@ public sealed class ProductManager : IProductManager
         if (product is null)
             throw new ProductIsNotFoundException(id);
 
+        product.MarkDeleted();
         await _productRepository.DeleteAsync(product).ConfigureAwait(false);
-
-        await _eventPublisher.EntityDeleted(product).ConfigureAwait(false);
     }
 
     public Task<bool> DoesNameExistAsync(string name, Guid? comparesWithCurrentId = null)
@@ -226,9 +221,8 @@ public sealed class ProductManager : IProductManager
         foreach (var vendorInfo in dto.Vendors)
             await product.AddVendorAsync(vendorInfo.VendorId, vendorInfo.DisplayOrder, _vendorDataReader).ConfigureAwait(false);
 
+        product.MarkUpdated(deletedPictureIds);
         await _productRepository.UpdateAsync(product).ConfigureAwait(false);
-
-        await _eventPublisher.EntityUpdated(product, deletedPictureIds).ConfigureAwait(false);
 
         return new UpdateProductResultDto(product.Id)
         {
@@ -287,12 +281,11 @@ public sealed class ProductManager : IProductManager
             return;
 
         product.UpdatePrice(dto.UnitPrice, dto.UnitCost);
+        product.MarkPriceChanged(oldUnitPrice, oldCostPrice);
         await _productRepository.UpdateAsync(product).ConfigureAwait(false);
 
         await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(
             product.Id, oldUnitPrice, product.UnitPrice, oldCostPrice, product.CostPrice,
             dto.ChangePriceReason ?? "Cập nhật giá hàng hóa")).ConfigureAwait(false);
-
-        await _eventPublisher.EntityUpdated(product).ConfigureAwait(false);
     }
 }
