@@ -37,8 +37,9 @@ public sealed class ProductModelFactory : IProductModelFactory
         {
             ProductStocks = warehouseOptions.Select(warehouse => new CreateProductModel.ProductStockModel
             {
-                WarehouseId = warehouse.Id
-            })
+                WarehouseId = warehouse.Id,
+                WarehouseName = warehouse.Name
+            }).ToList()
         };
 
         return model;

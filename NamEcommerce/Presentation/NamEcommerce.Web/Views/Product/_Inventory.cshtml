@@ -1,0 +1,31 @@
+﻿@model CreateProductModel.ProductInventoryModel
+<div class="row g-3">
+    <div class="col-sm-6 col-md-4 col-lg-3">
+        <label asp-for="CostPrice" class="form-label"></label>
+        <input asp-for="CostPrice" class="form-control" placeholder="Giá vốn"
+               data-decimal="currency" />
+        <span asp-validation-for="CostPrice" class="text-danger small"></span>
+    </div>
+    <div class="col-sm-6 col-md-4 col-lg-3">
+        <label asp-for="UnitPrice" class="form-label"></label>
+        <input asp-for="UnitPrice" class="form-control" placeholder="Giá bán"
+               data-decimal="currency" />
+        <span asp-validation-for="UnitPrice" class="text-danger small"></span>
+    </div>
+    <div class="col-12">
+        <div class="row border rounded p-3">
+            @for(var i = 0; i < Model.ProductStocks.Count(); i++)
+            {
+                var productStock = Model.ProductStocks.ElementAt(i);
+                <div class="col-sm-4 col-md-6 col-lg-4">
+                    <input type="hidden" asp-for="ProductStocks[i].WarehouseId" />
+                    <label asp-for="ProductStocks[i].Quantity" class="form-label">@productStock.WarehouseName</label>
+                    <input asp-for="ProductStocks[i].Quantity" class="form-control" placeholder="Số lượng"
+                           data-decimal="quantity" />
+                    <span asp-validation-for="ProductStocks[i].Quantity" class="text-danger small"></span>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
