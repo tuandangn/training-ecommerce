@@ -125,7 +125,7 @@
                             </div>
                             <span asp-validation-for="HasExistingStockQuantity" class="text-danger small"></span>
                         </div>
-                        <div class="col-12 d-none" id="inventoryContainer">
+                        <div class="col-12 @(Model.HasExistingStockQuantity ? "" : "d-none")" id="inventoryContainer">
                             <partial name="_Inventory" for="ProductInventory" />
                         </div>
                     </div>

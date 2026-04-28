@@ -11,6 +11,7 @@ using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
@@ -29,7 +30,8 @@ public sealed class GoodsReceiptManager(
     IEntityDataReader<Picture> pictureDataReader,
     IEntityDataReader<StockMovementLog> stockMovementLogDataReader,
     IEntityDataReader<Vendor> vendorDataReader,
-    IEventPublisher eventPublisher, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader) : IGoodsReceiptManager
+    IEventPublisher eventPublisher, 
+    IEntityDataReader<PurchaseOrder> purchaseOrderDataReader) : IGoodsReceiptManager
 {
     public async Task<CreateGoodsReceiptResultDto> CreateGoodsReceiptAsync(CreateGoodsReceiptDto dto)
     {
@@ -217,6 +219,102 @@ public sealed class GoodsReceiptManager(
         throw new NotImplementedException();
     }
 
+    public async Task<IList<SuggestedPurchaseOrderForGoodsReceiptDto>> GetSuggestedPurchaseOrdersAsync(Guid goodsReceiptId)
+    {
+        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(goodsReceiptId).ConfigureAwait(false);
+        if (goodsReceipt is null)
+            throw new GoodsReceiptIsNotFoundException(goodsReceiptId);
+
+        // Chỉ lấy PO đặt trước ngày nhận hàng và đang ở trạng thái có thể nhận hàng.
+        var candidateOrders = purchaseOrderDataReader.DataSource
+            .Where(po => po.PlacedOnUtc < goodsReceipt.ReceivedOnUtc
+                      && (po.Status == PurchaseOrderStatus.Approved || po.Status == PurchaseOrderStatus.Receiving))
+            .ToList();
+
+        if (candidateOrders.Count == 0)
+            return [];
+
+        // GR items gộp theo (ProductId, UnitCost) — UnitCost null = chưa định giá (pending costing).
+        var grGroups = goodsReceipt.Items
+            .GroupBy(i => (i.ProductId, i.UnitCost))
+            .Select(g => (Key: g.Key, ReceivingQty: g.Sum(i => i.Quantity)))
+            .ToList();
+
+        var totalGrQty = grGroups.Sum(g => g.ReceivingQty);
+        if (totalGrQty == 0)
+            return [];
+
+        var results = new List<SuggestedPurchaseOrderForGoodsReceiptDto>();
+
+        foreach (var po in candidateOrders)
+        {
+            // PO items gộp theo (ProductId, UnitCost) — tính số lượng còn lại chưa nhận.
+            var poRemainingMap = po.Items
+                .GroupBy(i => (i.ProductId, i.UnitCost))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Sum(i => i.QuantityOrdered - i.QuantityReceived));
+
+            decimal matchedQty = 0;
+
+            foreach (var grGroup in grGroups)
+            {
+                var (productId, unitCost) = grGroup.Key;
+                var receivingQty = grGroup.ReceivingQty;
+
+                if (unitCost.HasValue)
+                {
+                    // Exact match: cùng ProductId và cùng UnitCost.
+                    if (poRemainingMap.TryGetValue((productId, unitCost.Value), out var exactRemaining))
+                        matchedQty += Math.Min(exactRemaining, receivingQty);
+                }
+                else
+                {
+                    // Partial match: cùng ProductId, bất kỳ UnitCost — duyệt theo thứ tự để consume hết remaining.
+                    var remaining = receivingQty;
+                    foreach (var poKey in poRemainingMap.Keys
+                                 .Where(k => k.ProductId == productId && poRemainingMap[k] > 0)
+                                 .ToList())
+                    {
+                        var canMatch = Math.Min(poRemainingMap[poKey], remaining);
+                        matchedQty += canMatch;
+                        remaining -= canMatch;
+                        if (remaining == 0) break;
+                    }
+                }
+            }
+
+            var score = (int)Math.Round(matchedQty / totalGrQty * 100);
+            score = Math.Clamp(score, 0, 100);
+
+            var items = po.Items.Select(i => new SuggestedPurchaseOrderItemForGoodsReceiptDto
+            {
+                ProductId = i.ProductId,
+                QuantityOrdered = i.QuantityOrdered,
+                QuantityReceived = i.QuantityReceived,
+                UnitCost = i.UnitCost
+            }).ToList();
+
+            results.Add(new SuggestedPurchaseOrderForGoodsReceiptDto
+            {
+                PurchaseOrderId = po.Id,
+                PurchaseOrderCode = po.Code,
+                PlacedOnUtc = po.PlacedOnUtc,
+                VendorId = po.VendorId,
+                MatchScore = score,
+                IsFullMatch = score == 100,
+                Items = items
+            });
+        }
+
+        return results
+            .OrderByDescending(r => r.IsFullMatch)
+            .ThenByDescending(r => r.MatchScore)
+            .ThenByDescending(r => r.PlacedOnUtc)
+            .Take(20)
+            .ToList();
+    }
+
     public async Task SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -226,9 +324,6 @@ public sealed class GoodsReceiptManager(
             throw new GoodsReceiptIsNotFoundException(dto.Id);
 
         if (goodsReceipt.PurchaseOrderId.HasValue)
-            throw new GoodsReceiptCannotSetToPurchaseOrderException();
-
-        if (goodsReceipt.VendorId.HasValue)
             throw new GoodsReceiptCannotSetToPurchaseOrderException();
 
         var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);

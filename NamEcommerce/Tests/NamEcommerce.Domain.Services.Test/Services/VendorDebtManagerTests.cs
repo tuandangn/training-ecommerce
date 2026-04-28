@@ -10,7 +10,7 @@ using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
-using NamEcommerce.Domain.Shared.Events;
+using NamEcommerce.Domain.Shared.Events.Debts;
 using NamEcommerce.Domain.Shared.Exceptions.Debts;
 using NamEcommerce.Domain.Shared.Services.Users;
 
@@ -60,8 +60,7 @@ public sealed class VendorDebtManagerTests
         Mock<IEntityDataReader<VendorPayment>>? paymentReader = null,
         Mock<IEntityDataReader<Vendor>>? vendorReader = null,
         Mock<IEntityDataReader<PurchaseOrder>>? purchaseOrderReader = null,
-        Mock<IEntityDataReader<GoodsReceipt>>? goodsReceiptReader = null,
-        IEventPublisher? eventPublisher = null)
+        Mock<IEntityDataReader<GoodsReceipt>>? goodsReceiptReader = null)
         => new VendorDebtManager(
             debtRepo?.Object ?? null!,
             debtReader?.Object ?? null!,
@@ -69,8 +68,7 @@ public sealed class VendorDebtManagerTests
             paymentReader?.Object ?? null!,
             vendorReader?.Object ?? null!,
             purchaseOrderReader?.Object ?? null!,
-            goodsReceiptReader?.Object ?? null!,
-            eventPublisher ?? Mock.Of<IEventPublisher>());
+            goodsReceiptReader?.Object ?? null!);
 
     #endregion
 
@@ -196,21 +194,19 @@ public sealed class VendorDebtManagerTests
             TotalAmount = 2_000_000
         };
 
-        var expectedDebt = new VendorDebt(
-            code: "CNNCC-20260101-001",
-            vendorId: vendor.Id,
-            vendorName: vendor.Name,
-            purchaseOrderId: purchaseOrder.Id,
-            purchaseOrderCode: purchaseOrder.Code,
-            totalAmount: dto.TotalAmount,
-            dueDateUtc: null,
-            createdByUserId: null);
-
         var debtReaderStub = VendorDebtDataReader.Empty();
         var vendorReaderStub = VendorDataReader.VendorById(vendor.Id, vendor);
         var purchaseOrderReaderStub = PurchaseOrderDataReader.PurchaseOrderById(purchaseOrder.Id, purchaseOrder);
         var paymentReaderStub = VendorPaymentDataReader.Empty();
-        var debtRepoMock = VendorDebtRepository.InsertWillReturn(expectedDebt);
+
+        // Capture entity thực sự được Insert (chứa DomainEvents) thay vì dùng InsertWillReturn
+        VendorDebt? insertedDebt = null;
+        var debtRepoMock = new Mock<IRepository<VendorDebt>>();
+        debtRepoMock.Setup(r => r.InsertAsync(It.IsAny<VendorDebt>(), default))
+            .Callback<VendorDebt, CancellationToken>((d, _) => insertedDebt = d)
+            .ReturnsAsync((VendorDebt d, CancellationToken _) => d)
+            .Verifiable();
+
         var paymentRepoStub = new Mock<IRepository<VendorPayment>>();
         paymentRepoStub.Setup(r => r.UpdateAsync(It.IsAny<VendorPayment>(), default)).ReturnsAsync((VendorPayment p, CancellationToken _) => p);
 
@@ -224,10 +220,13 @@ public sealed class VendorDebtManagerTests
 
         var result = await manager.CreateDebtFromPurchaseOrderAsync(dto);
 
-        Assert.Equal(expectedDebt.Id, result.Id);
         Assert.Equal(dto.TotalAmount, result.TotalAmount);
         Assert.Equal(DebtStatus.Outstanding, result.Status);
         debtRepoMock.Verify();
+        // Verify domain event raise đúng — phải có VendorDebtCreated trong collection trước Insert
+        Assert.NotNull(insertedDebt);
+        Assert.Contains(insertedDebt!.DomainEvents.OfType<VendorDebtCreated>(),
+            e => e.VendorId == vendor.Id && e.TotalAmount == dto.TotalAmount && e.PurchaseOrderId == purchaseOrder.Id);
     }
 
     [Fact]
@@ -505,6 +504,9 @@ public sealed class VendorDebtManagerTests
 
         Assert.Equal(DebtStatus.FullyPaid, debt.Status);
         Assert.Equal(0, debt.RemainingAmount);
+        // Sau khi trả hết → debt phải có thêm event VendorDebtFullyPaid (ngoài VendorDebtUpdated)
+        Assert.Contains(debt.DomainEvents.OfType<VendorDebtFullyPaid>(),
+            e => e.VendorDebtId == debt.Id && e.VendorId == vendor.Id);
     }
 
     #endregion

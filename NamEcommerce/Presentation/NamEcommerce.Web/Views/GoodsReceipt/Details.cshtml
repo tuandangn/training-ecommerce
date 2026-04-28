@@ -118,13 +118,6 @@
                         <i class="bi bi-trash me-1"></i>Xóa phiếu
                     </button>
                 </form>
-                <form method="post" asp-action="SetToPurchaseOrder" asp-route-id="@Model.Id" id="setPurchaseOrderForm">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" id="purchaseOrderCode" name="code"/>
-                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="purchaseOrderCode.value = prompt('Nhập code: ');">
-                        Gắn đơn nhập
-                    </button>
-                </form>
             </div>
         </div>
     </div>
@@ -250,6 +243,51 @@
             </div>
         </div>
 
+        <!-- Phiếu đặt hàng -->
+        <div class="content-card mb-3" id="poLinkCard">
+            <div class="content-card-header">
+                <h5 class="mb-0">Phiếu đặt hàng</h5>
+                @if (!Model.PurchaseOrderId.HasValue)
+                {
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-light" id="btnSearchPoByCode">
+                            <i class="bi bi-search me-1"></i>Tìm theo mã
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnQuickCreatePo"
+                                data-bs-toggle="modal" data-bs-target="#quickCreatePoModal">
+                            <i class="bi bi-plus-lg me-1"></i>Tạo mới PO
+                        </button>
+                    </div>
+                }
+            </div>
+            <div class="content-card-body p-0">
+                @if (Model.PurchaseOrderId.HasValue)
+                {
+                    <!-- Đã link — hiển thị badge tĩnh -->
+                    <div class="px-3 py-3">
+                        <a asp-controller="PurchaseOrder" asp-action="Details" asp-route-id="@Model.PurchaseOrderId"
+                           class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none fs-6 px-3 py-2">
+                            <i class="bi bi-link-45deg me-1"></i>@Model.PurchaseOrderCode
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <!-- Chưa link — render danh sách gợi ý qua JS -->
+                    <div id="poSuggestionsPanel" data-receipt-id="@Model.Id">
+                        <div id="poSuggestionsLoading" class="px-3 py-3 text-center text-muted small">
+                            <span class="spinner-border spinner-border-sm me-1"></span>Đang tìm phiếu phù hợp...
+                        </div>
+                        <div id="poSuggestionsList" class="d-none"></div>
+                        <div id="poSuggestionsEmpty" class="d-none px-3 py-3 text-center text-muted small fst-italic">
+                            — Không tìm thấy phiếu đặt hàng phù hợp
+                        </div>
+                        <div id="poSuggestionsError" class="d-none px-3 py-2 text-danger small"></div>
+                    </div>
+                }
+            </div>
+        </div>
+
         <!-- Ảnh chụp -->
         <div class="content-card">
             <div class="content-card-header">
@@ -270,6 +308,112 @@
             </div>
         </div>
 
+    </div>
+</div>
+
+<!-- ── Modal: Tìm PO theo mã ── -->
+<div class="modal fade" id="searchPoByCodeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Tìm theo mã phiếu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <label class="form-label small fw-medium text-muted" for="poCodeInput">Mã phiếu đặt hàng</label>
+                <input type="text" id="poCodeInput" class="form-control" placeholder="VD: PO-2024-001" autocomplete="off" />
+                <div id="searchPoByCodeError" class="alert alert-danger d-none mt-2 py-2 mb-0 small"></div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnConfirmPoByCode" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal: Tạo nhanh PO từ GoodsReceipt ── -->
+<div class="modal fade" id="quickCreatePoModal" data-receipt-id="@Model.Id" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-plus me-2 text-primary"></i>Tạo phiếu đặt hàng từ phiếu nhập</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p class="text-muted small mb-3">
+                    Hệ thống sẽ tạo một PO mới với các mặt hàng bên dưới, sau đó tự động gắn vào phiếu nhập này.
+                </p>
+
+                <!-- Vendor picker -->
+                <div class="mb-3">
+                    <label class="form-label small fw-medium text-muted">Nhà cung cấp <span class="text-danger">*</span></label>
+                    <div id="quickPoVendorPicker"></div>
+                    <input type="hidden" id="quickPoSelectedVendorId" />
+                    <div id="quickPoVendorError" class="invalid-feedback d-none">Vui lòng chọn nhà cung cấp.</div>
+                </div>
+
+                <!-- Ngày đặt hàng -->
+                <div class="mb-3">
+                    <label class="form-label small fw-medium text-muted" for="quickPoPlacedOn">Ngày đặt hàng <span class="text-danger">*</span></label>
+                    <input type="datetime-local" id="quickPoPlacedOn" class="form-control"
+                           value="@Model.CreatedOn.ToString("s")" required />
+                </div>
+
+                <!-- Ghi chú -->
+                <div class="mb-3">
+                    <label class="form-label small fw-medium text-muted" for="quickPoNote">Ghi chú</label>
+                    <textarea id="quickPoNote" class="form-control" rows="2"
+                              placeholder="Ghi chú cho phiếu đặt hàng..." maxlength="2000"></textarea>
+                </div>
+
+                <!-- Items preview -->
+                <div>
+                    <label class="form-label small fw-medium text-muted mb-1">Hàng hóa sẽ được đưa vào PO</label>
+                    <div class="table-responsive rounded-3 border">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Sản phẩm</th>
+                                    <th class="text-end" style="width:100px">Số lượng</th>
+                                    <th class="text-end pe-3" style="width:140px">Đơn giá nhập</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Items)
+                                {
+                                    <tr>
+                                        <td class="ps-3 text-truncate" style="max-width:220px">@item.ProductName</td>
+                                        <td class="text-end">@item.Quantity.DisplayQuantity()</td>
+                                        <td class="text-end pe-3">
+                                            @if (item.UnitCost.HasValue)
+                                            {
+                                                <span>@item.UnitCost.Value.DisplayCurrency()</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-warning small"><i class="bi bi-hourglass-split me-1"></i>Chưa định giá</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="quickPoError" class="alert alert-danger d-none mt-3 py-2 mb-0"></div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnConfirmQuickCreatePo" class="btn btn-primary">
+                    <span class="spinner-border spinner-border-sm d-none me-1" id="quickPoSpinner"></span>
+                    <i class="bi bi-check-lg me-1" id="quickPoIcon"></i>Tạo & Gắn PO
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -401,6 +545,17 @@
 
     /* ── Product links ── */
     .details-product-link:hover { color: var(--bs-primary) !important; text-decoration: underline !important; }
+
+    /* ── PO Suggestion rows ── */
+    .po-suggestion-row {
+        display: flex; align-items: center; gap: .6rem;
+        padding: .6rem 1rem; border-bottom: 1px solid var(--bs-border-color-translucent);
+    }
+    .po-suggestion-row:last-child { border-bottom: none; }
+    .po-score-bar { height: 5px; flex: 1; border-radius: 3px; background: var(--bs-border-color); overflow: hidden; min-width: 40px; }
+    .po-score-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+    .po-score-full { background: var(--bs-success); }
+    .po-score-partial { background: var(--bs-warning); }
 
     /* ── Picture picker ── */
     .picture-upload-slot {
@@ -616,6 +771,226 @@
                 document.getElementById('setUnitCostError').classList.remove('d-none');
             }
         });
+
+        // ── Phiếu đặt hàng — Suggested PO ────────────────────────────────────
+        (function initPoSuggestions() {
+            const panel = document.getElementById('poSuggestionsPanel');
+            if (!panel) return; // Đã linked — không cần load
+
+            const receiptId = panel.dataset.receiptId;
+            const loadingEl = document.getElementById('poSuggestionsLoading');
+            const listEl    = document.getElementById('poSuggestionsList');
+            const emptyEl   = document.getElementById('poSuggestionsEmpty');
+            const errorEl   = document.getElementById('poSuggestionsError');
+
+            async function linkToPurchaseOrder(purchaseOrderId, poCode) {
+                if (!confirm(`Xác nhận gắn phiếu nhập này với phiếu đặt hàng "${poCode}"?`)) return;
+
+                const fd = new FormData();
+                fd.append('id', receiptId);
+                fd.append('purchaseOrderId', purchaseOrderId);
+                fd.append('__RequestVerificationToken', antiForgeryToken);
+
+                try {
+                    const res = await fetch('@Url.Action("SetToPurchaseOrder")', { method: 'POST', body: fd }).then(r => r.json());
+                    if (res.success) {
+                        location.reload();
+                    } else {
+                        alert(res.message || 'Gắn phiếu thất bại. Vui lòng thử lại.');
+                    }
+                } catch {
+                    alert('Lỗi kết nối. Vui lòng thử lại.');
+                }
+            }
+
+            function renderRow(po) {
+                const isFullMatch = po.isFullMatch;
+                const scoreClass  = isFullMatch ? 'po-score-full' : 'po-score-partial';
+                const badgeClass  = isFullMatch ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning border-warning-subtle';
+                const badgeIcon   = isFullMatch ? 'bi-check-circle-fill' : 'bi-lightning-charge-fill';
+                const badgeLabel  = isFullMatch ? 'Khớp hoàn toàn' : `Khớp ${po.matchScore}%`;
+                const placedDate  = new Date(po.placedOn).toLocaleDateString('vi-VN');
+
+                const row = document.createElement('div');
+                row.className = 'po-suggestion-row';
+                row.innerHTML = `
+                    <div style="flex:1;min-width:0;">
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <span class="badge border ${badgeClass} py-1" style="font-size:.7rem;">
+                                <i class="bi ${badgeIcon} me-1"></i>${badgeLabel}
+                            </span>
+                            <span class="fw-semibold text-truncate" style="font-size:.875rem;">${po.purchaseOrderCode}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted" style="font-size:.75rem;">${placedDate}</span>
+                            <div class="po-score-bar"><div class="po-score-fill ${scoreClass}" style="width:${po.matchScore}%"></div></div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0 btnSelectPo"
+                            data-po-id="${po.purchaseOrderId}" data-po-code="${po.purchaseOrderCode}">
+                        Chọn
+                    </button>`;
+
+                row.querySelector('.btnSelectPo').addEventListener('click', () => {
+                    linkToPurchaseOrder(po.purchaseOrderId, po.purchaseOrderCode);
+                });
+                return row;
+            }
+
+            async function loadSuggestions() {
+                try {
+                    const res = await fetch(`@Url.Action("GetSuggestedPurchaseOrders")?id=${receiptId}`).then(r => r.json());
+
+                    loadingEl.classList.add('d-none');
+
+                    if (!res || res.length === 0) {
+                        emptyEl.classList.remove('d-none');
+                        return;
+                    }
+
+                    res.forEach(po => listEl.appendChild(renderRow(po)));
+                    listEl.classList.remove('d-none');
+                } catch {
+                    loadingEl.classList.add('d-none');
+                    if (errorEl) {
+                        errorEl.textContent = 'Không thể tải danh sách phiếu đặt hàng.';
+                        errorEl.classList.remove('d-none');
+                    }
+                }
+            }
+
+            loadSuggestions();
+
+            // ── Tìm theo mã thủ công ──
+            document.getElementById('btnSearchPoByCode')?.addEventListener('click', () => {
+                document.getElementById('poCodeInput').value = '';
+                document.getElementById('searchPoByCodeError').classList.add('d-none');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('searchPoByCodeModal')).show();
+            });
+
+            document.getElementById('btnConfirmPoByCode')?.addEventListener('click', async () => {
+                const code = document.getElementById('poCodeInput').value.trim();
+                const errEl = document.getElementById('searchPoByCodeError');
+                errEl.classList.add('d-none');
+
+                if (!code) {
+                    errEl.textContent = 'Vui lòng nhập mã phiếu.';
+                    errEl.classList.remove('d-none');
+                    return;
+                }
+
+                const btn = document.getElementById('btnConfirmPoByCode');
+                btn.disabled = true;
+                try {
+                    const fd = new FormData();
+                    fd.append('id', receiptId);
+                    fd.append('code', code);
+                    fd.append('__RequestVerificationToken', antiForgeryToken);
+
+                    const res = await fetch('@Url.Action("SetToPurchaseOrderByCode")', { method: 'POST', body: fd }).then(r => r.json());
+                    if (res.success) {
+                        location.reload();
+                    } else {
+                        errEl.textContent = res.message || 'Không tìm thấy phiếu đặt hàng.';
+                        errEl.classList.remove('d-none');
+                    }
+                } catch {
+                    errEl.textContent = 'Lỗi kết nối. Vui lòng thử lại.';
+                    errEl.classList.remove('d-none');
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        })();
+
+        // ── Quick Create PO từ GoodsReceipt ──────────────────────────────────
+        (function initQuickCreatePo() {
+            const modalEl = document.getElementById('quickCreatePoModal');
+            if (!modalEl) return;
+
+            const vendorPickerEl   = document.getElementById('quickPoVendorPicker');
+            const vendorIdInput    = document.getElementById('quickPoSelectedVendorId');
+            const vendorErrorEl    = document.getElementById('quickPoVendorError');
+            const errorEl          = document.getElementById('quickPoError');
+            const confirmBtn       = document.getElementById('btnConfirmQuickCreatePo');
+            const spinner          = document.getElementById('quickPoSpinner');
+            const icon             = document.getElementById('quickPoIcon');
+
+            if (!vendorPickerEl || !confirmBtn) return;
+
+            const receiptId = modalEl.dataset.receiptId;
+
+            // Khởi tạo VendorPicker rỗng (chưa có vendor mặc định).
+            const picker = new VendorPicker(vendorPickerEl);
+            vendorPickerEl.addEventListener('select', (e) => {
+                vendorIdInput.value = e.detail?.vendor?.id ?? '';
+                vendorErrorEl.classList.add('d-none');
+                errorEl.classList.add('d-none');
+            });
+            vendorPickerEl.addEventListener('remove', () => {
+                vendorIdInput.value = '';
+            });
+
+            // Reset form khi mở modal.
+            modalEl.addEventListener('show.bs.modal', () => {
+                picker.clear?.();
+                vendorIdInput.value = '';
+                vendorErrorEl.classList.add('d-none');
+                errorEl.classList.add('d-none');
+                confirmBtn.disabled = false;
+                spinner.classList.add('d-none');
+                icon.classList.remove('d-none');
+            });
+
+            confirmBtn.addEventListener('click', async () => {
+                vendorErrorEl.classList.add('d-none');
+                errorEl.classList.add('d-none');
+
+                const vendorId  = (vendorIdInput.value || '').trim();
+                const placedOn  = document.getElementById('quickPoPlacedOn').value;
+                const note      = document.getElementById('quickPoNote').value;
+
+                if (!vendorId) {
+                    vendorErrorEl.classList.remove('d-none');
+                    vendorErrorEl.style.display = 'block';
+                    return;
+                }
+                if (!placedOn) {
+                    errorEl.textContent = 'Vui lòng chọn ngày đặt hàng.';
+                    errorEl.classList.remove('d-none');
+                    return;
+                }
+
+                confirmBtn.disabled = true;
+                spinner.classList.remove('d-none');
+                icon.classList.add('d-none');
+
+                try {
+                    const fd = new FormData();
+                    fd.append('id', receiptId);
+                    fd.append('vendorId', vendorId);
+                    fd.append('placedOn', placedOn);
+                    if (note) fd.append('note', note);
+                    fd.append('__RequestVerificationToken', antiForgeryToken);
+
+                    const res = await fetch('@Url.Action("QuickCreateAndLink")', { method: 'POST', body: fd }).then(r => r.json());
+                    if (res.success) {
+                        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                        location.reload();
+                    } else {
+                        errorEl.textContent = res.message || 'Tạo phiếu đặt hàng thất bại.';
+                        errorEl.classList.remove('d-none');
+                    }
+                } catch {
+                    errorEl.textContent = 'Lỗi kết nối. Vui lòng thử lại.';
+                    errorEl.classList.remove('d-none');
+                } finally {
+                    confirmBtn.disabled = false;
+                    spinner.classList.add('d-none');
+                    icon.classList.remove('d-none');
+                }
+            });
+        })();
 
         // ── Lưu thông tin ─────────────────────────────────────────────────────
         document.getElementById('btnSaveInfo')?.addEventListener('click', async () => {

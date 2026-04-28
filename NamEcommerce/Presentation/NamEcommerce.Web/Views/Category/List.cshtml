@@ -35,7 +35,7 @@
             <thead>
                 <tr>
                     <th class="ps-4">Tên danh mục</th>
-                    <th class="text-center" style="width: 120px;">Thứ tự</th>
+                    <th>Danh mục cha</th>
                     <th style="width: 100px;"></th>
                 </tr>
             </thead>
@@ -46,26 +46,13 @@
                     {
                         <tr>
                             <td class="ps-4">
-                                @if (Model.BreadcrumbOpts.Disabled)
-                                {
+                                <span class="fw-medium">
                                     @HighlighHelper.Highlight(item.Name, query)
-                                }
-                                else if (Model.BreadcrumbOpts.ExcludeCurrent)
-                                {
-                                    @if (!string.IsNullOrEmpty(item.Breadcrumb))
-                                    {
-                                        <span class="text-muted small me-1">
-                                            @item.Breadcrumb @Model.BreadcrumbOpts.Separator
-                                        </span>
-                                    }
-                                    @HighlighHelper.Highlight(item.Name, query)
-                                }
-                                else
-                                {
-                                    @item.Breadcrumb
-                                }
+                                </span>
                             </td>
-                            <td class="text-center text-muted">@item.DisplayOrder</td>
+                            <td class="text-muted">
+                                @item.Breadcrumb
+                            </td>
                             <td class="text-end pe-3">
                                 <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
                                     <i class="bi bi-pencil"></i>
@@ -109,14 +96,14 @@
     <script type="module" defer>
         import { confirm } from "/modules/modals.js";
         (function () {
-            $('.btnDelete').on('click', async function (e) {
-                e.preventDefault();
-                const name = $(this).data('name');
-                $(this).prop('disabled', true);
-                const confirmed = await confirm('Xóa danh mục', `Bạn muốn xóa danh mục <strong>${name}</strong>?`);
-                if (!confirmed) { $(this).prop('disabled', false); return; }
-                $(`#deleteForm${$(this).data('id')}`).submit();
-            });
+        $('.btnDelete').on('click', async function (e) {
+        e.preventDefault();
+        const name = $(this).data('name');
+        $(this).prop('disabled', true);
+        const confirmed = await confirm('Xóa danh mục', `Bạn muốn xóa danh mục <strong>${name}</strong>?`);
+        if (!confirmed) { $(this).prop('disabled', false); return; }
+        $(`#deleteForm${$(this).data('id')}`).submit();
+        });
         })();
     </script>
 }

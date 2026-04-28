@@ -43,7 +43,9 @@ public sealed class GetGoodsReceiptHandler : IRequestHandler<GetGoodsReceiptQuer
             VendorAddress = goodsReceipt.VendorAddress,
             HasVendorDebt = vendorDebt is not null,
             VendorDebtId = vendorDebt?.Id,
-            VendorDebtTotalAmount = vendorDebt?.TotalAmount
+            VendorDebtTotalAmount = vendorDebt?.TotalAmount,
+            PurchaseOrderId = goodsReceipt.PurchaseOrderId,
+            PurchaseOrderCode = goodsReceipt.PurchaseOrderCode
         };
 
         foreach (var item in goodsReceipt.Items)

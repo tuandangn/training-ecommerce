@@ -281,4 +281,44 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
             return CommonActionResultDto.CreateError(ex.Message);
         }
     }
+
+    public async Task<IList<SuggestedPurchaseOrderForGoodsReceiptAppDto>> GetSuggestedPurchaseOrdersAsync(Guid goodsReceiptId)
+    {
+        var domainList = await _goodsReceiptManager.GetSuggestedPurchaseOrdersAsync(goodsReceiptId).ConfigureAwait(false);
+
+        if (domainList.Count == 0)
+            return [];
+
+        // Thu thập tất cả ProductId cần enrich tên, batch query một lần.
+        var productIds = domainList
+            .SelectMany(po => po.Items.Select(i => i.ProductId))
+            .Distinct()
+            .ToList();
+
+        var productNameMap = new Dictionary<Guid, string?>();
+        foreach (var productId in productIds)
+        {
+            var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+            if (product is not null)
+                productNameMap[productId] = product.Name;
+        }
+
+        return domainList.Select(po => new SuggestedPurchaseOrderForGoodsReceiptAppDto
+        {
+            PurchaseOrderId = po.PurchaseOrderId,
+            PurchaseOrderCode = po.PurchaseOrderCode,
+            PlacedOn = po.PlacedOnUtc.ToLocalTime(),
+            VendorId = po.VendorId,
+            MatchScore = po.MatchScore,
+            IsFullMatch = po.IsFullMatch,
+            Items = po.Items.Select(i => new SuggestedPurchaseOrderItemForGoodsReceiptAppDto
+            {
+                ProductId = i.ProductId,
+                ProductName = productNameMap.GetValueOrDefault(i.ProductId),
+                QuantityOrdered = i.QuantityOrdered,
+                QuantityReceived = i.QuantityReceived,
+                UnitCost = i.UnitCost
+            }).ToList()
+        }).ToList();
+    }
 }

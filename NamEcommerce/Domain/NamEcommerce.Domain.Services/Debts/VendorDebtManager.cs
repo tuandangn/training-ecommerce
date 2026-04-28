@@ -8,7 +8,6 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Debts;
 using NamEcommerce.Domain.Shared.Services.Debts;
 
@@ -21,8 +20,7 @@ public sealed class VendorDebtManager(
     IEntityDataReader<VendorPayment> paymentReader,
     IEntityDataReader<Vendor> vendorReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
-    IEntityDataReader<GoodsReceipt> goodsReceiptReader,
-    IEventPublisher eventPublisher) : IVendorDebtManager
+    IEntityDataReader<GoodsReceipt> goodsReceiptReader) : IVendorDebtManager
 {
     private async Task<string> GenerateDebtCodeAsync()
     {
@@ -93,8 +91,8 @@ public sealed class VendorDebtManager(
             await paymentRepository.UpdateAsync(advance).ConfigureAwait(false);
         }
 
+        debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return inserted.ToDto();
     }
 
@@ -150,8 +148,8 @@ public sealed class VendorDebtManager(
             await paymentRepository.UpdateAsync(advance).ConfigureAwait(false);
         }
 
+        debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return inserted.ToDto();
     }
 
@@ -194,13 +192,13 @@ public sealed class VendorDebtManager(
                 payment.MarkAsApplied();
                 payment.PurchaseOrderId = debt.PurchaseOrderId;
                 payment.PurchaseOrderCode = debt.PurchaseOrderCode;
+                debt.MarkUpdated();
                 await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-                await eventPublisher.EntityUpdated(debt).ConfigureAwait(false);
             }
         }
 
+        payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return inserted.ToDto();
     }
 
@@ -248,8 +246,9 @@ public sealed class VendorDebtManager(
             debt.ApplyPayment(applyAmount);
             payment.MarkAsApplied();
 
+            debt.MarkUpdated();
             await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-            await eventPublisher.EntityUpdated(debt).ConfigureAwait(false);
+            payment.MarkCreated();
             var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
             results.Add(inserted.ToDto());
 
@@ -271,6 +270,7 @@ public sealed class VendorDebtManager(
                 recordedByUserId: dto.RecordedByUserId,
                 note: string.IsNullOrEmpty(dto.Note) ? "Tiền dư sau khi thanh toán nợ NCC" : dto.Note
             );
+            overpayment.MarkCreated();
             var inserted = await paymentRepository.InsertAsync(overpayment).ConfigureAwait(false);
             results.Add(inserted.ToDto());
         }
@@ -300,8 +300,8 @@ public sealed class VendorDebtManager(
             note: dto.Note
         );
 
+        payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return inserted.ToDto();
     }
 

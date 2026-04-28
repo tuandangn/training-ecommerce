@@ -6,7 +6,7 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
 {
     public void Configure(EntityTypeBuilder<DeliveryNote> builder)
     {
-        builder.ToTable("DeliveryNote", DbScheme);
+        builder.ToTable(nameof(DeliveryNote), DbScheme);
 
         builder.HasKey(d => d.Id);
 

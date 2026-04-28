@@ -6,10 +6,10 @@ using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Inventory;
-using NamEcommerce.Domain.Services.Extensions;
 
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
 
@@ -83,14 +83,25 @@ public sealed class DeliveryNoteManager(
         if (deliveryNote is null)
             throw new DeliveryNoteNotFoundException(id);
 
-        // Reserve stock for all items
+        if (deliveryNote.Status != DeliveryNoteStatus.Draft)
+            throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, DeliveryNoteStatus.Confirmed);
+
+        foreach (var item in deliveryNote.Items)
+        {
+            var stock = (await stockManager.GetInventoryStocksForProductAsync(item.ProductId, deliveryNote.WarehouseId).ConfigureAwait(false)).SingleOrDefault();
+            if (stock is null)
+                throw new InsufficientStockException(item.ProductId, deliveryNote.WarehouseId, item.Quantity, 0);
+            if (stock.QuantityAvailable < item.Quantity)
+                throw new InsufficientStockException(item.ProductId, deliveryNote.WarehouseId, item.Quantity, stock.QuantityAvailable);
+        }
+
         foreach (var item in deliveryNote.Items)
         {
             await stockManager.ReserveStockAsync(
-                item.ProductId, 
-                deliveryNote.WarehouseId, 
-                item.Quantity, 
-                deliveryNote.Id, 
+                item.ProductId,
+                deliveryNote.WarehouseId,
+                item.Quantity,
+                deliveryNote.Id,
                 Guid.Empty, // Default user for now
                 $"Giữ hàng cho phiếu xuất {deliveryNote.Code}").ConfigureAwait(false);
         }
@@ -191,12 +202,12 @@ public sealed class DeliveryNoteManager(
     public async Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize, string? keywords, Guid? orderId, IEnumerable<DeliveryNoteStatus>? status)
     {
         var query = deliveryNoteReader.DataSource;
-        
+
         if (!string.IsNullOrWhiteSpace(keywords))
         {
             var uppercaseKeywords = keywords.Trim().ToUpper();
-            query = query.Where(deliveryNote => 
-                deliveryNote.Code.Contains(keywords) || 
+            query = query.Where(deliveryNote =>
+                deliveryNote.Code.Contains(keywords) ||
                 (deliveryNote.OrderCode != null && deliveryNote.OrderCode.Contains(keywords)) ||
                 deliveryNote.CustomerName.ToUpper().Contains(uppercaseKeywords) ||
                 (deliveryNote.CustomerPhone != null && deliveryNote.CustomerPhone.Contains(keywords))
@@ -204,7 +215,7 @@ public sealed class DeliveryNoteManager(
         }
         if (orderId.HasValue)
             query = query.Where(deliverNote => deliverNote.OrderId == orderId);
-        if(status != null && status.Any())
+        if (status != null && status.Any())
             query = query.Where(deliverNote => status.Contains(deliverNote.Status));
 
         query = query.OrderByDescending(x => x.CreatedOnUtc);
@@ -216,7 +227,7 @@ public sealed class DeliveryNoteManager(
         }
 
         var deliveryNotes = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
-        
+
         return PagedDataDto.Create(deliveryNotes.Select(MapToDto).ToList(), pageIndex, pageSize, total);
     }
 
@@ -229,7 +240,7 @@ public sealed class DeliveryNoteManager(
         }
 
         var deliveredQuantities = deliveryNoteReader.DataSource
-            .Where(x => x.Status != DeliveryNoteStatus.Cancelled)
+            .Where(x => x.Status == DeliveryNoteStatus.Delivered)
             .SelectMany(x => x.Items)
             .Where(x => ids.Contains(x.OrderItemId))
             .GroupBy(x => x.OrderItemId)

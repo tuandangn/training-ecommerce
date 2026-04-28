@@ -10,6 +10,7 @@ public interface IGoodsReceiptAppService
 
     Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderAppDto dto);
     Task<CommonActionResultDto> RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderAppDto dto);
+    Task<IList<SuggestedPurchaseOrderForGoodsReceiptAppDto>> GetSuggestedPurchaseOrdersAsync(Guid goodsReceiptId);
 
     Task<CreateGoodsReceiptResultAppDto> CreateGoodsReceiptAsync(CreateGoodsReceiptAppDto dto);
     Task<UpdateGoodsReceiptResultAppDto> UpdateGoodsReceiptAsync(UpdateGoodsReceiptAppDto dto);

@@ -1,14 +1,10 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using NamEcommerce.Domain.Entities.Catalog;
-
 namespace NamEcommerce.Data.SqlServer.Mappings;
 
 public class ProductVendorMapping : IEntityTypeConfiguration<ProductVendor>
 {
     public void Configure(EntityTypeBuilder<ProductVendor> builder)
     {
-        builder.ToTable("ProductVendor");
+        builder.ToTable(nameof(ProductVendor), DbScheme);
 
         builder.HasKey(mapping => new { mapping.ProductId, mapping.VendorId });
 

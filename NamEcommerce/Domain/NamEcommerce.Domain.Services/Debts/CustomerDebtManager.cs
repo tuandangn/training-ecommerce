@@ -80,6 +80,7 @@ public sealed class CustomerDebtManager(
             await paymentRepository.UpdateAsync(deposit).ConfigureAwait(false);
         }
 
+        debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
         return MapToDto(inserted);
     }
@@ -118,6 +119,7 @@ public sealed class CustomerDebtManager(
             {
                 debt.ApplyPayment(payment.Amount);
                 payment.MarkAsApplied();
+                debt.MarkUpdated();
                 await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
             }
         }
@@ -130,10 +132,12 @@ public sealed class CustomerDebtManager(
                 debt.ApplyPayment(payment.Amount);
                 payment.MarkAsApplied();
                 payment.CustomerDebtId = debt.Id;
+                debt.MarkUpdated();
                 await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
             }
         }
 
+        payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
         return MapToPaymentDto(inserted);
     }
@@ -228,7 +232,9 @@ public sealed class CustomerDebtManager(
             debt.ApplyPayment(applyAmount);
             payment.MarkAsApplied();
 
+            debt.MarkUpdated();
             await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+            payment.MarkCreated();
             var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
             results.Add(MapToPaymentDto(inserted));
 
@@ -250,6 +256,7 @@ public sealed class CustomerDebtManager(
                 recordedByUserId: dto.RecordedByUserId,
                 note: string.IsNullOrEmpty(dto.Note) ? "Tiền dư sau khi thanh toán nợ" : dto.Note
             );
+            overpayment.MarkCreated();
             var inserted = await paymentRepository.InsertAsync(overpayment).ConfigureAwait(false);
             results.Add(MapToPaymentDto(inserted));
         }

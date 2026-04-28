@@ -7,7 +7,7 @@ public sealed class CustomerDebtMapping : IEntityTypeConfiguration<CustomerDebt>
 {
     public void Configure(EntityTypeBuilder<CustomerDebt> builder)
     {
-        builder.ToTable("CustomerDebt", DbScheme);
+        builder.ToTable(nameof(CustomerDebt), DbScheme);
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Code).IsRequired().HasMaxLength(100);

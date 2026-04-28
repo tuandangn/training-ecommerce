@@ -12,11 +12,10 @@ public sealed class GoodsReceiptMapping : IEntityTypeConfiguration<GoodsReceipt>
         builder.Property(g => g.ReceivedOnUtc).IsRequired();
 
         builder.Property(g => g.TruckDriverName).HasMaxLength(500);
-        builder.Property("TruckDriverNameNormalized").HasMaxLength(500);
+        builder.Property(g => g.TruckDriverNameNormalized).HasMaxLength(500);
         builder.Property(g => g.TruckNumberSerial).HasMaxLength(100);
         builder.Property(g => g.Note).HasMaxLength(2000);
 
-        // Vendor snapshot — nullable
         builder.Property(g => g.VendorId);
         builder.Property(g => g.VendorName).HasMaxLength(500);
         builder.Property(g => g.VendorPhone).HasMaxLength(50);
@@ -25,7 +24,6 @@ public sealed class GoodsReceiptMapping : IEntityTypeConfiguration<GoodsReceipt>
         builder.Property(g => g.CreatedByUserId);
         builder.Property(g => g.CreatedByUsername).HasMaxLength(500);
 
-        // PictureIds — danh sách Guid chứng từ, lưu dưới dạng JSON
         builder.Property<IList<Guid>>("_pictureIds")
             .HasColumnName("PictureIds")
             .HasColumnType("nvarchar(max)")
@@ -36,9 +34,7 @@ public sealed class GoodsReceiptMapping : IEntityTypeConfiguration<GoodsReceipt>
                     : System.Text.Json.JsonSerializer.Deserialize<IList<Guid>>(v, (System.Text.Json.JsonSerializerOptions?)null)
                       ?? new List<Guid>());
 
-        // Items collection — dùng backing field _items
-        builder.Metadata.FindNavigation(nameof(GoodsReceipt.Items))
-            ?.SetPropertyAccessMode(PropertyAccessMode.Field);
+        builder.Metadata.FindNavigation(nameof(GoodsReceipt.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(g => g.Items)
             .WithOne()
             .HasForeignKey(i => i.GoodsReceiptId)

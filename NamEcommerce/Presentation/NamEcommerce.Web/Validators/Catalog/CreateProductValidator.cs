@@ -28,7 +28,7 @@ public sealed class CreateProductValidator : AbstractValidator<CreateProductMode
             info.RuleForEach(inventory => inventory!.ProductStocks).ChildRules(stock =>
             {
                 stock.RuleFor(s => s.Quantity)
-                    .GreaterThan(0).WithMessage(m => localizer["Error.QuantityMustBePositive"]);
+                    .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.QuantityMustBePositive"]);
             });
         }).When(m => m.HasExistingStockQuantity);
     }

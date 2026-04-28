@@ -416,6 +416,20 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         return CommonActionResultDto.CreateSuccess();
     }
 
+    public async Task<CommonActionResultDto> ApprovePurchaseOrderAsync(Guid id)
+    {
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(id).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderIsNotFound");
+
+        if (!await _purchaseOrderManager.CanChangeStatusToAsync(id, PurchaseOrderStatus.Approved))
+            return CommonActionResultDto.CreateError("Error.Error.PurchaseOrderCannotChangeStatus");
+
+        await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Approved).ConfigureAwait(false);
+
+        return CommonActionResultDto.CreateSuccess();
+    }
+
     public async Task<CommonActionResultDto> CancelPurchaseOrderAsync(Guid id)
     {
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(id).ConfigureAwait(false);

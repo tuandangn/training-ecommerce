@@ -9,5 +9,4 @@ public sealed class GetCustomerPreparationListQuery : IRequest<PreparationListMo
     public string? Keywords { get; init; }
     public int PageIndex { get; init; }
     public int PageSize { get; init; }
-
 }

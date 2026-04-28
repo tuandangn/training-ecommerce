@@ -17,6 +17,7 @@ public interface IPurchaseOrderAppService
 
     Task<CommonActionResultDto> SubmitsPurchaseOrderAsync(Guid id);
     Task<CommonActionResultDto> CancelPurchaseOrderAsync(Guid id);
+    Task<CommonActionResultDto> ApprovePurchaseOrderAsync(Guid id);
     Task<CommonActionResultDto> ChangeStatusAsync(Guid purchaseOrderId, int newStatus);
 
     Task<CommonActionResultDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemAppDto dto);

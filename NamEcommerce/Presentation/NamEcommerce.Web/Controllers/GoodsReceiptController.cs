@@ -24,15 +24,11 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
-    // ─────────────────────────── LIST ───────────────────────────
-
     public async Task<IActionResult> List(GoodsReceiptListSearchModel search)
     {
         var model = await _goodsReceiptModelFactory.PrepareGoodsReceiptListModel(search);
         return View(model);
     }
-
-    // ─────────────────────────── CREATE ───────────────────────────
 
     public async Task<IActionResult> Create()
     {
@@ -60,7 +56,7 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
             Items = model.Items.Select(i => new CreateGoodsReceiptItemCommand
             {
                 ProductId = i.ProductId!.Value,
-                WarehouseId = i.WarehouseId,
+                WarehouseId = i.WarehouseId ?? model.WarehouseId,
                 Quantity = i.Quantity,
                 UnitCost = i.UnitCost
             }).ToList()
@@ -77,8 +73,6 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
-    // ─────────────────────────── DETAILS ───────────────────────────
-
     public async Task<IActionResult> Details(Guid id)
     {
         var model = await _goodsReceiptModelFactory.PrepareGoodsReceiptDetailsModel(id);
@@ -90,8 +84,6 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
 
         return View(model);
     }
-
-    // ─────────────────────────── EDIT INFO + PICTURES (JSON) ───────────────────────────
 
     [HttpPost]
     public async Task<IActionResult> EditInfo(EditGoodsReceiptModel model)
@@ -142,11 +134,6 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
         return Json(new { success = true });
     }
 
-    // ─────────────────────────── SET ITEM UNIT COST (JSON) ───────────────────────────
-
-    /// <summary>
-    /// Thiết lập đơn giá nhập cho một item còn pending costing.
-    /// </summary>
     [HttpPost]
     public async Task<IActionResult> SetItemUnitCost(SetGoodsReceiptItemUnitCostModel model)
     {
@@ -166,12 +153,6 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
         return Json(new { success = true, message = string.Empty });
     }
 
-    // ─────────────────────────── SET VENDOR (JSON) ───────────────────────────
-
-    /// <summary>
-    /// Gắn hoặc xoá nhà cung cấp khỏi phiếu nhập kho.
-    /// POST body: { goodsReceiptId: Guid, vendorId: Guid? }
-    /// </summary>
     [HttpPost]
     public async Task<IActionResult> SetVendor(Guid goodsReceiptId, Guid? vendorId)
     {
@@ -187,8 +168,6 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
         return Json(new { success = true, updatedId = result.UpdatedId });
     }
 
-    // ─────────────────────────── DELETE ───────────────────────────
-
     [HttpPost]
     public async Task<IActionResult> Delete(Guid id)
     {
@@ -202,15 +181,28 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
         return RedirectToAction(nameof(List));
     }
 
-    [HttpPost]
-    public async Task<IActionResult> SetToPurchaseOrder(Guid id, string code)
+    [HttpGet]
+    public async Task<IActionResult> GetSuggestedPurchaseOrders(Guid id)
     {
-        if (code == null)
-            return Json(new { success = false, message = LocalizeError("Error.Required", LocalizeError("Label.Code")) });
+        var result = await _mediator.Send(new GetSuggestedPurchaseOrdersForGoodsReceiptQuery { GoodsReceiptId = id });
+        return Json(result);
+    }
 
-        var goodsReceipt = await _mediator.Send(new GetGoodsReceiptQuery { Id = id });
-        if (goodsReceipt is null)
-            return Json(new { success = false, message = LocalizeError("Error.GoodsReceipt.IsNotFound") });
+    [HttpPost]
+    public async Task<IActionResult> SetToPurchaseOrder(Guid id, Guid purchaseOrderId)
+    {
+        var result = await _mediator.Send(new SetGoodsReceiptToPurchaseOrderCommand(id, purchaseOrderId));
+        if (result.Success)
+            return Json(new { success = true, message = string.Empty });
+
+        return Json(new { success = false, message = !string.IsNullOrEmpty(result.ErrorMessage) ? LocalizeError(result.ErrorMessage) : "Process is error" });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SetToPurchaseOrderByCode(Guid id, string code)
+    {
+        if (string.IsNullOrEmpty(code))
+            return Json(new { success = false, message = LocalizeError("Error.Required", LocalizeError("Label.Code")) });
 
         var purchaseOrderId = await _mediator.Send(new GetPurchaseOrderByCodeQuery(code));
         if (!purchaseOrderId.HasValue)
@@ -221,5 +213,26 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
             return Json(new { success = true, message = string.Empty });
 
         return Json(new { success = false, message = !string.IsNullOrEmpty(result.ErrorMessage) ? LocalizeError(result.ErrorMessage) : "Process is error" });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> QuickCreateAndLink(Guid id, Guid vendorId, DateTime placedOn, Guid? warehouseId, string? note)
+    {
+        if (vendorId == Guid.Empty)
+            return Json(new { success = false, message = LocalizeError("Error.Required", LocalizeError("Label.Vendor")) });
+
+        var result = await _mediator.Send(new QuickCreateAndLinkPurchaseOrderCommand
+        {
+            GoodsReceiptId = id,
+            VendorId = vendorId,
+            PlacedOn = placedOn,
+            WarehouseId = warehouseId,
+            Note = note
+        });
+
+        if (!result.Success)
+            return Json(new { success = false, message = !string.IsNullOrEmpty(result.ErrorMessage) ? LocalizeError(result.ErrorMessage) : "Tạo phiếu đặt hàng thất bại." });
+
+        return Json(new { success = true, createdPurchaseOrderId = result.CreatedPurchaseOrderId });
     }
 }

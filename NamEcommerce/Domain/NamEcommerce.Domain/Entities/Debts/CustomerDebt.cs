@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Events.Debts;
 using NamEcommerce.Domain.Shared.Helpers;
 
 namespace NamEcommerce.Domain.Entities.Debts;
@@ -85,10 +86,10 @@ public sealed record CustomerDebt : AppAggregateEntity
     internal void ApplyPayment(decimal amount)
     {
         if (amount <= 0) return;
-        
+
         PaidAmount += amount;
         RemainingAmount = TotalAmount - PaidAmount;
-        
+
         if (RemainingAmount <= 0)
         {
             RemainingAmount = 0;
@@ -98,7 +99,24 @@ public sealed record CustomerDebt : AppAggregateEntity
         {
             Status = DebtStatus.PartiallyPaid;
         }
-        
+
         UpdatedOnUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Đánh dấu phiếu công nợ vừa được khởi tạo — Manager gọi trước <c>InsertAsync</c>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new CustomerDebtCreated(Id, CustomerId, TotalAmount, DeliveryNoteId, OrderId));
+
+    /// <summary>
+    /// Đánh dấu phiếu công nợ vừa được cập nhật — raise <see cref="CustomerDebtUpdated"/>.
+    /// Nếu sau update <c>Status == FullyPaid</c> thì raise thêm <see cref="CustomerDebtFullyPaid"/>.
+    /// </summary>
+    internal void MarkUpdated()
+    {
+        RaiseDomainEvent(new CustomerDebtUpdated(Id));
+        if (Status == DebtStatus.FullyPaid)
+            RaiseDomainEvent(new CustomerDebtFullyPaid(Id, CustomerId));
     }
 }

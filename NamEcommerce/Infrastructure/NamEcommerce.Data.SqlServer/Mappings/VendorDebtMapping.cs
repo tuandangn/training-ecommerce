@@ -1,5 +1,4 @@
 using NamEcommerce.Domain.Entities.Debts;
-using static NamEcommerce.Data.SqlServer.NamEcommerceEfDataDefaults;
 
 namespace NamEcommerce.Data.SqlServer.Mappings;
 
@@ -7,7 +6,7 @@ public sealed class VendorDebtMapping : IEntityTypeConfiguration<VendorDebt>
 {
     public void Configure(EntityTypeBuilder<VendorDebt> builder)
     {
-        builder.ToTable("VendorDebt", DbScheme);
+        builder.ToTable(nameof(VendorDebt), DbScheme);
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Code).IsRequired().HasMaxLength(100);
