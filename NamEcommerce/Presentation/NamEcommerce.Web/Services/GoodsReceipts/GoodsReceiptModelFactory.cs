@@ -95,15 +95,15 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
             PictureIds = goodsReceipt.PictureIds,
             Note = goodsReceipt.Note,
             IsPendingCosting = goodsReceipt.IsPendingCosting,
-            // Vendor snapshot
             VendorId = goodsReceipt.VendorId,
             VendorName = goodsReceipt.VendorName,
             VendorPhone = goodsReceipt.VendorPhone,
             VendorAddress = goodsReceipt.VendorAddress,
-            // Vendor debt linkage (đã sinh nợ chưa, link sang trang Debts/Detail)
             HasVendorDebt = goodsReceipt.HasVendorDebt,
             VendorDebtId = goodsReceipt.VendorDebtId,
-            VendorDebtTotalAmount = goodsReceipt.VendorDebtTotalAmount
+            VendorDebtTotalAmount = goodsReceipt.VendorDebtTotalAmount,
+            PurchaseOrderId = goodsReceipt.PurchaseOrderId,
+            PurchaseOrderCode = goodsReceipt.PurchaseOrderCode
         };
 
         foreach (var item in goodsReceipt.Items)

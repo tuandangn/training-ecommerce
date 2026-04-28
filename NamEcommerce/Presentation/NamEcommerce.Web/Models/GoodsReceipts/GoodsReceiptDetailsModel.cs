@@ -10,22 +10,20 @@ public sealed class GoodsReceiptDetailsModel
     public IEnumerable<Guid> PictureIds { get; init; } = [];
     public string? Note { get; init; }
 
-    /// <summary>
-    /// True nếu còn ít nhất một item chưa được định giá nhập.
-    /// </summary>
     public bool IsPendingCosting { get; init; }
 
-    // ─── Vendor snapshot ──────────────────────────────────────
     public Guid? VendorId { get; init; }
     public string? VendorName { get; init; }
     public string? VendorPhone { get; init; }
     public string? VendorAddress { get; init; }
 
-    // ─── Vendor debt linkage ──────────────────────────────────
-    /// <summary>True nếu phiếu này đã sinh ra phiếu nợ NCC tương ứng.</summary>
     public bool HasVendorDebt { get; init; }
     public Guid? VendorDebtId { get; init; }
     public decimal? VendorDebtTotalAmount { get; init; }
+
+    // PurchaseOrder linkage
+    public Guid? PurchaseOrderId { get; init; }
+    public string? PurchaseOrderCode { get; init; }
 
     public IList<ItemModel> Items { get; init; } = [];
 
@@ -39,9 +37,6 @@ public sealed class GoodsReceiptDetailsModel
         public decimal Quantity { get; init; }
         public decimal? UnitCost { get; init; }
 
-        /// <summary>
-        /// True nếu item này chưa có đơn giá nhập.
-        /// </summary>
         public bool IsPendingCosting { get; init; }
     }
 }

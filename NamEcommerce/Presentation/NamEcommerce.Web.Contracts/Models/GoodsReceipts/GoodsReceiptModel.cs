@@ -23,6 +23,10 @@ public sealed class GoodsReceiptModel
     public Guid? VendorDebtId { get; init; }
     public decimal? VendorDebtTotalAmount { get; init; }
 
+    // PurchaseOrder linkage
+    public Guid? PurchaseOrderId { get; init; }
+    public string? PurchaseOrderCode { get; init; }
+
     public IList<ItemModel> Items { get; init; } = [];
 
     [Serializable]
