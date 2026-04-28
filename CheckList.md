@@ -194,6 +194,29 @@ Thay vì reverse stock (phức tạp, dễ âm tồn nếu đã bán một phầ
 
 ---
 
+## ✅ UnitTest — InventoryReceipt — Suggested PO logic
+
+**Cấp độ:** Trung Bình | **Độ ưu tiên:** Thấp | **Hoàn thành:** 2026-04-29
+
+> Test cho `GetSuggestedPurchaseOrdersAsync` trong `GoodsReceiptManagerTests.cs`. 7 tests viết theo TDD bám sát thuật toán: filter PO theo ngày + status, tính MatchScore (exact match có UnitCost / partial match theo ProductId), sắp xếp `IsFullMatch` desc → `MatchScore` desc → `PlacedOnUtc` desc.
+
+- [x] **Exact match**: GR items có UnitCost → PO có `(ProductId, UnitCost)` khớp đủ qty → `MatchScore = 100`, `IsFullMatch = true`
+- [x] **Partial match (no UnitCost)**: GR item không có UnitCost → match theo ProductId bất kỳ → `MatchScore < 100` (vd 4/10 = 40)
+- [x] **Lọc theo ngày**: PO `PlacedOnUtc > GR.ReceivedOnUtc` → không xuất hiện trong kết quả
+- [x] **Lọc theo status**: PO `Draft / Submitted / Completed / Cancelled` → bị loại; chỉ `Approved | Receiving` mới qua
+- [x] **Không có PO phù hợp**: return empty list, không throw
+- [x] **Sắp xếp đúng**: 3 PO (newer/older full match + partial) → đúng thứ tự `IsFullMatch` desc → `MatchScore` desc → `PlacedOnUtc` desc
+- [x] **VendorId không ảnh hưởng**: PO khác VendorId với GR vẫn được gợi ý nếu items khớp
+
+**Files đã chạm:**
+- `Tests/NamEcommerce.Domain.Services.Test/Services/GoodsReceiptManagerTests.cs` — thêm region `GetSuggestedPurchaseOrdersAsync` với 2 helper (`BuildGoodsReceiptWithItemsAsync`, `BuildPurchaseOrderForSuggestionAsync` — dùng reflection thêm items vào `_items` để bypass Product/Vendor lookup chains) + 7 tests `[Fact]`. Imports thêm `System.Reflection`, `Domain.Entities.PurchaseOrders`, `Domain.Shared.Enums.PurchaseOrders`.
+
+⚠️ **Tuấn cần làm sau merge session 2026-04-29:**
+- Build verify: `dotnet build NamEcommerce.sln`
+- Run unit tests: `dotnet test Tests/NamEcommerce.Domain.Services.Test/ --filter "FullyQualifiedName~GoodsReceiptManagerTests"`
+
+---
+
 ## ✅ UI/UX Notification
 
 **Cấp độ:** Dễ

@@ -62,25 +62,6 @@
 
 ---
 
-## UnitTest — InventoryReceipt
-
-**Cấp độ:** Trung Bình | **Độ ưu tiên:** Thấp
-
-### [PRIORITY: LOW] Unit Tests cho GoodsReceipt — Suggested PO logic
-
-> Viết sau khi Phase 1 Domain Layer đã implement xong.
-> Test cho `GetSuggestedPurchaseOrdersAsync` trong `GoodsReceiptManagerTests.cs`.
-
-- [ ] **Exact match**: GR có items với UnitCost → tìm đúng PO có `(ProductId, UnitCost)` khớp và đủ số lượng → MatchScore = 100
-- [ ] **Partial match (no UnitCost)**: GR item không có UnitCost → tìm PO theo ProductId bất kỳ → MatchScore < 100 nếu không đủ qty
-- [ ] **Lọc theo ngày**: PO có `PlacedOnUtc > GR.ReceivedOnUtc` → không được xuất hiện trong kết quả
-- [ ] **Lọc theo status**: PO ở trạng thái `Draft / Submitted / Completed / Cancelled` → bị loại khỏi kết quả
-- [ ] **Không có PO phù hợp**: return empty list, không throw exception
-- [ ] **Sắp xếp đúng**: `IsFullMatch` true xếp trước, cùng score thì `PlacedOnUtc` mới hơn xếp trước
-- [ ] **Test VendorId không ảnh hưởng**: PO khác VendorId với GR vẫn được gợi ý nếu items khớp
-
----
-
 ## System - Event
 
 **Cấp độ:** Khó
