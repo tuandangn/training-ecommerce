@@ -1,3 +1,4 @@
+@using NamEcommerce.Domain.Entities.Inventory
 @model NamEcommerce.Web.Contracts.Models.Inventory.StockMovementLogListModel
 @{
     ViewData[ViewConstants.PageTitle] = "Lịch sử biến động kho";
@@ -44,19 +45,16 @@
                             <td>
                                 @switch (item.MovementType)
                                 {
-                                    case 10:
+                                    case (int)StockMovementType.Inbound:
                                         <span class="badge bg-success">Nhập kho</span>
                                         break;
-                                    case 20:
-
+                                    case (int)StockMovementType.Outbound:
                                         <span class="badge bg-warning text-dark">Xuất kho</span>
                                         break;
-                                    case 30:
-
+                                    case (int)StockMovementType.Adjustment:
                                         <span class="badge bg-info text-dark">Kiểm kê / Điều chỉnh</span>
                                         break;
                                     default:
-
                                         <span class="badge bg-secondary">Khác</span>
                                         break;
                                 }

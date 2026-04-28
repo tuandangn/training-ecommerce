@@ -228,9 +228,6 @@ public sealed class GoodsReceiptManager(
         if (goodsReceipt.PurchaseOrderId.HasValue)
             throw new GoodsReceiptCannotSetToPurchaseOrderException();
 
-        if (goodsReceipt.VendorId.HasValue)
-            throw new GoodsReceiptCannotSetToPurchaseOrderException();
-
         var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);

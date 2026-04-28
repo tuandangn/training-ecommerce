@@ -26,7 +26,9 @@ public static class GoodsReceiptExtensions
             VendorId = goodsReceipt.VendorId,
             VendorName = goodsReceipt.VendorName,
             VendorPhone = goodsReceipt.VendorPhone,
-            VendorAddress = goodsReceipt.VendorAddress
+            VendorAddress = goodsReceipt.VendorAddress,
+            PurchaseOrderId = goodsReceipt.PurchaseOrderId,
+            PurchaseOrderCode = goodsReceipt.PurchaseOrderCode
         };
 
         return dto;

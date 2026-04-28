@@ -49,7 +49,7 @@ public sealed class CreateProductModel
         [UIHint("Currency")]
         public decimal UnitPrice { get; set; }
 
-        public IEnumerable<ProductStockModel> ProductStocks { get; set; } = [];
+        public IList<ProductStockModel> ProductStocks { get; set; } = [];
     }
 
     [Serializable]
@@ -57,6 +57,8 @@ public sealed class CreateProductModel
     {
         [Display(Name = "Kho hàng")]
         public Guid? WarehouseId { get; set; }
+        [ValidateNever]
+        public string? WarehouseName { get; set; }
 
         [Display(Name = "Số lượng")]
         public decimal Quantity { get; set; }

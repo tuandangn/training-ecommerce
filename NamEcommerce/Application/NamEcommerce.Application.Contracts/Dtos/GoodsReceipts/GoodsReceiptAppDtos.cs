@@ -36,6 +36,10 @@ public sealed record GoodsReceiptAppDto(Guid Id) : BaseGoodsReceiptAppDto
     public string? VendorName { get; init; }
     public string? VendorPhone { get; init; }
     public string? VendorAddress { get; init; }
+
+    // PurchaseOrder linkage
+    public Guid? PurchaseOrderId { get; init; }
+    public string? PurchaseOrderCode { get; init; }
 }
 
 [Serializable]
