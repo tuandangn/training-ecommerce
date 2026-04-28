@@ -266,11 +266,12 @@ export default class GoodsReceiptCreateController {
                       data-valmsg-for="Items[${i}].Quantity" data-valmsg-replace="true"></span>
             </td>
             <td>
-                <select asp-for="Items[${i}].WarehouseId" class="form-select item-warehouse" ${this.#state.warehouse ? 'disabled' : ''} data-val="${!this.#warehouseSettings.AllowNonWarehouse}" data-required="Vui lòng chọn kho hàng">
+                <select id="Items[${i}]_WarehouseId" name="Items[${i}].WarehouseId" class="form-select item-warehouse" ${this.#state.warehouse ? 'disabled' : ''} data-val="${!this.#warehouseSettings.AllowNonWarehouse}" data-required="Vui lòng chọn kho hàng">
                     ${this.#warehouseSettings.AllowNonWarehouse ? `<option value="" ${warehouseId ? '' : 'selected'}>(Không chọn)</option>` : ''}
                     ${this.#warehouseOptions.map(option => `<option value="${option.value}" ${option.value == warehouseId ? 'selected' : ''}>${option.label}</option>`).join('')}
                 </select>
-                <span asp-validation-for="Items[${i}].WarehouseId" class="small text-danger"></span>
+                <span class="small text-danger field-validation-valid"
+                      data-valmsg-for="Items[${i}].WarehouseId" data-valmsg-replace="true"></span>
             </td>
             <td class="text-end">
                 <input name="Items[${i}].UnitCost" value="${costFormatted}"

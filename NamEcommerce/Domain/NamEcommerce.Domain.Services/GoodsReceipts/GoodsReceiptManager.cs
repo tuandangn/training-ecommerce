@@ -8,13 +8,15 @@ using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
-using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Domain.Shared.Settings;
 
@@ -28,10 +30,11 @@ public sealed class GoodsReceiptManager(
     IEntityDataReader<Warehouse> warehouseDataReader,
     ICurrentUserAccessor currentUserAccessor,
     IEntityDataReader<Picture> pictureDataReader,
-    IEntityDataReader<StockMovementLog> stockMovementLogDataReader,
     IEntityDataReader<Vendor> vendorDataReader,
-    IEventPublisher eventPublisher, 
-    IEntityDataReader<PurchaseOrder> purchaseOrderDataReader) : IGoodsReceiptManager
+    IEventPublisher eventPublisher,
+    IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
+    IRepository<PurchaseOrder> purchaseOrderRepository,
+    IInventoryStockManager inventoryStockManager) : IGoodsReceiptManager
 {
     public async Task<CreateGoodsReceiptResultDto> CreateGoodsReceiptAsync(CreateGoodsReceiptDto dto)
     {
@@ -202,12 +205,20 @@ public sealed class GoodsReceiptManager(
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(dto.GoodsReceiptId);
 
-        // Cấm xóa nếu phiếu đã sinh StockMovementLog (đã cộng tồn) — tránh tồn kho ảo.
-        var hasStockMovements = stockMovementLogDataReader.DataSource
-            .Any(log => log.ReferenceType == StockReferenceType.GoodsReceipt
-                     && log.ReferenceId == dto.GoodsReceiptId);
-        if (hasStockMovements)
-            throw new GoodsReceiptHasStockMovementsException(dto.GoodsReceiptId);
+        var deletedProductQuantities = goodsReceipt.Items
+            .Where(item => item.WarehouseId.HasValue)
+            .GroupBy(
+                item => (item.ProductId, WarehouseId: item.WarehouseId!.Value),
+                item => item.Quantity,
+                (key, quantities) => (key.ProductId, key.WarehouseId, TotalQuantity: quantities.Sum())
+        );
+        foreach (var deletedProductQty in deletedProductQuantities)
+        {
+            var stock = (await inventoryStockManager.GetInventoryStocksForProductAsync(deletedProductQty.ProductId, deletedProductQty.WarehouseId).ConfigureAwait(false))
+                .SingleOrDefault();
+            if (stock is null || stock.QuantityAvailable < deletedProductQty.TotalQuantity)
+                throw new InsufficientStockException(deletedProductQty.ProductId, deletedProductQty.WarehouseId, deletedProductQty.TotalQuantity, 0);
+        }
 
         await goodsReceiptRepository.DeleteAsync(goodsReceipt).ConfigureAwait(false);
 
@@ -333,21 +344,47 @@ public sealed class GoodsReceiptManager(
         if (!purchaseOrder.CanReceiveGoods())
             throw new PurchaseOrderCannotReceiveGoodsException();
 
-        var grProductCostReceivingQtyMap = goodsReceipt.Items.GroupBy(
-            item => (item.ProductId, item.UnitCost),
-            item => item.Quantity,
-            (key, quantities) => (key, receivingQty: quantities.Sum()));
-        var poProductCostRemainingQtyMap = purchaseOrder.Items.GroupBy(
-            item => (item.ProductId, item.UnitCost),
-            item => item.QuantityOrdered - item.QuantityReceived,
-            (key, quantities) => (key, remainingQty: quantities.Sum())
-        );
+        var grProductCostReceivingQtyMap = goodsReceipt.Items
+            .GroupBy(
+                item => (item.ProductId, item.UnitCost),
+                item => item.Quantity,
+                (key, quantities) => (key, receivingQty: quantities.Sum()))
+            .ToList();
+        var poProductCostRemainingQtyMap = purchaseOrder.Items
+            .Where(item => item.QuantityOrdered > item.QuantityReceived)
+            .GroupBy(
+                item => (item.ProductId, item.UnitCost),
+                item => (remainQuantity: item.QuantityOrdered - item.QuantityReceived, item.Id),
+                (key, infos) => (key, remainingQty: infos.Sum(info => info.remainQuantity),
+                    participants: infos.Select(info => (info.Id, quantity: info.remainQuantity))
+                .ToList())
+        ).ToList();
+
+        var resovedPoItems = new List<(Guid itemId, decimal qty)>();
 
         foreach (var grItem in grProductCostReceivingQtyMap.Where(grItem => grItem.key.UnitCost.HasValue))
         {
-            var poItem = poProductCostRemainingQtyMap.FirstOrDefault(poItem => poItem.key == grItem.key);
+            var poIndex = poProductCostRemainingQtyMap.FindIndex(po => po.key == grItem.key);
+
+            if (poIndex == -1 || poProductCostRemainingQtyMap[poIndex].remainingQty < grItem.receivingQty)
+                throw new GoodsReceiptItemCannotResolvedWhenSetToPurchaseOrderException(grItem.key.ProductId, grItem.receivingQty);
+
+            var poItem = poProductCostRemainingQtyMap[poIndex];
+
             if (poItem.remainingQty < grItem.receivingQty)
                 throw new GoodsReceiptItemCannotResolvedWhenSetToPurchaseOrderException(grItem.key.ProductId, grItem.receivingQty);
+
+            var receivingQty = grItem.receivingQty;
+            for (var i = 0; i < poItem.participants.Count; i++)
+            {
+                var participant = poItem.participants[i];
+                if (receivingQty == 0) break;
+                var resolvedQty = Math.Min(participant.quantity, receivingQty);
+                participant.quantity -= resolvedQty;
+                poItem.participants[i] = participant;
+                resovedPoItems.Add((participant.Id, resolvedQty));
+                receivingQty -= resolvedQty;
+            }
             poItem.remainingQty -= grItem.receivingQty;
         }
         foreach (var grItem in grProductCostReceivingQtyMap.Where(grItem => !grItem.key.UnitCost.HasValue))
@@ -355,7 +392,18 @@ public sealed class GoodsReceiptManager(
             var receivingQty = grItem.receivingQty;
             foreach (var poItem in poProductCostRemainingQtyMap.Where(poItem => poItem.key.ProductId == grItem.key.ProductId && poItem.remainingQty > 0))
             {
-                receivingQty -= Math.Min(receivingQty, poItem.remainingQty);
+                for (var i = 0; i < poItem.participants.Count; i++)
+                {
+                    var participant = poItem.participants[i];
+                    if (participant.quantity == 0) continue;
+                    var resolvedQty = Math.Min(participant.quantity, receivingQty);
+                    participant.quantity -= resolvedQty;
+                    poItem.participants[i] = participant;
+                    receivingQty -= resolvedQty;
+                    resovedPoItems.Add((participant.Id, resolvedQty));
+                    if (receivingQty == 0)
+                        break;
+                }
                 if (receivingQty == 0)
                     break;
             }
@@ -365,5 +413,15 @@ public sealed class GoodsReceiptManager(
 
         goodsReceipt.SetToPurchaseOrder(purchaseOrder.Id, purchaseOrder.Code);
         await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
+
+        //*TOD* dung event để cập nhật số lượng đã nhận của PO item thay vì update trực tiếp ở đây
+        foreach (var (itemId, qty) in resovedPoItems)
+        {
+            var purchaseOrderItem = purchaseOrder.Items.First(item => item.Id == itemId);
+            purchaseOrderItem.AddQuantityReceived(qty);
+        }
+        purchaseOrder.VerifyStatus();
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+        await purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 }

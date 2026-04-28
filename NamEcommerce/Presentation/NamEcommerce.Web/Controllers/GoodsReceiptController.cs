@@ -13,13 +13,11 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;
     private readonly IGoodsReceiptModelFactory _goodsReceiptModelFactory;
-    private readonly WarehouseSettings _warehouseSettings;
 
-    public GoodsReceiptController(IMediator mediator, IGoodsReceiptModelFactory goodsReceiptModelFactory, WarehouseSettings warehouseSettings)
+    public GoodsReceiptController(IMediator mediator, IGoodsReceiptModelFactory goodsReceiptModelFactory)
     {
         _mediator = mediator;
         _goodsReceiptModelFactory = goodsReceiptModelFactory;
-        _warehouseSettings = warehouseSettings;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
