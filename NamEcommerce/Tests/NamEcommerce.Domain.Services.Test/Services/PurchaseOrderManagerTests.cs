@@ -1181,7 +1181,7 @@ public sealed class PurchaseOrderManagerTests
         var invalidPageIndex = -1;
         var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => purchaseOrderManager.GetPurchaseOrdersAsync("", invalidPageIndex, 1));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => purchaseOrderManager.GetPurchaseOrdersAsync(invalidPageIndex, 1, "", null));
     }
 
     [Fact]
@@ -1190,7 +1190,7 @@ public sealed class PurchaseOrderManagerTests
         var invalidPageSize = 0;
         var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
-        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => purchaseOrderManager.GetPurchaseOrdersAsync("", 0, invalidPageSize));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => purchaseOrderManager.GetPurchaseOrdersAsync(0, invalidPageSize, "", null));
     }
 
     [Fact]
@@ -1208,7 +1208,7 @@ public sealed class PurchaseOrderManagerTests
         var purchaseOrderDataReaderMock = PurchaseOrderDataReader.WithData(data);
         var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
-        var result = await purchaseOrderManager.GetPurchaseOrdersAsync(null, pageIndex, pageSize);
+        var result = await purchaseOrderManager.GetPurchaseOrdersAsync(pageIndex, pageSize, null, null);
 
         Assert.Equal(data.Last().Id, result.First().Id);
         Assert.Equal(data.Length, result.PagerInfo.TotalCount);
@@ -1235,7 +1235,7 @@ public sealed class PurchaseOrderManagerTests
         var warehouseDataReaderMock = WarehouseDataReader.WithData(warehouseHasKeywords);
         var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, null!, vendorDataReaderMock.Object, warehouseDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!);
 
-        var result = await purchaseOrderManager.GetPurchaseOrdersAsync(keywords, pageIndex, pageSize);
+        var result = await purchaseOrderManager.GetPurchaseOrdersAsync(pageIndex, pageSize, keywords, null);
 
         Assert.Equal(3, result.PagerInfo.TotalCount);
         Assert.Equal(data[3].Id, result.First().Id);

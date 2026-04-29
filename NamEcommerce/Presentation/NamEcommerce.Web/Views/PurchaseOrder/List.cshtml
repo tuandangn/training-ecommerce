@@ -3,132 +3,168 @@
     ViewData[ViewConstants.PageTitle] = "Đơn nhập hàng";
     var query = Model.Keywords;
 }
-
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Đơn nhập hàng</h1>
-        <p class="page-header-subtitle">Quản lý đơn nhập hàng</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">Đơn nhập</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Đơn nhập</li>
+            </ol>
+        </nav>
     </div>
-    <a asp-action="Create" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i> Thêm mới
-    </a>
-</div>
-
+}
 <div class="content-card">
     <div class="action-toolbar">
-        <partial name="_Search" model="@(new PurchaseOrderListSearchModel { Keywords = query })" />
+        <partial name="_Search" model="@(new PurchaseOrderListSearchModel { Keywords = Model.Keywords, Status = (PurchaseOrderStatus?)Model.Status })" />
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Tạo đơn
+        </a>
     </div>
-
-    <div class="table-responsive">
-        <table class="table data-table">
-            <thead>
-                <tr>
-                    <th class="ps-4">Mã đơn</th>
-                    <th class="d-none d-lg-table-cell text-center">
-                        Ngày đặt
-                    </th>
-                    <th>
-                        Nhà cung cấp
-                    </th>
-                    <th class="d-none d-md-table-cell">
-                        Kho hàng
-                    </th>
-                    <th class="text-center">
-                        Dự kiến giao
-                    </th>
-                    <th class="text-end">Tổng tiền</th>
-                    <th class="text-center" style="width: 120px;">
-                        Trạng thái
-                    </th>
-                    <th class="d-none d-xl-table-cell text-center">
-                        Ngày tạo
-                    </th>
-                    <th style="width: 80px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Data.Pagination.TotalCount > 0)
-                {
-                    @foreach (var purchaseOrder in Model.Data)
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-status=""
+               class="nav-link @(Model.Status.HasValue ? "" : "active")">Tất cả</a>
+        </li>
+        @foreach (var statusOption in PurchaseOrderStatus.GetOptions())
+        {
+            <li class="nav-item">
+                <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-status="@statusOption.value"
+                   class="nav-link @(statusOption.value == Model.Status ? "active" : "")" aria-current="page">@statusOption.text</a>
+            </li>
+        }
+    </ul>
+    <div class="content-card-body-flush">
+        <div class="table-responsive">
+            <table class="table data-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Mã đơn</th>
+                        <th class="d-none d-lg-table-cell text-center">
+                            Ngày đặt
+                        </th>
+                        <th>
+                            Nhà cung cấp
+                        </th>
+                        <th class="d-none d-md-table-cell">
+                            Kho hàng
+                        </th>
+                        <th class="text-center">
+                            Dự kiến giao
+                        </th>
+                        <th class="text-end">Tổng tiền</th>
+                        <th class="text-center" style="width: 120px;">
+                            Trạng thái
+                        </th>
+                        <th class="d-none d-xl-table-cell text-center">
+                            Ngày tạo
+                        </th>
+                        <th style="width: 80px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Data.Pagination.TotalCount > 0)
+                    {
+                        @foreach (var purchaseOrder in Model.Data)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="text-decoration-none fw-medium text-nowrap">
+                                        @HighlighHelper.Highlight(purchaseOrder.Code, query)
+                                    </a>
+                                    <span class="text-muted small d-inline d-lg-none">
+                                        @purchaseOrder.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                                    </span>
+                                </td>
+                                <td class="d-none d-lg-table-cell text-center">
+                                    @purchaseOrder.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                                </td>
+                                <td>
+                                    <div class="position-relative">
+                                        @if (!string.IsNullOrEmpty(purchaseOrder.VendorName))
+                                        {
+                                            @HighlighHelper.Highlight(purchaseOrder.VendorName, query)
+                                        }
+                                        @if (!string.IsNullOrEmpty(purchaseOrder.VendorPhone))
+                                        {
+                                            <div>
+                                                <a href="tel:@purchaseOrder.VendorPhone" class="text-muted small text-decoration-none">
+                                                    <i class="bi bi-telephone me-1"></i> @HighlighHelper.Highlight(purchaseOrder.VendorPhone, Model.Keywords)
+                                                </a>
+                                            </div>
+                                        }
+                                    </div>
+                                </td>
+                                <td class="d-none d-md-table-cell">
+                                    @if (!string.IsNullOrEmpty(purchaseOrder.WarehouseName))
+                                    {
+                                        @HighlighHelper.Highlight(purchaseOrder.WarehouseName, query)
+                                    }
+                                </td>
+                                <td class="text-center text-muted">
+                                    @purchaseOrder.ExpectedDeliveryDate?.ToString(ViewConstants.DefaultDateFormat)
+                                </td>
+                                <td class="text-end fw-bold text-primary text-nowrap">
+                                    @purchaseOrder.TotalAmount.DisplayCurrency()
+                                </td>
+                                <td class="text-center">
+                                    @{
+                                        var purchaseOrderStatus = (PurchaseOrderStatus)purchaseOrder.Status;
+                                    }
+                                    <span class="status-badge @purchaseOrderStatus.GetDisplayColor()">
+                                        @purchaseOrderStatus.GetDisplayText()
+                                    </span>
+                                </td>
+                                <td class="d-none d-xl-table-cell text-muted text-center">
+                                    @purchaseOrder.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a class="btn-table-action" asp-action="Details" asp-route-id="@purchaseOrder.Id" title="Chi tiết">
+                                        <i class="bi bi-chevron-right"></i>
+                                        <span class="visually-hidden">Chi tiết</span>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
                     {
                         <tr>
-                            <td class="ps-4">
-                                <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="text-decoration-none fw-medium text-nowrap">
-                                    @HighlighHelper.Highlight(purchaseOrder.Code, query)
-                                </a>
-                                <span class="text-muted small d-inline d-lg-none">
-                                    @purchaseOrder.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
-                                </span>
-                            </td>
-                            <td class="d-none d-lg-table-cell text-center">
-                                @purchaseOrder.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
-                            </td>
-                            <td>
-                                <div class="position-relative">
-                                    @if (!string.IsNullOrEmpty(purchaseOrder.VendorName))
-                                    {
-                                        @HighlighHelper.Highlight(purchaseOrder.VendorName, query)
-                                    }
-                                    @if (!string.IsNullOrEmpty(purchaseOrder.VendorPhone))
-                                    {
-                                        <div>
-                                            <a href="tel:@purchaseOrder.VendorPhone" class="text-muted small text-decoration-none">
-                                                <i class="bi bi-telephone me-1"></i> @HighlighHelper.Highlight(purchaseOrder.VendorPhone, Model.Keywords)
-                                            </a>
-                                        </div>
-                                    }
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+                                    <h5>Không tìm thấy đơn nhập hàng nào</h5>
+                                    <p>Thử thay đổi từ khóa tìm kiếm hoặc tạo đơn mới.</p>
                                 </div>
-                            </td>
-                            <td class="d-none d-md-table-cell">
-                                @if (!string.IsNullOrEmpty(purchaseOrder.WarehouseName))
-                                {
-                                    @HighlighHelper.Highlight(purchaseOrder.WarehouseName, query)
-                                }
-                            </td>
-                            <td class="text-center text-muted">
-                                @purchaseOrder.ExpectedDeliveryDate?.ToString(ViewConstants.DefaultDateFormat)
-                            </td>
-                            <td class="text-end fw-bold text-primary text-nowrap">
-                                @purchaseOrder.TotalAmount.DisplayCurrency()
-                            </td>
-                            <td class="text-center">
-                                @{
-                                    var purchaseOrderStatus = (PurchaseOrderStatus)purchaseOrder.Status;
-                                }
-                                <span class="status-badge @purchaseOrderStatus.GetDisplayColor()">
-                                    @purchaseOrderStatus.GetDisplayText()
-                                </span>
-                            </td>
-                            <td class="d-none d-xl-table-cell text-muted text-center">
-                                @purchaseOrder.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
-                            </td>
-                            <td class="text-end pe-3">
-                                <a class="btn-table-action" asp-action="Details" asp-route-id="@purchaseOrder.Id" title="Chi tiết">
-                                    <i class="bi bi-chevron-right"></i>
-                                    <span class="visually-hidden">Chi tiết</span>
-                                </a>
                             </td>
                         </tr>
                     }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="7">
-                            <div class="empty-state">
-                                <div class="empty-icon"><i class="bi bi-inbox"></i></div>
-                                <h5>Không tìm thấy đơn nhập hàng nào</h5>
-                                <p>Thử thay đổi từ khóa tìm kiếm hoặc tạo đơn mới.</p>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
+        @if (Model.Data.Pagination.TotalCount > 0)
+        {
+            <partial name="_Pager" model="Model.Data.Pagination" />
+        }
     </div>
-
-    @if (Model.Data.Pagination.TotalCount > 0)
-    {
-        <partial name="_Pager" model="Model.Data.Pagination" />
-    }
 </div>
+@section Scripts {
+    <script type="module">
+        const txtKeywords = document.getElementById('@Html.IdFor(m => m.Keywords)');
+        const form = txtKeywords.closest('form');
+        const onSearchChanged = debounce(function () {
+        form.submit();
+        }, 700);
+        txtKeywords.addEventListener('input', onSearchChanged);
+
+        if(txtKeywords.value){
+        focusEnd(txtKeywords);
+        }
+    @if (!string.IsNullOrEmpty(Model.Keywords))
+            {
+                <text>
+                focusEnd(txtKeywords);
+                </text>
+            }
+        </script>
+}

@@ -31,6 +31,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         var model = await _mediator.Send(new GetPurchaseOrderListQuery
         {
             Keywords = searchModel?.Keywords,
+            Status = (int?) searchModel?.Status,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         });

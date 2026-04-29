@@ -192,10 +192,10 @@ public sealed class OrderManager(
         return order.ToDto();
     }
 
-    public Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, OrderStatus? status, int pageIndex, int pageSize)
-        => GetOrdersAsync(keywords, status.HasValue ? [status.Value] : [], pageIndex, pageSize);
+    public Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status)
+        => GetOrdersAsync(pageIndex, pageSize, keywords, status.HasValue ? [status.Value] : []);
 
-    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, IEnumerable<OrderStatus> status, int pageIndex, int pageSize)
+    public async Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus> status)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));

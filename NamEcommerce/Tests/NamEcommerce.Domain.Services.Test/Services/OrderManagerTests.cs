@@ -759,7 +759,7 @@ public sealed class OrderManagerTests
         var customerDataReaderStub = CustomerDataReader.Empty();
         var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, customerDataReaderStub.Object, null!, null!);
 
-        var paged = await manager.GetOrdersAsync(keywords: null, status: (OrderStatus?)null, pageIndex: 0, pageSize: 10);
+        var paged = await manager.GetOrdersAsync(pageIndex: 0, pageSize: 10, keywords: null, status: (OrderStatus?)null);
 
         Assert.Equal(2, paged.PagerInfo.TotalCount);
     }
@@ -774,7 +774,7 @@ public sealed class OrderManagerTests
         var customerDataReaderStub = CustomerDataReader.Empty();
         var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, customerDataReaderStub.Object, null!, null!);
 
-        var paged = await manager.GetOrdersAsync(keywords: null, status: OrderStatus.Locked, pageIndex: 0, pageSize: 10);
+        var paged = await manager.GetOrdersAsync(pageIndex: 0, pageSize: 10, keywords: null, status: OrderStatus.Locked);
 
         Assert.Equal(1, paged.PagerInfo.TotalCount);
     }

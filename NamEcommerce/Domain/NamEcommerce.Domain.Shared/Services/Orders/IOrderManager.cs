@@ -20,6 +20,6 @@ public interface IOrderManager : ICodeExistCheckingService
     Task MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredDto dto);
 
     Task<OrderDto?> GetOrderByIdAsync(Guid id);
-    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, OrderStatus? status, int pageIndex, int pageSize);
-    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, IEnumerable<OrderStatus> status, int pageIndex, int pageSize);
+    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status);
+    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus> status);
 }

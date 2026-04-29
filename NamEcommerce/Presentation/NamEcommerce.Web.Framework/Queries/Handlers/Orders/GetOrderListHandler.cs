@@ -20,7 +20,7 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
 
     public async Task<OrderListModel> Handle(GetOrderListQuery request, CancellationToken cancellationToken)
     {
-        var pagedData = await _orderAppService.GetOrdersAsync(request.Keywords, request.Status, request.PageIndex, request.PageSize).ConfigureAwait(false);
+        var pagedData = await _orderAppService.GetOrdersAsync(request.PageIndex, request.PageSize, request.Keywords, request.Status).ConfigureAwait(false);
 
         var customers = await _customerAppService.GetCustomersByIdsAsync(pagedData.Select(o => o.CustomerId)).ConfigureAwait(false);
         var orderItemModels = new List<OrderListModel.OrderModel>();

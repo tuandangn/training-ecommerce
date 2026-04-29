@@ -7,7 +7,7 @@ namespace NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 
 public interface IPurchaseOrderManager : ICodeExistCheckingService
 {
-    Task<IPagedDataDto<PurchaseOrderDto>> GetPurchaseOrdersAsync(string? keywords, int pageIndex, int pageSize);
+    Task<IPagedDataDto<PurchaseOrderDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, PurchaseOrderStatus? status);
     Task<PurchaseOrderDto?> GetPurchaseOrderByIdAsync(Guid id);
     Task<PurchaseOrderDto?> GetPurchaseOrderByCodeAsync(string code);
 

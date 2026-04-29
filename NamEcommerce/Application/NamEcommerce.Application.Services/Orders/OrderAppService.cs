@@ -383,10 +383,10 @@ public sealed class OrderAppService(
         return order.ToDto();
     }
 
-    public async Task<IPagedDataAppDto<OrderAppDto>> GetOrdersAsync(string? keywords, int? status, int pageIndex, int pageSize)
+    public async Task<IPagedDataAppDto<OrderAppDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status)
     {
         OrderStatus? orderStatus = status.HasValue ? (OrderStatus)status : null;
-        var pagedData = await orderManager.GetOrdersAsync(keywords, orderStatus, pageIndex, pageSize).ConfigureAwait(false);
+        var pagedData = await orderManager.GetOrdersAsync(pageIndex, pageSize, keywords, orderStatus).ConfigureAwait(false);
 
         return PagedDataAppDto.Create(pagedData.Select(order => order.ToDto()), pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
     }

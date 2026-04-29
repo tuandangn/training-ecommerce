@@ -333,12 +333,15 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 
-    public async Task<IPagedDataDto<PurchaseOrderDto>> GetPurchaseOrdersAsync(string? keywords, int pageIndex, int pageSize)
+    public async Task<IPagedDataDto<PurchaseOrderDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, PurchaseOrderStatus? status)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
 
         var query = _purchaseOrderDataReader.DataSource;
+
+        if (status.HasValue)
+            query = query.Where(c => c.Status == status.Value);
 
         if (!string.IsNullOrEmpty(keywords))
         {

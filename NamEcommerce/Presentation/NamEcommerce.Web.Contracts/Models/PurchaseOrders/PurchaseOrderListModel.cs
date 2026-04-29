@@ -6,6 +6,7 @@ namespace NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 public sealed class PurchaseOrderListModel
 {
     public string? Keywords { get; init; }
+    public int? Status { get; set; }
     public required IPagedDataModel<ItemModel> Data { get; init; }
 
     [Serializable]

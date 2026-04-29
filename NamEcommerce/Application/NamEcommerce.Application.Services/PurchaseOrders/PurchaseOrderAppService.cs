@@ -4,6 +4,8 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
+using NamEcommerce.Domain.Entities.Orders;
+using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
@@ -20,21 +22,24 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
     private readonly IEntityDataReader<User> _userDataReader;
     private readonly IEntityDataReader<Product> _productDataReader;
+    private readonly IEntityDataReader<PurchaseOrder> _purchaseOrderDataReader;
 
     public PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
-        IEntityDataReader<Vendor> vendorDataReader, IEntityDataReader<Warehouse> warehouseDataReader,
-        IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader)
+        IEntityDataReader<PurchaseOrder> purchaseOrderDataReader, IEntityDataReader<Vendor> vendorDataReader,
+        IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader)
     {
         _purchaseOrderManager = purchaseOrderManager;
+        _purchaseOrderDataReader = purchaseOrderDataReader;
         _vendorDataReader = vendorDataReader;
         _warehouseDataReader = warehouseDataReader;
         _userDataReader = userDataReader;
         _productDataReader = productDataReader;
     }
 
-    public async Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(string? keywords, int pageIndex, int pageSize)
+    public async Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status)
     {
-        var pagedData = await _purchaseOrderManager.GetPurchaseOrdersAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);
+        PurchaseOrderStatus? poStatus = status.HasValue ? (PurchaseOrderStatus)status.Value : null;
+        var pagedData = await _purchaseOrderManager.GetPurchaseOrdersAsync(pageIndex, pageSize, keywords, poStatus).ConfigureAwait(false);
 
         return PagedDataAppDto.Create(pagedData.Items.Select(item => item.ToDto()), pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
     }
@@ -391,11 +396,14 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
     public async Task<string> NextPurchaseOrderCodeAsync()
     {
-        var now = DateTime.UtcNow;
         var code = string.Empty;
+        var now = DateTime.UtcNow;
+        var monthDateStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var monthDateEnd = new DateTime(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month), 23, 59, 59, DateTimeKind.Utc);
+        var monthOrderCount = await Task.Run(() => _purchaseOrderDataReader.DataSource.Where(o => o.CreatedOnUtc >= monthDateStart && o.CreatedOnUtc <= monthDateEnd).Count()).ConfigureAwait(false);
         do
         {
-            code = $"PO-{now:yyyyMM}-{Random.Shared.Next(1000, 9999)}";
+            code = $"{PurchaseOrder.PurchaseOrderCodePrefix}{now:MMyy}{++monthOrderCount:D3}";
         }
         while (await _purchaseOrderManager.DoesCodeExistAsync(code).ConfigureAwait(false));
 

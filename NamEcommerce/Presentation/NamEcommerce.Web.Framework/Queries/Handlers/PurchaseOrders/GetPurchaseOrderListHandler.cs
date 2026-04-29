@@ -23,7 +23,7 @@ public sealed class GetPurchaseOrderListHandler : IRequestHandler<GetPurchaseOrd
 
     public async Task<PurchaseOrderListModel> Handle(GetPurchaseOrderListQuery request, CancellationToken cancellationToken)
     {
-        var pagedData = await _purchaseOrderAppService.GetPurchaseOrdersAsync(request.Keywords, request.PageIndex, request.PageSize).ConfigureAwait(false);
+        var pagedData = await _purchaseOrderAppService.GetPurchaseOrdersAsync(request.PageIndex, request.PageSize, request.Keywords, request.Status).ConfigureAwait(false);
 
         var purchaseOrders = new List<PurchaseOrderListModel.ItemModel>();
         foreach (var purchaseOrder in pagedData)
@@ -54,6 +54,7 @@ public sealed class GetPurchaseOrderListHandler : IRequestHandler<GetPurchaseOrd
         return new PurchaseOrderListModel
         {
             Keywords = request.Keywords,
+            Status = request.Status,
             Data = PagedDataModel.Create(purchaseOrders, pagedData.Pagination.PageIndex, pagedData.Pagination.PageSize, pagedData.Pagination.TotalCount)
         };
     }

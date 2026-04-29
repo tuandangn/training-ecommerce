@@ -326,22 +326,8 @@ public sealed class GoodsReceiptManager(
             .ToList();
     }
 
-    private record _GoodsReceiptProductCostReceivingQtyItem(Guid ProductId, decimal? UnitCost, IList<_GoodsReceiptReceivedItemInfo> ReceivedItems)
-    {
-        public decimal TotalReceivedQuantity { get; set; }
-    };
-    private record _GoodsReceiptReceivedItemInfo(Guid ItemId)
-    {
-        public decimal ReceivedQuantity { get; set; }
-    };
-    private record _PurchaseOrderProductCostRemainingQtyItem(Guid ProductId, decimal UnitCost, IList<_PurchaseOrderItemInfo> Participants)
-    {
-        public decimal TotalRemainingQuantity { get; set; }
-    };
-    private record _PurchaseOrderItemInfo(Guid ItemId)
-    {
-        public decimal RemainingQuantity { get; set; }
-    };
+    #region SetGoodsReceiptToPurchaseOrder
+
     public async Task SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -445,7 +431,7 @@ public sealed class GoodsReceiptManager(
         foreach (var group in needUpdateUnitCostItems.GroupBy(i => i.itemId))
         {
             var goodsReceiptItem = goodsReceipt.Items.First(item => item.Id == group.Key);
-            for(var i = 0; i < group.Count(); i++)
+            for (var i = 0; i < group.Count(); i++)
             {
                 var (itemId, qty, unitCost) = group.ElementAt(i);
                 if (i == group.Count() - 1)
@@ -470,4 +456,27 @@ public sealed class GoodsReceiptManager(
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
         await purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
+
+    #region Helper classes
+
+    private record _GoodsReceiptProductCostReceivingQtyItem(Guid ProductId, decimal? UnitCost, IList<_GoodsReceiptReceivedItemInfo> ReceivedItems)
+    {
+        public decimal TotalReceivedQuantity { get; set; }
+    };
+    private record _GoodsReceiptReceivedItemInfo(Guid ItemId)
+    {
+        public decimal ReceivedQuantity { get; set; }
+    };
+    private record _PurchaseOrderProductCostRemainingQtyItem(Guid ProductId, decimal UnitCost, IList<_PurchaseOrderItemInfo> Participants)
+    {
+        public decimal TotalRemainingQuantity { get; set; }
+    };
+    private record _PurchaseOrderItemInfo(Guid ItemId)
+    {
+        public decimal RemainingQuantity { get; set; }
+    };
+
+    #endregion
+
+    #endregion
 }

@@ -5,9 +5,7 @@ namespace NamEcommerce.Application.Contracts.PurchaseOrders;
 
 public interface IPurchaseOrderAppService
 {
-    Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(string? keywords, int pageIndex, int pageSize);
-
-    Task<string> NextPurchaseOrderCodeAsync();
+    Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status);
 
     Task<PurchaseOrderAppDto?> GetPurchaseOrderByIdAsync(Guid id);
     Task<PurchaseOrderAppDto?> GetPurchaseOrderByCodeAsync(string code);
@@ -27,4 +25,6 @@ public interface IPurchaseOrderAppService
     Task<CommonActionResultDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto);
 
     Task<IList<RecentPurchasePriceAppDto>> GetRecentPurchasePricesAsync(Guid productId);
+
+    Task<string> NextPurchaseOrderCodeAsync();
 }

@@ -17,7 +17,7 @@ public sealed class PreparationAppService(
     public async Task<IPagedDataAppDto<PreparationItemAppDto>> GetPreparationListAsync(int pageIndex, int pageSize, string? keywords = null)
     {
         var status = Enum.GetValues<OrderStatus>().Where(status => status != OrderStatus.Locked).ToArray();
-        var orders = await orderManager.GetOrdersAsync(null, status, 0, int.MaxValue).ConfigureAwait(false);
+        var orders = await orderManager.GetOrdersAsync(0, int.MaxValue, null, status).ConfigureAwait(false);
 
         var orderItems = orders.OrderBy(o => o.ExpectedShippingDateUtc).SelectMany(order => order.Items.Select(item => (order, item)));
         var totalCount = orderItems.Count();
@@ -63,7 +63,7 @@ public sealed class PreparationAppService(
     public async Task<IPagedDataAppDto<PreparationGroupedItemAppDto>> GetPreparationGroupedListAsync(int pageIndex, int pageSize, string? keywords = null)
     {
         var status = Enum.GetValues<OrderStatus>().Where(status => status != OrderStatus.Locked).ToArray();
-        var orders = await orderManager.GetOrdersAsync(null, status, 0, int.MaxValue).ConfigureAwait(false);
+        var orders = await orderManager.GetOrdersAsync(0, int.MaxValue, null, status).ConfigureAwait(false);
 
         var groupedItems = orders.SelectMany(order => order.Items.Select(item => (order, item, expectedDate: order.ExpectedShippingDateUtc)))
             .GroupBy(info => info.item.ProductId)
