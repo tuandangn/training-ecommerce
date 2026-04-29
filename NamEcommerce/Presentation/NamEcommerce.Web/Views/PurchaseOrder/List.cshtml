@@ -69,7 +69,7 @@
                         {
                             <tr>
                                 <td class="ps-4">
-                                    <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="text-decoration-none fw-medium text-nowrap">
+                                    <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="text-decoration-none d-block fw-medium text-nowrap" data-bs-toggle="tooltip" title="Xem chi tiết">
                                         @HighlighHelper.Highlight(purchaseOrder.Code, query)
                                     </a>
                                     <span class="text-muted small d-inline d-lg-none">
@@ -81,16 +81,15 @@
                                 </td>
                                 <td>
                                     <div class="position-relative">
-                                        @if (!string.IsNullOrEmpty(purchaseOrder.VendorName))
-                                        {
+                                        <a asp-action="Details" asp-controller="VendorDebt" asp-route-vendorid="@purchaseOrder.VendorId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
                                             @HighlighHelper.Highlight(purchaseOrder.VendorName, query)
-                                        }
+                                        </a>
                                         @if (!string.IsNullOrEmpty(purchaseOrder.VendorPhone))
                                         {
                                             <div>
-                                                <a href="tel:@purchaseOrder.VendorPhone" class="text-muted small text-decoration-none">
-                                                    <i class="bi bi-telephone me-1"></i> @HighlighHelper.Highlight(purchaseOrder.VendorPhone, Model.Keywords)
-                                                </a>
+                                                <span class="text-muted small">
+                                                     @HighlighHelper.Highlight(purchaseOrder.VendorPhone, Model.Keywords)
+                                                </span>
                                             </div>
                                         }
                                     </div>
@@ -119,9 +118,8 @@
                                     @purchaseOrder.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
                                 </td>
                                 <td class="text-end pe-3">
-                                    <a class="btn-table-action" asp-action="Details" asp-route-id="@purchaseOrder.Id" title="Chi tiết">
-                                        <i class="bi bi-chevron-right"></i>
-                                        <span class="visually-hidden">Chi tiết</span>
+                                    <a class="btn btn-sm btn-light text-decoration-none text-primary" asp-action="Details" asp-route-id="@purchaseOrder.Id" data-bs-toggle="tooltip" title="Xem chi tiết">
+                                        <span>Xem</span>
                                     </a>
                                 </td>
                             </tr>
@@ -160,11 +158,11 @@
         if(txtKeywords.value){
         focusEnd(txtKeywords);
         }
-    @if (!string.IsNullOrEmpty(Model.Keywords))
-            {
-                <text>
+        @if (!string.IsNullOrEmpty(Model.Keywords))
+        {
+            <text>
                 focusEnd(txtKeywords);
-                </text>
-            }
-        </script>
+            </text>
+        }
+    </script>
 }

@@ -7,13 +7,14 @@ public sealed class PurchaseOrderListModel
 {
     public string? Keywords { get; init; }
     public int? Status { get; set; }
-    public required IPagedDataModel<ItemModel> Data { get; init; }
+    public required IPagedDataModel<PurchaseModel> Data { get; init; }
 
     [Serializable]
-    public sealed record ItemModel(Guid Id)
+    public sealed record PurchaseModel(Guid Id)
     {
         public required DateTime PlacedOn { get; set; }
         public required string Code { get; init; }
+        public Guid VendorId { get; set; }
         public string? VendorName { get; set; }
         public string? VendorPhone { get; set; }
         public string? WarehouseName { get; set; }

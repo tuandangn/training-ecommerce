@@ -25,10 +25,10 @@ public sealed class GetPurchaseOrderListHandler : IRequestHandler<GetPurchaseOrd
     {
         var pagedData = await _purchaseOrderAppService.GetPurchaseOrdersAsync(request.PageIndex, request.PageSize, request.Keywords, request.Status).ConfigureAwait(false);
 
-        var purchaseOrders = new List<PurchaseOrderListModel.ItemModel>();
+        var purchaseOrders = new List<PurchaseOrderListModel.PurchaseModel>();
         foreach (var purchaseOrder in pagedData)
         {
-            var purchaseOrderModel = new PurchaseOrderListModel.ItemModel(purchaseOrder.Id)
+            var purchaseOrderModel = new PurchaseOrderListModel.PurchaseModel(purchaseOrder.Id)
             {
                 Code = purchaseOrder.Code,
                 PlacedOn = purchaseOrder.PlacedOnUtc.ToLocalTime(),
@@ -39,6 +39,7 @@ public sealed class GetPurchaseOrderListHandler : IRequestHandler<GetPurchaseOrd
             };
 
             var vendor = await _vendorAppService.GetVendorByIdAsync(purchaseOrder.VendorId).ConfigureAwait(false);
+            purchaseOrderModel.VendorId = purchaseOrder.VendorId;
             purchaseOrderModel.VendorName = vendor?.Name;
             purchaseOrderModel.VendorPhone = vendor?.PhoneNumber;
 

@@ -62,7 +62,7 @@
                                 </td>
                                 <td>
                                     <div class="position-relative">
-                                        <a asp-action="Details" asp-controller="CustomerDebt" asp-route-id="@order.CustomerId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
+                                        <a asp-action="Details" asp-controller="CustomerDebt" asp-route-customerid="@order.CustomerId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
                                             @HighlighHelper.Highlight(order.CustomerName, Model.Keywords)
                                         </a>
                                         @if (!string.IsNullOrEmpty(order.CustomerPhone))
@@ -92,7 +92,7 @@
                                     }
                                 </td>
                                 <td class="text-end pe-3">
-                                    <a class="btn btn-sm btn-light text-decoration-none text-primary" asp-action="Details" asp-route-id="@order.Id">
+                                    <a class="btn btn-sm btn-light text-decoration-none text-primary" asp-action="Details" asp-route-id="@order.Id" data-bs-toggle="tooltip" title="Xem chi tiết">
                                         <span>Xem</span>
                                     </a>
                                 </td>
