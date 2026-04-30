@@ -42,7 +42,7 @@
                         <th>Khách hàng</th>
                         <th class="text-end">Tổng đơn</th>
                         <th class="text-center">Ngày dự kiến</th>
-                        <th class="text-center" style="width:100px;">Đã giao</th>
+                        <th class="text-center" style="width:100px;">Khóa</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -84,11 +84,11 @@
                                 <td class="text-center">
                                     @if (order.IsFinished)
                                     {
-                                        <i class="bi bi-check-circle-fill text-success ms-1" data-bs-toggle="tooltip" title="Đơn hàng đã hoàn thành"></i>
+                                        <i class="bi bi-check-circle-fill text-success ms-1" data-bs-toggle="tooltip" title="Đã khóa"></i>
                                     }
                                     else
                                     {
-                                        <i class="bi bi-x-circle-fill text-info ms-1" data-bs-toggle="tooltip" title="Đơn hàng chưa hoàn thành"></i>
+                                        <i class="bi bi-x-circle-fill text-info ms-1" data-bs-toggle="tooltip" title="Chưa khóa"></i>
                                     }
                                 </td>
                                 <td class="text-end pe-3">

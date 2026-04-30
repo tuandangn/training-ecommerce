@@ -34,14 +34,14 @@ public sealed class CreateProductModel
     [Display(Name = "Hình ảnh")]
     public Base64ImageModel? ImageFile { get; set; }
 
-    [Display(Name = "Quản lý hàng tồn")]
+    [Display(Name = "Đã có hàng tồn")]
     public bool HasExistingStockQuantity { get; set; }
     public ProductInventoryModel? ProductInventory { get; set; }
 
     [Serializable]
     public sealed class ProductInventoryModel
     {
-        [Display(Name = "Giá nhập")]
+        [Display(Name = "Giá vốn")]
         [UIHint("Currency")]
         public decimal CostPrice { get; set; }
 

@@ -76,6 +76,10 @@ export default class ProductBrowser {
         await this.#render();
     }
 
+    setVendor(vid) {
+        this.#setState({ vid });
+    }
+
     #bindKeywords() {
         const onChanged = debounce((e) => {
             this.#setState({ q: e.target.value.trim() });

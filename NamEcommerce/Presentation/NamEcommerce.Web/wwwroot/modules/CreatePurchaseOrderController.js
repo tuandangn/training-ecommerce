@@ -85,6 +85,15 @@ export default class CreatePurchaseOrderController {
                 (product) => this.#addOrIncrementItem(product)
             );
             this.#browser.init();
+
+            const el = getEl('vendorPicker');
+            el.addEventListener('select', (e) => {
+                const vendor = e.detail?.vendor ? new Vendor(e.detail.vendor) : null;
+                this.#browser.setVendor(vendor.id);
+            });
+            el.addEventListener('remove', () => {
+                this.#browser.setVendor(null);
+            });
         }
 
         this.#state = Object.assign(new PurchaseOrderState(), {
@@ -147,8 +156,8 @@ export default class CreatePurchaseOrderController {
         if (this.#activeRowIndex < 0) return;
         const tableBody = getEl('itemsTableBody');
         const row = tableBody.rows[this.#activeRowIndex];
-        console.log(row);
         this.#activeRowIndex = null;
+        if (!row) return;
         row.classList.add('table-success');
         setTimeout(() => row.classList.remove('table-success'), 700);
     }

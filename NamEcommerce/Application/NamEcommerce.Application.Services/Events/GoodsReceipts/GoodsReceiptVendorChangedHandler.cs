@@ -1,6 +1,7 @@
 using MediatR;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Events.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Debts;

@@ -30,7 +30,7 @@
     <!-- Mua hàng -->
     <li class="nav-item">
         <a class="nav-link @(WebHelper.IsHasController("PurchaseOrder", "Vendor") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapsePurchases" aria-expanded="@(WebHelper.IsHasController("PurchaseOrder", "Vendor") ? "true" : "false")">
-            <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Mua hàng
+            <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Nhập hàng
         </a>
         <div class="collapse @(WebHelper.IsHasController("PurchaseOrder", "Vendor") ? "show" : "")" id="collapsePurchases">
             <ul class="nav flex-column sub-menu">
@@ -95,7 +95,7 @@
         <div class="collapse @(WebHelper.IsHasController("Category", "Product", "Warehouse", "UnitMeasurement") ? "show" : "")" id="collapseCatalog">
             <ul class="nav flex-column sub-menu">
                 <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Product") ? "active" : "")" asp-controller="Product" asp-action="Index">Sản phẩm</a>
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Product") ? "active" : "")" asp-controller="Product" asp-action="Index">Hàng hóa</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("Category") ? "active" : "")" asp-controller="Category" asp-action="Index">Danh mục</a>
