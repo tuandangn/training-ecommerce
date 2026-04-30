@@ -34,8 +34,9 @@ Thư mục gốc chứa file solution `.sln` và các thư mục layer chính:
 ## 3. Các Module Chính (Core Modules)
 
 - **Catalog:** Quản lý sản phẩm, danh mục và đơn vị hàng hóa.
-- **Orders:** Xử lý đơn bán hàng, theo dõi thanh toán và trạng thái giao hàng.
-- **Inventory & PurchaseOrders:** Quản lý kho (Warehouses), nhập hàng (Purchase Orders) từ nhà cung cấp (Vendors), kiểm kê và điều phối hàng tồn kho.
+- **Orders:** Xử lý đơn bán hàng, theo dõi thanh toán và trạng thái giao hàng (Order → DeliveryNote → trừ tồn kho + ghi công nợ khách hàng).
+- **Inventory & PurchaseOrders:** Quản lý kho (Warehouses), nhập hàng (PurchaseOrder → GoodsReceipt → cộng tồn kho + ghi công nợ NCC), kiểm kê và điều phối hàng tồn kho.
+- **Returns:** *(Chưa implement — xem `RETURNS_MODULE_PLAN.md`)* Xử lý trả hàng hai chiều: CustomerReturn (khách trả về) và VendorReturn (cửa hàng trả NCC). Có bước kiểm tra chất lượng (Inspecting) trước khi cập nhật tồn kho và công nợ.
 - **Finance:** Quản lý thu chi (Expenses), báo cáo tài chính và dòng tiền (với module tài chính chuyên sâu).
 - **Customers & Users:** Quản lý thông tin khách hàng và hệ thống phân quyền nhân viên.
 
