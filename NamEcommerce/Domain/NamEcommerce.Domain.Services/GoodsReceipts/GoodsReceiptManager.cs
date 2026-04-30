@@ -112,11 +112,8 @@ public sealed class GoodsReceiptManager(
             throw new GoodsReceiptItemIsNotFoundException(dto.GoodsReceiptItemId);
 
         item.SetUnitCost(dto.UnitCost);
-        var updatedGoodsReceipt = await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
-
-        // Pass item.Id qua AdditionalData để GoodsReceiptUpdatedHandler phân biệt được
-        // đây là một lần SetUnitCost (cần Full Recalculation AverageCost) thay vì các loại update khác.
-        await eventPublisher.EntityUpdated(updatedGoodsReceipt, item.Id).ConfigureAwait(false);
+        goodsReceipt.MarkItemUnitCostSet(item.Id);
+        await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
     }
 
     public async Task<GoodsReceiptDto?> GetGoodsReceiptByIdAsync(Guid id)
@@ -187,9 +184,8 @@ public sealed class GoodsReceiptManager(
             goodsReceipt.ClearVendor();
         }
 
+        goodsReceipt.MarkVendorChanged();
         var updatedGoodsReceipt = await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
-
-        await eventPublisher.EntityUpdated(updatedGoodsReceipt, "vendor-updated").ConfigureAwait(false);
 
         return new SetGoodsReceiptVendorResultDto { UpdatedId = updatedGoodsReceipt.Id };
     }
@@ -215,9 +211,8 @@ public sealed class GoodsReceiptManager(
                 throw new InsufficientStockException(deletedProductQty.ProductId, deletedProductQty.WarehouseId, deletedProductQty.TotalQuantity, 0);
         }
 
+        goodsReceipt.MarkDeleted();
         await goodsReceiptRepository.DeleteAsync(goodsReceipt).ConfigureAwait(false);
-
-        await eventPublisher.EntityDeleted(goodsReceipt).ConfigureAwait(false);
     }
 
     public Task RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderDto dto)

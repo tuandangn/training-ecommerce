@@ -487,3 +487,26 @@ Khi audit thì phát hiện Product **đã hoàn tất migration từ trước**
 - Xoá file `PurchaseOrderUpdatedEventHandler.cs` (đang là stub comment).
 - Smoke test: PurchaseOrder flow → tạo PO → submit → approve → receive items → đơn tự transition Receiving → Completed (handler mới `PurchaseOrderItemReceivedEventHandler` xử lý đúng).
 - Nếu có existing test mock `IEventPublisher` ở chỗ khác (ngoài `PurchaseOrderManagerTests`) thì update tương tự.
+
+---
+
+## ✅ System - Event Refactor — Phase 3 Users (verify only)
+
+**Cấp độ:** Dễ | **Độ ưu tiên:** Cao | **Hoàn thành:** 2026-05-01
+
+> Audit Users module — phát hiện đã hoàn tất migration sang Domain Event mới từ trước (giống như Catalog/Product được phát hiện ở session 2026-04-30). Không cần thay đổi code.
+
+#### Tình trạng các thành phần
+
+- `Domain.Shared/Events/Users/UserEvents.cs` — đã có 4 sealed records: `UserCreated(Guid UserId, string Username, string FullName)`, `UserUpdated(Guid UserId)`, `UserPasswordChanged(Guid UserId)`, `UserDeleted(Guid UserId, string Username)`.
+- `Domain/Entities/Users/User.cs` — đã có 4 method `MarkCreated()`, `MarkUpdated()`, `MarkPasswordChanged()`, `MarkDeleted()` trong region `Domain Event Markers`.
+- `Domain.Services/Users/UserManager.cs` — KHÔNG inject `IEventPublisher` (3 deps: `IRepository<User>`, `IEntityDataReader<User>`, `ISecurityService`). `CreateUserAsync` đã gọi `user.MarkCreated()` trước `_userRepository.InsertAsync(user)`.
+- `Application.Services/Users/UserAppService.cs` — KHÔNG dùng `IEventPublisher`.
+- `Tests/NamEcommerce.Domain.Services.Test/Services/UserManagerTests.cs` — constructor đã 3 args, không cần update.
+- Toàn solution không còn reference đến `EntityCreatedNotification<User>` / `EntityUpdatedNotification<User>` / `EntityDeletedNotification<User>`.
+
+#### Pattern decision
+
+`IUserManager` hiện tại chỉ expose 2 method (`CreateUserAsync`, `FindUserByUserNameAndPasswordAsync` + base `DoesUsernameExistAsync`). Không có Update / ChangePassword / Delete — nên `MarkUpdated`/`MarkPasswordChanged`/`MarkDeleted` đã chuẩn bị sẵn cho khi bổ sung manager method tương ứng. Khi cần, chỉ việc gọi `Mark*` trước `UpdateAsync`/`DeleteAsync`.
+
+→ Phase 3 còn lại duy nhất `GoodsReceipts` (phức tạp).

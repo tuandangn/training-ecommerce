@@ -95,7 +95,6 @@
 #### Phase 3 — Migrate các module còn lại
 
 - [ ] **GoodsReceipts:** `GoodsReceipt` — migrate sang concrete events (`GoodsReceiptCreated`, `GoodsReceiptItemUnitCostSet`, `GoodsReceiptVendorChanged`, `GoodsReceiptDeleted`...). Hiện tại GoodsReceiptManager vẫn dùng `IEventPublisher` + `EntityCreatedNotification<GoodsReceipt>` / `EntityUpdatedNotification<GoodsReceipt>` / `EntityDeletedNotification<GoodsReceipt>` với `AdditionalData` để phân biệt loại update. Module này phức tạp (3 handler + AverageCost + Vendor debt) — cần thiết kế kỹ để không vỡ logic existing.
-- [ ] **Users:** `User` (UserManager) — đang dùng `IEventPublisher`. Phạm vi nhỏ, có thể làm cùng phiên với Phase 5 cleanup.
 
 ---
 
@@ -126,11 +125,8 @@
 
 **Files chính cần đụng (Phase 3 còn lại):**
 - `NamEcommerce.Domain.Shared/Events/GoodsReceipts/GoodsReceiptEvents.cs` — extend với concrete events Created/UpdatedItemUnitCost/VendorChanged/Deleted
-- `NamEcommerce.Domain.Shared/Events/Users/UserEvents.cs` — file mới
 - `NamEcommerce.Domain/Entities/GoodsReceipts/GoodsReceipt.cs` — thêm `Mark*` methods
-- `NamEcommerce.Domain/Entities/Users/User.cs` — thêm `Mark*` methods
 - `NamEcommerce.Domain.Services/GoodsReceipts/GoodsReceiptManager.cs` — bỏ inject `IEventPublisher`
-- `NamEcommerce.Domain.Services/Users/UserManager.cs` — bỏ inject `IEventPublisher`
 - `NamEcommerce.Application.Services/Events/GoodsReceipts/*Handler.cs` — refactor 3 handler theo concrete events
 
 **Rủi ro cần lưu ý:**
