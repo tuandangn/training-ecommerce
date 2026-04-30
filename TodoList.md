@@ -7,17 +7,27 @@
 
 ## ⚙️ Quy tắc làm việc với AI Assistant
 
-> **Áp dụng cho mọi phiên làm việc.**
+> **Áp dụng cho mọi phiên làm việc.** Chi tiết đầy đủ xem [CLAUDE.md](CLAUDE.md).
 
+### Source Control
 - **Branch làm việc: `dev-assistant`** — Mọi thay đổi code đều commit lên branch này, KHÔNG commit trực tiếp lên `main`.
-- **Sau mỗi phase/feature hoàn thành**: AI commit lên `dev-assistant`, bạn tự `git push` và merge vào `main` khi kiểm tra xong.
+- **Sau mỗi phiên hoàn thành**: AI commit lên `dev-assistant`, bạn tự `git push` và merge vào `main` khi kiểm tra xong.
 - **Git commit**: AI có thể tạo branch, add, commit trong sandbox. Không thể push (cần credentials của bạn).
 - **Lệnh bạn cần tự chạy sau mỗi session**:
   ```bash
   git push origin dev-assistant
   # Sau khi review xong thì merge vào main
   ```
-- **Scheduled task autonomous mode**: tạm thời KHÔNG viết unit test mới (Tuấn tự bổ sung sau). AI vẫn tuân thủ convention domain (internal methods, ToDto extension, Mark methods raise events...).
+
+### Quản lý Phiên Làm Việc
+- **File session**: Sau khi lên kế hoạch đầy đủ, AI tạo file `sessions/session_[N]_[yyyyMMdd].md` trước khi bắt đầu làm. N là số toàn cục tăng dần.
+- **Cập nhật session**: AI đánh dấu từng bước hoàn thành trong file session ngay sau khi làm xong.
+- **Khi phát hiện uncommitted files từ phiên trước**: AI commit chúng với message `[uncompleted] ...`, đổi tên file session gần nhất thành `session_N_yyyyMMdd_uncompleted.md`, rồi mới bắt đầu phiên mới.
+
+### Quy tắc khác
+- **Unit test**: Tạm thời KHÔNG viết unit test mới (Tuấn tự bổ sung sau).
+- **Migration**: AI KHÔNG tự chạy migration — báo Tuấn tự chạy.
+- **Skills**: AI đọc skill `namcommerce` trước khi viết code domain.
 
 ---
 
