@@ -423,3 +423,67 @@ Handler `GoodsReceiptCreatedHandler` tại `Application.Services/Events/GoodsRec
 - Build verify: `dotnet build NamEcommerce.sln`
 - Run unit tests: `dotnet test Tests/NamEcommerce.Domain.Services.Test/`
 - Smoke test: tạo/sửa/xoá entity của 5 module qua UI; VendorDebt + CustomerDebt event dispatch
+
+---
+
+## ✅ System - Event Refactor — Phase 3 tiếp (Catalog/Product + Inventory/InventoryStock + PurchaseOrders/PurchaseOrder)
+
+**Cấp độ:** Trung Bình | **Độ ưu tiên:** Cao | **Hoàn thành:** 2026-04-30
+
+> Tiếp tục Phase 3 — migrate 3 module còn lại sang Domain Event mới.
+> Lưu ý: session này KHÔNG viết unit test mới (Tuấn sẽ tự bổ sung sau).
+
+---
+
+#### Catalog/Product ✅ DONE 2026-04-30 (verify only)
+
+Khi audit thì phát hiện Product **đã hoàn tất migration từ trước**:
+
+- `Domain.Shared/Events/Catalog/ProductEvents.cs` — `ProductCreated`, `ProductUpdated`, `ProductDeleted`, `ProductPriceChanged` (đã có sẵn)
+- `Domain/Entities/Catalog/Product.cs` — `MarkCreated()`, `MarkUpdated(IEnumerable<Guid> deletedPictureIds)`, `MarkDeleted()`, `MarkPriceChanged(oldUnitPrice, oldCostPrice)` (đã có sẵn)
+- `Domain.Services/Catalog/ProductManager.cs` — không inject `IEventPublisher`, dùng `Mark*` methods (đã có sẵn)
+- `Application.Services/Events/Catalog/ProductDeletedEventHandler.cs` — `INotificationHandler<ProductDeleted>` (đã có sẵn)
+- `Application.Services/Events/Catalog/ProductUpdatedEventHandler.cs` — `INotificationHandler<ProductUpdated>` (đã có sẵn)
+
+→ Không cần thay đổi gì cho Catalog/Product.
+
+#### Inventory/InventoryStock ✅ DONE 2026-04-30 (verify only)
+
+`InventoryStockManager` không inject `IEventPublisher`. `InventoryStock` entity không raise event nào (chỉ là dữ liệu nội bộ về tồn kho — manipulate qua `AdjustStock`, `ReceiveStock`, `DispatchStock`, `ReserveStock`, `ReleaseReservedStock`, `UpdateAverageCost`). Không có handler `EntityCreatedNotification<InventoryStock>` / `EntityUpdatedNotification<InventoryStock>` / `EntityDeletedNotification<InventoryStock>` nào tồn tại.
+
+→ Module đã sạch khỏi pattern cũ. Nếu sau này cần publish event cho external system (low-stock alert, average-cost-changed) thì có thể thêm `Mark*` methods + concrete events — không scope của Phase 3.
+
+#### PurchaseOrders/PurchaseOrder ✅ DONE 2026-04-30
+
+**File mới tạo (2):**
+- `Domain.Shared/Events/PurchaseOrders/PurchaseOrderEvents.cs` — 6 sealed records: `PurchaseOrderCreated`, `PurchaseOrderUpdated`, `PurchaseOrderStatusChanged`, `PurchaseOrderItemAdded`, `PurchaseOrderItemRemoved`, `PurchaseOrderItemReceived`
+- `Application.Services/Events/PurchaseOrders/PurchaseOrderItemReceivedEventHandler.cs` — `INotificationHandler<PurchaseOrderItemReceived>` thay cho handler cũ. Chỉ chạy đúng khi item được nhận → gọi `VerifyStatusAsync` để transition Approved → Receiving → Completed.
+
+**File đã sửa entity:**
+- `Domain/Entities/PurchaseOrders/PurchaseOrder.cs` — thêm 6 method `MarkCreated()`, `MarkUpdated()`, `MarkStatusChanged(oldStatus)`, `MarkItemAdded(item)`, `MarkItemRemoved(itemId)`, `MarkItemReceived(itemId, qty)`
+
+**File đã sửa manager:**
+- `Domain.Services/PurchaseOrders/PurchaseOrderManager.cs` — bỏ inject `IEventPublisher` (12→11 deps). Tất cả `_eventPublisher.EntityCreated/EntityUpdated(...)` thay bằng `purchaseOrder.Mark*()` calls đặt trước `Insert/UpdateAsync`.
+  - `CreatePurchaseOrderAsync` → `MarkCreated()`
+  - `UpdatePurchaseOrderAsync` → `MarkUpdated()`
+  - `AddPurchaseOrderItemAsync` → `MarkItemAdded(item)` (loại bỏ `EntityUpdated(po)` vì handler `VerifyStatus` không cần chạy khi chỉ thêm item — receivedQty vẫn = 0)
+  - `ChangeStatusAsync` → `MarkStatusChanged(oldStatus)` (bắt `oldStatus` trước khi `ChangeStatus`)
+  - `ReceiveItemsAsync` → `MarkItemReceived(itemId, qty)` (handler mới subscribe event này)
+  - `DeleteOrderItemAsync` → `MarkItemRemoved(itemId)`
+
+**File đã sửa test:**
+- `Tests/NamEcommerce.Domain.Services.Test/Services/PurchaseOrderManagerTests.cs` — 22 constructor calls update: bỏ arg `Mock.Of<IEventPublisher>()` (12→11 args). Bỏ `using NamEcommerce.Domain.Shared.Events;`.
+
+**File deprecated:**
+- `Application.Services/Events/PurchaseOrders/PurchaseOrderUpdatedEventHandler.cs` — class bị xoá, nội dung file thay bằng comment migration note. Sandbox không cho xoá file → Tuấn xoá file thủ công khi review.
+
+**Pattern decisions:**
+- `MarkStatusChanged` cần bắt `oldStatus` BEFORE gọi `ChangeStatus` (immutable record nên không thể đọc state cũ sau khi đã thay đổi).
+- `AddPurchaseOrderItemAsync` không raise `PurchaseOrderUpdated` nữa vì side-effect duy nhất của `EntityUpdated` cũ là `VerifyStatusAsync` — và verify không có ý nghĩa khi item mới có receivedQty = 0.
+- `ReceiveItemsAsync` raise `PurchaseOrderItemReceived` TRƯỚC khi `UpdateAsync` để event được pickup bởi `DomainEventDispatchInterceptor` sau `SaveChanges`.
+
+⚠️ **Tuấn cần làm sau merge session 2026-04-30:**
+- Build verify: `dotnet build NamEcommerce.sln` (sandbox không có dotnet — chưa verify được build).
+- Xoá file `PurchaseOrderUpdatedEventHandler.cs` (đang là stub comment).
+- Smoke test: PurchaseOrder flow → tạo PO → submit → approve → receive items → đơn tự transition Receiving → Completed (handler mới `PurchaseOrderItemReceivedEventHandler` xử lý đúng).
+- Nếu có existing test mock `IEventPublisher` ở chỗ khác (ngoài `PurchaseOrderManagerTests`) thì update tương tự.

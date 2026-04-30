@@ -1,10 +1,10 @@
 using NamEcommerce.Domain.Entities.Catalog;
-using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Events.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
@@ -179,6 +179,49 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
         return false;
     }
+
+    #endregion
+
+    #region Domain Event Markers
+
+    /// <summary>
+    /// Đánh dấu đơn nhập vừa được tạo — Manager gọi trước <c>InsertAsync</c>.
+    /// Event sẽ được dispatch sau khi <c>SaveChanges</c> thành công bởi <c>DomainEventDispatchInterceptor</c>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new PurchaseOrderCreated(Id, Code, VendorId, WarehouseId));
+
+    /// <summary>
+    /// Đánh dấu đơn nhập vừa cập nhật thông tin chung — raise <see cref="PurchaseOrderUpdated"/>.
+    /// </summary>
+    internal void MarkUpdated()
+        => RaiseDomainEvent(new PurchaseOrderUpdated(Id));
+
+    /// <summary>
+    /// Đánh dấu trạng thái đơn nhập vừa thay đổi — raise <see cref="PurchaseOrderStatusChanged"/> với
+    /// trạng thái cũ + mới phục vụ tracking + side-effect khác (notify, audit log, ...).
+    /// </summary>
+    internal void MarkStatusChanged(PurchaseOrderStatus oldStatus)
+        => RaiseDomainEvent(new PurchaseOrderStatusChanged(Id, oldStatus, Status));
+
+    /// <summary>
+    /// Đánh dấu một dòng hàng vừa được thêm vào đơn nhập — raise <see cref="PurchaseOrderItemAdded"/>.
+    /// </summary>
+    internal void MarkItemAdded(PurchaseOrderItem item)
+        => RaiseDomainEvent(new PurchaseOrderItemAdded(Id, item.Id, item.ProductId, item.QuantityOrdered, item.UnitCost));
+
+    /// <summary>
+    /// Đánh dấu một dòng hàng vừa bị xoá — raise <see cref="PurchaseOrderItemRemoved"/>.
+    /// </summary>
+    internal void MarkItemRemoved(Guid itemId)
+        => RaiseDomainEvent(new PurchaseOrderItemRemoved(Id, itemId));
+
+    /// <summary>
+    /// Đánh dấu một dòng hàng vừa được nhận hàng — raise <see cref="PurchaseOrderItemReceived"/>.
+    /// Handler sẽ subscribe event này để verify + transition trạng thái đơn (Approved → Receiving → Completed).
+    /// </summary>
+    internal void MarkItemReceived(Guid itemId, decimal receivedQuantity)
+        => RaiseDomainEvent(new PurchaseOrderItemReceived(Id, itemId, receivedQuantity));
 
     #endregion
 

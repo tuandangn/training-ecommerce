@@ -24,7 +24,7 @@ class ProductApi {
 
         let url = `/Product/Search?q=${encodeURIComponent(query)}`;
         if (vendorId) {
-            url += `&vendorId=${encodeURIComponent(vendorId)}`;
+            url += `&vid=${encodeURIComponent(vendorId)}`;
         }
 
         const res = await fetch(url, {
@@ -118,8 +118,8 @@ class ProductPickerView {
     }
 
     setLoading(isLoading) {
-        this.spinner.classList.toggle('d-none', !isLoading);
-        this.searchIcon.classList.toggle('d-none', isLoading);
+    //    this.spinner.classList.toggle('d-none', !isLoading);
+    //    this.searchIcon.classList.toggle('d-none', isLoading);
     }
 
     #buildItem(product, query) {

@@ -23,7 +23,8 @@ public sealed class ProductManager : IProductManager
     private readonly IEntityDataReader<Vendor> _vendorDataReader;
 
     public ProductManager(IRepository<Product> productRepository,
-        IEntityDataReader<Product> productEntityDataReader, IEntityDataReader<Category> categoryDataReader,
+        IEntityDataReader<Product> productEntityDataReader,
+        IEntityDataReader<Category> categoryDataReader,
         IEntityDataReader<Picture> pictureDataReader,
         IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
         IRepository<ProductPriceHistory> priceHistoryRepository,
@@ -92,7 +93,7 @@ public sealed class ProductManager : IProductManager
         return Task.FromResult(sameNameExists);
     }
 
-    public Task<IPagedDataDto<ProductDto>> GetProductsAsync(int pageIndex, int pageSize, string? keywords = null, Guid? categoryId = null)
+    public Task<IPagedDataDto<ProductDto>> GetProductsAsync(int pageIndex, int pageSize, string? keywords = null, Guid? categoryId = null, Guid? vendorId = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
@@ -132,6 +133,9 @@ public sealed class ProductManager : IProductManager
 
             if (categoryId.HasValue)
                 query = query.Where(c => c.ProductCategories.Any(pc => pc.CategoryId == categoryId));
+
+            if (vendorId.HasValue)
+                query = query.Where(c => c.ProductVendors.Any(pv => pv.VendorId == vendorId));
 
             query = query.OrderBy(c => c.Name);
 

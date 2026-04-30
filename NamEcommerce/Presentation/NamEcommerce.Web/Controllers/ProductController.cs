@@ -24,7 +24,7 @@ public sealed class ProductController : BaseAuthorizedController
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
-    public async Task<IActionResult> List(ProductListSearchModel searchModel)
+    public async Task<IActionResult> List(ProductSearchModel searchModel)
     {
         var model = await _productModelFactory.PrepareProductListModel(searchModel);
 
@@ -156,14 +156,14 @@ public sealed class ProductController : BaseAuthorizedController
     }
 
     [HttpGet]
-    public async Task<IActionResult> Search(string q, Guid? w, Guid? vendorId, Guid? categoryId)
+    public async Task<IActionResult> Search(ProductSearchModel searchModel, Guid? wid)
     {
         var model = await _mediator.Send(new GetProductListForOrderQuery
         {
-            Keywords = q,
-            VendorId = vendorId,
-            WarehouseId = w,
-            CategoryId = categoryId
+            Keywords = searchModel.Q,
+            VendorId = searchModel.Vid,
+            WarehouseId = wid,
+            CategoryId = searchModel.Cid
         });
 
         var products = model.Data.Items.Select(productInfo => new

@@ -2,6 +2,7 @@ import { toast } from "/modules/modals.js";
 import { apiGet } from "/modules/ajax-helper.js";
 import VendorPicker from "/modules/VendorPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
+import ProductBrowser from "/modules/ProductBrowser.js";
 
 // ─── Models ───────────────────────────────────────────────────────────────────
 
@@ -60,8 +61,11 @@ export default class CreatePurchaseOrderController {
     #state;
     #addItemController = new AddItemController();
 
+    #browser = null;
     #productPicker;
     #vendorPicker;
+
+    #activeRowIndex = null;
 
     constructor() {
 
@@ -73,6 +77,15 @@ export default class CreatePurchaseOrderController {
         const initialExpectedDate = this.#bindExpectedDate();
         const initialPlacedDate = this.#bindPlacedDate();
         const initialWarehouse = this.#bindWarehouse();
+
+        const browserEl = document.getElementById('productBrowser');
+        if (browserEl) {
+            this.#browser = new ProductBrowser(
+                browserEl,
+                (product) => this.#addOrIncrementItem(product)
+            );
+            this.#browser.init();
+        }
 
         this.#state = Object.assign(new PurchaseOrderState(), {
             vendor: initialVendor,
@@ -95,6 +108,7 @@ export default class CreatePurchaseOrderController {
         this.#renderSummary();
         this.#renderVendor();
         this.#renderItems();
+        this.#highlightRow();
         this.#validateForm();
     }
 
@@ -127,6 +141,16 @@ export default class CreatePurchaseOrderController {
         this.#state.items.forEach((item, index) => {
             this.#buildItemRow(container, item, index);
         });
+    }
+
+    #highlightRow() {
+        if (this.#activeRowIndex < 0) return;
+        const tableBody = getEl('itemsTableBody');
+        const row = tableBody.rows[this.#activeRowIndex];
+        console.log(row);
+        this.#activeRowIndex = null;
+        row.classList.add('table-success');
+        setTimeout(() => row.classList.remove('table-success'), 700);
     }
 
     #getItems() {
@@ -242,6 +266,21 @@ export default class CreatePurchaseOrderController {
         this.#setState({ items });
     }
 
+    #addOrIncrementItem(product) {
+        const items = Array.from(this.#state.items);
+        const existingIndex = items.findIndex(item => item.productInfo.id === product.id);
+        if (existingIndex !== -1) {
+            const existingItem = items[existingIndex];
+            existingItem.quantity += 1;
+            this.#activeRowIndex = existingIndex;
+            this.#setState({ items });
+        } else {
+            items.push(new PurchaseOrderItem(new ProductInfo(product), 1, 0)); //*TODO* recent unit cost of vendor
+            this.#activeRowIndex = items.length - 1;
+            this.#setState({ items });
+        }
+    }
+
     // ─── Validation ───────────────────────────────────────────────────────────
 
     #validateForm() {
@@ -277,14 +316,15 @@ export default class CreatePurchaseOrderController {
     }
 
     #validateWarehouse() {
-        const { warehouse } = this.#state;
+        return true;
+        //    const { warehouse } = this.#state;
 
-        const warehouseValidator = document.querySelector('[data-valmsg-for="WarehouseId"]');
-        if (warehouseValidator) {
-            warehouseValidator.textContent = warehouse ? '' : 'Vui lòng chọn kho nhập hàng.';
-        }
+        //    const warehouseValidator = document.querySelector('[data-valmsg-for="WarehouseId"]');
+        //    if (warehouseValidator) {
+        //        warehouseValidator.textContent = warehouse ? '' : 'Vui lòng chọn kho nhập hàng.';
+        //    }
 
-        return !!warehouse;
+        //    return !!warehouse;
     }
 
     #validatePlacedDate() {
@@ -292,7 +332,6 @@ export default class CreatePurchaseOrderController {
         if (!msgEl) return true;
 
         const today = new Date();
-        console.log(this.#state.placedDate, today);
 
         if (this.#state.placedDate > today) {
             msgEl.textContent = 'Ngày đặt hàng không lớn hơn hiện tại.';
@@ -304,20 +343,20 @@ export default class CreatePurchaseOrderController {
     }
 
     #validateExpectedDate() {
-        const msgEl = document.querySelector('[data-valmsg-for="ExpectedDeliveryDate"]');
-        if (!msgEl) return true;
+        //const msgEl = document.querySelector('[data-valmsg-for="ExpectedDeliveryDate"]');
+        //if (!msgEl) return true;
 
-        if (this.#state.expectedDate) {
-            const expected = new Date(this.#state.expectedDate);
-            expected.setHours(23, 59, 59, 999);
+        //if (this.#state.expectedDate) {
+        //    const expected = new Date(this.#state.expectedDate);
+        //    expected.setHours(23, 59, 59, 999);
 
-            if (expected < this.#state.placedDate) {
-                msgEl.textContent = 'Ngày giao dự kiến phải lớn hơn ngày đặt hàng.';
-                return false;
-            }
-        }
+        //    if (expected < this.#state.placedDate) {
+        //        msgEl.textContent = 'Ngày giao dự kiến phải lớn hơn ngày đặt hàng.';
+        //        return false;
+        //    }
+        //}
 
-        msgEl.textContent = '';
+        //msgEl.textContent = '';
         return true;
     }
 
@@ -336,7 +375,8 @@ export default class CreatePurchaseOrderController {
     }
 
     #bindExpectedDate() {
-        const el = getEl('ExpectedDeliveryDate');
+        const el = document.getElementById('ExpectedDeliveryDate');
+        if (!el) return;
         el.addEventListener('change', (e) => {
             this.#setState({
                 expectedDate: e.target.value ? new Date(e.target.value) : null,
@@ -348,7 +388,8 @@ export default class CreatePurchaseOrderController {
     }
 
     #bindWarehouse() {
-        const el = getEl('WarehouseId');
+        const el = document.getElementById('WarehouseId');
+        if (!el) return;
         el.addEventListener('change', (e) => {
             this.#setState({
                 warehouse: e.target.value,

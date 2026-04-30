@@ -184,5 +184,36 @@ public sealed record GoodsReceipt : AppAggregateEntity
     private void MarkSetToPurchaseOrder(Guid purchaseOrderId) => RaiseDomainEvent(new GoodsReceiptSetToPurchaseOrder(Id, purchaseOrderId));
     private void MarkRemovedFromPurchaseOrder(Guid purchaseOrderId) => RaiseDomainEvent(new GoodsReceiptRemovedFromPurchaseOrder(Id, purchaseOrderId));
 
+    /// <summary>
+    /// Manager gọi trước <c>InsertAsync</c>. Handler sẽ cộng tồn kho cho từng item có WarehouseId
+    /// và thử sinh công nợ NCC nếu phiếu được tạo với đủ vendor + UnitCost.
+    /// </summary>
+    internal void MarkCreated() => RaiseDomainEvent(new GoodsReceiptCreated(Id));
+
+    /// <summary>
+    /// Manager gọi sau khi cập nhật thông tin chung (note, truck, ảnh, vendor inline) qua
+    /// <c>UpdateGoodsReceiptAsync</c>. Hiện không có handler subscribe — chủ yếu để audit/tracking.
+    /// </summary>
+    internal void MarkUpdated() => RaiseDomainEvent(new GoodsReceiptUpdated(Id));
+
+    /// <summary>
+    /// Manager gọi sau <c>SetUnitCost</c> cho 1 dòng hàng. Handler sẽ tính lại AverageCost
+    /// theo Full Recalculation và thử sinh công nợ NCC.
+    /// </summary>
+    internal void MarkItemUnitCostSet(Guid itemId) => RaiseDomainEvent(new GoodsReceiptItemUnitCostSet(Id, itemId));
+
+    /// <summary>
+    /// Manager gọi sau khi gắn / đổi / bỏ vendor qua <c>SetGoodsReceiptVendorAsync</c>.
+    /// Handler sẽ thử sinh công nợ NCC (idempotent).
+    /// </summary>
+    internal void MarkVendorChanged() => RaiseDomainEvent(new GoodsReceiptVendorChanged(Id));
+
+    /// <summary>
+    /// Manager gọi trước <c>DeleteAsync</c>. Event mang theo toàn bộ <c>PictureIds</c> hiện tại
+    /// để handler dọn ảnh khỏi storage. Handler còn hoàn nguyên tồn kho cho các item có WarehouseId
+    /// (re-fetch entity vì soft delete).
+    /// </summary>
+    internal void MarkDeleted() => RaiseDomainEvent(new GoodsReceiptDeleted(Id, _pictureIds.ToList().AsReadOnly()));
+
     #endregion
 }

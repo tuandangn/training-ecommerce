@@ -1,5 +1,6 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
+using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Catalog;
@@ -27,32 +28,10 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
 
     public async Task<ProductListForOrderModel> Handle(GetProductListForOrderQuery request, CancellationToken cancellationToken)
     {
-        IEnumerable<Application.Contracts.Dtos.Catalog.ProductAppDto> products;
-        string? vendorName = null;
+        var products = await _productAppService.GetProductsAsync(0, int.MaxValue, request.Keywords, request.CategoryId, request.VendorId).ConfigureAwait(false);
 
-        if (request.VendorId.HasValue)
-        {
-            products = await _productAppService.GetProductsByVendorIdAsync(request.VendorId.Value).ConfigureAwait(false);
-            if (!string.IsNullOrEmpty(request.Keywords))
-            {
-                var lowerKeywords = request.Keywords.ToLowerInvariant();
-                products = products.Where(p => p.Name.ToLowerInvariant().Contains(lowerKeywords));
-            }
-            var vendor = await _vendorAppService.GetVendorByIdAsync(request.VendorId.Value).ConfigureAwait(false);
-            if (vendor != null) vendorName = vendor.Name;
-        }
-        else
-        {
-            var pagedData = await _productAppService.GetProductsAsync(request.Keywords, 0, int.MaxValue).ConfigureAwait(false);
-            products = pagedData;
-        }
-
-        // Filter by category if provided
-        if (request.CategoryId.HasValue)
-            products = products.Where(p => p.Categories.Any(c => c.CategoryId == request.CategoryId.Value));
-
-        var allVendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
-        var allCategoryOptions = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
+        var allVendorOptions = await _mediator.Send(new GetVendorOptionListQuery(), cancellationToken).ConfigureAwait(false);
+        var allCategoryOptions = await _mediator.Send(new GetCategoryOptionListQuery(), cancellationToken).ConfigureAwait(false);
 
         var productListItems = new List<ProductListForOrderModel.ProductItemModel>();
         foreach (var productInfo in products)
@@ -94,10 +73,13 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
             productListItems.Add(productModel);
         }
 
+        var filteredByVendorName = request.VendorId.HasValue
+            ? allVendorOptions.FirstOrDefault(v => v.Id == request.VendorId.Value)?.Name
+            : null;
         return new ProductListForOrderModel
         {
             Keywords = request.Keywords,
-            FilteredByVendorName = vendorName,
+            FilteredByVendorName = filteredByVendorName,
             Data = PagedDataModel.Create(productListItems)
         };
     }

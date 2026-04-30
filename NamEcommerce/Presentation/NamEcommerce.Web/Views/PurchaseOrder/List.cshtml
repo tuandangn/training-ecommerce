@@ -46,12 +46,6 @@
                         <th>
                             Nhà cung cấp
                         </th>
-                        <th class="d-none d-md-table-cell">
-                            Kho hàng
-                        </th>
-                        <th class="text-center">
-                            Dự kiến giao
-                        </th>
                         <th class="text-end">Tổng tiền</th>
                         <th class="text-center" style="width: 120px;">
                             Trạng thái
@@ -93,15 +87,6 @@
                                             </div>
                                         }
                                     </div>
-                                </td>
-                                <td class="d-none d-md-table-cell">
-                                    @if (!string.IsNullOrEmpty(purchaseOrder.WarehouseName))
-                                    {
-                                        @HighlighHelper.Highlight(purchaseOrder.WarehouseName, query)
-                                    }
-                                </td>
-                                <td class="text-center text-muted">
-                                    @purchaseOrder.ExpectedDeliveryDate?.ToString(ViewConstants.DefaultDateFormat)
                                 </td>
                                 <td class="text-end fw-bold text-primary text-nowrap">
                                     @purchaseOrder.TotalAmount.DisplayCurrency()

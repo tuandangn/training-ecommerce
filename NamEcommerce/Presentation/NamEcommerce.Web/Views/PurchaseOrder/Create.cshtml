@@ -4,172 +4,44 @@
 @{
     ViewData["Title"] = "Thêm đơn nhập";
 }
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
-        <li class="breadcrumb-item"><a asp-action="List" class="text-decoration-none">Đơn nhập</a></li>
-        <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
-    </ol>
-</nav>
-<div class="content-card mb-3">
-    <div class="content-card-header">
-        <div>
-            <h1 class="page-header-title">Thêm đơn nhập</h1>
-            <p class="page-header-subtitle">Thêm mới đơn nhập hàng</p>
-        </div>
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Thêm mới
+        <span class="text-muted">Đơn nhập</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="PurchaseOrder" class="text-decoration-none">Đơn nhập</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
+            </ol>
+        </nav>
     </div>
-</div>
+}
 <div>
     <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
     <form method="post" id="createPurchaseOrderForm" asp-antiforgery="true">
         <div class="row g-3">
-            <div class="col-lg-8">
-                <div class="content-card">
-                    <div class="content-card-header">
-                        <h5>
-                            <i class="bi bi-box-seam me-2 text-primary"></i>
-                            Danh sách hàng hóa
-                        </h5>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
-                                data-bs-target="#addProductModal">
-                            <i class="bi bi-plus-lg me-1"></i>
-                            <span class="d-none d-lg-inline">Thêm hàng hóa</span>
-                            <span class="d-lg-none">Thêm</span>
-                        </button>
-                    </div>
-                    <div>
-                        <div class="table-responsive">
-                            <table class="table data-table mb-0" id="purchaseOrderItemsTable">
-                                <thead>
-                                    <tr>
-                                        <th class="ps-3">Sản phẩm</th>
-                                        <th class="text-center">Số lượng</th>
-                                        <th class="text-end">Đơn giá</th>
-                                        <th class="text-end d-none d-lg-table-cell">Thành tiền</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="itemsTableBody">
-                                    @for (var i = 0; i < Model.Items.Count; i++)
-                                    {
-                                        var item = Model.Items[i];
-                                        <tr id="row-@i" class="align-top">
-                                            <td class="ps-3">
-                                                <div class="d-flex align-items-center gap-2">
-                                                    @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))
-                                                    {
-                                                        <img src="@item.ProductDisplayPicture" class="rounded product-picture"
-                                                             style="width:40px; height:40px; object-fit:cover;" alt="@item.ProductDisplayName" />
-                                                    }
-                                                    else
-                                                    {
-                                                        <div class="d-flex align-items-center justify-content-center rounded bg-light"
-                                                             style="width: 40px; height: 40px;">
-                                                            <i class="bi bi-image text-muted"></i>
-                                                        </div>
-                                                    }
-                                                    <div class="fw-medium product-name">@item.ProductDisplayName</div>
-                                                </div>
-                                                <input type="text" class="visually-hidden product-id"
-                                                       name="Items[@i].ProductId" value="@item.ProductId" data-val="true"
-                                                       data-val-required="Vui lòng chọn hàng hóa." />
-                                                <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].ProductId" data-valmsg-replace="true"></span>
-                                            </td>
-                                            <td class="text-end">
-                                                <input name="Items[@i].Quantity" data-decimal="quantity"
-                                                       class="row-qty no-additional-element" value="@item.Quantity.DisplayQuantity()" autocomplete="off"
-                                                       data-val="true" data-val-required="Vui lòng nhập số lượng."
-                                                       data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
-                                                       data-val-number="Số lượng phải là số" />
-                                                <span class="small text-danger field-validation-valid"
-                                                      data-valmsg-for="Items[@i].Quantity"
-                                                      data-valmsg-replace="true"></span>
-                                            </td>
-                                            <td class="text-end">
-                                                <input name="Items[@i].UnitCost" data-decimal="currency"
-                                                       class="row-price no-additional-element" value="@item.UnitCost.DisplayCurrency()"
-                                                       data-val="true" autocomplete="off"
-                                                       data-val-required="Vui lòng nhập đơn giá"
-                                                       data-val-number="Đơn giá phải là số" />
-                                                <span class="small text-danger field-validation-valid"
-                                                      data-valmsg-for="Items[@i].UnitCost"
-                                                      data-valmsg-replace="true"></span>
-                                            </td>
-                                            <td class="text-end fw-bold text-danger px-3 row-total text-nowrap d-none d-lg-table-cell">
-                                                @item.ItemSubTotal.DisplayCurrency()
-                                            </td>
-                                            <td class="text-end pe-3 w-auto">
-                                                <button type="button"
-                                                        class="btn-table-action danger border-0 bg-transparent shadow-none">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="@(Model.Items.Count > 0 ? "" : "d-none") order-summary" id="tableFooter">
-                            <div class="order-summary-row">
-                                <span class="label">Tạm tính</span>
-                                <span class="value" id="subTotal">@Model.OrderSubTotal.DisplayCurrency()</span>
-                            </div>
-                            <div class="order-summary-row total">
-                                <span class="label">Tổng cộng</span>
-                                <span class="value" id="grandTotal">
-                                    @Model.OrderTotal.DisplayCurrency()
-                                </span>
-                            </div>
-                        </div>
-                        <div id="noItemsMessage" class="py-4 text-center text-muted" style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
-                            Chưa có hàng hóa nào
-                            <div class="mt-1">
-                                <span asp-validation-for="Items" class="text-danger small"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4">
+            <div class="col-xl-3 col-lg-3 col-md-12">
                 <div class="content-card mb-2">
                     <div class="content-card-header">
                         <h5>
-                            <i class="bi bi-pencil-square me-2 text-primary"></i>
                             Thông tin đơn nhập
                         </h5>
                     </div>
                     <div class="content-card-body">
                         <div class="mb-3">
                             <label asp-for="PlacedOn" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <input type="datetime-local" asp-for="PlacedOn" value="@Model.PlacedOn.ToString("s")" class="form-control" placeholder="Ngày đặt hàng"/>
+                            <input type="datetime-local" asp-for="PlacedOn" value="@Model.PlacedOn.ToString("s")" class="form-control" placeholder="Ngày đặt hàng" />
                             <span asp-validation-for="PlacedOn" class="text-danger small"></span>
                         </div>
                         <div class="mb-3">
-                            <div class="row g-3">
-                                <div class="col-12">
-                                    <label for="vendorSearch" class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
-                                    <div>
-                                        <div id="vendorPicker" data-id="@Model.VendorId" data-name="@Model.VendorName" data-phone="@Model.VendorPhone" data-address="@Model.VendorAddress"></div>
-                                        <input type="text" class="visually-hidden" asp-for="VendorId" />
-                                        <span asp-validation-for="VendorId" class="small text-danger"></span>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                    <select asp-for="WarehouseId" class="form-select">
-                                        <option value="" selected="@(!Model.WarehouseId.HasValue)">(Không chọn)</option>
-                                        @foreach (var warehouse in Model.AvailableWarehouses!)
-                                        {
-                                            <option value="@warehouse.Id" selected="@(Model.WarehouseId == warehouse.Id)">@warehouse.Name</option>
-                                        }
-                                    </select>
-                                    <span asp-validation-for="WarehouseId" class="small text-danger"></span>
-                                </div>
-                                <div class="col-12">
-                                    <label asp-for="ExpectedDeliveryDate" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                    <input asp-for="ExpectedDeliveryDate" class="form-control" value="@Model.ExpectedDeliveryDate?.ToString("s")" type="date" placeholder="Ngày giao dự kiến" />
-                                    <span asp-validation-for="ExpectedDeliveryDate" class="text-danger small"></span>
-                                </div>
+                            <label for="vendorSearch" class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
+                            <div>
+                                <div id="vendorPicker" data-id="@Model.VendorId" data-name="@Model.VendorName" data-phone="@Model.VendorPhone" data-address="@Model.VendorAddress"></div>
+                                <input type="text" class="visually-hidden" asp-for="VendorId" />
+                                <span asp-validation-for="VendorId" class="small text-danger"></span>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -179,8 +51,138 @@
                         </div>
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary" disabled id="btnSubmitPurchaseOrder">
-                                <i class="bi bi-check2 me-1"></i>Tạo đơn
+                                Tạo đơn
                             </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-9 col-lg-9 col-md-12">
+                <div class="row">
+                    <div class="col-xl-8 col-lg-12 col-md-7">
+                        <div class="content-card mb-3">
+                            <div class="content-card-header">
+                                <h5>
+                                    Danh sách hàng hóa
+                                </h5>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
+                                        data-bs-target="#addProductModal">
+                                    <i class="bi bi-plus-lg me-1"></i>
+                                    <span class="d-none d-lg-inline">Thêm hàng hóa</span>
+                                    <span class="d-lg-none">Thêm</span>
+                                </button>
+                            </div>
+                            <div class="content-card-body-flush">
+                                <div class="table-responsive">
+                                    <table class="table data-table mb-0" id="purchaseOrderItemsTable">
+                                        <thead>
+                                            <tr>
+                                                <th class="ps-3">Sản phẩm</th>
+                                                <th class="text-center">Số lượng</th>
+                                                <th class="text-end">Đơn giá</th>
+                                                <th class="text-end d-none d-lg-table-cell">Thành tiền</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="itemsTableBody">
+                                            @for (var i = 0; i < Model.Items.Count; i++)
+                                            {
+                                                var item = Model.Items[i];
+                                                <tr id="row-@i" class="align-top">
+                                                    <td class="ps-3">
+                                                        <div class="d-flex align-items-center gap-2">
+                                                            @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))
+                                                            {
+                                                                <img src="@item.ProductDisplayPicture" class="rounded product-picture"
+                                                                     style="width:40px; height:40px; object-fit:cover;" alt="@item.ProductDisplayName" />
+                                                            }
+                                                            else
+                                                            {
+                                                                <div class="d-flex align-items-center justify-content-center rounded bg-light"
+                                                                     style="width: 40px; height: 40px;">
+                                                                    <i class="bi bi-image text-muted"></i>
+                                                                </div>
+                                                            }
+                                                            <div class="fw-medium product-name">@item.ProductDisplayName</div>
+                                                        </div>
+                                                        <input type="text" class="visually-hidden product-id"
+                                                               name="Items[@i].ProductId" value="@item.ProductId" data-val="true"
+                                                               data-val-required="Vui lòng chọn hàng hóa." />
+                                                        <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].ProductId" data-valmsg-replace="true"></span>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <input name="Items[@i].Quantity" data-decimal="quantity"
+                                                               class="row-qty no-additional-element" value="@item.Quantity.DisplayQuantity()" autocomplete="off"
+                                                               data-val="true" data-val-required="Vui lòng nhập số lượng."
+                                                               data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
+                                                               data-val-number="Số lượng phải là số" />
+                                                        <span class="small text-danger field-validation-valid"
+                                                              data-valmsg-for="Items[@i].Quantity"
+                                                              data-valmsg-replace="true"></span>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <input name="Items[@i].UnitCost" data-decimal="currency"
+                                                               class="row-price no-additional-element" value="@item.UnitCost.DisplayCurrency()"
+                                                               data-val="true" autocomplete="off"
+                                                               data-val-required="Vui lòng nhập đơn giá"
+                                                               data-val-number="Đơn giá phải là số" />
+                                                        <span class="small text-danger field-validation-valid"
+                                                              data-valmsg-for="Items[@i].UnitCost"
+                                                              data-valmsg-replace="true"></span>
+                                                    </td>
+                                                    <td class="text-end fw-bold text-danger px-3 row-total text-nowrap d-none d-lg-table-cell">
+                                                        @item.ItemSubTotal.DisplayCurrency()
+                                                    </td>
+                                                    <td class="text-end pe-3 w-auto">
+                                                        <button type="button"
+                                                                class="btn-table-action danger border-0 bg-transparent shadow-none">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div id="noItemsMessage" class="py-4 text-center text-muted" style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
+                                    Chưa có hàng hóa nào
+                                    <div class="mt-1">
+                                        <span asp-validation-for="Items" class="text-danger small"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="content-card-footer bg-white py-2">
+                                <div class="order-summary" id="tableFooter">
+                                    <div class="order-summary-row small">
+                                        <span class="label">Tạm tính</span>
+                                        <span class="value" id="subTotal">@Model.OrderSubTotal.DisplayCurrency()</span>
+                                    </div>
+                                    <div class="order-summary-row total">
+                                        <span class="label">Tổng cộng</span>
+                                        <span class="value">
+                                            <span id="grandTotal">@Model.OrderTotal.DisplayCurrency()</span>
+                                        </span>
+                                    </div>
+                                    <div class="currency-hint text-end visible" id="grandTotalHint">
+                                        @if (Model.OrderTotal > 0)
+                                        {
+                                            @Model.OrderTotal.DisplayVietnameseCurrencyHint()
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-4 col-lg-12 col-md-5">
+                        <!-- Product Browser -->
+                        <div class="content-card">
+                            <div class="content-card-header">
+                                <h5>Chọn hàng hóa</h5>
+                                <span class="text-muted small">Nhấn <i class="bi bi-plus-lg"></i> để thêm vào phiếu</span>
+                            </div>
+                            <div class="content-card-body">
+                                <div id="productBrowser" data-item-class="col-12"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -274,12 +276,12 @@
         const addProductContainer = document.getElementById('addProductModal');
         const addProductModal = bootstrap.Modal.getOrCreateInstance(addProductContainer);
         addProductContainer.addEventListener('hidden.bs.modal', () => {
-            const searchInput = addProductContainer.querySelector('.productSearch');
-            if (searchInput)
-                searchInput.value = '';
+        const searchInput = addProductContainer.querySelector('.productSearch');
+        if (searchInput)
+        searchInput.value = '';
         });
         document.addEventListener('purchaseOrder:itemAdded', () => {
-            addProductModal.hide();
+        addProductModal.hide();
         });
     </script>
 }

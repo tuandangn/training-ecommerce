@@ -1,6 +1,5 @@
 using FluentValidation;
 using Microsoft.Extensions.Localization;
-using NamEcommerce.Web.Contracts.Extensions;
 using NamEcommerce.Web.Models.Catalog;
 using NamEcommerce.Web.Resources;
 
@@ -15,10 +14,5 @@ public sealed class CreatePurchaseOrderValidator : AbstractValidator<CreatePurch
 
         RuleFor(p => p.PlacedOn)
             .LessThanOrEqualTo(DateTime.Now).WithMessage(p => localizer["Error.PlacedOrderDateCannotBeInFuture"]);
-
-        RuleFor(p => p.ExpectedDeliveryDate)
-            .GreaterThanOrEqualTo(DateTime.Now.Date).WithMessage(p => localizer["Error.ExpectedDeliveryDateCannotBeInPast"])
-            .Must((m, expectedDeliveryDate) => !expectedDeliveryDate.HasValue || expectedDeliveryDate.ToEndOfDate() >= m.PlacedOn)
-            .WithMessage(p => localizer["Error.ExpectedDeliveryDateLessThanPlaceOrderDate"]);
     }
 }

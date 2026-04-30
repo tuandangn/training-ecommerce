@@ -206,11 +206,9 @@ public sealed class ProductAppService : IProductAppService
         return products.Select(p => p.ToDto());
     }
 
-    public async Task<IPagedDataAppDto<ProductAppDto>> GetProductsAsync(
-        string? keywords = null,
-        int pageIndex = 0, int pageSize = int.MaxValue)
+    public async Task<IPagedDataAppDto<ProductAppDto>> GetProductsAsync(int pageIndex, int pageSize, string? keywords = null, Guid? categoryId = null, Guid? vendorId = null)
     {
-        var pagedData = await _productManager.GetProductsAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
+        var pagedData = await _productManager.GetProductsAsync(pageIndex, pageSize, keywords, categoryId, vendorId).ConfigureAwait(false);
 
         var result = PagedDataAppDto.Create(
             pagedData.Select(product => product.ToDto()),

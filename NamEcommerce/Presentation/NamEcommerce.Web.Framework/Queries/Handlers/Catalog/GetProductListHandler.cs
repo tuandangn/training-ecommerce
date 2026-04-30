@@ -11,12 +11,11 @@ namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 public sealed class GetProductListHandler(
     IProductAppService productAppService, IMediator mediator,
     IPictureAppService pictureAppService, IUnitMeasurementAppService unitMeasurementAppService,
-    IVendorAppService vendorAppService)
-    : IRequestHandler<GetProductListQuery, ProductListModel>
+    IVendorAppService vendorAppService) : IRequestHandler<GetProductListQuery, ProductListModel>
 {
     public async Task<ProductListModel> Handle(GetProductListQuery request, CancellationToken cancellationToken)
     {
-        var pagedData = await productAppService.GetProductsAsync(request.Keywords, request.PageIndex, request.PageSize);
+        var pagedData = await productAppService.GetProductsAsync(request.PageIndex, request.PageSize, request.Keywords, request.CategoryId, request.VendorId);
 
         var categoryBreadcrumbs = new Dictionary<Guid, string>();
         var categoryIds = pagedData.Where(product => product.Categories.Any())

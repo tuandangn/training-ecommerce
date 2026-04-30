@@ -9,7 +9,6 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
@@ -31,7 +30,6 @@ public sealed class GoodsReceiptManager(
     ICurrentUserAccessor currentUserAccessor,
     IEntityDataReader<Picture> pictureDataReader,
     IEntityDataReader<Vendor> vendorDataReader,
-    IEventPublisher eventPublisher,
     IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
     IRepository<PurchaseOrder> purchaseOrderRepository,
     IInventoryStockManager inventoryStockManager) : IGoodsReceiptManager
@@ -58,9 +56,8 @@ public sealed class GoodsReceiptManager(
                 goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
         }
 
+        goodsReceipt.MarkCreated();
         var insertedGoodsReceipt = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
-
-        await eventPublisher.EntityCreated(insertedGoodsReceipt).ConfigureAwait(false);
 
         return new CreateGoodsReceiptResultDto { CreatedId = insertedGoodsReceipt.Id };
     }
@@ -79,7 +76,6 @@ public sealed class GoodsReceiptManager(
         goodsReceipt.TruckDriverName = dto.TruckDriverName;
         goodsReceipt.TruckNumberSerial = dto.TruckNumberSerial;
         goodsReceipt.Note = dto.Note;
-        var deletedPictureIds = goodsReceipt.PictureIds.AsEnumerable();
         goodsReceipt.ClearPictures();
         foreach (var pictureId in dto.PictureIds)
             await goodsReceipt.AddPictureAsync(pictureId, pictureDataReader).ConfigureAwait(false);
@@ -95,9 +91,8 @@ public sealed class GoodsReceiptManager(
             goodsReceipt.ClearVendor();
         }
 
+        goodsReceipt.MarkUpdated();
         var updatedGoodsReceipt = await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
-
-        await eventPublisher.EntityUpdated(updatedGoodsReceipt, deletedPictureIds).ConfigureAwait(false);
 
         return new UpdateGoodsReceiptResultDto { UpdatedId = updatedGoodsReceipt.Id };
     }

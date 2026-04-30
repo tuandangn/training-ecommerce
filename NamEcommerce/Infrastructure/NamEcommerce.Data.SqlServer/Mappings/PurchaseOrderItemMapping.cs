@@ -13,7 +13,6 @@ public sealed class PurchaseOrderItemMapping : IEntityTypeConfiguration<Purchase
         builder.Property(p => p.UnitCost).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(p => p.QuantityReceived).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(p => p.Note).HasMaxLength(1000);
-        builder.Property(p => p.CreatedOnUtc).IsRequired();
 
         builder.HasOne<Product>()
             .WithMany()

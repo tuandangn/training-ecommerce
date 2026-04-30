@@ -1,4 +1,3 @@
-using Moq;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
@@ -12,8 +11,6 @@ using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Events.Entities;
-using NamEcommerce.Domain.Entities.Catalog;
-using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.Media;
 using NamEcommerce.Domain.Shared.Services.Users;
@@ -1052,8 +1049,8 @@ public sealed class GoodsReceiptManagerTests
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(purchaseOrder);
         var manager = new GoodsReceiptManager(
             null!, goodsReceiptDataReaderStub.Object,
-            null!, null!, null!, null!, null!, null!, null!, null!,
-            purchaseOrderDataReaderStub.Object);
+            null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object, null!, null!);
 
         var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
 
@@ -1085,8 +1082,8 @@ public sealed class GoodsReceiptManagerTests
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(purchaseOrder);
         var manager = new GoodsReceiptManager(
             null!, goodsReceiptDataReaderStub.Object,
-            null!, null!, null!, null!, null!, null!, null!, null!,
-            purchaseOrderDataReaderStub.Object);
+            null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object, null!, null!);
 
         var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
 
@@ -1115,8 +1112,8 @@ public sealed class GoodsReceiptManagerTests
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(futurePurchaseOrder);
         var manager = new GoodsReceiptManager(
             null!, goodsReceiptDataReaderStub.Object,
-            null!, null!, null!, null!, null!, null!, null!, null!,
-            purchaseOrderDataReaderStub.Object);
+            null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object, null!, null!);
 
         var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
 
@@ -1161,8 +1158,8 @@ public sealed class GoodsReceiptManagerTests
             draftPurchaseOrder, submittedPurchaseOrder, completedPurchaseOrder, cancelledPurchaseOrder);
         var manager = new GoodsReceiptManager(
             null!, goodsReceiptDataReaderStub.Object,
-            null!, null!, null!, null!, null!, null!, null!, null!,
-            purchaseOrderDataReaderStub.Object);
+            null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object, null!, null!);
 
         var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
 
@@ -1182,8 +1179,8 @@ public sealed class GoodsReceiptManagerTests
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.Empty();
         var manager = new GoodsReceiptManager(
             null!, goodsReceiptDataReaderStub.Object,
-            null!, null!, null!, null!, null!, null!, null!, null!,
-            purchaseOrderDataReaderStub.Object);
+            null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object, null!, null!);
 
         var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
 
@@ -1230,8 +1227,8 @@ public sealed class GoodsReceiptManagerTests
             partialMatch, olderFullMatch, newerFullMatch);
         var manager = new GoodsReceiptManager(
             null!, goodsReceiptDataReaderStub.Object,
-            null!, null!, null!, null!, null!, null!, null!, null!,
-            purchaseOrderDataReaderStub.Object);
+            null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object, null!, null!);
 
         var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
 
@@ -1272,8 +1269,8 @@ public sealed class GoodsReceiptManagerTests
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.WithData(purchaseOrder);
         var manager = new GoodsReceiptManager(
             null!, goodsReceiptDataReaderStub.Object,
-            null!, null!, null!, null!, null!, null!, null!, null!,
-            purchaseOrderDataReaderStub.Object);
+            null!, null!, null!, null!, null!, null!, null!,
+            purchaseOrderDataReaderStub.Object, null!, null!);
 
         var results = await manager.GetSuggestedPurchaseOrdersAsync(goodsReceipt.Id);
 

@@ -181,8 +181,8 @@ export default class VendorPicker {
     }
 
     #setLoading(loading) {
-        this.loadingSpinner.style.display = loading ? 'block' : 'none';
-        this.searchIcon.style.display = loading ? 'none' : 'block';
+    //    this.loadingSpinner.style.display = loading ? 'block' : 'none';
+    //    this.searchIcon.style.display = loading ? 'none' : 'block';
     }
 
     #showError(message) {
@@ -243,16 +243,9 @@ export default class VendorPicker {
     #template() {
         return `
         <div class="input-group-container">
-            <div class="input-group">
-                <span class="input-group-text bg-white border-end-0">
-                    <span class="spinner-border spinner-border-sm text-secondary d-none searchSpinner" role="status"></span>
-                    <i class="bi bi-search text-muted searchSpinner d-none"></i>
-                    <i class="bi bi-search text-muted searchIcon"></i>
-                </span>
-                <input type="text" class="form-control border-start-0 ps-0 vendorSearch" id="vendorSearch"
-                    placeholder="Nhập tên, số điện thoại..." autocomplete="off"
-                    aria-label="Tìm kiếm nhà cung cấp" aria-autocomplete="list" />
-            </div>
+            <input type="text" class="form-control vendorSearch" id="vendorSearch"
+                placeholder="Nhập tên, số điện thoại..." autocomplete="off"
+                aria-label="Tìm kiếm nhà cung cấp" aria-autocomplete="list" />
         </div>
 
         <div class="list-group position-absolute w-100 shadow-lg mt-1 vendorSuggestion"

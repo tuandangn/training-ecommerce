@@ -24,10 +24,14 @@ export default class ProductBrowser {
     #onAdd;
     #options;
 
-    #categories = [];
-    #activeCategory = null;
-    #searchQuery = '';
     #abortController = null;
+
+    #state = {
+        q: '',
+        cid: null,
+        vid: null
+    };
+    #categories = [];
 
     // ── defaults ──────────────────────────────────────────────────────────────
     static #defaults = {
@@ -50,40 +54,62 @@ export default class ProductBrowser {
         this.#container = containerEl;
         this.#onAdd = onAdd;
         this.#options = { ...ProductBrowser.#defaults, ...options };
+
+        const initialData = Object.assign({}, containerEl.dataset);
+        if (initialData.q)
+            this.#state.q = initialData.q;
+        if (initialData.cid)
+            this.#state.cid = initialData.cid;
+        if (initialData.vid)
+            this.#state.vid = initialData.vid;
+
+        if (initialData.itemClass)
+            this.#options.itemClass = initialData.itemClass;
     }
 
     // ── public ────────────────────────────────────────────────────────────────
 
     async init() {
-        this.#render();
-        await this.#loadCategories();
-        await this.#loadProducts();
+        this.#controlTemplate();
+        this.#bindKeywords();
+        this.#categories = await this.#loadCategories();
+        await this.#render();
+    }
+
+    #bindKeywords() {
+        const onChanged = debounce((e) => {
+            this.#setState({ q: e.target.value.trim() });
+        }, 400);
+        this.#container.querySelector('.pb-search-input').addEventListener('input', onChanged);
     }
 
     // ── render ────────────────────────────────────────────────────────────────
 
-    #render() {
+    async #setState(patch) {
+        this.#state = Object.assign({}, this.#state, patch);
+        await this.#render();
+    }
+
+    async #render() {
+        this.#renderCategories();
+        await this.#loadProducts();
+    }
+
+    #controlTemplate() {
         this.#container.innerHTML = `
-            <div class="pb-search mb-2">
+            <div class="pb-search mb-3">
                 <div class="input-group input-group-sm">
                     <span class="input-group-text bg-white border-end-0">
                         <i class="bi bi-search text-muted pb-search-icon"></i>
                         <span class="spinner-border spinner-border-sm text-secondary d-none pb-spinner" role="status"></span>
                     </span>
-                    <input type="text" class="form-control border-start-0 ps-0 pb-search-input"
-                           placeholder="Tìm hàng hóa..." autocomplete="off" />
+                    <input type="text" class="form-control border-start-0 ps-0 pb-search-input" value="${this.#state.q}" placeholder="Tìm hàng hóa..." autocomplete="off" />
                 </div>
             </div>
             <div class="pb-categories mb-3 d-flex flex-wrap gap-1">
                 <span class="text-muted small">Đang tải danh mục...</span>
             </div>
             <div class="pb-grid"></div>`;
-
-        this.#container.querySelector('.pb-search-input')
-            ?.addEventListener('input', debounce((e) => {
-                this.#searchQuery = e.target.value.trim();
-                this.#loadProducts();
-            }, 400));
     }
 
     // ── categories ────────────────────────────────────────────────────────────
@@ -91,11 +117,10 @@ export default class ProductBrowser {
     async #loadCategories() {
         try {
             const res = await fetch(this.#options.categoryUrl);
-            this.#categories = res.ok ? await res.json() : [];
+            return res.ok ? await res.json() : [];
         } catch {
-            this.#categories = [];
+            return [];
         }
-        this.#renderCategories();
     }
 
     #renderCategories() {
@@ -110,14 +135,11 @@ export default class ProductBrowser {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.dataset.catId = id ?? '';
-        btn.className = 'btn btn-sm ' + (this.#activeCategory === id ? 'btn-primary' : 'btn-outline-secondary');
+        btn.className = 'btn btn-sm ' + (this.#state.cid === id ? 'btn-primary' : 'btn-outline-secondary');
         btn.textContent = name;
+
         btn.addEventListener('click', () => {
-            this.#activeCategory = id;
-            this.#container.querySelectorAll('.pb-categories button').forEach(b => {
-                b.className = 'btn btn-sm ' + (b.dataset.catId === (id ?? '') ? 'btn-primary' : 'btn-outline-secondary');
-            });
-            this.#loadProducts();
+            this.#setState({ cid: id });
         });
         return btn;
     }
@@ -130,8 +152,9 @@ export default class ProductBrowser {
         this.#setLoading(true);
 
         try {
-            let url = `${this.#options.productSearchUrl}?q=${encodeURIComponent(this.#searchQuery)}`;
-            if (this.#activeCategory) url += `&categoryId=${encodeURIComponent(this.#activeCategory)}`;
+            let url = `${this.#options.productSearchUrl}?q=${encodeURIComponent(this.#state.q)}`;
+            if (this.#state.cid) url += `&cid=${encodeURIComponent(this.#state.cid)}`;
+            if (this.#state.vid) url += `&vid=${encodeURIComponent(this.#state.vid)}`;
             const res = await fetch(url, { signal: this.#abortController.signal });
             if (!res.ok) throw new Error();
             const products = await res.json();
@@ -161,7 +184,7 @@ export default class ProductBrowser {
 
         products.forEach(p => {
             const col = document.createElement('div');
-            col.className = this.#options.colClass;
+            col.className = this.#options.itemClass || this.#options.colClass;
 
             const picHtml = p.picture
                 ? `<img src="${_esc(p.picture)}" class="pb-product-img" alt="${_esc(p.name)}" />`

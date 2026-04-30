@@ -1,21 +1,8 @@
-﻿using MediatR;
-using NamEcommerce.Domain.Entities.PurchaseOrders;
-using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
-
-namespace NamEcommerce.Application.Services.Events.PurchaseOrders;
-
-public sealed class PurchaseOrderUpdatedEventHandler : INotificationHandler<EntityUpdatedNotification<PurchaseOrder>>
-{
-    private readonly IPurchaseOrderManager _purchaseOrderManager;
-
-    public PurchaseOrderUpdatedEventHandler(IPurchaseOrderManager purchaseOrderManager)
-    {
-        _purchaseOrderManager = purchaseOrderManager;
-    }
-
-    public async Task Handle(EntityUpdatedNotification<PurchaseOrder> notification, CancellationToken cancellationToken)
-    {
-        var purchaseOrder = notification.Entity;
-        await _purchaseOrderManager.VerifyStatusAsync(purchaseOrder.Id).ConfigureAwait(false);
-    }
-}
+// Deprecated — moved to PurchaseOrderItemReceivedEventHandler.cs.
+// The old EntityUpdatedNotification<PurchaseOrder> handler ran on every update of a PurchaseOrder
+// (vendor change, note change, etc.) which was wasteful. The actual trigger we care about is
+// "an item just received quantity", so the new handler subscribes to the concrete
+// PurchaseOrderItemReceived domain event instead.
+//
+// File kept as an empty placeholder because the scheduled task session cannot delete files.
+// Tuấn có thể xóa file này trong lần dọn Phase 5 — Cleanup.

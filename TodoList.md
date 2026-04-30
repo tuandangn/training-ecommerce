@@ -17,17 +17,18 @@
   git push origin dev-assistant
   # Sau khi review xong thì merge vào main
   ```
+- **Scheduled task autonomous mode**: tạm thời KHÔNG viết unit test mới (Tuấn tự bổ sung sau). AI vẫn tuân thủ convention domain (internal methods, ToDto extension, Mark methods raise events...).
 
 ---
 
 ## 🔧 Pending Actions — Build & Smoke Test
 
-*(Sau session 2026-04-28)*
+*(Tích lũy qua các session 2026-04-28 → 2026-04-30)*
 
-**1. Build verify** toàn bộ solution — `dotnet build NamEcommerce.sln` để chắc:
-- DI cho `IEntityDataReader<StockMovementLog>` + `IEntityDataReader<GoodsReceipt>` + `IVendorDebtManager` không vỡ
-- `VendorDebtManagerTests.cs` compile sạch sau khi fix helper 7→8 params
-- Các thay đổi Notification + Vendor + Handler module compile sạch
+**1. Build verify** toàn bộ solution — `dotnet build NamEcommerce.sln`. Các thay đổi cần check compile sạch:
+
+- Session 2026-04-28: DI cho `IEntityDataReader<StockMovementLog>` + `IEntityDataReader<GoodsReceipt>` + `IVendorDebtManager`; `VendorDebtManagerTests.cs` (helper 7→8 params); Notification + Vendor + Handler module.
+- Session 2026-04-30: `PurchaseOrderManager` (12→11 deps, bỏ `IEventPublisher`); `PurchaseOrderManagerTests.cs` (22 constructor calls); `PurchaseOrderItemReceivedEventHandler` (mới); `PurchaseOrderUpdatedEventHandler.cs` (đang là stub — Tuấn xoá file thủ công).
 
 **2. Migrations cần chạy thủ công:**
 - `Add-Migration AddAverageCostToInventoryStock` (project Data.SqlServer)
@@ -59,6 +60,14 @@
 - DeliveryNote delivered flow → `CustomerDebt` sinh tự động
 - Tạo phiếu nhập (GoodsReceipt) → định giá đủ + vendor → `VendorDebtCreated` event dispatch
 - Trả hết nợ → `VendorDebtFullyPaid` event publish
+- **PurchaseOrder flow (mới session 2026-04-30):**
+  - Tạo PO → `PurchaseOrderCreated` event dispatch
+  - Update PO → `PurchaseOrderUpdated` event dispatch
+  - Add item → `PurchaseOrderItemAdded` event dispatch (KHÔNG còn trigger `VerifyStatus` thừa)
+  - Change status (Draft→Submitted→Approved) → `PurchaseOrderStatusChanged` event dispatch với oldStatus/newStatus đúng
+  - Receive item → `PurchaseOrderItemReceived` event dispatch → handler `PurchaseOrderItemReceivedEventHandler` gọi `VerifyStatusAsync` → đơn tự transition Approved → Receiving khi receivedQty > 0
+  - Receive đủ qty cho mọi item → đơn tự transition Receiving → Completed
+  - Delete item → `PurchaseOrderItemRemoved` event dispatch
 
 ---
 
@@ -68,18 +77,15 @@
 
 ### [PRIORITY: HIGH] Refactor Event System theo DDD đúng chuẩn
 
-> Phase 1 (Foundation) + Phase 2 (Orders/DeliveryNotes) + Phase 3 một phần đã DONE.
+> Phase 1 (Foundation) + Phase 2 (Orders/DeliveryNotes) + Phase 3 phần lớn đã DONE.
 > Xem lịch sử tại [CheckList.md](CheckList.md).
 
 ---
 
 #### Phase 3 — Migrate các module còn lại
 
-- [ ] **Catalog:** `Product` *(UnitMeasurement / Category / Vendor ✅ done)*
-- [ ] **Inventory:** `InventoryStock`, stock movements *(Warehouse ✅ done)*
-- [ ] **PurchaseOrders:** `PurchaseOrder`
-  - ⚠️ `PurchaseOrderUpdatedEventHandler` hiện đang gọi `VerifyStatusAsync` — cần thay bằng concrete event như `PurchaseOrderItemReceived`
-- [ ] **GoodsReceipts:** `GoodsReceipt` — dọn handler trống `GoodsReceiptUpdatedHandler`
+- [ ] **GoodsReceipts:** `GoodsReceipt` — migrate sang concrete events (`GoodsReceiptCreated`, `GoodsReceiptItemUnitCostSet`, `GoodsReceiptVendorChanged`, `GoodsReceiptDeleted`...). Hiện tại GoodsReceiptManager vẫn dùng `IEventPublisher` + `EntityCreatedNotification<GoodsReceipt>` / `EntityUpdatedNotification<GoodsReceipt>` / `EntityDeletedNotification<GoodsReceipt>` với `AdditionalData` để phân biệt loại update. Module này phức tạp (3 handler + AverageCost + Vendor debt) — cần thiết kế kỹ để không vỡ logic existing.
+- [ ] **Users:** `User` (UserManager) — đang dùng `IEventPublisher`. Phạm vi nhỏ, có thể làm cùng phiên với Phase 5 cleanup.
 
 ---
 
@@ -102,23 +108,23 @@
 - [ ] Xoá `EntityCreatedNotification<T>`, `EntityUpdatedNotification<T>`, `EntityDeletedNotification<T>`
 - [ ] Xoá `IEventPublisher` cũ + `EventPublisher` implementation
 - [ ] Xoá `EventPublisherExtensions.EntityCreated/Updated/Deleted`
-- [ ] Xoá các handler trống / TODO comment đã được thay thế
+- [ ] Xoá các handler trống / TODO comment đã được thay thế (bao gồm file stub `PurchaseOrderUpdatedEventHandler.cs` từ session 2026-04-30)
 - [ ] Update skill `namcommerce` — thay phần "Publish events qua `IEventPublisher`" bằng hướng dẫn raise domain event mới
 - [ ] Update `SYSTEM_DOCUMENTATION.md` — ghi rõ pattern Domain Event mới
 
 ---
 
 **Files chính cần đụng (Phase 3 còn lại):**
-- `NamEcommerce.Domain.Shared/Events/Catalog/ProductEvents.cs` — file mới
-- `NamEcommerce.Domain.Shared/Events/Inventory/InventoryStockEvents.cs` — file mới
-- `NamEcommerce.Domain.Shared/Events/PurchaseOrders/PurchaseOrderEvents.cs` — file mới
-- `NamEcommerce.Domain/Entities/Catalog/Product.cs` — thêm `Mark*` methods
-- `NamEcommerce.Domain/Entities/Inventory/InventoryStock.cs` — thêm `Mark*` methods
-- `NamEcommerce.Domain/Entities/PurchaseOrders/PurchaseOrder.cs` — thêm `Mark*` methods
-- `NamEcommerce.Domain.Services/**/*Manager.cs` — bỏ inject `IEventPublisher` cho các module còn lại
-- `NamEcommerce.Application.Services/Events/PurchaseOrders/PurchaseOrderUpdatedEventHandler.cs` — refactor theo concrete event
+- `NamEcommerce.Domain.Shared/Events/GoodsReceipts/GoodsReceiptEvents.cs` — extend với concrete events Created/UpdatedItemUnitCost/VendorChanged/Deleted
+- `NamEcommerce.Domain.Shared/Events/Users/UserEvents.cs` — file mới
+- `NamEcommerce.Domain/Entities/GoodsReceipts/GoodsReceipt.cs` — thêm `Mark*` methods
+- `NamEcommerce.Domain/Entities/Users/User.cs` — thêm `Mark*` methods
+- `NamEcommerce.Domain.Services/GoodsReceipts/GoodsReceiptManager.cs` — bỏ inject `IEventPublisher`
+- `NamEcommerce.Domain.Services/Users/UserManager.cs` — bỏ inject `IEventPublisher`
+- `NamEcommerce.Application.Services/Events/GoodsReceipts/*Handler.cs` — refactor 3 handler theo concrete events
 
 **Rủi ro cần lưu ý:**
 - `AppAggregateEntity` là `record` — `_domainEvents` (List reference type) hoạt động bình thường nhưng phải `[NotMapped]`
 - Test fixtures hiện tại verify `IEventPublisher` mock — cần update sang assert `DomainEvents` collection
 - Outbox cần idempotency cho handler để tránh duplicate side effect khi retry
+- GoodsReceipt migration phức tạp — `AdditionalData` switch hiện tại (Guid itemId vs "vendor-updated" string) cần được tách thành 2 concrete event riêng (`GoodsReceiptItemUnitCostSet` + `GoodsReceiptVendorChanged`)

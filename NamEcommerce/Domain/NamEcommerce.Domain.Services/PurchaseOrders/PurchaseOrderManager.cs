@@ -8,7 +8,6 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
@@ -29,7 +28,6 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private readonly IEntityDataReader<User> _userDataReader;
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IInventoryStockManager _stockManager;
-    private readonly IEventPublisher _eventPublisher;
     private readonly IEntityDataReader<InventoryStock> _stockDataReader;
     private readonly IRepository<Product> _productRepository;
     private readonly IRepository<ProductPriceHistory> _priceHistoryRepository;
@@ -37,7 +35,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IInventoryStockManager stockManager, IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
-        IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader, IEventPublisher eventPublisher,
+        IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader,
         IEntityDataReader<InventoryStock> stockDataReader, IRepository<Product> productRepository,
         IRepository<ProductPriceHistory> priceHistoryRepository, ICurrentUserAccessor currentUserAccessor)
     {
@@ -48,7 +46,6 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         _warehouseOrderDataReader = warehouseOrderDataReader;
         _userDataReader = userDataReader;
         _productDataReader = productDataReader;
-        _eventPublisher = eventPublisher;
         _stockDataReader = stockDataReader;
         _productRepository = productRepository;
         _priceHistoryRepository = priceHistoryRepository;
@@ -98,9 +95,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             }, _productDataReader).ConfigureAwait(false);
         }
 
+        purchaseOrder.MarkCreated();
         var insertedPurchaseOrder = await _purchaseOrderRepository.InsertAsync(purchaseOrder).ConfigureAwait(false);
-
-        await _eventPublisher.EntityCreated(insertedPurchaseOrder).ConfigureAwait(false);
 
         return new CreatePurchaseOrderResultDto
         {
@@ -140,9 +136,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         await purchaseOrder.ChangeVendorAsync(dto.VendorId, _vendorOrderDataReader).ConfigureAwait(false);
         await purchaseOrder.ChangeWarehouse(dto.WarehouseId, _warehouseOrderDataReader).ConfigureAwait(false);
 
+        purchaseOrder.MarkUpdated();
         var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
-
-        await _eventPublisher.EntityUpdated(updatedPurchaseOrder).ConfigureAwait(false);
 
         return new UpdatePurchaseOrderResultDto(updatedPurchaseOrder.Id)
         {
@@ -180,10 +175,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         await purchaseOrder.AddPurchaseOrderItemAsync(purchaseOrderItem, _productDataReader).ConfigureAwait(false);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
 
-        var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
-
-        await _eventPublisher.EntityCreated(purchaseOrderItem).ConfigureAwait(false);
-        await _eventPublisher.EntityUpdated(updatedPurchaseOrder).ConfigureAwait(false);
+        purchaseOrder.MarkItemAdded(purchaseOrderItem);
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         return new AddPurchaseOrderItemResultDto
         {
@@ -201,12 +194,12 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (!purchaseOrder.CanChangeStatusTo(status))
             throw new PurchaseOrderCannotChangeStatusException();
 
+        var oldStatus = purchaseOrder.Status;
         purchaseOrder.ChangeStatus(status);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
 
-        var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
-
-        await _eventPublisher.EntityUpdated(updatedPurchaseOrder).ConfigureAwait(false);
+        purchaseOrder.MarkStatusChanged(oldStatus);
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 
     public async Task<bool> CanChangeStatusToAsync(Guid purchaseOrderId, PurchaseOrderStatus status)
@@ -272,6 +265,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         purchaseOrderItem.AddQuantityReceived(dto.ReceivedQuantity);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+        purchaseOrder.MarkItemReceived(purchaseOrderItem.Id, dto.ReceivedQuantity);
 
         var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
@@ -309,8 +303,6 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             warehouseId.Value, dto.ReceivedQuantity,
             $"Nhập hàng từ PO {purchaseOrder.Code}", dto.ReceivedByUserId,
             (int)StockReferenceType.PurchaseOrder, purchaseOrder.Id).ConfigureAwait(false);
-
-        await _eventPublisher.EntityUpdated(updatedPurchaseOrder).ConfigureAwait(false);
 
         return new ReceivedGoodsForItemResultDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {
@@ -354,17 +346,12 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 .ToList()
                 .OfType<Guid?>()
                 .ToList();
-            var warehouseIds = _warehouseOrderDataReader.DataSource
-                .Where(w => w.Name.ToUpper().Contains(uppercaseKeywords) || w.Name.ToUpper().Contains(normalizedKeywords) || w.NormalizedName.Contains(normalizedKeywords))
-                .Select(w => w.Id)
-                .ToList()
-                .OfType<Guid?>()
-                .ToList();
+            IList<Guid?> warehouseIds = [];
             IList<Guid?> userIds = [];
 
             query = query.Where(c => c.Code.Contains(keywords)
                 || vendorIds.Contains(c.VendorId)
-                || warehouseIds.Contains(c.WarehouseId)
+                || warehouseIds.Contains(c.WarehouseId) || c.Items.Any(item => warehouseIds.Contains(item.WarehouseId))
                 || userIds.Contains(c.CreatedByUserId));
         }
 
@@ -409,10 +396,9 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         purchaseOrder.RemoveOrderItem(itemId);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+        purchaseOrder.MarkItemRemoved(itemId);
 
-        var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
-
-        await _eventPublisher.EntityUpdated(updatedPurchaseOrder).ConfigureAwait(false);
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 
     public async Task<IList<RecentPurchasePriceDto>> GetRecentPurchasePricesAsync(Guid productId)
