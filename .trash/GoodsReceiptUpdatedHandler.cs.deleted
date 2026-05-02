@@ -1,0 +1,10 @@
+// Deprecated — split into 2 concrete handlers (session 2026-04-30):
+//   - GoodsReceiptItemUnitCostSetHandler  ← khi 1 dòng hàng được set UnitCost
+//   - GoodsReceiptVendorChangedHandler    ← khi vendor được gắn / đổi
+//
+// Handler cũ subscribe EntityUpdatedNotification<GoodsReceipt> rồi switch theo
+// AdditionalData (Guid itemId vs "vendor-updated" string vs IEnumerable<Guid>) để phân biệt
+// loại update — pattern khó đọc và dễ bug. Đã thay bằng 2 concrete event riêng.
+//
+// File kept as an empty placeholder because the scheduled task session cannot delete files.
+// Tuấn có thể xóa file này trong lần dọn Phase 5 — Cleanup.
