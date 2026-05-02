@@ -510,3 +510,60 @@ Khi audit thì phát hiện Product **đã hoàn tất migration từ trước**
 `IUserManager` hiện tại chỉ expose 2 method (`CreateUserAsync`, `FindUserByUserNameAndPasswordAsync` + base `DoesUsernameExistAsync`). Không có Update / ChangePassword / Delete — nên `MarkUpdated`/`MarkPasswordChanged`/`MarkDeleted` đã chuẩn bị sẵn cho khi bổ sung manager method tương ứng. Khi cần, chỉ việc gọi `Mark*` trước `UpdateAsync`/`DeleteAsync`.
 
 → Phase 3 còn lại duy nhất `GoodsReceipts` (phức tạp).
+
+---
+
+## ✅ System - Event Refactor — Phase 5 Prerequisite (Migrate dead Order handlers)
+
+**Cấp độ:** Dễ | **Độ ưu tiên:** Cao | **Hoàn thành:** 2026-05-02 (session 3)
+
+> Block cuối cùng trước khi xoá `EntityCreatedNotification<T>` / `EntityUpdatedNotification<T>` legacy types: 2 dead handler trong module `Orders` còn subscribe legacy notification với body rỗng. Đã migrate / chuyển stub.
+
+#### Files thay đổi
+
+- `Application.Services/Events/Orders/OrderCreatedEventHandler.cs` — migrate sang `INotificationHandler<OrderPlaced>` (concrete event đã có sẵn trong `Domain.Shared/Events/Orders/OrderEvents.cs`). Body vẫn rỗng + giữ TODO comment cho việc implement Reserve Stock sau (logic chưa từng được implement). Constructor inject `IOrderManager` giữ nguyên.
+- `Application.Services/Events/Orders/OrderUpdatedEventHandler.cs` — class bị xoá, nội dung file thay bằng comment migration note. Body cũ trả `Task.CompletedTask` → KHÔNG có logic mất mát. Nhu cầu phản ứng với việc Order thay đổi đã được phục vụ bởi 2 concrete event `OrderInfoUpdated` / `OrderShippingUpdated`. Sandbox không xoá được file → Tuấn xoá thủ công khi review.
+
+#### Verify
+
+- `grep` toàn solution: KHÔNG còn `INotificationHandler` nào subscribe `EntityCreatedNotification<T>` / `EntityUpdatedNotification<T>` / `EntityDeletedNotification<T>` (chỉ còn comments giải thích migration history + định nghĩa records trong `EventPublisher.cs` — sẽ xoá ở step Phase 5 tiếp theo).
+- `OrderPlaced : DomainEvent : IDomainEvent : INotification` ✓ — handler hoạt động với MediatR.
+
+#### Tuấn cần làm sau merge
+
+- Build verify: `dotnet build NamEcommerce.sln` (sandbox không có dotnet — chưa verify được build).
+- KHÔNG cần migration / smoke test (không có code logic thay đổi — cả 2 handler có body rỗng).
+- (Optional) Xoá thủ công các stub file: `OrderUpdatedEventHandler.cs` (mới session 3), và các stub cũ `GoodsReceiptUpdatedHandler.cs`, `PurchaseOrderUpdatedEventHandler.cs`. `OrderCreatedEventHandler.cs` chỉ xoá nếu xác nhận không implement Reserve Stock.
+
+---
+
+## ✅ System - Event Refactor — Phase 3 GoodsReceipts (verify only)
+
+**Cấp độ:** Khó (theo TodoList) | **Độ ưu tiên:** Cao | **Hoàn thành:** 2026-05-02
+
+> Audit GoodsReceipts module — phát hiện đã hoàn tất migration sang Domain Event mới từ trước (giống như Catalog/Product/Users đã được phát hiện ở các session trước). **Không cần thay đổi code production nào.**
+
+#### Tình trạng các thành phần
+
+- `Domain.Shared/Events/GoodsReceipts/GoodsReceiptEvents.cs` — đã có 7 sealed records concrete: `GoodsReceiptCreated`, `GoodsReceiptUpdated`, `GoodsReceiptItemUnitCostSet`, `GoodsReceiptVendorChanged`, `GoodsReceiptDeleted` (mang theo `IReadOnlyCollection<Guid> PictureIds` để handler dọn ảnh), `GoodsReceiptSetToPurchaseOrder`, `GoodsReceiptRemovedFromPurchaseOrder`. XML doc đầy đủ giải thích từng handler chịu trách nhiệm gì.
+- `Domain/Entities/GoodsReceipts/GoodsReceipt.cs` — region `Events` chứa 7 method `Mark*()` raise concrete events. `MarkDeleted()` capture snapshot `_pictureIds.ToList()` để handler dọn ảnh sau khi entity bị xoá.
+- `Domain.Services/GoodsReceipts/GoodsReceiptManager.cs` — KHÔNG inject `IEventPublisher` (11 deps khác — Repository, DataReader, settings, manager). Mọi mutation flow (`CreateGoodsReceiptAsync`, `UpdateGoodsReceiptAsync`, `SetGoodsReceiptItemUnitCostAsync`, `SetGoodsReceiptVendorAsync`, `DeleteGoodsReceiptAsync`) đều gọi `goodsReceipt.Mark*()` trước repository call.
+- `Application.Services/Events/GoodsReceipts/GoodsReceiptCreatedHandler.cs` — subscribe `GoodsReceiptCreated`. Cộng tồn kho cho từng item có WarehouseId qua `IInventoryStockManager.ReceiveStockAsync` + try sinh `VendorDebt` cho edge case "tạo phiếu với đủ vendor + UnitCost ngay từ đầu" (idempotent qua `CreateDebtFromGoodsReceiptAsync`).
+- `Application.Services/Events/GoodsReceipts/GoodsReceiptItemUnitCostSetHandler.cs` — subscribe `GoodsReceiptItemUnitCostSet`. Tính lại `InventoryStock.AverageCost` theo Full Recalculation `Σ(qty×cost)/Σ(qty)` trên toàn bộ DB cho cặp `(ProductId, WarehouseId)` + try sinh nợ NCC.
+- `Application.Services/Events/GoodsReceipts/GoodsReceiptVendorChangedHandler.cs` — subscribe `GoodsReceiptVendorChanged`. Chỉ try sinh nợ NCC (idempotent), không đụng AverageCost (vì vendor thay đổi không liên quan đến giá vốn).
+- `Application.Services/Events/GoodsReceipts/GoodsReceiptDeletedEventHandler.cs` — subscribe `GoodsReceiptDeleted`. Hoàn nguyên tồn kho qua `AdjustStockAsync` + xoá ảnh theo `notification.PictureIds` (đã capture trong event trước khi soft delete).
+- `Application.Services/Events/GoodsReceipts/GoodsReceiptUpdatedHandler.cs` — chỉ chứa comment giải thích đã bị split → 2 concrete handlers (`GoodsReceiptItemUnitCostSetHandler` + `GoodsReceiptVendorChangedHandler`). File stub chờ Phase 5 cleanup.
+- Toàn solution KHÔNG còn reference đến `EntityCreatedNotification<GoodsReceipt>` / `EntityUpdatedNotification<GoodsReceipt>` / `EntityDeletedNotification<GoodsReceipt>`.
+
+#### Bonus — Phase 5 prerequisite gần như sẵn sàng
+
+Audit cross-solution cho legacy publisher chain:
+
+- `.EntityCreated()` / `.EntityUpdated()` / `.EntityDeleted()` extension methods — KHÔNG còn caller nào trong toàn `*.cs`.
+- `IEventPublisher` injection — chỉ còn DI registration trong `Program.cs:148`. Không Manager / AppService / Handler nào inject.
+- 2 handler subscribe legacy notification còn sống nhưng **dead code** (publish-side đã chết): `OrderCreatedEventHandler` (`INotificationHandler<EntityCreatedNotification<Order>>` — chỉ TODO comment về reserve stock, body trả `Task.CompletedTask`), `OrderUpdatedEventHandler` (body trả `Task.CompletedTask`).
+- 2 stub file đã đánh dấu safe-to-delete trong file: `GoodsReceiptUpdatedHandler.cs`, `PurchaseOrderUpdatedEventHandler.cs`.
+
+→ Phase 5 (Cleanup) có đầy đủ điều kiện để triển khai trong session tiếp theo có sự hiện diện của Tuấn — chỉ cần migrate hoặc xoá 2 OrderHandler, sau đó loại bỏ chuỗi `IEventPublisher` / `EntityCreatedEvent`/`EntityUpdatedEvent`/`EntityDeletedEvent` / 3 notification record / `EventPublisher` / `EventPublisherExtensions` / DI registration. Có thể tận dụng nốt cleanup `BaseEvent` + 2 file `DeliveryNoteConfirmedEvent` / `DeliveryNoteDeliveredEvent` (chỉ là class definition không ai khởi tạo, handlers thật subscribe `DeliveryNoteConfirmed` / `DeliveryNoteDelivered` concrete events khác tên).
+
+→ **Phase 3 (System Event Refactor) hoàn tất 100% sau session này.**

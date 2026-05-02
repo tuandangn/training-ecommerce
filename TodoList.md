@@ -87,14 +87,8 @@
 
 ### [PRIORITY: HIGH] Refactor Event System theo DDD đúng chuẩn
 
-> Phase 1 (Foundation) + Phase 2 (Orders/DeliveryNotes) + Phase 3 phần lớn đã DONE.
-> Xem lịch sử tại [CheckList.md](CheckList.md).
-
----
-
-#### Phase 3 — Migrate các module còn lại
-
-- [ ] **GoodsReceipts:** `GoodsReceipt` — migrate sang concrete events (`GoodsReceiptCreated`, `GoodsReceiptItemUnitCostSet`, `GoodsReceiptVendorChanged`, `GoodsReceiptDeleted`...). Hiện tại GoodsReceiptManager vẫn dùng `IEventPublisher` + `EntityCreatedNotification<GoodsReceipt>` / `EntityUpdatedNotification<GoodsReceipt>` / `EntityDeletedNotification<GoodsReceipt>` với `AdditionalData` để phân biệt loại update. Module này phức tạp (3 handler + AverageCost + Vendor debt) — cần thiết kế kỹ để không vỡ logic existing.
+> Phase 1 (Foundation) + Phase 2 (Orders/DeliveryNotes) + **Phase 3 hoàn tất 100%** (audit session 2026-05-02 phát hiện GoodsReceipts đã migrate từ trước).
+> Xem lịch sử đầy đủ tại [CheckList.md](CheckList.md).
 
 ---
 
@@ -111,26 +105,35 @@
 
 ---
 
-#### Phase 5 — Cleanup (0.5 ngày)
+#### Phase 5 — Cleanup (0.5 ngày) — PREREQUISITE đã DONE 100%
 
-- [ ] Xoá `EntityCreatedEvent<T>`, `EntityUpdatedEvent<T>`, `EntityDeletedEvent<T>`
-- [ ] Xoá `EntityCreatedNotification<T>`, `EntityUpdatedNotification<T>`, `EntityDeletedNotification<T>`
-- [ ] Xoá `IEventPublisher` cũ + `EventPublisher` implementation
-- [ ] Xoá `EventPublisherExtensions.EntityCreated/Updated/Deleted`
-- [ ] Xoá các handler trống / TODO comment đã được thay thế (bao gồm file stub `PurchaseOrderUpdatedEventHandler.cs` từ session 2026-04-30)
-- [ ] Update skill `namcommerce` — thay phần "Publish events qua `IEventPublisher`" bằng hướng dẫn raise domain event mới
-- [ ] Update `SYSTEM_DOCUMENTATION.md` — ghi rõ pattern Domain Event mới
+> Audit session 2026-05-02: KHÔNG còn caller nào của `.EntityCreated()` / `.EntityUpdated()` / `.EntityDeleted()` extension methods trong toàn solution. `IEventPublisher` không còn được Manager / AppService / Handler nào inject. Sau session 3 (2026-05-02): KHÔNG còn subscriber nào của `EntityCreatedNotification<T>` / `EntityUpdatedNotification<T>` / `EntityDeletedNotification<T>` trong toàn solution → sẵn sàng xoá legacy types.
+
+**Xoá 4 stub file (đã đánh dấu safe-to-delete trong file — chỉ còn comment, không compile thành handler nào):**
+- [ ] `Application.Services/Events/GoodsReceipts/GoodsReceiptUpdatedHandler.cs`
+- [ ] `Application.Services/Events/PurchaseOrders/PurchaseOrderUpdatedEventHandler.cs`
+- [ ] `Application.Services/Events/Orders/OrderUpdatedEventHandler.cs` — stub từ session 2026-05-02 (session 3)
+- [ ] `Application.Services/Events/Orders/OrderCreatedEventHandler.cs` — *CHỈ XOÁ* nếu Tuấn không có ý định implement Reserve Stock. Hiện tại đã subscribe concrete `OrderPlaced` event với body rỗng + TODO comment để giữ kiến trúc cho việc implement sau (session 3 2026-05-02). Nếu xác nhận không implement → xoá file.
+
+**Xoá legacy event chain (sau khi block trên đã xong):**
+- [ ] `Domain.Shared/Events/Entities/EntityCreatedEvent.cs`, `EntityUpdatedEvent.cs`, `EntityDeletedEvent.cs`
+- [ ] `Application.Services/Events/EventPublisher.cs` (chứa `EntityCreatedNotification<T>`, `EntityUpdatedNotification<T>`, `EntityDeletedNotification<T>` records)
+- [ ] `Domain.Shared/Events/IEventPublisher.cs`
+- [ ] `Domain.Services/Extensions/EventPublisherExtensions.cs`
+- [ ] DI registration trong `Web/Program.cs:148`: `services.AddScoped<IEventPublisher, EventPublisher>();`
+
+**Xoá `BaseEvent` + 2 file event không dùng:**
+- [ ] `Domain.Shared/Events/BaseEvent.cs` (chỉ còn dùng bởi 2 file dưới)
+- [ ] `Domain.Shared/Events/DeliveryNotes/DeliveryNoteConfirmedEvent.cs` (KHÔNG ai khởi tạo — handlers thật subscribe concrete `DeliveryNoteConfirmed` khác tên)
+- [ ] `Domain.Shared/Events/DeliveryNotes/DeliveryNoteDeliveredEvent.cs` (tương tự)
+
+**Update tài liệu:**
+- [ ] Update skill `namcommerce` — thay phần "Publish events qua `IEventPublisher`" bằng hướng dẫn `entity.Mark*()` raise concrete events
+- [ ] Update `SYSTEM_DOCUMENTATION.md` — ghi rõ pattern Domain Event mới (raise trong entity, dispatch qua interceptor, INotificationHandler subscribe concrete event)
 
 ---
 
-**Files chính cần đụng (Phase 3 còn lại):**
-- `NamEcommerce.Domain.Shared/Events/GoodsReceipts/GoodsReceiptEvents.cs` — extend với concrete events Created/UpdatedItemUnitCost/VendorChanged/Deleted
-- `NamEcommerce.Domain/Entities/GoodsReceipts/GoodsReceipt.cs` — thêm `Mark*` methods
-- `NamEcommerce.Domain.Services/GoodsReceipts/GoodsReceiptManager.cs` — bỏ inject `IEventPublisher`
-- `NamEcommerce.Application.Services/Events/GoodsReceipts/*Handler.cs` — refactor 3 handler theo concrete events
-
-**Rủi ro cần lưu ý:**
+**Rủi ro / Lưu ý chung:**
 - `AppAggregateEntity` là `record` — `_domainEvents` (List reference type) hoạt động bình thường nhưng phải `[NotMapped]`
-- Test fixtures hiện tại verify `IEventPublisher` mock — cần update sang assert `DomainEvents` collection
-- Outbox cần idempotency cho handler để tránh duplicate side effect khi retry
-- GoodsReceipt migration phức tạp — `AdditionalData` switch hiện tại (Guid itemId vs "vendor-updated" string) cần được tách thành 2 concrete event riêng (`GoodsReceiptItemUnitCostSet` + `GoodsReceiptVendorChanged`)
+- Test fixtures cũ verify `IEventPublisher` mock — đã được update qua các session trước; nếu phát hiện test còn sót, sửa sang assert `DomainEvents` collection
+- Outbox (Phase 4) cần idempotency cho handler để tránh duplicate side effect khi retry
