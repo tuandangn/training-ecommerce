@@ -452,3 +452,7 @@ $RECYCLE.BIN/
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+# Sandbox-deleted files (Windows mount block delete from Linux side; mv to .trash/ as workaround).
+# Tuấn có thể xoá hẳn folder .trash/ trên Windows sau khi review.
+.trash/

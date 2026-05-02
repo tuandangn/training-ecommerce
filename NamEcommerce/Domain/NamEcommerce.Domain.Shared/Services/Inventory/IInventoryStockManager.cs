@@ -9,7 +9,7 @@ public interface IInventoryStockManager
 
     /// <summary>
     /// Cập nhật giá vốn bình quân (AverageCost) cho stock của (productId, warehouseId).
-    /// Được gọi bởi GoodsReceiptUpdatedHandler sau khi tính lại Full Recalculation
+    /// Được gọi bởi GoodsReceiptItemUnitCostSetHandler sau khi tính lại Full Recalculation
     /// dựa trên toàn bộ GoodsReceiptItems đã có UnitCost cùng (ProductId, WarehouseId).
     /// </summary>
     /// <exception cref="InvalidStockOperationException">newAverageCost &lt; 0</exception>

@@ -109,10 +109,10 @@
 
 > Audit session 2026-05-02: KHÔNG còn caller nào của `.EntityCreated()` / `.EntityUpdated()` / `.EntityDeleted()` extension methods trong toàn solution. `IEventPublisher` không còn được Manager / AppService / Handler nào inject. Sau session 3 (2026-05-02): KHÔNG còn subscriber nào của `EntityCreatedNotification<T>` / `EntityUpdatedNotification<T>` / `EntityDeletedNotification<T>` trong toàn solution → sẵn sàng xoá legacy types.
 
-**Xoá 4 stub file (đã đánh dấu safe-to-delete trong file — chỉ còn comment, không compile thành handler nào):**
-- [ ] `Application.Services/Events/GoodsReceipts/GoodsReceiptUpdatedHandler.cs`
-- [ ] `Application.Services/Events/PurchaseOrders/PurchaseOrderUpdatedEventHandler.cs`
-- [ ] `Application.Services/Events/Orders/OrderUpdatedEventHandler.cs` — stub từ session 2026-05-02 (session 3)
+**Xoá stub file:** ✅ DONE 3/4 trong session 3 (2026-05-02) — đã `mv` ra `.trash/` (sandbox không cho `rm` trên Windows mount). Tuấn có thể `Remove-Item D:\Learning\NamTraining\training-ecommerce\.trash\ -Recurse -Force` trên Windows để xoá hẳn.
+- [x] ~~`Application.Services/Events/GoodsReceipts/GoodsReceiptUpdatedHandler.cs`~~ → `.trash/GoodsReceiptUpdatedHandler.cs.deleted`
+- [x] ~~`Application.Services/Events/PurchaseOrders/PurchaseOrderUpdatedEventHandler.cs`~~ → `.trash/PurchaseOrderUpdatedEventHandler.cs.deleted`
+- [x] ~~`Application.Services/Events/Orders/OrderUpdatedEventHandler.cs`~~ → `.trash/OrderUpdatedEventHandler.cs.deleted`
 - [ ] `Application.Services/Events/Orders/OrderCreatedEventHandler.cs` — *CHỈ XOÁ* nếu Tuấn không có ý định implement Reserve Stock. Hiện tại đã subscribe concrete `OrderPlaced` event với body rỗng + TODO comment để giữ kiến trúc cho việc implement sau (session 3 2026-05-02). Nếu xác nhận không implement → xoá file.
 
 **Xoá legacy event chain (sau khi block trên đã xong):**

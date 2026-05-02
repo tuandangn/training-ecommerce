@@ -537,6 +537,44 @@ Khi audit thì phát hiện Product **đã hoàn tất migration từ trước**
 
 ---
 
+## ✅ System - Event Refactor — Phase 5 (Step 1: Xoá 3 stub file)
+
+**Cấp độ:** Dễ | **Độ ưu tiên:** Cao | **Hoàn thành:** 2026-05-02 (session 3, late stage)
+
+> Sau khi prerequisite hoàn tất (zero subscriber còn dùng legacy notification), tiến hành xoá 3 stub file đã đánh dấu safe-to-delete. Sandbox Linux không xoá được file trên Windows mount (`rm: Operation not permitted`) → workaround dùng `mv` ra folder `.trash/` (đã thêm vào `.gitignore`). File rời source tree → MSBuild không include → tương đương xoá về mặt build.
+
+#### Files đã ra khỏi source tree
+
+- `Application.Services/Events/GoodsReceipts/GoodsReceiptUpdatedHandler.cs` → `.trash/GoodsReceiptUpdatedHandler.cs.deleted`
+- `Application.Services/Events/PurchaseOrders/PurchaseOrderUpdatedEventHandler.cs` → `.trash/PurchaseOrderUpdatedEventHandler.cs.deleted`
+- `Application.Services/Events/Orders/OrderUpdatedEventHandler.cs` → `.trash/OrderUpdatedEventHandler.cs.deleted`
+
+#### Side fix
+
+- `Domain.Shared/Services/Inventory/IInventoryStockManager.cs` — xref comment cho `UpdateAverageCostAsync` đổi từ `GoodsReceiptUpdatedHandler` → `GoodsReceiptItemUnitCostSetHandler` (handler thật sự gọi method này sau khi handler cũ bị split).
+
+#### .gitignore
+
+- Thêm rule `.trash/` để folder workaround không bị track lên git.
+
+#### Tuấn cần làm sau merge
+
+- (Khuyến nghị) Xoá hẳn folder `.trash/` trên Windows sau khi review:
+  ```powershell
+  Remove-Item D:\Learning\NamTraining\training-ecommerce\.trash\ -Recurse -Force
+  ```
+- Build verify: `dotnet build NamEcommerce.sln` (sandbox không có dotnet — chưa verify được build).
+- Quyết định riêng cho `OrderCreatedEventHandler.cs`: giữ (nếu sẽ implement Reserve Stock) hay xoá (nếu không). File này KHÔNG bị xoá trong session vì có điều kiện.
+
+#### Step Phase 5 còn lại
+
+- Xoá `OrderCreatedEventHandler.cs` (conditional)
+- Xoá legacy event chain: `EntityCreatedEvent`, `EntityUpdatedEvent`, `EntityDeletedEvent`, `EventPublisher.cs`, `IEventPublisher.cs`, `EventPublisherExtensions.cs`, DI registration trong `Program.cs:148`
+- Xoá `BaseEvent` + 2 file event mồ côi (`DeliveryNoteConfirmedEvent.cs`, `DeliveryNoteDeliveredEvent.cs`)
+- Update tài liệu (skill `namcommerce` + `SYSTEM_DOCUMENTATION.md`)
+
+---
+
 ## ✅ System - Event Refactor — Phase 3 GoodsReceipts (verify only)
 
 **Cấp độ:** Khó (theo TodoList) | **Độ ưu tiên:** Cao | **Hoàn thành:** 2026-05-02
