@@ -40,9 +40,6 @@
                 <thead>
                     <tr>
                         <th class="ps-4">Mã đơn</th>
-                        <th class="d-none d-lg-table-cell text-center">
-                            Ngày đặt
-                        </th>
                         <th>
                             Nhà cung cấp
                         </th>
@@ -66,12 +63,9 @@
                                     <a asp-action="Details" asp-route-id="@purchaseOrder.Id" class="text-decoration-none d-block fw-medium text-nowrap" data-bs-toggle="tooltip" title="Xem chi tiết">
                                         @HighlighHelper.Highlight(purchaseOrder.Code, query)
                                     </a>
-                                    <span class="text-muted small d-inline d-lg-none">
+                                    <span class="text-muted small">
                                         @purchaseOrder.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
                                     </span>
-                                </td>
-                                <td class="d-none d-lg-table-cell text-center">
-                                    @purchaseOrder.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
                                 </td>
                                 <td>
                                     <div class="position-relative">
@@ -113,7 +107,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="7">
+                            <td colspan="6">
                                 <div class="empty-state">
                                     <div class="empty-icon"><i class="bi bi-inbox"></i></div>
                                     <h5>Không tìm thấy đơn nhập hàng nào</h5>

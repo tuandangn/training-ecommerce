@@ -15,7 +15,7 @@ namespace NamEcommerce.Domain.Entities.PurchaseOrders;
 [Serializable]
 public sealed record PurchaseOrder : AppAggregateEntity
 {
-    public const string PurchaseOrderCodePrefix = "PO";
+    public const string PurchaseOrderCodePrefix = "DN";
 
     private PurchaseOrder() : base(Guid.Empty)
     {

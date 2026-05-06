@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using NamEcommerce.Web.Contracts.Models.Common;
 using System.ComponentModel.DataAnnotations;
 
-namespace NamEcommerce.Web.Models.Catalog;
+namespace NamEcommerce.Web.Models.PurchaseOrders;
 
 [Serializable]
 public sealed class CreatePurchaseOrderModel

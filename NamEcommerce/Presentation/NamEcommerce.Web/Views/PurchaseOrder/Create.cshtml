@@ -108,7 +108,7 @@
                                                         <input type="text" class="visually-hidden product-id"
                                                                name="Items[@i].ProductId" value="@item.ProductId" data-val="true"
                                                                data-val-required="Vui lòng chọn hàng hóa." />
-                                                        <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].ProductId" data-valmsg-replace="true"></span>
+                                                        <span class="small text-danger" asp-validation-for="Items[i].ProductId"></span>
                                                     </td>
                                                     <td class="text-end">
                                                         <input name="Items[@i].Quantity" data-decimal="quantity"
@@ -116,9 +116,7 @@
                                                                data-val="true" data-val-required="Vui lòng nhập số lượng."
                                                                data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
                                                                data-val-number="Số lượng phải là số" />
-                                                        <span class="small text-danger field-validation-valid"
-                                                              data-valmsg-for="Items[@i].Quantity"
-                                                              data-valmsg-replace="true"></span>
+                                                        <span class="small text-danger" asp-validation-for="Items[i].Quantity"></span>
                                                     </td>
                                                     <td class="text-end">
                                                         <input name="Items[@i].UnitCost" data-decimal="currency"
@@ -126,9 +124,7 @@
                                                                data-val="true" autocomplete="off"
                                                                data-val-required="Vui lòng nhập đơn giá"
                                                                data-val-number="Đơn giá phải là số" />
-                                                        <span class="small text-danger field-validation-valid"
-                                                              data-valmsg-for="Items[@i].UnitCost"
-                                                              data-valmsg-replace="true"></span>
+                                                        <span class="small text-danger" asp-validation-for="Items[i].UnitCost"></span>
                                                     </td>
                                                     <td class="text-end fw-bold text-danger px-3 row-total text-nowrap d-none d-lg-table-cell">
                                                         @item.ItemSubTotal.DisplayCurrency()
@@ -181,7 +177,7 @@
                                 <span class="text-muted small">Nhấn <i class="bi bi-plus-lg"></i> để thêm vào phiếu</span>
                             </div>
                             <div class="content-card-body">
-                                <div id="productBrowser" data-item-class="col-12"></div>
+                                <div id="productBrowser" data-item-class="col-12" data-vid="@Model.VendorId"></div>
                             </div>
                         </div>
                     </div>

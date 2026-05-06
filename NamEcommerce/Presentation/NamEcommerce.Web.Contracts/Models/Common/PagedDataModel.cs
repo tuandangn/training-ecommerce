@@ -22,14 +22,14 @@ public sealed class PagedDataModel<TData> : IPagedDataModel<TData>, IEnumerable,
 
 public static class PagedDataModel
 {
-    public static IPagedDataModel<TData> Create<TData>(IEnumerable<TData> items, int? pageIndex = null, int? pageSize = null)
+    public static IPagedDataModel<TData> Create<TData>(IEnumerable<TData> items)
         => new PagedDataModel<TData>()
         {
             Items = items,
             Pagination = new PaginationModel
             {
-                PageIndex = pageIndex ?? 0,
-                PageSize = pageSize ?? items.Count(),
+                PageIndex = 0,
+                PageSize = Math.Max(1, items.Count()),
                 TotalCount = items.Count()
             }
         };
