@@ -47,6 +47,32 @@ Thư mục gốc chứa file solution `.sln` và các thư mục layer chính:
 - **Security:** Quản lý phân quyền dựa trên Role và User định danh trong module Security.
 - **UI/UX:** Giao diện được thiết kế theo hướng chuyên nghiệp, hỗ trợ đầy đủ thiết bị di động (Responsive). Các chức năng quản lý được tối ưu hóa cho hiệu suất cao.
 
+### 4.1. Domain Event Pattern
+
+Hệ thống xử lý side-effect ngoài transaction chính (sinh công nợ, dọn ảnh, cập nhật tồn kho, gọi n8n...) thông qua **Domain Event** theo pattern DDD chuẩn:
+
+1. **Concrete Event** — `sealed record` extending `DomainEvent` (tự implement `IDomainEvent : INotification` của MediatR), nằm tại `Domain.Shared/Events/{Module}/{Entity}Events.cs`. Mỗi event mang chính xác data handler cần (KHÔNG truyền entity).
+2. **Aggregate Entity** — kế thừa `AppAggregateEntity` (đã có `RaiseDomainEvent` + collection `DomainEvents` đánh dấu `[NotMapped]`). Entity expose `internal void Mark*()` (ví dụ: `MarkPlaced`, `MarkUpdated`, `MarkDeleted`) để raise concrete event tương ứng.
+3. **Domain Manager** — chỉ gọi `entity.Mark*()` ngay trước `_repository.Insert/Update/DeleteAsync`. Manager **KHÔNG inject** `IEventPublisher` (đang trong Phase 5 cleanup, mọi caller đã được dọn).
+4. **SaveChanges Interceptor** (Infrastructure) — dispatch toàn bộ `DomainEvents` qua `IMediator.Publish` SAU KHI commit thành công, sau đó gọi `ClearDomainEvents()`. Đảm bảo event chỉ phát ra khi DB đã commit thành công.
+5. **Handler** — `INotificationHandler<TConcreteEvent>` đặt tại `Application.Services/Events/{Module}/{Entity}{Action}Handler.cs`. Một handler = một concern (Reserve Stock / sinh CustomerDebt / dọn ảnh / gọi n8n...). Handler nên **idempotent** để chuẩn bị cho Outbox Phase 4.
+
+**Ví dụ flow Order:**
+
+```
+OrderManager.PlaceOrderAsync
+   ├── new Order(...)
+   ├── order.MarkPlaced()                  → RaiseDomainEvent(new OrderPlaced(...))
+   ├── _orderRepository.InsertAsync(order)
+   └── (SaveChanges thành công)
+        ↓
+   Interceptor dispatch OrderPlaced qua MediatR
+        ├── OrderPlacedHandler            → reserve stock (placeholder)
+        └── (handler khác nếu có)
+```
+
+**Lưu ý migrate handler cũ:** subscribe legacy `EntityCreatedNotification<T>` / `EntityUpdatedNotification<T>` / `EntityDeletedNotification<T>` đã được dọn 100% sau session 3 (2026-05-02). Chuỗi `IEventPublisher` / `EventPublisher` / `EventPublisherExtensions` / 3 record notification / DI registration / `BaseEvent` + 2 file `DeliveryNoteConfirmedEvent` / `DeliveryNoteDeliveredEvent` (mồ côi, không ai khởi tạo) **đang chờ xoá ở Phase 5** — xem `TodoList.md`.
+
 ## 5. Công cụ và Công nghệ (Tech Stack)
 
 - **Backend:** .NET (C#)

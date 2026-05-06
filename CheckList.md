@@ -513,6 +513,40 @@ Khi audit thì phát hiện Product **đã hoàn tất migration từ trước**
 
 ---
 
+## ✅ System - Event Refactor — Phase 5 (Update tài liệu Domain Event pattern)
+
+**Cấp độ:** Dễ | **Độ ưu tiên:** Cao | **Hoàn thành:** 2026-05-03 (session 4)
+
+> Documentation update — phản ánh pattern Domain Event mới (`entity.Mark*()` raise concrete event + interceptor dispatch + `INotificationHandler<TConcreteEvent>` subscribe) trên skill `namcommerce` và `SYSTEM_DOCUMENTATION.md`. Pattern cũ (`IEventPublisher.EntityCreated/Updated/Deleted`) đã legacy + đang Phase 5 cleanup. KHÔNG đụng code production.
+
+#### Files thay đổi
+
+- `.skill-extract/namcommerce/SKILL.md`
+  - Mục **Domain Manager — Naming & Quy tắc** (line 155): thay bullet `IEventPublisher.EntityCreated/Updated/Deleted` bằng hướng dẫn `entity.Mark*()` + reference tới mục mới.
+  - Thêm mục **Domain Event Pattern** (mới) ngay sau bullet point đó: 5 step pattern (Concrete event sealed record → AggregateEntity expose Mark* → Manager gọi Mark* → SaveChanges interceptor dispatch → Handler subscribe `INotificationHandler<TConcreteEvent>`). Có ví dụ code `OrderPlaced` / `MarkPlaced`. Bao gồm rule capture snapshot trong `MarkDeleted()` cho entity có quan hệ con (capture trước soft delete) và quy tắc chung Mark/Raise.
+- `.skill-extract/namcommerce/references/domain-layer.md`
+  - Thêm vào template `Xyz` entity: 3 method mẫu `MarkCreated()`, `MarkUpdated()`, `MarkDeleted()` raise `XyzCreated`, `XyzUpdated`, `XyzDeleted`. Kèm note về file chứa concrete event (`Domain.Shared/Events/{Module}/XyzEvents.cs`).
+  - Cập nhật template `XyzManager`: bỏ inject `IEventPublisher`, đổi constructor 3→2 deps. Trong `CreateXyzAsync` thay `_eventPublisher.EntityCreated(inserted)` bằng `xyz.MarkCreated()` trước `Insert`. Tương tự `UpdateXyzAsync` (Mark trước Update) và `DeleteXyzAsync` (Mark trước Delete để snapshot data nếu cần).
+- `.skill-extract/namcommerce/references/application-layer.md`
+  - Thêm mục **Template: Domain Event Handler** ở cuối file: ví dụ `XyzCreatedHandler : INotificationHandler<XyzCreated>` + 6 quy tắc handler (subscribe concrete event, idempotent, một concern, không inject `IEventPublisher`, etc.).
+- `SYSTEM_DOCUMENTATION.md`
+  - Thêm mục mới **4.1. Domain Event Pattern** trong section Operations: 5 step flow, ví dụ flow Order (`PlaceOrderAsync` → `MarkPlaced` → `InsertAsync` → SaveChanges → Interceptor → MediatR dispatch → `OrderPlacedHandler`). Note rằng legacy notification subscribers đã dọn 100% sau session 3.
+
+#### Verify
+
+- Skill `namcommerce/SKILL.md` line 155 (cũ) đã thay đúng từ `IEventPublisher` → `entity.Mark*()` + cross-ref mục mới.
+- `domain-layer.md` template `XyzManager` đã giảm constructor xuống 2 deps. Manager `CreateXyzAsync`/`UpdateXyzAsync`/`DeleteXyzAsync` đều có `xyz.Mark*()` đặt đúng vị trí (trước repository call, hoặc trước `Delete` để snapshot).
+- `application-layer.md` mục Handler mới mô tả `INotificationHandler<TConcreteEvent>` đúng pattern hiện hữu trong `Application.Services/Events/` (Orders, GoodsReceipts, DeliveryNotes...).
+- `SYSTEM_DOCUMENTATION.md` mục 4.1 mới mô tả flow đầy đủ + chỉ rõ phần legacy đang chờ Phase 5 xoá.
+
+#### Tuấn cần làm sau merge
+
+- KHÔNG có code production thay đổi → KHÔNG cần build / migration / smoke test.
+- Có thể merge thẳng `dev-assistant` → `main` sau review nội dung tài liệu.
+- Phase 5 cleanup còn lại (xoá legacy event chain) chưa thực hiện trong session này — chờ session sau khi sandbox commit hoạt động ổn định (xem `TodoList.md`).
+
+---
+
 ## ✅ System - Event Refactor — Phase 5 Prerequisite (Migrate dead Order handlers)
 
 **Cấp độ:** Dễ | **Độ ưu tiên:** Cao | **Hoàn thành:** 2026-05-02 (session 3)
@@ -605,3 +639,61 @@ Audit cross-solution cho legacy publisher chain:
 → Phase 5 (Cleanup) có đầy đủ điều kiện để triển khai trong session tiếp theo có sự hiện diện của Tuấn — chỉ cần migrate hoặc xoá 2 OrderHandler, sau đó loại bỏ chuỗi `IEventPublisher` / `EntityCreatedEvent`/`EntityUpdatedEvent`/`EntityDeletedEvent` / 3 notification record / `EventPublisher` / `EventPublisherExtensions` / DI registration. Có thể tận dụng nốt cleanup `BaseEvent` + 2 file `DeliveryNoteConfirmedEvent` / `DeliveryNoteDeliveredEvent` (chỉ là class definition không ai khởi tạo, handlers thật subscribe `DeliveryNoteConfirmed` / `DeliveryNoteDelivered` concrete events khác tên).
 
 → **Phase 3 (System Event Refactor) hoàn tất 100% sau session này.**
+
+---
+
+## ✅ System - Event Refactor — Phase 5 (Step 2: Xoá legacy event chain + BaseEvent + 2 unused DeliveryNote events)
+
+**Cấp độ:** Dễ | **Độ ưu tiên:** Cao | **Hoàn thành:** 2026-05-03 (session 5, scheduled task tự động)
+
+> Tiếp nối Step 1 (đã xoá 3 stub handler). Step 2 hoàn tất phần lớn Phase 5: loại bỏ toàn bộ legacy publisher chain (`EntityCreatedEvent`/`EntityUpdatedEvent`/`EntityDeletedEvent` + `EventPublisher` + `IEventPublisher` + `EventPublisherExtensions`), đồng thời tận dụng cleanup `BaseEvent` + 2 file event mồ côi (`DeliveryNoteConfirmedEvent`, `DeliveryNoteDeliveredEvent`).
+
+#### Pre-flight verify
+
+Grep cross-solution xác nhận zero caller production code:
+
+- `IEventPublisher` — chỉ còn ở `Program.cs:148` DI registration + chính các file sắp xoá.
+- `EntityCreatedEvent`/`EntityUpdatedEvent`/`EntityDeletedEvent` — chỉ ở chính các file sắp xoá + `EventPublisherExtensions.cs` + `EventPublisher.cs`.
+- `EntityCreatedNotification`/`EntityUpdatedNotification`/`EntityDeletedNotification` — chỉ ở chính các file sắp xoá; tất cả các nơi khác đã được audit từ Phase 5 prerequisite.
+- `BaseEvent` — chỉ chứa các file sắp xoá (`BaseEvent.cs` self + `DeliveryNoteConfirmedEvent.cs` + `DeliveryNoteDeliveredEvent.cs` + đã-bị-xoá `EntityCreatedEvent`/`EntityUpdatedEvent`/`EntityDeletedEvent`).
+- `DeliveryNoteConfirmedEvent`/`DeliveryNoteDeliveredEvent` — KHÔNG ai khởi tạo. Handlers thật subscribe `DeliveryNoteConfirmed`/`DeliveryNoteDelivered` (concrete events định nghĩa trong `Events/DeliveryNotes/DeliveryNoteEvents.cs`).
+- Các comment `<c>EntityUpdatedNotification</c>` còn sót trong `OrderCreatedEventHandler.cs`, `PurchaseOrderItemReceivedEventHandler.cs`, `PurchaseOrderEvents.cs` đều là XML doc giải thích lịch sử — không gây lỗi build, giữ lại làm context cho người maintain sau.
+
+#### Files đã ra khỏi source tree (mv → `.trash/`)
+
+Legacy publisher chain:
+
+- `Domain.Shared/Events/Entities/EntityCreatedEvent.cs` → `.trash/EntityCreatedEvent.cs.deleted`
+- `Domain.Shared/Events/Entities/EntityUpdatedEvent.cs` → `.trash/EntityUpdatedEvent.cs.deleted`
+- `Domain.Shared/Events/Entities/EntityDeletedEvent.cs` → `.trash/EntityDeletedEvent.cs.deleted`
+- `Application.Services/Events/EventPublisher.cs` → `.trash/EventPublisher.cs.deleted` (chứa `EntityCreatedNotification<T>`, `EntityUpdatedNotification<T>`, `EntityDeletedNotification<T>` records)
+- `Domain.Shared/Events/IEventPublisher.cs` → `.trash/IEventPublisher.cs.deleted`
+- `Domain.Services/Extensions/EventPublisherExtensions.cs` → `.trash/EventPublisherExtensions.cs.deleted`
+
+BaseEvent + DeliveryNote events mồ côi:
+
+- `Domain.Shared/Events/BaseEvent.cs` → `.trash/BaseEvent.cs.deleted`
+- `Domain.Shared/Events/DeliveryNotes/DeliveryNoteConfirmedEvent.cs` → `.trash/DeliveryNoteConfirmedEvent.cs.deleted`
+- `Domain.Shared/Events/DeliveryNotes/DeliveryNoteDeliveredEvent.cs` → `.trash/DeliveryNoteDeliveredEvent.cs.deleted`
+
+#### Edits
+
+`Presentation/NamEcommerce.Web/Program.cs`:
+
+- Xoá `using NamEcommerce.Application.Services.Events;` (chỉ dùng cho `EventPublisher` — namespace tuy còn handler con nhưng MediatR auto-scan, không cần import trong Program.cs).
+- Xoá DI line 148 cũ: `services.AddScoped<IEventPublisher, EventPublisher>();`
+
+(Giữ nguyên `using NamEcommerce.Domain.Shared.Events;` — namespace còn `IDomainEvent`/`DomainEvent` được dùng nơi khác trong solution.)
+
+#### Phase 5 còn lại sau session này
+
+- `Application.Services/Events/Orders/OrderCreatedEventHandler.cs` — vẫn giữ vì cần Tuấn quyết định: nếu sẽ implement Reserve Stock thì giữ + fill body; nếu không thì xoá. Hiện subscribe concrete `OrderPlaced` event với body rỗng + TODO comment.
+- Update SYSTEM_DOCUMENTATION.md / skill `namcommerce` nếu có nhắc tới `IEventPublisher` (audit chưa làm trong session này — Tuấn có thể grep nhanh).
+
+#### Tuấn cần làm sau merge
+
+- Build verify: `dotnet build NamEcommerce.sln` (sandbox không có dotnet — chưa verify được build trong session).
+- (Khuyến nghị) Xoá hẳn folder `.trash/` sau khi review:
+  ```powershell
+  Remove-Item D:\Learning\NamTraining\training-ecommerce\.trash\ -Recurse -Force
+  ```

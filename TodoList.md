@@ -5,25 +5,6 @@
 
 ---
 
-## ⚙️ Quy tắc làm việc với AI Assistant
-
-> **Áp dụng cho mọi phiên làm việc.** Chi tiết đầy đủ xem [CLAUDE.md](CLAUDE.md).
-
-### Source Control
-- **Branch làm việc: `dev-assistant`** — Mọi thay đổi code đều commit lên branch này, KHÔNG commit trực tiếp lên `main`.
-- **Sau mỗi phiên hoàn thành**: AI commit lên `dev-assistant`, bạn tự `git push` và merge vào `main` khi kiểm tra xong.
-- **Git commit**: AI có thể tạo branch, add, commit trong sandbox. Không thể push (cần credentials của bạn).
-- **Lệnh bạn cần tự chạy sau mỗi session**:
-  ```bash
-  git push origin dev-assistant
-  # Sau khi review xong thì merge vào main
-  ```
-
-### Quản lý Phiên Làm Việc
-- **File session**: Sau khi lên kế hoạch đầy đủ, AI tạo file `sessions/session_[N]_[yyyyMMdd].md` trước khi bắt đầu làm. N là số toàn cục tăng dần.
-- **Cập nhật session**: AI đánh dấu từng bước hoàn thành trong file session ngay sau khi làm xong.
-- **Khi phát hiện uncommitted files từ phiên trước**: AI commit chúng với message `[uncompleted] ...`, đổi tên file session gần nhất thành `session_N_yyyyMMdd_uncompleted.md`, rồi mới bắt đầu phiên mới.
-
 ### Quy tắc khác
 - **Unit test**: Tạm thời KHÔNG viết unit test mới (Tuấn tự bổ sung sau).
 - **Migration**: AI KHÔNG tự chạy migration — báo Tuấn tự chạy.
@@ -33,16 +14,18 @@
 
 ## 🔧 Pending Actions — Build & Smoke Test
 
-*(Tích lũy qua các session 2026-04-28 → 2026-04-30)*
+*(Tích lũy qua các session 2026-04-28 → 2026-05-06)*
 
 **1. Build verify** toàn bộ solution — `dotnet build NamEcommerce.sln`. Các thay đổi cần check compile sạch:
 
 - Session 2026-04-28: DI cho `IEntityDataReader<StockMovementLog>` + `IEntityDataReader<GoodsReceipt>` + `IVendorDebtManager`; `VendorDebtManagerTests.cs` (helper 7→8 params); Notification + Vendor + Handler module.
 - Session 2026-04-30: `PurchaseOrderManager` (12→11 deps, bỏ `IEventPublisher`); `PurchaseOrderManagerTests.cs` (22 constructor calls); `PurchaseOrderItemReceivedEventHandler` (mới); `PurchaseOrderUpdatedEventHandler.cs` (đang là stub — Tuấn xoá file thủ công).
+- Session 2026-05-06 (Phase 4 Outbox): `OutboxMessage` entity (Domain), `OutboxMessageMapping` (Data.SqlServer), `IOutbox` + `OutboxAccessor`, `IIntegrationEvent` (kế thừa MediatR `INotification`), `DeliveryNoteConfirmedIntegrationEvent` + handler, `OutboxProcessor` background service. Csproj `Data.SqlServer` thêm 3 PackageReference: `Microsoft.Extensions.Hosting.Abstractions` 10.0.0, `Microsoft.Extensions.DependencyInjection.Abstractions` 10.0.0, `Microsoft.Extensions.Logging.Abstractions` 10.0.0. `Program.cs` đăng ký `IOutbox`, `OutboxProcessorOptions`, `AddHostedService<OutboxProcessor>`.
 
 **2. Migrations cần chạy thủ công:**
 - `Add-Migration AddAverageCostToInventoryStock` (project Data.SqlServer)
 - `Add-Migration AddVendorToGoodsReceiptAndDebt`
+- `Add-Migration AddOutboxMessages` (Phase 4 — bảng `tbl.OutboxMessage` với index `IX_OutboxMessage_Pending`)
 - `Update-Database`
 
 **3. Smoke test** flow nghiệp vụ:
@@ -66,10 +49,14 @@
 **Event Refactor smoke test:**
 - App start lên + SaveChanges hoạt động bình thường với interceptor mới
 - Order flow: tạo Order → `OrderPlaced` event dispatch đúng
-- DeliveryNote confirmed flow → n8n nhận notification
+- DeliveryNote confirmed flow → **Outbox enqueue** `DeliveryNoteConfirmedIntegrationEvent` → background service publish → n8n nhận notification (kiểm tra log + bảng `tbl.OutboxMessage` có dòng với `ProcessedOnUtc != null`)
 - DeliveryNote delivered flow → `CustomerDebt` sinh tự động
 - Tạo phiếu nhập (GoodsReceipt) → định giá đủ + vendor → `VendorDebtCreated` event dispatch
 - Trả hết nợ → `VendorDebtFullyPaid` event publish
+- **Outbox failure scenarios (Phase 4):**
+  - Stop n8n → confirm DeliveryNote → message lưu vào Outbox với `Error` + `RetryCount` tăng → start n8n → message tự retry và `ProcessedOnUtc` được set
+  - Rollback transaction nghiệp vụ → message KHÔNG được lưu vào Outbox (atomic)
+  - Restart app khi có message chưa processed → background service pick up tiếp tục
 - **PurchaseOrder flow (mới session 2026-04-30):**
   - Tạo PO → `PurchaseOrderCreated` event dispatch
   - Update PO → `PurchaseOrderUpdated` event dispatch
@@ -87,21 +74,8 @@
 
 ### [PRIORITY: HIGH] Refactor Event System theo DDD đúng chuẩn
 
-> Phase 1 (Foundation) + Phase 2 (Orders/DeliveryNotes) + **Phase 3 hoàn tất 100%** (audit session 2026-05-02 phát hiện GoodsReceipts đã migrate từ trước).
+> Phase 1 (Foundation) + Phase 2 (Orders/DeliveryNotes) + **Phase 3 hoàn tất 100%** + **Phase 4 hoàn tất 100% (session 2026-05-06)**.
 > Xem lịch sử đầy đủ tại [CheckList.md](CheckList.md).
-
----
-
-#### Phase 4 — Outbox Pattern cho Integration Event (1-2 ngày)
-
-- [ ] Tạo entity `OutboxMessage` (Id, Type, Payload JSON, OccurredOnUtc, ProcessedOnUtc?, Error?)
-- [ ] EF Configuration + DbSet trong `DbContext` (KHÔNG tự chạy migration — báo Tuấn tự làm)
-- [ ] Tạo `IOutbox` interface + implementation lưu vào DbContext (cùng transaction với SaveChanges)
-- [ ] Tạo `IIntegrationEvent` marker
-- [ ] Tách integration event:
-  - `DeliveryNoteConfirmedIntegrationEvent` — gửi notify n8n (thay cho call trực tiếp `_n8nAppService` hiện tại)
-- [ ] `BackgroundService` đọc bảng `OutboxMessages` chưa processed → publish qua MediatR → mark processed; retry nếu lỗi
-- [ ] Test failure scenarios: n8n down, DB transaction rollback, duplicate dispatch (idempotency)
 
 ---
 
@@ -109,27 +83,10 @@
 
 > Audit session 2026-05-02: KHÔNG còn caller nào của `.EntityCreated()` / `.EntityUpdated()` / `.EntityDeleted()` extension methods trong toàn solution. `IEventPublisher` không còn được Manager / AppService / Handler nào inject. Sau session 3 (2026-05-02): KHÔNG còn subscriber nào của `EntityCreatedNotification<T>` / `EntityUpdatedNotification<T>` / `EntityDeletedNotification<T>` trong toàn solution → sẵn sàng xoá legacy types.
 
-**Xoá stub file:** ✅ DONE 3/4 trong session 3 (2026-05-02) — đã `mv` ra `.trash/` (sandbox không cho `rm` trên Windows mount). Tuấn có thể `Remove-Item D:\Learning\NamTraining\training-ecommerce\.trash\ -Recurse -Force` trên Windows để xoá hẳn.
-- [x] ~~`Application.Services/Events/GoodsReceipts/GoodsReceiptUpdatedHandler.cs`~~ → `.trash/GoodsReceiptUpdatedHandler.cs.deleted`
-- [x] ~~`Application.Services/Events/PurchaseOrders/PurchaseOrderUpdatedEventHandler.cs`~~ → `.trash/PurchaseOrderUpdatedEventHandler.cs.deleted`
-- [x] ~~`Application.Services/Events/Orders/OrderUpdatedEventHandler.cs`~~ → `.trash/OrderUpdatedEventHandler.cs.deleted`
-- [ ] `Application.Services/Events/Orders/OrderCreatedEventHandler.cs` — *CHỈ XOÁ* nếu Tuấn không có ý định implement Reserve Stock. Hiện tại đã subscribe concrete `OrderPlaced` event với body rỗng + TODO comment để giữ kiến trúc cho việc implement sau (session 3 2026-05-02). Nếu xác nhận không implement → xoá file.
+**Stub file còn lại (cần Tuấn quyết định):**
+- [ ] `Application.Services/Events/Orders/OrderCreatedEventHandler.cs` — *CHỈ XOÁ* nếu Tuấn không có ý định implement Reserve Stock. Hiện tại đã subscribe concrete `OrderPlaced` event với body rỗng + TODO comment để giữ kiến trúc cho việc implement sau. Nếu xác nhận không implement → xoá file.
 
-**Xoá legacy event chain (sau khi block trên đã xong):**
-- [ ] `Domain.Shared/Events/Entities/EntityCreatedEvent.cs`, `EntityUpdatedEvent.cs`, `EntityDeletedEvent.cs`
-- [ ] `Application.Services/Events/EventPublisher.cs` (chứa `EntityCreatedNotification<T>`, `EntityUpdatedNotification<T>`, `EntityDeletedNotification<T>` records)
-- [ ] `Domain.Shared/Events/IEventPublisher.cs`
-- [ ] `Domain.Services/Extensions/EventPublisherExtensions.cs`
-- [ ] DI registration trong `Web/Program.cs:148`: `services.AddScoped<IEventPublisher, EventPublisher>();`
-
-**Xoá `BaseEvent` + 2 file event không dùng:**
-- [ ] `Domain.Shared/Events/BaseEvent.cs` (chỉ còn dùng bởi 2 file dưới)
-- [ ] `Domain.Shared/Events/DeliveryNotes/DeliveryNoteConfirmedEvent.cs` (KHÔNG ai khởi tạo — handlers thật subscribe concrete `DeliveryNoteConfirmed` khác tên)
-- [ ] `Domain.Shared/Events/DeliveryNotes/DeliveryNoteDeliveredEvent.cs` (tương tự)
-
-**Update tài liệu:**
-- [ ] Update skill `namcommerce` — thay phần "Publish events qua `IEventPublisher`" bằng hướng dẫn `entity.Mark*()` raise concrete events
-- [ ] Update `SYSTEM_DOCUMENTATION.md` — ghi rõ pattern Domain Event mới (raise trong entity, dispatch qua interceptor, INotificationHandler subscribe concrete event)
+**Đã xoá session 5 (2026-05-03):** ✅ Toàn bộ legacy event chain + BaseEvent + 2 unused DeliveryNote events đã `mv` ra `.trash/` + remove DI registration. Xem chi tiết tại `CheckList.md`.
 
 ---
 

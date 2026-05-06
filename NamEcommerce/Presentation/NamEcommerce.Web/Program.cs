@@ -23,7 +23,6 @@ using NamEcommerce.Application.Services.Communication;
 using NamEcommerce.Application.Services.Customers;
 using NamEcommerce.Application.Services.Debts;
 using NamEcommerce.Application.Services.DeliveryNotes;
-using NamEcommerce.Application.Services.Events;
 using NamEcommerce.Application.Services.Finance;
 using NamEcommerce.Application.Services.Inventory;
 using NamEcommerce.Application.Services.Media;
@@ -35,6 +34,7 @@ using NamEcommerce.Application.Services.Users;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Data.SqlServer.Interceptors;
+using NamEcommerce.Data.SqlServer.Outbox;
 using NamEcommerce.Domain.Services.Catalog;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Customers;
@@ -62,6 +62,7 @@ using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Security;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Services.Outbox;
 using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Configurations;
@@ -125,6 +126,11 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped(typeof(IRepository<>), typeof(NamEcommerceEfRepository<>));
     services.AddScoped(typeof(IEntityDataReader<>), typeof(EntityDataReader<>));
     services.AddScoped(typeof(IGetByIdService<>), typeof(EntityDataReader<>));
+    services.AddScoped<IOutbox, OutboxAccessor>();
+
+    // Outbox processor (background service) — đọc OutboxMessages chưa processed và publish qua MediatR.
+    services.Configure<OutboxProcessorOptions>(configuration.GetSection("Outbox"));
+    services.AddHostedService<OutboxProcessor>();
 
     services.AddScoped<IUserManager, UserManager>();
     services.AddScoped<ICategoryManager, CategoryManager>();
@@ -145,7 +151,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IGoodsReceiptManager, GoodsReceiptManager>();
 
     services.AddScoped<ISecurityService, SecurityService>();
-    services.AddScoped<IEventPublisher, EventPublisher>();
     services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
 
     services.AddScoped<ICategoryAppService, CategoryAppService>();
