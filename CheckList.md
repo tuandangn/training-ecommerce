@@ -4,6 +4,26 @@
 
 ---
 
+## ✅ Stock Invariant Hardening — Phase A1 (SourceType) ✅ DONE 2026-05-07
+
+**Cấp độ:** Dễ → Trung bình
+**Mục tiêu:** Mở đường cho Phase B (Returns) bằng cách thêm thuộc tính `SourceType` (nguồn gốc) vào hai entity phiếu kho. Không thay đổi behavior hiện tại nhờ default value.
+
+### [PRIORITY: HIGH] A1 — Thêm SourceType cho GoodsReceipt + DeliveryNote
+
+**Việc đã làm:**
+- [x] Enum `GoodsReceiptSourceType` (FromVendor=0, FromCustomerReturn=1, FromAdjustment=2) tại `Domain.Shared/Enums/GoodsReceipts/GoodsReceiptSourceType.cs`
+- [x] Enum `DeliveryNoteSourceType` (ToCustomer=0, ToVendorReturn=1, ToAdjustment=2) tại `Domain.Shared/Enums/DeliveryNotes/DeliveryNoteSourceType.cs`
+- [x] `GoodsReceipt.SourceType` (`internal set`, default `FromVendor`) — XML doc giải thích vai trò handler.
+- [x] `DeliveryNote.SourceType` (`internal set`, default `ToCustomer`) — tương tự.
+- [x] EF Mapping: `GoodsReceiptMapping.cs` + `DeliveryNoteMap.cs` cấu hình cột với `IsRequired().HasDefaultValue(...).HasConversion<int>()`.
+- [x] Import `using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;` đã thêm vào `GoodsReceipt.cs`.
+
+**Pending Tuấn xử lý:**
+- Migration: `Add-Migration AddSourceTypeToGoodsReceiptAndDeliveryNote` + `Update-Database` (đã ghi vào TodoList "Migrations cần chạy thủ công").
+
+---
+
 ## ✅ Module Inventory — GoodsReceipt
 
 **Cấp độ:** Trung bình

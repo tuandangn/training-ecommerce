@@ -1,4 +1,5 @@
 using NamEcommerce.Domain.Entities.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 
 namespace NamEcommerce.Data.SqlServer.Mappings;
 
@@ -16,6 +17,13 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.Property(d => d.OrderId).IsRequired();
         builder.Property(d => d.WarehouseId).IsRequired();
         builder.Property(d => d.OrderCode);
+
+        // Phase A1: SourceType phân biệt nguồn (KH vs trả NCC vs điều chỉnh).
+        // Default = ToCustomer để dữ liệu hiện có (chưa có cột) sau migration tự map đúng.
+        builder.Property(d => d.SourceType)
+            .IsRequired()
+            .HasDefaultValue(DeliveryNoteSourceType.ToCustomer)
+            .HasConversion<int>();
 
         builder.Property(d => d.CustomerId).IsRequired();
         builder.Property(d => d.CustomerName).HasMaxLength(255).IsRequired();

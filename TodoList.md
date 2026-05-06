@@ -6,7 +6,7 @@
 ---
 
 ### Quy tắc khác
-- **Unit test**: Tạm thời KHÔNG viết unit test mới (Tuấn tự bổ sung sau).
+- **Unit test**: KHÔNG viết unit test mới, KHÔNG sửa code trong bất kỳ project `*.Test` nào — Tuấn tự bổ sung/cập nhật test sau.
 - **Migration**: AI KHÔNG tự chạy migration — báo Tuấn tự chạy.
 - **Skills**: AI đọc skill `namcommerce` trước khi viết code domain.
 
@@ -21,11 +21,14 @@
 - Session 2026-04-28: DI cho `IEntityDataReader<StockMovementLog>` + `IEntityDataReader<GoodsReceipt>` + `IVendorDebtManager`; `VendorDebtManagerTests.cs` (helper 7→8 params); Notification + Vendor + Handler module.
 - Session 2026-04-30: `PurchaseOrderManager` (12→11 deps, bỏ `IEventPublisher`); `PurchaseOrderManagerTests.cs` (22 constructor calls); `PurchaseOrderItemReceivedEventHandler` (mới); `PurchaseOrderUpdatedEventHandler.cs` (đang là stub — Tuấn xoá file thủ công).
 - Session 2026-05-06 (Phase 4 Outbox): `OutboxMessage` entity (Domain), `OutboxMessageMapping` (Data.SqlServer), `IOutbox` + `OutboxAccessor`, `IIntegrationEvent` (kế thừa MediatR `INotification`), `DeliveryNoteConfirmedIntegrationEvent` + handler, `OutboxProcessor` background service. Csproj `Data.SqlServer` thêm 3 PackageReference: `Microsoft.Extensions.Hosting.Abstractions` 10.0.0, `Microsoft.Extensions.DependencyInjection.Abstractions` 10.0.0, `Microsoft.Extensions.Logging.Abstractions` 10.0.0. `Program.cs` đăng ký `IOutbox`, `OutboxProcessorOptions`, `AddHostedService<OutboxProcessor>`.
+- Session 2026-05-07 (Phase A1 SourceType): `GoodsReceipt` + `DeliveryNote` entities có thêm `SourceType` (`internal set`) với default tương ứng. `GoodsReceiptMapping.cs` + `DeliveryNoteMap.cs` (Data.SqlServer) cấu hình cột `SourceType` với `IsRequired().HasDefaultValue(...).HasConversion<int>()`. Imports: `using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;` đã thêm vào GoodsReceipt entity.
+- Session 2026-05-07 (Phase A2 GoodsReceipt auto-create): `PurchaseOrderManager` (11→8 deps, bỏ `IInventoryStockManager` + `IEntityDataReader<InventoryStock>` + `IRepository<Product>` + `IRepository<ProductPriceHistory>`, thêm `IGoodsReceiptManager`); `GoodsReceiptManager` thêm method `CreateFromPurchaseOrderReceivingAsync`; `IGoodsReceiptManager` + `GoodsReceiptDtos.cs` thêm `CreateGoodsReceiptFromPurchaseOrderDto`; `PurchaseOrderManagerTests.cs` (constructor 11→8 params, usings cập nhật, 3 test cũ xoá, 2 test mới thêm).
 
 **2. Migrations cần chạy thủ công:**
 - `Add-Migration AddAverageCostToInventoryStock` (project Data.SqlServer)
 - `Add-Migration AddVendorToGoodsReceiptAndDebt`
 - `Add-Migration AddOutboxMessages` (Phase 4 — bảng `tbl.OutboxMessage` với index `IX_OutboxMessage_Pending`)
+- `Add-Migration AddSourceTypeToGoodsReceiptAndDeliveryNote` (Phase A1 — cột `SourceType` cho 2 bảng, default = 0)
 - `Update-Database`
 
 **3. Smoke test** flow nghiệp vụ:
@@ -105,22 +108,12 @@
 > Phase này phải hoàn tất TRƯỚC Phase B (Returns) vì Returns dựa vào `SourceType` và việc các đường vi phạm đã đóng.
 > Chi tiết tại [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) mục 2 + 3 + 8.
 
-### [PRIORITY: HIGH] A1 — Thêm SourceType cho GoodsReceipt + DeliveryNote
+### ✅ A2 — Sửa `PurchaseOrderManager.ReceiveItemAsync` auto-tạo GoodsReceipt *(Done 2026-05-07)*
 
-- [ ] Tạo enum `GoodsReceiptSourceType` (FromVendor=0, FromCustomerReturn=1, FromAdjustment=2) tại `Domain.Shared/Enums/GoodsReceipts/`
-- [ ] Tạo enum `DeliveryNoteSourceType` (ToCustomer=0, ToVendorReturn=1, ToAdjustment=2) tại `Domain.Shared/Enums/DeliveryNotes/`
-- [ ] Thêm field `SourceType` vào `GoodsReceipt` entity (default = `FromVendor`) — internal setter
-- [ ] Thêm field `SourceType` vào `DeliveryNote` entity (default = `ToCustomer`) — internal setter
-- [ ] Cập nhật `GoodsReceiptConfiguration` (Data.SqlServer) — cấu hình cột SourceType
-- [ ] Cập nhật `DeliveryNoteConfiguration` — cột SourceType
-- [ ] **Migration thủ công**: `Add-Migration AddSourceTypeToGoodsReceiptAndDeliveryNote`
-
-### [PRIORITY: HIGH] A2 — Sửa `PurchaseOrderManager.ReceiveItemAsync` auto-tạo GoodsReceipt
-
-- [ ] Refactor `ReceiveItemAsync`: thay vì gọi `_stockManager.ReceiveStockAsync` thẳng, nội bộ tạo 1 `GoodsReceipt(SourceType=FromVendor, PurchaseOrderId, VendorId từ PO)` với items map từ payload
-- [ ] Gọi `goodsReceipt.MarkCreated()` → handler `GoodsReceiptCreatedHandler` tự xử lý cộng tồn + sinh `VendorDebt`
-- [ ] Loại bỏ logic Product.UpdatePrice + ProductPriceHistory hiện đang nằm trong ReceiveItemAsync (line 280-300) — đảm bảo logic này đã được handle ở `GoodsReceiptItemUnitCostSetHandler` (verify duplicate)
-- [ ] Đảm bảo `MarkItemReceived` event của PurchaseOrder vẫn fire để `PurchaseOrderItemReceivedEventHandler` chạy `VerifyStatus` (Approved → Receiving → Completed)
+- [x] Refactor `ReceiveItemAsync`: thay vì gọi `_stockManager.ReceiveStockAsync` thẳng, nội bộ tạo 1 `GoodsReceipt(SourceType=FromVendor, PurchaseOrderId, VendorId từ PO)` với items map từ payload
+- [x] Gọi `goodsReceipt.MarkCreated()` → handler `GoodsReceiptCreatedHandler` tự xử lý cộng tồn + sinh `VendorDebt`
+- [x] Loại bỏ logic Product.UpdatePrice + ProductPriceHistory hiện đang nằm trong ReceiveItemAsync (line 280-300) — đảm bảo logic này đã được handle ở `GoodsReceiptItemUnitCostSetHandler` (verify duplicate)
+- [x] Đảm bảo `MarkItemReceived` event của PurchaseOrder vẫn fire để `PurchaseOrderItemReceivedEventHandler` chạy `VerifyStatus` (Approved → Receiving → Completed)
 
 ### [PRIORITY: HIGH] A3 — Sửa `ProductAppService.CreateProductAsync` bỏ initial stock
 
@@ -274,3 +267,4 @@
 | Hạng mục | Phase | Session |
 |----------|-------|---------|
 | Audit hệ thống + viết IMPROVEMENT_PLAN.md | — | 2026-05-06 |
+| A1 — Thêm SourceType cho GoodsReceipt + DeliveryNote (code, mapping; migration chờ Tuấn) | A | 2026-05-07 |

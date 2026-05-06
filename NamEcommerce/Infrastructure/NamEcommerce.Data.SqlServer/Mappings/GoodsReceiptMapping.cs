@@ -1,4 +1,5 @@
 using NamEcommerce.Domain.Entities.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
 
 namespace NamEcommerce.Data.SqlServer.Mappings;
 
@@ -10,6 +11,13 @@ public sealed class GoodsReceiptMapping : IEntityTypeConfiguration<GoodsReceipt>
         builder.HasKey(g => g.Id);
 
         builder.Property(g => g.ReceivedOnUtc).IsRequired();
+
+        // Phase A1: SourceType phân biệt nguồn (NCC vs trả từ KH vs điều chỉnh).
+        // Default = FromVendor để dữ liệu hiện có (chưa có cột) sau migration tự map đúng.
+        builder.Property(g => g.SourceType)
+            .IsRequired()
+            .HasDefaultValue(GoodsReceiptSourceType.FromVendor)
+            .HasConversion<int>();
 
         builder.Property(g => g.TruckDriverName).HasMaxLength(500);
         builder.Property(g => g.TruckDriverNameNormalized).HasMaxLength(500);

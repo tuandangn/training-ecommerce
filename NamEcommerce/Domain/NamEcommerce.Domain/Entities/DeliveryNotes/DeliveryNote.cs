@@ -64,7 +64,15 @@ public sealed record DeliveryNote : AppAggregateEntity
     public decimal AmountToCollect { get; internal set; }
     
     public DeliveryNoteStatus Status { get; private set; }
-    
+
+    /// <summary>
+    /// Nguồn gốc phiếu xuất. Mặc định <see cref="DeliveryNoteSourceType.ToCustomer"/> (xuất bán cho khách).
+    /// Phase B sẽ thêm <see cref="DeliveryNoteSourceType.ToVendorReturn"/> khi VendorReturn.Confirmed
+    /// auto-sinh phiếu xuất loại này. Handler downstream phân nhánh theo property này (ví dụ:
+    /// <c>DeliveryNoteDeliveredEventHandler</c> skip sinh <c>CustomerDebt</c> khi không phải <c>ToCustomer</c>).
+    /// </summary>
+    public DeliveryNoteSourceType SourceType { get; internal set; } = DeliveryNoteSourceType.ToCustomer;
+
     public DateTime? DeliveredOnUtc { get; private set; }
     public Guid? DeliveryProofPictureId { get; private set; }
     public string? DeliveryReceiverName { get; private set; }

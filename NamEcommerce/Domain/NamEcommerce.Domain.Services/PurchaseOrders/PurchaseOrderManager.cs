@@ -6,6 +6,7 @@ using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
@@ -13,7 +14,7 @@ using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Users;
 using NamEcommerce.Domain.Shared.Helpers;
-using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Users;
 
@@ -27,28 +28,21 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private readonly IEntityDataReader<Warehouse> _warehouseOrderDataReader;
     private readonly IEntityDataReader<User> _userDataReader;
     private readonly IEntityDataReader<Product> _productDataReader;
-    private readonly IInventoryStockManager _stockManager;
-    private readonly IEntityDataReader<InventoryStock> _stockDataReader;
-    private readonly IRepository<Product> _productRepository;
-    private readonly IRepository<ProductPriceHistory> _priceHistoryRepository;
+    private readonly IGoodsReceiptManager _goodsReceiptManager;
     private readonly ICurrentUserAccessor _currentUserAccessor;
 
     public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
-        IInventoryStockManager stockManager, IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
+        IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
         IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader,
-        IEntityDataReader<InventoryStock> stockDataReader, IRepository<Product> productRepository,
-        IRepository<ProductPriceHistory> priceHistoryRepository, ICurrentUserAccessor currentUserAccessor)
+        IGoodsReceiptManager goodsReceiptManager, ICurrentUserAccessor currentUserAccessor)
     {
         _purchaseOrderRepository = poRepository;
-        _stockManager = stockManager;
         _purchaseOrderDataReader = purchaseOrderDataReader;
         _vendorOrderDataReader = vendorOrderDataReader;
         _warehouseOrderDataReader = warehouseOrderDataReader;
         _userDataReader = userDataReader;
         _productDataReader = productDataReader;
-        _stockDataReader = stockDataReader;
-        _productRepository = productRepository;
-        _priceHistoryRepository = priceHistoryRepository;
+        _goodsReceiptManager = goodsReceiptManager;
         _currentUserAccessor = currentUserAccessor;
     }
 
@@ -265,44 +259,26 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         purchaseOrderItem.AddQuantityReceived(dto.ReceivedQuantity);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+
+        // MarkItemReceived vẫn phải fire để PurchaseOrderItemReceivedEventHandler
+        // chạy VerifyStatus (Approved → Receiving → Completed).
         purchaseOrder.MarkItemReceived(purchaseOrderItem.Id, dto.ReceivedQuantity);
 
-        var updatedPurchaseOrder = await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
-        // Calculate Weighted Average Cost Price
-        var allStocks = _stockDataReader.DataSource.Where(s => s.ProductId == product.Id).ToList();
-        var currentTotalStock = allStocks.Sum(s => s.QuantityOnHand);
-
-        var currentTotalValue = product.CostPrice * currentTotalStock;
-        var receivedValue = dto.ReceivedQuantity * purchaseOrderItem.UnitCost;
-        var newTotalStock = currentTotalStock + dto.ReceivedQuantity;
-
-        var oldUnitPrice = product.UnitPrice;
-        var oldCostPrice = product.CostPrice;
-
-        var newCostPrice = newTotalStock > 0
-            ? (currentTotalValue + receivedValue) / newTotalStock
-            : oldCostPrice;
-
-        // Nếu người dùng không nhập giá bán mới thì giữ nguyên giá bán hiện tại
-        var newUnitPrice = dto.SellingPrice ?? oldUnitPrice;
-
-        if (newUnitPrice != oldUnitPrice || newCostPrice != oldCostPrice)
+        // Tạo GoodsReceipt tự động (SourceType=FromVendor) với 1 item tương ứng.
+        // Handler GoodsReceiptCreatedHandler sẽ: cộng tồn kho + thử sinh VendorDebt.
+        // Nếu item có UnitCost: Handler GoodsReceiptItemUnitCostSetHandler cập nhật AverageCost.
+        await _goodsReceiptManager.CreateFromPurchaseOrderReceivingAsync(new CreateGoodsReceiptFromPurchaseOrderDto
         {
-            product.UpdatePrice(newUnitPrice, newCostPrice);
-            product.UpdatedOnUtc = DateTime.UtcNow;
-            await _productRepository.UpdateAsync(product).ConfigureAwait(false);
-
-            await _priceHistoryRepository.InsertAsync(new ProductPriceHistory(
-                product.Id, oldUnitPrice, newUnitPrice, oldCostPrice, newCostPrice,
-                $"Nhập hàng từ PO {purchaseOrder.Code}")
-            ).ConfigureAwait(false);
-        }
-
-        await _stockManager.ReceiveStockAsync(purchaseOrderItem.ProductId,
-            warehouseId.Value, dto.ReceivedQuantity,
-            $"Nhập hàng từ PO {purchaseOrder.Code}", dto.ReceivedByUserId,
-            (int)StockReferenceType.PurchaseOrder, purchaseOrder.Id).ConfigureAwait(false);
+            PurchaseOrderId = purchaseOrder.Id,
+            PurchaseOrderCode = purchaseOrder.Code,
+            VendorId = purchaseOrder.VendorId,
+            ProductId = purchaseOrderItem.ProductId,
+            WarehouseId = warehouseId.Value,
+            Quantity = dto.ReceivedQuantity,
+            UnitCost = purchaseOrderItem.UnitCost
+        }).ConfigureAwait(false);
 
         return new ReceivedGoodsForItemResultDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {

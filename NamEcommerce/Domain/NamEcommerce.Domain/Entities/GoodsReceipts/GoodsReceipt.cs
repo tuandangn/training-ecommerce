@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Users;
+using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Events.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.Media;
@@ -26,6 +27,12 @@ public sealed record GoodsReceipt : AppAggregateEntity
     }
 
     public DateTime ReceivedOnUtc { get; private set; }
+
+    /// <summary>
+    /// Nguồn gốc phiếu nhập — quyết định business rule của handler (sinh / không sinh VendorDebt, v.v.).
+    /// Mặc định <see cref="GoodsReceiptSourceType.FromVendor"/>; chỉ Manager / handler nội bộ mới được đổi.
+    /// </summary>
+    public GoodsReceiptSourceType SourceType { get; internal set; } = GoodsReceiptSourceType.FromVendor;
 
     public Guid? PurchaseOrderId { get; private set; }
     public string? PurchaseOrderCode { get; private set; }

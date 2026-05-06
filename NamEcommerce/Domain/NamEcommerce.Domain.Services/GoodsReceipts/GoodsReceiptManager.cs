@@ -215,6 +215,47 @@ public sealed class GoodsReceiptManager(
         await goodsReceiptRepository.DeleteAsync(goodsReceipt).ConfigureAwait(false);
     }
 
+    public async Task<CreateGoodsReceiptResultDto> CreateFromPurchaseOrderReceivingAsync(CreateGoodsReceiptFromPurchaseOrderDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
+
+        // Tạo GoodsReceipt mới — SourceType mặc định là FromVendor (0)
+        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), goodsReceiptDataReader, currentUserAccessor);
+        goodsReceipt.SetReceivedDate(DateTime.UtcNow);
+
+        // Gắn liên kết PO (fire GoodsReceiptSetToPurchaseOrder event — không có handler, harmless)
+        goodsReceipt.SetToPurchaseOrder(dto.PurchaseOrderId, dto.PurchaseOrderCode);
+
+        // Gắn vendor từ PO (nếu có)
+        if (dto.VendorId.HasValue)
+        {
+            var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId.Value).ConfigureAwait(false);
+            if (vendor is not null)
+                goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
+        }
+
+        // Thêm item — dùng WarehouseId từ dto (đã được PurchaseOrderManager resolve)
+        await goodsReceipt.AddItemAsync(
+            dto.ProductId, dto.WarehouseId, dto.Quantity, dto.UnitCost,
+            productDataReader, warehouseSettings, warehouseDataReader
+        ).ConfigureAwait(false);
+
+        // MarkCreated → GoodsReceiptCreatedHandler: cộng tồn + thử sinh VendorDebt
+        goodsReceipt.MarkCreated();
+
+        // Nếu item đã có UnitCost, cũng fire GoodsReceiptItemUnitCostSet
+        // → GoodsReceiptItemUnitCostSetHandler: cập nhật AverageCost + thử sinh VendorDebt (idempotent)
+        if (dto.UnitCost.HasValue)
+        {
+            var addedItem = goodsReceipt.Items.Last();
+            goodsReceipt.MarkItemUnitCostSet(addedItem.Id);
+        }
+
+        var insertedGoodsReceipt = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
+        return new CreateGoodsReceiptResultDto { CreatedId = insertedGoodsReceipt.Id };
+    }
+
     public Task RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderDto dto)
     {
         throw new NotImplementedException();

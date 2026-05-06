@@ -9,6 +9,14 @@ public interface IGoodsReceiptManager
     Task<UpdateGoodsReceiptResultDto> UpdateGoodsReceiptAsync(UpdateGoodsReceiptDto dto);
     Task DeleteGoodsReceiptAsync(DeleteGoodsReceiptDto dto);
 
+    /// <summary>
+    /// Tự động tạo GoodsReceipt khi nhận 1 item từ PurchaseOrder.
+    /// Chỉ dành cho <c>PurchaseOrderManager.ReceiveItemsAsync</c> — không phải flow thủ công.
+    /// MarkCreated sẽ trigger <c>GoodsReceiptCreatedHandler</c> cộng tồn + sinh VendorDebt.
+    /// Nếu UnitCost đã có, cũng trigger <c>GoodsReceiptItemUnitCostSetHandler</c> cập nhật AverageCost.
+    /// </summary>
+    Task<CreateGoodsReceiptResultDto> CreateFromPurchaseOrderReceivingAsync(CreateGoodsReceiptFromPurchaseOrderDto dto);
+
     Task SetGoodsReceiptItemUnitCostAsync(SetGoodsReceiptItemUnitCostDto dto);
     Task<SetGoodsReceiptVendorResultDto> SetGoodsReceiptVendorAsync(SetGoodsReceiptVendorDto dto);
 

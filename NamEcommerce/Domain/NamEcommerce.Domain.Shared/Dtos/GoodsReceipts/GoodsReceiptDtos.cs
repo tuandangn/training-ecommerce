@@ -2,6 +2,42 @@ using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 
 namespace NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 
+/// <summary>
+/// DTO nội bộ — tự động tạo GoodsReceipt khi nhận hàng từ PurchaseOrder.
+/// Không đi qua flow thông thường (không cần ảnh chứng từ, không cần người dùng nhập thủ công).
+/// Mỗi lần gọi tương ứng với 1 item nhận hàng của 1 PO.
+/// </summary>
+[Serializable]
+public sealed record CreateGoodsReceiptFromPurchaseOrderDto
+{
+    public required Guid PurchaseOrderId { get; init; }
+    public required string PurchaseOrderCode { get; init; }
+
+    /// <summary>VendorId từ PO — nullable vì PO có thể chưa có vendor (hiếm).</summary>
+    public Guid? VendorId { get; init; }
+
+    public required Guid ProductId { get; init; }
+    public required Guid WarehouseId { get; init; }
+    public required decimal Quantity { get; init; }
+
+    /// <summary>UnitCost từ PO item — nullable nếu PO item chưa có giá.</summary>
+    public decimal? UnitCost { get; init; }
+
+    public void Verify()
+    {
+        if (PurchaseOrderId == Guid.Empty)
+            throw new ArgumentException("PurchaseOrderId is required", nameof(PurchaseOrderId));
+        if (string.IsNullOrEmpty(PurchaseOrderCode))
+            throw new ArgumentException("PurchaseOrderCode is required", nameof(PurchaseOrderCode));
+        if (ProductId == Guid.Empty)
+            throw new ArgumentException("ProductId is required", nameof(ProductId));
+        if (WarehouseId == Guid.Empty)
+            throw new ArgumentException("WarehouseId is required", nameof(WarehouseId));
+        if (Quantity <= 0)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityMustBePositive");
+    }
+}
+
 [Serializable]
 public abstract record BaseGoodsReceiptDto
 {
