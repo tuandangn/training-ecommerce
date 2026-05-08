@@ -11,21 +11,23 @@ public interface ICustomerReturnManager
     Task CancelAsync(Guid id);
 
     Task<CustomerReturnDto?> GetByIdAsync(Guid id);
-    Task<(int Total, List<CustomerReturnDto> Items)> GetListAsync(Guid? customerId, Guid? orderId, int? status, int pageIndex, int pageSize);
+    Task<(int Total, List<CustomerReturnDto> Items)> GetListAsync(
+        Guid? customerId, Guid? deliveryNoteId, int? status, int pageIndex, int pageSize);
 
     /// <summary>
-    /// Tính tổng <c>AcceptedQuantity</c> đã trả cho một (orderId, productId) qua các phiếu Confirmed.
-    /// Dùng để validate không vượt quá số đã giao.
+    /// Tính tổng <c>AcceptedQuantity</c> đã trả cho một (deliveryNoteId, productId) qua các phiếu Confirmed.
+    /// Dùng để validate không vượt quá số đã giao. Bỏ qua nếu <c>deliveryNoteId</c> là null (tạo tự do).
     /// </summary>
-    Task<decimal> GetTotalConfirmedReturnQuantityAsync(Guid orderId, Guid productId, Guid? excludeReturnId = null);
+    Task<decimal> GetTotalConfirmedReturnQuantityAsync(Guid deliveryNoteId, Guid productId, Guid? excludeReturnId = null);
 
     /// <summary>
     /// Gọi sau khi <c>GoodsReceipt</c> được sinh từ <c>CustomerReturnConfirmedEventHandler</c>:
     /// <list type="number">
     ///   <item><description>Ghi nhận <c>GeneratedGoodsReceiptId</c> lên phiếu trả (idempotency guard).</description></item>
-    ///   <item><description>Giảm <c>CustomerDebt</c> của Order theo FIFO <c>CreatedOnUtc</c> — có thể xuống âm.</description></item>
+    ///   <item><description>Giảm <c>CustomerDebt</c> của khách hàng theo FIFO <c>CreatedOnUtc</c> — có thể xuống âm.</description></item>
+    ///   <item><description>Nếu <c>AdditionalCost &gt; 0</c>, tạo Expense ghi nhận chi phí phát sinh.</description></item>
     /// </list>
     /// Chỉ dành cho <c>CustomerReturnConfirmedEventHandler</c> gọi.
     /// </summary>
-    Task FinalizeConfirmAsync(Guid returnId, Guid generatedGoodsReceiptId, decimal totalReturnAmount);
+    Task FinalizeConfirmAsync(Guid returnId, Guid generatedGoodsReceiptId, decimal netRefundAmount);
 }

@@ -9,8 +9,8 @@ public static class CustomerReturnExtensions
         => new(customerReturn.Id)
         {
             Code = customerReturn.Code,
-            OrderId = customerReturn.OrderId,
-            OrderCode = customerReturn.OrderCode,
+            DeliveryNoteId = customerReturn.DeliveryNoteId,
+            DeliveryNoteCode = customerReturn.DeliveryNoteCode,
             CustomerId = customerReturn.CustomerId,
             CustomerName = customerReturn.CustomerName,
             WarehouseId = customerReturn.WarehouseId,
@@ -19,6 +19,7 @@ public static class CustomerReturnExtensions
             Status = (int)customerReturn.Status,
             ReturnDate = customerReturn.ReturnDate,
             ConfirmedOnUtc = customerReturn.ConfirmedOnUtc,
+            AdditionalCost = customerReturn.AdditionalCost,
             GeneratedGoodsReceiptId = customerReturn.GeneratedGoodsReceiptId,
             CreatedByUserId = customerReturn.CreatedByUserId,
             CreatedOnUtc = customerReturn.CreatedOnUtc,
@@ -31,7 +32,8 @@ public static class CustomerReturnExtensions
                 DeliveryNoteItemId = i.DeliveryNoteItemId,
                 RequestedQuantity = i.RequestedQuantity,
                 AcceptedQuantity = i.AcceptedQuantity,
-                UnitPrice = i.UnitPrice
+                OriginalUnitPrice = i.OriginalUnitPrice,
+                ReturnUnitPrice = i.ReturnUnitPrice
             })
         };
 }

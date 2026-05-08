@@ -3,15 +3,14 @@ namespace NamEcommerce.Domain.Shared.Events.Returns;
 /// <summary>
 /// Phiếu trả hàng khách vừa được xác nhận (Inspecting → Confirmed). Handler subscribe event này để:
 /// <list type="number">
-///   <item><description>Tạo <c>GoodsReceipt(SourceType=FromCustomerReturn)</c> nhận lại hàng trả.</description></item>
-///   <item><description>Giảm <c>CustomerDebt</c> của Order tương ứng theo FIFO <c>CreatedOnUtc</c> bằng
-///     <c>ApplyReturn(AcceptedTotal, returnId)</c> — có thể xuống âm.</description></item>
+///   <item><description>Tạo <c>GoodsReceipt(SourceType=FromCustomerReturn)</c> nhận lại hàng trả; UnitCost = ReturnUnitPrice của từng item.</description></item>
+///   <item><description>Giảm <c>CustomerDebt</c> của khách theo FIFO <c>CreatedOnUtc</c> với net amount = Σ(qty × ReturnUnitPrice) − AdditionalCost.</description></item>
 ///   <item><description>Set <c>CustomerReturn.GeneratedGoodsReceiptId</c> sau khi phiếu nhập được sinh.</description></item>
 /// </list>
 /// </summary>
 public sealed record CustomerReturnConfirmed(
     Guid CustomerReturnId,
-    Guid OrderId,
+    Guid? DeliveryNoteId,
     Guid CustomerId,
     Guid WarehouseId) : DomainEvent;
 

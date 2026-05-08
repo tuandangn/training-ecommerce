@@ -13,7 +13,8 @@ public sealed record VendorReturn : AppAggregateEntity
     internal VendorReturn(string code, Guid vendorId, string vendorName,
         Guid? purchaseOrderId, Guid? goodsReceiptId,
         Guid warehouseId, string warehouseName,
-        string? note, Guid? createdByUserId) : base(Guid.NewGuid())
+        string? note, decimal additionalCost,
+        Guid? createdByUserId) : base(Guid.NewGuid())
     {
         Code = code;
         VendorId = vendorId;
@@ -23,6 +24,7 @@ public sealed record VendorReturn : AppAggregateEntity
         WarehouseId = warehouseId;
         WarehouseName = warehouseName;
         Note = note;
+        AdditionalCost = additionalCost;
         CreatedByUserId = createdByUserId;
         Status = VendorReturnStatus.Draft;
         ReturnDate = DateTime.UtcNow;
@@ -37,7 +39,7 @@ public sealed record VendorReturn : AppAggregateEntity
     /// <summary>Đơn nhập gốc — nullable nếu trả từ GoodsReceipt độc lập (không qua PO).</summary>
     public Guid? PurchaseOrderId { get; private set; }
 
-    /// <summary>Phiếu nhập kho gốc — nullable nếu trả theo PO (không cần chỉ định GoodsReceipt cụ thể).</summary>
+    /// <summary>Phiếu nhập kho gốc — nullable nếu trả theo PO hoặc tạo tự do.</summary>
     public Guid? GoodsReceiptId { get; private set; }
 
     public Guid WarehouseId { get; private set; }
@@ -48,6 +50,9 @@ public sealed record VendorReturn : AppAggregateEntity
     public DateTime ReturnDate { get; internal set; }
 
     public DateTime? ConfirmedOnUtc { get; private set; }
+
+    /// <summary>Chi phí phát sinh khi trả hàng cho NCC (vận chuyển, đền bù...). Tự động ghi Expense khi Confirm.</summary>
+    public decimal AdditionalCost { get; private set; }
 
     /// <summary>ID phiếu xuất kho được tự động sinh khi Confirm (SourceType=ToVendorReturn, Status=Delivered).</summary>
     public Guid? GeneratedDeliveryNoteId { get; internal set; }
@@ -62,15 +67,18 @@ public sealed record VendorReturn : AppAggregateEntity
     #region Methods
 
     internal void AddItem(Guid productId, string productName, Guid? goodsReceiptItemId,
-        decimal requestedQuantity, decimal acceptedQuantity, decimal unitCost)
+        decimal requestedQuantity, decimal acceptedQuantity,
+        decimal? originalUnitCost, decimal returnUnitCost)
     {
         if (requestedQuantity <= 0)
             throw new ReturnDataIsInvalidException("Error.VendorReturn.RequestedQuantityMustBePositive");
         if (acceptedQuantity < 0)
             throw new ReturnDataIsInvalidException("Error.VendorReturn.AcceptedQuantityCannotBeNegative");
+        if (returnUnitCost < 0)
+            throw new ReturnDataIsInvalidException("Error.VendorReturn.ReturnUnitCostCannotBeNegative");
 
         var item = new VendorReturnItem(Guid.NewGuid(), Id, productId, productName,
-            goodsReceiptItemId, requestedQuantity, acceptedQuantity, unitCost);
+            goodsReceiptItemId, requestedQuantity, acceptedQuantity, originalUnitCost, returnUnitCost);
         _items.Add(item);
     }
 

@@ -132,7 +132,7 @@ public sealed record SetGoodsReceiptVendorResultDto
 
 /// <summary>
 /// DTO để tạo GoodsReceipt tự động khi CustomerReturn được Confirm.
-/// UnitCost sẽ được lấy từ AverageCost tại thời điểm xử lý trong Manager.
+/// UnitCost = ReturnUnitPrice của item (giá trả về thực tế); nếu = 0 thì fallback sang AverageCost.
 /// </summary>
 [Serializable]
 public sealed record CreateGoodsReceiptFromCustomerReturnDto
@@ -148,4 +148,10 @@ public sealed record CreateGoodsReceiptFromCustomerReturnItemDto
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
     public required decimal Quantity { get; init; }
+
+    /// <summary>
+    /// Giá trả về từ CustomerReturnItem.ReturnUnitPrice — dùng làm UnitCost khi nhập kho.
+    /// Nếu = 0, GoodsReceiptManager sẽ fallback sang AverageCost.
+    /// </summary>
+    public decimal ReturnUnitPrice { get; init; } = 0;
 }

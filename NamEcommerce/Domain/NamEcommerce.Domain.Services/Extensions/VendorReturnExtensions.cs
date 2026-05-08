@@ -19,6 +19,7 @@ public static class VendorReturnExtensions
             Status = (int)vendorReturn.Status,
             ReturnDate = vendorReturn.ReturnDate,
             ConfirmedOnUtc = vendorReturn.ConfirmedOnUtc,
+            AdditionalCost = vendorReturn.AdditionalCost,
             GeneratedDeliveryNoteId = vendorReturn.GeneratedDeliveryNoteId,
             CreatedByUserId = vendorReturn.CreatedByUserId,
             CreatedOnUtc = vendorReturn.CreatedOnUtc,
@@ -31,7 +32,8 @@ public static class VendorReturnExtensions
                 GoodsReceiptItemId = i.GoodsReceiptItemId,
                 RequestedQuantity = i.RequestedQuantity,
                 AcceptedQuantity = i.AcceptedQuantity,
-                UnitCost = i.UnitCost
+                OriginalUnitCost = i.OriginalUnitCost,
+                ReturnUnitCost = i.ReturnUnitCost
             })
         };
 }

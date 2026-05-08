@@ -10,19 +10,22 @@ public sealed record CustomerReturn : AppAggregateEntity
 {
     private CustomerReturn() : base(Guid.Empty) { }
 
-    internal CustomerReturn(string code, Guid orderId, string orderCode,
+    internal CustomerReturn(string code,
+        Guid? deliveryNoteId, string? deliveryNoteCode,
         Guid customerId, string customerName,
         Guid warehouseId, string warehouseName,
-        string? note, Guid? createdByUserId) : base(Guid.NewGuid())
+        string? note, decimal additionalCost,
+        Guid? createdByUserId) : base(Guid.NewGuid())
     {
         Code = code;
-        OrderId = orderId;
-        OrderCode = orderCode;
+        DeliveryNoteId = deliveryNoteId;
+        DeliveryNoteCode = deliveryNoteCode;
         CustomerId = customerId;
         CustomerName = customerName;
         WarehouseId = warehouseId;
         WarehouseName = warehouseName;
         Note = note;
+        AdditionalCost = additionalCost;
         CreatedByUserId = createdByUserId;
         Status = CustomerReturnStatus.Draft;
         ReturnDate = DateTime.UtcNow;
@@ -31,8 +34,9 @@ public sealed record CustomerReturn : AppAggregateEntity
 
     public string Code { get; private set; } = string.Empty;
 
-    public Guid OrderId { get; private set; }
-    public string OrderCode { get; private set; } = string.Empty;
+    /// <summary>Phiếu xuất kho nguồn — null nếu phiếu trả tự do (không gắn phiếu xuất cụ thể).</summary>
+    public Guid? DeliveryNoteId { get; private set; }
+    public string? DeliveryNoteCode { get; private set; }
 
     public Guid CustomerId { get; private set; }
     public string CustomerName { get; private set; } = string.Empty;
@@ -45,6 +49,9 @@ public sealed record CustomerReturn : AppAggregateEntity
     public DateTime ReturnDate { get; internal set; }
 
     public DateTime? ConfirmedOnUtc { get; private set; }
+
+    /// <summary>Chi phí phát sinh khi nhận hàng trả (vận chuyển, bồi thường...). Tự động ghi Expense khi Confirm.</summary>
+    public decimal AdditionalCost { get; private set; }
 
     /// <summary>ID phiếu nhập kho được tự động sinh khi Confirm (SourceType=FromCustomerReturn).</summary>
     public Guid? GeneratedGoodsReceiptId { get; internal set; }
@@ -59,15 +66,18 @@ public sealed record CustomerReturn : AppAggregateEntity
     #region Methods
 
     internal void AddItem(Guid productId, string productName, Guid? deliveryNoteItemId,
-        decimal requestedQuantity, decimal acceptedQuantity, decimal unitPrice)
+        decimal requestedQuantity, decimal acceptedQuantity,
+        decimal? originalUnitPrice, decimal returnUnitPrice)
     {
         if (requestedQuantity <= 0)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.RequestedQuantityMustBePositive");
         if (acceptedQuantity < 0)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.AcceptedQuantityCannotBeNegative");
+        if (returnUnitPrice < 0)
+            throw new ReturnDataIsInvalidException("Error.CustomerReturn.ReturnUnitPriceCannotBeNegative");
 
         var item = new CustomerReturnItem(Guid.NewGuid(), Id, productId, productName,
-            deliveryNoteItemId, requestedQuantity, acceptedQuantity, unitPrice);
+            deliveryNoteItemId, requestedQuantity, acceptedQuantity, originalUnitPrice, returnUnitPrice);
         _items.Add(item);
     }
 
@@ -92,7 +102,7 @@ public sealed record CustomerReturn : AppAggregateEntity
         ConfirmedOnUtc = DateTime.UtcNow;
         UpdatedOnUtc = DateTime.UtcNow;
 
-        RaiseDomainEvent(new CustomerReturnConfirmed(Id, OrderId, CustomerId, WarehouseId));
+        RaiseDomainEvent(new CustomerReturnConfirmed(Id, DeliveryNoteId, CustomerId, WarehouseId));
     }
 
     internal void Cancel()
