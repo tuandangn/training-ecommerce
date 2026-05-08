@@ -1,8 +1,7 @@
+using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.StockAdjustment;
 using NamEcommerce.Application.Contracts.StockAdjustment;
 using NamEcommerce.Application.Services.Extensions;
-using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.StockAdjustment;
 using NamEcommerce.Domain.Shared.Enums.StockAdjustment;
 using NamEcommerce.Domain.Shared.Exceptions;
@@ -66,10 +65,10 @@ public sealed class StockAdjustmentNoteAppService(IStockAdjustmentNoteManager ma
         return dto?.ToAppDto();
     }
 
-    public async Task<IPagedDataDto<StockAdjustmentNoteListAppDto>> GetListAsync(
-        int pageIndex, int pageSize, string? keywords, Guid? warehouseId, StockAdjustmentStatus? status)
+    public async Task<IPagedDataAppDto<StockAdjustmentNoteListAppDto>> GetListAsync(
+        int pageIndex, int pageSize, string? keywords, Guid? warehouseId, int? status)
     {
-        var paged = await manager.GetListAsync(pageIndex, pageSize, keywords, warehouseId, status).ConfigureAwait(false);
-        return PagedDataDto.Create(paged.Items.Select(x => x.ToListAppDto()).ToList(), pageIndex, pageSize, paged.TotalCount);
+        var paged = await manager.GetListAsync(pageIndex, pageSize, keywords, warehouseId, (StockAdjustmentStatus?)status).ConfigureAwait(false);
+        return PagedDataAppDto.Create(paged.Items.Select(x => x.ToListAppDto()).ToList(), pageIndex, pageSize, paged.PagerInfo.TotalCount);
     }
 }

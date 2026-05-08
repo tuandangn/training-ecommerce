@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.StockAdjustment;
-using NamEcommerce.Web.Contracts.Queries.StockAdjustment;
 using NamEcommerce.Web.Models.StockAdjustment;
 using NamEcommerce.Web.Services.StockAdjustment;
 

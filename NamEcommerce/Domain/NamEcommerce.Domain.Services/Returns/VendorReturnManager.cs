@@ -18,7 +18,6 @@ public sealed class VendorReturnManager(
     IEntityDataReader<VendorReturn> vendorReturnDataReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
     IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
-    IEntityDataReader<GoodsReceiptItem> goodsReceiptItemDataReader,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Vendor> vendorDataReader,
     IEntityDataReader<Warehouse> warehouseDataReader,
@@ -266,25 +265,25 @@ public sealed class VendorReturnManager(
         if (vendorReturn.GoodsReceiptId.HasValue)
         {
             // Lọc trực tiếp theo GoodsReceipt cụ thể
-            return goodsReceiptItemDataReader.DataSource
-                .Where(i => i.GoodsReceiptId == vendorReturn.GoodsReceiptId.Value
-                            && i.ProductId == productId)
+            return goodsReceiptDataReader.DataSource
+                .Where(gr => gr.Id == vendorReturn.GoodsReceiptId.Value)
+                .ToList()
+                .SelectMany(gr => gr.Items.Where(item => item.ProductId == productId))
                 .Sum(i => i.Quantity);
         }
 
         if (vendorReturn.PurchaseOrderId.HasValue)
         {
             // Lấy tất cả GoodsReceipt gắn với PurchaseOrderId
-            var goodsReceiptIds = goodsReceiptDataReader.DataSource
+            var goodsReceipts = goodsReceiptDataReader.DataSource
                 .Where(gr => gr.PurchaseOrderId == vendorReturn.PurchaseOrderId.Value)
-                .Select(gr => gr.Id)
                 .ToList();
 
-            if (!goodsReceiptIds.Any())
+            if (!goodsReceipts.Any())
                 return 0;
 
-            return goodsReceiptItemDataReader.DataSource
-                .Where(i => goodsReceiptIds.Contains(i.GoodsReceiptId) && i.ProductId == productId)
+            return goodsReceipts
+                .SelectMany(gr => gr.Items.Where(item => item.ProductId == productId))
                 .Sum(i => i.Quantity);
         }
 

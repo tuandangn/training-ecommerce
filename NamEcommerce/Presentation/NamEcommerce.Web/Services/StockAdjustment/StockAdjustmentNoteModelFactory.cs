@@ -15,7 +15,7 @@ public sealed class StockAdjustmentNoteModelFactory(IMediator mediator) : IStock
 
         return new CreateStockAdjustmentNoteModel
         {
-            AvailableWarehouses = warehouses.Items
+            AvailableWarehouses = warehouses.Options
                 .Select(w => new WarehouseSelectItem { Id = w.Id, Name = w.Name })
                 .ToList()
         };
@@ -32,6 +32,6 @@ public sealed class StockAdjustmentNoteModelFactory(IMediator mediator) : IStock
             : null;
 
         return await mediator.Send(new GetStockAdjustmentNoteListQuery(
-            pageNumber, pageSize, keywords, warehouseId, statusEnum)).ConfigureAwait(false);
+            pageNumber, pageSize, keywords, warehouseId, (int?)statusEnum)).ConfigureAwait(false);
     }
 }

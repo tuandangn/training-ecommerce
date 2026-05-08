@@ -1,5 +1,3 @@
-using NamEcommerce.Domain.Shared.Enums.StockAdjustment;
-
 namespace NamEcommerce.Application.Contracts.Dtos.StockAdjustment;
 
 [Serializable]
@@ -10,7 +8,7 @@ public sealed record StockAdjustmentNoteAppDto
     public required Guid WarehouseId { get; init; }
     public string? WarehouseName { get; init; }
     public string? Note { get; init; }
-    public required StockAdjustmentStatus Status { get; init; }
+    public required int Status { get; init; }
     public DateTime? ApprovedOnUtc { get; init; }
     public required DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
@@ -73,7 +71,7 @@ public sealed record StockAdjustmentNoteListAppDto
     public required string Code { get; init; }
     public required Guid WarehouseId { get; init; }
     public string? WarehouseName { get; init; }
-    public required StockAdjustmentStatus Status { get; init; }
+    public required int Status { get; init; }
     public int ItemCount { get; init; }
     public required DateTime CreatedOnUtc { get; init; }
 }

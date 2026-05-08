@@ -22,7 +22,7 @@ public sealed class GetStockAdjustmentNoteHandler(IStockAdjustmentNoteAppService
             WarehouseId = dto.WarehouseId,
             WarehouseName = dto.WarehouseName,
             Note = dto.Note,
-            Status = (int)dto.Status,
+            Status = dto.Status,
             ApprovedOnUtc = dto.ApprovedOnUtc.HasValue
                 ? DateTimeHelper.ToLocalTime(dto.ApprovedOnUtc.Value)
                 : null,
@@ -51,7 +51,7 @@ public sealed class GetStockAdjustmentNoteListHandler(IStockAdjustmentNoteAppSer
 
         return new StockAdjustmentNoteListModel
         {
-            TotalCount = paged.TotalCount,
+            TotalCount = paged.Pagination.TotalCount,
             PageNumber = request.PageNumber,
             PageSize = request.PageSize,
             Items = paged.Items.Select(x => new StockAdjustmentNoteListItemModel

@@ -49,7 +49,6 @@ using NamEcommerce.Domain.Services.Security;
 using NamEcommerce.Domain.Services.Users;
 using NamEcommerce.Domain.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Services.Catalog;
 using NamEcommerce.Domain.Shared.Services.Customers;
 using NamEcommerce.Domain.Shared.Services.Debts;
@@ -89,6 +88,11 @@ using NamEcommerce.Application.Services.Returns;
 using NamEcommerce.Domain.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Web.Services.Returns;
+using NamEcommerce.Web.Services.StockAdjustment;
+using NamEcommerce.Application.Services.StockAdjustment;
+using NamEcommerce.Application.Contracts.StockAdjustment;
+using NamEcommerce.Domain.Shared.Services.StockAdjustment;
+using NamEcommerce.Domain.Services.StockAdjustment;
 
 //services
 var builder = WebApplication.CreateBuilder(args);

@@ -13,7 +13,7 @@ public static class StockAdjustmentNoteAppExtensions
             WarehouseId = dto.WarehouseId,
             WarehouseName = dto.WarehouseName,
             Note = dto.Note,
-            Status = dto.Status,
+            Status = (int) dto.Status,
             ApprovedOnUtc = dto.ApprovedOnUtc,
             CreatedOnUtc = dto.CreatedOnUtc,
             UpdatedOnUtc = dto.UpdatedOnUtc,
@@ -34,7 +34,7 @@ public static class StockAdjustmentNoteAppExtensions
             Code = dto.Code,
             WarehouseId = dto.WarehouseId,
             WarehouseName = dto.WarehouseName,
-            Status = dto.Status,
+            Status = (int) dto.Status,
             ItemCount = dto.Items.Count,
             CreatedOnUtc = dto.CreatedOnUtc
         };

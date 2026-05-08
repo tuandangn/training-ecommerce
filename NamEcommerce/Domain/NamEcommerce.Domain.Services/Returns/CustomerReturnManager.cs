@@ -8,6 +8,7 @@ using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Returns;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.Returns;
 
@@ -18,7 +19,6 @@ public sealed class CustomerReturnManager(
     IEntityDataReader<CustomerReturn> customerReturnDataReader,
     IEntityDataReader<Order> orderDataReader,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
-    IEntityDataReader<DeliveryNoteItem> deliveryNoteItemDataReader,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Warehouse> warehouseDataReader,
     IEntityDataReader<CustomerDebt> customerDebtDataReader,
@@ -233,16 +233,16 @@ public sealed class CustomerReturnManager(
     private decimal GetTotalDeliveredQuantity(Guid orderId, Guid productId)
     {
         // Join DeliveryNote (Delivered status = 3) + DeliveryNoteItem theo orderId + productId
-        var deliveredNoteIds = deliveryNoteDataReader.DataSource
-            .Where(dn => dn.OrderId == orderId && (int)dn.Status == 3) // Delivered
-            .Select(dn => dn.Id)
+        var deliveredNotes = deliveryNoteDataReader.DataSource
+            .Where(dn => dn.OrderId == orderId && dn.Status == DeliveryNoteStatus.Delivered) // Delivered
             .ToList();
 
-        if (!deliveredNoteIds.Any())
+        if (!deliveredNotes.Any())
             return 0;
 
-        return deliveryNoteItemDataReader.DataSource
-            .Where(i => deliveredNoteIds.Contains(i.DeliveryNoteId) && i.ProductId == productId)
-            .Sum(i => i.Quantity);
+        return deliveredNotes
+            .SelectMany(dn => dn.Items.Where(item => item.ProductId == productId))
+            .Where(item => item.ProductId == productId)
+            .Sum(item => item.Quantity);
     }
 }

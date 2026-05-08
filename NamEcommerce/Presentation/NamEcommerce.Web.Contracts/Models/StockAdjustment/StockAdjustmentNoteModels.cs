@@ -1,5 +1,3 @@
-using NamEcommerce.Domain.Shared.Enums.StockAdjustment;
-
 namespace NamEcommerce.Web.Contracts.Models.StockAdjustment;
 
 public sealed class StockAdjustmentNoteModel
