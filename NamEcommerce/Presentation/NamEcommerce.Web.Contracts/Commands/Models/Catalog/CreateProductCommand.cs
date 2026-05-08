@@ -14,4 +14,9 @@ public sealed class CreateProductCommand : IRequest<CreateProductResultModel>
     public Guid? UnitMeasurementId { get; set; }
     public int DisplayOrder { get; set; }
     public FileInfoModel? ImageFile { get; set; }
+
+    // Tồn kho ban đầu — nếu có sẽ tự tạo + duyệt StockAdjustmentNote
+    public IEnumerable<ProductStockModel>? ProductStocks { get; set; }
+
+    public sealed record ProductStockModel(Guid WarehouseId, decimal Quantity);
 }

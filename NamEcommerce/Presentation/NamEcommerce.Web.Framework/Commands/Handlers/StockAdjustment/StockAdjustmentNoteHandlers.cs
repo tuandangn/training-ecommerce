@@ -28,7 +28,6 @@ public sealed class CreateStockAdjustmentNoteHandler(
         };
 
         var currentUser = await currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
-
         var result = await appService.CreateAsync(dto, currentUser?.Id).ConfigureAwait(false);
         return new CreateStockAdjustmentNoteResultModel
         {

@@ -4,7 +4,6 @@ namespace NamEcommerce.Domain.Shared.Services.Inventory;
 
 public interface IInventoryStockManager
 {
-    Task<StockMovementLogDto?> AdjustStockAsync(Guid productId, Guid warehouseId, decimal newQuantity, string? note, Guid modifiedByUserId);
     Task<StockMovementLogDto?> ReceiveStockAsync(Guid productId, Guid warehouseId, decimal receivedQuantity, string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId);
 
     /// <summary>

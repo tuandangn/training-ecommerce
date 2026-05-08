@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Catalog;
@@ -13,7 +12,6 @@ namespace NamEcommerce.Domain.Services.Inventory;
 
 public sealed class InventoryStockManager : IInventoryStockManager
 {
-    private readonly IStockAuditLogger _stockAuditLogger;
     private readonly IRepository<InventoryStock> _inventoryStockRepository;
     private readonly IRepository<StockMovementLog> _stockMovementRepository;
     private readonly IEntityDataReader<StockMovementLog> _stockMovementDataReader;
@@ -25,7 +23,6 @@ public sealed class InventoryStockManager : IInventoryStockManager
     {
         _inventoryStockRepository = inventoryStockRepository;
         _inventoryStockDataReader = inventoryStockDataReader;
-        _stockAuditLogger = stockAuditLogger;
         _stockMovementRepository = stockMovementRepository;
         _productDataReader = productDataReader;
         _warehouseDataReader = warehouseDataReader;
@@ -37,60 +34,6 @@ public sealed class InventoryStockManager : IInventoryStockManager
         var stock = new InventoryStock(Guid.NewGuid(), productId, warehouseId, unitMeasurementId);
         await _inventoryStockRepository.InsertAsync(stock).ConfigureAwait(false);
         return stock;
-    }
-
-    public async Task<StockMovementLogDto?> AdjustStockAsync(Guid productId, Guid warehouseId, decimal newQuantity, string? note, Guid modifiedByUserId)
-    {
-        if (newQuantity < 0)
-            throw new InvalidStockOperationException("Error.StockQuantityCannotBeNegative");
-
-        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
-        if (product is null)
-            throw new ProductIsNotFoundException(productId);
-
-        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
-        if (warehouse is null)
-            throw new WarehouseIsNotFoundException(warehouseId);
-
-        var stock = await GetInventoryStockForProductAsync(productId, warehouseId).ConfigureAwait(false);
-        if (stock is null)
-            stock = await InitializeStockAsync(productId, warehouseId, product.UnitMeasurementId ?? Guid.Empty).ConfigureAwait(false);
-
-        var quantityBefore = stock.QuantityOnHand;
-        var quantityChange = newQuantity - quantityBefore;
-        if (quantityChange == 0)
-            return null;
-
-        // Validate against max stock level if increasing
-        if (newQuantity > quantityBefore && stock.MaxStockLevel > 0 && newQuantity > stock.MaxStockLevel)
-            throw new WarehouseCapacityExceededException("Error.WarehouseCapacityExceeded", stock.MaxStockLevel, newQuantity);
-
-        stock.QuantityOnHand = newQuantity;
-        stock.UpdatedOnUtc = DateTime.UtcNow;
-        await _inventoryStockRepository.UpdateAsync(stock).ConfigureAwait(false);
-
-        var movementType = quantityChange > 0 ? StockMovementType.Adjustment : StockMovementType.Adjustment;
-        var stockMovementLog = new StockMovementLog(Guid.NewGuid(), stock.ProductId, stock.WarehouseId,
-            movementType, Math.Abs(quantityChange), quantityBefore, stock.QuantityOnHand,
-            0, null, note, modifiedByUserId
-        );
-        await _stockMovementRepository.InsertAsync(stockMovementLog).ConfigureAwait(false);
-
-        await _stockAuditLogger.LogStockOperationAsync(productId, product.Name,
-            warehouseId, warehouse.Name, "Điều chỉnh", Math.Abs(quantityChange), quantityBefore, stock.QuantityOnHand,
-            modifiedByUserId, null, note, Activity.Current?.Id);
-
-        return new StockMovementLogDto(stockMovementLog.Id)
-        {
-            ProductId = stockMovementLog.ProductId,
-            ProductName = product.Name,
-            MovementType = (int)stockMovementLog.MovementType,
-            Quantity = stockMovementLog.Quantity,
-            QuantityBefore = stockMovementLog.QuantityBefore,
-            QuantityAfter = stockMovementLog.QuantityAfter,
-            CreatedOnUtc = stockMovementLog.CreatedOnUtc,
-            Note = stockMovementLog.Note
-        };
     }
 
     public async Task<StockMovementLogDto?> ReceiveStockAsync(Guid productId, Guid warehouseId, decimal receivedQuantity, string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId)

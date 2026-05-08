@@ -70,13 +70,13 @@ public sealed class ProductController : BaseAuthorizedController
             DisplayOrder = model.DisplayOrder,
             ImageFile = imageFileInfo
         };
-        //if (model.HasExistingStockQuantity)
-        //{
-        //    createProductCommand.UnitPrice = model.ProductInventory!.UnitPrice;
-        //    createProductCommand.CostPrice = model.ProductInventory!.CostPrice;
-        //    createProductCommand.ProductStocks = model.ProductInventory!.ProductStocks.Where(stock => stock.Quantity > 0)
-        //        .Select(stock => new CreateProductCommand.ProductStockModel(stock.WarehouseId, stock.Quantity));
-        //}
+        if (model.HasExistingStockQuantity)
+        {
+            createProductCommand.ProductStocks = model.ProductInventory!.ProductStocks
+                .Where(stock => stock.Quantity > 0)
+                .Select(stock => new CreateProductCommand.ProductStockModel(stock.WarehouseId, stock.Quantity));
+        }
+
         var createProductResult = await _mediator.Send(createProductCommand);
         if (!createProductResult.Success)
         {

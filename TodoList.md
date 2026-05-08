@@ -34,6 +34,7 @@
 - Không cần migration cho `StockMovementType.Revert` — enum C# không ánh xạ schema DB (cột int)
 - `Add-Migration AddReturnsModule` (Phase B5 — 4 bảng: `tbl.CustomerReturn`, `tbl.CustomerReturnItem`, `tbl.VendorReturn`, `tbl.VendorReturnItem`)
 - `Add-Migration AddCostAtDispatchToDeliveryNoteItem` (C3 — cột `CostAtDispatch decimal(18,4) NULL` trên `tbl.DeliveryNoteItem`)
+- `Add-Migration AddCustomerRefund` (C1 — bảng `tbl.CustomerRefund`, index `(CustomerId, Status)` + `CustomerReturnId`)
 - `Update-Database`
 
 **3. Smoke test** flow nghiệp vụ:
@@ -248,7 +249,7 @@
 
 > Các todo độc lập với Returns, làm sau khi Phase B đã ổn định.
 
-- [ ] **C1** — Phiếu chi/hoàn tiền khi `CustomerDebt.RemainingAmount < 0`: thiết kế entity `CustomerRefund` (hoặc mở rộng `Expense`), flow hoàn tiền mặt cho khách
+- [x] **C1** — Phiếu chi/hoàn tiền khi `CustomerDebt.RemainingAmount < 0`: thiết kế entity `CustomerRefund` (hoặc mở rộng `Expense`), flow hoàn tiền mặt cho khách
 - [x] **C2** — Sửa `FinancialReportAppService.GetProfitLossSummaryAsync`: đổi nguồn tính doanh thu sang `DeliveryNote.DeliveredOnUtc` + filter `SourceType=ToCustomer`; trừ doanh thu các CustomerReturn Confirmed; COGS từ `CostAtDispatch`
 - [x] **C3** — Snapshot `CostAtDispatch` trên `DeliveryNoteItem`: ghi giá vốn (AverageCost) tại thời điểm `MarkDelivered` để báo cáo lãi/lỗ chính xác
 - [ ] **C4** — Thiết kế kiểm kê/điều chỉnh tồn: chọn 1 trong 2 hướng:
@@ -280,3 +281,4 @@
 | C3 — Snapshot CostAtDispatch trên DeliveryNoteItem tại thời điểm MarkDelivered (+ CreateAsDeliveredAsync) | C | 2026-05-08 |
 | C6 — DeliveryNoteDeliveredStockHandler mới; bỏ inline DispatchStockAsync khỏi Manager | C | 2026-05-08 |
 | C2 — FinancialReportAppService đổi nguồn sang DeliveryNote.DeliveredOnUtc + COGS từ CostAtDispatch + trừ CustomerReturn | C | 2026-05-08 |
+| C1 — CustomerRefund entity + event CustomerReturnOverRefunded + Manager + AppService + Handler + EF Mapping + Controller + Views | C | 2026-05-08 |

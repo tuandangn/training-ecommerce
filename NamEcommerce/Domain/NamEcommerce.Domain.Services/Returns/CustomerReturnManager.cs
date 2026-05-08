@@ -208,13 +208,17 @@ public sealed class CustomerReturnManager(
             remaining -= toApply;
         }
 
-        // Tổng trả > tổng nợ → áp phần thừa vào debt cũ nhất (cho phép âm)
+        // Tổng trả > tổng nợ → áp phần thừa vào debt cũ nhất (cho phép âm) + raise OverRefunded event
         if (remaining > 0)
         {
             var first = orderedDebts[0];
             first.ApplyReturn(remaining, returnId);
             if (!touchedDebts.Contains(first))
                 touchedDebts.Add(first);
+
+            // Raise event để handler tạo CustomerRefund cho khoản hoàn tiền
+            customerReturn.MarkOverRefunded(remaining, first.Id);
+            await customerReturnRepository.UpdateAsync(customerReturn).ConfigureAwait(false);
         }
 
         foreach (var debt in touchedDebts)

@@ -93,6 +93,7 @@ using NamEcommerce.Application.Services.StockAdjustment;
 using NamEcommerce.Application.Contracts.StockAdjustment;
 using NamEcommerce.Domain.Shared.Services.StockAdjustment;
 using NamEcommerce.Domain.Services.StockAdjustment;
+using NamEcommerce.Web.Services.Debts;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -160,6 +161,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IGoodsReceiptManager, GoodsReceiptManager>();
     services.AddScoped<ICustomerReturnManager, CustomerReturnManager>();
     services.AddScoped<IVendorReturnManager, VendorReturnManager>();
+    services.AddScoped<ICustomerRefundManager, CustomerRefundManager>();
     services.AddScoped<IStockAdjustmentNoteManager, StockAdjustmentNoteManager>();
 
     services.AddScoped<ISecurityService, SecurityService>();
@@ -186,6 +188,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IGoodsReceiptAppService, GoodsReceiptAppService>();
     services.AddScoped<ICustomerReturnAppService, CustomerReturnAppService>();
     services.AddScoped<IVendorReturnAppService, VendorReturnAppService>();
+    services.AddScoped<ICustomerRefundAppService, CustomerRefundAppService>();
     services.AddScoped<IStockAdjustmentNoteAppService, StockAdjustmentNoteAppService>();
 
     builder.Services.AddHttpClient<IN8nAppService, N8nAppService>(client =>
@@ -209,6 +212,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IGoodsReceiptModelFactory, GoodsReceiptModelFactory>();
     services.AddScoped<ICustomerReturnModelFactory, CustomerReturnModelFactory>();
     services.AddScoped<IVendorReturnModelFactory, VendorReturnModelFactory>();
+    services.AddScoped<ICustomerRefundModelFactory, CustomerRefundModelFactory>();
     services.AddScoped<IStockAdjustmentNoteModelFactory, StockAdjustmentNoteModelFactory>();
 
     services.AddMediatR(config =>

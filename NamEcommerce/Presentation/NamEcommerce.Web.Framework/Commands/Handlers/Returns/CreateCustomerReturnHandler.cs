@@ -23,7 +23,6 @@ public sealed class CreateCustomerReturnHandler : IRequestHandler<CreateCustomer
     public async Task<CreateCustomerReturnResultModel> Handle(CreateCustomerReturnCommand request, CancellationToken cancellationToken)
     {
         var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
-
         var result = await _customerReturnAppService.CreateAsync(new CreateCustomerReturnAppDto
         {
             OrderId = request.OrderId,

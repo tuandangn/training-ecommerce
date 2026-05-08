@@ -20,3 +20,13 @@ public sealed record CustomerReturnConfirmed(
 /// Hiện không có handler — event để audit/tracking.
 /// </summary>
 public sealed record CustomerReturnCancelled(Guid CustomerReturnId) : DomainEvent;
+
+/// <summary>
+/// Tổng giá trị trả hàng vượt quá tổng nợ còn lại — cần hoàn tiền mặt cho khách.
+/// Handler subscribe event này để tạo <c>CustomerRefund</c> với <c>Amount = OverAmount</c>.
+/// </summary>
+public sealed record CustomerReturnOverRefunded(
+    Guid CustomerReturnId,
+    Guid CustomerId,
+    decimal OverAmount,
+    Guid OverRefundedDebtId) : DomainEvent;

@@ -33,4 +33,23 @@ public sealed class CreateProductModel
 
     [Display(Name = "Hình ảnh")]
     public Base64ImageModel? ImageFile { get; set; }
+
+    // Tồn kho ban đầu
+    [ValidateNever]
+    public ProductInventoryModel? ProductInventory { get; set; }
+
+    public bool HasExistingStockQuantity =>
+        ProductInventory?.ProductStocks.Any(s => s.Quantity > 0) ?? false;
+
+    public sealed class ProductInventoryModel
+    {
+        public List<ProductStockModel> ProductStocks { get; set; } = [];
+    }
+
+    public sealed class ProductStockModel
+    {
+        public Guid WarehouseId { get; set; }
+        public string WarehouseName { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+    }
 }

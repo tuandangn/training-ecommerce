@@ -23,7 +23,6 @@ public sealed class CreateVendorReturnHandler : IRequestHandler<CreateVendorRetu
     public async Task<CreateVendorReturnResultModel> Handle(CreateVendorReturnCommand request, CancellationToken cancellationToken)
     {
         var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
-
         var result = await _vendorReturnAppService.CreateAsync(new CreateVendorReturnAppDto
         {
             VendorId = request.VendorId,

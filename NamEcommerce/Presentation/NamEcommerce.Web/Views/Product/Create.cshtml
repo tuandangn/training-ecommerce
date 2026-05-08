@@ -117,10 +117,48 @@
                     </div>
                 </div>
                 <div class="tab-pane fade" id="inventory" role="tabpanel">
-                    <div class="alert alert-info d-flex align-items-center gap-2 mb-0">
+                    <div class="alert alert-info d-flex align-items-center gap-2 mb-3">
                         <i class="bi bi-info-circle-fill fs-5"></i>
-                        <span>Để có tồn kho ban đầu, hãy tạo <strong>Phiếu nhập hàng (GoodsReceipt)</strong> sau khi lưu hàng hóa.</span>
+                        <span>Nhập số lượng ban đầu cho từng kho (tùy chọn). Hệ thống sẽ tự tạo <strong>Phiếu kiểm kê (PKK)</strong> và duyệt ngay.</span>
                     </div>
+                    @if (Model.ProductInventory?.ProductStocks is { Count: > 0 })
+                    {
+                        <div class="table-responsive">
+                            <table class="table data-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-3" style="width:60%">Kho hàng</th>
+                                        <th class="text-end" style="width:40%">Số lượng ban đầu</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (var i = 0; i < Model.ProductInventory.ProductStocks.Count; i++)
+                                    {
+                                        var stock = Model.ProductInventory.ProductStocks[i];
+                                        <tr class="align-middle">
+                                            <td class="ps-3">
+                                                <input type="hidden" name="ProductInventory.ProductStocks[@i].WarehouseId"
+                                                       value="@stock.WarehouseId" />
+                                                <input type="hidden" name="ProductInventory.ProductStocks[@i].WarehouseName"
+                                                       value="@stock.WarehouseName" />
+                                                <span class="fw-medium">@stock.WarehouseName</span>
+                                            </td>
+                                            <td class="text-end pe-3" style="max-width:180px;">
+                                                <input name="ProductInventory.ProductStocks[@i].Quantity"
+                                                       value="@stock.Quantity"
+                                                       class="form-control form-control-sm text-end"
+                                                       type="number" min="0" step="0.001" placeholder="0" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-muted small fst-italic">Chưa có kho hàng nào được cấu hình.</div>
+                    }
                 </div>
                 <div class="tab-pane fade" id="additional" role="tabpanel">
                     <div class="row g-3">
