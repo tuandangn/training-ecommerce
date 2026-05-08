@@ -14,7 +14,7 @@
 
 ## 🔧 Pending Actions — Build & Smoke Test
 
-*(Tích lũy qua các session 2026-04-28 → 2026-05-06)*
+*(Tích lũy qua các session 2026-04-28 → 2026-05-07)*
 
 **1. Build verify** toàn bộ solution — `dotnet build NamEcommerce.sln`. Các thay đổi cần check compile sạch:
 
@@ -23,12 +23,17 @@
 - Session 2026-05-06 (Phase 4 Outbox): `OutboxMessage` entity (Domain), `OutboxMessageMapping` (Data.SqlServer), `IOutbox` + `OutboxAccessor`, `IIntegrationEvent` (kế thừa MediatR `INotification`), `DeliveryNoteConfirmedIntegrationEvent` + handler, `OutboxProcessor` background service. Csproj `Data.SqlServer` thêm 3 PackageReference: `Microsoft.Extensions.Hosting.Abstractions` 10.0.0, `Microsoft.Extensions.DependencyInjection.Abstractions` 10.0.0, `Microsoft.Extensions.Logging.Abstractions` 10.0.0. `Program.cs` đăng ký `IOutbox`, `OutboxProcessorOptions`, `AddHostedService<OutboxProcessor>`.
 - Session 2026-05-07 (Phase A1 SourceType): `GoodsReceipt` + `DeliveryNote` entities có thêm `SourceType` (`internal set`) với default tương ứng. `GoodsReceiptMapping.cs` + `DeliveryNoteMap.cs` (Data.SqlServer) cấu hình cột `SourceType` với `IsRequired().HasDefaultValue(...).HasConversion<int>()`. Imports: `using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;` đã thêm vào GoodsReceipt entity.
 - Session 2026-05-07 (Phase A2 GoodsReceipt auto-create): `PurchaseOrderManager` (11→8 deps, bỏ `IInventoryStockManager` + `IEntityDataReader<InventoryStock>` + `IRepository<Product>` + `IRepository<ProductPriceHistory>`, thêm `IGoodsReceiptManager`); `GoodsReceiptManager` thêm method `CreateFromPurchaseOrderReceivingAsync`; `IGoodsReceiptManager` + `GoodsReceiptDtos.cs` thêm `CreateGoodsReceiptFromPurchaseOrderDto`; `PurchaseOrderManagerTests.cs` (constructor 11→8 params, usings cập nhật, 3 test cũ xoá, 2 test mới thêm).
+- Session 2026-05-07 (Phase A3–A6 Stock Invariant): A3: `ProductAppService` bỏ `IInventoryStockManager`/`ICurrentUserAccessor`/`IEntityDataReader<Warehouse>` + toàn bộ initial stock logic; `CreateProductAppDto` bỏ UnitPrice/CostPrice/ProductStocks; `CreateProductCommand` bỏ stock fields; `CreateProductModel` bỏ HasExistingStockQuantity/ProductInventory; `CreateProductValidator` bỏ ChildRules; `Create.cshtml` thay inventory tab = info note; `CreateProductHandler` bỏ stock mapping. A4: xóa 5 actions+views InventoryController; xóa 5 handlers; xóa 5 commands; xóa StockOperationModels.cs + AdjustStockModel.cs + 5 result models từ InventoryModels.cs; bỏ AdjustStock link trong StockList.cshtml. A5: `IInventoryAppService` + `InventoryAppService` bỏ 5 methods + `IInventoryValidator`; xóa 5 DTOs. A6: `StockMovementType.Revert` enum mới; `IInventoryStockManager.RevertReceiveAsync` interface + implementation; `GoodsReceiptDeletedEventHandler` dùng `RevertReceiveAsync`.
+- Session 2026-05-07 (Phase B1–B3 Returns Domain + B4 Application một phần): B1: enums `CustomerReturnStatus`/`VendorReturnStatus`; events `CustomerReturnConfirmed/Cancelled` + `VendorReturnConfirmed/Cancelled`; 6 exception classes. B2: 4 entities (`CustomerReturn`, `CustomerReturnItem`, `VendorReturn`, `VendorReturnItem`) + `ApplyReturn` trên `CustomerDebt`/`VendorDebt`; thêm constructor `DeliveryNote(code, warehouseId, note, createdByUserId)` cho VendorReturn (OrderId=Guid.Empty sentinel) + `AddItemFromVendorReturn` + `MarkAsDeliveredFromVendorReturn`. B3: `CustomerReturnManager` + `VendorReturnManager`; `IInventoryStockManager.GetAverageCostAsync` mới; `GoodsReceiptManager.CreateFromCustomerReturnAsync`; `DeliveryNoteManager.CreateAsDeliveredAsync`; DTOs domain `CreateGoodsReceiptFromCustomerReturnDto` + `CreateDeliveryNoteFromVendorReturnDto`. B4 (một phần): `CustomerReturnAppDtos.cs` + `VendorReturnAppDtos.cs`; `ICustomerReturnAppService`; Extension `CustomerReturnAppExtensions` + `VendorReturnAppExtensions`; guard `FromCustomerReturn` trong `GoodsReceiptCreatedHandler`; guard `ToVendorReturn` trong `DeliveryNoteDeliveredEventHandler`.
 
 **2. Migrations cần chạy thủ công:**
 - `Add-Migration AddAverageCostToInventoryStock` (project Data.SqlServer)
 - `Add-Migration AddVendorToGoodsReceiptAndDebt`
 - `Add-Migration AddOutboxMessages` (Phase 4 — bảng `tbl.OutboxMessage` với index `IX_OutboxMessage_Pending`)
 - `Add-Migration AddSourceTypeToGoodsReceiptAndDeliveryNote` (Phase A1 — cột `SourceType` cho 2 bảng, default = 0)
+- Không cần migration cho `StockMovementType.Revert` — enum C# không ánh xạ schema DB (cột int)
+- `Add-Migration AddReturnsModule` (Phase B5 — 4 bảng: `tbl.CustomerReturn`, `tbl.CustomerReturnItem`, `tbl.VendorReturn`, `tbl.VendorReturnItem`)
+- `Add-Migration AddCostAtDispatchToDeliveryNoteItem` (C3 — cột `CostAtDispatch decimal(18,4) NULL` trên `tbl.DeliveryNoteItem`)
 - `Update-Database`
 
 **3. Smoke test** flow nghiệp vụ:
@@ -115,37 +120,34 @@
 - [x] Loại bỏ logic Product.UpdatePrice + ProductPriceHistory hiện đang nằm trong ReceiveItemAsync (line 280-300) — đảm bảo logic này đã được handle ở `GoodsReceiptItemUnitCostSetHandler` (verify duplicate)
 - [x] Đảm bảo `MarkItemReceived` event của PurchaseOrder vẫn fire để `PurchaseOrderItemReceivedEventHandler` chạy `VerifyStatus` (Approved → Receiving → Completed)
 
-### [PRIORITY: HIGH] A3 — Sửa `ProductAppService.CreateProductAsync` bỏ initial stock
+### ✅ A3 — Sửa `ProductAppService.CreateProductAsync` bỏ initial stock *(Done 2026-05-07)*
 
-- [ ] Loại bỏ phần gọi `_inventoryStockManager.AdjustStockAsync` (line 152) trong flow tạo Product
-- [ ] Cập nhật DTO `CreateProductAppDto` / Form Model — bỏ field initial stock (hoặc đánh dấu deprecated)
-- [ ] Cập nhật View tạo Product — thêm note "Để có tồn kho ban đầu, tạo phiếu nhập (GoodsReceipt) sau khi tạo sản phẩm"
-- [ ] Cập nhật Validator nếu cần
+- [x] Loại bỏ phần gọi `_inventoryStockManager.AdjustStockAsync` trong flow tạo Product
+- [x] Cập nhật DTO `CreateProductAppDto` / Form Model — bỏ UnitPrice, CostPrice, ProductStocks
+- [x] Cập nhật View tạo Product — thêm note "Để có tồn kho ban đầu, tạo phiếu nhập (GoodsReceipt) sau khi tạo sản phẩm"
+- [x] Cập nhật Validator — bỏ ProductInventory ChildRules block
+- [x] Cập nhật Handler — bỏ mapping UnitPrice, CostPrice, ProductStocks
 
-### [PRIORITY: HIGH] A4 — Bỏ 4 actions InventoryController + Commands/Handlers/Views
+### ✅ A4 — Bỏ 4 actions InventoryController + Commands/Handlers/Views *(Done 2026-05-07)*
 
-- [ ] Bỏ `InventoryController.ReceiveStock` (GET + POST) + view `Views/Inventory/ReceiveStock.cshtml`
-- [ ] Bỏ `InventoryController.DispatchStock` + view
-- [ ] Bỏ `InventoryController.ReserveStock` + view
-- [ ] Bỏ `InventoryController.AdjustStock` + view
-- [ ] Xóa `ReceiveStockHandler`, `DispatchStockHandler`, `ReserveStockHandler`, `AdjustStockHandler` (Web.Framework/Commands/Handlers/Inventory)
-- [ ] Xóa `ReceiveStockCommand`, `DispatchStockCommand`, `ReserveStockCommand`, `AdjustStockCommand` (Web.Contracts/Commands/Models/Inventory)
-- [ ] Xóa `ReceiveStockModel`, `DispatchStockModel`, `ReserveStockModel`, `ReserveStockResultModel`, `AdjustStockModel` (Web.Contracts/Models/Inventory)
-- [ ] Bỏ link/menu trong layout/sidebar trỏ tới các action đã xoá
+- [x] Bỏ `InventoryController.ReceiveStock`, `DispatchStock`, `ReserveStock`, `ReleaseReservedStock`, `AdjustStock` (GET + POST) + xóa 5 views tương ứng
+- [x] Xóa `ReceiveStockHandler`, `DispatchStockHandler`, `ReserveStockHandler`, `ReleaseReservedStockHandler`, `AdjustStockHandler`
+- [x] Xóa `ReceiveStockCommand`, `DispatchStockCommand`, `ReserveStockCommand`, `ReleaseReservedStockCommand`, `AdjustStockCommand` (InventoryCommands.cs)
+- [x] Xóa `StockOperationModels.cs`; remove 5 result models từ `InventoryModels.cs`; xóa `AdjustStockModel.cs`
+- [x] Bỏ link AdjustStock trong `StockList.cshtml`
 
-### [PRIORITY: HIGH] A5 — Bỏ 4 method public stock thao tác khỏi `IInventoryAppService`
+### ✅ A5 — Bỏ 5 method public stock thao tác khỏi `IInventoryAppService` *(Done 2026-05-07)*
 
-- [ ] Remove khỏi `IInventoryAppService`: `ReceiveStockAsync`, `DispatchStockAsync`, `ReserveStockAsync`, `ReleaseReservedStockAsync`, `AdjustStockAsync`
-- [ ] Xóa implementation tương ứng trong `InventoryAppService`
-- [ ] Xóa DTOs liên quan ở `Application.Contracts/Dtos/Inventory/InventoryAppDtos.cs` (`ReceiveStockAppDto`, `DispatchStockAppDto`, `ReserveStockAppDto`, `AdjustStockAppDto`, `ReleaseStockAppDto`) nếu không còn ai dùng
-- [ ] Xác nhận `IInventoryStockManager` (Domain) **vẫn giữ** các method này — Manager khác (`DeliveryNoteManager`, `GoodsReceiptCreatedHandler`, `GoodsReceiptDeletedEventHandler`) dùng nội bộ
+- [x] Remove khỏi `IInventoryAppService`: `ReceiveStockAsync`, `DispatchStockAsync`, `ReserveStockAsync`, `ReleaseReservedStockAsync`, `AdjustStockAsync`
+- [x] Xóa implementation tương ứng trong `InventoryAppService`; bỏ `IInventoryValidator` khỏi constructor
+- [x] Xóa 5 DTOs (`ReceiveStockAppDto`, `DispatchStockAppDto`, `ReserveStockAppDto`, `AdjustStockAppDto`, `ReleaseStockAppDto`) khỏi `InventoryAppDtos.cs`
 
-### [PRIORITY: MEDIUM] A6 — Đổi naming `AdjustStockAsync` cho rollback use-case
+### ✅ A6 — Đổi naming `AdjustStockAsync` cho rollback use-case *(Done 2026-05-07)*
 
-- [ ] Thêm method semantic mới `RevertReceiveAsync(productId, warehouseId, quantity, goodsReceiptId, modifiedByUserId)` vào `IInventoryStockManager`
-- [ ] Implementation: tương tự `AdjustStockAsync` nhưng ghi `StockMovementLog` với `MovementType=Adjustment, ReferenceType=GoodsReceipt, Note='Hoàn nguyên do xóa phiếu {goodsReceiptId}'`
-- [ ] Cập nhật `GoodsReceiptDeletedEventHandler` dùng API mới thay cho `AdjustStockAsync`
-- [ ] (Optional) Đánh dấu `IInventoryStockManager.AdjustStockAsync` là `[Obsolete]` để dễ phát hiện caller mới — sẽ remove ở Phase C khi có `StockAdjustmentNote`
+- [x] Thêm method semantic mới `RevertReceiveAsync(productId, warehouseId, quantity, goodsReceiptId, modifiedByUserId)` vào `IInventoryStockManager`
+- [x] Implementation: trừ đúng qty đã nhập, ghi `StockMovementLog` với `MovementType=Revert, ReferenceType=GoodsReceipt`
+- [x] Thêm `StockMovementType.Revert` vào enum `StockMovementLog.cs`
+- [x] Cập nhật `GoodsReceiptDeletedEventHandler` dùng `RevertReceiveAsync` thay cho `AdjustStockAsync`
 
 ### [PRIORITY: HIGH] A7 — Smoke test Phase A
 
@@ -165,72 +167,68 @@
 > **Phụ thuộc**: Phase A (Stock Invariant Hardening) phải DONE 100%.
 > Chi tiết thiết kế tại [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) mục 6.
 
-### [PRIORITY: HIGH] B1 — Domain.Shared
+### ✅ B1 — Domain.Shared *(Done 2026-05-07)*
 
-- [ ] Enum `CustomerReturnStatus` (Draft=0, Inspecting=1, Confirmed=2, Cancelled=3) tại `Domain.Shared/Enums/Returns/`
-- [ ] Enum `VendorReturnStatus` (Draft=0, Inspecting=1, Confirmed=2, Cancelled=3)
-- [ ] Bổ sung `StockReferenceType.CustomerReturn = 7`, `VendorReturn = 8` (optional, để truy vết)
-- [ ] Events: `CustomerReturnConfirmed(Id, OrderId, CustomerId, WarehouseId)`, `CustomerReturnCancelled(Id)` tại `Domain.Shared/Events/Returns/CustomerReturnEvents.cs`
-- [ ] Events: `VendorReturnConfirmed(Id, PurchaseOrderId?, GoodsReceiptId?, VendorId, WarehouseId)`, `VendorReturnCancelled(Id)` tại `Domain.Shared/Events/Returns/VendorReturnEvents.cs`
-- [ ] Exceptions: `CustomerReturnNotFoundException`, `VendorReturnNotFoundException`, `ExceedsDeliveredQuantityException`, `ExceedsReceivedQuantityException`, `ReturnCannotChangeStatusException`, `ReturnDataIsInvalidException`
+- [x] Enum `CustomerReturnStatus` (Draft=0, Inspecting=1, Confirmed=2, Cancelled=3) tại `Domain.Shared/Enums/Returns/`
+- [x] Enum `VendorReturnStatus` (Draft=0, Inspecting=1, Confirmed=2, Cancelled=3)
+- [x] Events: `CustomerReturnConfirmed(Id, OrderId, CustomerId, WarehouseId)`, `CustomerReturnCancelled(Id)` tại `Domain.Shared/Events/Returns/CustomerReturnEvents.cs`
+- [x] Events: `VendorReturnConfirmed(Id, PurchaseOrderId?, GoodsReceiptId?, VendorId, WarehouseId)`, `VendorReturnCancelled(Id)` tại `Domain.Shared/Events/Returns/VendorReturnEvents.cs`
+- [x] Exceptions: `CustomerReturnNotFoundException`, `VendorReturnNotFoundException`, `ExceedsDeliveredQuantityException`, `ExceedsReceivedQuantityException`, `ReturnCannotChangeStatusException`, `ReturnDataIsInvalidException`
 
-### [PRIORITY: HIGH] B2 — Domain Layer (Entities + Debt extensions)
+### ✅ B2 — Domain Layer (Entities + Debt extensions) *(Done 2026-05-07)*
 
-- [ ] Entity `CustomerReturn` tại `Domain/Entities/Returns/CustomerReturn.cs` với fields: Code, OrderId, CustomerId, WarehouseId, ReturnDate, Note, Status, ConfirmedOnUtc?, GeneratedGoodsReceiptId?, CreatedByUserId?, CreatedOnUtc, UpdatedOnUtc?
-- [ ] Entity `CustomerReturnItem` (CustomerReturnId, ProductId, DeliveryNoteItemId?, RequestedQuantity, AcceptedQuantity, UnitPrice)
-- [ ] Entity `VendorReturn` (Code, PurchaseOrderId?, GoodsReceiptId?, VendorId, WarehouseId, ReturnDate, Note, Status, ConfirmedOnUtc?, GeneratedDeliveryNoteId?, CreatedByUserId?, …)
-- [ ] Entity `VendorReturnItem` (VendorReturnId, ProductId, GoodsReceiptItemId?, RequestedQuantity, AcceptedQuantity, UnitCost)
-- [ ] Mark methods cho `CustomerReturn`: `MarkCreated`, `Confirm`, `Cancel` — raise event tương ứng
-- [ ] Mark methods cho `VendorReturn`: `MarkCreated`, `Confirm`, `Cancel`
-- [ ] Extensions `ToDto` cho 4 entity tại `Domain/Extensions/Returns/`
-- [ ] Mở rộng `CustomerDebt`: thêm method `ApplyReturn(decimal amount, Guid returnId)` — giảm `RemainingAmount` (cho phép xuống âm), track `appliedReturnIds` để idempotent
-- [ ] Mở rộng `VendorDebt`: thêm `ApplyReturn(amount, returnId)` tương tự
-- [ ] Sửa `DeliveryNote.OrderId` thành `Guid?` (nullable) để chứa được phiếu xuất loại `ToVendorReturn` không có Order
-- [ ] **Migration thủ công**: `Add-Migration MakeOrderIdNullableOnDeliveryNote` + `Add-Migration AddReturnsModule`
+- [x] Entity `CustomerReturn` + `CustomerReturnItem` tại `Domain/Entities/Returns/`
+- [x] Entity `VendorReturn` + `VendorReturnItem` tại `Domain/Entities/Returns/`
+- [x] Mark methods cho `CustomerReturn`: `MoveToInspecting`, `Confirm` (raise `CustomerReturnConfirmed`), `Cancel` (raise `CustomerReturnCancelled`), `MarkCreated`
+- [x] Mark methods cho `VendorReturn`: tương tự
+- [x] DTOs domain tại `Domain.Shared/Dtos/Returns/`: `CustomerReturnDto`, `CustomerReturnItemDto`, `CreateCustomerReturnDto`, `UpdateCustomerReturnDto`; tương ứng cho VendorReturn
+- [x] `ApplyReturn(decimal amount, Guid returnId)` trên `CustomerDebt` — giảm `RemainingAmount` (cho phép xuống âm)
+- [x] `ApplyReturn(decimal amount, Guid returnId)` trên `VendorDebt` — tương tự
+- [x] Constructor thứ 2 `DeliveryNote(code, warehouseId, note, createdByUserId)` — sentinel `OrderId=Guid.Empty, CustomerId=Guid.Empty` cho VendorReturn flow; `AddItemFromVendorReturn`; `MarkAsDeliveredFromVendorReturn`
+- [x] `ICustomerReturnManager` + `IVendorReturnManager` interface tại `Domain.Shared/Services/Returns/`
 
-### [PRIORITY: HIGH] B3 — Domain.Services (Managers)
+### ✅ B3 — Domain.Services (Managers) *(Done 2026-05-07)*
 
-- [ ] DTOs cho Return Managers (kèm `Verify()`): `CreateCustomerReturnDto`, `UpdateCustomerReturnDto`, `CustomerReturnDto`, `CustomerReturnItemDto`; tương ứng cho VendorReturn
-- [ ] `ICustomerReturnManager` + `CustomerReturnManager`:
-  - `CreateAsync(dto)` — tạo phiếu Draft, validate Order tồn tại + items thuộc Order
-  - `UpdateAsync(dto)` — chỉ khi Draft
-  - `MoveToInspectingAsync(id)` — Draft → Inspecting
-  - `ConfirmAsync(id)` — Inspecting → Confirmed; validate `Σ AcceptedQty ≤ Delivered cho (OrderId, ProductId)` — throw `ExceedsDeliveredQuantityException` nếu vượt; raise `CustomerReturnConfirmed`
-  - `CancelAsync(id)` — chỉ khi Draft hoặc Inspecting
-- [ ] `IVendorReturnManager` + `VendorReturnManager` (đối xứng, validate theo PurchaseOrder hoặc GoodsReceipt độc lập)
-- [ ] Method internal mới `GoodsReceiptManager.CreateFromCustomerReturnAsync(dto)` — chỉ cho `CustomerReturnConfirmedEventHandler` gọi; tạo `GoodsReceipt(SourceType=FromCustomerReturn)` items map từ Return; UnitCost = `AverageCost` hiện tại của (ProductId, WarehouseId) để báo cáo nhất quán
-- [ ] Method internal mới `DeliveryNoteManager.CreateAsDeliveredAsync(dto)` — chỉ cho `VendorReturnConfirmedEventHandler` gọi; tạo `DeliveryNote(SourceType=ToVendorReturn, OrderId=null)` ở status `Delivered` ngay (skip Reserve/Confirm/Delivering); trừ tồn thực sự
+- [x] `CustomerReturnManager` — `CreateAsync`, `UpdateAsync`, `MoveToInspectingAsync`, `ConfirmAsync`, `CancelAsync`, `GetByIdAsync`, `GetListAsync`, `GetTotalConfirmedReturnQuantityAsync`
+- [x] `VendorReturnManager` — đối xứng; validate `AcceptedQty ≤ (received − previouslyReturned)` theo GoodsReceipt hoặc PurchaseOrder; throw `ExceedsReceivedQuantityException`
+- [x] `IInventoryStockManager.GetAverageCostAsync(productId, warehouseId)` — interface + implementation mới
+- [x] `GoodsReceiptManager.CreateFromCustomerReturnAsync(dto)` — tạo `GoodsReceipt(SourceType=FromCustomerReturn)`, UnitCost = `AverageCost` hiện tại
+- [x] `DeliveryNoteManager.CreateAsDeliveredAsync(dto)` — tạo `DeliveryNote(SourceType=ToVendorReturn)` status `Delivered` ngay, dispatch stock inline
+- [x] DTOs mới: `CreateGoodsReceiptFromCustomerReturnDto/Item`, `CreateDeliveryNoteFromVendorReturnDto/Item` tại `Domain.Shared/Dtos/`
+- [x] `IGoodsReceiptManager.CreateFromCustomerReturnAsync` + `IDeliveryNoteManager.CreateAsDeliveredAsync` — interface mới
 
-### [PRIORITY: HIGH] B4 — Application
+### ✅ B4 — Application *(Done 2026-05-07)*
 
-- [ ] AppDtos cho Return (kèm `Validate()` return `(bool, string?)`): `CreateCustomerReturnAppDto`, `CustomerReturnAppDto`, `CustomerReturnListAppDto`; tương tự cho VendorReturn
-- [ ] `ICustomerReturnAppService` + `CustomerReturnAppService` — nhận AppDto, gọi Manager qua DomainDto
-- [ ] `IVendorReturnAppService` + `VendorReturnAppService`
-- [ ] Event handler `CustomerReturnConfirmedEventHandler`: gọi `GoodsReceiptManager.CreateFromCustomerReturnAsync` + duyệt `CustomerDebt` của Order theo FIFO `CreatedOnUtc` để gọi `ApplyReturn`; set `CustomerReturn.GeneratedGoodsReceiptId`
-- [ ] Event handler `VendorReturnConfirmedEventHandler`: gọi `DeliveryNoteManager.CreateAsDeliveredAsync` + giảm `VendorDebt` (FIFO theo PurchaseOrderId hoặc GoodsReceiptId); set `VendorReturn.GeneratedDeliveryNoteId`
-- [ ] **Sửa** `GoodsReceiptCreatedHandler.TryCreateVendorDebtAsync`: thêm guard `if (goodsReceipt.SourceType == GoodsReceiptSourceType.FromCustomerReturn) return;`
-- [ ] **Sửa** `DeliveryNoteDeliveredEventHandler`: thêm guard `if (deliveryNote.SourceType == DeliveryNoteSourceType.ToVendorReturn) return;`
+- [x] `Application.Contracts/Dtos/Returns/CustomerReturnAppDtos.cs` + `VendorReturnAppDtos.cs` — App DTOs + `Validate()`
+- [x] `Application.Contracts/Returns/ICustomerReturnAppService.cs` + `IVendorReturnAppService.cs`
+- [x] `Application.Services/Extensions/CustomerReturnExtensions.cs` + `VendorReturnAppExtensions.cs` — `ToAppDto()`
+- [x] `Application.Services/Returns/CustomerReturnAppService.cs` + `VendorReturnAppService.cs`
+- [x] `Application.Services/Events/Returns/CustomerReturnConfirmedEventHandler.cs` — tạo GoodsReceipt + FinalizeConfirmAsync (giảm CustomerDebt FIFO)
+- [x] `Application.Services/Events/Returns/VendorReturnConfirmedEventHandler.cs` — tạo DeliveryNote + FinalizeConfirmAsync (giảm VendorDebt FIFO)
+- [x] `ICustomerReturnManager.FinalizeConfirmAsync` + `IVendorReturnManager.FinalizeConfirmAsync` — interface + implementation (idempotency + FIFO ApplyReturn)
+- [x] `GoodsReceiptCreatedHandler` — guard `SourceType == FromCustomerReturn` → skip `TryCreateVendorDebtAsync`
+- [x] `DeliveryNoteDeliveredEventHandler` — guard `SourceType == ToVendorReturn` → return early
 
-### [PRIORITY: HIGH] B5 — Infrastructure (Data.SqlServer)
+### ✅ B5 — Infrastructure (Data.SqlServer) *(Done 2026-05-07)*
 
-- [ ] `CustomerReturnConfiguration` + `CustomerReturnItemConfiguration` (mapping FK, indexes)
-- [ ] `VendorReturnConfiguration` + `VendorReturnItemConfiguration`
-- [ ] Index hỗ trợ truy vấn: `(OrderId, Status)` cho CustomerReturn; `(PurchaseOrderId, Status)` + `(GoodsReceiptId, Status)` cho VendorReturn
-- [ ] Đăng ký Repository + EntityDataReader cho 4 entity mới trong DI
+- [x] `CustomerReturnMapping` + `CustomerReturnItemMapping` (table, FK, decimals, indexes)
+- [x] `VendorReturnMapping` + `VendorReturnItemMapping`
+- [x] Index: `(OrderId, Status)` + `(CustomerId, Status)` cho CustomerReturn; `(PurchaseOrderId, Status)` + `(GoodsReceiptId, Status)` + `(VendorId, Status)` cho VendorReturn
+- [x] DI: `ICustomerReturnManager/AppService` + `IVendorReturnManager/AppService` đăng ký trong `Program.cs`
 
-### [PRIORITY: HIGH] B6 — Presentation (Web)
+### ✅ B6 — Presentation (Web) *(Done 2026-05-07)*
 
-- [ ] Models (Web.Contracts/Models/Returns): `CreateCustomerReturnModel`, `UpdateCustomerReturnModel`, `CustomerReturnDetailModel`, `CustomerReturnListModel`; tương tự VendorReturn
-- [ ] FluentValidation Validators cho mỗi Model
-- [ ] Commands/Queries (Web.Contracts/Commands+Queries) cho cả 2 module: `CreateCustomerReturnCommand`, `MoveToInspectingCommand`, `ConfirmCustomerReturnCommand`, `CancelCustomerReturnCommand`, `GetCustomerReturnByIdQuery`, `GetCustomerReturnsQuery`; tương tự VendorReturn
-- [ ] Command/Query Handlers tương ứng (Web.Framework) — đều dùng IMediator + AppService
-- [ ] `ICustomerReturnModelFactory` + `CustomerReturnModelFactory` (Web)
-- [ ] `IVendorReturnModelFactory` + `VendorReturnModelFactory`
-- [ ] `CustomerReturnController` (Index, Detail, Create [GET/POST], Update [GET/POST], Inspect, Confirm, Cancel) — dùng IMediator + ModelFactory, không inject AppService trực tiếp
-- [ ] `VendorReturnController` (đối xứng)
-- [ ] Views: `Index.cshtml`, `Create.cshtml`, `Detail.cshtml`, `Inspect.cshtml` cho cả 2 controller
-- [ ] Thêm menu/sidebar link tới 2 module mới
-- [ ] Code prefix: `TKH-yyyyMMdd-NNN` (CustomerReturn), `TNCC-yyyyMMdd-NNN` (VendorReturn) — đảm bảo qua `ICodeExistCheckingService`
+- [x] `Web.Contracts/Commands/Returns/`: `CreateCustomerReturnCommand`, `UpdateCustomerReturnCommand`, `ChangeCustomerReturnStatusCommand` (3 commands); VendorReturn tương tự
+- [x] `Web.Contracts/Queries/Returns/`: `GetCustomerReturnQuery`, `GetCustomerReturnListQuery`; VendorReturn tương tự
+- [x] `Web.Contracts/Models/Returns/`: `CustomerReturnModel`, `CustomerReturnListModel`, `CreateCustomerReturnResultModel`, `UpdateCustomerReturnResultModel`; VendorReturn tương tự
+- [x] Command Handlers (Web.Framework): `CreateCustomerReturnHandler`, `UpdateCustomerReturnHandler`, `ChangeCustomerReturnStatusHandlers`; VendorReturn tương tự
+- [x] Query Handlers (Web.Framework): `GetCustomerReturnHandler`, `GetCustomerReturnListHandler`; VendorReturn tương tự
+- [x] View Models (Web/Models/Returns): `CreateCustomerReturnModel`, `CustomerReturnDetailsModel`, `CustomerReturnListSearchModel`; VendorReturn tương tự
+- [x] `ICustomerReturnModelFactory` + `CustomerReturnModelFactory`; VendorReturn tương tự
+- [x] `CustomerReturnController` + `VendorReturnController` (Index, List, Create GET/POST, Details, Update, MoveToInspecting, Confirm, Cancel)
+- [x] DI: cả 2 ModelFactory đăng ký trong `Program.cs`
+- [x] Views: `List.cshtml`, `Create.cshtml`, `Details.cshtml` cho cả 2 controller
+- [x] Thêm menu/sidebar link "Trả hàng" (CustomerReturn + VendorReturn) vào sidebar
 
 ### [PRIORITY: HIGH] B7 — Smoke test Phase B
 
@@ -251,13 +249,13 @@
 > Các todo độc lập với Returns, làm sau khi Phase B đã ổn định.
 
 - [ ] **C1** — Phiếu chi/hoàn tiền khi `CustomerDebt.RemainingAmount < 0`: thiết kế entity `CustomerRefund` (hoặc mở rộng `Expense`), flow hoàn tiền mặt cho khách
-- [ ] **C2** — Sửa `FinancialReportAppService.GetProfitLossSummaryAsync`: đổi nguồn tính doanh thu sang `DeliveryNote.DeliveredOnUtc` + filter `SourceType=ToCustomer`; trừ doanh thu các CustomerReturn Confirmed; trừ COGS bù theo
-- [ ] **C3** — Snapshot `CostAtDispatch` trên `DeliveryNoteItem`: ghi giá vốn (AverageCost) tại thời điểm `MarkDelivered` để báo cáo lãi/lỗ chính xác
+- [x] **C2** — Sửa `FinancialReportAppService.GetProfitLossSummaryAsync`: đổi nguồn tính doanh thu sang `DeliveryNote.DeliveredOnUtc` + filter `SourceType=ToCustomer`; trừ doanh thu các CustomerReturn Confirmed; COGS từ `CostAtDispatch`
+- [x] **C3** — Snapshot `CostAtDispatch` trên `DeliveryNoteItem`: ghi giá vốn (AverageCost) tại thời điểm `MarkDelivered` để báo cáo lãi/lỗ chính xác
 - [ ] **C4** — Thiết kế kiểm kê/điều chỉnh tồn: chọn 1 trong 2 hướng:
   - Entity riêng `StockAdjustmentNote` (Draft → Approved → trigger cộng/trừ tồn)
   - `SourceType=Adjustment` trên 2 phiếu cũ — chia FromAdjustment/ToAdjustment
 - [ ] **C5** — Khôi phục lối tạo Product có sẵn stock: auto-sinh phiếu Adjustment khi user nhập initial stock (sau khi C4 xong)
-- [ ] **C6** — Thống nhất pattern side-effect: `DeliveryNoteManager.MarkDeliveredAsync` chuyển từ inline `DispatchStockAsync` sang event handler (như `GoodsReceiptCreatedHandler`)
+- [x] **C6** — Thống nhất pattern side-effect: `DeliveryNoteManager.MarkDeliveredAsync` chuyển từ inline `DispatchStockAsync` sang event handler (`DeliveryNoteDeliveredStockHandler`)
 - [ ] **C7** — Remove `IInventoryStockManager.AdjustStockAsync` (đã `[Obsolete]` từ A6) sau khi C4 thay thế bằng `StockAdjustmentNote`
 
 ---
@@ -268,3 +266,17 @@
 |----------|-------|---------|
 | Audit hệ thống + viết IMPROVEMENT_PLAN.md | — | 2026-05-06 |
 | A1 — Thêm SourceType cho GoodsReceipt + DeliveryNote (code, mapping; migration chờ Tuấn) | A | 2026-05-07 |
+| A2 — PurchaseOrderManager.ReceiveItemAsync auto-tạo GoodsReceipt thay vì gọi stockManager trực tiếp | A | 2026-05-07 |
+| A3 — ProductAppService bỏ initial stock logic; DTO/Model/View cập nhật | A | 2026-05-07 |
+| A4 — Xóa 5 actions InventoryController + handlers + commands + models | A | 2026-05-07 |
+| A5 — Bỏ 5 method stock thao tác khỏi IInventoryAppService | A | 2026-05-07 |
+| A6 — RevertReceiveAsync thay AdjustStockAsync cho rollback use-case | A | 2026-05-07 |
+| B1 — Domain.Shared: enums, events, exceptions cho Returns | B | 2026-05-07 |
+| B2 — Domain Entities: CustomerReturn/Item + VendorReturn/Item; ApplyReturn trên Debts; DeliveryNote thêm constructor/methods | B | 2026-05-07 |
+| B3 — Domain.Services: CustomerReturnManager + VendorReturnManager + extensions GoodsReceiptManager/DeliveryNoteManager | B | 2026-05-07 |
+| B4 — Application: AppDtos + IAppServices + AppServices + Event Handlers (CustomerReturnConfirmed + VendorReturnConfirmed) + FinalizeConfirmAsync | B | 2026-05-07 |
+| B5 — Infrastructure: EF mappings (4 bảng Returns) + DI registrations trong Program.cs | B | 2026-05-07 |
+| B6 — Presentation: Commands/Queries/Models/Handlers/Controllers/ModelFactories/Views + sidebar menu | B | 2026-05-07 |
+| C3 — Snapshot CostAtDispatch trên DeliveryNoteItem tại thời điểm MarkDelivered (+ CreateAsDeliveredAsync) | C | 2026-05-08 |
+| C6 — DeliveryNoteDeliveredStockHandler mới; bỏ inline DispatchStockAsync khỏi Manager | C | 2026-05-08 |
+| C2 — FinancialReportAppService đổi nguồn sang DeliveryNote.DeliveredOnUtc + COGS từ CostAtDispatch + trừ CustomerReturn | C | 2026-05-08 |

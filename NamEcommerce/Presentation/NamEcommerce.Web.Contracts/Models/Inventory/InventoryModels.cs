@@ -24,41 +24,6 @@ public sealed class InventoryStockListModel
 }
 
 [Serializable]
-public sealed record AdjustStockResultModel
-{
-    public required bool Success { get; init; }
-    public required string? ErrorMessage { get; init; }
-}
-
-[Serializable]
-public sealed record ReserveStockResultModel
-{
-    public required bool Success { get; init; }
-    public required string? ErrorMessage { get; init; }
-}
-
-[Serializable]
-public sealed record ReleaseReservedStockResultModel
-{
-    public required bool Success { get; init; }
-    public required string? ErrorMessage { get; init; }
-}
-
-[Serializable]
-public sealed record DispatchStockResultModel
-{
-    public required bool Success { get; init; }
-    public required string? ErrorMessage { get; init; }
-}
-
-[Serializable]
-public sealed record ReceiveStockResultModel
-{
-    public required bool Success { get; init; }
-    public required string? ErrorMessage { get; init; }
-}
-
-[Serializable]
 public sealed class StockMovementLogListModel
 {
     public Guid? ProductId { get; init; }

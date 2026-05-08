@@ -117,17 +117,9 @@
                     </div>
                 </div>
                 <div class="tab-pane fade" id="inventory" role="tabpanel">
-                    <div class="row g-3">
-                        <div class="col-sm-6">
-                            <div class="form-check form-switch">
-                                <input asp-for="HasExistingStockQuantity" class="form-check-input" role="switch"/>
-                                <label asp-for="HasExistingStockQuantity" class="form-check-label"></label>
-                            </div>
-                            <span asp-validation-for="HasExistingStockQuantity" class="text-danger small"></span>
-                        </div>
-                        <div class="col-12 @(Model.HasExistingStockQuantity ? "" : "d-none")" id="inventoryContainer">
-                            <partial name="_Inventory" for="ProductInventory" />
-                        </div>
+                    <div class="alert alert-info d-flex align-items-center gap-2 mb-0">
+                        <i class="bi bi-info-circle-fill fs-5"></i>
+                        <span>Để có tồn kho ban đầu, hãy tạo <strong>Phiếu nhập hàng (GoodsReceipt)</strong> sau khi lưu hàng hóa.</span>
                     </div>
                 </div>
                 <div class="tab-pane fade" id="additional" role="tabpanel">
@@ -153,11 +145,4 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script type="module" defer>
-        const hasExistingStockQuantity = document.getElementById('@Html.IdFor(m => m.HasExistingStockQuantity)');
-        const inventoryContainer = document.getElementById('inventoryContainer');
-        hasExistingStockQuantity.addEventListener('change',() => {
-            inventoryContainer.classList.toggle('d-none', !hasExistingStockQuantity.checked);
-        });
-    </script>
 }

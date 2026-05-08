@@ -45,61 +45,6 @@ public sealed record StockMovementLogAppDto
 }
 
 [Serializable]
-public sealed record AdjustStockAppDto
-{
-    public required Guid ProductId { get; init; }
-    public required Guid WarehouseId { get; init; }
-    public required decimal NewQuantity { get; init; }
-    public string? Note { get; init; }
-    public required Guid ModifiedByUserId { get; init; }
-}
-
-[Serializable]
-public sealed record ReserveStockAppDto
-{
-    public required Guid ProductId { get; init; }
-    public required Guid WarehouseId { get; init; }
-    public required decimal Quantity { get; init; }
-    public Guid? ReferenceId { get; init; }
-    public required Guid UserId { get; init; }
-    public string? Note { get; init; }
-}
-
-[Serializable]
-public sealed record ReleaseStockAppDto
-{
-    public required Guid ProductId { get; init; }
-    public required Guid WarehouseId { get; init; }
-    public required decimal Quantity { get; init; }
-    public Guid? ReferenceId { get; init; }
-    public required Guid UserId { get; init; }
-    public string? Note { get; init; }
-}
-
-[Serializable]
-public sealed record DispatchStockAppDto
-{
-    public required Guid ProductId { get; init; }
-    public required Guid WarehouseId { get; init; }
-    public required decimal Quantity { get; init; }
-    public Guid? ReferenceId { get; init; }
-    public required Guid UserId { get; init; }
-    public string? Note { get; init; }
-}
-
-[Serializable]
-public sealed record ReceiveStockAppDto
-{
-    public required Guid ProductId { get; init; }
-    public required Guid WarehouseId { get; init; }
-    public required decimal Quantity { get; init; }
-    public int ReferenceType { get; init; }
-    public Guid? ReferenceId { get; init; }
-    public required Guid UserId { get; init; }
-    public string? Note { get; init; }
-}
-
-[Serializable]
 public sealed class ResultAppDto
 {
     public required bool Success { get; init; }

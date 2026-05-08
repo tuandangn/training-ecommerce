@@ -33,10 +33,7 @@ public sealed class CreateProductHandler : IRequestHandler<CreateProductCommand,
                 MimeType = request.ImageFile.MimeType,
                 Extension = request.ImageFile.Extension,
                 FileName = request.ImageFile.FileName
-            } : null,
-            UnitPrice = request.UnitPrice,
-            CostPrice = request.CostPrice,
-            ProductStocks = request.ProductStocks.Select(productStock => new ProductStockAppDto(productStock.WarehouseId, productStock.Quantity))
+            } : null
         };
 
         var result = await _productAppService.CreateProductAsync(dto).ConfigureAwait(false);

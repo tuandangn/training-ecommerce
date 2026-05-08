@@ -24,6 +24,7 @@ public sealed record DeliveryNoteDto
     public string? Note { get; init; }
     
     public DeliveryNoteStatus Status { get; init; }
+    public DeliveryNoteSourceType SourceType { get; init; }
     
     public DateTime? DeliveredOnUtc { get; init; }
     public Guid? DeliveryProofPictureId { get; init; }
@@ -52,6 +53,12 @@ public sealed record DeliveryNoteItemDto
     public required decimal Quantity { get; init; }
     public required decimal UnitPrice { get; init; }
     public required decimal SubTotal { get; init; }
+
+    /// <summary>
+    /// Giá vốn bình quân tại thời điểm xuất kho (snapshot khi MarkDelivered).
+    /// Null nếu phiếu chưa giao hoặc chưa có dữ liệu giá vốn.
+    /// </summary>
+    public decimal? CostAtDispatch { get; init; }
 }
 
 [Serializable]
@@ -105,3 +112,24 @@ public sealed record MarkDeliveryNoteDeliveredDto
 
 [Serializable]
 public sealed record DeliveryNoteLinkDto(Guid Id, string Code, DeliveryNoteStatus Status, DateTime CreatedOnUtc);
+
+/// <summary>
+/// DTO để tạo DeliveryNote tự động (Status=Delivered ngay) khi VendorReturn được Confirm.
+/// UnitCost đã được ghi trên VendorReturnItem — truyền thẳng vào đây.
+/// </summary>
+[Serializable]
+public sealed record CreateDeliveryNoteFromVendorReturnDto
+{
+    public required Guid VendorReturnId { get; init; }
+    public required Guid WarehouseId { get; init; }
+    public required IEnumerable<CreateDeliveryNoteFromVendorReturnItemDto> Items { get; init; }
+}
+
+[Serializable]
+public sealed record CreateDeliveryNoteFromVendorReturnItemDto
+{
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public required decimal Quantity { get; init; }
+    public required decimal UnitCost { get; init; }
+}

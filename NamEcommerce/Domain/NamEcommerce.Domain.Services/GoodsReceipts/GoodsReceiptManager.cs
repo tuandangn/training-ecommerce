@@ -8,6 +8,7 @@ using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
@@ -254,6 +255,34 @@ public sealed class GoodsReceiptManager(
 
         var insertedGoodsReceipt = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
         return new CreateGoodsReceiptResultDto { CreatedId = insertedGoodsReceipt.Id };
+    }
+
+    public async Task<Guid> CreateFromCustomerReturnAsync(CreateGoodsReceiptFromCustomerReturnDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), goodsReceiptDataReader, currentUserAccessor);
+        goodsReceipt.SetReceivedDate(DateTime.UtcNow);
+        goodsReceipt.SourceType = GoodsReceiptSourceType.FromCustomerReturn;
+
+        foreach (var item in dto.Items)
+        {
+            var averageCost = await inventoryStockManager.GetAverageCostAsync(item.ProductId, dto.WarehouseId)
+                .ConfigureAwait(false);
+
+            await goodsReceipt.AddItemAsync(
+                item.ProductId, dto.WarehouseId, item.Quantity,
+                averageCost > 0 ? averageCost : null,
+                productDataReader, warehouseSettings, warehouseDataReader
+            ).ConfigureAwait(false);
+        }
+
+        // MarkCreated → GoodsReceiptCreatedHandler sẽ cộng tồn kho.
+        // Handler có guard: if SourceType == FromCustomerReturn → skip sinh VendorDebt.
+        goodsReceipt.MarkCreated();
+
+        var inserted = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
+        return inserted.Id;
     }
 
     public Task RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderDto dto)

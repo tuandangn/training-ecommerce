@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
+using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Events.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.Inventory;
@@ -49,6 +50,9 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
         var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId).ConfigureAwait(false);
         if (goodsReceipt is null) return;
 
+        // Guard: phiếu nhập do khách trả hàng — vẫn cộng tồn, nhưng KHÔNG sinh VendorDebt.
+        var isFromCustomerReturn = goodsReceipt.SourceType == GoodsReceiptSourceType.FromCustomerReturn;
+
         // 1. Cộng tồn kho cho các item có warehouse
         foreach (var item in goodsReceipt.Items)
         {
@@ -67,8 +71,10 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
             ).ConfigureAwait(false);
         }
 
-        // 2. Sinh công nợ NCC nếu phiếu được tạo với đủ điều kiện ngay từ đầu
-        await TryCreateVendorDebtAsync(goodsReceipt).ConfigureAwait(false);
+        // 2. Sinh công nợ NCC nếu phiếu được tạo với đủ điều kiện ngay từ đầu.
+        // Skip nếu là phiếu nhập do khách trả hàng.
+        if (!isFromCustomerReturn)
+            await TryCreateVendorDebtAsync(goodsReceipt).ConfigureAwait(false);
     }
 
     private async Task TryCreateVendorDebtAsync(GoodsReceipt goodsReceipt)

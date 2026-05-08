@@ -14,10 +14,4 @@ public sealed class CreateProductCommand : IRequest<CreateProductResultModel>
     public Guid? UnitMeasurementId { get; set; }
     public int DisplayOrder { get; set; }
     public FileInfoModel? ImageFile { get; set; }
-    public decimal? UnitPrice { get; set; }
-    public decimal? CostPrice { get; set; }
-    public IEnumerable<ProductStockModel> ProductStocks { get; set; } = [];
-
-    [Serializable]
-    public sealed record ProductStockModel(Guid? WarehouseId, decimal Quantity);
 }

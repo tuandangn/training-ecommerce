@@ -149,6 +149,58 @@ public sealed class InventoryStockManager : IInventoryStockManager
         };
     }
 
+    public async Task<StockMovementLogDto?> RevertReceiveAsync(Guid productId, Guid warehouseId, decimal quantity, Guid goodsReceiptId, Guid modifiedByUserId)
+    {
+        if (quantity <= 0)
+            throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
+
+        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+        if (product is null)
+            throw new ProductIsNotFoundException(productId);
+
+        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
+        if (warehouse is null)
+            throw new WarehouseIsNotFoundException(warehouseId);
+
+        var stock = await GetInventoryStockForProductAsync(productId, warehouseId).ConfigureAwait(false);
+        if (stock is null)
+            throw new StockNotFoundException("Error.StockNotFound", productId, warehouseId);
+
+        var quantityBefore = stock.QuantityOnHand;
+        var quantityAfter = Math.Max(0, quantityBefore - quantity);
+
+        stock.QuantityOnHand = quantityAfter;
+        stock.UpdatedOnUtc = DateTime.UtcNow;
+        await _inventoryStockRepository.UpdateAsync(stock).ConfigureAwait(false);
+
+        var stockMovementLog = new StockMovementLog(
+            Guid.NewGuid(),
+            stock.ProductId,
+            stock.WarehouseId,
+            StockMovementType.Revert,
+            quantity,
+            quantityBefore,
+            quantityAfter,
+            StockReferenceType.GoodsReceipt,
+            goodsReceiptId,
+            $"Hoàn tác nhập hàng từ phiếu nhập {goodsReceiptId}",
+            modifiedByUserId
+        );
+        await _stockMovementRepository.InsertAsync(stockMovementLog).ConfigureAwait(false);
+
+        return new StockMovementLogDto(stockMovementLog.Id)
+        {
+            ProductId = stockMovementLog.ProductId,
+            ProductName = product.Name,
+            MovementType = (int)stockMovementLog.MovementType,
+            Quantity = stockMovementLog.Quantity,
+            QuantityBefore = stockMovementLog.QuantityBefore,
+            QuantityAfter = stockMovementLog.QuantityAfter,
+            CreatedOnUtc = stockMovementLog.CreatedOnUtc,
+            Note = stockMovementLog.Note
+        };
+    }
+
     public async Task UpdateAverageCostAsync(Guid productId, Guid warehouseId, decimal newAverageCost)
     {
         if (newAverageCost < 0)
@@ -441,6 +493,39 @@ public sealed class InventoryStockManager : IInventoryStockManager
             return (false, stock.MaxStockLevel); // No max level set
 
         return (stock.QuantityOnHand > stock.MaxStockLevel, stock.MaxStockLevel);
+    }
+
+    public async Task<decimal> GetAverageCostAsync(Guid productId, Guid warehouseId)
+    {
+        var stock = await GetInventoryStockForProductAsync(productId, warehouseId).ConfigureAwait(false);
+        return stock?.AverageCost ?? 0m;
+    }
+
+    public async Task ApplyAdjustmentAsync(Guid productId, Guid warehouseId, decimal delta, Guid adjustmentNoteId, Guid? userId)
+    {
+        if (delta == 0) return;
+
+        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+        if (product is null) throw new ProductIsNotFoundException(productId);
+
+        var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId).ConfigureAwait(false);
+        if (warehouse is null) throw new WarehouseIsNotFoundException(warehouseId);
+
+        var stock = await GetInventoryStockForProductAsync(productId, warehouseId).ConfigureAwait(false);
+        if (stock is null)
+            stock = await InitializeStockAsync(productId, warehouseId, product.UnitMeasurementId ?? Guid.Empty).ConfigureAwait(false);
+
+        var before = stock.QuantityOnHand;
+        stock.QuantityOnHand += delta;
+        if (stock.QuantityOnHand < 0) stock.QuantityOnHand = 0;
+        stock.UpdatedOnUtc = DateTime.UtcNow;
+        await _inventoryStockRepository.UpdateAsync(stock).ConfigureAwait(false);
+
+        var log = new StockMovementLog(Guid.NewGuid(), productId, warehouseId,
+            StockMovementType.Adjustment, Math.Abs(delta), before, stock.QuantityOnHand,
+            StockReferenceType.Adjustment, adjustmentNoteId,
+            delta > 0 ? "Điều chỉnh tăng tồn kho" : "Điều chỉnh giảm tồn kho", userId);
+        await _stockMovementRepository.InsertAsync(log).ConfigureAwait(false);
     }
 
     private Task<InventoryStock?> GetInventoryStockForProductAsync(Guid productId, Guid warehouseId)

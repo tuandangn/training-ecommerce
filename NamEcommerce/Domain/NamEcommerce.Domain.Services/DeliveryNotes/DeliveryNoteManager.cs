@@ -126,21 +126,19 @@ public sealed class DeliveryNoteManager(
         if (deliveryNote is null)
             throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
 
-        // 1. Mark DeliveryNote Delivered
-        deliveryNote.MarkDelivered(dto.PictureId, dto.ReceiverName);
-        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
-
-        // 2. Dispatch stock (Deduct from QuantityOnHand and clear reservation)
+        // C3: Snapshot giá vốn bình quân TRƯỚC khi xuất kho (stock vẫn còn nguyên).
+        // Lưu cùng entity — DeliveryNoteDeliveredStockHandler sẽ dispatch stock sau khi event fire.
         foreach (var item in deliveryNote.Items)
         {
-            await stockManager.DispatchStockAsync(
-                item.ProductId,
-                deliveryNote.WarehouseId,
-                item.Quantity,
-                deliveryNote.Id,
-                Guid.Empty, // Default user
-                $"Xuất hàng cho phiếu xuất {deliveryNote.Code}").ConfigureAwait(false);
+            item.CostAtDispatch = await stockManager.GetAverageCostAsync(
+                item.ProductId, deliveryNote.WarehouseId).ConfigureAwait(false);
         }
+
+        // 1. Mark DeliveryNote Delivered — raise DeliveryNoteDelivered event
+        deliveryNote.MarkDelivered(dto.PictureId, dto.ReceiverName);
+
+        // Save entity (CostAtDispatch + status) → interceptor fires event → DeliveryNoteDeliveredStockHandler dispatches stock
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
 
         // 2. Mark related OrderItems as Delivered
         var order = await orderRepository.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
@@ -148,8 +146,6 @@ public sealed class DeliveryNoteManager(
         {
             foreach (var noteItem in deliveryNote.Items)
             {
-                // Only mark as delivered if the entire requested quantity was delivered
-                // For simplicity, any delivery note item delivered marks the whole order item delivered currently
                 var orderItem = order.OrderItems.FirstOrDefault(i => i.Id == noteItem.OrderItemId);
                 if (orderItem != null && !orderItem.IsDelivered)
                 {
@@ -161,6 +157,40 @@ public sealed class DeliveryNoteManager(
             order.TryAutoLock();
             await orderRepository.UpdateAsync(order).ConfigureAwait(false);
         }
+    }
+
+    public async Task<Guid> CreateAsDeliveredAsync(CreateDeliveryNoteFromVendorReturnDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var code = await GenerateCodeAsync().ConfigureAwait(false);
+
+        var deliveryNote = new DeliveryNote(
+            code: code,
+            warehouseId: dto.WarehouseId,
+            note: null,
+            createdByUserId: null);
+
+        deliveryNote.SourceType = DeliveryNoteSourceType.ToVendorReturn;
+
+        foreach (var item in dto.Items)
+            deliveryNote.AddItemFromVendorReturn(item.ProductId, item.ProductName, item.Quantity, item.UnitCost);
+
+        // C3: Snapshot giá vốn bình quân TRƯỚC khi xuất kho (stock vẫn còn nguyên).
+        foreach (var item in deliveryNote.Items)
+        {
+            item.CostAtDispatch = await stockManager.GetAverageCostAsync(
+                item.ProductId, dto.WarehouseId).ConfigureAwait(false);
+        }
+
+        // Chuyển thẳng sang Delivered và raise DeliveryNoteDelivered event.
+        // DeliveryNoteDeliveredStockHandler sẽ dispatch stock; DeliveryNoteDeliveredEventHandler có guard
+        // SourceType == ToVendorReturn → skip sinh CustomerDebt.
+        deliveryNote.MarkAsDeliveredFromVendorReturn();
+
+        var inserted = await deliveryNoteRepository.InsertAsync(deliveryNote).ConfigureAwait(false);
+
+        return inserted.Id;
     }
 
     public async Task CancelAsync(Guid id)
@@ -307,6 +337,7 @@ public sealed class DeliveryNoteManager(
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,
             Status = deliveryNote.Status,
+            SourceType = deliveryNote.SourceType,
             DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
             DeliveryProofPictureId = deliveryNote.DeliveryProofPictureId,
             DeliveryReceiverName = deliveryNote.DeliveryReceiverName,
@@ -326,7 +357,8 @@ public sealed class DeliveryNoteManager(
                 ProductName = i.ProductName ?? string.Empty,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
-                SubTotal = i.SubTotal
+                SubTotal = i.SubTotal,
+                CostAtDispatch = i.CostAtDispatch
             }).ToList()
         };
     }

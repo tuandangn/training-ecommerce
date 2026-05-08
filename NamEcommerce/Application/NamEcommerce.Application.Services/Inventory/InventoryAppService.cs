@@ -2,21 +2,16 @@ using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.Inventory;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Domain.Shared.Services.Inventory;
-using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 
 namespace NamEcommerce.Application.Services.Inventory;
 
 public sealed class InventoryAppService : IInventoryAppService
 {
     private readonly IInventoryStockManager _stockManager;
-    private readonly IInventoryValidator _validator;
 
-    public InventoryAppService(
-        IInventoryStockManager stockManager,
-        IInventoryValidator validator)
+    public InventoryAppService(IInventoryStockManager stockManager)
     {
         _stockManager = stockManager;
-        _validator = validator;
     }
 
     public async Task<IPagedDataAppDto<InventoryStockAppDto>> GetInventoryStocksAsync(string? keywords, Guid? warehouseId, int pageIndex, int pageSize)
@@ -76,115 +71,5 @@ public sealed class InventoryAppService : IInventoryAppService
         }).ToList();
 
         return PagedDataAppDto.Create(items, pageIndex, pageSize, total);
-    }
-
-    public async Task<ResultAppDto> AdjustStockAsync(AdjustStockAppDto dto)
-    {
-        try
-        {
-            await _validator.ValidateStockOperationAsync(dto.ProductId, dto.WarehouseId, dto.NewQuantity);
-            await _stockManager.AdjustStockAsync(dto.ProductId, dto.WarehouseId, dto.NewQuantity, dto.Note, dto.ModifiedByUserId);
-            return new ResultAppDto { Success = true, ErrorMessage = null };
-        }
-        catch (InvalidStockOperationException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (WarehouseCapacityExceededException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (Exception)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockAdjustmentFailed" };
-        }
-    }
-
-    public async Task<ResultAppDto> ReserveStockAsync(ReserveStockAppDto dto)
-    {
-        try
-        {
-            await _validator.ValidateStockOperationAsync(dto.ProductId, dto.WarehouseId, dto.Quantity);
-            await _stockManager.ReserveStockAsync(dto.ProductId, dto.WarehouseId, dto.Quantity, dto.ReferenceId, dto.UserId, dto.Note);
-            return new ResultAppDto { Success = true, ErrorMessage = null };
-        }
-        catch (InsufficientStockException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (InvalidStockOperationException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (Exception)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockReservationFailed" };
-        }
-    }
-
-    public async Task<ResultAppDto> ReleaseReservedStockAsync(ReleaseStockAppDto dto)
-    {
-        try
-        {
-            await _validator.ValidateStockOperationAsync(dto.ProductId, dto.WarehouseId, dto.Quantity);
-            await _stockManager.ReleaseReservedStockAsync(dto.ProductId, dto.WarehouseId, dto.Quantity, dto.ReferenceId, dto.UserId, dto.Note);
-            return new ResultAppDto { Success = true, ErrorMessage = null };
-        }
-        catch (StockNotFoundException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (InvalidStockOperationException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (Exception)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockReleaseFailed" };
-        }
-    }
-
-    public async Task<ResultAppDto> DispatchStockAsync(DispatchStockAppDto dto)
-    {
-        try
-        {
-            await _validator.ValidateStockOperationAsync(dto.ProductId, dto.WarehouseId, dto.Quantity);
-            await _stockManager.DispatchStockAsync(dto.ProductId, dto.WarehouseId, dto.Quantity, dto.ReferenceId, dto.UserId, dto.Note);
-            return new ResultAppDto { Success = true, ErrorMessage = null };
-        }
-        catch (InsufficientStockException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (InvalidStockOperationException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (Exception)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockDispatchFailed" };
-        }
-    }
-
-    public async Task<ResultAppDto> ReceiveStockAsync(ReceiveStockAppDto dto)
-    {
-        try
-        {
-            await _validator.ValidateStockOperationAsync(dto.ProductId, dto.WarehouseId, dto.Quantity);
-            await _stockManager.ReceiveStockAsync(dto.ProductId, dto.WarehouseId, dto.Quantity, dto.Note, dto.UserId, dto.ReferenceType, dto.ReferenceId);
-            return new ResultAppDto { Success = true, ErrorMessage = null };
-        }
-        catch (WarehouseCapacityExceededException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (InvalidStockOperationException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (Exception)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockReceiveFailed" };
-        }
     }
 }

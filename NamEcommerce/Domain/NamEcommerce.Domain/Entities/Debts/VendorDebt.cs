@@ -140,6 +140,21 @@ public sealed record VendorDebt : AppAggregateEntity
     }
 
     /// <summary>
+    /// Giảm công nợ NCC do trả hàng — <c>RemainingAmount</c> có thể xuống âm (NCC nợ lại mình).
+    /// Idempotent: caller kiểm tra <c>returnId</c> trước khi gọi để tránh áp dụng 2 lần.
+    /// </summary>
+    internal void ApplyReturn(decimal amount, Guid returnId)
+    {
+        if (amount <= 0) return;
+
+        RemainingAmount -= amount;
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        if (RemainingAmount <= 0)
+            Status = DebtStatus.FullyPaid;
+    }
+
+    /// <summary>
     /// Đánh dấu phiếu công nợ vừa được khởi tạo — Manager gọi trước <c>InsertAsync</c>.
     /// </summary>
     internal void MarkCreated()

@@ -12,7 +12,7 @@ namespace NamEcommerce.Application.Services.Events.GoodsReceipts;
 /// Handler cho <see cref="GoodsReceiptDeleted"/>. Sau khi phiếu nhập bị xoá:
 /// <list type="number">
 ///   <item><description><b>Hoàn nguyên tồn kho:</b> với mỗi item có <c>WarehouseId</c>, gọi
-///     <see cref="IInventoryStockManager.AdjustStockAsync"/> để trừ số lượng đã cộng.</description></item>
+///     <see cref="IInventoryStockManager.RevertReceiveAsync"/> để trừ đúng số lượng đã nhập.</description></item>
 ///   <item><description><b>Xoá ảnh đính kèm:</b> dọn các <see cref="Picture"/> theo
 ///     <see cref="GoodsReceiptDeleted.PictureIds"/> (event đã capture danh sách ảnh trước khi xoá).</description></item>
 /// </list>
@@ -52,12 +52,11 @@ public sealed class GoodsReceiptDeletedEventHandler : INotificationHandler<Goods
                 if (!item.WarehouseId.HasValue) continue;
                 if (item.Quantity <= 0) continue;
 
-                var stock = (await _inventoryStockManager.GetInventoryStocksForProductAsync(item.ProductId, item.WarehouseId.Value).ConfigureAwait(false)).Single();
-                await _inventoryStockManager.AdjustStockAsync(
+                await _inventoryStockManager.RevertReceiveAsync(
                     productId: item.ProductId,
                     warehouseId: item.WarehouseId.Value,
-                    newQuantity: stock.QuantityAvailable - item.Quantity,
-                    note: $"Thay đổi do phiếu {goodsReceipt.Id} bị xóa",
+                    quantity: item.Quantity,
+                    goodsReceiptId: goodsReceipt.Id,
                     modifiedByUserId: goodsReceipt.CreatedByUserId ?? Guid.Empty
                 ).ConfigureAwait(false);
             }

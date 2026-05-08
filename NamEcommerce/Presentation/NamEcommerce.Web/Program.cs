@@ -84,6 +84,11 @@ using NamEcommerce.Application.Contracts.GoodsReceipts;
 using NamEcommerce.Application.Services.GoodsReceipts;
 using NamEcommerce.Web.Services.GoodsReceipts;
 using NamEcommerce.Web.Services.Users;
+using NamEcommerce.Application.Contracts.Returns;
+using NamEcommerce.Application.Services.Returns;
+using NamEcommerce.Domain.Services.Returns;
+using NamEcommerce.Domain.Shared.Services.Returns;
+using NamEcommerce.Web.Services.Returns;
 
 //services
 var builder = WebApplication.CreateBuilder(args);
@@ -149,6 +154,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
     services.AddScoped<IVendorDebtManager, VendorDebtManager>();
     services.AddScoped<IGoodsReceiptManager, GoodsReceiptManager>();
+    services.AddScoped<ICustomerReturnManager, CustomerReturnManager>();
+    services.AddScoped<IVendorReturnManager, VendorReturnManager>();
+    services.AddScoped<IStockAdjustmentNoteManager, StockAdjustmentNoteManager>();
 
     services.AddScoped<ISecurityService, SecurityService>();
     services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
@@ -172,6 +180,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
     services.AddScoped<IVendorDebtAppService, VendorDebtAppService>();
     services.AddScoped<IGoodsReceiptAppService, GoodsReceiptAppService>();
+    services.AddScoped<ICustomerReturnAppService, CustomerReturnAppService>();
+    services.AddScoped<IVendorReturnAppService, VendorReturnAppService>();
+    services.AddScoped<IStockAdjustmentNoteAppService, StockAdjustmentNoteAppService>();
 
     builder.Services.AddHttpClient<IN8nAppService, N8nAppService>(client =>
     {
@@ -192,6 +203,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IPreparationModelFactory, PreparationModelFactory>();
     services.AddScoped<IDeliveryNoteModelFactory, DeliveryNoteModelFactory>();
     services.AddScoped<IGoodsReceiptModelFactory, GoodsReceiptModelFactory>();
+    services.AddScoped<ICustomerReturnModelFactory, CustomerReturnModelFactory>();
+    services.AddScoped<IVendorReturnModelFactory, VendorReturnModelFactory>();
+    services.AddScoped<IStockAdjustmentNoteModelFactory, StockAdjustmentNoteModelFactory>();
 
     services.AddMediatR(config =>
     {

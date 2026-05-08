@@ -17,6 +17,13 @@ public interface IGoodsReceiptManager
     /// </summary>
     Task<CreateGoodsReceiptResultDto> CreateFromPurchaseOrderReceivingAsync(CreateGoodsReceiptFromPurchaseOrderDto dto);
 
+    /// <summary>
+    /// Tự động tạo GoodsReceipt khi CustomerReturn được Confirm (SourceType=FromCustomerReturn).
+    /// Không sinh VendorDebt. Chỉ cộng tồn kho qua GoodsReceiptCreatedHandler (có guard SourceType).
+    /// UnitCost = AverageCost hiện tại của (ProductId, WarehouseId).
+    /// </summary>
+    Task<Guid> CreateFromCustomerReturnAsync(CreateGoodsReceiptFromCustomerReturnDto dto);
+
     Task SetGoodsReceiptItemUnitCostAsync(SetGoodsReceiptItemUnitCostDto dto);
     Task<SetGoodsReceiptVendorResultDto> SetGoodsReceiptVendorAsync(SetGoodsReceiptVendorDto dto);
 

@@ -46,7 +46,8 @@ public enum StockMovementType
     Outbound,
     Transfer,
     Adjustment,
-    Return
+    Return,
+    Revert
 }
 
 public enum StockReferenceType
@@ -57,5 +58,7 @@ public enum StockReferenceType
     StockIssue = 3,
     StockTransfer = 4,
     Adjustment = 5,
-    GoodsReceipt = 6
+    GoodsReceipt = 6,
+    CustomerReturn = 7,
+    VendorReturn = 8
 }

@@ -1,0 +1,293 @@
+using NamEcommerce.Data.Contracts;
+using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.Debts;
+using NamEcommerce.Domain.Entities.GoodsReceipts;
+using NamEcommerce.Domain.Entities.Inventory;
+using NamEcommerce.Domain.Entities.Returns;
+using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Services.Extensions;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Returns;
+using NamEcommerce.Domain.Shared.Exceptions.Returns;
+using NamEcommerce.Domain.Shared.Services.Returns;
+
+namespace NamEcommerce.Domain.Services.Returns;
+
+public sealed class VendorReturnManager(
+    IRepository<VendorReturn> vendorReturnRepository,
+    IEntityDataReader<VendorReturn> vendorReturnDataReader,
+    IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
+    IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
+    IEntityDataReader<GoodsReceiptItem> goodsReceiptItemDataReader,
+    IEntityDataReader<Product> productDataReader,
+    IEntityDataReader<Vendor> vendorDataReader,
+    IEntityDataReader<Warehouse> warehouseDataReader,
+    IEntityDataReader<VendorDebt> vendorDebtDataReader,
+    IRepository<VendorDebt> vendorDebtRepository) : IVendorReturnManager
+{
+    public async Task<VendorReturnDto> CreateAsync(CreateVendorReturnDto dto, Guid? createdByUserId)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
+
+        var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        if (vendor is null)
+            throw new ReturnDataIsInvalidException("Error.VendorReturn.VendorNotFound", dto.VendorId);
+
+        if (dto.PurchaseOrderId.HasValue)
+        {
+            var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId.Value).ConfigureAwait(false);
+            if (purchaseOrder is null)
+                throw new ReturnDataIsInvalidException("Error.VendorReturn.PurchaseOrderNotFound", dto.PurchaseOrderId.Value);
+        }
+
+        if (dto.GoodsReceiptId.HasValue)
+        {
+            var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId.Value).ConfigureAwait(false);
+            if (goodsReceipt is null)
+                throw new ReturnDataIsInvalidException("Error.VendorReturn.GoodsReceiptNotFound", dto.GoodsReceiptId.Value);
+        }
+
+        var warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId).ConfigureAwait(false);
+        if (warehouse is null)
+            throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseNotFound", dto.WarehouseId);
+
+        var code = GenerateCode();
+
+        var vendorReturn = new VendorReturn(
+            code: code,
+            vendorId: vendor.Id,
+            vendorName: vendor.Name,
+            purchaseOrderId: dto.PurchaseOrderId,
+            goodsReceiptId: dto.GoodsReceiptId,
+            warehouseId: warehouse.Id,
+            warehouseName: warehouse.Name,
+            note: dto.Note,
+            createdByUserId: createdByUserId);
+
+        foreach (var itemDto in dto.Items)
+        {
+            var product = await productDataReader.GetByIdAsync(itemDto.ProductId).ConfigureAwait(false);
+            if (product is null)
+                throw new ReturnDataIsInvalidException("Error.VendorReturn.ProductNotFound", itemDto.ProductId);
+
+            vendorReturn.AddItem(
+                productId: itemDto.ProductId,
+                productName: product.Name,
+                goodsReceiptItemId: itemDto.GoodsReceiptItemId,
+                requestedQuantity: itemDto.RequestedQuantity,
+                acceptedQuantity: itemDto.AcceptedQuantity,
+                unitCost: itemDto.UnitCost);
+        }
+
+        vendorReturn.MarkCreated();
+        var inserted = await vendorReturnRepository.InsertAsync(vendorReturn).ConfigureAwait(false);
+        return inserted.ToDto();
+    }
+
+    public async Task<VendorReturnDto> UpdateAsync(UpdateVendorReturnDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false)
+            ?? throw new VendorReturnNotFoundException(dto.Id);
+
+        vendorReturn.Note = dto.Note;
+        if (dto.ReturnDate.HasValue)
+            vendorReturn.ReturnDate = dto.ReturnDate.Value;
+
+        await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
+        return vendorReturn.ToDto();
+    }
+
+    public async Task MoveToInspectingAsync(Guid id)
+    {
+        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
+            ?? throw new VendorReturnNotFoundException(id);
+
+        vendorReturn.MoveToInspecting();
+        await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
+    }
+
+    public async Task ConfirmAsync(Guid id)
+    {
+        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
+            ?? throw new VendorReturnNotFoundException(id);
+
+        // Validate: tổng AcceptedQuantity không được vượt quá số đã nhập từ NCC
+        foreach (var item in vendorReturn.Items)
+        {
+            var receivedQty = GetTotalReceivedQuantity(vendorReturn, item.ProductId);
+            var previouslyReturned = await GetTotalConfirmedReturnQuantityAsync(
+                item.ProductId,
+                goodsReceiptId: vendorReturn.GoodsReceiptId,
+                purchaseOrderId: vendorReturn.PurchaseOrderId,
+                excludeReturnId: id).ConfigureAwait(false);
+            var maxAllowed = receivedQty - previouslyReturned;
+
+            if (item.AcceptedQuantity > maxAllowed)
+                throw new ExceedsReceivedQuantityException(item.ProductId, item.AcceptedQuantity, maxAllowed);
+        }
+
+        vendorReturn.Confirm();
+        await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
+    }
+
+    public async Task CancelAsync(Guid id)
+    {
+        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
+            ?? throw new VendorReturnNotFoundException(id);
+
+        vendorReturn.Cancel();
+        await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
+    }
+
+    public async Task<VendorReturnDto?> GetByIdAsync(Guid id)
+    {
+        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false);
+        return vendorReturn?.ToDto();
+    }
+
+    public Task<(int Total, List<VendorReturnDto> Items)> GetListAsync(
+        Guid? vendorId, Guid? purchaseOrderId, Guid? goodsReceiptId, int? status, int pageIndex, int pageSize)
+    {
+        var query = vendorReturnDataReader.DataSource;
+
+        if (vendorId.HasValue)
+            query = query.Where(r => r.VendorId == vendorId.Value);
+        if (purchaseOrderId.HasValue)
+            query = query.Where(r => r.PurchaseOrderId == purchaseOrderId.Value);
+        if (goodsReceiptId.HasValue)
+            query = query.Where(r => r.GoodsReceiptId == goodsReceiptId.Value);
+        if (status.HasValue)
+            query = query.Where(r => (int)r.Status == status.Value);
+
+        var total = query.Count();
+        var items = query
+            .OrderByDescending(r => r.CreatedOnUtc)
+            .Skip(pageIndex * pageSize)
+            .Take(pageSize)
+            .ToList()
+            .Select(r => r.ToDto())
+            .ToList();
+
+        return Task.FromResult((total, items));
+    }
+
+    public Task<decimal> GetTotalConfirmedReturnQuantityAsync(
+        Guid productId, Guid? goodsReceiptId, Guid? purchaseOrderId, Guid? excludeReturnId = null)
+    {
+        var query = vendorReturnDataReader.DataSource
+            .Where(r => (int)r.Status == 2 // Confirmed
+                        && (excludeReturnId == null || r.Id != excludeReturnId));
+
+        if (goodsReceiptId.HasValue)
+            query = query.Where(r => r.GoodsReceiptId == goodsReceiptId.Value);
+        else if (purchaseOrderId.HasValue)
+            query = query.Where(r => r.PurchaseOrderId == purchaseOrderId.Value);
+
+        decimal total = 0;
+        var confirmedReturns = query.ToList();
+        foreach (var ret in confirmedReturns)
+            total += ret.Items
+                .Where(i => i.ProductId == productId)
+                .Sum(i => i.AcceptedQuantity);
+
+        return Task.FromResult(total);
+    }
+
+    public async Task FinalizeConfirmAsync(Guid returnId, Guid generatedDeliveryNoteId, decimal totalReturnAmount)
+    {
+        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(returnId).ConfigureAwait(false);
+        if (vendorReturn is null) return;
+
+        // Idempotency guard
+        if (vendorReturn.GeneratedDeliveryNoteId.HasValue) return;
+
+        vendorReturn.GeneratedDeliveryNoteId = generatedDeliveryNoteId;
+        await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
+
+        if (totalReturnAmount <= 0) return;
+
+        // Tìm VendorDebts liên quan theo GoodsReceiptId hoặc PurchaseOrderId, FIFO
+        var debtsQuery = vendorDebtDataReader.DataSource.AsQueryable();
+        if (vendorReturn.GoodsReceiptId.HasValue)
+            debtsQuery = debtsQuery.Where(d => d.GoodsReceiptId == vendorReturn.GoodsReceiptId.Value);
+        else if (vendorReturn.PurchaseOrderId.HasValue)
+            debtsQuery = debtsQuery.Where(d => d.PurchaseOrderId == vendorReturn.PurchaseOrderId.Value);
+        else
+            return;
+
+        var orderedDebts = debtsQuery.OrderBy(d => d.CreatedOnUtc).ToList();
+        if (!orderedDebts.Any()) return;
+
+        var touchedDebts = new List<VendorDebt>();
+        var remaining = totalReturnAmount;
+
+        foreach (var debt in orderedDebts)
+        {
+            if (remaining <= 0) break;
+            if (debt.RemainingAmount <= 0) continue;
+
+            var toApply = Math.Min(remaining, debt.RemainingAmount);
+            debt.ApplyReturn(toApply, returnId);
+            touchedDebts.Add(debt);
+            remaining -= toApply;
+        }
+
+        // Tổng trả > tổng nợ → áp phần thừa vào debt cũ nhất (cho phép âm)
+        if (remaining > 0)
+        {
+            var first = orderedDebts[0];
+            first.ApplyReturn(remaining, returnId);
+            if (!touchedDebts.Contains(first))
+                touchedDebts.Add(first);
+        }
+
+        foreach (var debt in touchedDebts)
+            await vendorDebtRepository.UpdateAsync(debt).ConfigureAwait(false);
+    }
+
+    // ── Private helpers ──────────────────────────────────────────────────────
+
+    private string GenerateCode()
+    {
+        var datePrefix = $"TNCC-{DateTime.UtcNow:yyyyMMdd}";
+        var count = vendorReturnDataReader.DataSource.Count(r => r.Code.StartsWith(datePrefix));
+        return $"{datePrefix}-{(count + 1):D3}";
+    }
+
+    /// <summary>
+    /// Tính tổng số lượng đã nhập từ NCC cho một productId,
+    /// lọc theo GoodsReceiptId (nếu có) hoặc PurchaseOrderId (nếu có).
+    /// </summary>
+    private decimal GetTotalReceivedQuantity(VendorReturn vendorReturn, Guid productId)
+    {
+        if (vendorReturn.GoodsReceiptId.HasValue)
+        {
+            // Lọc trực tiếp theo GoodsReceipt cụ thể
+            return goodsReceiptItemDataReader.DataSource
+                .Where(i => i.GoodsReceiptId == vendorReturn.GoodsReceiptId.Value
+                            && i.ProductId == productId)
+                .Sum(i => i.Quantity);
+        }
+
+        if (vendorReturn.PurchaseOrderId.HasValue)
+        {
+            // Lấy tất cả GoodsReceipt gắn với PurchaseOrderId
+            var goodsReceiptIds = goodsReceiptDataReader.DataSource
+                .Where(gr => gr.PurchaseOrderId == vendorReturn.PurchaseOrderId.Value)
+                .Select(gr => gr.Id)
+                .ToList();
+
+            if (!goodsReceiptIds.Any())
+                return 0;
+
+            return goodsReceiptItemDataReader.DataSource
+                .Where(i => goodsReceiptIds.Contains(i.GoodsReceiptId) && i.ProductId == productId)
+                .Sum(i => i.Quantity);
+        }
+
+        return 0;
+    }
+}
