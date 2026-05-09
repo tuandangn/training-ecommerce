@@ -12,5 +12,11 @@ public interface ICustomerReturnAppService
 
     Task<CustomerReturnAppDto?> GetByIdAsync(Guid id);
     Task<(int Total, List<CustomerReturnAppDto> Items)> GetListAsync(
-        Guid? customerId, Guid? orderId, int? status, int pageIndex, int pageSize);
+        Guid? customerId, Guid? deliveryNoteId, int? status, int pageIndex, int pageSize);
+
+    /// <summary>Lấy danh sách phiếu xuất kho (Delivered, ToCustomer) của một khách hàng — cho AJAX picker.</summary>
+    Task<List<DeliveryNotePickerAppDto>> GetDeliveryNotesByCustomerAsync(Guid customerId);
+
+    /// <summary>Lấy danh sách items có thể trả của một phiếu xuất kho — bao gồm số lượng đã trả.</summary>
+    Task<List<ReturnableItemAppDto>> GetDeliveryNoteItemsForReturnAsync(Guid deliveryNoteId, Guid? excludeReturnId = null);
 }

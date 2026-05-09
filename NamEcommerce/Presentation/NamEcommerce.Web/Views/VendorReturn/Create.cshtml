@@ -17,61 +17,77 @@
         </nav>
     </div>
 }
+
 <div>
     <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible"></div>
     <form method="post" id="createVendorReturnForm" asp-antiforgery="true">
+        <input type="hidden" asp-for="VendorId" id="hiddenVendorId" />
+        <input type="hidden" asp-for="GoodsReceiptId" id="hiddenGoodsReceiptId" />
+
         <div class="row g-3">
             <!-- Cột trái: danh sách items -->
             <div class="col-lg-8 order-1 order-lg-0">
                 <div class="content-card mb-3">
                     <div class="content-card-header">
                         <h5>Danh sách hàng trả</h5>
-                        <button type="button" class="btn btn-sm bg-light text-primary" id="btnAddItem">
-                            <i class="bi bi-plus-lg me-1"></i> Thêm hàng hóa
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnLoadFromReceipt" style="display:none!important">
+                                <i class="bi bi-arrow-repeat me-1"></i>Load từ phiếu nhập
+                            </button>
+                            <button type="button" class="btn btn-sm bg-light text-primary" id="btnAddFreeItem">
+                                <i class="bi bi-plus-lg me-1"></i>Thêm hàng
+                            </button>
+                        </div>
                     </div>
                     <div class="content-card-body-flush">
                         <div class="table-responsive">
                             <table class="table data-table mb-0" id="returnItemsTable">
                                 <thead>
                                     <tr>
-                                        <th class="ps-3">Hàng hóa</th>
-                                        <th class="text-end" style="width:120px">SL yêu cầu</th>
-                                        <th class="text-end" style="width:120px">SL chấp nhận</th>
-                                        <th class="text-end" style="width:130px">Giá vốn</th>
-                                        <th class="text-end" style="width:130px">Thành tiền</th>
-                                        <th style="width:40px"></th>
+                                        <th class="ps-3" style="min-width:160px">Hàng hóa</th>
+                                        <th class="text-center" style="width:60px">ĐVT</th>
+                                        <th class="text-end" style="width:80px">Đã nhập</th>
+                                        <th class="text-end" style="width:80px">Đã trả</th>
+                                        <th class="text-end" style="width:80px">Còn lại</th>
+                                        <th class="text-end" style="width:100px">SL trả</th>
+                                        <th class="text-end" style="width:110px">Giá vốn gốc</th>
+                                        <th class="text-end" style="width:115px">Giá trả NCC</th>
+                                        <th class="text-end" style="width:115px">Thành tiền</th>
+                                        <th style="width:36px"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="itemsTableBody">
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
-                                        <tr id="item-row-@i">
+                                        <tr>
                                             <td class="ps-3">
-                                                <div class="fw-medium item-product-name">@item.ProductDisplayName</div>
-                                                <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" class="item-product-id" />
-                                                <input type="hidden" name="Items[@i].GoodsReceiptItemId" value="@item.GoodsReceiptItemId" class="item-goods-receipt-item-id" />
+                                                <div class="fw-medium">@item.ProductDisplayName</div>
+                                                <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
+                                                <input type="hidden" name="Items[@i].GoodsReceiptItemId" value="@item.GoodsReceiptItemId" />
+                                                <input type="hidden" name="Items[@i].OriginalUnitCost" value="@item.OriginalUnitCost" class="item-orig-cost" />
                                             </td>
+                                            <td class="text-center text-muted small"></td>
+                                            <td class="text-end text-muted small">—</td>
+                                            <td class="text-end text-muted small">—</td>
+                                            <td class="text-end text-muted small">—</td>
                                             <td class="text-end">
                                                 <input name="Items[@i].RequestedQuantity" value="@item.RequestedQuantity.DisplayQuantity()"
-                                                       class="form-control form-control-sm text-end item-requested-qty"
+                                                       class="form-control form-control-sm text-end item-req-qty"
                                                        data-decimal="quantity" min="0.001" placeholder="0" />
                                             </td>
-                                            <td class="text-end">
-                                                <input name="Items[@i].AcceptedQuantity" value="@item.AcceptedQuantity.DisplayQuantity()"
-                                                       class="form-control form-control-sm text-end item-accepted-qty"
-                                                       data-decimal="quantity" min="0" placeholder="0" />
+                                            <td class="text-end text-muted small">
+                                                @(item.OriginalUnitCost.HasValue ? item.OriginalUnitCost.Value.DisplayCurrency() : "—")
                                             </td>
                                             <td class="text-end">
-                                                <input name="Items[@i].UnitCost" value="@item.UnitCost.DisplayCurrency()"
-                                                       class="form-control form-control-sm text-end item-unit-cost"
+                                                <input name="Items[@i].ReturnUnitCost" value="@item.ReturnUnitCost.DisplayCurrency()"
+                                                       class="form-control form-control-sm text-end item-return-cost"
                                                        data-decimal="currency" min="0" placeholder="0" />
                                             </td>
-                                            <td class="text-end item-accepted-total text-muted small">
-                                                @((item.AcceptedQuantity * item.UnitCost).DisplayCurrency())
+                                            <td class="text-end item-subtotal text-muted small">
+                                                @((item.RequestedQuantity * item.ReturnUnitCost).DisplayCurrency())
                                             </td>
-                                            <td class="pe-3">
+                                            <td class="pe-2">
                                                 <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
@@ -81,11 +97,27 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div id="noItemsMessage" class="py-4 text-center text-muted" style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
-                            Chưa có hàng hóa nào được chọn.
+                        <div id="noItemsMessage" class="py-4 text-center text-muted"
+                             style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
+                            Chọn nhà cung cấp và phiếu nhập, hoặc nhấn "+ Thêm hàng" để tạo tự do.
                         </div>
                     </div>
-                    <div class="content-card-footer py-2 d-flex align-items-center justify-content-between">
+                    <!-- Footer: Chi phí + Tổng -->
+                    <div class="content-card-footer py-2">
+                        <div class="d-flex justify-content-end align-items-center gap-3">
+                            <span class="text-muted small">Tổng giá trị trả:</span>
+                            <span id="totalReturnValue" class="fw-semibold text-primary">0 ₫</span>
+                        </div>
+                        <div class="d-flex justify-content-end align-items-center gap-3 mt-1">
+                            <span class="text-muted small">Chi phí phát sinh:</span>
+                            <span id="additionalCostDisplay" class="text-danger small fw-medium">0 ₫</span>
+                        </div>
+                        <div class="d-flex justify-content-end align-items-center gap-3 mt-1 border-top pt-2">
+                            <span class="text-muted small fw-bold">Tổng thu hồi từ NCC:</span>
+                            <span id="netRecoveryAmount" class="fw-bold text-success fs-6">0 ₫</span>
+                        </div>
+                    </div>
+                    <div class="content-card-footer py-2 d-flex align-items-center justify-content-between border-top">
                         <a asp-action="List" class="btn btn-link text-decoration-none">
                             <span class="text-muted small">Trở về</span>
                         </a>
@@ -101,21 +133,29 @@
                         <h5>Thông tin phiếu trả</h5>
                     </div>
                     <div class="content-card-body">
+
                         <!-- Nhà cung cấp -->
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp <span class="text-danger">*</span></label>
-                            <input type="hidden" asp-for="VendorId" id="VendorId" />
-                            <div id="vendorDisplay" class="border rounded p-2 bg-light text-muted small">
-                                @if (Model.VendorId.HasValue)
-                                {
-                                    <span class="fw-semibold text-dark">@Model.VendorDisplayName</span>
-                                }
-                                else
-                                {
-                                    <span class="fst-italic">Chưa chọn nhà cung cấp</span>
-                                }
-                            </div>
+                            <label class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Nhà cung cấp <span class="text-danger">*</span>
+                            </label>
+                            <div id="vendorPicker"
+                                 data-id="@Model.VendorId"
+                                 data-name="@Model.VendorDisplayName"
+                                 data-phone=""></div>
                             <span asp-validation-for="VendorId" class="small text-danger"></span>
+                        </div>
+
+                        <!-- Phiếu nhập kho (optional) -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Phiếu nhập kho
+                                <span class="badge bg-secondary-subtle text-secondary border ms-1" style="font-size:.65rem;">tuỳ chọn</span>
+                            </label>
+                            <select id="goodsReceiptSelect" class="form-select" disabled>
+                                <option value="">(Chọn nhà cung cấp trước)</option>
+                            </select>
+                            <div class="form-text">Để trống nếu tạo phiếu trả tự do.</div>
                         </div>
 
                         <!-- Kho xuất -->
@@ -134,11 +174,19 @@
                             <span asp-validation-for="WarehouseId" class="small text-danger"></span>
                         </div>
 
-                        <!-- Ghi chú -->
+                        <!-- Chi phí phát sinh -->
                         <div class="mb-3">
+                            <label asp-for="AdditionalCost" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <input asp-for="AdditionalCost" id="additionalCostInput"
+                                   class="form-control" data-decimal="currency" min="0" placeholder="0"
+                                   value="@Model.AdditionalCost.DisplayCurrency()" />
+                            <div class="form-text">Vận chuyển, đền bù... sẽ trừ vào tổng thu hồi.</div>
+                        </div>
+
+                        <!-- Ghi chú -->
+                        <div class="mb-0">
                             <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <textarea asp-for="Note" class="form-control" rows="3" placeholder="Lý do trả hàng, ghi chú..."></textarea>
-                            <span asp-validation-for="Note" class="small text-danger"></span>
                         </div>
                     </div>
                     <div class="content-card-footer d-none d-lg-block">
@@ -155,42 +203,154 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script type="module">
-        // ── Thêm/xóa item ─────────────────────────────────────────────────────
+        import VendorPicker from '/modules/VendorPicker.js';
+
+        // ── VendorPicker ──────────────────────────────────────────────────────────
+        const pickerEl = document.getElementById('vendorPicker');
+        const hiddenVendorId = document.getElementById('hiddenVendorId');
+        const hiddenGoodsReceiptId = document.getElementById('hiddenGoodsReceiptId');
+        const goodsReceiptSelect = document.getElementById('goodsReceiptSelect');
+
+        const vendorPicker = new VendorPicker(pickerEl);
+
+        // Khôi phục nếu validation fail
+        const initialVendorId = hiddenVendorId.value;
+        const initialVendorName = pickerEl.dataset.name;
+        if (initialVendorId && initialVendorName) {
+            vendorPicker.selectVendor({ id: initialVendorId, name: initialVendorName, phone: '' });
+        }
+
+        pickerEl.addEventListener('select', async (e) => {
+            hiddenVendorId.value = e.detail.vendor.id;
+            hiddenGoodsReceiptId.value = '';
+            await loadGoodsReceipts(e.detail.vendor.id);
+        });
+
+        pickerEl.addEventListener('remove', () => {
+            hiddenVendorId.value = '';
+            hiddenGoodsReceiptId.value = '';
+            resetGoodsReceiptSelect();
+            clearItems();
+        });
+
+        // ── Goods Receipt picker ──────────────────────────────────────────────────
+        async function loadGoodsReceipts(vendorId) {
+            goodsReceiptSelect.disabled = true;
+            goodsReceiptSelect.innerHTML = '<option value="">Đang tải...</option>';
+
+            try {
+                const res = await fetch(`/VendorReturn/GetGoodsReceipts?vendorId=${vendorId}`);
+                const receipts = await res.json();
+
+                goodsReceiptSelect.innerHTML = '<option value="">(Không chọn — trả tự do)</option>';
+                receipts.forEach(r => {
+                    const opt = document.createElement('option');
+                    opt.value = r.id;
+                    opt.textContent = r.label;
+                    goodsReceiptSelect.appendChild(opt);
+                });
+                goodsReceiptSelect.disabled = false;
+
+                const prevId = hiddenGoodsReceiptId.value;
+                if (prevId) goodsReceiptSelect.value = prevId;
+            } catch {
+                goodsReceiptSelect.innerHTML = '<option value="">Lỗi tải dữ liệu</option>';
+            }
+        }
+
+        function resetGoodsReceiptSelect() {
+            goodsReceiptSelect.innerHTML = '<option value="">(Chọn nhà cung cấp trước)</option>';
+            goodsReceiptSelect.disabled = true;
+        }
+
+        goodsReceiptSelect.addEventListener('change', async () => {
+            const receiptId = goodsReceiptSelect.value;
+            hiddenGoodsReceiptId.value = receiptId;
+
+            if (!receiptId) {
+                updateLoadBtn(false);
+                return;
+            }
+
+            updateLoadBtn(true);
+            await loadItemsFromReceipt(receiptId);
+        });
+
+        function updateLoadBtn(show) {
+            const btn = document.getElementById('btnLoadFromReceipt');
+            btn.style.setProperty('display', show ? 'inline-flex' : 'none', 'important');
+        }
+
+        // ── Load items từ phiếu nhập ─────────────────────────────────────────────
+        async function loadItemsFromReceipt(receiptId) {
+            try {
+                const res = await fetch(`/VendorReturn/GetGoodsReceiptItems?goodsReceiptId=${receiptId}`);
+                const items = await res.json();
+                clearItems();
+                items.forEach(item => addItemRowFromReceipt(item));
+                updateFooter();
+            } catch {
+                alert('Không thể tải danh sách hàng từ phiếu nhập.');
+            }
+        }
+
+        document.getElementById('btnLoadFromReceipt').addEventListener('click', async () => {
+            const receiptId = goodsReceiptSelect.value;
+            if (receiptId) await loadItemsFromReceipt(receiptId);
+        });
+
+        // ── Item table ────────────────────────────────────────────────────────────
         let rowIndex = @Model.Items.Count;
         const tbody = document.getElementById('itemsTableBody');
         const noMsg = document.getElementById('noItemsMessage');
+
+        function clearItems() {
+            tbody.innerHTML = '';
+            updateEmptyState();
+        }
 
         function updateEmptyState() {
             noMsg.style.display = tbody.rows.length === 0 ? 'block' : 'none';
         }
 
-        function addItemRow(productId, productName, goodsReceiptItemId = '', requestedQty = 1, unitCost = 0) {
+        function fmtCurrency(val) {
+            return Number(val || 0).toLocaleString('vi-VN') + ' ₫';
+        }
+
+        function fmtQty(val) {
+            const n = Number(val || 0);
+            return n % 1 === 0 ? n.toLocaleString('vi-VN') : n.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+        }
+
+        function addItemRowFromReceipt(item) {
             const i = rowIndex++;
+            const origCost = item.unitPrice || 0;
+            const available = item.availableQty ?? (item.originalQty - item.alreadyReturnedQty);
             const tr = document.createElement('tr');
-            tr.id = `item-row-${i}`;
             tr.innerHTML = `
                 <td class="ps-3">
-                    <div class="fw-medium">${productName}</div>
-                    <input type="hidden" name="Items[${i}].ProductId" value="${productId}" />
-                    <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="${goodsReceiptItemId}" />
+                    <div class="fw-medium">${item.productName}</div>
+                    <input type="hidden" name="Items[${i}].ProductId" value="${item.productId}" />
+                    <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="${item.sourceItemId ?? ''}" />
+                    <input type="hidden" name="Items[${i}].OriginalUnitCost" value="${origCost}" class="item-orig-cost" />
                 </td>
+                <td class="text-center text-muted small">${item.unit}</td>
+                <td class="text-end text-muted small">${fmtQty(item.originalQty)}</td>
+                <td class="text-end text-muted small">${fmtQty(item.alreadyReturnedQty)}</td>
+                <td class="text-end text-muted small fw-medium ${available > 0 ? 'text-success' : 'text-danger'}">${fmtQty(available)}</td>
                 <td class="text-end">
-                    <input name="Items[${i}].RequestedQuantity" value="${requestedQty}"
-                           class="form-control form-control-sm text-end item-requested-qty"
-                           data-decimal="quantity" min="0.001" placeholder="0" />
+                    <input name="Items[${i}].RequestedQuantity" value="${available > 0 ? available : ''}"
+                           class="form-control form-control-sm text-end item-req-qty"
+                           data-decimal="quantity" min="0.001" max="${available}" placeholder="0" />
                 </td>
+                <td class="text-end text-muted small">${origCost > 0 ? fmtCurrency(origCost) : '—'}</td>
                 <td class="text-end">
-                    <input name="Items[${i}].AcceptedQuantity" value="${requestedQty}"
-                           class="form-control form-control-sm text-end item-accepted-qty"
-                           data-decimal="quantity" min="0" placeholder="0" />
-                </td>
-                <td class="text-end">
-                    <input name="Items[${i}].UnitCost" value="${unitCost}"
-                           class="form-control form-control-sm text-end item-unit-cost"
+                    <input name="Items[${i}].ReturnUnitCost" value="${origCost}"
+                           class="form-control form-control-sm text-end item-return-cost"
                            data-decimal="currency" min="0" placeholder="0" />
                 </td>
-                <td class="text-end item-accepted-total text-muted small">—</td>
-                <td class="pe-3">
+                <td class="text-end item-subtotal text-muted small">—</td>
+                <td class="pe-2">
                     <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                         <i class="bi bi-trash"></i>
                     </button>
@@ -199,19 +359,92 @@
             updateEmptyState();
         }
 
-        // Xóa item
+        function addFreeItemRow() {
+            const i = rowIndex++;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="ps-3">
+                    <input name="Items[${i}].ProductId" value=""
+                           class="form-control form-control-sm item-product-id" placeholder="ProductId..." />
+                    <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="" />
+                    <input type="hidden" name="Items[${i}].OriginalUnitCost" value="" class="item-orig-cost" />
+                </td>
+                <td class="text-center text-muted small">—</td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end">
+                    <input name="Items[${i}].RequestedQuantity" value=""
+                           class="form-control form-control-sm text-end item-req-qty"
+                           data-decimal="quantity" min="0.001" placeholder="0" />
+                </td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end">
+                    <input name="Items[${i}].ReturnUnitCost" value=""
+                           class="form-control form-control-sm text-end item-return-cost"
+                           data-decimal="currency" min="0" placeholder="0" />
+                </td>
+                <td class="text-end item-subtotal text-muted small">—</td>
+                <td class="pe-2">
+                    <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>`;
+            tbody.appendChild(tr);
+            updateEmptyState();
+        }
+
+        document.getElementById('btnAddFreeItem').addEventListener('click', addFreeItemRow);
+
         tbody.addEventListener('click', e => {
             const btn = e.target.closest('.btn-remove-item');
             if (btn) {
                 btn.closest('tr').remove();
                 updateEmptyState();
+                updateFooter();
             }
         });
 
-        // Nút thêm hàng thủ công
-        document.getElementById('btnAddItem').addEventListener('click', () => {
-            const name = prompt('Nhập tên hàng hóa (ProductId cần nhập thủ công):');
-            if (name) addItemRow('', name);
+        tbody.addEventListener('input', e => {
+            if (e.target.matches('.item-req-qty, .item-return-cost')) {
+                const row = e.target.closest('tr');
+                const qty = parseDecimal(row.querySelector('.item-req-qty')?.value);
+                const cost = parseDecimal(row.querySelector('.item-return-cost')?.value);
+                const sub = row.querySelector('.item-subtotal');
+                if (sub) sub.textContent = fmtCurrency(qty * cost);
+                updateFooter();
+            }
         });
+
+        // ── Footer ───────────────────────────────────────────────────────────────
+        const additionalCostInput = document.getElementById('additionalCostInput');
+
+        function parseDecimal(str) {
+            if (!str) return 0;
+            return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+        }
+
+        function updateFooter() {
+            let total = 0;
+            tbody.querySelectorAll('tr').forEach(row => {
+                const qty = parseDecimal(row.querySelector('.item-req-qty')?.value);
+                const cost = parseDecimal(row.querySelector('.item-return-cost')?.value);
+                total += qty * cost;
+            });
+
+            const addCost = parseDecimal(additionalCostInput.value);
+            const net = Math.max(0, total - addCost);
+
+            document.getElementById('totalReturnValue').textContent = fmtCurrency(total);
+            document.getElementById('additionalCostDisplay').textContent = fmtCurrency(addCost);
+            document.getElementById('netRecoveryAmount').textContent = fmtCurrency(net);
+        }
+
+        additionalCostInput.addEventListener('input', updateFooter);
+        updateFooter();
+
+        if (initialVendorId) {
+            loadGoodsReceipts(initialVendorId);
+        }
     </script>
 }

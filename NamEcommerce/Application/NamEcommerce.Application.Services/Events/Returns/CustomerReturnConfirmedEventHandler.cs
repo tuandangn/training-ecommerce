@@ -43,12 +43,13 @@ public sealed class CustomerReturnConfirmedEventHandler(
                 {
                     ProductId = i.ProductId,
                     ProductName = i.ProductName,
-                    Quantity = i.AcceptedQuantity
+                    Quantity = i.AcceptedQuantity,
+                    ReturnUnitPrice = i.ReturnUnitPrice
                 })
             }).ConfigureAwait(false);
 
-        // 2. Ghi nhận GoodsReceiptId + giảm CustomerDebt FIFO
-        var totalReturnAmount = customerReturn.Items.Sum(i => i.AcceptedTotal);
+        // 2. Ghi nhận GoodsReceiptId + giảm CustomerDebt FIFO (net = Σ AcceptedTotal - AdditionalCost)
+        var totalReturnAmount = customerReturn.NetRefundAmount;
         await _customerReturnManager.FinalizeConfirmAsync(
             notification.CustomerReturnId, goodsReceiptId, totalReturnAmount).ConfigureAwait(false);
     }

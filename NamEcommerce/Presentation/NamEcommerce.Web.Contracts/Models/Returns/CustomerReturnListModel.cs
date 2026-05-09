@@ -6,7 +6,7 @@ namespace NamEcommerce.Web.Contracts.Models.Returns;
 public sealed class CustomerReturnListModel
 {
     public Guid? CustomerId { get; init; }
-    public Guid? OrderId { get; init; }
+    public Guid? DeliveryNoteId { get; init; }
     public int? Status { get; init; }
     public required IPagedDataModel<ItemModel> Data { get; init; }
 
@@ -15,7 +15,8 @@ public sealed class CustomerReturnListModel
     {
         public required string Code { get; init; }
         public required string CustomerName { get; init; }
-        public required string OrderCode { get; init; }
+        public Guid? DeliveryNoteId { get; init; }
+        public string? DeliveryNoteCode { get; init; }
         public required string WarehouseName { get; init; }
         public required int Status { get; init; }
         public required DateTime ReturnDate { get; init; }

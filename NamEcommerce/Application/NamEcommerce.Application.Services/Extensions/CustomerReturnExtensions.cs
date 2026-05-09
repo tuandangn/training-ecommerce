@@ -9,8 +9,8 @@ public static class CustomerReturnAppExtensions
         => new(dto.Id)
         {
             Code = dto.Code,
-            OrderId = dto.OrderId,
-            OrderCode = dto.OrderCode,
+            DeliveryNoteId = dto.DeliveryNoteId,
+            DeliveryNoteCode = dto.DeliveryNoteCode,
             CustomerId = dto.CustomerId,
             CustomerName = dto.CustomerName,
             WarehouseId = dto.WarehouseId,
@@ -19,6 +19,7 @@ public static class CustomerReturnAppExtensions
             Status = dto.Status,
             ReturnDate = dto.ReturnDate,
             ConfirmedOnUtc = dto.ConfirmedOnUtc,
+            AdditionalCost = dto.AdditionalCost,
             GeneratedGoodsReceiptId = dto.GeneratedGoodsReceiptId,
             CreatedByUserId = dto.CreatedByUserId,
             CreatedOnUtc = dto.CreatedOnUtc,
@@ -31,7 +32,8 @@ public static class CustomerReturnAppExtensions
                 DeliveryNoteItemId = i.DeliveryNoteItemId,
                 RequestedQuantity = i.RequestedQuantity,
                 AcceptedQuantity = i.AcceptedQuantity,
-                UnitPrice = i.UnitPrice
+                OriginalUnitPrice = i.OriginalUnitPrice,
+                ReturnUnitPrice = i.ReturnUnitPrice
             })
         };
 }

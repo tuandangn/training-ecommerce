@@ -17,12 +17,19 @@ public sealed class VendorReturnModel
     public required int Status { get; init; }
     public required DateTime ReturnDate { get; init; }
     public DateTime? ConfirmedOn { get; init; }
+
+    /// <summary>Chi phí phát sinh khi trả hàng NCC (vận chuyển, đền bù...).</summary>
+    public required decimal AdditionalCost { get; init; }
+
     public Guid? GeneratedDeliveryNoteId { get; init; }
 
     public required DateTime CreatedOn { get; init; }
     public DateTime? UpdatedOn { get; init; }
 
     public IList<ItemModel> Items { get; init; } = [];
+
+    /// <summary>Số tiền thu lại từ NCC = Σ(AcceptedQty × ReturnUnitCost) − AdditionalCost (floor 0).</summary>
+    public decimal NetRecoveryAmount => Math.Max(0, Items.Sum(i => i.AcceptedTotal) - AdditionalCost);
 
     [Serializable]
     public sealed record ItemModel(Guid Id)
@@ -32,7 +39,13 @@ public sealed class VendorReturnModel
         public Guid? GoodsReceiptItemId { get; init; }
         public required decimal RequestedQuantity { get; init; }
         public required decimal AcceptedQuantity { get; init; }
-        public required decimal UnitCost { get; init; }
-        public decimal AcceptedTotal => AcceptedQuantity * UnitCost;
+
+        /// <summary>Giá vốn gốc (tham chiếu) — null nếu tạo tự do.</summary>
+        public decimal? OriginalUnitCost { get; init; }
+
+        /// <summary>Giá NCC hoàn trả thực tế.</summary>
+        public required decimal ReturnUnitCost { get; init; }
+
+        public decimal AcceptedTotal => AcceptedQuantity * ReturnUnitCost;
     }
 }

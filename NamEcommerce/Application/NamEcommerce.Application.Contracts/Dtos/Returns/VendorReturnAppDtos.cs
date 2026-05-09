@@ -14,11 +14,18 @@ public sealed record VendorReturnAppDto(Guid Id)
     public required int Status { get; init; }
     public required DateTime ReturnDate { get; init; }
     public DateTime? ConfirmedOnUtc { get; init; }
+
+    /// <summary>Chi phí phát sinh khi trả hàng NCC (vận chuyển, đền bù...).</summary>
+    public required decimal AdditionalCost { get; init; }
+
     public Guid? GeneratedDeliveryNoteId { get; init; }
     public Guid? CreatedByUserId { get; init; }
     public required DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
     public required IEnumerable<VendorReturnItemAppDto> Items { get; init; }
+
+    /// <summary>Số tiền thu lại từ NCC = Σ(AcceptedQty × ReturnUnitCost) − AdditionalCost (floor 0).</summary>
+    public decimal NetRecoveryAmount => Math.Max(0, Items.Sum(i => i.AcceptedTotal) - AdditionalCost);
 }
 
 [Serializable]
@@ -30,28 +37,43 @@ public sealed record VendorReturnItemAppDto(Guid Id)
     public Guid? GoodsReceiptItemId { get; init; }
     public required decimal RequestedQuantity { get; init; }
     public required decimal AcceptedQuantity { get; init; }
-    public required decimal UnitCost { get; init; }
-    public decimal AcceptedTotal => AcceptedQuantity * UnitCost;
+
+    /// <summary>Giá vốn gốc tại thời điểm nhập (tham chiếu) — null nếu tạo tự do.</summary>
+    public decimal? OriginalUnitCost { get; init; }
+
+    /// <summary>Giá NCC hoàn trả thực tế.</summary>
+    public required decimal ReturnUnitCost { get; init; }
+
+    public decimal AcceptedTotal => AcceptedQuantity * ReturnUnitCost;
 }
 
 [Serializable]
 public sealed record CreateVendorReturnAppDto
 {
     public required Guid VendorId { get; init; }
+
+    /// <summary>Đơn nhập nguồn — null = tạo tự do.</summary>
     public Guid? PurchaseOrderId { get; init; }
+
+    /// <summary>Phiếu nhập kho nguồn — null = tạo tự do.</summary>
     public Guid? GoodsReceiptId { get; init; }
+
     public required Guid WarehouseId { get; init; }
     public string? Note { get; init; }
+
+    /// <summary>Chi phí phát sinh (vận chuyển, đền bù...) — giảm vào khoản thu hồi từ NCC.</summary>
+    public decimal AdditionalCost { get; init; } = 0;
+
     public required IEnumerable<CreateVendorReturnItemAppDto> Items { get; init; }
 
     public (bool valid, string? errorMessage) Validate()
     {
         if (VendorId == Guid.Empty)
             return (false, "Error.VendorReturn.VendorRequired");
-        if (PurchaseOrderId is null && GoodsReceiptId is null)
-            return (false, "Error.VendorReturn.PurchaseOrderOrGoodsReceiptRequired");
         if (WarehouseId == Guid.Empty)
             return (false, "Error.VendorReturn.WarehouseRequired");
+        if (AdditionalCost < 0)
+            return (false, "Error.VendorReturn.AdditionalCostCannotBeNegative");
         if (!Items.Any())
             return (false, "Error.VendorReturn.NoItems");
         return (true, null);
@@ -65,7 +87,12 @@ public sealed record CreateVendorReturnItemAppDto
     public Guid? GoodsReceiptItemId { get; init; }
     public required decimal RequestedQuantity { get; init; }
     public required decimal AcceptedQuantity { get; init; }
-    public required decimal UnitCost { get; init; }
+
+    /// <summary>Giá vốn gốc (tham chiếu) — null nếu không lấy từ phiếu nhập.</summary>
+    public decimal? OriginalUnitCost { get; init; }
+
+    /// <summary>Giá NCC hoàn trả thực tế.</summary>
+    public required decimal ReturnUnitCost { get; init; }
 }
 
 [Serializable]

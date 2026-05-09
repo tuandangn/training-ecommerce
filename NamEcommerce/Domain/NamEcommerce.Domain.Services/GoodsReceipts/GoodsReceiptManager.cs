@@ -267,12 +267,22 @@ public sealed class GoodsReceiptManager(
 
         foreach (var item in dto.Items)
         {
-            var averageCost = await inventoryStockManager.GetAverageCostAsync(item.ProductId, dto.WarehouseId)
-                .ConfigureAwait(false);
+            // Dùng ReturnUnitPrice làm UnitCost (hàng trả về có thể khác giá gốc do hư hỏng).
+            // Fallback AverageCost nếu ReturnUnitPrice = 0 (không cung cấp).
+            decimal? unitCost;
+            if (item.ReturnUnitPrice > 0)
+            {
+                unitCost = item.ReturnUnitPrice;
+            }
+            else
+            {
+                var averageCost = await inventoryStockManager.GetAverageCostAsync(item.ProductId, dto.WarehouseId)
+                    .ConfigureAwait(false);
+                unitCost = averageCost > 0 ? averageCost : null;
+            }
 
             await goodsReceipt.AddItemAsync(
-                item.ProductId, dto.WarehouseId, item.Quantity,
-                averageCost > 0 ? averageCost : null,
+                item.ProductId, dto.WarehouseId, item.Quantity, unitCost,
                 productDataReader, warehouseSettings, warehouseDataReader
             ).ConfigureAwait(false);
         }

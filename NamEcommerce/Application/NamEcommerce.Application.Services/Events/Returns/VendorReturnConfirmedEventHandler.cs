@@ -44,12 +44,12 @@ public sealed class VendorReturnConfirmedEventHandler(
                     ProductId = i.ProductId,
                     ProductName = i.ProductName,
                     Quantity = i.AcceptedQuantity,
-                    UnitCost = i.UnitCost
+                    UnitCost = i.ReturnUnitCost
                 })
             }).ConfigureAwait(false);
 
-        // 2. Ghi nhận DeliveryNoteId + giảm VendorDebt FIFO
-        var totalReturnAmount = vendorReturn.Items.Sum(i => i.AcceptedTotal);
+        // 2. Ghi nhận DeliveryNoteId + giảm VendorDebt FIFO (net = Σ AcceptedTotal - AdditionalCost)
+        var totalReturnAmount = vendorReturn.NetRecoveryAmount;
         await _vendorReturnManager.FinalizeConfirmAsync(
             notification.VendorReturnId, deliveryNoteId, totalReturnAmount).ConfigureAwait(false);
     }

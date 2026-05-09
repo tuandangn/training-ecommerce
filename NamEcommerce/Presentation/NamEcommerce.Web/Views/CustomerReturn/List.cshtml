@@ -57,9 +57,9 @@
                                 </td>
                                 <td>@item.CustomerName</td>
                                 <td>
-                                    <a asp-controller="Order" asp-action="Details" asp-route-id="@item.Id"
+                                    <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@item.DeliveryNoteId"
                                        class="text-decoration-none text-muted">
-                                        @item.OrderCode
+                                        @item.DeliveryNoteCode
                                     </a>
                                 </td>
                                 <td class="text-muted small">@item.WarehouseName</td>

@@ -25,8 +25,8 @@ public sealed class GetCustomerReturnHandler : IRequestHandler<GetCustomerReturn
         {
             Id = dto.Id,
             Code = dto.Code,
-            OrderId = dto.OrderId,
-            OrderCode = dto.OrderCode,
+            DeliveryNoteId = dto.DeliveryNoteId,
+            DeliveryNoteCode = dto.DeliveryNoteCode,
             CustomerId = dto.CustomerId,
             CustomerName = dto.CustomerName,
             WarehouseId = dto.WarehouseId,
@@ -35,6 +35,7 @@ public sealed class GetCustomerReturnHandler : IRequestHandler<GetCustomerReturn
             Status = dto.Status,
             ReturnDate = DateTimeHelper.ToLocalTime(dto.ReturnDate),
             ConfirmedOn = DateTimeHelper.ToLocalTime(dto.ConfirmedOnUtc),
+            AdditionalCost = dto.AdditionalCost,
             GeneratedGoodsReceiptId = dto.GeneratedGoodsReceiptId,
             CreatedOn = DateTimeHelper.ToLocalTime(dto.CreatedOnUtc),
             UpdatedOn = DateTimeHelper.ToLocalTime(dto.UpdatedOnUtc)
@@ -49,7 +50,8 @@ public sealed class GetCustomerReturnHandler : IRequestHandler<GetCustomerReturn
                 DeliveryNoteItemId = item.DeliveryNoteItemId,
                 RequestedQuantity = item.RequestedQuantity,
                 AcceptedQuantity = item.AcceptedQuantity,
-                UnitPrice = item.UnitPrice
+                OriginalUnitPrice = item.OriginalUnitPrice,
+                ReturnUnitPrice = item.ReturnUnitPrice
             });
         }
 

@@ -19,6 +19,7 @@ public static class VendorReturnAppExtensions
             Status = dto.Status,
             ReturnDate = dto.ReturnDate,
             ConfirmedOnUtc = dto.ConfirmedOnUtc,
+            AdditionalCost = dto.AdditionalCost,
             GeneratedDeliveryNoteId = dto.GeneratedDeliveryNoteId,
             CreatedByUserId = dto.CreatedByUserId,
             CreatedOnUtc = dto.CreatedOnUtc,
@@ -31,7 +32,8 @@ public static class VendorReturnAppExtensions
                 GoodsReceiptItemId = i.GoodsReceiptItemId,
                 RequestedQuantity = i.RequestedQuantity,
                 AcceptedQuantity = i.AcceptedQuantity,
-                UnitCost = i.UnitCost
+                OriginalUnitCost = i.OriginalUnitCost,
+                ReturnUnitCost = i.ReturnUnitCost
             })
         };
 }

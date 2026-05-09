@@ -7,26 +7,28 @@ namespace NamEcommerce.Web.Models.Returns;
 [Serializable]
 public sealed class CreateVendorReturnModel
 {
+    /// <summary>Nhà cung cấp — dùng VendorPicker component.</summary>
     [Display(Name = "Nhà cung cấp")]
     public Guid? VendorId { get; set; }
 
     [ValidateNever]
     public string? VendorDisplayName { get; set; }
 
-    [Display(Name = "Đơn đặt hàng")]
-    public Guid? PurchaseOrderId { get; set; }
-
-    [ValidateNever]
-    public string? PurchaseOrderDisplayCode { get; set; }
-
+    /// <summary>Phiếu nhập kho nguồn — null = tạo tự do.</summary>
     [Display(Name = "Phiếu nhập kho")]
     public Guid? GoodsReceiptId { get; set; }
+
+    [ValidateNever]
+    public string? GoodsReceiptDisplayLabel { get; set; }
 
     [Display(Name = "Kho xuất hàng trả")]
     public Guid? WarehouseId { get; set; }
 
     [ValidateNever]
     public EntityOptionListModel? AvailableWarehouses { get; set; }
+
+    [Display(Name = "Chi phí phát sinh")]
+    public decimal AdditionalCost { get; set; }
 
     [Display(Name = "Ghi chú")]
     public string? Note { get; set; }
@@ -51,6 +53,9 @@ public sealed class CreateVendorReturnItemModel
     [Display(Name = "Số lượng chấp nhận")]
     public decimal AcceptedQuantity { get; set; }
 
-    [Display(Name = "Giá vốn")]
-    public decimal UnitCost { get; set; }
+    [Display(Name = "Giá vốn gốc")]
+    public decimal? OriginalUnitCost { get; set; }
+
+    [Display(Name = "Giá trả NCC")]
+    public decimal ReturnUnitCost { get; set; }
 }

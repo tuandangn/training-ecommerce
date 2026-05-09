@@ -41,7 +41,7 @@
                         @Model.Items.Count mặt hàng
                     </span>
                 </h5>
-                <span class="fw-semibold text-primary">@Model.Items.Sum(i => i.AcceptedTotal).DisplayCurrency()</span>
+                <span class="fw-semibold text-success">@Model.NetRefundAmount.DisplayCurrency()</span>
             </div>
             <div class="content-card-body-flush">
                 <div class="table-responsive">
@@ -49,10 +49,11 @@
                         <thead>
                             <tr>
                                 <th class="ps-4">Hàng hóa</th>
-                                <th class="text-end" style="width:120px">SL yêu cầu</th>
-                                <th class="text-end" style="width:120px">SL chấp nhận</th>
-                                <th class="text-end" style="width:130px">Đơn giá</th>
-                                <th class="text-end pe-4" style="width:140px">Thành tiền</th>
+                                <th class="text-end" style="width:110px">SL yêu cầu</th>
+                                <th class="text-end" style="width:110px">SL chấp nhận</th>
+                                <th class="text-end" style="width:120px">Đ.Giá gốc</th>
+                                <th class="text-end" style="width:120px">Đ.Giá trả</th>
+                                <th class="text-end pe-4" style="width:130px">Thành tiền</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -68,15 +69,29 @@
                                     </td>
                                     <td class="text-end text-muted">@item.RequestedQuantity.DisplayQuantity()</td>
                                     <td class="text-end fw-medium">@item.AcceptedQuantity.DisplayQuantity()</td>
-                                    <td class="text-end text-muted">@item.UnitPrice.DisplayCurrency()</td>
+                                    <td class="text-end text-muted small">
+                                        @(item.OriginalUnitPrice.HasValue ? item.OriginalUnitPrice.Value.DisplayCurrency() : "—")
+                                    </td>
+                                    <td class="text-end text-muted">@item.ReturnUnitPrice.DisplayCurrency()</td>
                                     <td class="text-end pe-4 fw-semibold">@item.AcceptedTotal.DisplayCurrency()</td>
                                 </tr>
                             }
                         </tbody>
                         <tfoot>
-                            <tr class="table-light">
-                                <td colspan="4" class="ps-4 text-end text-muted small fw-medium pe-3">Tổng giá trị trả</td>
-                                <td class="text-end pe-4 fw-bold text-dark">@Model.Items.Sum(i => i.AcceptedTotal).DisplayCurrency()</td>
+                            <tr>
+                                <td colspan="5" class="ps-4 text-end text-muted small fw-medium pe-3">Tổng giá trị trả</td>
+                                <td class="text-end pe-4 fw-semibold text-dark">@Model.Items.Sum(i => i.AcceptedTotal).DisplayCurrency()</td>
+                            </tr>
+                            @if (Model.AdditionalCost > 0)
+                            {
+                                <tr>
+                                    <td colspan="5" class="ps-4 text-end text-muted small fw-medium pe-3">Chi phí phát sinh</td>
+                                    <td class="text-end pe-4 fw-medium text-danger">−@Model.AdditionalCost.DisplayCurrency()</td>
+                                </tr>
+                            }
+                            <tr class="table-success">
+                                <td colspan="5" class="ps-4 text-end small fw-bold pe-3">Tổng hoàn khách</td>
+                                <td class="text-end pe-4 fw-bold text-success">@Model.NetRefundAmount.DisplayCurrency()</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -144,6 +159,13 @@
                             <dd class="text-success fw-semibold">@Model.ConfirmedOn.Value.ToString(ViewConstants.DefaultDateTimeFormat)</dd>
                         </div>
                     }
+                    @if (Model.AdditionalCost > 0)
+                    {
+                        <div class="receipt-info-row">
+                            <dt>Chi phí</dt>
+                            <dd class="text-danger fw-medium">@Model.AdditionalCost.DisplayCurrency()</dd>
+                        </div>
+                    }
                     @if (!string.IsNullOrEmpty(Model.Note))
                     {
                         <div class="receipt-info-row">
@@ -159,7 +181,7 @@
             </div>
         </div>
 
-        <!-- Khách hàng & Đơn hàng -->
+        <!-- Khách hàng & nguồn phiếu -->
         <div class="content-card mb-3">
             <div class="content-card-header">
                 <h5 class="mb-0">Khách hàng</h5>
@@ -170,15 +192,25 @@
                         <dt>Khách</dt>
                         <dd class="fw-semibold"><i class="bi bi-person-fill me-1 text-primary"></i>@Model.CustomerName</dd>
                     </div>
-                    <div class="receipt-info-row">
-                        <dt>Đơn hàng</dt>
-                        <dd>
-                            <a asp-controller="Order" asp-action="Details" asp-route-id="@Model.OrderId"
-                               class="text-decoration-none fw-semibold">
-                                <i class="bi bi-receipt me-1"></i>@Model.OrderCode
-                            </a>
-                        </dd>
-                    </div>
+                    @if (Model.DeliveryNoteId.HasValue)
+                    {
+                        <div class="receipt-info-row">
+                            <dt>Phiếu xuất</dt>
+                            <dd>
+                                <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@Model.DeliveryNoteId"
+                                   class="text-decoration-none fw-semibold">
+                                    <i class="bi bi-receipt me-1"></i>@Model.DeliveryNoteCode
+                                </a>
+                            </dd>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="receipt-info-row">
+                            <dt>Nguồn</dt>
+                            <dd><span class="badge bg-secondary-subtle text-secondary border">Tạo tự do</span></dd>
+                        </div>
+                    }
                     <div class="receipt-info-row">
                         <dt>Kho nhận</dt>
                         <dd class="text-muted"><i class="bi bi-building me-1"></i>@Model.WarehouseName</dd>
@@ -263,7 +295,6 @@
 
 @section Scripts {
     <script type="module">
-        import { apiPost } from "/modules/ajax-helper.js";
         import { toast } from "/modules/modals.js";
 
         const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';

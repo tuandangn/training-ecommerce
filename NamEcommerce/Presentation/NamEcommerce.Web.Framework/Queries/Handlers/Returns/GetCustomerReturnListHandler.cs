@@ -20,7 +20,7 @@ public sealed class GetCustomerReturnListHandler : IRequestHandler<GetCustomerRe
     {
         var (total, items) = await _customerReturnAppService.GetListAsync(
             request.CustomerId,
-            request.OrderId,
+            request.DeliveryNoteId,
             request.Status,
             request.PageIndex,
             request.PageSize
@@ -30,18 +30,19 @@ public sealed class GetCustomerReturnListHandler : IRequestHandler<GetCustomerRe
         {
             Code = dto.Code,
             CustomerName = dto.CustomerName,
-            OrderCode = dto.OrderCode,
+            DeliveryNoteId = dto.DeliveryNoteId,
+            DeliveryNoteCode = dto.DeliveryNoteCode,
             WarehouseName = dto.WarehouseName,
             Status = dto.Status,
             ReturnDate = DateTimeHelper.ToLocalTime(dto.ReturnDate),
-            TotalAmount = dto.Items.Sum(i => i.AcceptedTotal),
+            TotalAmount = dto.NetRefundAmount,
             ItemCount = dto.Items.Count()
         }).ToList();
 
         return new CustomerReturnListModel
         {
             CustomerId = request.CustomerId,
-            OrderId = request.OrderId,
+            DeliveryNoteId = request.DeliveryNoteId,
             Status = request.Status,
             Data = PagedDataModel.Create(itemModels, request.PageIndex, request.PageSize, total)
         };

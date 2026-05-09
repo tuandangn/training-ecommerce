@@ -85,85 +85,71 @@ Update-Database
 
 ---
 
-### D3 — Domain.Services: Cập nhật Managers
+### D3 — Domain.Services: Cập nhật Managers ✅ Done
 
 - [x] `ICustomerReturnManager`: `GetListAsync` đổi `orderId` → `deliveryNoteId`; `GetTotalConfirmedReturnQuantityAsync` đổi param; doc `FinalizeConfirmAsync` cập nhật
-- [ ] `CustomerReturnManager`: rewrite `CreateAsync` (load DeliveryNote hoặc Customer), `ConfirmAsync` (validate by DeliveryNoteId), `FinalizeConfirmAsync` (FIFO by CustomerId + AdditionalCost → Expense), `GetListAsync`, `GetTotalConfirmedReturnQuantityAsync`; thay `IEntityDataReader<Order>` → `IEntityDataReader<Customer>`
-- [ ] `VendorReturnManager`: cập nhật `CreateAsync`/`FinalizeConfirmAsync` map `AdditionalCost` + `ReturnUnitCost`; `FinalizeConfirmAsync` dùng net amount
-- [ ] `GoodsReceiptManager.CreateFromCustomerReturnAsync`: dùng `item.ReturnUnitPrice` làm `UnitCost` (fallback AverageCost nếu = 0)
-- [ ] `IVendorReturnManager.FinalizeConfirmAsync`: cập nhật signature nếu cần
+- [x] `CustomerReturnManager`: rewrite `CreateAsync` (load DeliveryNote hoặc Customer), `ConfirmAsync` (validate by DeliveryNoteId), `FinalizeConfirmAsync` (FIFO by CustomerId + AdditionalCost → Expense), `GetListAsync`, `GetTotalConfirmedReturnQuantityAsync`; thay `IEntityDataReader<Order>` → `IEntityDataReader<Customer>`
+- [x] `VendorReturnManager`: cập nhật `CreateAsync`/`FinalizeConfirmAsync` map `AdditionalCost` + `ReturnUnitCost`; `FinalizeConfirmAsync` dùng net amount + Expense
+- [x] `GoodsReceiptManager.CreateFromCustomerReturnAsync`: dùng `item.ReturnUnitPrice` làm `UnitCost` (fallback AverageCost nếu = 0)
+- [x] Event handlers: `CustomerReturnConfirmedEventHandler` + `VendorReturnConfirmedEventHandler` map trường mới, pass `NetRefundAmount`/`NetRecoveryAmount`
 
 ---
 
-### D4 — Application Layer: AppDtos + AppServices
+### D4 — Application Layer: AppDtos + AppServices ✅ Done
 
-- [ ] `CustomerReturnAppDtos.cs`: thêm price fields vào tất cả DTOs (App + Create + Item)
-- [ ] `VendorReturnAppDtos.cs`: tương tự
-- [ ] `CustomerReturnAppService` + `VendorReturnAppService`: cập nhật mapping
-- [ ] Thêm vào `ICustomerReturnAppService` + implementation:
-  - `GetDeliveryNotesByCustomerAsync(customerId)` → `List<DeliveryNotePickerAppDto>` (id, code, deliveredOnUtc)
-  - `GetDeliveryNoteItemsForReturnAsync(deliveryNoteId)` → `List<ReturnableItemAppDto>` (productId, productName, unit, deliveredQty, alreadyReturnedQty, unitPrice)
-- [ ] Thêm vào `IVendorReturnAppService` + implementation:
-  - `GetGoodsReceiptsByVendorAsync(vendorId)` → `List<GoodsReceiptPickerAppDto>` (id, code, createdOnUtc)
-  - `GetGoodsReceiptItemsForReturnAsync(goodsReceiptId)` → `List<ReturnableItemAppDto>` (productId, productName, unit, receivedQty, alreadyReturnedQty, unitCost)
+- [x] `CustomerReturnAppDtos.cs`: thêm `DeliveryNoteId?`, `DeliveryNoteCode?`, `AdditionalCost`, `NetRefundAmount`, `OriginalUnitPrice?`, `ReturnUnitPrice`; `Validate()` cập nhật
+- [x] `VendorReturnAppDtos.cs`: thêm `AdditionalCost`, `NetRecoveryAmount`, `OriginalUnitCost?`, `ReturnUnitCost`; bỏ require PO/GR
+- [x] `ICustomerReturnAppService.GetListAsync`: `orderId` → `deliveryNoteId`
+- [x] `CustomerReturnAppService` + `VendorReturnAppService`: cập nhật mapping đầy đủ
+- [x] App Extensions: `CustomerReturnAppExtensions` + `VendorReturnAppExtensions` map trường mới
+
+> Note: các AJAX helper methods (GetDeliveryNotesByCustomer, GetDeliveryNoteItemsForReturn...) sẽ implement ở D6/D7 qua Query Handlers thay vì AppService.
 
 ---
 
-### D5 — Infrastructure: EF Mapping + Migration
+### D5 — Infrastructure: EF Mapping + Migration ✅ Done
 
-- [ ] `CustomerReturnMapping`: đổi `OrderId` → `DeliveryNoteId`; thêm `AdditionalCost decimal(18,4) default 0`
-- [ ] `CustomerReturnItemMapping`: thêm `OriginalUnitPrice decimal(18,4) nullable`, `ReturnUnitPrice decimal(18,4) not null default 0`
-- [ ] `VendorReturnMapping`: thêm `AdditionalCost decimal(18,4) default 0`
-- [ ] `VendorReturnItemMapping`: thêm `OriginalUnitCost decimal(18,4) nullable`, `ReturnUnitCost decimal(18,4) not null default 0`
+- [x] `CustomerReturnMapping`: đổi `OrderId/OrderCode` → `DeliveryNoteId?/DeliveryNoteCode?`; thêm `AdditionalCost decimal(18,4) default 0`; index đổi sang DeliveryNoteId
+- [x] `CustomerReturnItemMapping`: thêm `OriginalUnitPrice decimal(18,4) nullable`, `ReturnUnitPrice decimal(18,4) default 0`
+- [x] `VendorReturnMapping`: thêm `AdditionalCost decimal(18,4) default 0`
+- [x] `VendorReturnItemMapping`: thêm `OriginalUnitCost decimal(18,4) nullable`, `ReturnUnitCost decimal(18,4) default 0`
 - [ ] **Migration** (Tuấn tự chạy): `Add-Migration UpdateReturnsAddPriceAndDeliveryNoteRef`
 
 ---
 
-### D6 — Web.Contracts: Commands / Queries / Models
+### D6 — Web.Contracts: Commands / Queries / Models ✅ Done
 
-- [ ] `CreateCustomerReturnCommand`: thêm `DeliveryNoteId?`, `AdditionalCost`; item thêm `OriginalUnitPrice?`, `ReturnUnitPrice`
-- [ ] `UpdateCustomerReturnCommand`: cập nhật tương tự
-- [ ] `CreateVendorReturnCommand` + Update: thêm `AdditionalCost`; item thêm `OriginalUnitCost?`, `ReturnUnitCost`
-- [ ] Thêm 4 Queries tại `Web.Contracts/Queries/Models/Returns/`:
-  - `GetDeliveryNotesByCustomerQuery { CustomerId }` → `IRequest<List<DeliveryNotePickerModel>>`
-  - `GetDeliveryNoteItemsForReturnQuery { DeliveryNoteId }` → `IRequest<List<ReturnableItemModel>>`
-  - `GetGoodsReceiptsByVendorQuery { VendorId }` → `IRequest<List<GoodsReceiptPickerModel>>`
-  - `GetGoodsReceiptItemsForReturnQuery { GoodsReceiptId }` → `IRequest<List<ReturnableItemModel>>`
-- [ ] Thêm Models: `DeliveryNotePickerModel { Id, Code, DeliveredOnUtc }`, `GoodsReceiptPickerModel { Id, Code, CreatedOnUtc }`, `ReturnableItemModel { ProductId, ProductName, Unit, OriginalQty, AlreadyReturnedQty, UnitPrice }`
-- [ ] Cập nhật `CustomerReturnModel` + `VendorReturnModel`: thêm price fields
+- [x] `CreateCustomerReturnCommand`: `DeliveryNoteId?`, `CustomerId?`, `AdditionalCost`; item: `OriginalUnitPrice?`, `ReturnUnitPrice`
+- [x] `CreateVendorReturnCommand`: `AdditionalCost`; item: `OriginalUnitCost?`, `ReturnUnitCost`; bỏ require PO/GR
+- [x] `GetCustomerReturnListQuery`: `orderId` → `deliveryNoteId`; `CustomerReturnListModel`: đổi `OrderCode` → `DeliveryNoteCode`
+- [x] 4 Queries: `GetDeliveryNotesByCustomerQuery`, `GetDeliveryNoteItemsForReturnQuery`, `GetGoodsReceiptsByVendorQuery`, `GetGoodsReceiptItemsForReturnQuery`
+- [x] 3 Models mới: `DeliveryNotePickerModel`, `GoodsReceiptPickerModel`, `ReturnableItemModel` tại `ReturnPickerModels.cs`
+- [x] `CustomerReturnModel` + `VendorReturnModel`: thêm `DeliveryNoteId?/Code?`, `AdditionalCost`, `NetRefundAmount`/`NetRecoveryAmount`, price fields trên items
 
 ---
 
-### D7 — Web.Framework: Handlers
+### D7 — Web.Framework: Handlers ✅ Done
 
-- [ ] `GetDeliveryNotesByCustomerHandler`: query DeliveryNote → filter `CustomerId` + `SourceType=ToCustomer` + `Status=Delivered`
-- [ ] `GetDeliveryNoteItemsForReturnHandler`: query items → tính `alreadyReturnedQty` từ CustomerReturn Confirmed cùng DeliveryNoteId
-- [ ] `GetGoodsReceiptsByVendorHandler`: query GoodsReceipt → filter `VendorId` + `SourceType=FromVendor`
-- [ ] `GetGoodsReceiptItemsForReturnHandler`: query items → tính `alreadyReturnedQty` từ VendorReturn Confirmed cùng GoodsReceiptId
-- [ ] Cập nhật `CreateCustomerReturnHandler` + `CreateVendorReturnHandler`: map price fields mới
+- [x] 4 AJAX Handlers: `GetDeliveryNotesByCustomerHandler`, `GetDeliveryNoteItemsForReturnHandler`, `GetGoodsReceiptsByVendorHandler`, `GetGoodsReceiptItemsForReturnHandler`
+- [x] `CreateCustomerReturnHandler` + `CreateVendorReturnHandler`: map `AdditionalCost` + price fields
+- [x] `GetCustomerReturnHandler` + `GetVendorReturnHandler`: map `AdditionalCost`, `DeliveryNoteId`, price fields
+- [x] `GetCustomerReturnListHandler` + `GetVendorReturnListHandler`: dùng `NetRefundAmount`/`NetRecoveryAmount`
+- [x] AppService interfaces: thêm 4 picker methods; AppService impl: inject `IEntityDataReader<DeliveryNote/GoodsReceipt/CustomerReturn/VendorReturn/Product/UnitMeasurement>`
+- [x] `ReturnPickerAppDtos.cs`: `DeliveryNotePickerAppDto`, `GoodsReceiptPickerAppDto`, `ReturnableItemAppDto`
 
 ---
 
-### D8 — Web: Controllers + Views
+### D8 — Web: Controllers + Views ✅ Done (2026-05-09)
 
-- [ ] `CustomerReturnController`: thêm 2 AJAX actions:
-  - `GET /CustomerReturn/GetDeliveryNotes?customerId=` → JSON
-  - `GET /CustomerReturn/GetDeliveryNoteItems?deliveryNoteId=` → JSON
-- [ ] `VendorReturnController`: thêm 2 AJAX actions:
-  - `GET /VendorReturn/GetGoodsReceipts?vendorId=` → JSON
-  - `GET /VendorReturn/GetGoodsReceiptItems?goodsReceiptId=` → JSON
-- [ ] Redesign `CustomerReturn/Create.cshtml`:
-  - **Xóa** input OrderId / ProductId thủ công
-  - Khách hàng: `<select>` searchable (Choices.js)
-  - Phiếu xuất: `<select>` load AJAX theo customerId (nullable — để trống = tạo tự do)
-  - Bảng items: nếu chọn phiếu → load AJAX + fill sẵn; nếu tự do → nút "+ Thêm hàng" với product search
-  - Mỗi row: `Tên hàng | ĐVT | Đã giao | Đã trả | Còn lại | SL trả | Đơn giá gốc | Đơn giá trả về`
-  - Footer: `Chi phí phát sinh` | `Tổng hoàn = Σ(SL × Đơn giá trả) − Chi phí`
-  - Warehouse: `<select>` dropdown
-- [ ] Redesign `VendorReturn/Create.cshtml`: tương tự — NCC → Phiếu nhập → Items
-- [ ] Update `CustomerReturn/Details.cshtml`: hiển thị `ReturnUnitPrice` từng dòng, `AdditionalCost`, net amount
-- [ ] Update `VendorReturn/Details.cshtml`: tương tự
-- [ ] `CustomerReturnModelFactory` + `VendorReturnModelFactory`: cập nhật mapping nếu cần
+- [x] `CustomerReturnController`: thêm 2 AJAX actions (`GetDeliveryNotes`, `GetDeliveryNoteItems`)
+- [x] `VendorReturnController`: thêm 2 AJAX actions (`GetGoodsReceipts`, `GetGoodsReceiptItems`)
+- [x] Redesign `CustomerReturn/Create.cshtml`: CustomerPicker + AJAX delivery note picker + item grid (ĐVT | Đã giao | Đã trả | Còn lại | SL trả | Đ.Giá gốc | Đ.Giá trả) + footer (Chi phí | Tổng hoàn)
+- [x] Redesign `VendorReturn/Create.cshtml`: VendorPicker + AJAX goods receipt picker + item grid tương tự
+- [x] Update `CustomerReturn/Details.cshtml`: cột OriginalUnitPrice + ReturnUnitPrice, tfoot AdditionalCost + NetRefundAmount
+- [x] Update `VendorReturn/Details.cshtml`: tương tự
+- [x] `CustomerReturnModelFactory` + `VendorReturnModelFactory`: đơn giản hoá — PrepareDetails trả trực tiếp `CustomerReturnModel?`/`VendorReturnModel?`
+- [x] `CreateCustomerReturnModel` + `CreateVendorReturnModel`: cập nhật fields (CustomerId, DeliveryNoteId, AdditionalCost, OriginalUnitPrice, ReturnUnitPrice...)
+- [x] `CustomerReturnListSearchModel`: `OrderId` → `DeliveryNoteId`
 
 ---
 

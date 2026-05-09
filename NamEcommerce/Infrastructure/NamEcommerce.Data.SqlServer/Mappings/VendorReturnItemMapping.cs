@@ -18,6 +18,11 @@ public sealed class VendorReturnItemMapping : IEntityTypeConfiguration<VendorRet
 
         builder.Property(i => i.RequestedQuantity).IsRequired().HasColumnType("decimal(18,2)");
         builder.Property(i => i.AcceptedQuantity).IsRequired().HasColumnType("decimal(18,2)");
-        builder.Property(i => i.UnitCost).IsRequired().HasColumnType("decimal(18,2)");
+
+        // Giá vốn gốc (tham chiếu) — nullable
+        builder.Property(i => i.OriginalUnitCost).IsRequired(false).HasColumnType("decimal(18,4)");
+
+        // Giá NCC hoàn trả thực tế — required
+        builder.Property(i => i.ReturnUnitCost).IsRequired().HasColumnType("decimal(18,4)").HasDefaultValue(0m);
     }
 }

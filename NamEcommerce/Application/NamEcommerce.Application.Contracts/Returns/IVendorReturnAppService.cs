@@ -13,4 +13,10 @@ public interface IVendorReturnAppService
     Task<VendorReturnAppDto?> GetByIdAsync(Guid id);
     Task<(int Total, List<VendorReturnAppDto> Items)> GetListAsync(
         Guid? vendorId, Guid? purchaseOrderId, Guid? goodsReceiptId, int? status, int pageIndex, int pageSize);
+
+    /// <summary>Lấy danh sách phiếu nhập kho (FromVendor) của một NCC — cho AJAX picker.</summary>
+    Task<List<GoodsReceiptPickerAppDto>> GetGoodsReceiptsByVendorAsync(Guid vendorId);
+
+    /// <summary>Lấy danh sách items có thể trả của một phiếu nhập kho — bao gồm số lượng đã trả.</summary>
+    Task<List<ReturnableItemAppDto>> GetGoodsReceiptItemsForReturnAsync(Guid goodsReceiptId, Guid? excludeReturnId = null);
 }

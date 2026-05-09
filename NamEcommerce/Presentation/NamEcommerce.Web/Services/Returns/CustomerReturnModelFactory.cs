@@ -1,5 +1,4 @@
 using MediatR;
-using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Returns;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
@@ -29,48 +28,9 @@ public sealed class CustomerReturnModelFactory : ICustomerReturnModelFactory
         return model;
     }
 
-    public async Task<CustomerReturnDetailsModel?> PrepareCustomerReturnDetailsModel(Guid id)
+    public async Task<CustomerReturnModel?> PrepareCustomerReturnDetailsModel(Guid id)
     {
-        var customerReturn = await _mediator.Send(new GetCustomerReturnQuery { Id = id }).ConfigureAwait(false);
-        if (customerReturn is null)
-            return null;
-
-        var statusLabel = GetStatusLabel(customerReturn.Status);
-
-        var model = new CustomerReturnDetailsModel
-        {
-            Id = customerReturn.Id,
-            Code = customerReturn.Code,
-            OrderId = customerReturn.OrderId,
-            OrderCode = customerReturn.OrderCode,
-            CustomerId = customerReturn.CustomerId,
-            CustomerName = customerReturn.CustomerName,
-            WarehouseId = customerReturn.WarehouseId,
-            WarehouseName = customerReturn.WarehouseName,
-            Note = customerReturn.Note,
-            Status = customerReturn.Status,
-            StatusLabel = statusLabel,
-            ReturnDate = customerReturn.ReturnDate,
-            ConfirmedOn = customerReturn.ConfirmedOn,
-            GeneratedGoodsReceiptId = customerReturn.GeneratedGoodsReceiptId,
-            CreatedOn = customerReturn.CreatedOn,
-            UpdatedOn = customerReturn.UpdatedOn
-        };
-
-        foreach (var item in customerReturn.Items)
-        {
-            model.Items.Add(new CustomerReturnDetailsModel.ItemModel(item.Id)
-            {
-                ProductId = item.ProductId,
-                ProductName = item.ProductName,
-                DeliveryNoteItemId = item.DeliveryNoteItemId,
-                RequestedQuantity = item.RequestedQuantity,
-                AcceptedQuantity = item.AcceptedQuantity,
-                UnitPrice = item.UnitPrice
-            });
-        }
-
-        return model;
+        return await _mediator.Send(new GetCustomerReturnQuery { Id = id }).ConfigureAwait(false);
     }
 
     public async Task<CustomerReturnListModel> PrepareCustomerReturnListModel(CustomerReturnListSearchModel searchModel)
@@ -83,19 +43,10 @@ public sealed class CustomerReturnModelFactory : ICustomerReturnModelFactory
         return await _mediator.Send(new GetCustomerReturnListQuery
         {
             CustomerId = searchModel?.CustomerId,
-            OrderId = searchModel?.OrderId,
+            DeliveryNoteId = searchModel?.DeliveryNoteId,
             Status = searchModel?.Status,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         }).ConfigureAwait(false);
     }
-
-    private static string GetStatusLabel(int status) => (CustomerReturnStatus)status switch
-    {
-        CustomerReturnStatus.Draft => "Bản nháp",
-        CustomerReturnStatus.Inspecting => "Đang kiểm tra",
-        CustomerReturnStatus.Confirmed => "Đã xác nhận",
-        CustomerReturnStatus.Cancelled => "Đã huỷ",
-        _ => "Không xác định"
-    };
 }

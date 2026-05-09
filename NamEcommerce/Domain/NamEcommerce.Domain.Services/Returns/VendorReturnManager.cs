@@ -6,10 +6,13 @@ using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Services.Extensions;
-using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Finance;
 using NamEcommerce.Domain.Shared.Dtos.Returns;
+using NamEcommerce.Domain.Shared.Enums.Finance;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
+using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Returns;
+using NamEcommerce.Domain.Shared.Common;
 
 namespace NamEcommerce.Domain.Services.Returns;
 
@@ -22,7 +25,8 @@ public sealed class VendorReturnManager(
     IEntityDataReader<Vendor> vendorDataReader,
     IEntityDataReader<Warehouse> warehouseDataReader,
     IEntityDataReader<VendorDebt> vendorDebtDataReader,
-    IRepository<VendorDebt> vendorDebtRepository) : IVendorReturnManager
+    IRepository<VendorDebt> vendorDebtRepository,
+    IExpenseManager expenseManager) : IVendorReturnManager
 {
     public async Task<VendorReturnDto> CreateAsync(CreateVendorReturnDto dto, Guid? createdByUserId)
     {
@@ -62,6 +66,7 @@ public sealed class VendorReturnManager(
             warehouseId: warehouse.Id,
             warehouseName: warehouse.Name,
             note: dto.Note,
+            additionalCost: dto.AdditionalCost,
             createdByUserId: createdByUserId);
 
         foreach (var itemDto in dto.Items)
@@ -76,7 +81,8 @@ public sealed class VendorReturnManager(
                 goodsReceiptItemId: itemDto.GoodsReceiptItemId,
                 requestedQuantity: itemDto.RequestedQuantity,
                 acceptedQuantity: itemDto.AcceptedQuantity,
-                unitCost: itemDto.UnitCost);
+                originalUnitCost: itemDto.OriginalUnitCost,
+                returnUnitCost: itemDto.ReturnUnitCost);
         }
 
         vendorReturn.MarkCreated();
@@ -205,6 +211,19 @@ public sealed class VendorReturnManager(
 
         vendorReturn.GeneratedDeliveryNoteId = generatedDeliveryNoteId;
         await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
+
+        // Ghi chi phí phát sinh vào Expense (vận chuyển, bồi thường khi trả hàng NCC)
+        if (vendorReturn.AdditionalCost > 0)
+        {
+            await expenseManager.CreateExpenseAsync(new CreateExpenseDto
+            {
+                Title = $"Chi phí phát sinh phiếu trả NCC {vendorReturn.Code}",
+                Description = $"Chi phí phát sinh khi trả hàng cho nhà cung cấp {vendorReturn.VendorName}",
+                Amount = vendorReturn.AdditionalCost,
+                ExpenseType = ExpenseType.ReturnCost,
+                IncurredDate = vendorReturn.ConfirmedOnUtc ?? DateTime.UtcNow
+            }).ConfigureAwait(false);
+        }
 
         if (totalReturnAmount <= 0) return;
 

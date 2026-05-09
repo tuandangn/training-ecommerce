@@ -5,8 +5,11 @@ public sealed class CustomerReturnModel
 {
     public required Guid Id { get; init; }
     public required string Code { get; init; }
-    public required Guid OrderId { get; init; }
-    public required string OrderCode { get; init; }
+
+    /// <summary>Phiếu xuất kho nguồn — null nếu phiếu trả tự do.</summary>
+    public Guid? DeliveryNoteId { get; init; }
+    public string? DeliveryNoteCode { get; init; }
+
     public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
     public required Guid WarehouseId { get; init; }
@@ -17,12 +20,19 @@ public sealed class CustomerReturnModel
     public required int Status { get; init; }
     public required DateTime ReturnDate { get; init; }
     public DateTime? ConfirmedOn { get; init; }
+
+    /// <summary>Chi phí phát sinh khi nhận hàng trả (vận chuyển, bồi thường...).</summary>
+    public required decimal AdditionalCost { get; init; }
+
     public Guid? GeneratedGoodsReceiptId { get; init; }
 
     public required DateTime CreatedOn { get; init; }
     public DateTime? UpdatedOn { get; init; }
 
     public IList<ItemModel> Items { get; init; } = [];
+
+    /// <summary>Số tiền hoàn khách = Σ(AcceptedQty × ReturnUnitPrice) − AdditionalCost (floor 0).</summary>
+    public decimal NetRefundAmount => Math.Max(0, Items.Sum(i => i.AcceptedTotal) - AdditionalCost);
 
     [Serializable]
     public sealed record ItemModel(Guid Id)
@@ -32,7 +42,13 @@ public sealed class CustomerReturnModel
         public Guid? DeliveryNoteItemId { get; init; }
         public required decimal RequestedQuantity { get; init; }
         public required decimal AcceptedQuantity { get; init; }
-        public required decimal UnitPrice { get; init; }
-        public decimal AcceptedTotal => AcceptedQuantity * UnitPrice;
+
+        /// <summary>Giá bán gốc (tham chiếu) — null nếu tạo tự do.</summary>
+        public decimal? OriginalUnitPrice { get; init; }
+
+        /// <summary>Giá hoàn trả thực tế.</summary>
+        public required decimal ReturnUnitPrice { get; init; }
+
+        public decimal AcceptedTotal => AcceptedQuantity * ReturnUnitPrice;
     }
 }

@@ -34,7 +34,7 @@ public sealed class GetVendorReturnListHandler : IRequestHandler<GetVendorReturn
             WarehouseName = dto.WarehouseName,
             Status = dto.Status,
             ReturnDate = DateTimeHelper.ToLocalTime(dto.ReturnDate),
-            TotalAmount = dto.Items.Sum(i => i.AcceptedTotal),
+            TotalAmount = dto.NetRecoveryAmount,
             ItemCount = dto.Items.Count()
         }).ToList();
 

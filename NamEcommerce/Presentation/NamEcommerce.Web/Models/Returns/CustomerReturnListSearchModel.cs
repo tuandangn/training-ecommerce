@@ -6,6 +6,6 @@ namespace NamEcommerce.Web.Models.Returns;
 public sealed record CustomerReturnListSearchModel : BasePaginationModel
 {
     public Guid? CustomerId { get; set; }
-    public Guid? OrderId { get; set; }
+    public Guid? DeliveryNoteId { get; set; }
     public int? Status { get; set; }
 }

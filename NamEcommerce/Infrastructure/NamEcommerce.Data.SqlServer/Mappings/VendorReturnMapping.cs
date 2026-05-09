@@ -26,6 +26,7 @@ public sealed class VendorReturnMapping : IEntityTypeConfiguration<VendorReturn>
         builder.Property(r => r.Status).IsRequired().HasConversion<int>();
         builder.Property(r => r.ReturnDate).IsRequired();
         builder.Property(r => r.ConfirmedOnUtc).IsRequired(false);
+        builder.Property(r => r.AdditionalCost).IsRequired().HasColumnType("decimal(18,4)").HasDefaultValue(0m);
         builder.Property(r => r.GeneratedDeliveryNoteId).IsRequired(false);
 
         builder.Property(r => r.CreatedByUserId).IsRequired(false);

@@ -43,16 +43,20 @@ public sealed class CustomerReturnController : BaseAuthorizedController
 
         var result = await _mediator.Send(new CreateCustomerReturnCommand
         {
-            OrderId = model.OrderId!.Value,
+            DeliveryNoteId = model.DeliveryNoteId,
+            CustomerId = model.CustomerId,
             WarehouseId = model.WarehouseId!.Value,
+            AdditionalCost = model.AdditionalCost,
             Note = model.Note,
             Items = model.Items.Select(i => new CreateCustomerReturnItemCommand
             {
                 ProductId = i.ProductId!.Value,
                 DeliveryNoteItemId = i.DeliveryNoteItemId,
                 RequestedQuantity = i.RequestedQuantity,
-                AcceptedQuantity = i.AcceptedQuantity,
-                UnitPrice = i.UnitPrice
+                // AcceptedQuantity không có field riêng trong form — default = RequestedQuantity (Draft)
+                AcceptedQuantity = i.AcceptedQuantity > 0 ? i.AcceptedQuantity : i.RequestedQuantity,
+                OriginalUnitPrice = i.OriginalUnitPrice,
+                ReturnUnitPrice = i.ReturnUnitPrice
             }).ToList()
         });
 
@@ -142,5 +146,33 @@ public sealed class CustomerReturnController : BaseAuthorizedController
             return Json(new { success = false });
 
         return Json(new { success = true, data = model });
+    }
+
+    // ── AJAX Pickers ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// GET /CustomerReturn/GetDeliveryNotes?customerId=
+    /// Trả về danh sách phiếu xuất kho của khách — dùng cho AJAX dropdown trong form tạo phiếu trả.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetDeliveryNotes(Guid customerId)
+    {
+        var notes = await _mediator.Send(new GetDeliveryNotesByCustomerQuery { CustomerId = customerId });
+        return Json(notes);
+    }
+
+    /// <summary>
+    /// GET /CustomerReturn/GetDeliveryNoteItems?deliveryNoteId=&amp;excludeReturnId=
+    /// Trả về danh sách mặt hàng có thể trả của phiếu xuất — bao gồm số lượng đã trả.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetDeliveryNoteItems(Guid deliveryNoteId, Guid? excludeReturnId = null)
+    {
+        var items = await _mediator.Send(new GetDeliveryNoteItemsForReturnQuery
+        {
+            DeliveryNoteId = deliveryNoteId,
+            ExcludeReturnId = excludeReturnId
+        });
+        return Json(items);
     }
 }

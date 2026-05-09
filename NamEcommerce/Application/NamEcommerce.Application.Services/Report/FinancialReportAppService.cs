@@ -39,7 +39,7 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
     public Task<ProfitLossSummaryAppDto> GetProfitLossSummaryAsync(DateTime? fromDate, DateTime? toDate)
     {
         var fromUtc = fromDate?.ToUniversalTime();
-        var toUtc   = toDate.HasValue
+        var toUtc = toDate.HasValue
             ? toDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime()
             : (DateTime?)null;
 
@@ -50,7 +50,7 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
                       && dn.DeliveredOnUtc != null);
 
         if (fromUtc.HasValue) dnQuery = dnQuery.Where(dn => dn.DeliveredOnUtc >= fromUtc.Value);
-        if (toUtc.HasValue)   dnQuery = dnQuery.Where(dn => dn.DeliveredOnUtc <= toUtc.Value);
+        if (toUtc.HasValue) dnQuery = dnQuery.Where(dn => dn.DeliveredOnUtc <= toUtc.Value);
 
         var deliveredNotes = dnQuery
             .Select(dn => new
@@ -74,35 +74,35 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
                       && cr.ConfirmedOnUtc != null);
 
         if (fromUtc.HasValue) crQuery = crQuery.Where(cr => cr.ConfirmedOnUtc >= fromUtc.Value);
-        if (toUtc.HasValue)   crQuery = crQuery.Where(cr => cr.ConfirmedOnUtc <= toUtc.Value);
+        if (toUtc.HasValue) crQuery = crQuery.Where(cr => cr.ConfirmedOnUtc <= toUtc.Value);
 
         var confirmedReturns = crQuery
             .Select(cr => new
             {
                 cr.ConfirmedOnUtc,
-                Items = cr.Items.Select(i => new { i.AcceptedQuantity, i.UnitPrice }).ToList()
+                Items = cr.Items.Select(i => new { i.AcceptedQuantity, i.ReturnUnitPrice }).ToList()
             })
             .ToList();
 
         // ── 3. Tra cứu tên sản phẩm ────────────────────────────────────────────
         var productIds = deliveredNotes.SelectMany(dn => dn.Items).Select(i => i.ProductId).Distinct().ToList();
-        var products   = _productDataReader.DataSource.Where(p => productIds.Contains(p.Id)).ToList();
+        var products = _productDataReader.DataSource.Where(p => productIds.Contains(p.Id)).ToList();
 
         // ── 4. Tính tổng ────────────────────────────────────────────────────────
-        decimal grossRevenue    = deliveredNotes.Sum(dn => dn.TotalAmount);
-        decimal totalReturnAmt  = confirmedReturns.Sum(cr => cr.Items.Sum(i => i.AcceptedQuantity * i.UnitPrice));
-        decimal totalCogs       = deliveredNotes
+        decimal grossRevenue = deliveredNotes.Sum(dn => dn.TotalAmount);
+        decimal totalReturnAmt = confirmedReturns.Sum(cr => cr.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitPrice));
+        decimal totalCogs = deliveredNotes
             .SelectMany(dn => dn.Items)
             .Sum(i => (i.CostAtDispatch ?? 0m) * i.Quantity);
 
         var dto = new ProfitLossSummaryAppDto
         {
-            TotalRevenue            = grossRevenue - totalReturnAmt,
-            TotalCogs               = totalCogs
+            TotalRevenue = grossRevenue - totalReturnAmt,
+            TotalCogs = totalCogs
         };
 
         // ── 5. Xu hướng doanh thu theo ngày ────────────────────────────────────
-        var dateDict    = new Dictionary<string, RevenueByDateAppDto>();
+        var dateDict = new Dictionary<string, RevenueByDateAppDto>();
         var productDict = new Dictionary<Guid, TopSellingProductAppDto>();
 
         foreach (var dn in deliveredNotes)
@@ -116,7 +116,7 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
 
             decimal dnCogs = dn.Items.Sum(i => (i.CostAtDispatch ?? 0m) * i.Quantity);
             dayStats.Revenue += dn.TotalAmount;
-            dayStats.Profit  += dn.TotalAmount - dnCogs;
+            dayStats.Profit += dn.TotalAmount - dnCogs;
 
             foreach (var item in dn.Items)
             {
@@ -130,27 +130,27 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
                     productDict[item.ProductId] = topProd;
                 }
                 topProd.QuantitySold += (int)item.Quantity;
-                topProd.Revenue      += item.SubTotal;
+                topProd.Revenue += item.SubTotal;
             }
         }
 
         // Trừ giá trị trả hàng vào ngày xác nhận (giảm doanh thu + lợi nhuận ngày đó)
         foreach (var cr in confirmedReturns)
         {
-            var returnAmt = cr.Items.Sum(i => i.AcceptedQuantity * i.UnitPrice);
+            var returnAmt = cr.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitPrice);
             var dateLabel = cr.ConfirmedOnUtc!.Value.ToLocalTime().ToString("dd/MM/yyyy");
             if (dateDict.TryGetValue(dateLabel, out var dayStats))
             {
                 dayStats.Revenue -= returnAmt;
-                dayStats.Profit  -= returnAmt;
+                dayStats.Profit -= returnAmt;
             }
             else
             {
                 dateDict[dateLabel] = new RevenueByDateAppDto
                 {
                     DateLabel = dateLabel,
-                    Revenue   = -returnAmt,
-                    Profit    = -returnAmt
+                    Revenue = -returnAmt,
+                    Profit = -returnAmt
                 };
             }
         }
@@ -158,7 +158,7 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
         // ── 6. Chi phí vận hành ────────────────────────────────────────────────
         var expensesQuery = _expenseDataReader.DataSource;
         if (fromUtc.HasValue) expensesQuery = expensesQuery.Where(e => e.IncurredDate >= fromUtc.Value);
-        if (toUtc.HasValue)   expensesQuery = expensesQuery.Where(e => e.IncurredDate <= toUtc.Value);
+        if (toUtc.HasValue) expensesQuery = expensesQuery.Where(e => e.IncurredDate <= toUtc.Value);
 
         var expensesList = expensesQuery.Select(e => new { e.IncurredDate, e.Amount }).ToList();
         dto.TotalOperatingExpenses = expensesList.Sum(e => e.Amount);
@@ -172,7 +172,7 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
                 dateDict[dateLabel] = new RevenueByDateAppDto
                 {
                     DateLabel = dateLabel,
-                    Profit    = -expense.Amount
+                    Profit = -expense.Amount
                 };
         }
 

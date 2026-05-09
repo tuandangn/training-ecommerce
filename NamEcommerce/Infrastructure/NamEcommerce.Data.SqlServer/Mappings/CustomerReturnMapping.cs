@@ -13,8 +13,9 @@ public sealed class CustomerReturnMapping : IEntityTypeConfiguration<CustomerRet
         builder.Property(r => r.Code).IsRequired().HasMaxLength(50);
         builder.HasIndex(r => r.Code).IsUnique();
 
-        builder.Property(r => r.OrderId).IsRequired();
-        builder.Property(r => r.OrderCode).IsRequired().HasMaxLength(50);
+        // Phiếu xuất kho nguồn — nullable (null = trả tự do)
+        builder.Property(r => r.DeliveryNoteId).IsRequired(false);
+        builder.Property(r => r.DeliveryNoteCode).IsRequired(false).HasMaxLength(50);
 
         builder.Property(r => r.CustomerId).IsRequired();
         builder.Property(r => r.CustomerName).IsRequired().HasMaxLength(500);
@@ -26,14 +27,17 @@ public sealed class CustomerReturnMapping : IEntityTypeConfiguration<CustomerRet
         builder.Property(r => r.Status).IsRequired().HasConversion<int>();
         builder.Property(r => r.ReturnDate).IsRequired();
         builder.Property(r => r.ConfirmedOnUtc).IsRequired(false);
+
+        builder.Property(r => r.AdditionalCost).IsRequired().HasColumnType("decimal(18,4)").HasDefaultValue(0m);
+
         builder.Property(r => r.GeneratedGoodsReceiptId).IsRequired(false);
 
         builder.Property(r => r.CreatedByUserId).IsRequired(false);
         builder.Property(r => r.CreatedOnUtc).IsRequired();
         builder.Property(r => r.UpdatedOnUtc).IsRequired(false);
 
-        // Index hỗ trợ query theo Order + filter theo Status
-        builder.HasIndex(r => new { r.OrderId, r.Status });
+        // Index hỗ trợ query theo DeliveryNote + filter theo Status
+        builder.HasIndex(r => new { r.DeliveryNoteId, r.Status });
         builder.HasIndex(r => new { r.CustomerId, r.Status });
 
         // Navigation: _items (private backing field)

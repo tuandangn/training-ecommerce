@@ -35,6 +35,7 @@ public sealed class GetVendorReturnHandler : IRequestHandler<GetVendorReturnQuer
             Status = dto.Status,
             ReturnDate = DateTimeHelper.ToLocalTime(dto.ReturnDate),
             ConfirmedOn = DateTimeHelper.ToLocalTime(dto.ConfirmedOnUtc),
+            AdditionalCost = dto.AdditionalCost,
             GeneratedDeliveryNoteId = dto.GeneratedDeliveryNoteId,
             CreatedOn = DateTimeHelper.ToLocalTime(dto.CreatedOnUtc),
             UpdatedOn = DateTimeHelper.ToLocalTime(dto.UpdatedOnUtc)
@@ -49,7 +50,8 @@ public sealed class GetVendorReturnHandler : IRequestHandler<GetVendorReturnQuer
                 GoodsReceiptItemId = item.GoodsReceiptItemId,
                 RequestedQuantity = item.RequestedQuantity,
                 AcceptedQuantity = item.AcceptedQuantity,
-                UnitCost = item.UnitCost
+                OriginalUnitCost = item.OriginalUnitCost,
+                ReturnUnitCost = item.ReturnUnitCost
             });
         }
 

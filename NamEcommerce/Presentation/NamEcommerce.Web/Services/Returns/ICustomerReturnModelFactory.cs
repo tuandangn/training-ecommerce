@@ -7,5 +7,9 @@ public interface ICustomerReturnModelFactory
 {
     Task<CustomerReturnListModel> PrepareCustomerReturnListModel(CustomerReturnListSearchModel searchModel);
     Task<CreateCustomerReturnModel> PrepareCreateCustomerReturnModel(CreateCustomerReturnModel? model = null);
-    Task<CustomerReturnDetailsModel?> PrepareCustomerReturnDetailsModel(Guid id);
+
+    /// <summary>
+    /// Lấy model chi tiết phiếu trả hàng khách — trả về <c>null</c> nếu không tìm thấy.
+    /// </summary>
+    Task<CustomerReturnModel?> PrepareCustomerReturnDetailsModel(Guid id);
 }

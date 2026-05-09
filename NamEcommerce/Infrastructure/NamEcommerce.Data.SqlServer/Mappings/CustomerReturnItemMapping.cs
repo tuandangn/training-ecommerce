@@ -18,6 +18,11 @@ public sealed class CustomerReturnItemMapping : IEntityTypeConfiguration<Custome
 
         builder.Property(i => i.RequestedQuantity).IsRequired().HasColumnType("decimal(18,2)");
         builder.Property(i => i.AcceptedQuantity).IsRequired().HasColumnType("decimal(18,2)");
-        builder.Property(i => i.UnitPrice).IsRequired().HasColumnType("decimal(18,2)");
+
+        // Giá bán gốc (tham chiếu) — nullable
+        builder.Property(i => i.OriginalUnitPrice).IsRequired(false).HasColumnType("decimal(18,4)");
+
+        // Giá hoàn trả thực tế — required
+        builder.Property(i => i.ReturnUnitPrice).IsRequired().HasColumnType("decimal(18,4)").HasDefaultValue(0m);
     }
 }

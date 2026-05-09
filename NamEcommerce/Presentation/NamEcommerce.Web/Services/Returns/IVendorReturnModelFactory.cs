@@ -7,5 +7,8 @@ public interface IVendorReturnModelFactory
 {
     Task<VendorReturnListModel> PrepareVendorReturnListModel(VendorReturnListSearchModel searchModel);
     Task<CreateVendorReturnModel> PrepareCreateVendorReturnModel(CreateVendorReturnModel? model = null);
-    Task<VendorReturnDetailsModel?> PrepareVendorReturnDetailsModel(Guid id);
+    /// <summary>
+    /// Lấy model chi tiết phiếu trả hàng NCC — trả về <c>null</c> nếu không tìm thấy.
+    /// </summary>
+    Task<VendorReturnModel?> PrepareVendorReturnDetailsModel(Guid id);
 }

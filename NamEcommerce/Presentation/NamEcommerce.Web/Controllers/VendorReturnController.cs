@@ -44,17 +44,19 @@ public sealed class VendorReturnController : BaseAuthorizedController
         var result = await _mediator.Send(new CreateVendorReturnCommand
         {
             VendorId = model.VendorId!.Value,
-            PurchaseOrderId = model.PurchaseOrderId,
             GoodsReceiptId = model.GoodsReceiptId,
             WarehouseId = model.WarehouseId!.Value,
+            AdditionalCost = model.AdditionalCost,
             Note = model.Note,
             Items = model.Items.Select(i => new CreateVendorReturnItemCommand
             {
                 ProductId = i.ProductId!.Value,
                 GoodsReceiptItemId = i.GoodsReceiptItemId,
                 RequestedQuantity = i.RequestedQuantity,
-                AcceptedQuantity = i.AcceptedQuantity,
-                UnitCost = i.UnitCost
+                // AcceptedQuantity không có field riêng trong form — default = RequestedQuantity (Draft)
+                AcceptedQuantity = i.AcceptedQuantity > 0 ? i.AcceptedQuantity : i.RequestedQuantity,
+                OriginalUnitCost = i.OriginalUnitCost,
+                ReturnUnitCost = i.ReturnUnitCost
             }).ToList()
         });
 
@@ -144,5 +146,33 @@ public sealed class VendorReturnController : BaseAuthorizedController
             return Json(new { success = false });
 
         return Json(new { success = true, data = model });
+    }
+
+    // ── AJAX Pickers ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// GET /VendorReturn/GetGoodsReceipts?vendorId=
+    /// Trả về danh sách phiếu nhập kho của NCC — dùng cho AJAX dropdown trong form tạo phiếu trả NCC.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetGoodsReceipts(Guid vendorId)
+    {
+        var receipts = await _mediator.Send(new GetGoodsReceiptsByVendorQuery { VendorId = vendorId });
+        return Json(receipts);
+    }
+
+    /// <summary>
+    /// GET /VendorReturn/GetGoodsReceiptItems?goodsReceiptId=&amp;excludeReturnId=
+    /// Trả về danh sách mặt hàng có thể trả của phiếu nhập — bao gồm số lượng đã trả.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetGoodsReceiptItems(Guid goodsReceiptId, Guid? excludeReturnId = null)
+    {
+        var items = await _mediator.Send(new GetGoodsReceiptItemsForReturnQuery
+        {
+            GoodsReceiptId = goodsReceiptId,
+            ExcludeReturnId = excludeReturnId
+        });
+        return Json(items);
     }
 }

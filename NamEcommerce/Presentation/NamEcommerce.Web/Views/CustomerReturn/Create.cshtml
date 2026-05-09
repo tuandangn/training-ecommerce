@@ -17,61 +17,77 @@
         </nav>
     </div>
 }
+
 <div>
     <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible"></div>
     <form method="post" id="createCustomerReturnForm" asp-antiforgery="true">
+        <input type="hidden" asp-for="CustomerId" id="hiddenCustomerId" />
+        <input type="hidden" asp-for="DeliveryNoteId" id="hiddenDeliveryNoteId" />
+
         <div class="row g-3">
             <!-- Cột trái: danh sách items -->
             <div class="col-lg-8 order-1 order-lg-0">
                 <div class="content-card mb-3">
                     <div class="content-card-header">
                         <h5>Danh sách hàng trả</h5>
-                        <button type="button" class="btn btn-sm bg-light text-primary" id="btnAddItem">
-                            <i class="bi bi-plus-lg me-1"></i> Thêm hàng hóa
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnLoadFromNote" style="display:none!important">
+                                <i class="bi bi-arrow-repeat me-1"></i>Load từ phiếu xuất
+                            </button>
+                            <button type="button" class="btn btn-sm bg-light text-primary" id="btnAddFreeItem">
+                                <i class="bi bi-plus-lg me-1"></i>Thêm hàng
+                            </button>
+                        </div>
                     </div>
                     <div class="content-card-body-flush">
                         <div class="table-responsive">
                             <table class="table data-table mb-0" id="returnItemsTable">
                                 <thead>
                                     <tr>
-                                        <th class="ps-3">Hàng hóa</th>
-                                        <th class="text-end" style="width:120px">SL yêu cầu</th>
-                                        <th class="text-end" style="width:120px">SL chấp nhận</th>
-                                        <th class="text-end" style="width:130px">Đơn giá</th>
-                                        <th class="text-end" style="width:130px">Thành tiền</th>
-                                        <th style="width:40px"></th>
+                                        <th class="ps-3" style="min-width:160px">Hàng hóa</th>
+                                        <th class="text-center" style="width:60px">ĐVT</th>
+                                        <th class="text-end" style="width:80px">Đã giao</th>
+                                        <th class="text-end" style="width:80px">Đã trả</th>
+                                        <th class="text-end" style="width:80px">Còn lại</th>
+                                        <th class="text-end" style="width:100px">SL trả</th>
+                                        <th class="text-end" style="width:110px">Đ.Giá gốc</th>
+                                        <th class="text-end" style="width:115px">Đ.Giá trả</th>
+                                        <th class="text-end" style="width:115px">Thành tiền</th>
+                                        <th style="width:36px"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="itemsTableBody">
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
-                                        <tr id="item-row-@i">
+                                        <tr>
                                             <td class="ps-3">
-                                                <div class="fw-medium item-product-name">@item.ProductDisplayName</div>
-                                                <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" class="item-product-id" />
-                                                <input type="hidden" name="Items[@i].DeliveryNoteItemId" value="@item.DeliveryNoteItemId" class="item-delivery-note-item-id" />
+                                                <div class="fw-medium">@item.ProductDisplayName</div>
+                                                <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
+                                                <input type="hidden" name="Items[@i].DeliveryNoteItemId" value="@item.DeliveryNoteItemId" />
+                                                <input type="hidden" name="Items[@i].OriginalUnitPrice" value="@item.OriginalUnitPrice" class="item-orig-price" />
                                             </td>
+                                            <td class="text-center text-muted small"></td>
+                                            <td class="text-end text-muted small">—</td>
+                                            <td class="text-end text-muted small">—</td>
+                                            <td class="text-end text-muted small">—</td>
                                             <td class="text-end">
                                                 <input name="Items[@i].RequestedQuantity" value="@item.RequestedQuantity.DisplayQuantity()"
-                                                       class="form-control form-control-sm text-end item-requested-qty"
+                                                       class="form-control form-control-sm text-end item-req-qty"
                                                        data-decimal="quantity" min="0.001" placeholder="0" />
                                             </td>
-                                            <td class="text-end">
-                                                <input name="Items[@i].AcceptedQuantity" value="@item.AcceptedQuantity.DisplayQuantity()"
-                                                       class="form-control form-control-sm text-end item-accepted-qty"
-                                                       data-decimal="quantity" min="0" placeholder="0" />
+                                            <td class="text-end text-muted small">
+                                                @(item.OriginalUnitPrice.HasValue ? item.OriginalUnitPrice.Value.DisplayCurrency() : "—")
                                             </td>
                                             <td class="text-end">
-                                                <input name="Items[@i].UnitPrice" value="@item.UnitPrice.DisplayCurrency()"
-                                                       class="form-control form-control-sm text-end item-unit-price"
+                                                <input name="Items[@i].ReturnUnitPrice" value="@item.ReturnUnitPrice.DisplayCurrency()"
+                                                       class="form-control form-control-sm text-end item-return-price"
                                                        data-decimal="currency" min="0" placeholder="0" />
                                             </td>
-                                            <td class="text-end item-accepted-total text-muted small">
-                                                @((item.AcceptedQuantity * item.UnitPrice).DisplayCurrency())
+                                            <td class="text-end item-subtotal text-muted small">
+                                                @((item.RequestedQuantity * item.ReturnUnitPrice).DisplayCurrency())
                                             </td>
-                                            <td class="pe-3">
+                                            <td class="pe-2">
                                                 <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
@@ -81,11 +97,27 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div id="noItemsMessage" class="py-4 text-center text-muted" style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
-                            Chưa có hàng hóa nào được chọn.
+                        <div id="noItemsMessage" class="py-4 text-center text-muted"
+                             style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
+                            Chọn khách hàng và phiếu xuất, hoặc nhấn "+ Thêm hàng" để tạo tự do.
                         </div>
                     </div>
-                    <div class="content-card-footer py-2 d-flex align-items-center justify-content-between">
+                    <!-- Footer: Chi phí + Tổng -->
+                    <div class="content-card-footer py-2">
+                        <div class="d-flex justify-content-end align-items-center gap-3">
+                            <span class="text-muted small">Tổng giá trị trả:</span>
+                            <span id="totalReturnValue" class="fw-semibold text-primary">0 ₫</span>
+                        </div>
+                        <div class="d-flex justify-content-end align-items-center gap-3 mt-1">
+                            <span class="text-muted small">Chi phí phát sinh:</span>
+                            <span id="additionalCostDisplay" class="text-danger small fw-medium">0 ₫</span>
+                        </div>
+                        <div class="d-flex justify-content-end align-items-center gap-3 mt-1 border-top pt-2">
+                            <span class="text-muted small fw-bold">Tổng hoàn khách:</span>
+                            <span id="netRefundAmount" class="fw-bold text-success fs-6">0 ₫</span>
+                        </div>
+                    </div>
+                    <div class="content-card-footer py-2 d-flex align-items-center justify-content-between border-top">
                         <a asp-action="List" class="btn btn-link text-decoration-none">
                             <span class="text-muted small">Trở về</span>
                         </a>
@@ -101,26 +133,29 @@
                         <h5>Thông tin phiếu trả</h5>
                     </div>
                     <div class="content-card-body">
-                        <!-- Đơn hàng -->
+
+                        <!-- Khách hàng -->
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase d-block">Đơn hàng <span class="text-danger">*</span></label>
-                            <input type="hidden" asp-for="OrderId" id="OrderId" />
-                            <div id="orderDisplay" class="border rounded p-2 bg-light text-muted small">
-                                @if (Model.OrderId.HasValue)
-                                {
-                                    <span class="fw-semibold text-dark">@Model.OrderDisplayCode</span>
-                                }
-                                else
-                                {
-                                    <span class="fst-italic">Chưa chọn đơn hàng</span>
-                                }
-                            </div>
-                            <div class="mt-1">
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnPickOrder">
-                                    <i class="bi bi-search me-1"></i>Chọn đơn hàng
-                                </button>
-                            </div>
-                            <span asp-validation-for="OrderId" class="small text-danger"></span>
+                            <label class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Khách hàng <span class="text-danger">*</span>
+                            </label>
+                            <div id="customerPicker"
+                                 data-id="@Model.CustomerId"
+                                 data-name="@Model.CustomerDisplayName"
+                                 data-phone="" data-address=""></div>
+                            <span asp-validation-for="CustomerId" class="small text-danger"></span>
+                        </div>
+
+                        <!-- Phiếu xuất kho (optional) -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Phiếu xuất kho
+                                <span class="badge bg-secondary-subtle text-secondary border ms-1" style="font-size:.65rem;">tuỳ chọn</span>
+                            </label>
+                            <select id="deliveryNoteSelect" class="form-select" disabled>
+                                <option value="">(Chọn khách hàng trước)</option>
+                            </select>
+                            <div class="form-text">Để trống nếu tạo phiếu trả tự do (không từ phiếu xuất).</div>
                         </div>
 
                         <!-- Kho nhận -->
@@ -139,11 +174,19 @@
                             <span asp-validation-for="WarehouseId" class="small text-danger"></span>
                         </div>
 
-                        <!-- Ghi chú -->
+                        <!-- Chi phí phát sinh -->
                         <div class="mb-3">
+                            <label asp-for="AdditionalCost" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <input asp-for="AdditionalCost" id="additionalCostInput"
+                                   class="form-control" data-decimal="currency" min="0" placeholder="0"
+                                   value="@Model.AdditionalCost.DisplayCurrency()" />
+                            <div class="form-text">Vận chuyển, bồi thường... sẽ trừ vào tổng hoàn.</div>
+                        </div>
+
+                        <!-- Ghi chú -->
+                        <div class="mb-0">
                             <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <textarea asp-for="Note" class="form-control" rows="3" placeholder="Lý do trả hàng, ghi chú..."></textarea>
-                            <span asp-validation-for="Note" class="small text-danger"></span>
                         </div>
                     </div>
                     <div class="content-card-footer d-none d-lg-block">
@@ -160,42 +203,159 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script type="module">
-        // ── Thêm/xóa item ─────────────────────────────────────────────────────
+        import CustomerPicker from '/modules/CustomerPicker.js';
+
+        // ── CustomerPicker ────────────────────────────────────────────────────────
+        const pickerEl = document.getElementById('customerPicker');
+        const hiddenCustomerId = document.getElementById('hiddenCustomerId');
+        const hiddenDeliveryNoteId = document.getElementById('hiddenDeliveryNoteId');
+        const deliveryNoteSelect = document.getElementById('deliveryNoteSelect');
+
+        const customerPicker = new CustomerPicker(pickerEl);
+
+        // Nếu server trả về customerId đã chọn (ví dụ khi validation fail)
+        const initialCustomerId = hiddenCustomerId.value;
+        const initialCustomerName = pickerEl.dataset.name;
+        if (initialCustomerId && initialCustomerName) {
+            customerPicker.selectCustomer({ id: initialCustomerId, name: initialCustomerName, phone: '', address: '' });
+        }
+
+        pickerEl.addEventListener('select', async (e) => {
+            hiddenCustomerId.value = e.detail.customer.id;
+            hiddenDeliveryNoteId.value = '';
+            await loadDeliveryNotes(e.detail.customer.id);
+        });
+
+        pickerEl.addEventListener('remove', () => {
+            hiddenCustomerId.value = '';
+            hiddenDeliveryNoteId.value = '';
+            resetDeliveryNoteSelect();
+            clearItems();
+        });
+
+        // ── Delivery Note picker ──────────────────────────────────────────────────
+        async function loadDeliveryNotes(customerId) {
+            deliveryNoteSelect.disabled = true;
+            deliveryNoteSelect.innerHTML = '<option value="">Đang tải...</option>';
+
+            try {
+                const res = await fetch(`/CustomerReturn/GetDeliveryNotes?customerId=${customerId}`);
+                const notes = await res.json();
+
+                deliveryNoteSelect.innerHTML = '<option value="">(Không chọn — trả tự do)</option>';
+                notes.forEach(n => {
+                    const opt = document.createElement('option');
+                    opt.value = n.id;
+                    const date = new Date(n.deliveredOn).toLocaleDateString('vi-VN');
+                    opt.textContent = `${n.code} — ${date}`;
+                    deliveryNoteSelect.appendChild(opt);
+                });
+                deliveryNoteSelect.disabled = false;
+
+                // Khôi phục lại lựa chọn cũ (nếu validation fail)
+                const prevNoteId = hiddenDeliveryNoteId.value;
+                if (prevNoteId) deliveryNoteSelect.value = prevNoteId;
+            } catch {
+                deliveryNoteSelect.innerHTML = '<option value="">Lỗi tải dữ liệu</option>';
+            }
+        }
+
+        function resetDeliveryNoteSelect() {
+            deliveryNoteSelect.innerHTML = '<option value="">(Chọn khách hàng trước)</option>';
+            deliveryNoteSelect.disabled = true;
+        }
+
+        deliveryNoteSelect.addEventListener('change', async () => {
+            const noteId = deliveryNoteSelect.value;
+            hiddenDeliveryNoteId.value = noteId;
+
+            if (!noteId) {
+                // Trả tự do — giữ nguyên items
+                updateLoadBtn(false);
+                return;
+            }
+
+            updateLoadBtn(true);
+            // Auto-load items từ phiếu xuất
+            await loadItemsFromNote(noteId);
+        });
+
+        function updateLoadBtn(show) {
+            const btn = document.getElementById('btnLoadFromNote');
+            btn.style.setProperty('display', show ? 'inline-flex' : 'none', 'important');
+        }
+
+        // ── Load items từ phiếu xuất ─────────────────────────────────────────────
+        async function loadItemsFromNote(noteId) {
+            try {
+                const res = await fetch(`/CustomerReturn/GetDeliveryNoteItems?deliveryNoteId=${noteId}`);
+                const items = await res.json();
+                clearItems();
+                items.forEach(item => addItemRowFromNote(item));
+                updateFooter();
+            } catch {
+                alert('Không thể tải danh sách hàng từ phiếu xuất.');
+            }
+        }
+
+        document.getElementById('btnLoadFromNote').addEventListener('click', async () => {
+            const noteId = deliveryNoteSelect.value;
+            if (noteId) await loadItemsFromNote(noteId);
+        });
+
+        // ── Item table ────────────────────────────────────────────────────────────
         let rowIndex = @Model.Items.Count;
         const tbody = document.getElementById('itemsTableBody');
         const noMsg = document.getElementById('noItemsMessage');
+
+        function clearItems() {
+            tbody.innerHTML = '';
+            updateEmptyState();
+        }
 
         function updateEmptyState() {
             noMsg.style.display = tbody.rows.length === 0 ? 'block' : 'none';
         }
 
-        function addItemRow(productId, productName, deliveryNoteItemId = '', requestedQty = 1, unitPrice = 0) {
+        function fmtCurrency(val) {
+            return Number(val || 0).toLocaleString('vi-VN') + ' ₫';
+        }
+
+        function fmtQty(val) {
+            const n = Number(val || 0);
+            return n % 1 === 0 ? n.toLocaleString('vi-VN') : n.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+        }
+
+        /** Thêm row từ AJAX phiếu xuất (có AvailableQty, UnitPrice làm gợi ý) */
+        function addItemRowFromNote(item) {
             const i = rowIndex++;
+            const origPrice = item.unitPrice || 0;
+            const available = item.availableQty ?? (item.originalQty - item.alreadyReturnedQty);
             const tr = document.createElement('tr');
-            tr.id = `item-row-${i}`;
             tr.innerHTML = `
                 <td class="ps-3">
-                    <div class="fw-medium">${productName}</div>
-                    <input type="hidden" name="Items[${i}].ProductId" value="${productId}" />
-                    <input type="hidden" name="Items[${i}].DeliveryNoteItemId" value="${deliveryNoteItemId}" />
+                    <div class="fw-medium">${item.productName}</div>
+                    <input type="hidden" name="Items[${i}].ProductId" value="${item.productId}" />
+                    <input type="hidden" name="Items[${i}].DeliveryNoteItemId" value="${item.sourceItemId ?? ''}" />
+                    <input type="hidden" name="Items[${i}].OriginalUnitPrice" value="${origPrice}" class="item-orig-price" />
                 </td>
+                <td class="text-center text-muted small">${item.unit}</td>
+                <td class="text-end text-muted small">${fmtQty(item.originalQty)}</td>
+                <td class="text-end text-muted small">${fmtQty(item.alreadyReturnedQty)}</td>
+                <td class="text-end text-muted small fw-medium ${available > 0 ? 'text-success' : 'text-danger'}">${fmtQty(available)}</td>
                 <td class="text-end">
-                    <input name="Items[${i}].RequestedQuantity" value="${requestedQty}"
-                           class="form-control form-control-sm text-end item-requested-qty"
-                           data-decimal="quantity" min="0.001" placeholder="0" />
+                    <input name="Items[${i}].RequestedQuantity" value="${available > 0 ? available : ''}"
+                           class="form-control form-control-sm text-end item-req-qty"
+                           data-decimal="quantity" min="0.001" max="${available}" placeholder="0" />
                 </td>
+                <td class="text-end text-muted small">${origPrice > 0 ? fmtCurrency(origPrice) : '—'}</td>
                 <td class="text-end">
-                    <input name="Items[${i}].AcceptedQuantity" value="${requestedQty}"
-                           class="form-control form-control-sm text-end item-accepted-qty"
-                           data-decimal="quantity" min="0" placeholder="0" />
-                </td>
-                <td class="text-end">
-                    <input name="Items[${i}].UnitPrice" value="${unitPrice}"
-                           class="form-control form-control-sm text-end item-unit-price"
+                    <input name="Items[${i}].ReturnUnitPrice" value="${origPrice}"
+                           class="form-control form-control-sm text-end item-return-price"
                            data-decimal="currency" min="0" placeholder="0" />
                 </td>
-                <td class="text-end item-accepted-total text-muted small">—</td>
-                <td class="pe-3">
+                <td class="text-end item-subtotal text-muted small">—</td>
+                <td class="pe-2">
                     <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                         <i class="bi bi-trash"></i>
                     </button>
@@ -204,19 +364,98 @@
             updateEmptyState();
         }
 
+        /** Thêm row tự do (không từ phiếu xuất) */
+        function addFreeItemRow(productId = '', productName = 'Hàng hóa mới') {
+            const i = rowIndex++;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="ps-3">
+                    <input name="Items[${i}].ProductId" value="${productId}"
+                           class="form-control form-control-sm item-product-id" placeholder="ProductId..." />
+                    <input type="hidden" name="Items[${i}].DeliveryNoteItemId" value="" />
+                    <input type="hidden" name="Items[${i}].OriginalUnitPrice" value="" class="item-orig-price" />
+                </td>
+                <td class="text-center text-muted small">—</td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end">
+                    <input name="Items[${i}].RequestedQuantity" value=""
+                           class="form-control form-control-sm text-end item-req-qty"
+                           data-decimal="quantity" min="0.001" placeholder="0" />
+                </td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end">
+                    <input name="Items[${i}].ReturnUnitPrice" value=""
+                           class="form-control form-control-sm text-end item-return-price"
+                           data-decimal="currency" min="0" placeholder="0" />
+                </td>
+                <td class="text-end item-subtotal text-muted small">—</td>
+                <td class="pe-2">
+                    <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>`;
+            tbody.appendChild(tr);
+            updateEmptyState();
+        }
+
+        document.getElementById('btnAddFreeItem').addEventListener('click', () => addFreeItemRow());
+
         // Xóa item
         tbody.addEventListener('click', e => {
             const btn = e.target.closest('.btn-remove-item');
             if (btn) {
                 btn.closest('tr').remove();
                 updateEmptyState();
+                updateFooter();
             }
         });
 
-        // Nút thêm hàng thủ công
-        document.getElementById('btnAddItem').addEventListener('click', () => {
-            const name = prompt('Nhập tên hàng hóa (ProductId cần nhập thủ công):');
-            if (name) addItemRow('', name);
+        // Recalculate khi thay đổi giá / số lượng
+        tbody.addEventListener('input', e => {
+            if (e.target.matches('.item-req-qty, .item-return-price')) {
+                const row = e.target.closest('tr');
+                const qty = parseDecimal(row.querySelector('.item-req-qty')?.value);
+                const price = parseDecimal(row.querySelector('.item-return-price')?.value);
+                const sub = row.querySelector('.item-subtotal');
+                if (sub) sub.textContent = fmtCurrency(qty * price);
+                updateFooter();
+            }
         });
+
+        // ── Footer tính toán ─────────────────────────────────────────────────────
+        const additionalCostInput = document.getElementById('additionalCostInput');
+
+        function parseDecimal(str) {
+            if (!str) return 0;
+            return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+        }
+
+        function updateFooter() {
+            let total = 0;
+            tbody.querySelectorAll('tr').forEach(row => {
+                const qty = parseDecimal(row.querySelector('.item-req-qty')?.value);
+                const price = parseDecimal(row.querySelector('.item-return-price')?.value);
+                total += qty * price;
+            });
+
+            const addCost = parseDecimal(additionalCostInput.value);
+            const net = Math.max(0, total - addCost);
+
+            document.getElementById('totalReturnValue').textContent = fmtCurrency(total);
+            document.getElementById('additionalCostDisplay').textContent = fmtCurrency(addCost);
+            document.getElementById('netRefundAmount').textContent = fmtCurrency(net);
+        }
+
+        additionalCostInput.addEventListener('input', updateFooter);
+
+        // Khởi tạo footer
+        updateFooter();
+
+        // Nếu server có customerId sẵn (validation fail re-render)
+        if (initialCustomerId) {
+            loadDeliveryNotes(initialCustomerId);
+        }
     </script>
 }

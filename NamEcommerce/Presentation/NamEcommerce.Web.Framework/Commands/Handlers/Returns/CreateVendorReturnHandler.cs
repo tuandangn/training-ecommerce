@@ -30,13 +30,15 @@ public sealed class CreateVendorReturnHandler : IRequestHandler<CreateVendorRetu
             GoodsReceiptId = request.GoodsReceiptId,
             WarehouseId = request.WarehouseId,
             Note = request.Note,
+            AdditionalCost = request.AdditionalCost,
             Items = request.Items.Select(i => new CreateVendorReturnItemAppDto
             {
                 ProductId = i.ProductId,
                 GoodsReceiptItemId = i.GoodsReceiptItemId,
                 RequestedQuantity = i.RequestedQuantity,
                 AcceptedQuantity = i.AcceptedQuantity,
-                UnitCost = i.UnitCost
+                OriginalUnitCost = i.OriginalUnitCost,
+                ReturnUnitCost = i.ReturnUnitCost
             }).ToList()
         }, currentUser?.Id).ConfigureAwait(false);
 
