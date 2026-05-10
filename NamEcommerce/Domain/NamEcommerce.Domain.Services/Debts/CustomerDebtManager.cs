@@ -34,6 +34,32 @@ public sealed class CustomerDebtManager(
         return $"{datePrefix}-{(count + 1):D3}";
     }
 
+    public async Task<CustomerDebtDto> CreateInitialDebtAsync(CreateInitialCustomerDebtDto dto)
+    {
+        dto.Verify();
+
+        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
+
+        var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
+
+        var debt = new CustomerDebt(
+            code: code,
+            customerId: customer.Id,
+            customerName: customer.FullName,
+            totalAmount: dto.TotalAmount,
+            createdByUserId: dto.CreatedByUserId
+        )
+        {
+            CustomerAddress = customer.Address,
+            CustomerPhone = customer.PhoneNumber
+        };
+
+        debt.MarkCreated();
+        var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
+        return MapToDto(inserted);
+    }
+
     public async Task<CustomerDebtDto> CreateDebtFromDeliveryNoteAsync(CreateCustomerDebtDto dto)
     {
         dto.Verify();

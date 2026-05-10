@@ -19,10 +19,11 @@
  *   { id, name, picture, availableQty, categoryName }
  */
 export default class ProductBrowser {
-    // ── state ─────────────────────────────────────────────────────────────────
     #container;
     #onAdd;
     #options;
+
+    #pendingChange = false;
 
     #abortController = null;
 
@@ -33,11 +34,11 @@ export default class ProductBrowser {
     };
     #categories = [];
 
-    // ── defaults ──────────────────────────────────────────────────────────────
     static #defaults = {
         colClass: 'col-12 col-sm-6 col-md-4 col-lg-6 col-xl-4',
         categoryUrl: '/Category/Options',
         productSearchUrl: '/Product/Search',
+        purchase: false
     };
 
     /**
@@ -62,16 +63,11 @@ export default class ProductBrowser {
             this.#state.cid = initialData.cid;
         if (initialData.vid)
             this.#state.vid = initialData.vid;
-
-        if (initialData.itemClass)
-            this.#options.itemClass = initialData.itemClass;
     }
-
-    // ── public ────────────────────────────────────────────────────────────────
 
     async init() {
         this.#controlTemplate();
-        this.#bindKeywords();
+        this.#bindEvents();
         this.#categories = await this.#loadCategories();
         await this.#render();
     }
@@ -80,14 +76,26 @@ export default class ProductBrowser {
         this.#setState({ vid });
     }
 
-    #bindKeywords() {
+    #bindEvents() {
+        const input = this.#container.querySelector('.pb-search-input');
+
         const onChanged = debounce((e) => {
             this.#setState({ q: e.target.value.trim() });
         }, 400);
-        this.#container.querySelector('.pb-search-input').addEventListener('input', onChanged);
-    }
+        input.addEventListener('input', onChanged);
 
-    // ── render ────────────────────────────────────────────────────────────────
+        input.addEventListener('focus', () => {
+            if (this.#productSuggestionIsShown())
+                return;
+            this.#showProductSuggestions()
+        });
+
+        const collapse = this.#container.querySelector('.collapse');
+        collapse.addEventListener('shown.bs.collapse', event => {
+            if (this.#pendingChange)
+                this.#setState({});
+        });
+    }
 
     async #setState(patch) {
         this.#state = Object.assign({}, this.#state, patch);
@@ -95,6 +103,11 @@ export default class ProductBrowser {
     }
 
     async #render() {
+        if (!this.#productSuggestionIsShown()) {
+            this.#pendingChange = true;
+            return;
+        }
+        this.#pendingChange = false;
         this.#renderCategories();
         await this.#loadProducts();
     }
@@ -104,7 +117,7 @@ export default class ProductBrowser {
             <div class="accordion accordion-flush" id="accordionProductBrowser">
                 <div class="accordion-item">
                     <div class="accordion-header position-relative">
-                        <button class="accordion-button text-dark bg-white w-auto p-1 shadow-none position-absolute" style="top:-10px;right:-10px;" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProductBrowser" aria-expanded="true" aria-controls="collapseProductBrowser"></button>
+                        <button class="accordion-button text-dark bg-white w-auto p-1 shadow-none position-absolute collapsed" style="top:-10px;right:-10px;" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProductBrowser" aria-expanded="false" aria-controls="collapseProductBrowser"></button>
                         <div class="pb-search">
                             <label class="form-label small fw-bold text-muted text-uppercase d-block" for="pbSearchKeywords">Thêm hàng hóa</label>
                             <div class="input-group">
@@ -118,7 +131,7 @@ export default class ProductBrowser {
                     </div>
                 </div>
             </div>
-            <div id="collapseProductBrowser" class="accordion-collapse collapse show" aria-labelledby="headingProductBrowser" data-bs-parent="#accordionProductBrowser">
+            <div id="collapseProductBrowser" class="accordion-collapse collapse" aria-labelledby="headingProductBrowser" data-bs-parent="#accordionProductBrowser">
                 <div class="accordion-body p-0 mt-3">
                     <div class="pb-categories mb-3 d-flex flex-wrap gap-1">
                         <span class="text-muted small">Đang tải danh mục...</span>
@@ -129,7 +142,17 @@ export default class ProductBrowser {
         `;
     }
 
-    // ── categories ────────────────────────────────────────────────────────────
+    #showProductSuggestions() {
+        const collapse = this.#container.querySelector('.collapse');
+        const bsCollapse = new bootstrap.Collapse(collapse, {
+            toggle: false
+        });
+        bsCollapse.show();
+    }
+    #productSuggestionIsShown() {
+        const collapse = this.#container.querySelector('.collapse');
+        return collapse.classList.contains('show');
+    }
 
     async #loadCategories() {
         try {
@@ -160,8 +183,6 @@ export default class ProductBrowser {
         });
         return btn;
     }
-
-    // ── products ──────────────────────────────────────────────────────────────
 
     async #loadProducts() {
         this.#abortController?.abort();
@@ -197,33 +218,44 @@ export default class ProductBrowser {
 
         grid.innerHTML = '';
         const row = document.createElement('div');
-        row.className = 'row g-2';
+        row.className = 'row g-2 pb-1';
 
         products.forEach(p => {
+            const isDisabled = !this.#isValidProduct(p);
             const col = document.createElement('div');
-            col.className = this.#options.itemClass || this.#options.colClass;
+            col.className = this.#options.colClass;
 
             const picHtml = p.picture
                 ? `<img src="${_esc(p.picture)}" class="pb-product-img" alt="${_esc(p.name)}" />`
                 : `<div class="pb-product-img-placeholder"><i class="bi bi-box-seam text-muted fs-4"></i></div>`;
 
-            const qtyHtml = p.availableQty > 0
+            let vendorInfoHtml = '';
+            if (this.#options.purchase) {
+                if (p.vendorCount == 0) {
+                    vendorInfoHtml = `<div class="small text-danger text-decoration-underline">Không có NCC</div>`;
+                } else {
+                    vendorInfoHtml = `<div class="small text-muted"><i class="bi bi-truck me-1"></i>${p.vendorCount} NCC</div>`;
+                }
+            }
+
+            let qtyHtml = p.availableQty > 0
                 ? `<span class="text-success fw-medium">${DecimalFields.formatQuantity ? DecimalFields.formatQuantity(p.availableQty) : p.availableQty}</span>`
                 : `<span class="text-muted">0</span>`;
+            qtyHtml = '<div class="pb-product-stock small"><i class="bi bi-boxes me-1 text-muted"></i>Tồn:' + qtyHtml + '</div>';
 
             const catHtml = p.categoryName
                 ? `<div class="pb-product-category text-truncate">${_esc(p.categoryName)}</div>`
                 : '';
 
             col.innerHTML = `
-                <div class="pb-product-card">
+                <div class="pb-product-card ${isDisabled ? 'bg-light' : ''}">
                     <div class="pb-product-thumb">${picHtml}</div>
                     <div class="pb-product-info">
-                        <div class="pb-product-name fw-medium text-truncate" title="${_esc(p.name)}">${_esc(p.name)}</div>
+                        <div class="pb-product-name fw-medium text-truncate ${isDisabled ? 'text-muted' : ''}" title="${_esc(p.name)}">${_esc(p.name)}</div>
                         ${catHtml}
-                        <div class="pb-product-stock small"><i class="bi bi-boxes me-1 text-muted"></i>Tồn: ${qtyHtml}</div>
+                        ${this.#options.purchase ? vendorInfoHtml : qtyHtml}
                     </div>
-                    <button type="button" class="pb-add-btn btn btn-sm btn-outline-primary" title="Thêm vào phiếu">
+                    <button type="button" class="pb-add-btn btn btn-sm btn-outline-primary ${isDisabled ? 'd-none' : ''}" title="Thêm vào phiếu">
                         <i class="bi bi-plus-lg"></i>
                     </button>
                 </div>`;
@@ -235,7 +267,12 @@ export default class ProductBrowser {
         grid.appendChild(row);
     }
 
-    // ── helpers ───────────────────────────────────────────────────────────────
+    #isValidProduct(product) {
+        if (this.#options.purchase) {
+            return product.vendorCount > 0;
+        }
+        return product.availableQty > 0;
+    }
 
     #setLoading(on) {
         this.#container.querySelector('.pb-spinner')?.classList.toggle('d-none', !on);
@@ -243,7 +280,6 @@ export default class ProductBrowser {
     }
 }
 
-// private module-level helper (not exported)
 function _esc(str) {
     return String(str ?? '')
         .replace(/&/g, '&amp;')

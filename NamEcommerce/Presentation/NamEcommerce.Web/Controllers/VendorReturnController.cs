@@ -26,9 +26,25 @@ public sealed class VendorReturnController : BaseAuthorizedController
         return View(model);
     }
 
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create(
+        Guid? goodsReceiptId = null,
+        Guid? vendorId = null,
+        string? vendorName = null,
+        string? goodsReceiptCode = null)
     {
-        var model = await _vendorReturnModelFactory.PrepareCreateVendorReturnModel();
+        CreateVendorReturnModel? prefilledModel = null;
+        if (goodsReceiptId.HasValue || vendorId.HasValue)
+        {
+            prefilledModel = new CreateVendorReturnModel
+            {
+                GoodsReceiptId = goodsReceiptId,
+                GoodsReceiptDisplayLabel = goodsReceiptCode,
+                VendorId = vendorId,
+                VendorDisplayName = vendorName
+            };
+        }
+
+        var model = await _vendorReturnModelFactory.PrepareCreateVendorReturnModel(prefilledModel);
         return View(model);
     }
 
@@ -174,5 +190,45 @@ public sealed class VendorReturnController : BaseAuthorizedController
             ExcludeReturnId = excludeReturnId
         });
         return Json(items);
+    }
+
+    /// <summary>
+    /// GET /VendorReturn/GetByGoodsReceipt?goodsReceiptId=
+    /// Trả về danh sách phiếu trả NCC liên kết với phiếu nhập kho — dùng cho section "Trả hàng NCC" trên Details.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetByGoodsReceipt(Guid goodsReceiptId)
+    {
+        var result = await _mediator.Send(new GetVendorReturnListQuery
+        {
+            GoodsReceiptId = goodsReceiptId,
+            PageIndex = 0,
+            PageSize = 100
+        });
+        return Json(result.Data.Items.Select(r => new
+        {
+            id = r.Id,
+            code = r.Code,
+            status = r.Status,
+            statusLabel = r.Status switch
+            {
+                0 => "Bản nháp",
+                1 => "Đang kiểm hàng",
+                2 => "Đã xác nhận",
+                3 => "Đã hủy",
+                _ => "?"
+            },
+            statusColor = r.Status switch
+            {
+                0 => "secondary",
+                1 => "warning",
+                2 => "success",
+                3 => "danger",
+                _ => "secondary"
+            },
+            returnDate = r.ReturnDate.ToLocalTime().ToString("dd/MM/yyyy"),
+            totalAmount = r.TotalAmount,
+            itemCount = r.ItemCount
+        }));
     }
 }

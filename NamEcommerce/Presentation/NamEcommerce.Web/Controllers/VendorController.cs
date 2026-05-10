@@ -58,7 +58,8 @@ public sealed class VendorController : BaseAuthorizedController
             Name = model.Name!,
             PhoneNumber = model.PhoneNumber!,
             Address = model.Address,
-            DisplayOrder = model.DisplayOrder
+            DisplayOrder = model.DisplayOrder,
+            InitialDebt = model.InitialDebt
         });
         if (!createVendorResult.Success)
         {

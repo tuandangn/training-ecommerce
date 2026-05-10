@@ -1,3 +1,5 @@
+using NamEcommerce.Web.Contracts.Models.Common;
+
 namespace NamEcommerce.Web.Contracts.Models.Catalog;
 
 [Serializable]
@@ -10,7 +12,12 @@ public sealed record ProductForOrderModel(Guid Id)
     public decimal QuantityReserved { get; set; }
     public decimal QuantityAvailable { get; set; }
 
-    public IEnumerable<Guid> AvailableWarehouseIds { get; set; } = [];
     public int VendorCount { get; set; }
     public Guid? FirstVendorId { get; set; }
+
+    public string? UnitMeasurement { get; set; }
+    public string? CategoryName { get; set; }
+
+    public IEnumerable<EntityOptionListModel.EntityOptionModel> AvailableWarehouses { get; set; } = [];
+    public IEnumerable<EntityOptionListModel.EntityOptionModel> AvailableVendors { get; set; } = [];
 }

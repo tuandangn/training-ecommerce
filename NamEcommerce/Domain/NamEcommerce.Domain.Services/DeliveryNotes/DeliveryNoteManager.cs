@@ -1,15 +1,18 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
+using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.Returns;
 
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
 
@@ -18,7 +21,9 @@ public sealed class DeliveryNoteManager(
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<Order> orderReader,
     IRepository<Order> orderRepository,
-    IInventoryStockManager stockManager) : IDeliveryNoteManager
+    IInventoryStockManager stockManager,
+    IEntityDataReader<CustomerReturn> customerReturnReader,
+    ICustomerReturnManager customerReturnManager) : IDeliveryNoteManager
 {
     private Task<string> GenerateCodeAsync()
     {
@@ -198,6 +203,25 @@ public sealed class DeliveryNoteManager(
         var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (deliveryNote is null)
             throw new DeliveryNoteNotFoundException(id);
+
+        // E3: Kiểm tra các phiếu trả hàng liên kết
+        var linkedReturns = customerReturnReader.DataSource
+            .Where(r => r.DeliveryNoteId == id)
+            .Select(r => new { r.Id, r.Status })
+            .ToList();
+
+        // Block nếu có phiếu trả đã Confirmed
+        if (linkedReturns.Any(r => r.Status == CustomerReturnStatus.Confirmed))
+            throw new DeliveryNoteHasConfirmedReturnsException(id);
+
+        // Auto-cancel phiếu trả ở Draft/Inspecting
+        var cancellableReturnIds = linkedReturns
+            .Where(r => r.Status == CustomerReturnStatus.Draft || r.Status == CustomerReturnStatus.Inspecting)
+            .Select(r => r.Id)
+            .ToList();
+
+        foreach (var returnId in cancellableReturnIds)
+            await customerReturnManager.CancelAsync(returnId).ConfigureAwait(false);
 
         bool wasConfirmed = deliveryNote.Status == DeliveryNoteStatus.Confirmed || deliveryNote.Status == DeliveryNoteStatus.Delivering;
 

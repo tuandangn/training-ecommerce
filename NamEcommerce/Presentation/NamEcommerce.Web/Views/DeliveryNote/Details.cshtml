@@ -50,8 +50,17 @@
                 <i class="bi bi-x-circle me-1"></i> Hủy phiếu
             </button>
         }
-        
+
         <div class="vr mx-1"></div>
+
+        <a asp-controller="CustomerReturn" asp-action="Create"
+           asp-route-deliveryNoteId="@Model.Id"
+           asp-route-customerId="@Model.CustomerId"
+           asp-route-customerName="@Model.CustomerName"
+           asp-route-deliveryNoteCode="@Model.Code"
+           class="btn btn-outline-secondary d-flex align-items-center">
+            <i class="bi bi-arrow-return-left me-2"></i> Tạo phiếu trả
+        </a>
 
         <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-primary d-flex align-items-center">
             <i class="bi bi-printer me-2"></i> In phiếu
@@ -188,6 +197,43 @@
 
     <!-- Cột phải: Danh sách hàng hóa (col-md-8) -->
     <div class="col-lg-8 order-lg-1">
+        <!-- Khách trả hàng -->
+        <div class="content-card mb-4" id="customerReturnsCard" data-delivery-note-id="@Model.Id">
+            <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0 d-flex align-items-center justify-content-between">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-arrow-return-left me-2 text-warning"></i>Khách trả hàng</h5>
+                <a asp-controller="CustomerReturn" asp-action="Create"
+                   asp-route-deliveryNoteId="@Model.Id"
+                   asp-route-customerId="@Model.CustomerId"
+                   asp-route-customerName="@Model.CustomerName"
+                   asp-route-deliveryNoteCode="@Model.Code"
+                   class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div id="customerReturnsLoading" class="px-4 py-3 text-center text-muted small">
+                    <span class="spinner-border spinner-border-sm me-1"></span>Đang tải...
+                </div>
+                <div id="customerReturnsEmpty" class="d-none px-4 py-3 text-center text-muted small fst-italic">
+                    — Chưa có phiếu trả hàng nào liên kết
+                </div>
+                <div id="customerReturnsList" class="d-none">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Mã phiếu</th>
+                                <th>Ngày trả</th>
+                                <th class="text-center">Trạng thái</th>
+                                <th class="text-end">Số mặt hàng</th>
+                                <th class="text-end pe-4">Tổng giá trị</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerReturnsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div class="content-card h-100 d-flex flex-column">
             <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
                 <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Danh sách hàng hóa</h5>
@@ -438,6 +484,43 @@
                     }
                 });
             }
+
+            // ── Tải danh sách phiếu trả hàng ────────────────────────────────
+            (function loadCustomerReturns() {
+                const card = document.getElementById('customerReturnsCard');
+                if (!card) return;
+                const noteId = card.dataset.deliveryNoteId;
+                const loadingEl = document.getElementById('customerReturnsLoading');
+                const emptyEl = document.getElementById('customerReturnsEmpty');
+                const listEl = document.getElementById('customerReturnsList');
+                const tbody = document.getElementById('customerReturnsTableBody');
+
+                fetch('/CustomerReturn/GetByDeliveryNote?deliveryNoteId=' + noteId)
+                    .then(r => r.json())
+                    .then(function(returns) {
+                        loadingEl.classList.add('d-none');
+                        if (!returns || returns.length === 0) {
+                            emptyEl.classList.remove('d-none');
+                            return;
+                        }
+                        returns.forEach(function(ret) {
+                            var tr = document.createElement('tr');
+                            tr.innerHTML =
+                                '<td class="ps-4"><a href="/CustomerReturn/Details/' + ret.id + '" class="fw-medium text-decoration-none">' + ret.code + '</a></td>' +
+                                '<td class="text-muted small">' + ret.returnDate + '</td>' +
+                                '<td class="text-center"><span class="badge bg-' + ret.statusColor + '">' + ret.statusLabel + '</span></td>' +
+                                '<td class="text-end text-muted small">' + ret.itemCount + '</td>' +
+                                '<td class="text-end pe-4 fw-semibold">' + ret.totalAmount.toLocaleString('vi-VN') + 'đ</td>';
+                            tbody.appendChild(tr);
+                        });
+                        listEl.classList.remove('d-none');
+                    })
+                    .catch(function() {
+                        loadingEl.classList.add('d-none');
+                        emptyEl.textContent = 'Không thể tải dữ liệu phiếu trả.';
+                        emptyEl.classList.remove('d-none');
+                    });
+            })();
         });
     </script>
 }

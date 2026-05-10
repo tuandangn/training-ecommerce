@@ -108,6 +108,26 @@ public sealed record CreateVendorDebtFromGoodsReceiptDto
     }
 }
 
+/// <summary>
+/// Tạo công nợ ban đầu (số dư đầu kỳ) cho nhà cung cấp — không gắn PO hay phiếu nhập.
+/// Dùng khi tạo mới NCC mà đã có sẵn nợ cũ.
+/// </summary>
+[Serializable]
+public sealed record CreateInitialVendorDebtDto
+{
+    public required Guid VendorId { get; init; }
+    public required decimal TotalAmount { get; init; }
+    public Guid? CreatedByUserId { get; init; }
+
+    public void Verify()
+    {
+        if (VendorId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.VendorRequired");
+        if (TotalAmount <= 0)
+            throw new NamEcommerceDomainException("Error.VendorDebtTotalAmountMustBePositive");
+    }
+}
+
 [Serializable]
 public sealed record VendorPaymentDto
 {

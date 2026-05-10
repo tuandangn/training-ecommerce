@@ -50,6 +50,14 @@ public sealed record CreatePurchaseOrderAppDto : BasePurchaseOrderAppDto
 {
     public Guid? CreatedByUserId { get; set; }
     public IList<CreatePurchaseOrderItemAppDto> Items { get; init; } = [];
+
+    public override (bool valid, string? errorMessage) Validate()
+    {
+        if (Items.Count == 0)
+            return (false, "Error.PurchaseOrderItemRequired");
+
+        return base.Validate();
+    }
 }
 [Serializable]
 public sealed record CreatePurchaseOrderResultAppDto

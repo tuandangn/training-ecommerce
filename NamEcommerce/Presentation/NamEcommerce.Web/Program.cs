@@ -221,7 +221,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         config.RegisterServicesFromAssemblyContaining<CookieAuthenticateUserHandler>();
     });
 
-    services.AddLocalization(options => options.ResourcesPath = "Resources");
+    services.AddLocalization();
 
     services.AddAuthentication(opts =>
         opts.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme

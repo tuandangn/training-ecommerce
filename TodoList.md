@@ -159,3 +159,53 @@ Update-Database
 Add-Migration UpdateReturnsAddPriceAndDeliveryNoteRef
 Update-Database
 ```
+
+---
+
+## Phase E — Returns UX & Initial Debt
+
+### E1 — Công nợ ban đầu khi tạo Vendor ✅ Done (2026-05-10)
+
+- [x] `CreateInitialVendorDebtDto` trong `VendorDebtDtos.cs`
+- [x] `VendorDebt` entity: thêm constructor 5-tham số (không gắn PO/GR)
+- [x] `IVendorDebtManager`: thêm `CreateInitialDebtAsync`
+- [x] `VendorDebtManager`: implement `CreateInitialDebtAsync`
+- [x] `CreateVendorCommand`: thêm `InitialDebt decimal?`
+- [x] `CreateVendorHandler`: inject `IVendorDebtManager`, gọi sau khi tạo Vendor thành công
+- [x] `CreateVendorModel`: thêm `InitialDebt decimal?`
+- [x] `VendorController.Create`: map `InitialDebt`
+- [x] `Vendor/Create.cshtml`: thêm field "Công nợ ban đầu" trong tab Cài đặt
+
+### E2 — Công nợ ban đầu khi tạo Customer ✅ Done (2026-05-10)
+
+- [x] `CreateInitialCustomerDebtDto` trong `DebtDtos.cs`
+- [x] `CustomerDebt` entity: thêm constructor 5-tham số (không gắn DeliveryNote/Order)
+- [x] `ICustomerDebtManager`: thêm `CreateInitialDebtAsync`
+- [x] `CustomerDebtManager`: implement `CreateInitialDebtAsync`
+- [x] `CreateCustomerCommand`: thêm `InitialDebt decimal?`
+- [x] `CreateCustomerHandler`: inject `ICustomerDebtManager`, gọi sau khi tạo Customer thành công
+- [x] `CreateCustomerModel`: thêm `InitialDebt decimal?`
+- [x] `CustomerController.Create`: map `InitialDebt`
+- [x] `Customer/Create.cshtml`: thêm field "Công nợ ban đầu"
+
+### E3 — Cancel protection cho DeliveryNote/GoodsReceipt (Approach 2)
+
+> Block cancel nếu có Confirmed returns. Auto-cancel Draft/Inspecting returns khi parent bị cancel.
+
+- [ ] `DeliveryNoteManager.CancelAsync`: kiểm tra Confirmed CustomerReturns → block; auto-cancel Draft/Inspecting CustomerReturns
+- [ ] `GoodsReceiptManager.CancelAsync`: tương tự cho VendorReturns
+
+### E4 — Return info trên DeliveryNote/GoodsReceipt Details
+
+> Cột "Đã trả" trong items table (chỉ khi có returns). Section "Khách trả hàng" / "Trả hàng NCC".
+
+- [ ] Queries + Handlers để load linked returns
+- [ ] Update `DeliveryNote/Details.cshtml`
+- [ ] Update `GoodsReceipt/Details.cshtml`
+
+### E5 — Quick-create return button trên Details pages
+
+- [ ] `CustomerReturn/Create` GET nhận `deliveryNoteId` param → pre-fill form
+- [ ] `VendorReturn/Create` GET nhận `goodsReceiptId` param → pre-fill form
+- [ ] Button "Tạo phiếu trả" trên `DeliveryNote/Details.cshtml`
+- [ ] Button "Tạo phiếu trả NCC" trên `GoodsReceipt/Details.cshtml`

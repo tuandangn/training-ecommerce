@@ -151,6 +151,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             Code = deliveryNote.Code,
             OrderId = deliveryNote.OrderId,
             OrderCode = order?.Code ?? string.Empty,
+            CustomerId = deliveryNote.CustomerId,
             CustomerName = deliveryNote.CustomerName,
             CustomerPhone = deliveryNote.CustomerPhone,
             CustomerAddress = deliveryNote.CustomerAddress,

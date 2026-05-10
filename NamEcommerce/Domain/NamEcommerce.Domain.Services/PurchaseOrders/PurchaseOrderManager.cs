@@ -59,6 +59,15 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (vendor is null)
             throw new VendorIsNotFoundException(dto.VendorId);
 
+        var products = await _productDataReader.GetByIdsAsync(dto.Items.Select(item => item.ProductId).OfType<Guid>()).ConfigureAwait(false);
+        var candidateVendorIds = products.SelectMany(p => p.ProductVendors).Select(v => v.VendorId).Distinct().ToList();
+        var validVendorIds = candidateVendorIds.Where(vendorId => products.All(p => p.ProductVendors.Any(v => v.VendorId == vendorId))).ToList();
+        if (validVendorIds.Count == 0)
+            throw new PurchaseOrderNoVendorsAppropriateException();
+
+        if (!validVendorIds.Contains(dto.VendorId))
+            throw new PurchaseOrderVendorIsNotAppropriateException();
+
         if (dto.WarehouseId.HasValue)
         {
             var warehouse = await _warehouseOrderDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);

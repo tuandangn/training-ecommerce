@@ -149,6 +149,31 @@ public sealed record CreateVendorDebtResultAppDto
 }
 
 [Serializable]
+public sealed record CreateInitialVendorDebtAppDto
+{
+    public required Guid VendorId { get; init; }
+    public required decimal TotalAmount { get; init; }
+    public Guid? CreatedByUserId { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (VendorId == Guid.Empty)
+            return (false, "Error.VendorRequired");
+        if (TotalAmount <= 0)
+            return (false, "Error.VendorDebtTotalAmountMustBePositive");
+
+        return (true, string.Empty);
+    }
+}
+[Serializable]
+public sealed record CreateInitialVendorDebtResultAppDto
+{
+    public bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+    public VendorDebtAppDto? Debt { get; init; }
+}
+
+[Serializable]
 public sealed record RecordVendorPaymentResultAppDto
 {
     public bool Success { get; init; }

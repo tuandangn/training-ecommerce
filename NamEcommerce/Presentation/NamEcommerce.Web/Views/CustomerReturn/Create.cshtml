@@ -213,7 +213,11 @@
 
         const customerPicker = new CustomerPicker(pickerEl);
 
-        // Nếu server trả về customerId đã chọn (ví dụ khi validation fail)
+        // Lưu deliveryNoteId được pre-fill (từ URL params hoặc validation fail)
+        // TRƯỚC khi selectCustomer() có thể clear nó qua 'select' event.
+        let pendingDeliveryNoteId = hiddenDeliveryNoteId.value || null;
+
+        // Nếu server trả về customerId đã chọn (ví dụ khi validation fail hoặc E5 pre-fill)
         const initialCustomerId = hiddenCustomerId.value;
         const initialCustomerName = pickerEl.dataset.name;
         if (initialCustomerId && initialCustomerName) {
@@ -252,9 +256,17 @@
                 });
                 deliveryNoteSelect.disabled = false;
 
-                // Khôi phục lại lựa chọn cũ (nếu validation fail)
-                const prevNoteId = hiddenDeliveryNoteId.value;
-                if (prevNoteId) deliveryNoteSelect.value = prevNoteId;
+                // Ưu tiên: pendingDeliveryNoteId (pre-fill từ URL params hoặc validation fail lần đầu)
+                // Fallback: hiddenDeliveryNoteId.value (validation fail sau khi user đã chọn)
+                const noteToSelect = pendingDeliveryNoteId || hiddenDeliveryNoteId.value;
+                pendingDeliveryNoteId = null; // consume — chỉ dùng 1 lần
+
+                if (noteToSelect && deliveryNoteSelect.querySelector(`option[value="${noteToSelect}"]`)) {
+                    deliveryNoteSelect.value = noteToSelect;
+                    hiddenDeliveryNoteId.value = noteToSelect;
+                    updateLoadBtn(true);
+                    await loadItemsFromNote(noteToSelect);
+                }
             } catch {
                 deliveryNoteSelect.innerHTML = '<option value="">Lỗi tải dữ liệu</option>';
             }

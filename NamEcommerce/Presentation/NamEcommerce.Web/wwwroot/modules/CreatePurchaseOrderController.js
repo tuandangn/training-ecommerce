@@ -1,5 +1,6 @@
 import { toast, confirm } from "/modules/modals.js";
 import { apiGet } from "/modules/ajax-helper.js";
+import { ProductPriceController } from "/modules/ProductPricePicker.js";
 import VendorPicker from "/modules/VendorPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
@@ -36,7 +37,7 @@ class PurchaseOrderItem {
         return this.appropriateVendors.map(v => v.id);
     }
     get appropriateVendors() {
-        return this.productInfo?.availableVendors.map(v => ({ id: v.key, name: v.value })) ?? [];
+        return this.productInfo?.availableVendors?.map(v => ({ id: v.key, name: v.value })) ?? [];
     }
 
     get lineTotal() {
@@ -64,15 +65,21 @@ class PurchaseOrderState {
 
 export default class CreatePurchaseOrderController {
     #state;
-    #addItemController = new AddItemController();
+    #addItemController;
 
     #browser = null;
     #productPicker;
     #vendorPicker;
 
     #activeRowIndex = null;
+    #initialized = false;
+
+    #priceController;
 
     constructor() {
+        this.#priceController = new ProductPriceController('/PurchaseOrder/RecentPurchasePrices?productId=');
+        this.#addItemController = new AddItemController();
+
         this.#bindProductPicker();
         this.#bindAddItemForm();
 
@@ -86,20 +93,27 @@ export default class CreatePurchaseOrderController {
         if (browserEl) {
             this.#browser = new ProductBrowser(
                 browserEl,
-                (product) => this.#addOrIncrementItem(product)
+                (product) => this.#addOrIncrementItem(product),
+                { purchase: true }
             );
             this.#browser.init();
         }
 
         this.#bindEvents();
 
-        this.#state = Object.assign(new PurchaseOrderState(), {
+        if (initialVendor)
+            this.#productPicker.setVendor(initialVendor.id, initialVendor.name);
+
+        this.#state = Object.assign(new PurchaseOrderState());
+        this.#setState({
             vendor: initialVendor,
             items: initialItems,
             warehouse: initialWarehouse,
             expectedDate: initialExpectedDate,
             placedDate: initialPlacedDate
         });
+
+        this.#initialized = true;
     }
 
     #bindEvents() {
@@ -117,16 +131,42 @@ export default class CreatePurchaseOrderController {
 
     #setState(patch) {
         Object.assign(this.#state, patch);
+        if (this.#shouldRemoveVendor()) {
+            this.#state.vendor = null;
+        }
         this.#render();
     }
 
+    #shouldRemoveVendor() {
+        if (this.#state.items.length == 0)
+            return false;
+
+        if (!this.#state.vendor)
+            return false;
+
+        const commonVendors = this.#getCommonVendorOfItems(this.#state.items);
+        if (commonVendors.length == 0)
+            return true;
+        if (commonVendors.length == 1 && commonVendors[0].id != this.#state.vendor.id)
+            return true;
+        if (commonVendors.length > 1 && commonVendors.findIndex(v => v.id === this.#state.vendor.id) == -1)
+            return true;
+
+        return false;
+    }
+
     #render() {
-        console.count('render');
         this.#renderSummary();
         this.#renderVendor();
         this.#renderItems();
         this.#highlightRow();
         this.#validateForm();
+
+        const commonVendors = this.#getCommonVendorOfItems(this.#state.items);
+        const warningEl = document.querySelector('.notHasAppropriatedVendorWarning');
+        if (warningEl) {
+            warningEl.classList.toggle('d-none', this.#state.items.length == 0 || commonVendors.length > 0);
+        }
     }
 
     #renderSummary() {
@@ -136,22 +176,34 @@ export default class CreatePurchaseOrderController {
         const hasItems = this.#state.items.length > 0;
         getEl('noItemsMessage').style.display = hasItems ? 'none' : 'block';
         //getEl('tableFooter').classList.toggle('d-none', !hasItems);
+        getEl('grandTotalHint').textContent = this.#state.total > 0 ? SoBangChu.docSoTien(this.#state.total) : '';
     }
 
     #renderVendor() {
         const { vendor } = this.#state;
 
-        const vendorId = getEl('VendorId');
-        const oldValue = vendorId.value;
+        const vendorElement = getEl('VendorId');
+        const oldValue = vendorElement.value;
 
-        vendorId.value = vendor?.id ?? '';
-        if (oldValue != vendorId.value) {
-            vendorId.dispatchEvent(new CustomEvent('change'));
+        vendorElement.value = vendor?.id ?? '';
+        if (oldValue != vendorElement.value) {
+            vendorElement.dispatchEvent(new CustomEvent('change'));
         }
 
         if (this.#vendorPicker) {
             const isServerLocked = getEl('vendorPicker')?.dataset.locked === 'true';
             this.#vendorPicker.setLocked(isServerLocked);
+
+            const commonVendors = this.#getCommonVendorOfItems(this.#state.items);
+            if (this.#state.items.length > 0)
+                this.#vendorPicker.setLimitVendorIds(commonVendors.map(v => v.id));
+            else
+                this.#vendorPicker.setLimitVendorIds(null);
+
+            const currentVendor = this.#vendorPicker.value;
+            if (currentVendor?.id != vendor?.id) {
+                this.#vendorPicker.updateValue(vendor);
+            }
         }
     }
 
@@ -162,30 +214,26 @@ export default class CreatePurchaseOrderController {
         this.#state.items.forEach((item, index) => {
             this.#buildItemRow(container, item, index);
         });
-
-        const commonVendors = this.#getCommonVendorOfItems(this.#state.items);
-        const warningEl = document.querySelector('.notHasAppropriatedVendorWarning');
-        if (warningEl) {
-            warningEl.classList.toggle('d-none', this.#state.items.length == 0 || commonVendors.length > 0);
-        }
-
-        if (this.#state.items.length > 0)
-            this.#vendorPicker.setLimitVendorIds(commonVendors.map(v => v.id));
-        else
-            this.#vendorPicker.setLimitVendorIds(null);
     }
 
     #getItems() {
         const container = getEl('itemsTableBody');
         const rows = Array.from(container.querySelectorAll('tr'));
         return rows.map(row => {
-            const purchaseOrderItem = new PurchaseOrderItem({}, 0, 0);
-
-            purchaseOrderItem.productInfo.id = row.querySelector('.product-id').value;
-            purchaseOrderItem.productInfo.name = row.querySelector('.product-name').textContent;
-            purchaseOrderItem.productInfo.picture = row.querySelector('.product-picture')?.src;
-            purchaseOrderItem.quantity = parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-qty').value, 2), 0);
-            purchaseOrderItem.unitCost = parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-price').value, 0), 0);
+            let availableVendors = [];
+            const availableVendorEl = row.querySelector('.available-vendors');
+            if (availableVendorEl) {
+                availableVendors = JSON.parse(availableVendorEl.textContent).map(v => ({ key: v.id, value: v.name }));
+            }
+            const productInfo = {
+                id: row.querySelector('.product-id').value,
+                name: row.querySelector('.product-name').textContent,
+                picture: row.querySelector('.product-picture')?.src,
+                availableVendors
+            };
+            const quantity = parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-qty').value, 2), 0);
+            const unitCost = parseNumber(DecimalFields.stripFormatting(row.querySelector('.row-price').value, 0), 0);
+            const purchaseOrderItem = new PurchaseOrderItem(new ProductInfo(productInfo), quantity, unitCost);
 
             return purchaseOrderItem;
         });
@@ -241,6 +289,7 @@ export default class CreatePurchaseOrderController {
                     class="row-price no-additional-element" value="${unitCost}"
                     data-val="true" autocomplete="off"
                     data-val-required="Vui lòng nhập đơn giá"
+                    data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1" 
                     data-val-number="Đơn giá phải là số" />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="Items[${index}].UnitCost"
@@ -259,23 +308,7 @@ export default class CreatePurchaseOrderController {
         // Events
         row.querySelector('button').addEventListener('click', () => {
             const items = this.#state.items.filter((_, i) => i !== index);
-            this.#state.items = items;
-
-            const commonVendors = this.#getCommonVendorOfItems(items);
-            if (commonVendors.length == 1) {
-                if (commonVendors[0].id == this.#state.vendor?.id) {
-                    this.#setState({ items });
-                } else {
-                    const selectedVendor = new Vendor({ id: commonVendors[0].id, name: commonVendors[0].name });
-                    this.#vendorPicker.selectVendor(selectedVendor);
-                }
-            } else {
-                if (items.length > 1 && commonVendors.find(v => v.id === this.#state.vendor?.id))
-                    this.#setState({ items });
-                else
-                    this.#vendorPicker.removeVendor();
-            }
-
+            this.#setState({ items });
             this.#dispatch('purchaseOrder:itemRemoved');
         });
 
@@ -286,29 +319,15 @@ export default class CreatePurchaseOrderController {
         const inputQtyChangeDebounced = debounce((e) => {
             const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
             this.#updateItem(index, { quantity: newQuantity });
-        }, 2000, () => {
-            if (inputQuantity._decimalFormatting)
-                return false;
-
-            var quantityRaw = DecimalFields.stripFormatting(inputQuantity.value, 2)
-            return DecimalFields.isValidDecimal(inputQuantity, quantityRaw);
-        });
+        }, 1000);
         inputQuantity.addEventListener('input', inputQtyChangeDebounced);
-        inputQuantity.addEventListener('change', inputQtyChangeDebounced.flush);
 
         const inputUnitCost = row.querySelector('.row-price');
         const inputUnitCostChangeDebounced = debounce((e) => {
             const newUnitCost = parseNumber(DecimalFields.stripFormatting(inputUnitCost.value, 0), 0);
             this.#updateItem(index, { unitCost: newUnitCost });
-        }, 3000, () => {
-            if (inputUnitCost._decimalFormatting)
-                return false;
-
-            var unitCostRaw = DecimalFields.stripFormatting(inputUnitCost.value)
-            return DecimalFields.isValidDecimal(inputUnitCost, unitCostRaw);
-        });
+        }, 1000);
         inputUnitCost.addEventListener('input', inputUnitCostChangeDebounced);
-        inputUnitCost.addEventListener('change', inputUnitCostChangeDebounced.flush);
     }
 
     #updateItem(index, patch) {
@@ -318,7 +337,7 @@ export default class CreatePurchaseOrderController {
         this.#setState({ items });
     }
 
-    #addOrIncrementItem(product) {
+    async #addOrIncrementItem(product) {
         const items = Array.from(this.#state.items);
         const existingIndex = items.findIndex(item => item.productInfo.id === product.id);
         if (existingIndex !== -1) {
@@ -327,7 +346,10 @@ export default class CreatePurchaseOrderController {
             this.#activeRowIndex = existingIndex;
             this.#setState({ items });
         } else {
-            items.push(new PurchaseOrderItem(new ProductInfo(product), 1, 0)); //*TODO* recent unit cost of vendor
+            let unitCost = 0;
+            if (this.#state.vendor) 
+                unitCost = await this.#priceController.getPriceOfProduct(product.id, this.#state.vendor.id) ?? 0;
+            items.push(new PurchaseOrderItem(new ProductInfo(product), 1, unitCost));
             this.#activeRowIndex = items.length - 1;
             this.#setState({ items });
         }
@@ -341,73 +363,9 @@ export default class CreatePurchaseOrderController {
         $(form).removeData('validator').removeData('unobtrusiveValidation');
         $.validator.unobtrusive.parse(form);
 
-        const vendorValid = this.#validateVendor();
-        const warehouseValid = this.#validateWarehouse();
-        const placedDateValid = this.#validatePlacedDate();
-        const expectedDateValid = this.#validateExpectedDate();
-        const canSubmit = Boolean(
-            this.#state.items.length > 0
-            && vendorValid && warehouseValid
-            && expectedDateValid && placedDateValid
-        );
+        const canSubmit = this.#state.items.length > 0 && (this.#initialized ? $(form).valid() : $(form).data('validator').checkForm());
 
         form.querySelector('[type="submit"]').disabled = !canSubmit;
-    }
-
-    #validateVendor() {
-        const { vendor } = this.#state;
-
-        const vendorValidator = document.querySelector('[data-valmsg-for="VendorId"]');
-        if (vendorValidator) {
-            vendorValidator.textContent = vendor ? '' : 'Vui lòng chọn nhà cung cấp.';
-        }
-
-        return !!vendor;
-    }
-
-    #validateWarehouse() {
-        return true;
-        //    const { warehouse } = this.#state;
-
-        //    const warehouseValidator = document.querySelector('[data-valmsg-for="WarehouseId"]');
-        //    if (warehouseValidator) {
-        //        warehouseValidator.textContent = warehouse ? '' : 'Vui lòng chọn kho nhập hàng.';
-        //    }
-
-        //    return !!warehouse;
-    }
-
-    #validatePlacedDate() {
-        const msgEl = document.querySelector('[data-valmsg-for="PlacedOn"]');
-        if (!msgEl) return true;
-
-        const today = new Date();
-
-        if (this.#state.placedDate > today) {
-            msgEl.textContent = 'Ngày đặt hàng không lớn hơn hiện tại.';
-            return false;
-        }
-
-        msgEl.textContent = '';
-        return true;
-    }
-
-    #validateExpectedDate() {
-        //const msgEl = document.querySelector('[data-valmsg-for="ExpectedDeliveryDate"]');
-        //if (!msgEl) return true;
-
-        //if (this.#state.expectedDate) {
-        //    const expected = new Date(this.#state.expectedDate);
-        //    expected.setHours(23, 59, 59, 999);
-
-        //    if (expected < this.#state.placedDate) {
-        //        msgEl.textContent = 'Ngày giao dự kiến phải lớn hơn ngày đặt hàng.';
-        //        return false;
-        //    }
-        //}
-
-        //msgEl.textContent = '';
-        return true;
     }
 
     #bindPlacedDate() {
@@ -450,6 +408,7 @@ export default class CreatePurchaseOrderController {
 
     #bindVendorPicker() {
         const el = getEl('vendorPicker');
+
         this.#vendorPicker = new VendorPicker(el);
 
         el.addEventListener('select', (e) => {
@@ -482,11 +441,8 @@ export default class CreatePurchaseOrderController {
             this.#addItemController.setVendor(null);
         });
 
-        const initialVendor = el.dataset;
-        if (initialVendor.id && initialVendor.name) {
-            var vendor = new Vendor(initialVendor);
-            this.#vendorPicker.displayVendor(vendor);
-            if (this.#productPicker) this.#productPicker.vendorId = vendor.id;
+        var vendor = this.#vendorPicker.value;
+        if (vendor) {
             return vendor;
         }
         return null;
@@ -498,25 +454,6 @@ export default class CreatePurchaseOrderController {
 
         el.addEventListener('select', (e) => {
             const product = e.detail?.product ? new ProductInfo(e.detail.product) : null;
-
-            //if (product && !this.#state.vendor) {
-            //    if (product.vendorCount === 1) {
-            //        const vendorId = product.firstVendorId;
-            //        const vendorName = product.availableVendors.find(v => v.key === vendorId)?.value;
-            //        const vendor = new Vendor({ id: vendorId, name: vendorName });
-
-            //        this.#vendorPicker.selectVendor(vendor);
-            //    } else if (product.vendorCount > 1) {
-            //        toast('Thông báo', 'Sản phẩm có nhiều nhà cung cấp. Vui lòng chọn nhà cung cấp ở mục trên trước!', 'info');
-            //        this.#productPicker.clear();
-            //        return;
-            //    } else if (product.vendorCount === 0) {
-            //        toast('Lỗi', 'Sản phẩm này chưa được liên kết với nhà cung cấp nào. Vui lòng cập nhật sản phẩm.', 'error');
-            //        this.#productPicker.clear();
-            //        return;
-            //    }
-            //}
-
             this.#addItemController.setProduct(product, this.#state.vendor?.id ?? null);
         });
         el.addEventListener('remove', () => {
@@ -532,22 +469,7 @@ export default class CreatePurchaseOrderController {
                 return;
 
             const items = [...this.#state.items, e.detail.item];
-            this.#state.items = items;
-
-            const commonVendors = this.#getCommonVendorOfItems(items);
-            if (commonVendors.length == 1) {
-                if (commonVendors[0].id == this.#state.vendor?.id) {
-                    this.#setState({ items });
-                } else {
-                    const selectedVendor = new Vendor({ id: commonVendors[0].id, name: commonVendors[0].name });
-                    this.#vendorPicker.selectVendor(selectedVendor);
-                }
-            } else {
-                if (commonVendors.find(v => v.id === this.#state.vendor?.id))
-                    this.#setState({ items });
-                else
-                    this.#vendorPicker.removeVendor();
-            }
+            this.#setState({ items });
 
             this.#productPicker.clear();
             this.#dispatch('purchaseOrder:itemAdded');
@@ -610,7 +532,7 @@ export class AddItemController {
     }
 
     setVendor(vendorId) {
-        const unitCost = this.#getPriceOfVendor(vendorId);
+        const unitCost = this.#getPriceOfVendor(vendorId, this.state.recentPrices);
         if (unitCost)
             this.#setState({ vendorId, unitCost });
         else
@@ -627,7 +549,7 @@ export class AddItemController {
             } catch {
                 recentPrices = [];
             }
-            unitCost = this.#getPriceOfVendor(currentVendorId) ?? 0;
+            unitCost = this.#getPriceOfVendor(currentVendorId, recentPrices) ?? 0;
         }
 
         this.#setState({
@@ -647,12 +569,12 @@ export class AddItemController {
         });
     }
 
-    #getPriceOfVendor(vendorId) {
-        if (this.state.recentPrices.length === 0)
+    #getPriceOfVendor(vendorId, recentPrices) {
+        if (recentPrices.length === 0)
             return;
 
         if (vendorId) {
-            const match = this.state.recentPrices.find(p => p.vendorId === vendorId);
+            const match = recentPrices.find(p => p.vendorId === vendorId);
             if (match) {
                 return match.unitCost;
             }

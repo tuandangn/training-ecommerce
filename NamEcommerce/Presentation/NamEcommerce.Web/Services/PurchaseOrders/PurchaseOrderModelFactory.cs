@@ -77,6 +77,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                     var product = products.First(p => p.Id == item.ProductId);
                     item.ProductDisplayName = product.Name;
                     item.ProductDisplayPicture = product.PictureUrl;
+                    item.AvailableVendors = product.AvailableVendors;
                 }
             }
         }

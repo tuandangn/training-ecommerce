@@ -12,6 +12,7 @@ using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
+using System.Reflection;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
 
@@ -86,6 +87,27 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             {
                 Success = false,
                 ErrorMessage = "Error.VendorIsNotFound"
+            };
+        }
+
+        var products = await _productDataReader.GetByIdsAsync(dto.Items.Select(item => item.ProductId).OfType<Guid>()).ConfigureAwait(false);
+        var candidateVendorIds = products.SelectMany(p => p.ProductVendors).Select(v => v.VendorId).Distinct().ToList();
+        var validVendorIds = candidateVendorIds.Where(vendorId => products.All(p => p.ProductVendors.Any(v => v.VendorId == vendorId))).ToList();
+        if (validVendorIds.Count == 0)
+        {
+            return new CreatePurchaseOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.PurchaseOrder.NoVendorsAppropriate"
+            };
+        }
+
+        if (!validVendorIds.Contains(dto.VendorId))
+        {
+            return new CreatePurchaseOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.PurchaseOrder.VendorIsNotAppropriate"
             };
         }
 

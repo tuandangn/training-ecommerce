@@ -36,6 +36,33 @@ public sealed class VendorDebtManager(
         return $"{datePrefix}-{(count + 1):D3}";
     }
 
+    public async Task<VendorDebtDto> CreateInitialDebtAsync(CreateInitialVendorDebtDto dto)
+    {
+        dto.Verify();
+
+        var vendor = await vendorReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        if (vendor == null)
+            throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
+
+        var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
+
+        var debt = new VendorDebt(
+            code: code,
+            vendorId: vendor.Id,
+            vendorName: vendor.Name,
+            totalAmount: dto.TotalAmount,
+            createdByUserId: dto.CreatedByUserId
+        )
+        {
+            VendorPhone = vendor.PhoneNumber,
+            VendorAddress = vendor.Address
+        };
+
+        debt.MarkCreated();
+        await debtRepository.InsertAsync(debt).ConfigureAwait(false);
+        return debt.ToDto();
+    }
+
     public async Task<VendorDebtDto> CreateDebtFromPurchaseOrderAsync(CreateVendorDebtDto dto)
     {
         dto.Verify();

@@ -15,6 +15,9 @@ public sealed class CreatePurchaseOrderValidator : AbstractValidator<CreatePurch
         RuleFor(p => p.PlacedOn)
             .LessThanOrEqualTo(DateTime.Now).WithMessage(p => localizer["Error.PlacedOrderDateCannotBeInFuture"]);
 
+        RuleFor(p => p.Items)
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Items"]]);
+
         RuleForEach(p => p.Items).SetValidator(new CreatePurchaseOrderItemValidator(localizer));
     }
 }

@@ -213,7 +213,11 @@
 
         const vendorPicker = new VendorPicker(pickerEl);
 
-        // Khôi phục nếu validation fail
+        // Lưu goodsReceiptId được pre-fill (từ URL params hoặc validation fail)
+        // TRƯỚC khi selectVendor() có thể clear nó qua 'select' event.
+        let pendingGoodsReceiptId = hiddenGoodsReceiptId.value || null;
+
+        // Khôi phục nếu validation fail hoặc E5 pre-fill
         const initialVendorId = hiddenVendorId.value;
         const initialVendorName = pickerEl.dataset.name;
         if (initialVendorId && initialVendorName) {
@@ -251,8 +255,16 @@
                 });
                 goodsReceiptSelect.disabled = false;
 
-                const prevId = hiddenGoodsReceiptId.value;
-                if (prevId) goodsReceiptSelect.value = prevId;
+                // Ưu tiên: pendingGoodsReceiptId (pre-fill từ URL params hoặc validation fail lần đầu)
+                const receiptToSelect = pendingGoodsReceiptId || hiddenGoodsReceiptId.value;
+                pendingGoodsReceiptId = null; // consume — chỉ dùng 1 lần
+
+                if (receiptToSelect && goodsReceiptSelect.querySelector(`option[value="${receiptToSelect}"]`)) {
+                    goodsReceiptSelect.value = receiptToSelect;
+                    hiddenGoodsReceiptId.value = receiptToSelect;
+                    updateLoadBtn(true);
+                    await loadItemsFromReceipt(receiptToSelect);
+                }
             } catch {
                 goodsReceiptSelect.innerHTML = '<option value="">Lỗi tải dữ liệu</option>';
             }

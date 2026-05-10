@@ -11,6 +11,8 @@ public sealed class CreateCustomerCommand : IRequest<CreateCustomerResultModel>
     public required string Address { get; init; }
     public string? Email { get; set; }
     public string? Note { get; set; }
+    /// <summary>Công nợ ban đầu — nếu > 0 sẽ tạo một phiếu CustomerDebt số dư đầu kỳ.</summary>
+    public decimal? InitialDebt { get; set; }
 }
 
 [Serializable]

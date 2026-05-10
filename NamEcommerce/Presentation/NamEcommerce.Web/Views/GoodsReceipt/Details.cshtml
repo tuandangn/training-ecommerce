@@ -120,6 +120,57 @@
                 </form>
             </div>
         </div>
+
+        <!-- Trả hàng NCC -->
+        <div class="content-card mt-3" id="vendorReturnsCard" data-goods-receipt-id="@Model.Id">
+            <div class="content-card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-arrow-return-right me-2 text-warning"></i>Trả hàng NCC
+                </h5>
+                @if (Model.VendorId.HasValue)
+                {
+                    <a asp-controller="VendorReturn" asp-action="Create"
+                       asp-route-goodsReceiptId="@Model.Id"
+                       asp-route-vendorId="@Model.VendorId"
+                       asp-route-vendorName="@Model.VendorName"
+                       asp-route-goodsReceiptCode="@Model.CreatedOn.ToString("dd/MM/yyyy")"
+                       class="btn btn-sm btn-outline-warning">
+                        <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="VendorReturn" asp-action="Create"
+                       asp-route-goodsReceiptId="@Model.Id"
+                       asp-route-goodsReceiptCode="@Model.CreatedOn.ToString("dd/MM/yyyy")"
+                       class="btn btn-sm btn-outline-warning">
+                        <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
+                    </a>
+                }
+            </div>
+            <div class="content-card-body p-0">
+                <div id="vendorReturnsLoading" class="px-4 py-3 text-center text-muted small">
+                    <span class="spinner-border spinner-border-sm me-1"></span>Đang tải...
+                </div>
+                <div id="vendorReturnsEmpty" class="d-none px-4 py-3 text-center text-muted small fst-italic">
+                    — Chưa có phiếu trả hàng NCC nào liên kết
+                </div>
+                <div id="vendorReturnsList" class="d-none">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Mã phiếu</th>
+                                <th>Ngày trả</th>
+                                <th class="text-center">Trạng thái</th>
+                                <th class="text-end">Số mặt hàng</th>
+                                <th class="text-end pe-4">Tổng giá trị</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vendorReturnsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
     <div class="col-lg-4 order-0 order-lg-1">
 
@@ -1006,5 +1057,42 @@
                 document.getElementById('editInfoError').classList.remove('d-none');
             }
         });
+
+        // ── Tải danh sách phiếu trả hàng NCC ────────────────────────────────
+        (function loadVendorReturns() {
+            const card = document.getElementById('vendorReturnsCard');
+            if (!card) return;
+            const receiptId = card.dataset.goodsReceiptId;
+            const loadingEl = document.getElementById('vendorReturnsLoading');
+            const emptyEl   = document.getElementById('vendorReturnsEmpty');
+            const listEl    = document.getElementById('vendorReturnsList');
+            const tbody     = document.getElementById('vendorReturnsTableBody');
+
+            fetch('/VendorReturn/GetByGoodsReceipt?goodsReceiptId=' + receiptId)
+                .then(r => r.json())
+                .then(function(returns) {
+                    loadingEl.classList.add('d-none');
+                    if (!returns || returns.length === 0) {
+                        emptyEl.classList.remove('d-none');
+                        return;
+                    }
+                    returns.forEach(function(ret) {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML =
+                            '<td class="ps-4"><a href="/VendorReturn/Details/' + ret.id + '" class="fw-medium text-decoration-none">' + ret.code + '</a></td>' +
+                            '<td class="text-muted small">' + ret.returnDate + '</td>' +
+                            '<td class="text-center"><span class="badge bg-' + ret.statusColor + '">' + ret.statusLabel + '</span></td>' +
+                            '<td class="text-end text-muted small">' + ret.itemCount + '</td>' +
+                            '<td class="text-end pe-4 fw-semibold">' + ret.totalAmount.toLocaleString('vi-VN') + 'đ</td>';
+                        tbody.appendChild(tr);
+                    });
+                    listEl.classList.remove('d-none');
+                })
+                .catch(function() {
+                    loadingEl.classList.add('d-none');
+                    emptyEl.textContent = 'Không thể tải dữ liệu phiếu trả NCC.';
+                    emptyEl.classList.remove('d-none');
+                });
+        })();
     </script>
 }

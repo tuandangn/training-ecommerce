@@ -4,6 +4,7 @@ using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -38,6 +39,33 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         {
             model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
             return View(model);
+        }
+
+        if (model.Items.Count > 0 && model.VendorId.HasValue)
+        {
+            var isInvalid = false;
+
+            var productInfos = await _mediator.Send(new GetProductsByIdsForOrderQuery
+            {
+                Ids = model.Items.Where(i => i.ProductId.HasValue).Select(i => i.ProductId!.Value).ToList()
+            });
+            var candidateVendorIds = productInfos.SelectMany(p => p.AvailableVendors).Select(v => v.Id).Distinct().ToList();
+            var validVendorIds = candidateVendorIds.Where(vendorId => productInfos.All(p => p.AvailableVendors.Any(v => v.Id == vendorId))).ToList();
+
+            model.NotHasAppropriatedVendor = isInvalid = validVendorIds.Count == 0;
+
+            if (model.VendorId.HasValue && !validVendorIds.Contains(model.VendorId.Value))
+            {
+                AddLocalizedModelError("Error.PurchaseOrder.VendorIsNotAppropriate");
+                model.VendorId = null;
+                isInvalid = true;
+            }
+
+            if (isInvalid)
+            {
+                model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
+                return View(model);
+            }
         }
 
         var result = await _mediator.Send(new CreatePurchaseOrderCommand

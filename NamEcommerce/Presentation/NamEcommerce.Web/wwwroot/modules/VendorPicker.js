@@ -20,9 +20,28 @@ export default class VendorPicker {
         if (!(target instanceof HTMLElement)) {
             throw new TypeError('Target phải là một HTMLElement hợp lệ');
         }
-
         this.target = target;
         this.#init();
+
+        const dataset = target.dataset;
+
+        let limitIds = null;
+        if (dataset.empty == 'true') {
+            limitIds = [];
+        }
+        else if (dataset.limit) {
+            const ids = dataset.limit.split(',').map(id => id.trim());
+            if (ids.length > 0)
+                limitIds = ids;
+        }
+        this.#limitVendorIds = Array.isArray(limitIds) ? limitIds : null;
+
+        const { id, name } = dataset;
+        if (id && name && (limitIds === null || limitIds.includes(id))) {
+            var vendor = new Vendor({ id, name });
+            this.#selectedVendor = vendor;
+            this.displayVendor(vendor);
+        }
     }
 
     #init() {
@@ -89,9 +108,6 @@ export default class VendorPicker {
 
         if (data === null) return; // Bị abort — bỏ qua
 
-        if (this.#limitVendorIds)
-            data = data.filter(v => this.#limitVendorIds.includes(v.id));
-
         this.#vendors = data;
         this.#renderSuggestion(query);
     }
@@ -123,7 +139,12 @@ export default class VendorPicker {
     #renderSuggestion(query = '') {
         this.suggestion.innerHTML = '';
 
-        if (!this.#vendors.length) {
+        let vendors = this.#vendors;
+
+        if (this.#limitVendorIds)
+            vendors = vendors.filter(v => this.#limitVendorIds.includes(v.id));
+
+        if (!vendors.length) {
             this.suggestion.innerHTML = `
                 <div class="list-group-item p-3 text-center text-muted small">
                     <i class="bi bi-inbox me-1"></i> Không tìm thấy kết quả
@@ -134,7 +155,7 @@ export default class VendorPicker {
 
         const fragment = document.createDocumentFragment();
 
-        this.#vendors.forEach((data, index) => {
+        vendors.forEach((data, index) => {
             const vendor = new Vendor(data);
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -193,52 +214,8 @@ export default class VendorPicker {
         this.suggestion.style.display = 'none';
     }
 
-    displayVendor(vendor) {
-        this.displayInfo.querySelector('.name-field').textContent = vendor.name;
-        this.displayInfo.querySelector('.phone-field').textContent = vendor.phone;
-        this.displayInfo.querySelector('.address-field').textContent = vendor.address;
-
-        this.inputGroup.classList.add('d-none');
-        this.displayInfo.classList.remove('d-none');
-        this.#hideSuggestion();
-    }
-
-    setLimitVendorIds(ids) {
-        this.#limitVendorIds = Array.isArray(ids) ? ids : null;
-        if (this.#selectedVendor && this.#limitVendorIds && !this.#limitVendorIds.includes(this.#selectedVendor.id))
-            this.removeVendor();
-    }
-
-    selectVendor(vendor) {
-        const oldVendor = this.#selectedVendor;
-        this.#selectedVendor = vendor instanceof Vendor ? vendor : new Vendor(vendor);
-
-        this.displayVendor(this.#selectedVendor);
-
-        this.input.value = '';
-        this.#dispatch('select', { vendor: this.#selectedVendor, oldVendor });
-    }
-
-    removeVendor() {
-        console.trace('Removing selected vendor');
-        this.#selectedVendor = null;
-        this.inputGroup.classList.remove('d-none');
-        this.displayInfo.classList.add('d-none');
-        this.#dispatch('remove');
-    }
-
     #dispatch(eventName, detail = {}) {
         this.target.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
-    }
-
-    setLocked(isLocked) {
-        if (isLocked) {
-            this.clearBtn.classList.add('d-none');
-            this.input.disabled = true;
-        } else {
-            this.clearBtn.classList.remove('d-none');
-            this.input.disabled = false;
-        }
     }
 
     #template() {
@@ -263,6 +240,66 @@ export default class VendorPicker {
             <button type="button" class="btn-close ms-2 clearVendor" aria-label="Xóa nhà cung cấp"></button>
         </div>
         `;
+    }
+
+    displayVendor(vendor) {
+        this.displayInfo.querySelector('.name-field').textContent = vendor.name;
+        this.displayInfo.querySelector('.phone-field').textContent = vendor.phone;
+        this.displayInfo.querySelector('.address-field').textContent = vendor.address;
+
+        this.inputGroup.classList.add('d-none');
+        this.displayInfo.classList.remove('d-none');
+        this.#hideSuggestion();
+    }
+
+    setLimitVendorIds(ids) {
+        this.#limitVendorIds = Array.isArray(ids) ? ids : null;
+        if (this.#selectedVendor && this.#limitVendorIds && !this.#limitVendorIds.includes(this.#selectedVendor.id))
+            this.removeVendor();
+    }
+
+    selectVendor(vendor) {
+        if (this.#limitVendorIds && !this.#limitVendorIds.includes(vendor.id))
+            throw new Error('Nhà cung cấp không hợp lệ');
+
+        const oldVendor = this.#selectedVendor;
+        this.#selectedVendor = vendor instanceof Vendor ? vendor : new Vendor(vendor);
+
+        this.displayVendor(this.#selectedVendor);
+
+        this.input.value = '';
+        this.#dispatch('select', { vendor: this.#selectedVendor, oldVendor });
+    }
+
+    removeVendor() {
+        this.#selectedVendor = null;
+        this.inputGroup.classList.remove('d-none');
+        this.displayInfo.classList.add('d-none');
+        this.#dispatch('remove');
+    }
+
+    setLocked(isLocked) {
+        if (isLocked) {
+            this.clearBtn.classList.add('d-none');
+            this.input.disabled = true;
+        } else {
+            this.clearBtn.classList.remove('d-none');
+            this.input.disabled = false;
+        }
+    }
+
+    updateValue(vendor) {
+        if (vendor && this.#limitVendorIds && !this.#limitVendorIds.includes(vendor.id))
+            throw new Error('Nhà cung cấp không hợp lệ');
+
+        if (vendor) {
+            this.#selectedVendor = vendor instanceof Vendor ? vendor : new Vendor(vendor);
+            this.displayVendor(this.#selectedVendor);
+        } else {
+            this.#selectedVendor = null;
+            this.inputGroup.classList.remove('d-none');
+            this.displayInfo.classList.add('d-none');
+        }
     }
 
     get value() {

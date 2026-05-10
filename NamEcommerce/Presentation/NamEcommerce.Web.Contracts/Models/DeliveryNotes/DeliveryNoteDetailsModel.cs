@@ -7,7 +7,8 @@ public sealed class DeliveryNoteDetailsModel
     
     public Guid OrderId { get; set; }
     public string OrderCode { get; set; } = string.Empty;
-    
+
+    public Guid CustomerId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     public string? CustomerPhone { get; set; }
     public string? CustomerAddress { get; set; }

@@ -26,9 +26,25 @@ public sealed class CustomerReturnController : BaseAuthorizedController
         return View(model);
     }
 
-    public async Task<IActionResult> Create()
+    public async Task<IActionResult> Create(
+        Guid? deliveryNoteId = null,
+        Guid? customerId = null,
+        string? customerName = null,
+        string? deliveryNoteCode = null)
     {
-        var model = await _customerReturnModelFactory.PrepareCreateCustomerReturnModel();
+        CreateCustomerReturnModel? prefilledModel = null;
+        if (deliveryNoteId.HasValue || customerId.HasValue)
+        {
+            prefilledModel = new CreateCustomerReturnModel
+            {
+                DeliveryNoteId = deliveryNoteId,
+                DeliveryNoteDisplayCode = deliveryNoteCode,
+                CustomerId = customerId,
+                CustomerDisplayName = customerName
+            };
+        }
+
+        var model = await _customerReturnModelFactory.PrepareCreateCustomerReturnModel(prefilledModel);
         return View(model);
     }
 
@@ -174,5 +190,45 @@ public sealed class CustomerReturnController : BaseAuthorizedController
             ExcludeReturnId = excludeReturnId
         });
         return Json(items);
+    }
+
+    /// <summary>
+    /// GET /CustomerReturn/GetByDeliveryNote?deliveryNoteId=
+    /// Trả về danh sách phiếu trả hàng liên kết với phiếu xuất kho — dùng cho section "Khách trả hàng" trên Details.
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetByDeliveryNote(Guid deliveryNoteId)
+    {
+        var result = await _mediator.Send(new GetCustomerReturnListQuery
+        {
+            DeliveryNoteId = deliveryNoteId,
+            PageIndex = 0,
+            PageSize = 100
+        });
+        return Json(result.Data.Items.Select(r => new
+        {
+            id = r.Id,
+            code = r.Code,
+            status = r.Status,
+            statusLabel = r.Status switch
+            {
+                0 => "Bản nháp",
+                1 => "Đang kiểm hàng",
+                2 => "Đã xác nhận",
+                3 => "Đã hủy",
+                _ => "?"
+            },
+            statusColor = r.Status switch
+            {
+                0 => "secondary",
+                1 => "warning",
+                2 => "success",
+                3 => "danger",
+                _ => "secondary"
+            },
+            returnDate = r.ReturnDate.ToLocalTime().ToString("dd/MM/yyyy"),
+            totalAmount = r.TotalAmount,
+            itemCount = r.ItemCount
+        }));
     }
 }

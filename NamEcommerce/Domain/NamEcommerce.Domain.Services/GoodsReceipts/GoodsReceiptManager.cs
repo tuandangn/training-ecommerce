@@ -4,12 +4,14 @@ using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
@@ -17,6 +19,7 @@ using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Domain.Shared.Settings;
 
@@ -33,7 +36,9 @@ public sealed class GoodsReceiptManager(
     IEntityDataReader<Vendor> vendorDataReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
     IRepository<PurchaseOrder> purchaseOrderRepository,
-    IInventoryStockManager inventoryStockManager) : IGoodsReceiptManager
+    IInventoryStockManager inventoryStockManager,
+    IEntityDataReader<VendorReturn> vendorReturnReader,
+    IVendorReturnManager vendorReturnManager) : IGoodsReceiptManager
 {
     public async Task<CreateGoodsReceiptResultDto> CreateGoodsReceiptAsync(CreateGoodsReceiptDto dto)
     {
@@ -196,6 +201,25 @@ public sealed class GoodsReceiptManager(
         var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId).ConfigureAwait(false);
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(dto.GoodsReceiptId);
+
+        // E3: Kiểm tra các phiếu trả NCC liên kết
+        var linkedReturns = vendorReturnReader.DataSource
+            .Where(r => r.GoodsReceiptId == dto.GoodsReceiptId)
+            .Select(r => new { r.Id, r.Status })
+            .ToList();
+
+        // Block nếu có phiếu trả đã Confirmed
+        if (linkedReturns.Any(r => r.Status == VendorReturnStatus.Confirmed))
+            throw new GoodsReceiptHasConfirmedReturnsException(dto.GoodsReceiptId);
+
+        // Auto-cancel phiếu trả ở Draft/Inspecting
+        var cancellableReturnIds = linkedReturns
+            .Where(r => r.Status == VendorReturnStatus.Draft || r.Status == VendorReturnStatus.Inspecting)
+            .Select(r => r.Id)
+            .ToList();
+
+        foreach (var returnId in cancellableReturnIds)
+            await vendorReturnManager.CancelAsync(returnId).ConfigureAwait(false);
 
         var deletedProductQuantities = goodsReceipt.Items
             .Where(item => item.WarehouseId.HasValue)

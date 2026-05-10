@@ -51,6 +51,22 @@ public sealed record VendorDebt : AppAggregateEntity
         CreatedOnUtc = DateTime.UtcNow;
     }
 
+    /// <summary>Constructor cho công nợ ban đầu (số dư đầu kỳ) — không gắn PO hay phiếu nhập.</summary>
+    internal VendorDebt(string code, Guid vendorId, string vendorName,
+        decimal totalAmount, Guid? createdByUserId) : base(Guid.NewGuid())
+    {
+        Code = code;
+        VendorId = vendorId;
+        VendorName = vendorName;
+        TotalAmount = totalAmount;
+        RemainingAmount = totalAmount;
+        PaidAmount = 0;
+        Status = DebtStatus.Outstanding;
+        DueDateUtc = null;
+        CreatedByUserId = createdByUserId;
+        CreatedOnUtc = DateTime.UtcNow;
+    }
+
     public string Code { get; private set; }
 
     public Guid VendorId { get; private set; }

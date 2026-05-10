@@ -1,6 +1,5 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
-using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Common;
@@ -12,18 +11,14 @@ namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductListForOrderQuery, ProductListForOrderModel>
 {
     private readonly IProductAppService _productAppService;
-    private readonly IVendorAppService _vendorAppService;
     private readonly IPictureAppService _pictureAppService;
     private readonly IMediator _mediator;
-    private readonly IInventoryAppService _inventoryAppService;
 
-    public GetProductListForOrderHandler(IProductAppService productAppService, IVendorAppService vendorAppService, IMediator mediator, IPictureAppService pictureAppService, IInventoryAppService inventoryAppService)
+    public GetProductListForOrderHandler(IProductAppService productAppService, IMediator mediator, IPictureAppService pictureAppService)
     {
         _productAppService = productAppService;
-        _vendorAppService = vendorAppService;
         _mediator = mediator;
         _pictureAppService = pictureAppService;
-        _inventoryAppService = inventoryAppService;
     }
 
     public async Task<ProductListForOrderModel> Handle(GetProductListForOrderQuery request, CancellationToken cancellationToken)

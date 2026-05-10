@@ -76,7 +76,8 @@ public sealed class CustomerController : BaseAuthorizedController
             PhoneNumber = model.PhoneNumber!,
             Email = model.Email,
             Address = model.Address,
-            Note = model.Note
+            Note = model.Note,
+            InitialDebt = model.InitialDebt
         });
 
         if (!result.Success)
