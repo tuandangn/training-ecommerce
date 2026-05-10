@@ -25,16 +25,24 @@
         return str.replace(/,/g, '');
     }
 
-    function formatCurrency(raw) {
+    function formatCurrency(raw, endSymbol) {
         var n = parseInt(raw, 10);
         if (isNaN(n)) return raw;
-        return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        var currencyText = n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        if (endSymbol) currencyText += ' ' + endSymbol;
+        return currencyText;
+    }
+    function formatCurrencyWithSymbol(raw) {
+        return formatCurrency(raw, '\u20ab');
     }
 
     function formatQuantity(raw) {
-        var n = parseFloat(raw);
+        const n = parseFloat(raw);
         if (isNaN(n)) return raw;
-        var parts = n.toFixed(2).split('.');
+        const parts = n.toFixed(2).split('.');
+        const decimalValue = parseFloat(parts[1]);
+        if (isNaN(decimalValue) || decimalValue === 0)
+            return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + parts[1];
     }
 
@@ -388,6 +396,7 @@
         bindInput: bindInput,
         isValidDecimal: isValidDecimal,
         formatCurrency: formatCurrency,
+        formatCurrencyWithSymbol: formatCurrencyWithSymbol,
         formatQuantity: formatQuantity,
         stripFormatting: stripFormatting
     };

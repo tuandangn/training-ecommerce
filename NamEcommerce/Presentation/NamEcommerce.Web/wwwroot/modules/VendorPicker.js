@@ -8,6 +8,7 @@ export class Vendor {
 
 export default class VendorPicker {
     #vendors = [];
+    #limitVendorIds = null;
     #selectedVendor = null;
     #debounceTimer = null;
     #abortController = null;
@@ -23,8 +24,6 @@ export default class VendorPicker {
         this.target = target;
         this.#init();
     }
-
-    // ─── Khởi tạo ───────────────────────────────────────────────────────────────
 
     #init() {
         this.target.innerHTML = this.#template();
@@ -43,8 +42,6 @@ export default class VendorPicker {
         this.loadingSpinner = q('.searchSpinner');
         this.searchIcon = q('.searchIcon');
     }
-
-    // ─── Sự kiện ────────────────────────────────────────────────────────────────
 
     #bindEvents() {
         this.input.addEventListener('input', (e) => this.#onInput(e));
@@ -83,16 +80,17 @@ export default class VendorPicker {
         }
     }
 
-    // ─── Tìm kiếm ───────────────────────────────────────────────────────────────
-
     async #search(query) {
         this.#setLoading(true);
 
-        const data = await this.#fetchVendors(query);
+        let data = await this.#fetchVendors(query);
 
         this.#setLoading(false);
 
         if (data === null) return; // Bị abort — bỏ qua
+
+        if (this.#limitVendorIds)
+            data = data.filter(v => this.#limitVendorIds.includes(v.id));
 
         this.#vendors = data;
         this.#renderSuggestion(query);
@@ -121,8 +119,6 @@ export default class VendorPicker {
         this.#abortController?.abort();
         this.#abortController = null;
     }
-
-    // ─── Render ─────────────────────────────────────────────────────────────────
 
     #renderSuggestion(query = '') {
         this.suggestion.innerHTML = '';
@@ -181,8 +177,8 @@ export default class VendorPicker {
     }
 
     #setLoading(loading) {
-    //    this.loadingSpinner.style.display = loading ? 'block' : 'none';
-    //    this.searchIcon.style.display = loading ? 'none' : 'block';
+        //    this.loadingSpinner.style.display = loading ? 'block' : 'none';
+        //    this.searchIcon.style.display = loading ? 'none' : 'block';
     }
 
     #showError(message) {
@@ -197,8 +193,6 @@ export default class VendorPicker {
         this.suggestion.style.display = 'none';
     }
 
-    // ─── Chọn nhà cung cấp ───────────────────────────────────────────────────────
-
     displayVendor(vendor) {
         this.displayInfo.querySelector('.name-field').textContent = vendor.name;
         this.displayInfo.querySelector('.phone-field').textContent = vendor.phone;
@@ -208,16 +202,25 @@ export default class VendorPicker {
         this.displayInfo.classList.remove('d-none');
         this.#hideSuggestion();
     }
+
+    setLimitVendorIds(ids) {
+        this.#limitVendorIds = Array.isArray(ids) ? ids : null;
+        if (this.#selectedVendor && this.#limitVendorIds && !this.#limitVendorIds.includes(this.#selectedVendor.id))
+            this.removeVendor();
+    }
+
     selectVendor(vendor) {
+        const oldVendor = this.#selectedVendor;
         this.#selectedVendor = vendor instanceof Vendor ? vendor : new Vendor(vendor);
 
         this.displayVendor(this.#selectedVendor);
 
         this.input.value = '';
-        this.#dispatch('select', { vendor: this.#selectedVendor });
+        this.#dispatch('select', { vendor: this.#selectedVendor, oldVendor });
     }
 
     removeVendor() {
+        console.trace('Removing selected vendor');
         this.#selectedVendor = null;
         this.inputGroup.classList.remove('d-none');
         this.displayInfo.classList.add('d-none');
@@ -237,8 +240,6 @@ export default class VendorPicker {
             this.input.disabled = false;
         }
     }
-
-    // ─── Template ────────────────────────────────────────────────────────────────
 
     #template() {
         return `
@@ -262,5 +263,9 @@ export default class VendorPicker {
             <button type="button" class="btn-close ms-2 clearVendor" aria-label="Xóa nhà cung cấp"></button>
         </div>
         `;
+    }
+
+    get value() {
+        return this.#selectedVendor;
     }
 }

@@ -101,19 +101,32 @@ export default class ProductBrowser {
 
     #controlTemplate() {
         this.#container.innerHTML = `
-            <div class="pb-search mb-3">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-white border-end-0">
-                        <i class="bi bi-search text-muted pb-search-icon"></i>
-                        <span class="spinner-border spinner-border-sm text-secondary d-none pb-spinner" role="status"></span>
-                    </span>
-                    <input type="text" class="form-control border-start-0 ps-0 pb-search-input" value="${this.#state.q}" placeholder="Tìm hàng hóa..." autocomplete="off" />
+            <div class="accordion accordion-flush" id="accordionProductBrowser">
+                <div class="accordion-item">
+                    <div class="accordion-header position-relative">
+                        <button class="accordion-button text-dark bg-white w-auto p-1 shadow-none position-absolute" style="top:-10px;right:-10px;" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProductBrowser" aria-expanded="true" aria-controls="collapseProductBrowser"></button>
+                        <div class="pb-search">
+                            <label class="form-label small fw-bold text-muted text-uppercase d-block" for="pbSearchKeywords">Thêm hàng hóa</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="bi bi-search text-muted pb-search-icon"></i>
+                                    <span class="spinner-border spinner-border-sm text-secondary d-none pb-spinner" role="status"></span>
+                                </span>
+                                <input type="text" id="pbSearchKeywords" class="form-control border-start-0 ps-0 pb-search-input" value="${this.#state.q}" placeholder="Tìm hàng hóa..." autocomplete="off" />
+                            </div>
+                        <div>
+                    </div>
                 </div>
             </div>
-            <div class="pb-categories mb-3 d-flex flex-wrap gap-1">
-                <span class="text-muted small">Đang tải danh mục...</span>
+            <div id="collapseProductBrowser" class="accordion-collapse collapse show" aria-labelledby="headingProductBrowser" data-bs-parent="#accordionProductBrowser">
+                <div class="accordion-body p-0 mt-3">
+                    <div class="pb-categories mb-3 d-flex flex-wrap gap-1">
+                        <span class="text-muted small">Đang tải danh mục...</span>
+                    </div>
+                    <div class="pb-grid" style="max-height:300px; overflow-y: auto;overflow-x:hidden;"></div>
+                </div>
             </div>
-            <div class="pb-grid"></div>`;
+        `;
     }
 
     // ── categories ────────────────────────────────────────────────────────────

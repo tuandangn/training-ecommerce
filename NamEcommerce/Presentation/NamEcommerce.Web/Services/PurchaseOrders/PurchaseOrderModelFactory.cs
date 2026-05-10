@@ -30,7 +30,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         var model = await _mediator.Send(new GetPurchaseOrderListQuery
         {
             Keywords = searchModel?.Keywords,
-            Status = (int?) searchModel?.Status,
+            Status = (int?)searchModel?.Status,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         });
@@ -40,20 +40,24 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 
     public async Task<CreatePurchaseOrderModel> PrepareCreatePurchaseOrderModel(CreatePurchaseOrderModel? oldModel = null)
     {
-        var vendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
-        var warehouseOptions = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new CreatePurchaseOrderModel
         {
             PlacedOn = DateTime.Now
         };
-        model.AvailableWarehouses = warehouseOptions;
+        model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
-        var vendor = await _mediator.Send(new GetVendorQuery { Id = model.VendorId }).ConfigureAwait(false);
-        if (vendor is not null)
+        if (model.VendorId.HasValue)
         {
-            model.VendorName = vendor.Name;
-            model.VendorPhone = vendor.PhoneNumber;
-            model.VendorAddress = vendor.Address;
+            var vendor = await _mediator.Send(new GetVendorQuery
+            {
+                Id = model.VendorId.Value
+            }).ConfigureAwait(false);
+            if (vendor is not null)
+            {
+                model.VendorName = vendor.Name;
+                model.VendorPhone = vendor.PhoneNumber;
+                model.VendorAddress = vendor.Address;
+            }
         }
 
         if (model.Items.Count > 0)

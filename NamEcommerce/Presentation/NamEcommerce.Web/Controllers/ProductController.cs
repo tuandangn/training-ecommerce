@@ -170,11 +170,12 @@ public sealed class ProductController : BaseAuthorizedController
         {
             id = productInfo.Id,
             name = productInfo.Name,
+            unitMeasurement = productInfo.UnitMeasurement,
             picture = productInfo.PictureUrl,
             availableQty = productInfo.QuantityAvailable,
             categoryName = productInfo.CategoryName,
-            avaialbeWarehouses = productInfo.AvailableWarehouseIds,
-            vendorCount = productInfo.AvailableVendors.Count,
+            availableWarehouses = productInfo.AvailableWarehouses,
+            vendorCount = productInfo.AvailableVendors.Count(),
             firstVendorId = productInfo.AvailableVendors.FirstOrDefault()?.Id.ToString(),
             availableVendors = productInfo.AvailableVendors.Select(v => new { key = v.Id.ToString(), value = v.Name })
         }).ToList();

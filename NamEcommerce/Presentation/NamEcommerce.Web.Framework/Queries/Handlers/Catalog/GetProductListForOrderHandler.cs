@@ -1,11 +1,11 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
-using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 
@@ -30,15 +30,23 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
     {
         var products = await _productAppService.GetProductsAsync(0, int.MaxValue, request.Keywords, request.CategoryId, request.VendorId).ConfigureAwait(false);
 
-        var allVendorOptions = await _mediator.Send(new GetVendorOptionListQuery(), cancellationToken).ConfigureAwait(false);
-        var allCategoryOptions = await _mediator.Send(new GetCategoryOptionListQuery(), cancellationToken).ConfigureAwait(false);
+        var vendorOptions = await _mediator.Send(new GetVendorOptionListQuery(), cancellationToken).ConfigureAwait(false);
+        var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery
+        {
+            BreadcrumbOpts = new BreadcrumbOptions
+            {
+                Disabled = true
+            }
+        }, cancellationToken).ConfigureAwait(false);
+        var unitMeasurementOptions = await _mediator.Send(new GetUnitMeasurementOptionListQuery(), cancellationToken).ConfigureAwait(false);
+        var warehouseOptions = await _mediator.Send(new GetWarehouseOptionListQuery(), cancellationToken).ConfigureAwait(false);
 
         var productListItems = new List<ProductListForOrderModel.ProductItemModel>();
         foreach (var productInfo in products)
         {
             var firstCategoryId = productInfo.Categories.FirstOrDefault()?.CategoryId;
             var categoryName = firstCategoryId.HasValue
-                ? allCategoryOptions.Options.FirstOrDefault(c => c.Id == firstCategoryId.Value)?.Name
+                ? categoryOptions.Options.FirstOrDefault(c => c.Id == firstCategoryId.Value)?.Name
                 : null;
 
             var productModel = new ProductListForOrderModel.ProductItemModel(productInfo.Id)
@@ -55,26 +63,22 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
                 productModel.PictureUrl = base64PictureInfo?.Base64Value;
             }
 
-            var stockItems = await _inventoryAppService.GetInventoryStocksForProductAsync(productInfo.Id, request.WarehouseId);
-            productModel.QuantityOnHand = stockItems.Sum(item => item.QuantityOnHand);
-            productModel.QuantityReserved = stockItems.Sum(item => item.QuantityReserved);
-            productModel.QuantityAvailable = stockItems.Sum(item => item.QuantityAvailable);
-            productModel.AvailableWarehouseIds = stockItems.Where(item => item.WarehouseId.HasValue).Select(item => item.WarehouseId).OfType<Guid>().ToList();
+            var stockInfo = await _mediator.Send(new GetProductStockInfoQuery(productInfo.Id, request.WarehouseId), cancellationToken).ConfigureAwait(false);
+            productModel.QuantityOnHand = stockInfo.QuantityOnHand;
+            productModel.QuantityReserved = stockInfo.QuantityReserved;
+            productModel.QuantityAvailable = stockInfo.QuantityAvailable;
+            productModel.AvailableWarehouses = warehouseOptions.Where(option => stockInfo.AvailableWarehouseIds.Contains(option.Id)).ToList();
 
-            if (!request.VendorId.HasValue && productInfo.Vendors != null)
-            {
-                productModel.AvailableVendors = productInfo.Vendors
-                    .Select(v => allVendorOptions.Options.FirstOrDefault(o => o.Id == v.VendorId))
-                    .Where(o => o != null)
-                    .Select(o => new ProductListForOrderModel.VendorOptionModel(o!.Id, o.Name))
-                    .ToList();
-            }
+            if (productInfo.Vendors != null)
+                productModel.AvailableVendors = vendorOptions.Where(option => productInfo.Vendors.Any(v => v.VendorId == option.Id)).ToList();
+
+            productModel.UnitMeasurement = unitMeasurementOptions.FirstOrDefault(option => option.Id == productInfo.UnitMeasurementId)?.Name;
 
             productListItems.Add(productModel);
         }
 
         var filteredByVendorName = request.VendorId.HasValue
-            ? allVendorOptions.FirstOrDefault(v => v.Id == request.VendorId.Value)?.Name
+            ? vendorOptions.FirstOrDefault(v => v.Id == request.VendorId.Value)?.Name
             : null;
         return new ProductListForOrderModel
         {

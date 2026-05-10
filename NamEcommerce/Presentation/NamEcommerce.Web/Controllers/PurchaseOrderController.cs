@@ -43,7 +43,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         var result = await _mediator.Send(new CreatePurchaseOrderCommand
         {
             PlacedOn = model.PlacedOn,
-            VendorId = model.VendorId,
+            VendorId = model.VendorId!.Value,
             WarehouseId = model.WarehouseId,
             Note = model.Note,
             ExpectedDeliveryDate = model.ExpectedDeliveryDate,

@@ -24,7 +24,10 @@ public sealed class GetProductStockInfoHandler : IRequestHandler<GetProductStock
             WarehouseId = request.WarehouseId,
             QuantityOnHand = stockItems.Sum(item => item.QuantityOnHand),
             QuantityReserved = stockItems.Sum(item => item.QuantityReserved),
-            QuantityAvailable = stockItems.Sum(item => item.QuantityAvailable)
+            QuantityAvailable = stockItems.Sum(item => item.QuantityAvailable),
+            AvailableWarehouseIds = stockItems.Where(item => item.WarehouseId.HasValue && item.QuantityAvailable > 0)
+                .Select(item => item.WarehouseId)
+                .OfType<Guid>().Distinct().ToList()
         };
     }
 }
