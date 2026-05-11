@@ -70,17 +70,17 @@ function debounce(fn, ms, checkFn) {
     let timer;
 
     const debounced = (...args) => {
+        clearTimeout(timer);
         if (checkFn && !checkFn())
             return;
-        clearTimeout(timer);
         timer = setTimeout(() => fn(...args), ms);
     };
 
     debounced.cancel = () => clearTimeout(timer);
     debounced.flush = (...args) => {
+        clearTimeout(timer);
         if (checkFn && !checkFn())
             return;
-        clearTimeout(timer);
         fn(...args);
     };
 

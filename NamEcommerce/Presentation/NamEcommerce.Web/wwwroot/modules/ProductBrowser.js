@@ -194,8 +194,12 @@ export default class ProductBrowser {
         btn.addEventListener('click', () => {
             if (!this.#productSuggestionIsShown()) {
                 this.#showProductSuggestions().then(() => this.#setState({ cid: id }));
-            } else
-                this.#setState({ cid: id });
+            } else {
+                if (this.#state.cid == id)
+                    this.#setState({ cid: null });
+                else
+                    this.#setState({ cid: id });
+            }
         });
         return btn;
     }

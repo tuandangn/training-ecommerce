@@ -369,6 +369,7 @@ export default class ProductPicker {
     setVendor(vendorId, vendorName) {
         this.api.updateVendor(vendorId);
         this.view.updateVendor(vendorName);
+        this.clear();
     }
 
     clear() {
