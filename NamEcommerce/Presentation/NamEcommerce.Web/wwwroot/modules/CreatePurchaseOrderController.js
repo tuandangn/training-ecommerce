@@ -295,7 +295,7 @@ export default class CreatePurchaseOrderController {
                     data-valmsg-for="Items[${index}].UnitCost"
                     data-valmsg-replace="true"></span>
             </td>
-            <td class="text-end fw-bold text-danger px-3 row-total text-nowrap d-none d-lg-table-cell">
+            <td class="text-end fw-bold text-primary px-3 row-total text-nowrap d-none d-lg-table-cell">
                 ${DecimalFields.formatCurrency(item.lineTotal)}
             </td>
             <td class="text-end pe-3 w-auto">

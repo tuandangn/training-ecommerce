@@ -804,4 +804,7 @@
   <data name="Label.ExpectedDeliveryDate" xml:space="preserve">
     <value>Expected delivery date</value>
   </data>
+  <data name="Error.PurchaseOrder.ProductsAreNotFound" xml:space="preserve">
+    <value>Products are not found</value>
+  </data>
 </root>

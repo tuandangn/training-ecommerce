@@ -10,9 +10,10 @@ public sealed class CreatePurchaseOrderValidator : AbstractValidator<CreatePurch
     public CreatePurchaseOrderValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(p => p.VendorId)
-            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.VendorId"]]);
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Vendor"]]);
 
         RuleFor(p => p.PlacedOn)
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.PlaceOrderDate"]])
             .LessThanOrEqualTo(DateTime.Now).WithMessage(p => localizer["Error.PlacedOrderDateCannotBeInFuture"]);
 
         RuleFor(p => p.Items)

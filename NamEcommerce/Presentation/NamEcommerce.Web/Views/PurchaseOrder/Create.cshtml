@@ -98,7 +98,7 @@
                                                        data-val-number="Đơn giá phải là số" />
                                                 <span class="small text-danger" asp-validation-for="Items[i].UnitCost"></span>
                                             </td>
-                                            <td class="text-end fw-bold text-danger px-3 row-total text-nowrap d-none d-lg-table-cell">
+                                            <td class="text-end fw-bold text-primary px-3 row-total text-nowrap d-none d-lg-table-cell">
                                                 @item.ItemSubTotal.DisplayCurrency()
                                             </td>
                                             <td class="text-end pe-3 w-auto">
@@ -157,7 +157,8 @@
                     <div class="content-card-body">
                         <div class="mb-3">
                             <label asp-for="PlacedOn" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <input type="datetime-local" asp-for="PlacedOn" value="@Model.PlacedOn.ToString("s")" class="form-control" placeholder="Ngày đặt hàng" />
+                            <input type="datetime-local" asp-for="PlacedOn" value="@Model.PlacedOn.ToString("s")" class="form-control" placeholder="Ngày đặt hàng"
+                                   data-val-range-max="@DateTime.Now.ToString("s")" />
                             <span asp-validation-for="PlacedOn" class="text-danger small"></span>
                         </div>
                         <div class="mb-3">

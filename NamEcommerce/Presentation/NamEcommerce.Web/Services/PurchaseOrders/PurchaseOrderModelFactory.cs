@@ -69,9 +69,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 {
                     Ids = productIds
                 }).ConfigureAwait(false);
-
                 model.Items = model.Items.Where(i => products.Any(p => p.Id == i.ProductId)).ToList();
-
                 foreach (var item in model.Items)
                 {
                     var product = products.First(p => p.Id == item.ProductId);
@@ -79,6 +77,10 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                     item.ProductDisplayPicture = product.PictureUrl;
                     item.AvailableVendors = product.AvailableVendors;
                 }
+            }
+            else
+            {
+                model.Items.Clear();
             }
         }
 

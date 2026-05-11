@@ -29,7 +29,7 @@ export default class ProductBrowser {
 
     #state = {
         q: '',
-        cid: null,
+        cid: undefined,
         vid: null
     };
     #categories = [];
@@ -85,15 +85,19 @@ export default class ProductBrowser {
         input.addEventListener('input', onChanged);
 
         input.addEventListener('focus', () => {
-            if (this.#productSuggestionIsShown())
-                return;
-            this.#showProductSuggestions()
+            if (!this.#productSuggestionIsShown()) {
+                this.#showProductSuggestions();
+            }
         });
 
         const collapse = this.#container.querySelector('.collapse');
         collapse.addEventListener('shown.bs.collapse', event => {
-            if (this.#pendingChange)
-                this.#setState({});
+            if (this.#pendingChange) {
+                if (this.#state.cid === undefined)
+                    this.#setState({cid: null});
+                else
+                    this.#setState({});
+            }
         });
     }
 
@@ -103,12 +107,12 @@ export default class ProductBrowser {
     }
 
     async #render() {
+        this.#renderCategories();
         if (!this.#productSuggestionIsShown()) {
             this.#pendingChange = true;
             return;
         }
         this.#pendingChange = false;
-        this.#renderCategories();
         await this.#loadProducts();
     }
 
@@ -117,7 +121,10 @@ export default class ProductBrowser {
             <div class="accordion accordion-flush" id="accordionProductBrowser">
                 <div class="accordion-item">
                     <div class="accordion-header position-relative">
-                        <button class="accordion-button text-dark bg-white w-auto p-1 shadow-none position-absolute collapsed" style="top:-10px;right:-10px;" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProductBrowser" aria-expanded="false" aria-controls="collapseProductBrowser"></button>
+                        <button class="accordion-button text-dark bg-white w-auto p-1 shadow-none position-absolute collapsed" style="top:-10px;right:-10px;" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseProductBrowser" aria-expanded="false" aria-controls="collapseProductBrowser">
+                            <span class="visually-hidden">Mở thêm hàng hóa</span>
+                        </button>
                         <div class="pb-search">
                             <label class="form-label small fw-bold text-muted text-uppercase d-block" for="pbSearchKeywords">Thêm hàng hóa</label>
                             <div class="input-group">
@@ -131,23 +138,29 @@ export default class ProductBrowser {
                     </div>
                 </div>
             </div>
+            <div class="pb-categories mt-3 d-flex flex-wrap gap-1">
+                <span class="text-muted small">Đang tải danh mục...</span>
+            </div>
             <div id="collapseProductBrowser" class="accordion-collapse collapse" aria-labelledby="headingProductBrowser" data-bs-parent="#accordionProductBrowser">
                 <div class="accordion-body p-0 mt-3">
-                    <div class="pb-categories mb-3 d-flex flex-wrap gap-1">
-                        <span class="text-muted small">Đang tải danh mục...</span>
-                    </div>
-                    <div class="pb-grid" style="max-height:300px; overflow-y: auto;overflow-x:hidden;"></div>
+                    <div class="pb-grid" style="max-height:300px; overflow-y: auto;overflow-x:hidden;">Đang tải hàng hóa...</div>
                 </div>
             </div>
         `;
     }
 
     #showProductSuggestions() {
-        const collapse = this.#container.querySelector('.collapse');
-        const bsCollapse = new bootstrap.Collapse(collapse, {
-            toggle: false
+        return new Promise(resolve => {
+            const collapse = this.#container.querySelector('.collapse');
+            const bsCollapse = new bootstrap.Collapse(collapse, {
+                toggle: false
+            });
+            bsCollapse.show();
+            collapse.addEventListener('shown.bs.collapse', function onShow() {
+                collapse.removeEventListener('shown.bs.collapse', onShow);
+                resolve();
+            });
         });
-        bsCollapse.show();
     }
     #productSuggestionIsShown() {
         const collapse = this.#container.querySelector('.collapse');
@@ -179,7 +192,10 @@ export default class ProductBrowser {
         btn.textContent = name;
 
         btn.addEventListener('click', () => {
-            this.#setState({ cid: id });
+            if (!this.#productSuggestionIsShown()) {
+                this.#showProductSuggestions().then(() => this.#setState({ cid: id }));
+            } else
+                this.#setState({ cid: id });
         });
         return btn;
     }
