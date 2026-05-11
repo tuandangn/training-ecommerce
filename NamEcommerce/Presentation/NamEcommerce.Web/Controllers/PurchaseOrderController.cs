@@ -6,6 +6,7 @@ using NamEcommerce.Web.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Catalog;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -102,6 +103,18 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
             return View(model);
         }
+
+        await _mediator.Send(new SubmitsPurchaseOrderCommand
+        {
+            PurchaseOrderId = result.CreatedId!.Value
+        });
+
+        await _mediator.Send(new ChangePurchaseOrderStatusCommand
+        {
+            PurchaseOrderId = result.CreatedId!.Value,
+            Status = (int)PurchaseOrderStatus.Approved
+        });
+
         NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
