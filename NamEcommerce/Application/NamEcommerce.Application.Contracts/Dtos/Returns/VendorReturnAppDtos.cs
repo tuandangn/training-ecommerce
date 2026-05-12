@@ -53,19 +53,10 @@ public sealed record VendorReturnItemAppDto(Guid Id)
 public sealed record CreateVendorReturnAppDto
 {
     public required Guid VendorId { get; init; }
-
-    /// <summary>Đơn nhập nguồn — null = tạo tự do.</summary>
-    public Guid? PurchaseOrderId { get; init; }
-
-    /// <summary>Phiếu nhập kho nguồn — null = tạo tự do.</summary>
     public Guid? GoodsReceiptId { get; init; }
-
     public required Guid WarehouseId { get; init; }
     public string? Note { get; init; }
-
-    /// <summary>Chi phí phát sinh (vận chuyển, đền bù...) — giảm vào khoản thu hồi từ NCC.</summary>
     public decimal AdditionalCost { get; init; } = 0;
-
     public required IEnumerable<CreateVendorReturnItemAppDto> Items { get; init; }
 
     public (bool valid, string? errorMessage) Validate()

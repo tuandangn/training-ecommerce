@@ -14,12 +14,17 @@ public sealed class DeliveryNotePickerModel
 public sealed class GoodsReceiptPickerModel
 {
     public required Guid Id { get; init; }
-
-    /// <summary>Nhãn hiển thị = mã PO (nếu có) hoặc "Nhập {ReceivedOn:dd/MM/yyyy}".</summary>
+    public required string Code { get; init; }
     public required string Label { get; init; }
-
     public required DateTime ReceivedOn { get; init; }
     public string? PurchaseOrderCode { get; init; }
+    public IReadOnlyList<Guid> WarehouseIds { get; init; } = [];
+    public IReadOnlyList<string> WarehouseNames { get; init; } = [];
+    public int ItemCount { get; init; }
+    public decimal TotalQuantity { get; init; }
+    public decimal TotalValue { get; init; }
+    public bool IsPendingCosting { get; init; }
+    public bool IsFullyReturned { get; init; }
 }
 
 /// <summary>Dòng hàng có thể trả — dùng cho cả CustomerReturn và VendorReturn.</summary>

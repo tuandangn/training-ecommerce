@@ -7,19 +7,10 @@ namespace NamEcommerce.Web.Contracts.Commands.Models.Returns;
 public sealed class CreateVendorReturnCommand : IRequest<CreateVendorReturnResultModel>
 {
     public required Guid VendorId { get; init; }
-
-    /// <summary>Đơn nhập nguồn — null = tạo tự do.</summary>
-    public Guid? PurchaseOrderId { get; init; }
-
-    /// <summary>Phiếu nhập kho nguồn — null = tạo tự do.</summary>
     public Guid? GoodsReceiptId { get; init; }
-
     public required Guid WarehouseId { get; init; }
     public string? Note { get; init; }
-
-    /// <summary>Chi phí phát sinh (vận chuyển, đền bù...) — giảm vào khoản thu hồi từ NCC.</summary>
     public decimal AdditionalCost { get; init; } = 0;
-
     public IList<CreateVendorReturnItemCommand> Items { get; init; } = [];
 }
 

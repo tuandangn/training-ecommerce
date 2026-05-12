@@ -93,7 +93,6 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         if (purchaseOrderInfo == null)
             return null;
 
-        // Fetch song song các dữ liệu phụ trợ — independent calls.
         var warehouseTask = _mediator.Send(new GetWarehouseOptionListQuery());
         var receiptsTask = _mediator.Send(new GetRelatedGoodsReceiptsByPurchaseOrderQuery { PurchaseOrderId = id });
         var returnsTask = _mediator.Send(new GetRelatedVendorReturnsByPurchaseOrderQuery { PurchaseOrderId = id });

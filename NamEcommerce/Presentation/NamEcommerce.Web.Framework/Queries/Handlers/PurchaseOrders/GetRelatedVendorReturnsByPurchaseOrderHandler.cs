@@ -8,7 +8,6 @@ namespace NamEcommerce.Web.Framework.Queries.Handlers.PurchaseOrders;
 public sealed class GetRelatedVendorReturnsByPurchaseOrderHandler
     : IRequestHandler<GetRelatedVendorReturnsByPurchaseOrderQuery, IList<RelatedVendorReturnModel>>
 {
-    // Page size đủ lớn để một đơn nhập không bao giờ vượt — phiếu trả/PO thực tế chỉ vài cái.
     private const int FullPageSize = 500;
 
     private readonly IVendorReturnAppService _vendorReturnAppService;

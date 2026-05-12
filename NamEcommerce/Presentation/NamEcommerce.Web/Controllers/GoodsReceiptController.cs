@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Contracts.Commands.Models.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Queries.Models.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;

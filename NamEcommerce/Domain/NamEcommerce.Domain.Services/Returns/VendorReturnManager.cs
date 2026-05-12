@@ -13,6 +13,9 @@ using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Entities.Finance;
+using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Domain.Services.Returns;
 
@@ -26,11 +29,11 @@ public sealed class VendorReturnManager(
     IEntityDataReader<Warehouse> warehouseDataReader,
     IEntityDataReader<VendorDebt> vendorDebtDataReader,
     IRepository<VendorDebt> vendorDebtRepository,
-    IEntityDataReader<NamEcommerce.Domain.Entities.Finance.Expense> expenseDataReader,
-    IRepository<NamEcommerce.Domain.Entities.Finance.Expense> expenseRepository,
-    NamEcommerce.Domain.Shared.Services.Inventory.IInventoryStockManager inventoryStockManager,
+    IEntityDataReader<Expense> expenseDataReader,
+    IRepository<Expense> expenseRepository,
+    IInventoryStockManager inventoryStockManager,
     IExpenseManager expenseManager,
-    NamEcommerce.Domain.Shared.Services.Users.ICurrentUserAccessor currentUserAccessor) : IVendorReturnManager
+    ICurrentUserAccessor currentUserAccessor) : IVendorReturnManager
 {
     public async Task<VendorReturnDto> CreateAsync(CreateVendorReturnDto dto, Guid? createdByUserId)
     {
@@ -41,16 +44,10 @@ public sealed class VendorReturnManager(
         if (vendor is null)
             throw new ReturnDataIsInvalidException("Error.VendorReturn.VendorNotFound", dto.VendorId);
 
-        if (dto.PurchaseOrderId.HasValue)
-        {
-            var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId.Value).ConfigureAwait(false);
-            if (purchaseOrder is null)
-                throw new ReturnDataIsInvalidException("Error.VendorReturn.PurchaseOrderNotFound", dto.PurchaseOrderId.Value);
-        }
-
+        GoodsReceipt? goodsReceipt = null;
         if (dto.GoodsReceiptId.HasValue)
         {
-            var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId.Value).ConfigureAwait(false);
+            goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId.Value).ConfigureAwait(false);
             if (goodsReceipt is null)
                 throw new ReturnDataIsInvalidException("Error.VendorReturn.GoodsReceiptNotFound", dto.GoodsReceiptId.Value);
         }
@@ -65,7 +62,7 @@ public sealed class VendorReturnManager(
             code: code,
             vendorId: vendor.Id,
             vendorName: vendor.Name,
-            purchaseOrderId: dto.PurchaseOrderId,
+            purchaseOrderId: goodsReceipt?.PurchaseOrderId,
             goodsReceiptId: dto.GoodsReceiptId,
             warehouseId: warehouse.Id,
             warehouseName: warehouse.Name,

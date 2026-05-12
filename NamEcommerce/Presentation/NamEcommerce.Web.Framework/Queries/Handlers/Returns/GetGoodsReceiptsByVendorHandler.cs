@@ -23,15 +23,23 @@ public sealed class GetGoodsReceiptsByVendorHandler
         GetGoodsReceiptsByVendorQuery request, CancellationToken cancellationToken)
     {
         var dtos = await _vendorReturnAppService
-            .GetGoodsReceiptsByVendorAsync(request.VendorId)
+            .GetGoodsReceiptsByVendorAsync(request.VendorId, request.PurchaseOrderId)
             .ConfigureAwait(false);
 
         return dtos.Select(d => new GoodsReceiptPickerModel
         {
             Id = d.Id,
+            Code = d.Code,
             Label = d.Label,
             ReceivedOn = DateTimeHelper.ToLocalTime(d.ReceivedOnUtc),
-            PurchaseOrderCode = d.PurchaseOrderCode
+            PurchaseOrderCode = d.PurchaseOrderCode,
+            WarehouseIds = d.WarehouseIds,
+            WarehouseNames = d.WarehouseNames,
+            ItemCount = d.ItemCount,
+            TotalQuantity = d.TotalQuantity,
+            TotalValue = d.TotalValue,
+            IsPendingCosting = d.IsPendingCosting,
+            IsFullyReturned = d.IsFullyReturned
         }).ToList();
     }
 }

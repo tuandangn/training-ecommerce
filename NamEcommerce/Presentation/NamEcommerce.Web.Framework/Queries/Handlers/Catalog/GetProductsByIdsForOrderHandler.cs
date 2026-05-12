@@ -47,7 +47,8 @@ public sealed class GetProductsByIdsForOrderHandler : IRequestHandler<GetProduct
         {
             var productModel = new ProductForOrderModel(productInfo.Id)
             {
-                Name = productInfo.Name
+                Name = productInfo.Name,
+                CurrentUnitPrice = productInfo.UnitPrice
             };
 
             if (productInfo.Pictures.Any())
@@ -62,13 +63,8 @@ public sealed class GetProductsByIdsForOrderHandler : IRequestHandler<GetProduct
             productModel.QuantityReserved = stockInfo.QuantityReserved;
             productModel.QuantityAvailable = stockInfo.QuantityAvailable;
             productModel.AvailableWarehouses = warehouseOptions.Where(option => stockInfo.AvailableWarehouseIds.Contains(option.Id)).ToList();
-
-            productModel.VendorCount = productInfo.Vendors?.Count() ?? 0;
-            productModel.FirstVendorId = productInfo.Vendors?.FirstOrDefault()?.VendorId;
-
             if (productInfo.Vendors != null)
                 productModel.AvailableVendors = vendorOptions.Where(option => productInfo.Vendors.Any(v => v.VendorId == option.Id)).ToList();
-
             productModel.UnitMeasurement = unitMeasurementOptions.FirstOrDefault(option => option.Id == productInfo.UnitMeasurementId)?.Name;
 
             model.Add(productModel);

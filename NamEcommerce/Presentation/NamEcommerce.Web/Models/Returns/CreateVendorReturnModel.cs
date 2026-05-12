@@ -34,6 +34,13 @@ public sealed class CreateVendorReturnModel
     public string? Note { get; set; }
 
     public IList<CreateVendorReturnItemModel> Items { get; set; } = [];
+
+    /// <summary>Đơn nhập đang lọc — chỉ hiện GR thuộc PO này. Null = không lọc.</summary>
+    [ValidateNever]
+    public Guid? FilterPurchaseOrderId { get; set; }
+
+    [ValidateNever]
+    public string? FilterPurchaseOrderCode { get; set; }
 }
 
 [Serializable]

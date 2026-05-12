@@ -3,6 +3,7 @@ using NamEcommerce.Application.Contracts.Returns;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
+using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Returns;
@@ -12,12 +13,13 @@ using NamEcommerce.Domain.Shared.Services.Returns;
 
 namespace NamEcommerce.Application.Services.Returns;
 
-public sealed class VendorReturnAppService(
-    IVendorReturnManager manager,
+public sealed class VendorReturnAppService(IVendorReturnManager manager,
     IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
     IEntityDataReader<VendorReturn> vendorReturnDataReader,
     IEntityDataReader<Product> productDataReader,
-    IEntityDataReader<UnitMeasurement> unitMeasurementDataReader) : IVendorReturnAppService
+    IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
+    IEntityDataReader<Warehouse> warehouseDataReader,
+    IEntityDataReader<InventoryStock> inventoryStockDataReader) : IVendorReturnAppService
 {
     private readonly IVendorReturnManager _manager = manager;
 
@@ -35,7 +37,6 @@ public sealed class VendorReturnAppService(
             var domainDto = new CreateVendorReturnDto
             {
                 VendorId = dto.VendorId,
-                PurchaseOrderId = dto.PurchaseOrderId,
                 GoodsReceiptId = dto.GoodsReceiptId,
                 WarehouseId = dto.WarehouseId,
                 Note = dto.Note,
@@ -184,24 +185,138 @@ public sealed class VendorReturnAppService(
         return (total, items.Select(i => i.ToAppDto()).ToList());
     }
 
-    public Task<List<GoodsReceiptPickerAppDto>> GetGoodsReceiptsByVendorAsync(Guid vendorId)
+    public Task<List<GoodsReceiptPickerAppDto>> GetGoodsReceiptsByVendorAsync(Guid vendorId, Guid? purchaseOrderId = null)
     {
-        var receipts = goodsReceiptDataReader.DataSource
+        var query = goodsReceiptDataReader.DataSource
             .Where(gr => gr.VendorId == vendorId
-                         && gr.SourceType == GoodsReceiptSourceType.FromVendor)
+                         && gr.SourceType == GoodsReceiptSourceType.FromVendor);
+
+        if (purchaseOrderId.HasValue)
+            query = query.Where(gr => gr.PurchaseOrderId == purchaseOrderId.Value);
+
+        var receipts = query
             .OrderByDescending(gr => gr.ReceivedOnUtc)
             .ToList();
 
-        var result = receipts.Select(gr => new GoodsReceiptPickerAppDto(gr.Id)
+        if (receipts.Count == 0)
+            return Task.FromResult(new List<GoodsReceiptPickerAppDto>());
+
+        // Batch load warehouse names referenced by GR items
+        var warehouseIds = receipts
+            .SelectMany(r => r.Items)
+            .Select(i => i.WarehouseId)
+            .OfType<Guid>()
+            .Distinct()
+            .ToList();
+        var warehouseNameDict = warehouseDataReader.DataSource
+            .Where(w => warehouseIds.Contains(w.Id))
+            .ToDictionary(w => w.Id, w => w.Name);
+
+        // Batch load confirmed returns linked to these GRs → tính total đã trả per (GR, Product)
+        var grIds = receipts.Select(r => r.Id).ToList();
+        var returnedByGrProduct = vendorReturnDataReader.DataSource
+            .Where(r => r.GoodsReceiptId.HasValue
+                        && grIds.Contains(r.GoodsReceiptId!.Value)
+                        && (int)r.Status == 2) // Confirmed
+            .ToList()
+            .SelectMany(r => r.Items.Select(i => new
+            {
+                GrId = r.GoodsReceiptId!.Value,
+                i.ProductId,
+                i.AcceptedQuantity
+            }))
+            .GroupBy(x => new { x.GrId, x.ProductId })
+            .ToDictionary(g => (g.Key.GrId, g.Key.ProductId), g => g.Sum(x => x.AcceptedQuantity));
+
+        var result = receipts.Select(gr =>
         {
-            Label = gr.PurchaseOrderCode is not null
-                ? $"PO: {gr.PurchaseOrderCode} — {gr.ReceivedOnUtc:dd/MM/yyyy}"
-                : $"Nhập {gr.ReceivedOnUtc:dd/MM/yyyy}",
-            ReceivedOnUtc = gr.ReceivedOnUtc,
-            PurchaseOrderCode = gr.PurchaseOrderCode
+            var warehouseIds = gr.Items
+                .Select(i => i.WarehouseId)
+                .OfType<Guid>()
+                .Distinct()
+                .ToList();
+            var warehouseNames = warehouseIds
+                .Select(id => warehouseNameDict.TryGetValue(id, out var name) ? name : null)
+                .OfType<string>()
+                .ToList();
+
+            var totalQty = gr.Items.Sum(i => i.Quantity);
+            var totalValue = gr.Items.Sum(i => i.Quantity * (i.UnitCost ?? 0));
+            var isPendingCosting = gr.Items.Any(i => !i.UnitCost.HasValue);
+
+            // IsFullyReturned: với mọi product trong GR, tổng đã trả >= tổng đã nhập của product đó trong GR này
+            var receivedPerProduct = gr.Items
+                .GroupBy(i => i.ProductId)
+                .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
+            var isFullyReturned = receivedPerProduct.Count > 0
+                && receivedPerProduct.All(kv =>
+                    returnedByGrProduct.TryGetValue((gr.Id, kv.Key), out var returned)
+                    && returned >= kv.Value);
+
+            return new GoodsReceiptPickerAppDto(gr.Id)
+            {
+                Code = gr.Code,
+                Label = gr.PurchaseOrderCode is not null
+                    ? $"{gr.Code} · PO {gr.PurchaseOrderCode} · {gr.ReceivedOnUtc:dd/MM/yyyy}"
+                    : $"{gr.Code} · {gr.ReceivedOnUtc:dd/MM/yyyy}",
+                ReceivedOnUtc = gr.ReceivedOnUtc,
+                PurchaseOrderCode = gr.PurchaseOrderCode,
+                WarehouseIds = warehouseIds,
+                WarehouseNames = warehouseNames,
+                ItemCount = gr.Items.Count,
+                TotalQuantity = totalQty,
+                TotalValue = totalValue,
+                IsPendingCosting = isPendingCosting,
+                IsFullyReturned = isFullyReturned
+            };
         }).ToList();
 
         return Task.FromResult(result);
+    }
+
+    public Task<List<Guid>> GetWarehousesWithSufficientStockAsync(
+        IReadOnlyList<(Guid ProductId, decimal RequiredQty)> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        if (items.Count == 0)
+            return Task.FromResult(warehouseDataReader.DataSource.Select(w => w.Id).ToList());
+
+        // Sum required qty per product (cùng product có thể xuất hiện nhiều dòng)
+        var requiredByProduct = items
+            .Where(t => t.RequiredQty > 0)
+            .GroupBy(t => t.ProductId)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.RequiredQty));
+
+        if (requiredByProduct.Count == 0)
+            return Task.FromResult(warehouseDataReader.DataSource.Select(w => w.Id).ToList());
+
+        var productIds = requiredByProduct.Keys.ToList();
+
+        // Load stocks for these products, group by warehouse
+        var stocks = inventoryStockDataReader.DataSource
+            .Where(s => productIds.Contains(s.ProductId))
+            .ToList();
+
+        var availableByWarehouseProduct = stocks
+            .GroupBy(s => s.WarehouseId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.GroupBy(s => s.ProductId)
+                      .ToDictionary(pg => pg.Key, pg => pg.Sum(s => s.QuantityAvailable)));
+
+        // A warehouse is valid if it has >= required qty for ALL products
+        var validIds = new List<Guid>();
+        foreach (var (warehouseId, productAvailable) in availableByWarehouseProduct)
+        {
+            var isValid = requiredByProduct.All(kv =>
+                productAvailable.TryGetValue(kv.Key, out var avail) && avail >= kv.Value);
+
+            if (isValid)
+                validIds.Add(warehouseId);
+        }
+
+        return Task.FromResult(validIds);
     }
 
     public Task<List<ReturnableItemAppDto>> GetGoodsReceiptItemsForReturnAsync(

@@ -30,17 +30,21 @@ public sealed class VendorReturnController : BaseAuthorizedController
         Guid? goodsReceiptId = null,
         Guid? vendorId = null,
         string? vendorName = null,
-        string? goodsReceiptCode = null)
+        string? goodsReceiptCode = null,
+        Guid? purchaseOrderId = null,
+        string? purchaseOrderCode = null)
     {
         CreateVendorReturnModel? prefilledModel = null;
-        if (goodsReceiptId.HasValue || vendorId.HasValue)
+        if (goodsReceiptId.HasValue || vendorId.HasValue || purchaseOrderId.HasValue)
         {
             prefilledModel = new CreateVendorReturnModel
             {
                 GoodsReceiptId = goodsReceiptId,
                 GoodsReceiptDisplayLabel = goodsReceiptCode,
                 VendorId = vendorId,
-                VendorDisplayName = vendorName
+                VendorDisplayName = vendorName,
+                FilterPurchaseOrderId = purchaseOrderId,
+                FilterPurchaseOrderCode = purchaseOrderCode
             };
         }
 
@@ -183,23 +187,24 @@ public sealed class VendorReturnController : BaseAuthorizedController
         return Json(new { success = true, data = model });
     }
 
-    // ── AJAX Pickers ──────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// GET /VendorReturn/GetGoodsReceipts?vendorId=
-    /// Trả về danh sách phiếu nhập kho của NCC — dùng cho AJAX dropdown trong form tạo phiếu trả NCC.
-    /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetGoodsReceipts(Guid vendorId)
+    public async Task<IActionResult> GetGoodsReceipts(Guid vendorId, Guid? purchaseOrderId = null)
     {
-        var receipts = await _mediator.Send(new GetGoodsReceiptsByVendorQuery { VendorId = vendorId });
+        var receipts = await _mediator.Send(new GetGoodsReceiptsByVendorQuery
+        {
+            VendorId = vendorId,
+            PurchaseOrderId = purchaseOrderId
+        });
         return Json(receipts);
     }
 
-    /// <summary>
-    /// GET /VendorReturn/GetGoodsReceiptItems?goodsReceiptId=&amp;excludeReturnId=
-    /// Trả về danh sách mặt hàng có thể trả của phiếu nhập — bao gồm số lượng đã trả.
-    /// </summary>
+    [HttpPost]
+    public async Task<IActionResult> GetValidWarehouses([FromBody] GetValidWarehousesForReturnQuery query)
+    {
+        var ids = await _mediator.Send(query ?? new GetValidWarehousesForReturnQuery());
+        return Json(ids);
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetGoodsReceiptItems(Guid goodsReceiptId, Guid? excludeReturnId = null)
     {
@@ -211,10 +216,6 @@ public sealed class VendorReturnController : BaseAuthorizedController
         return Json(items);
     }
 
-    /// <summary>
-    /// GET /VendorReturn/GetByGoodsReceipt?goodsReceiptId=
-    /// Trả về danh sách phiếu trả NCC liên kết với phiếu nhập kho — dùng cho section "Trả hàng NCC" trên Details.
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetByGoodsReceipt(Guid goodsReceiptId)
     {

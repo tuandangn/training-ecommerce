@@ -10,4 +10,7 @@ namespace NamEcommerce.Web.Contracts.Queries.Models.Returns;
 public sealed class GetGoodsReceiptsByVendorQuery : IRequest<List<GoodsReceiptPickerModel>>
 {
     public required Guid VendorId { get; init; }
+
+    /// <summary>Chỉ lấy GR thuộc PO này (optional). Null = lấy toàn bộ GR của NCC.</summary>
+    public Guid? PurchaseOrderId { get; init; }
 }

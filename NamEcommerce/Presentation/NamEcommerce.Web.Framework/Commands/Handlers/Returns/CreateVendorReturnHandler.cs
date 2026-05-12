@@ -26,7 +26,6 @@ public sealed class CreateVendorReturnHandler : IRequestHandler<CreateVendorRetu
         var result = await _vendorReturnAppService.CreateAsync(new CreateVendorReturnAppDto
         {
             VendorId = request.VendorId,
-            PurchaseOrderId = request.PurchaseOrderId,
             GoodsReceiptId = request.GoodsReceiptId,
             WarehouseId = request.WarehouseId,
             Note = request.Note,

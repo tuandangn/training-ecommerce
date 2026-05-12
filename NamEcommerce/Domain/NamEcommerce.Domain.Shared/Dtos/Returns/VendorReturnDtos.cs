@@ -23,9 +23,7 @@ public sealed record VendorReturnDto(Guid Id)
     public required DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
 
-    /// <summary>Chi phí phát sinh khi trả hàng cho NCC (vận chuyển, đền bù...). Tự động ghi Expense khi Confirm.</summary>
     public required decimal AdditionalCost { get; init; }
-
     public required IEnumerable<VendorReturnItemDto> Items { get; init; }
 
     /// <summary>Số tiền thu lại từ NCC = Σ(AcceptedQty × ReturnUnitCost) − AdditionalCost (floor 0).</summary>
@@ -55,19 +53,10 @@ public sealed record VendorReturnItemDto(Guid Id)
 public sealed record CreateVendorReturnDto
 {
     public required Guid VendorId { get; init; }
-
-    /// <summary>Đơn nhập nguồn — null = tạo tự do hoặc chỉ gắn GoodsReceipt.</summary>
-    public Guid? PurchaseOrderId { get; init; }
-
-    /// <summary>Phiếu nhập kho nguồn — null = tạo tự do.</summary>
     public Guid? GoodsReceiptId { get; init; }
-
     public required Guid WarehouseId { get; init; }
     public string? Note { get; init; }
-
-    /// <summary>Chi phí phát sinh (tiền xe trả hàng, đền bù...) — giảm vào khoản thu hồi từ NCC.</summary>
     public decimal AdditionalCost { get; init; } = 0;
-
     public required IEnumerable<CreateVendorReturnItemDto> Items { get; init; }
 
     public void Verify()

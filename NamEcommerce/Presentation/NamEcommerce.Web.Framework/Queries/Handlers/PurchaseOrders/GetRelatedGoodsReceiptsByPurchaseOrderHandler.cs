@@ -36,6 +36,7 @@ public sealed class GetRelatedGoodsReceiptsByPurchaseOrderHandler
 
             return new RelatedGoodsReceiptModel(receipt.Id)
             {
+                Code = receipt.Code,
                 ReceivedOn = receipt.ReceivedOnUtc.ToLocalTime(),
                 ItemCount = receipt.Items.Count,
                 TotalQuantity = receipt.Items.Sum(it => it.Quantity),

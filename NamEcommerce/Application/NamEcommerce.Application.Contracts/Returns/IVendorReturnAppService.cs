@@ -15,9 +15,15 @@ public interface IVendorReturnAppService
     Task<(int Total, List<VendorReturnAppDto> Items)> GetListAsync(
         Guid? vendorId, Guid? purchaseOrderId, Guid? goodsReceiptId, int? status, int pageIndex, int pageSize);
 
-    /// <summary>Lấy danh sách phiếu nhập kho (FromVendor) của một NCC — cho AJAX picker.</summary>
-    Task<List<GoodsReceiptPickerAppDto>> GetGoodsReceiptsByVendorAsync(Guid vendorId);
+    /// <summary>Lấy danh sách phiếu nhập kho (FromVendor) của một NCC — cho AJAX picker. Có thể lọc theo PurchaseOrderId.</summary>
+    Task<List<GoodsReceiptPickerAppDto>> GetGoodsReceiptsByVendorAsync(Guid vendorId, Guid? purchaseOrderId = null);
 
     /// <summary>Lấy danh sách items có thể trả của một phiếu nhập kho — bao gồm số lượng đã trả.</summary>
     Task<List<ReturnableItemAppDto>> GetGoodsReceiptItemsForReturnAsync(Guid goodsReceiptId, Guid? excludeReturnId = null);
+
+    /// <summary>
+    /// Lọc danh sách Warehouse có đủ tồn (QuantityAvailable) để đáp ứng TOÀN BỘ items đang trả.
+    /// Kho hợp lệ = có >= RequiredQty cho mọi (ProductId).
+    /// </summary>
+    Task<List<Guid>> GetWarehousesWithSufficientStockAsync(IReadOnlyList<(Guid ProductId, decimal RequiredQty)> items);
 }

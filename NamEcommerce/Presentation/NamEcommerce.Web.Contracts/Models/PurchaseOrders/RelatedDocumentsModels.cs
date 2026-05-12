@@ -4,18 +4,13 @@ namespace NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 [Serializable]
 public sealed record RelatedGoodsReceiptModel(Guid Id)
 {
+    public required string Code { get; set; }
     public required DateTime ReceivedOn { get; init; }
     public required int ItemCount { get; init; }
     public required decimal TotalQuantity { get; init; }
     public required bool IsPendingCosting { get; init; }
-
-    /// <summary>Tổng giá trị phiếu — null khi còn item chưa định giá.</summary>
     public decimal? TotalValue { get; init; }
-
-    /// <summary>Danh sách tên kho riêng biệt phiếu này nhận vào (1 phiếu có thể nhập nhiều kho).</summary>
     public IList<string> WarehouseNames { get; init; } = [];
-
-    /// <summary>Tóm tắt các mặt hàng — hiển thị trong popover/expand.</summary>
     public IList<RelatedGoodsReceiptItemModel> Items { get; init; } = [];
 }
 
