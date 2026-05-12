@@ -163,11 +163,29 @@ public sealed record VendorDebt : AppAggregateEntity
     {
         if (amount <= 0) return;
 
+        var wasNonNegative = RemainingAmount >= 0;
         RemainingAmount -= amount;
         UpdatedOnUtc = DateTime.UtcNow;
 
         if (RemainingAmount <= 0)
             Status = DebtStatus.FullyPaid;
+
+        if (wasNonNegative && RemainingAmount < 0)
+        {
+            var overAmount = -RemainingAmount;
+            RaiseDomainEvent(new VendorDebtBecameNegative(Id, VendorId, returnId, overAmount, RemainingAmount));
+        }
+    }
+
+    internal void ReverseReturn(decimal amount)
+    {
+        if (amount <= 0) return;
+
+        RemainingAmount += amount;
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        if (RemainingAmount > 0)
+            Status = PaidAmount > 0 ? DebtStatus.PartiallyPaid : DebtStatus.Outstanding;
     }
 
     /// <summary>

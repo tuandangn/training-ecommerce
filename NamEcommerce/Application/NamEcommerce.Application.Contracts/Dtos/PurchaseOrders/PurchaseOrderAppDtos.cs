@@ -30,6 +30,8 @@ public sealed record PurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto
 
     public decimal TaxAmount { get; set; }
     public decimal ShippingAmount { get; set; }
+    public decimal AccumulatedTaxAmount { get; set; }
+    public decimal AccumulatedShippingAmount { get; set; }
     public decimal TotalAmount { get; set; }
 
     public IList<PurchaseOrderItemAppDto> Items { get; } = [];

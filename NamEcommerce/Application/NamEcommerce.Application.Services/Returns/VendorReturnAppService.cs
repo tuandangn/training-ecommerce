@@ -156,6 +156,19 @@ public sealed class VendorReturnAppService(
         }
     }
 
+    public async Task<ConfirmVendorReturnResultAppDto> ReverseConfirmedAsync(Guid id, string reason)
+    {
+        try
+        {
+            await _manager.ReverseConfirmedAsync(id, reason).ConfigureAwait(false);
+            return new ConfirmVendorReturnResultAppDto { Success = true };
+        }
+        catch (Exception ex)
+        {
+            return new ConfirmVendorReturnResultAppDto { Success = false, ErrorMessage = ex.Message };
+        }
+    }
+
     public async Task<VendorReturnAppDto?> GetByIdAsync(Guid id)
     {
         var dto = await _manager.GetByIdAsync(id).ConfigureAwait(false);

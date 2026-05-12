@@ -159,6 +159,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
     services.AddScoped<IVendorDebtManager, VendorDebtManager>();
     services.AddScoped<IGoodsReceiptManager, GoodsReceiptManager>();
+    services.AddScoped<IGoodsReceiptPurchaseOrderLinker, GoodsReceiptPurchaseOrderLinker>();
     services.AddScoped<ICustomerReturnManager, CustomerReturnManager>();
     services.AddScoped<IVendorReturnManager, VendorReturnManager>();
     services.AddScoped<ICustomerRefundManager, CustomerRefundManager>();

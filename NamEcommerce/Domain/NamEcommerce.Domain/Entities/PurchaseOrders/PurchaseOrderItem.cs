@@ -38,6 +38,16 @@ public record PurchaseOrderItem : AppEntity
         QuantityReceived += quantityReceived;
     }
 
+    internal void RevertQuantityReceived(decimal quantity)
+    {
+        if (quantity < 0)
+            throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be greater than or equal to 0");
+        if (quantity > QuantityReceived)
+            throw new ArgumentOutOfRangeException(nameof(quantity), "Cannot revert more than QuantityReceived");
+
+        QuantityReceived -= quantity;
+    }
+
     internal bool CanReceiveQuantity(decimal receivingQuantity)
         => QuantityReceived + receivingQuantity <= QuantityOrdered;
 

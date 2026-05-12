@@ -954,12 +954,26 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<Guid?>("RecordedByUserId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("SourceCustomerReturnId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SourceVendorReturnId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SourceCustomerReturnId")
+                        .IsUnique()
+                        .HasFilter("[SourceCustomerReturnId] IS NOT NULL");
+
+                    b.HasIndex("SourceVendorReturnId")
+                        .IsUnique()
+                        .HasFilter("[SourceVendorReturnId] IS NOT NULL");
 
                     b.ToTable("Expenses", "tbl");
                 });
@@ -969,6 +983,16 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("BulkReceiveBatchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("");
 
                     b.Property<Guid?>("CreatedByUserId")
                         .HasColumnType("uniqueidentifier");
@@ -1037,6 +1061,12 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasColumnName("PictureIds");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BulkReceiveBatchId");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasFilter("[Code] <> ''");
 
                     b.ToTable("GoodsReceipt", "tbl");
                 });
@@ -1512,6 +1542,29 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<decimal>("AccumulatedShippingAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("AccumulatedTaxAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ApprovedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CloseReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ClosedOnUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -1532,12 +1585,21 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("LastReceivedOnUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<DateTime>("PlacedOnUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<decimal>("ShippingAmount")
                         .HasColumnType("decimal(18,2)");
@@ -1759,6 +1821,12 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<Guid?>("GoodsReceiptId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("InspectedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("InspectedOnUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
@@ -1771,6 +1839,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<DateTime>("ReturnDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ReversedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReversedReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");

@@ -93,12 +93,22 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         if (purchaseOrderInfo == null)
             return null;
 
-        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        // Fetch song song các dữ liệu phụ trợ — independent calls.
+        var warehouseTask = _mediator.Send(new GetWarehouseOptionListQuery());
+        var receiptsTask = _mediator.Send(new GetRelatedGoodsReceiptsByPurchaseOrderQuery { PurchaseOrderId = id });
+        var returnsTask = _mediator.Send(new GetRelatedVendorReturnsByPurchaseOrderQuery { PurchaseOrderId = id });
+        await Task.WhenAll(warehouseTask, receiptsTask, returnsTask).ConfigureAwait(false);
+
+        var availableWarehouses = await warehouseTask;
+        var relatedReceipts = await receiptsTask;
+        var relatedReturns = await returnsTask;
 
         var model = new PurchaseOrderDetailsModel
         {
             Info = purchaseOrderInfo,
-            AvailableWarehouses = availableWarehouses
+            AvailableWarehouses = availableWarehouses,
+            RelatedGoodsReceipts = relatedReceipts,
+            RelatedVendorReturns = relatedReturns
         };
         model.CanModifyInfo = purchaseOrderInfo.CanModifyInfo;
         if (model.CanModifyInfo)

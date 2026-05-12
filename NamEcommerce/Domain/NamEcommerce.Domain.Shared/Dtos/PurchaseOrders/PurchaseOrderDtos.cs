@@ -36,6 +36,8 @@ public sealed record PurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
     public required DateTime CreatedOnUtc { get; init; }
     public decimal TaxAmount { get; set; }
     public decimal ShippingAmount { get; set; }
+    public decimal AccumulatedTaxAmount { get; set; }
+    public decimal AccumulatedShippingAmount { get; set; }
     public decimal TotalAmount { get; set; }
     public bool CanAddItems { get; init; }
     public bool CanReceiveGoods { get; init; }

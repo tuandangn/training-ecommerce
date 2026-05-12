@@ -48,3 +48,5 @@ public sealed record PurchaseOrderItemReceived(
     Guid PurchaseOrderId,
     Guid PurchaseOrderItemId,
     decimal ReceivedQuantity) : DomainEvent;
+
+public sealed record PurchaseOrderBulkReceived(Guid PurchaseOrderId) : DomainEvent;

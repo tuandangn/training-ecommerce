@@ -15,5 +15,8 @@ public enum VendorReturnStatus
     Confirmed = 2,
 
     /// <summary>Đã huỷ — chỉ cho phép từ Draft hoặc Inspecting.</summary>
-    Cancelled = 3
+    Cancelled = 3,
+
+    /// <summary>Đã đảo ngược — hoàn nguyên tồn + công nợ + chi phí từ Confirmed.</summary>
+    Reversed = 4
 }

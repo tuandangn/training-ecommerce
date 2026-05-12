@@ -9,7 +9,6 @@
     <h1 class="topbar-page-title">
         Đơn bán
         <span class="text-muted">@Model.Code</span>
-        <span class="text-muted fw-normal">@Model.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
         @if (orderStatus != OrderStatus.Locked)
         {
             <span class="text-muted small">
@@ -18,7 +17,6 @@
                 </span>
             </span>
         }
-
     </h1>
     <div class="topbar-page-subtitle">
         <nav aria-label="breadcrumb">

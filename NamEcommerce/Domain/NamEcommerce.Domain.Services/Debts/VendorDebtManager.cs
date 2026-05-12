@@ -362,6 +362,15 @@ public sealed class VendorDebtManager(
         return dto with { Payments = payments.Select(p => p.ToDto()).ToList() };
     }
 
+    public async Task DeleteDebtFromGoodsReceiptAsync(Guid goodsReceiptId)
+    {
+        var debt = debtReader.DataSource
+            .FirstOrDefault(d => d.GoodsReceiptId == goodsReceiptId);
+        if (debt == null) return;
+
+        await debtRepository.DeleteAsync(debt).ConfigureAwait(false);
+    }
+
     public async Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId)
     {
         var payment = await paymentReader.GetByIdAsync(paymentId).ConfigureAwait(false);

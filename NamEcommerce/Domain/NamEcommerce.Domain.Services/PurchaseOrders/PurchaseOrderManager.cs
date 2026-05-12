@@ -188,6 +188,20 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         };
     }
 
+    public async Task ClosePartialAsync(Guid purchaseOrderId, string reason)
+    {
+        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
+
+        var oldStatus = purchaseOrder.Status;
+        purchaseOrder.ClosePartial(reason);
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+
+        purchaseOrder.MarkStatusChanged(oldStatus);
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+    }
+
     public async Task ChangeStatusAsync(Guid purchaseOrderId, PurchaseOrderStatus status)
     {
         var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
@@ -198,7 +212,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             throw new PurchaseOrderCannotChangeStatusException();
 
         var oldStatus = purchaseOrder.Status;
-        purchaseOrder.ChangeStatus(status);
+        var currentUser = await _currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        purchaseOrder.ChangeStatus(status, currentUser?.Id);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
 
         purchaseOrder.MarkStatusChanged(oldStatus);
@@ -292,6 +307,93 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         return new ReceivedGoodsForItemResultDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {
             ReceivedQuantity = dto.ReceivedQuantity
+        };
+    }
+
+    public async Task<BulkReceiveGoodsForPurchaseOrderResultDto> BulkReceiveItemsAsync(BulkReceiveGoodsForPurchaseOrderDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
+
+        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
+
+        if (!purchaseOrder.CanReceiveGoods())
+            throw new PurchaseOrderCannotReceiveGoodsException();
+
+        // Aggregate-validate qty theo PO item (cùng item nhiều kho phải cộng dồn trước khi check).
+        var groupedByItem = dto.Lines.GroupBy(line => line.PurchaseOrderItemId);
+        foreach (var group in groupedByItem)
+        {
+            var poItem = purchaseOrder.Items.FirstOrDefault(i => i.Id == group.Key);
+            if (poItem is null)
+                throw new PurchaseOrderItemIsNotFoundException(group.Key);
+
+            var totalReceiving = group.Sum(x => x.ReceivedQuantity);
+            if (poItem.QuantityReceived + totalReceiving > poItem.QuantityOrdered)
+                throw new PurchaseOrderReceiveQuantityExceedsOrderedQuantityException();
+        }
+
+        // Validate warehouse cho tất cả lines (cache theo Id).
+        var warehouseCache = new Dictionary<Guid, Warehouse?>();
+        foreach (var line in dto.Lines)
+        {
+            if (!warehouseCache.TryGetValue(line.WarehouseId, out var warehouse))
+            {
+                warehouse = await _warehouseOrderDataReader.GetByIdAsync(line.WarehouseId).ConfigureAwait(false);
+                warehouseCache[line.WarehouseId] = warehouse;
+            }
+            if (warehouse is null)
+                throw new WarehouseIsNotFoundException(line.WarehouseId);
+        }
+
+        foreach (var line in dto.Lines)
+        {
+            var poItem = purchaseOrder.Items.First(i => i.Id == line.PurchaseOrderItemId);
+            poItem.AddQuantityReceived(line.ReceivedQuantity);
+        }
+        purchaseOrder.MarkBulkReceived();
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+
+        // 1 lần UpdateAsync PO (trước khi tạo GoodsReceipts để event handlers có state mới).
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+
+        // Group lines theo WarehouseId → mỗi group = 1 GoodsReceipt với nhiều items.
+        // BatchId chia sẻ giữa tất cả GR cùng đợt bulk-receive (chỉ set nếu sinh ra ≥2 GR).
+        var linesByWarehouse = dto.Lines.GroupBy(line => line.WarehouseId).ToList();
+        var batchId = linesByWarehouse.Count > 1 ? (Guid?)Guid.NewGuid() : null;
+        var createdReceiptIds = new List<Guid>();
+        foreach (var warehouseGroup in linesByWarehouse)
+        {
+            var bulkItems = warehouseGroup.Select(line =>
+            {
+                var poItem = purchaseOrder.Items.First(i => i.Id == line.PurchaseOrderItemId);
+                return new CreateGoodsReceiptFromPurchaseOrderBulkItemDto
+                {
+                    ProductId = poItem.ProductId,
+                    Quantity = line.ReceivedQuantity,
+                    UnitCost = line.ActualUnitCost ?? poItem.UnitCost
+                };
+            }).ToList();
+
+            var result = await _goodsReceiptManager.CreateBulkFromPurchaseOrderReceivingAsync(new CreateGoodsReceiptFromPurchaseOrderBulkDto
+            {
+                PurchaseOrderId = purchaseOrder.Id,
+                PurchaseOrderCode = purchaseOrder.Code,
+                VendorId = purchaseOrder.VendorId,
+                WarehouseId = warehouseGroup.Key,
+                BulkReceiveBatchId = batchId,
+                Items = bulkItems
+            }).ConfigureAwait(false);
+
+            createdReceiptIds.Add(result.CreatedId);
+        }
+
+        return new BulkReceiveGoodsForPurchaseOrderResultDto
+        {
+            PurchaseOrderId = purchaseOrder.Id,
+            CreatedGoodsReceiptIds = createdReceiptIds
         };
     }
 
@@ -436,6 +538,24 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 PurchaseOrderCode: x.Code,
                 PurchaseDateUtc: x.PlacedOnUtc))
             .ToList();
+    }
+
+    public async Task AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping, decimal additionalTax)
+    {
+        if (additionalShipping < 0)
+            throw new PurchaseOrderDataIsInvalidException("Error.ShippingAmountCannotBeNegative");
+        if (additionalTax < 0)
+            throw new PurchaseOrderDataIsInvalidException("Error.TaxAmountCannotBeNegative");
+
+        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
+
+        purchaseOrder.AccumulatedShippingAmount += additionalShipping;
+        purchaseOrder.AccumulatedTaxAmount += additionalTax;
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 
     public Task<PurchaseOrderDto?> GetPurchaseOrderByCodeAsync(string code)

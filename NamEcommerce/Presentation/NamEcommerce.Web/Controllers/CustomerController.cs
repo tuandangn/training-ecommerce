@@ -75,7 +75,7 @@ public sealed class CustomerController : BaseAuthorizedController
             FullName = model.FullName!,
             PhoneNumber = model.PhoneNumber!,
             Email = model.Email,
-            Address = model.Address,
+            Address = model.Address ?? string.Empty,
             Note = model.Note,
             InitialDebt = model.InitialDebt
         });
@@ -124,7 +124,7 @@ public sealed class CustomerController : BaseAuthorizedController
             FullName = model.FullName!,
             PhoneNumber = model.PhoneNumber!,
             Email = model.Email,
-            Address = model.Address,
+            Address = model.Address ?? string.Empty,
             Note = model.Note
         });
 

@@ -47,3 +47,15 @@ public sealed record GoodsReceiptSetToPurchaseOrder(Guid GoodsReceiptId, Guid Pu
 /// Phiếu nhập vừa được unlink khỏi PurchaseOrder qua <c>RemoveGoodsReceiptFromPurchaseOrder</c>.
 /// </summary>
 public sealed record GoodsReceiptRemovedFromPurchaseOrder(Guid GoodsReceiptId, Guid PurchaseOrderId) : DomainEvent;
+
+/// <summary>
+/// Khi link GoodsReceipt vào PurchaseOrder, 1 item gốc (no-cost) phải được tách ra nhiều item con
+/// vì match nhiều dòng PO có UnitCost khác nhau. Event này dùng để audit/trace việc tự split.
+/// </summary>
+public sealed record GoodsReceiptItemSplitOnLinking(
+    Guid GoodsReceiptId,
+    Guid PurchaseOrderId,
+    Guid OriginalItemId,
+    Guid ProductId,
+    decimal SplitQuantity,
+    decimal AssignedUnitCost) : DomainEvent;

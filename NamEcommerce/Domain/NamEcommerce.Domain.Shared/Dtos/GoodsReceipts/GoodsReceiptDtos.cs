@@ -38,6 +38,60 @@ public sealed record CreateGoodsReceiptFromPurchaseOrderDto
     }
 }
 
+/// <summary>
+/// DTO nội bộ — tạo 1 GoodsReceipt cho nhiều items cùng nhập vào 1 kho từ 1 PurchaseOrder.
+/// Caller (PurchaseOrderManager.BulkReceiveItemsAsync) đã group lines theo WarehouseId trước khi gọi.
+/// </summary>
+[Serializable]
+public sealed record CreateGoodsReceiptFromPurchaseOrderBulkDto
+{
+    public required Guid PurchaseOrderId { get; init; }
+    public required string PurchaseOrderCode { get; init; }
+
+    /// <summary>VendorId từ PO — nullable vì PO có thể chưa có vendor (hiếm).</summary>
+    public Guid? VendorId { get; init; }
+
+    /// <summary>Tất cả items trong DTO này cùng nhập vào kho này.</summary>
+    public required Guid WarehouseId { get; init; }
+
+    /// <summary>BatchId chia sẻ giữa các GoodsReceipt được tạo cùng một lần bulk-receive (nhiều kho).</summary>
+    public Guid? BulkReceiveBatchId { get; init; }
+
+    public required IList<CreateGoodsReceiptFromPurchaseOrderBulkItemDto> Items { get; init; }
+
+    public void Verify()
+    {
+        if (PurchaseOrderId == Guid.Empty)
+            throw new ArgumentException("PurchaseOrderId is required", nameof(PurchaseOrderId));
+        if (string.IsNullOrEmpty(PurchaseOrderCode))
+            throw new ArgumentException("PurchaseOrderCode is required", nameof(PurchaseOrderCode));
+        if (WarehouseId == Guid.Empty)
+            throw new ArgumentException("WarehouseId is required", nameof(WarehouseId));
+        if (Items is null || Items.Count == 0)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityMustBePositive");
+        foreach (var item in Items)
+            item.Verify();
+    }
+}
+
+[Serializable]
+public sealed record CreateGoodsReceiptFromPurchaseOrderBulkItemDto
+{
+    public required Guid ProductId { get; init; }
+    public required decimal Quantity { get; init; }
+
+    /// <summary>UnitCost từ PO item — nullable nếu PO item chưa có giá.</summary>
+    public decimal? UnitCost { get; init; }
+
+    public void Verify()
+    {
+        if (ProductId == Guid.Empty)
+            throw new ArgumentException("ProductId is required", nameof(ProductId));
+        if (Quantity <= 0)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityMustBePositive");
+    }
+}
+
 [Serializable]
 public abstract record BaseGoodsReceiptDto
 {
@@ -55,7 +109,7 @@ public abstract record BaseGoodsReceiptDto
 
     public virtual void Verify()
     {
-        if (!PictureIds.Any())
+        if (PictureIds is null || !PictureIds.Any())
             throw new GoodsReceiptProofPictureRequired();
 
         if (ReceivedOnUtc > DateTime.UtcNow)
@@ -66,6 +120,7 @@ public abstract record BaseGoodsReceiptDto
 [Serializable]
 public sealed record GoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto
 {
+    public string Code { get; init; } = string.Empty;
     public required IEnumerable<GoodsReceiptItemDto> Items { get; init; }
     public bool IsPendingCosting { get; init; }
 
@@ -77,6 +132,9 @@ public sealed record GoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto
     // PurchaseOrder linkage
     public Guid? PurchaseOrderId { get; init; }
     public string? PurchaseOrderCode { get; init; }
+
+    /// <summary>BatchId của lần bulk-receive (nếu phiếu sinh từ bulk-receive nhiều kho).</summary>
+    public Guid? BulkReceiveBatchId { get; init; }
 }
 
 [Serializable]

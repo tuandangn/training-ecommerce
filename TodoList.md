@@ -188,24 +188,26 @@ Update-Database
 - [x] `CustomerController.Create`: map `InitialDebt`
 - [x] `Customer/Create.cshtml`: thêm field "Công nợ ban đầu"
 
-### E3 — Cancel protection cho DeliveryNote/GoodsReceipt (Approach 2)
+### E3 — Cancel protection cho DeliveryNote/GoodsReceipt (Approach 2) ✅ Done
 
 > Block cancel nếu có Confirmed returns. Auto-cancel Draft/Inspecting returns khi parent bị cancel.
 
-- [ ] `DeliveryNoteManager.CancelAsync`: kiểm tra Confirmed CustomerReturns → block; auto-cancel Draft/Inspecting CustomerReturns
-- [ ] `GoodsReceiptManager.CancelAsync`: tương tự cho VendorReturns
+- [x] `DeliveryNoteManager.CancelAsync`: kiểm tra Confirmed CustomerReturns → block; auto-cancel Draft/Inspecting CustomerReturns
+- [x] `GoodsReceiptManager.DeleteGoodsReceiptAsync`: tương tự cho VendorReturns (entity GoodsReceipt không có concept Cancel — dùng Delete)
 
-### E4 — Return info trên DeliveryNote/GoodsReceipt Details
+### E4 — Return info trên DeliveryNote/GoodsReceipt Details ✅ Done (2026-05-12)
 
 > Cột "Đã trả" trong items table (chỉ khi có returns). Section "Khách trả hàng" / "Trả hàng NCC".
 
-- [ ] Queries + Handlers để load linked returns
-- [ ] Update `DeliveryNote/Details.cshtml`
-- [ ] Update `GoodsReceipt/Details.cshtml`
+- [x] Queries + Handlers để load linked returns:
+  - Section returns list: `GET /CustomerReturn/GetByDeliveryNote`, `GET /VendorReturn/GetByGoodsReceipt` (AJAX)
+  - Returned-quantity per item: `GetReturnedQuantitiesByDeliveryNoteQuery` + `GetReturnedQuantitiesByGoodsReceiptQuery` (chỉ tính Confirmed)
+- [x] Update `DeliveryNote/Details.cshtml`: cột "Đã trả" trong items table + section "Khách trả hàng"
+- [x] Update `GoodsReceipt/Details.cshtml`: cột "Đã trả" + section "Trả hàng NCC"
 
-### E5 — Quick-create return button trên Details pages
+### E5 — Quick-create return button trên Details pages ✅ Done
 
-- [ ] `CustomerReturn/Create` GET nhận `deliveryNoteId` param → pre-fill form
-- [ ] `VendorReturn/Create` GET nhận `goodsReceiptId` param → pre-fill form
-- [ ] Button "Tạo phiếu trả" trên `DeliveryNote/Details.cshtml`
-- [ ] Button "Tạo phiếu trả NCC" trên `GoodsReceipt/Details.cshtml`
+- [x] `CustomerReturn/Create` GET nhận `deliveryNoteId`, `customerId`, `customerName`, `deliveryNoteCode` → pre-fill form
+- [x] `VendorReturn/Create` GET nhận `goodsReceiptId`, `vendorId`, `vendorName`, `goodsReceiptCode` → pre-fill form
+- [x] Button "Tạo phiếu trả" trên `DeliveryNote/Details.cshtml`
+- [x] Button "Tạo phiếu trả NCC" trên `GoodsReceipt/Details.cshtml`

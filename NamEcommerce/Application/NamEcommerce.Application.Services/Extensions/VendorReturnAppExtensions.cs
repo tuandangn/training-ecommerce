@@ -19,6 +19,8 @@ public static class VendorReturnAppExtensions
             Status = dto.Status,
             ReturnDate = dto.ReturnDate,
             ConfirmedOnUtc = dto.ConfirmedOnUtc,
+            ReversedOnUtc = dto.ReversedOnUtc,
+            ReversedReason = dto.ReversedReason,
             AdditionalCost = dto.AdditionalCost,
             GeneratedDeliveryNoteId = dto.GeneratedDeliveryNoteId,
             CreatedByUserId = dto.CreatedByUserId,

@@ -35,6 +35,8 @@ public sealed class GetVendorReturnHandler : IRequestHandler<GetVendorReturnQuer
             Status = dto.Status,
             ReturnDate = DateTimeHelper.ToLocalTime(dto.ReturnDate),
             ConfirmedOn = DateTimeHelper.ToLocalTime(dto.ConfirmedOnUtc),
+            ReversedOn = DateTimeHelper.ToLocalTime(dto.ReversedOnUtc),
+            ReversedReason = dto.ReversedReason,
             AdditionalCost = dto.AdditionalCost,
             GeneratedDeliveryNoteId = dto.GeneratedDeliveryNoteId,
             CreatedOn = DateTimeHelper.ToLocalTime(dto.CreatedOnUtc),

@@ -26,7 +26,11 @@ public sealed class VendorReturnManager(
     IEntityDataReader<Warehouse> warehouseDataReader,
     IEntityDataReader<VendorDebt> vendorDebtDataReader,
     IRepository<VendorDebt> vendorDebtRepository,
-    IExpenseManager expenseManager) : IVendorReturnManager
+    IEntityDataReader<NamEcommerce.Domain.Entities.Finance.Expense> expenseDataReader,
+    IRepository<NamEcommerce.Domain.Entities.Finance.Expense> expenseRepository,
+    NamEcommerce.Domain.Shared.Services.Inventory.IInventoryStockManager inventoryStockManager,
+    IExpenseManager expenseManager,
+    NamEcommerce.Domain.Shared.Services.Users.ICurrentUserAccessor currentUserAccessor) : IVendorReturnManager
 {
     public async Task<VendorReturnDto> CreateAsync(CreateVendorReturnDto dto, Guid? createdByUserId)
     {
@@ -110,7 +114,8 @@ public sealed class VendorReturnManager(
         var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new VendorReturnNotFoundException(id);
 
-        vendorReturn.MoveToInspecting();
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        vendorReturn.MoveToInspecting(currentUser?.Id);
         await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
     }
 
@@ -144,6 +149,67 @@ public sealed class VendorReturnManager(
             ?? throw new VendorReturnNotFoundException(id);
 
         vendorReturn.Cancel();
+        await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
+    }
+
+    public async Task ReverseConfirmedAsync(Guid id, string reason)
+    {
+        var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
+            ?? throw new VendorReturnNotFoundException(id);
+
+        foreach (var item in vendorReturn.Items)
+        {
+            if (item.AcceptedQuantity <= 0) continue;
+            await inventoryStockManager.ReceiveStockAsync(
+                productId: item.ProductId,
+                warehouseId: vendorReturn.WarehouseId,
+                receivedQuantity: item.AcceptedQuantity,
+                note: $"Đảo ngược phiếu trả NCC {vendorReturn.Code}",
+                receivedByUserId: vendorReturn.CreatedByUserId,
+                referenceType: (int)NamEcommerce.Domain.Entities.Inventory.StockReferenceType.VendorReturn,
+                referenceId: vendorReturn.Id).ConfigureAwait(false);
+        }
+
+        var totalReturnAmount = Math.Max(0,
+            vendorReturn.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitCost) - vendorReturn.AdditionalCost);
+        if (totalReturnAmount > 0)
+        {
+            var debtsQuery = vendorDebtDataReader.DataSource.AsQueryable();
+            if (vendorReturn.GoodsReceiptId.HasValue)
+                debtsQuery = debtsQuery.Where(d => d.GoodsReceiptId == vendorReturn.GoodsReceiptId.Value);
+            else if (vendorReturn.PurchaseOrderId.HasValue)
+                debtsQuery = debtsQuery.Where(d => d.PurchaseOrderId == vendorReturn.PurchaseOrderId.Value);
+
+            var orderedDebts = debtsQuery.OrderByDescending(d => d.CreatedOnUtc).ToList();
+            if (orderedDebts.Any())
+            {
+                var remaining = totalReturnAmount;
+                foreach (var debt in orderedDebts)
+                {
+                    if (remaining <= 0) break;
+                    var alreadyReturned = debt.TotalAmount - debt.PaidAmount - debt.RemainingAmount;
+                    var toReverse = Math.Min(remaining, Math.Max(0, alreadyReturned));
+                    if (toReverse <= 0) continue;
+
+                    debt.ReverseReturn(toReverse);
+                    remaining -= toReverse;
+                    await vendorDebtRepository.UpdateAsync(debt).ConfigureAwait(false);
+                }
+                if (remaining > 0 && orderedDebts.Count > 0)
+                {
+                    var first = orderedDebts[0];
+                    first.ReverseReturn(remaining);
+                    await vendorDebtRepository.UpdateAsync(first).ConfigureAwait(false);
+                }
+            }
+        }
+
+        var linkedExpense = expenseDataReader.DataSource
+            .FirstOrDefault(e => e.SourceVendorReturnId == vendorReturn.Id);
+        if (linkedExpense is not null)
+            await expenseRepository.DeleteAsync(linkedExpense).ConfigureAwait(false);
+
+        vendorReturn.MarkReversed(reason);
         await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
     }
 
@@ -212,7 +278,6 @@ public sealed class VendorReturnManager(
         vendorReturn.GeneratedDeliveryNoteId = generatedDeliveryNoteId;
         await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
 
-        // Ghi chi phí phát sinh vào Expense (vận chuyển, bồi thường khi trả hàng NCC)
         if (vendorReturn.AdditionalCost > 0)
         {
             await expenseManager.CreateExpenseAsync(new CreateExpenseDto
@@ -221,7 +286,8 @@ public sealed class VendorReturnManager(
                 Description = $"Chi phí phát sinh khi trả hàng cho nhà cung cấp {vendorReturn.VendorName}",
                 Amount = vendorReturn.AdditionalCost,
                 ExpenseType = ExpenseType.ReturnCost,
-                IncurredDate = vendorReturn.ConfirmedOnUtc ?? DateTime.UtcNow
+                IncurredDate = vendorReturn.ConfirmedOnUtc ?? DateTime.UtcNow,
+                SourceVendorReturnId = vendorReturn.Id
             }).ConfigureAwait(false);
         }
 

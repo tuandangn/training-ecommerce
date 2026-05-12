@@ -95,7 +95,7 @@ export default class CreatePurchaseOrderController {
             this.#browser = new ProductBrowser(
                 browserEl,
                 (product) => this.#addOrIncrementItem(product),
-                { purchase: true }
+                { purchase: true, colClass: browserEl.dataset.colClass, initialShow: true }
             );
             this.#browser.init();
         }
@@ -502,10 +502,7 @@ export default class CreatePurchaseOrderController {
         });
 
         var vendor = this.#vendorPicker.value;
-        if (vendor) {
-            return vendor;
-        }
-        return null;
+        return vendor ?? null;
     }
 
     #bindProductPicker() {

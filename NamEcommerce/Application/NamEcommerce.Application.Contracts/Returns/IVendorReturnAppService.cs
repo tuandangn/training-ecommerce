@@ -9,6 +9,7 @@ public interface IVendorReturnAppService
     Task<ConfirmVendorReturnResultAppDto> MoveToInspectingAsync(Guid id);
     Task<ConfirmVendorReturnResultAppDto> ConfirmAsync(Guid id);
     Task<ConfirmVendorReturnResultAppDto> CancelAsync(Guid id);
+    Task<ConfirmVendorReturnResultAppDto> ReverseConfirmedAsync(Guid id, string reason);
 
     Task<VendorReturnAppDto?> GetByIdAsync(Guid id);
     Task<(int Total, List<VendorReturnAppDto> Items)> GetListAsync(

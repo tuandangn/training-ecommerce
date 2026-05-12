@@ -14,6 +14,8 @@ public sealed record VendorReturnAppDto(Guid Id)
     public required int Status { get; init; }
     public required DateTime ReturnDate { get; init; }
     public DateTime? ConfirmedOnUtc { get; init; }
+    public DateTime? ReversedOnUtc { get; init; }
+    public string? ReversedReason { get; init; }
 
     /// <summary>Chi phí phát sinh khi trả hàng NCC (vận chuyển, đền bù...).</summary>
     public required decimal AdditionalCost { get; init; }

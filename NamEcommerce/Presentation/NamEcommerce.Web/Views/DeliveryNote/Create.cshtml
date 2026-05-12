@@ -47,7 +47,7 @@
                     </div>
                     <div class="mb-3">
                         <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
-                        <select asp-for="WarehouseId" asp-items="Model.AvailableWarehouses.ToSelectList(Model.WarehouseId)" class="form-select">
+                        <select asp-for="WarehouseId" asp-items="Model.AvailableWarehouses!.ToSelectList(Model.WarehouseId)" class="form-select">
                             <option value="">-- Chọn kho xuất --</option>
                         </select>
                         <span asp-validation-for="WarehouseId" class="text-danger small"></span>

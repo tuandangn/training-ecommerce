@@ -15,6 +15,7 @@ public interface IPurchaseOrderAppService
 
     Task<CommonActionResultDto> SubmitsPurchaseOrderAsync(Guid id);
     Task<CommonActionResultDto> CancelPurchaseOrderAsync(Guid id);
+    Task<CommonActionResultDto> ClosePartialPurchaseOrderAsync(Guid id, string reason);
     Task<CommonActionResultDto> ApprovePurchaseOrderAsync(Guid id);
     Task<CommonActionResultDto> ChangeStatusAsync(Guid purchaseOrderId, int newStatus);
 
@@ -23,6 +24,8 @@ public interface IPurchaseOrderAppService
     Task<CommonActionResultDto> DeletePurchaseOrderItemAsync(DeletePurchaseOrderItemAppDto dto);
 
     Task<CommonActionResultDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto);
+
+    Task<BulkReceiveGoodsResultAppDto> BulkReceiveAsync(BulkReceiveGoodsAppDto dto);
 
     Task<IList<RecentPurchasePriceAppDto>> GetRecentPurchasePricesAsync(Guid productId);
 

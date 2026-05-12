@@ -55,3 +55,20 @@ public sealed class CancelVendorReturnHandler
         return new CommonActionResultModel { Success = result.Success, ErrorMessage = result.ErrorMessage };
     }
 }
+
+public sealed class ReverseVendorReturnHandler
+    : IRequestHandler<ReverseVendorReturnCommand, CommonActionResultModel>
+{
+    private readonly IVendorReturnAppService _vendorReturnAppService;
+
+    public ReverseVendorReturnHandler(IVendorReturnAppService vendorReturnAppService)
+    {
+        _vendorReturnAppService = vendorReturnAppService;
+    }
+
+    public async Task<CommonActionResultModel> Handle(ReverseVendorReturnCommand request, CancellationToken cancellationToken)
+    {
+        var result = await _vendorReturnAppService.ReverseConfirmedAsync(request.Id, request.Reason).ConfigureAwait(false);
+        return new CommonActionResultModel { Success = result.Success, ErrorMessage = result.ErrorMessage };
+    }
+}

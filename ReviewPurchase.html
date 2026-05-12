@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Review Workflow: PurchaseOrder → GoodsReceipt → VendorReturn</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --text: #1a1a1a;
+    --text-muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #1e40af;
+    --crit: #dc2626;
+    --high: #ea580c;
+    --med: #ca8a04;
+    --low: #2563eb;
+    --done: #16a34a;
+    --code-bg: #f3f4f6;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.65;
+    color: var(--text);
+    background: var(--bg);
+    margin: 0;
+    padding: 0;
+  }
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 2.5rem 4rem;
+  }
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  h1 {
+    font-size: 2rem;
+    margin: 0 0 .25rem;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .subtitle {
+    color: var(--text-muted);
+    font-size: .95rem;
+  }
+  .meta {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    font-size: .85rem;
+    color: var(--text-muted);
+  }
+  .meta span strong { color: var(--text); }
+
+  /* TOC */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2.5rem;
+    box-shadow: var(--shadow);
+  }
+  .toc h2 {
+    margin: 0 0 .75rem;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-muted);
+  }
+  .toc ol {
+    margin: 0;
+    padding-left: 1.25rem;
+    columns: 2;
+    column-gap: 2rem;
+  }
+  .toc li { margin: .25rem 0; break-inside: avoid; }
+  .toc a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .toc a:hover { text-decoration: underline; }
+
+  h2 {
+    font-size: 1.5rem;
+    margin: 2.5rem 0 1rem;
+    padding-bottom: .4rem;
+    border-bottom: 2px solid var(--border);
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 1.15rem;
+    margin: 1.5rem 0 .5rem;
+    color: var(--text);
+  }
+  h4 {
+    font-size: 1rem;
+    margin: 1rem 0 .25rem;
+    color: var(--text);
+  }
+  p { margin: .5rem 0; }
+  ul, ol { padding-left: 1.5rem; }
+  li { margin: .25rem 0; }
+
+  /* Code & pre */
+  code {
+    background: var(--code-bg);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: 0.9em;
+    color: #be185d;
+  }
+  pre {
+    background: #1f2937;
+    color: #e5e7eb;
+    padding: 1rem 1.25rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    font-size: .85rem;
+    line-height: 1.5;
+  }
+  pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+  }
+
+  .ascii-flow {
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    color: var(--text);
+    font-family: ui-monospace, monospace;
+    white-space: pre;
+    font-size: .85rem;
+    line-height: 1.45;
+  }
+
+  /* Issue cards */
+  .issue {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left-width: 4px;
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    box-shadow: var(--shadow);
+  }
+  .issue.crit { border-left-color: var(--crit); }
+  .issue.high { border-left-color: var(--high); }
+  .issue.med  { border-left-color: var(--med); }
+  .issue.low  { border-left-color: var(--low); }
+
+  .issue-header {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: .25rem;
+  }
+  .issue h3 { margin: 0; flex: 1; }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  .badge.crit { background: var(--crit); }
+  .badge.high { background: var(--high); }
+  .badge.med  { background: var(--med); }
+  .badge.low  { background: var(--low); }
+  .badge.done { background: var(--done); }
+
+  .file-ref {
+    font-family: ui-monospace, monospace;
+    font-size: .8rem;
+    color: var(--text-muted);
+    margin: .25rem 0 .5rem;
+  }
+  .file-ref::before { content: "📁 "; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: .9rem;
+    background: var(--surface);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  th, td {
+    padding: .5rem .75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: #f3f4f6;
+    font-weight: 600;
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-muted);
+  }
+  tr:last-child td { border-bottom: none; }
+
+  /* Priority cards */
+  .priority-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin: 1rem 0;
+    box-shadow: var(--shadow);
+  }
+  .priority-section.p0 { border-top: 3px solid var(--crit); }
+  .priority-section.p1 { border-top: 3px solid var(--high); }
+  .priority-section.p2 { border-top: 3px solid var(--med); }
+  .priority-section.p3 { border-top: 3px solid var(--low); }
+  .priority-section h3 { margin-top: .5rem; }
+  .priority-section ol { padding-left: 1.5rem; }
+
+  .summary-box {
+    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 0;
+  }
+  .summary-box h3 { margin-top: 0; color: var(--accent); }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .stat-num {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: .75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin-top: .25rem;
+  }
+  .stat.crit .stat-num { color: var(--crit); }
+  .stat.high .stat-num { color: var(--high); }
+  .stat.med  .stat-num { color: var(--med); }
+  .stat.low  .stat-num { color: var(--low); }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+  @media print {
+    body { background: white; }
+    .container { padding: 1rem; max-width: 100%; }
+    .toc, .issue, .priority-section { box-shadow: none; break-inside: avoid; }
+    .toc ol { columns: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Review Workflow: PurchaseOrder → GoodsReceipt → VendorReturn</h1>
+  <div class="subtitle">Phân tích điểm yếu, bug, và đề xuất cải thiện</div>
+  <div class="meta">
+    <span><strong>Ngày:</strong> 2026-05-12</span>
+    <span><strong>Phạm vi:</strong> Domain → Application → Web layers</span>
+    <span><strong>Scope:</strong> PurchaseOrder, GoodsReceipt, VendorReturn + handlers</span>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="stat crit"><div class="stat-num">4</div><div class="stat-label">Critical</div></div>
+  <div class="stat high"><div class="stat-num">7</div><div class="stat-label">High</div></div>
+  <div class="stat med"><div class="stat-num">11</div><div class="stat-label">Medium / Design</div></div>
+  <div class="stat low"><div class="stat-num">19</div><div class="stat-label">Improvements</div></div>
+</div>
+
+<div class="toc">
+  <h2>Mục lục</h2>
+  <ol>
+    <li><a href="#workflow">Workflow tổng quan</a></li>
+    <li><a href="#critical">Bug CRITICAL</a></li>
+    <li><a href="#high">Bug HIGH</a></li>
+    <li><a href="#design">Design weaknesses</a></li>
+    <li><a href="#improvements">Improvements theo priority</a></li>
+    <li><a href="#summary">Tổng kết</a></li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="workflow">1. Workflow tổng quan</h2>
+
+<h3>1.1. Path A — PO-driven (luồng chuẩn)</h3>
+<pre class="ascii-flow">PO Draft → Submitted → Approved → [Receive] → Receiving → Completed
+                                       ↓
+                          GoodsReceipt(SourceType=FromVendor, linkedPoId)
+                                       ↓ (event GoodsReceiptCreated)
+                                  +Stock  +VendorDebt (nếu đủ cost+vendor)
+                                       ↓
+                          VendorReturn(linked GR | PO | free) → Inspecting → Confirmed
+                                       ↓ (event VendorReturnConfirmed)
+                          DeliveryNote(SourceType=ToVendorReturn, Status=Delivered)
+                          → -Stock  -VendorDebt (FIFO)  +Expense (additionalCost)</pre>
+
+<h3>1.2. Path B — GR-driven (luồng phụ trợ)</h3>
+<pre class="ascii-flow">GoodsReceipt độc lập (no PO) → SetGoodsReceiptToPurchaseOrder
+                                       ↓
+                          Match items theo (ProductId, UnitCost)
+                          ├─ Exact match: update PO.Item.QuantityReceived
+                          └─ Partial (GR no cost): split GR item + set cost từ PO</pre>
+
+<h3>1.3. Trạng thái</h3>
+<table>
+  <thead>
+    <tr><th>Entity</th><th>States</th><th>Transition rules</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>PurchaseOrder</code></td>
+      <td>Draft (10) → Submitted (20) → Approved (30) → Receiving (40) → Completed (50). Cancelled (60) khả thi từ bất kỳ trạng thái nào trừ Completed/Cancelled, và <strong>chỉ nếu không có item nào đã nhận</strong>.</td>
+      <td>One-way (không quay lùi). Cancel block khi có <code>QuantityReceived &gt; 0</code>.</td>
+    </tr>
+    <tr>
+      <td><code>GoodsReceipt</code></td>
+      <td>Không có status — chỉ có lifecycle: tạo → (set vendor / set unit cost) → delete (soft).</td>
+      <td>Delete bị block nếu có <code>Confirmed</code> VendorReturn liên kết hoặc stock đã bị Reserve.</td>
+    </tr>
+    <tr>
+      <td><code>VendorReturn</code></td>
+      <td>Draft (0) → Inspecting (1) → Confirmed (2). Cancelled (3) từ Draft/Inspecting.</td>
+      <td>Confirmed = no undo. Cancel chỉ từ Draft/Inspecting.</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2 id="critical">2. Bug & vấn đề CRITICAL</h2>
+
+<div class="issue crit">
+  <div class="issue-header"><span class="badge crit">P0</span><h3>2.1. RemoveGoodsReceiptFromPurchaseOrder chưa implement</h3></div>
+  <div class="file-ref">Domain/NamEcommerce.Domain.Services/GoodsReceipts/GoodsReceiptManager.cs:377-380</div>
+  <pre><code>public Task RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderDto dto)
+{
+    throw new NotImplementedException();
+}</code></pre>
+  <ul>
+    <li>Path B có cách <em>link</em> GR vào PO nhưng <strong>không có cách unlink</strong>. User link nhầm PO → kẹt vĩnh viễn (phải xóa GR rồi tạo lại — vì có stock đã cộng).</li>
+    <li>App service / Controller có method exposing endpoint này → <strong>500 error</strong> khi user gọi.</li>
+    <li><strong>Tác động:</strong> data integrity, user experience.</li>
+  </ul>
+</div>
+
+<div class="issue crit">
+  <div class="issue-header"><span class="badge crit">P0</span><h3>2.2. Concurrency race khi 2 user cùng nhận 1 PO</h3></div>
+  <div class="file-ref">PurchaseOrderManager.ReceiveItemsAsync / BulkReceiveItemsAsync</div>
+  <ul>
+    <li>Flow: đọc PO → check <code>QuantityReceived + receivingQty &lt;= QuantityOrdered</code> → cộng dồn → Update.</li>
+    <li>Không có <code>RowVersion</code> / <code>[Timestamp]</code> / optimistic concurrency token trên <code>PurchaseOrder</code> entity. EF default không chặn race.</li>
+    <li>2 request đồng thời (vd user kho A và user kho B cùng nhận) có thể <strong>vượt qty</strong> — last-write-wins overwrites check.</li>
+    <li><strong>Tác động:</strong> data integrity. Có thể nhận quá số đặt mà không bao giờ phát hiện.</li>
+  </ul>
+</div>
+
+<div class="issue crit">
+  <div class="issue-header"><span class="badge crit">P0</span><h3>2.3. VendorReturn Draft/Inspecting KHÔNG reserve qty trả</h3></div>
+  <div class="file-ref">VendorReturnManager.ConfirmAsync (validate aggregate chỉ ở step Confirm)</div>
+  <ul>
+    <li>Aggregate-validate qty (<code>previouslyReturned + currentRequest &lt;= received</code>) chỉ ở <code>ConfirmAsync</code>.</li>
+    <li><strong>Kịch bản fail:</strong>
+      <ol>
+        <li>GR có 10 item X.</li>
+        <li>User A tạo VR_Draft trả 5/10 (chưa Confirm).</li>
+        <li>User B tạo VR_Draft trả 6/10 (chưa Confirm). Pass vì chưa có Confirmed nào.</li>
+        <li>Cả 2 Confirm cùng lúc → một trong hai fail tại Confirm; user mất công nhập thừa.</li>
+      </ol>
+    </li>
+    <li>Cột "Đã trả" trong Details của GR/DN chỉ tính <code>Confirmed</code> → user mù về phần đang giữ ở Draft/Inspecting.</li>
+    <li><strong>Tác động:</strong> UX kém + race window khi confirm đồng thời.</li>
+  </ul>
+</div>
+
+<div class="issue crit">
+  <div class="issue-header"><span class="badge crit">P0</span><h3>2.4. VendorReturn.AdditionalCost sinh Expense không có link ngược + idempotency yếu</h3></div>
+  <div class="file-ref">VendorReturnManager.FinalizeConfirmAsync:218-226</div>
+  <ul>
+    <li>Tạo <code>Expense</code> với <code>Description</code> chỉ chứa tên vendor + mã VR dạng text. <strong>Không có FK <code>Expense.VendorReturnId</code></strong>.</li>
+    <li>Accountant query "tất cả Expense của VR-X" → phải search text. Không reliable.</li>
+    <li>Idempotency của Expense <strong>không</strong> được đảm bảo riêng — chỉ idempotent qua <code>GeneratedDeliveryNoteId</code> guard (line 210). Nếu code chạy partial (fail giữa create-expense và set-deliveryNoteId) → re-run sẽ tạo Expense duplicate.</li>
+    <li><strong>Fix:</strong> thêm FK <code>Expense.SourceVendorReturnId</code> + unique index → cả 2 vấn đề được giải quyết.</li>
+  </ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="high">3. Bug & vấn đề HIGH</h2>
+
+<div class="issue high">
+  <div class="issue-header"><span class="badge high">P1</span><h3>3.1. PurchaseOrderItemReceivedEventHandler chạy N lần per bulk</h3></div>
+  <ul>
+    <li>BulkReceive N lines → <code>MarkItemReceived</code> fire N event → <code>VerifyStatusAsync</code> chạy N lần (mỗi lần re-fetch PO entire).</li>
+    <li>Idempotent (chỉ transition khi cần) nhưng <strong>waste N round-trip</strong> DB.</li>
+    <li><strong>Fix:</strong> thêm event <code>PurchaseOrderBulkReceived(poId)</code> fire 1 lần ở cuối bulk, hoặc tắt per-item handler cho bulk path.</li>
+  </ul>
+</div>
+
+<div class="issue high">
+  <div class="issue-header"><span class="badge high">P1</span><h3>3.2. SetGoodsReceiptToPurchaseOrder có logic phức tạp + side effect ẩn</h3></div>
+  <div class="file-ref">GoodsReceiptManager.cs:480-607 (~127 dòng)</div>
+  <ul>
+    <li>Split GR items động (<code>SplitToNewItemWithQuantity</code>) khi GR no-cost match PO multi-cost-items. Tạo items mới mid-method.</li>
+    <li><strong>Khó debug</strong>: 2 helper records <code>_GoodsReceiptProductCostReceivingQtyItem</code> + <code>_PurchaseOrderProductCostRemainingQtyItem</code> + double nested loop. Không có log audit khi split.</li>
+    <li><strong>UX không clear:</strong> user link 1 GR có 5 items, sau khi link có thể thành 7 items (vì split). Confusion.</li>
+    <li><strong>Fix:</strong> tách thành service riêng (vd <code>GoodsReceiptPurchaseOrderLinker</code>), thêm audit log "item X split thành 2 items vì match 2 PO items có cost khác".</li>
+  </ul>
+</div>
+
+<div class="issue high">
+  <div class="issue-header"><span class="badge high">P1</span><h3>3.3. VendorReturn dual reference (PO vs GR) — overpermissive validation</h3></div>
+  <div class="file-ref">VendorReturnManager.GetTotalReceivedQuantity:282-310</div>
+  <ul>
+    <li>Nếu VR link với <code>PurchaseOrderId</code> (không GR), <code>GetTotalReceivedQuantity</code> cộng <strong>tất cả</strong> GR thuộc PO đó.</li>
+    <li>Hệ quả: trả "theo PO" → có thể vượt qty của bất kỳ GR cụ thể nào.</li>
+    <li>Workflow thực: hàng trả là từ 1 lô cụ thể (1 GR) → nên ép user pick GoodsReceiptId.</li>
+    <li><strong>Fix:</strong> hoặc bỏ flow "VR theo PO không pick GR", hoặc check qty theo từng GR cụ thể được match.</li>
+  </ul>
+</div>
+
+<div class="issue high">
+  <div class="issue-header"><span class="badge high">P1</span><h3>3.4. VendorReturn Confirmed = no undo, không có Reverse command</h3></div>
+  <ul>
+    <li><code>VendorReturn.Cancel()</code> chỉ allow từ Draft/Inspecting.</li>
+    <li>Khi Confirmed:
+      <ul>
+        <li>DeliveryNote(ToVendorReturn) đã trừ stock.</li>
+        <li>VendorDebt đã giảm (FIFO).</li>
+        <li>Expense đã ghi.</li>
+      </ul>
+    </li>
+    <li>Sai lầm → phải tạo "phiếu nhập điều chỉnh" + manual journal entries để hoàn nguyên. <strong>Không có công cụ</strong>.</li>
+    <li><strong>Fix:</strong> command <code>ReverseConfirmedVendorReturn(id, reason)</code> đóng gói cả stock + debt + expense reverse, tạo VR-Reverse mới linked ngược.</li>
+  </ul>
+</div>
+
+<div class="issue high">
+  <div class="issue-header"><span class="badge high">P1</span><h3>3.5. VendorReturnCancelled event không có handler</h3></div>
+  <ul>
+    <li>Event raise (<code>VendorReturn.Cancel()</code>) nhưng grep cho thấy <strong>không có <code>INotificationHandler&lt;VendorReturnCancelled&gt;</code></strong>.</li>
+    <li>Dead event hoặc reserved cho audit. Nếu dead → remove. Nếu reserved → ít nhất 1 NoOp handler có doc rõ.</li>
+  </ul>
+</div>
+
+<div class="issue high">
+  <div class="issue-header"><span class="badge high">P1</span><h3>3.6. Inconsistency: AddReceiptFees cộng dồn vs UpdatePO override</h3></div>
+  <ul>
+    <li>Hai path cùng ghi <code>PurchaseOrder.ShippingAmount/TaxAmount</code>:
+      <ul>
+        <li><code>PurchaseOrderManager.AddReceiptFeesAsync</code>: <code>+= shipping</code> (cộng dồn per bulk-receive)</li>
+        <li><code>PurchaseOrderAppService.UpdatePurchaseOrderAsync</code>: <code>= dto.ShippingAmount</code> (override toàn bộ qua edit form)</li>
+      </ul>
+    </li>
+    <li>User edit fees giữa các đợt bulk-receive sẽ <strong>nhầm semantics</strong>: nhập "0" để hủy, nhưng quên là sẽ override cả accumulated fees.</li>
+    <li><strong>Fix:</strong> tách thành 2 fields <code>BaseFees</code> (do edit form) + <code>AccumulatedReceiptFees</code> (do bulk receive); hoặc log delta vào ReceiptFeeHistory.</li>
+  </ul>
+</div>
+
+<div class="issue high">
+  <div class="issue-header"><span class="badge high">P1</span><h3>3.7. PO không thể partial-cancel</h3></div>
+  <div class="file-ref">PurchaseOrder.CanChangeStatusTo:146</div>
+  <ul>
+    <li>Cancel block nếu có item nào đã nhận <code>&gt; 0</code>.</li>
+    <li><strong>Workflow thực bị kẹt:</strong> đặt 100, NCC giao 30, NCC không giao tiếp → muốn close đơn ở 30 + cancel phần còn lại. Hiện không có cơ chế:
+      <ul>
+        <li>Không edit qty items được (chỉ Draft).</li>
+        <li>Không cancel được (đã nhận).</li>
+        <li>Tạo VendorReturn cho 30 đã nhận → vẫn không cancel được PO vì <code>QuantityReceived</code> vẫn &gt; 0.</li>
+      </ul>
+    </li>
+    <li><strong>Fix:</strong> command <code>ClosePartial(reason)</code> set status <code>Completed</code> với note rõ "đóng đơn dù chưa nhận hết, lý do: ...".</li>
+  </ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="design">4. Design weaknesses</h2>
+
+<div class="issue med">
+  <div class="issue-header"><span class="badge med">P2</span><h3>4.1. PO không hỗ trợ cost-per-receive</h3></div>
+  <ul>
+    <li>1 PO item = 1 UnitCost cố định. Bulk-receive luôn dùng cost của PO item.</li>
+    <li>Thực tế: NCC bù trừ giá lúc giao, hoặc CK theo lô → giá khác giá đặt.</li>
+    <li>Hệ quả: <code>AverageCost</code> của Product không phản ánh giá thực.</li>
+    <li>Workaround hiện tại: tạo GR độc lập (Path B) rồi link sau — nhưng split-cost logic phức tạp (xem 3.2).</li>
+    <li><strong>Đề xuất:</strong> thêm <code>ActualUnitCost</code> override ở <code>GoodsReceiptItem</code> level, default = PO item cost.</li>
+  </ul>
+</div>
+
+<div class="issue med">
+  <div class="issue-header"><span class="badge med">P2</span><h3>4.2. GoodsReceipt không có business code</h3></div>
+  <ul>
+    <li><code>GoodsReceipt</code> chỉ có <code>Id Guid</code>, không có <code>Code</code>. User chỉ thấy date <code>ReceivedOnUtc</code>.</li>
+    <li>Khó reference giữa các bộ phận ("phiếu nhập ngày 10/05 lúc 09:00"... có khi 5 phiếu cùng ngày).</li>
+    <li>VendorReturn có <code>Code</code> (<code>TNCC-YYYYMMDD-NNN</code>) → inconsistency.</li>
+    <li><strong>Đề xuất:</strong> thêm <code>Code</code> format <code>PN-YYYYMM-NNN</code> (Phiếu Nhập).</li>
+  </ul>
+</div>
+
+<div class="issue med">
+  <div class="issue-header"><span class="badge med">P2</span><h3>4.3. BulkReceive sinh nhiều GoodsReceipts không có "session ID"</h3></div>
+  <ul>
+    <li>Nhập 1 lần vào 3 kho → 3 GR riêng biệt, không có metadata "cùng đợt".</li>
+    <li>User nhìn list GR khó hiểu vì 3 records xuất hiện liền kề nhưng không grouping.</li>
+    <li><strong>Đề xuất:</strong> thêm <code>BatchId Guid</code> chia sẻ giữa các GR của cùng bulk-receive session.</li>
+  </ul>
+</div>
+
+<div class="issue med">
+  <div class="issue-header"><span class="badge med">P2</span><h3>4.4. PO không track ai duyệt / khi nào duyệt</h3></div>
+  <ul>
+    <li><code>ChangeStatusAsync(Approved)</code> không lưu <code>ApprovedByUserId</code>, <code>ApprovedOnUtc</code>. Chỉ có <code>CreatedByUserId</code>.</li>
+    <li>Audit yếu khi cần biết ai approve đơn quan trọng.</li>
+  </ul>
+</div>
+
+<div class="issue med">
+  <div class="issue-header"><span class="badge med">P2</span><h3>4.5. VendorReturn "Inspecting" status không có guard nghiệp vụ</h3></div>
+  <ul>
+    <li><code>MoveToInspecting()</code> chỉ từ Draft. Không check "đã kiểm tra hết items chưa" / "ai inspect chưa".</li>
+    <li>"Inspecting" không reserve stock cũng không tạo audit trail → trạng thái này <strong>chỉ là cờ visual</strong>, không có nghiệp vụ thật.</li>
+    <li><strong>Đề xuất:</strong> hoặc bỏ status này (Draft → Confirmed trực tiếp), hoặc thêm rule (gắn <code>InspectedByUserId</code>, <code>InspectedOnUtc</code>).</li>
+  </ul>
+</div>
+
+<div class="issue med">
+  <div class="issue-header"><span class="badge med">P2</span><h3>4.6. Stock check khi xóa GR dùng QuantityAvailable, error message misleading</h3></div>
+  <div class="file-ref">GoodsReceiptManager.DeleteGoodsReceiptAsync:248-251</div>
+  <ul>
+    <li>Nếu user xóa GR nhưng stock đã bị Reserve cho DeliveryNote → block.</li>
+    <li>Error message: <code>InsufficientStockException</code> → user hiểu nhầm "thiếu hàng". Thực tế là "không xóa được vì đã reserved cho đơn xuất khác".</li>
+    <li><strong>Fix:</strong> exception riêng <code>GoodsReceiptCannotDeleteDueToReservedStockException</code> + message rõ.</li>
+  </ul>
+</div>
+
+<div class="issue med">
+  <div class="issue-header"><span class="badge med">P2</span><h3>4.7. PurchaseOrder không track lần nhận cuối</h3></div>
+  <ul>
+    <li><code>UpdatedOnUtc</code> được dùng chung cho mọi update (note, vendor, warehouse, receive, ...).</li>
+    <li>Khó query "đơn nào lâu chưa nhận tiếp" — phải scan tất cả GoodsReceipts.</li>
+    <li><strong>Đề xuất:</strong> thêm <code>LastReceivedOnUtc</code> riêng.</li>
+  </ul>
+</div>
+
+<div class="issue crit">
+  <div class="issue-header"><span class="badge crit">P0</span><h3>4.8. Không thấy rollback VendorDebt khi delete GR</h3></div>
+  <ul>
+    <li><code>DeleteGoodsReceiptAsync</code> rollback stock (<code>RevertReceiveAsync</code> qua handler) nhưng <strong>không thấy rollback VendorDebt</strong> liên quan.</li>
+    <li>Nếu GR đã sinh VendorDebt rồi xóa GR → VendorDebt vẫn còn → <strong>công nợ ảo</strong>.</li>
+    <li>Đáng lẽ <code>GoodsReceiptDeleted</code> handler nên giảm/xóa VendorDebt có <code>GoodsReceiptId == deletedId</code>.</li>
+    <li><strong>Tác động:</strong> sai số kế toán. Cần verify gấp.</li>
+  </ul>
+</div>
+
+<div class="issue med">
+  <div class="issue-header"><span class="badge med">P2</span><h3>4.9. GoodsReceipt picture validation không nhất quán giữa Create / Update</h3></div>
+  <ul>
+    <li><code>CreateGoodsReceiptDto.Validate()</code> yêu cầu <code>PictureIds.Any()</code> (ít nhất 1 ảnh).</li>
+    <li>Nhưng <code>UpdateGoodsReceiptAsync</code> cho phép <code>ClearPictures</code> rồi add lại → có thể update về 0 pictures (không có rule cấm).</li>
+    <li><strong>Fix:</strong> Update cũng phải validate ≥1 picture.</li>
+  </ul>
+</div>
+
+<div class="issue low">
+  <div class="issue-header"><span class="badge low">P3</span><h3>4.10. BulkReceive result IDs bị discard</h3></div>
+  <ul>
+    <li>Manager trả về <code>CreatedGoodsReceiptIds</code> nhưng <code>PurchaseOrderAppService.BulkReceiveAsync</code> discard → trả <code>CommonActionResultDto.CreateSuccess()</code>.</li>
+    <li>UI không hiển thị các GR vừa tạo → user phải vào list để xem.</li>
+    <li><strong>Đề xuất:</strong> trả về IDs cho UI để show toast "Đã tạo 2 phiếu nhập: ..." hoặc link sang Details.</li>
+  </ul>
+</div>
+
+<div class="issue low">
+  <div class="issue-header"><span class="badge low">P3</span><h3>4.11. VendorReturn overpayment cho phép VendorDebt âm</h3></div>
+  <div class="file-ref">VendorReturnManager.FinalizeConfirmAsync:257-262</div>
+  <ul>
+    <li>Nếu <code>totalReturnAmount &gt; tổng VendorDebt</code> → "áp phần thừa vào debt cũ nhất (cho phép âm)".</li>
+    <li>VendorDebt âm = vendor đang nợ mình → đúng business nhưng cần kế toán biết và xử lý.</li>
+    <li>Không có log/notification rõ ràng khi xảy ra trường hợp này.</li>
+    <li><strong>Đề xuất:</strong> raise event <code>VendorDebtBecameNegative</code> để accountant module audit.</li>
+  </ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="improvements">5. Improvements theo priority</h2>
+
+<div class="priority-section p0">
+  <h3>P0 — Must fix (block flow / data integrity)</h3>
+  <ol>
+    <li>Implement <code>RemoveGoodsReceiptFromPurchaseOrder</code> hoặc explicitly disable API.</li>
+    <li>Thêm <code>[ConcurrencyCheck]</code>/<code>[Timestamp]</code> cho <code>PurchaseOrder</code> để chặn race khi bulk-receive.</li>
+    <li>Rollback <code>VendorDebt</code> khi delete <code>GoodsReceipt</code> (verify code + thêm handler nếu chưa có).</li>
+    <li>Idempotency thực sự cho <code>Expense</code> từ <code>VendorReturn</code> (thêm <code>VendorReturnId</code> FK, unique index).</li>
+  </ol>
+</div>
+
+<div class="priority-section p1">
+  <h3>P1 — Should fix (UX & business correctness)</h3>
+  <ol start="5">
+    <li>Cột "Đã trả" trên Details cộng cả <code>Draft/Inspecting</code> (visual reservation) hoặc cảnh báo "đang có VR pending: X qty".</li>
+    <li>Cho phép partial-cancel PO (<code>ClosePartial(reason)</code> với audit).</li>
+    <li>Cho phép override <code>UnitCost</code> per-receive (thêm <code>ActualUnitCost</code> ở <code>GoodsReceiptItem</code>).</li>
+    <li>Thêm <code>Code</code> cho <code>GoodsReceipt</code> (format tương tự <code>PN-YYYYMM-NNN</code>).</li>
+    <li>Tách <code>BaseFees</code> vs <code>AccumulatedReceiptFees</code> trên PO.</li>
+    <li>VendorReturn Confirmed cần có "Reverse" command (tạo phiếu điều chỉnh tự động đóng gói cả stock + debt + expense reverse).</li>
+    <li>Tối ưu <code>PurchaseOrderItemReceivedEventHandler</code> — fire 1 event cuối bulk thay vì N events.</li>
+  </ol>
+</div>
+
+<div class="priority-section p2">
+  <h3>P2 — Nice to have (audit & traceability)</h3>
+  <ol start="12">
+    <li><code>BulkReceiveBatchId</code> để link các GR cùng đợt.</li>
+    <li><code>PurchaseOrder.ApprovedByUserId</code>, <code>ApprovedOnUtc</code>, <code>LastReceivedOnUtc</code>.</li>
+    <li>Handler cho <code>VendorReturnCancelled</code> (audit log) hoặc remove event.</li>
+    <li>Error message rõ hơn cho <code>InsufficientStockException</code> khi xóa GR.</li>
+    <li>Show created GR IDs trong response của bulk receive.</li>
+    <li>Refactor <code>SetGoodsReceiptToPurchaseOrder</code> — split logic ra service riêng + log audit khi tự split items.</li>
+  </ol>
+</div>
+
+<div class="priority-section p3">
+  <h3>P3 — Design polish</h3>
+  <ol start="18">
+    <li><code>Inspecting</code> status nếu chỉ là cờ visual → cân nhắc bỏ, hoặc thêm rule (gắn người inspect, ngày inspect).</li>
+    <li>Update GR cho phép clear pictures → nên giữ ràng buộc giống Create (ít nhất 1 ảnh).</li>
+    <li>PO không cho edit items sau Submit → workflow đề xuất: cho phép edit items trong khi Approved nhưng chưa nhận gì.</li>
+    <li>Raise <code>VendorDebtBecameNegative</code> event khi overpayment.</li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="summary">6. Tổng kết</h2>
+
+<div class="summary-box">
+  <h3>Đánh giá tổng thể</h3>
+  <p>Workflow <strong>happy path</strong> chạy đúng và có defense-in-depth (validate ở entity, app service, manager). Side effects qua MediatR events tách bạch rõ ràng (stock, debt, expense). Tuy nhiên có 4 vấn đề <strong>critical</strong> cần xử lý gấp:</p>
+  <ul>
+    <li><strong>Concurrency:</strong> chưa có cơ chế chống race ở PO level → rủi ro vượt qty khi nhận đồng thời.</li>
+    <li><strong>Reversibility:</strong> Path B unlink chưa implement; VendorReturn Confirmed = no undo; GR delete có thể không rollback VendorDebt.</li>
+    <li><strong>Visibility:</strong> Draft/Inspecting VR không reflected trong "Đã trả" → user mù thông tin pending.</li>
+    <li><strong>Cost model:</strong> PO chốt giá lúc đặt, không cho override khi nhận → AverageCost lệch so với giá thực.</li>
+  </ul>
+  <p>Ưu tiên xử lý <strong>P0 trước</strong> (data integrity), sau đó P1 (UX/business). P2/P3 có thể đưa vào roadmap dài hạn.</p>
+</div>
+
+<hr>
+<p style="text-align:center; color: var(--text-muted); font-size: .85rem;">
+  Generated: 2026-05-12 · Branch: dev-assistant · 41 issues identified across 3 modules
+</p>
+
+</div>
+</body>
+</html>

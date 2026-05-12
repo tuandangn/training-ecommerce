@@ -40,6 +40,8 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             ExpectedDeliveryDate = purchaseOrder.ExpectedDeliveryDateUtc?.ToLocalTime(),
             ShippingAmount = purchaseOrder.ShippingAmount,
             TaxAmount = purchaseOrder.TaxAmount,
+            AccumulatedShippingAmount = purchaseOrder.AccumulatedShippingAmount,
+            AccumulatedTaxAmount = purchaseOrder.AccumulatedTaxAmount,
             TotalAmount = purchaseOrder.TotalAmount,
             CreatedOn = purchaseOrder.CreatedOnUtc.ToLocalTime(),
             CanModifyInfo = purchaseOrder.CanModifyInfo,

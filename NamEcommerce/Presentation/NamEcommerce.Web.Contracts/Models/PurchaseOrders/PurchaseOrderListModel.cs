@@ -22,5 +22,17 @@ public sealed class PurchaseOrderListModel
         public decimal TotalAmount { get; set; }
         public DateTime? ExpectedDeliveryDate { get; set; }
         public DateTime CreatedOn { get; set; }
+
+        public IList<ItemSummaryModel> Items { get; set; } = [];
+        public decimal TotalOrdered { get; set; }
+        public decimal TotalReceived { get; set; }
     }
+}
+
+[Serializable]
+public sealed record ItemSummaryModel
+{
+    public required string ProductName { get; init; }
+    public required decimal QuantityOrdered { get; init; }
+    public required decimal QuantityReceived { get; init; }
 }

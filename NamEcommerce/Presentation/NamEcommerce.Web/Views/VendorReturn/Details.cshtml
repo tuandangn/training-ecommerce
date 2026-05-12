@@ -10,6 +10,7 @@
         VendorReturnStatus.Inspecting => ("bg-warning text-dark", "Đang kiểm tra"),
         VendorReturnStatus.Confirmed => ("bg-success", "Đã xác nhận"),
         VendorReturnStatus.Cancelled => ("bg-danger", "Đã huỷ"),
+        VendorReturnStatus.Reversed => ("bg-dark", "Đã đảo ngược"),
         _ => ("bg-secondary", "—")
     };
 }
@@ -124,10 +125,53 @@
                             </button>
                         </form>
                     }
+                    @if (status == VendorReturnStatus.Confirmed)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#reverseModal">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Đảo ngược
+                        </button>
+                    }
                 </div>
             </div>
         </div>
     </div>
+
+    @if (status == VendorReturnStatus.Confirmed)
+    {
+        <div class="modal fade" id="reverseModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <form asp-action="Reverse" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="modal-header border-0 pb-0">
+                            <h5 class="modal-title fw-bold">
+                                <i class="bi bi-arrow-counterclockwise me-2 text-danger"></i>
+                                Đảo ngược phiếu trả NCC
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-danger border-0 small">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                Thao tác này sẽ <strong>hoàn nguyên</strong>: cộng lại tồn kho, tăng lại công nợ NCC, xóa chi phí phát sinh đã ghi. Không thể undo.
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold text-muted text-uppercase" for="reverseReason">Lý do đảo ngược</label>
+                                <textarea name="reason" id="reverseReason" class="form-control" rows="3" required minlength="3" maxlength="1000"
+                                          placeholder="VD: Khách trả lại hàng, NCC giao lại, lập sai phiếu, ..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 pt-0 pb-3">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Xác nhận đảo ngược
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
 
     <!-- Cột phải: thông tin phiếu -->
     <div class="col-lg-4 order-0 order-lg-1">
@@ -158,6 +202,20 @@
                             <dt>Xác nhận</dt>
                             <dd class="text-success fw-semibold">@Model.ConfirmedOn.Value.ToString(ViewConstants.DefaultDateTimeFormat)</dd>
                         </div>
+                    }
+                    @if (Model.ReversedOn.HasValue)
+                    {
+                        <div class="receipt-info-row">
+                            <dt>Đảo ngược</dt>
+                            <dd class="text-dark fw-semibold">@Model.ReversedOn.Value.ToString(ViewConstants.DefaultDateTimeFormat)</dd>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.ReversedReason))
+                        {
+                            <div class="receipt-info-row">
+                                <dt>Lý do</dt>
+                                <dd class="text-secondary">@Model.ReversedReason</dd>
+                            </div>
+                        }
                     }
                     @if (Model.AdditionalCost > 0)
                     {

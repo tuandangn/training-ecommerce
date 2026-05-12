@@ -43,4 +43,10 @@ public sealed class DeliveryNoteItemModel
     public decimal Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal SubTotal { get; set; }
+
+    /// <summary>Tổng đã trả (Confirmed).</summary>
+    public decimal ReturnedQuantity { get; set; }
+
+    /// <summary>Số đang giữ trong VR Draft/Inspecting.</summary>
+    public decimal PendingReturnQuantity { get; set; }
 }

@@ -46,6 +46,8 @@ public interface IVendorDebtManager
     /// </summary>
     Task<VendorDebtDto?> GetDebtByGoodsReceiptIdAsync(Guid goodsReceiptId);
 
+    Task DeleteDebtFromGoodsReceiptAsync(Guid goodsReceiptId);
+
     Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId);
 
     Task<VendorDebtSummaryDto?> GetVendorDebtSummaryAsync(Guid vendorId);

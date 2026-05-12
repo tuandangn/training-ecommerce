@@ -16,6 +16,8 @@ public sealed record VendorReturnDto(Guid Id)
     public required int Status { get; init; }
     public required DateTime ReturnDate { get; init; }
     public DateTime? ConfirmedOnUtc { get; init; }
+    public DateTime? ReversedOnUtc { get; init; }
+    public string? ReversedReason { get; init; }
     public Guid? GeneratedDeliveryNoteId { get; init; }
     public Guid? CreatedByUserId { get; init; }
     public required DateTime CreatedOnUtc { get; init; }

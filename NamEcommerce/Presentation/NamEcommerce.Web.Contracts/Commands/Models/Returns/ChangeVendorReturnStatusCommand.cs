@@ -20,3 +20,10 @@ public sealed class CancelVendorReturnCommand : IRequest<CommonActionResultModel
 {
     public required Guid Id { get; init; }
 }
+
+[Serializable]
+public sealed class ReverseVendorReturnCommand : IRequest<CommonActionResultModel>
+{
+    public required Guid Id { get; init; }
+    public required string Reason { get; init; }
+}

@@ -19,6 +19,8 @@ public static class VendorReturnExtensions
             Status = (int)vendorReturn.Status,
             ReturnDate = vendorReturn.ReturnDate,
             ConfirmedOnUtc = vendorReturn.ConfirmedOnUtc,
+            ReversedOnUtc = vendorReturn.ReversedOnUtc,
+            ReversedReason = vendorReturn.ReversedReason,
             AdditionalCost = vendorReturn.AdditionalCost,
             GeneratedDeliveryNoteId = vendorReturn.GeneratedDeliveryNoteId,
             CreatedByUserId = vendorReturn.CreatedByUserId,

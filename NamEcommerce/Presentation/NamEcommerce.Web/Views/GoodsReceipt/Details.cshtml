@@ -42,6 +42,9 @@
                     </span>
                 }
             </div>
+            @{
+                var hasReturnedItems = Model.Items.Any(i => i.ReturnedQuantity > 0 || i.PendingReturnQuantity > 0);
+            }
             <div class="content-card-body-flush">
                 <table class="table data-table mb-0">
                     <thead>
@@ -49,6 +52,10 @@
                             <th class="ps-4">Sản phẩm</th>
                             <th style="width:130px">Kho</th>
                             <th class="text-end" style="width:100px">SL nhập</th>
+                            @if (hasReturnedItems)
+                            {
+                                <th class="text-end" style="width:110px" data-bs-toggle="tooltip" title="Số lượng đã trả NCC (Confirmed)">Đã trả</th>
+                            }
                             <th class="text-end pe-4" style="width:160px">Đơn giá nhập</th>
                         </tr>
                     </thead>
@@ -75,6 +82,36 @@
                                 <td class="text-end fw-medium">
                                     @item.Quantity.DisplayQuantity()
                                 </td>
+                                @if (hasReturnedItems)
+                                {
+                                    <td class="text-end">
+                                        @if (item.ReturnedQuantity <= 0 && item.PendingReturnQuantity <= 0)
+                                        {
+                                            <span class="text-muted small">—</span>
+                                        }
+                                        else
+                                        {
+                                            if (item.ReturnedQuantity >= item.Quantity)
+                                            {
+                                                <span class="status-badge danger small" data-bs-toggle="tooltip" title="Toàn bộ đã trả NCC">
+                                                    <i class="bi bi-arrow-return-right"></i> @item.ReturnedQuantity.DisplayQuantity()
+                                                </span>
+                                            }
+                                            else if (item.ReturnedQuantity > 0)
+                                            {
+                                                <span class="status-badge warning small" data-bs-toggle="tooltip" title="Đã trả một phần">
+                                                    @item.ReturnedQuantity.DisplayQuantity()
+                                                </span>
+                                            }
+                                            if (item.PendingReturnQuantity > 0)
+                                            {
+                                                <div class="small text-info mt-1" data-bs-toggle="tooltip" title="Đang chờ xác nhận (Draft/Inspecting)">
+                                                    <i class="bi bi-hourglass-split"></i> @item.PendingReturnQuantity.DisplayQuantity()
+                                                </div>
+                                            }
+                                        }
+                                    </td>
+                                }
                                 <td class="text-end pe-4">
                                     @if (item.IsPendingCosting)
                                     {
@@ -100,7 +137,7 @@
                     {
                         <tfoot>
                             <tr class="table-light">
-                                <td colspan="3" class="ps-4 text-end text-muted small fw-medium pe-3">Tổng giá trị phiếu</td>
+                                <td colspan="@(hasReturnedItems ? 4 : 3)" class="ps-4 text-end text-muted small fw-medium pe-3">Tổng giá trị phiếu</td>
                                 <td class="text-end pe-4 fw-bold text-dark">@totalValue.Value.DisplayCurrency()</td>
                             </tr>
                         </tfoot>

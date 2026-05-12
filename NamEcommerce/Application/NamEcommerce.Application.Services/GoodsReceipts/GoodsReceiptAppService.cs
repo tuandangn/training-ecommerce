@@ -52,6 +52,12 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         return goodsReceipt.ToDto();
     }
 
+    public async Task<IList<GoodsReceiptAppDto>> GetGoodsReceiptsByPurchaseOrderIdAsync(Guid purchaseOrderId)
+    {
+        var receipts = await _goodsReceiptManager.GetGoodsReceiptsByPurchaseOrderIdAsync(purchaseOrderId).ConfigureAwait(false);
+        return receipts.Select(r => r.ToDto()).ToList();
+    }
+
     public async Task<CreateGoodsReceiptResultAppDto> CreateGoodsReceiptAsync(CreateGoodsReceiptAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);

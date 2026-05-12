@@ -416,6 +416,87 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         return CommonActionResultDto.CreateSuccess();
     }
 
+    public async Task<BulkReceiveGoodsResultAppDto> BulkReceiveAsync(BulkReceiveGoodsAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return BulkReceiveGoodsResultAppDto.CreateError(errorMessage);
+
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            return BulkReceiveGoodsResultAppDto.CreateError("Error.PurchaseOrderIsNotFound");
+
+        if (!await _purchaseOrderManager.CanReceiveGoodsAsync(dto.PurchaseOrderId).ConfigureAwait(false))
+            return BulkReceiveGoodsResultAppDto.CreateError("Error.PurchaseOrderCannotReceiveGoods");
+
+        if (dto.ReceivedByUserId.HasValue)
+        {
+            var user = await _userDataReader.GetByIdAsync(dto.ReceivedByUserId.Value).ConfigureAwait(false);
+            if (user is null)
+                return BulkReceiveGoodsResultAppDto.CreateError("Error.UserIsNotFound");
+        }
+
+        // Pre-validate ở app service để trả error messages thân thiện thay vì để manager throw exception.
+        // Manager vẫn re-validate (defense-in-depth).
+
+        // Bước 1: aggregate-validate qty theo PO item.
+        var groupedByItem = dto.Items.GroupBy(i => i.ItemId);
+        foreach (var group in groupedByItem)
+        {
+            var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(i => i.Id == group.Key);
+            if (purchaseOrderItem is null)
+                return BulkReceiveGoodsResultAppDto.CreateError("Error.PurchaseOrderItemIsNotFound");
+
+            var totalReceiving = group.Sum(x => x.Quantity);
+            if (purchaseOrderItem.QuantityReceived + totalReceiving > purchaseOrderItem.QuantityOrdered)
+                return BulkReceiveGoodsResultAppDto.CreateError("Error.PurchaseOrderReceiveQuantityExceedsOrdered");
+        }
+
+        // Bước 2: resolve + validate warehouse cho từng line (fallback về PO default nếu line không khai).
+        var warehouseCache = new Dictionary<Guid, Warehouse?>();
+        var lines = new List<BulkReceiveGoodsForPurchaseOrderLineDto>(dto.Items.Count);
+        foreach (var itemDto in dto.Items)
+        {
+            var warehouseId = itemDto.WarehouseId ?? purchaseOrder.WarehouseId;
+            if (!warehouseId.HasValue)
+                return BulkReceiveGoodsResultAppDto.CreateError("Error.WarehouseRequired");
+
+            if (!warehouseCache.TryGetValue(warehouseId.Value, out var warehouse))
+            {
+                warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+                warehouseCache[warehouseId.Value] = warehouse;
+            }
+            if (warehouse is null)
+                return BulkReceiveGoodsResultAppDto.CreateError("Error.WarehouseIsNotFound");
+
+            lines.Add(new BulkReceiveGoodsForPurchaseOrderLineDto
+            {
+                PurchaseOrderItemId = itemDto.ItemId,
+                WarehouseId = warehouseId.Value,
+                ReceivedQuantity = itemDto.Quantity,
+                ActualUnitCost = itemDto.ActualUnitCost
+            });
+        }
+
+        // Bước 3: manager group-by-warehouse → mỗi kho = 1 GoodsReceipt, 1 lần UpdateAsync PO.
+        var bulkResult = await _purchaseOrderManager.BulkReceiveItemsAsync(new BulkReceiveGoodsForPurchaseOrderDto(dto.PurchaseOrderId)
+        {
+            Lines = lines,
+            ReceivedByUserId = dto.ReceivedByUserId
+        }).ConfigureAwait(false);
+
+        // Cộng dồn phí vận chuyển và thuế vào đơn (nếu có)
+        if (dto.AdditionalShipping > 0 || dto.AdditionalTax > 0)
+        {
+            await _purchaseOrderManager.AddReceiptFeesAsync(dto.PurchaseOrderId, dto.AdditionalShipping, dto.AdditionalTax)
+                .ConfigureAwait(false);
+        }
+
+        return BulkReceiveGoodsResultAppDto.CreateSuccess(bulkResult.CreatedGoodsReceiptIds);
+    }
+
     public async Task<string> NextPurchaseOrderCodeAsync()
     {
         var code = string.Empty;
@@ -470,6 +551,23 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotCancel");
 
         await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Cancelled).ConfigureAwait(false);
+
+        return CommonActionResultDto.CreateSuccess();
+    }
+
+    public async Task<CommonActionResultDto> ClosePartialPurchaseOrderAsync(Guid id, string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+            return CommonActionResultDto.CreateError("Error.PurchaseOrder.CloseReasonRequired");
+
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(id).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderIsNotFound");
+
+        if (purchaseOrder.Status != PurchaseOrderStatus.Receiving)
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotClosePartial");
+
+        await _purchaseOrderManager.ClosePartialAsync(id, reason).ConfigureAwait(false);
 
         return CommonActionResultDto.CreateSuccess();
     }

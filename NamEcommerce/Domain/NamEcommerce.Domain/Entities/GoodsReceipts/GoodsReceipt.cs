@@ -17,14 +17,21 @@ namespace NamEcommerce.Domain.Entities.GoodsReceipts;
 [Serializable]
 public sealed record GoodsReceipt : AppAggregateEntity
 {
-    private GoodsReceipt() : base(Guid.Empty) { }
+    public const string GoodsReceiptCodePrefix = "PN";
+
+    private GoodsReceipt() : base(Guid.Empty) { Code = string.Empty; }
 
     private GoodsReceipt(Guid id, CurrentUserInfoDto? createdByUser) : base(id)
     {
+        Code = string.Empty;
         CreatedByUserId = createdByUser?.Id;
         CreatedByUsername = createdByUser?.Username;
         CreatedOnUtc = DateTime.UtcNow;
     }
+
+    public string Code { get; private set; }
+
+    internal void SetCode(string code) => Code = code;
 
     public DateTime ReceivedOnUtc { get; private set; }
 
@@ -36,6 +43,11 @@ public sealed record GoodsReceipt : AppAggregateEntity
 
     public Guid? PurchaseOrderId { get; private set; }
     public string? PurchaseOrderCode { get; private set; }
+
+    /// <summary>Link các GoodsReceipt cùng đợt bulk-receive (nhiều kho trong 1 lần nhập). Null nếu tạo lẻ.</summary>
+    public Guid? BulkReceiveBatchId { get; private set; }
+
+    internal void SetBulkReceiveBatchId(Guid batchId) => BulkReceiveBatchId = batchId;
 
     public string? TruckDriverName
     {
@@ -88,10 +100,10 @@ public sealed record GoodsReceipt : AppAggregateEntity
     internal void SplitToNewItemWithQuantity(Guid itemId, decimal quantity)
     {
         var item = Items.FirstOrDefault(i => i.Id == itemId);
-        if (item is null) 
+        if (item is null)
             throw new GoodsReceiptItemIsNotFoundException(itemId);
 
-        if (quantity > item.Quantity) 
+        if (quantity > item.Quantity)
             throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.SplitQuantityTooLarge");
 
         if (quantity == item.Quantity)
@@ -102,6 +114,9 @@ public sealed record GoodsReceipt : AppAggregateEntity
 
         _items.Add(newItem);
     }
+
+    internal void RaiseItemSplitOnLinking(Guid purchaseOrderId, Guid originalItemId, Guid productId, decimal splitQuantity, decimal assignedUnitCost)
+        => RaiseDomainEvent(new GoodsReceiptItemSplitOnLinking(Id, purchaseOrderId, originalItemId, productId, splitQuantity, assignedUnitCost));
 
     internal void ItemUnitCost(Guid itemId, decimal unitCost)
     {

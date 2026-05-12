@@ -10,6 +10,8 @@ public interface IVendorReturnManager
     Task ConfirmAsync(Guid id);
     Task CancelAsync(Guid id);
 
+    Task ReverseConfirmedAsync(Guid id, string reason);
+
     Task<VendorReturnDto?> GetByIdAsync(Guid id);
     Task<(int Total, List<VendorReturnDto> Items)> GetListAsync(Guid? vendorId, Guid? purchaseOrderId, Guid? goodsReceiptId, int? status, int pageIndex, int pageSize);
 

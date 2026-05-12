@@ -154,6 +154,25 @@ public sealed class VendorReturnController : BaseAuthorizedController
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    [HttpPost]
+    public async Task<IActionResult> Reverse(Guid id, string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            NotifyError("Error.VendorReturn.ReverseReasonRequired");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var (success, errorMessage) = await _mediator.Send(new ReverseVendorReturnCommand { Id = id, Reason = reason });
+
+        if (!success)
+            NotifyError(errorMessage!);
+        else
+            NotifySuccess("Msg.SaveSuccess");
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetById(Guid id)
     {

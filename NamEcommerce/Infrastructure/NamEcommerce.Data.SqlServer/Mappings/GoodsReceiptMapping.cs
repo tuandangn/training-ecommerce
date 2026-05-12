@@ -10,6 +10,9 @@ public sealed class GoodsReceiptMapping : IEntityTypeConfiguration<GoodsReceipt>
         builder.ToTable(nameof(GoodsReceipt), DbScheme);
         builder.HasKey(g => g.Id);
 
+        builder.Property(g => g.Code).HasMaxLength(50).IsRequired().HasDefaultValue("");
+        builder.HasIndex(g => g.Code).IsUnique().HasFilter("[Code] <> ''");
+
         builder.Property(g => g.ReceivedOnUtc).IsRequired();
 
         // Phase A1: SourceType phân biệt nguồn (NCC vs trả từ KH vs điều chỉnh).
@@ -18,6 +21,9 @@ public sealed class GoodsReceiptMapping : IEntityTypeConfiguration<GoodsReceipt>
             .IsRequired()
             .HasDefaultValue(GoodsReceiptSourceType.FromVendor)
             .HasConversion<int>();
+
+        builder.Property(g => g.BulkReceiveBatchId);
+        builder.HasIndex(g => g.BulkReceiveBatchId);
 
         builder.Property(g => g.TruckDriverName).HasMaxLength(500);
         builder.Property(g => g.TruckDriverNameNormalized).HasMaxLength(500);

@@ -30,7 +30,8 @@ export default class GoodsReceiptCreateController {
         if (browserEl) {
             this.#browser = new ProductBrowser(
                 browserEl,
-                (product) => this.#addOrIncrementItem(product)
+                (product) => this.#addOrIncrementItem(product),
+                { purchase: true }
             );
             this.#browser.init();
         }
@@ -58,7 +59,7 @@ export default class GoodsReceiptCreateController {
         const pickerEl = document.getElementById('productPicker');
         if (!pickerEl) return;
 
-        this.#productPicker = new ProductPicker(pickerEl);
+        this.#productPicker = new ProductPicker(pickerEl, { purchase: true });
 
         pickerEl.addEventListener('select', (e) => {
             const product = e.detail?.product;

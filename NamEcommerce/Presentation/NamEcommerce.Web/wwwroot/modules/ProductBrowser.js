@@ -38,7 +38,8 @@ export default class ProductBrowser {
         colClass: 'col-12 col-sm-6 col-md-4 col-lg-6 col-xl-4',
         categoryUrl: '/Category/Options',
         productSearchUrl: '/Product/Search',
-        purchase: false
+        purchase: false,
+        initialShow: false
     };
 
     /**
@@ -63,6 +64,9 @@ export default class ProductBrowser {
             this.#state.cid = initialData.cid;
         if (initialData.vid)
             this.#state.vid = initialData.vid;
+
+        if (this.#options.initialShow)
+            this.#state.cid = null;
     }
 
     async init() {
@@ -121,8 +125,8 @@ export default class ProductBrowser {
             <div class="accordion accordion-flush" id="accordionProductBrowser">
                 <div class="accordion-item">
                     <div class="accordion-header position-relative">
-                        <button class="accordion-button text-dark bg-white w-auto p-1 shadow-none position-absolute collapsed" style="top:-10px;right:-10px;" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#collapseProductBrowser" aria-expanded="false" aria-controls="collapseProductBrowser">
+                        <button class="accordion-button text-dark bg-white w-auto p-1 shadow-none position-absolute ${this.#options.initialShow ? '' : 'collapsed'}" style="top:-10px;right:-10px;" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseProductBrowser" aria-expanded="${this.#options.initialShow}" aria-controls="collapseProductBrowser">
                             <span class="visually-hidden">Mở thêm hàng hóa</span>
                         </button>
                         <div class="pb-search">
@@ -141,7 +145,7 @@ export default class ProductBrowser {
             <div class="pb-categories mt-3 d-flex flex-wrap gap-1">
                 <span class="text-muted small">Đang tải danh mục...</span>
             </div>
-            <div id="collapseProductBrowser" class="accordion-collapse collapse" aria-labelledby="headingProductBrowser" data-bs-parent="#accordionProductBrowser">
+            <div id="collapseProductBrowser" class="accordion-collapse collapse ${this.#options.initialShow ? 'show' : ''}" aria-labelledby="headingProductBrowser" data-bs-parent="#accordionProductBrowser">
                 <div class="accordion-body p-0 mt-3">
                     <div class="pb-grid" style="max-height:300px; overflow-y: auto;overflow-x:hidden;">Đang tải hàng hóa...</div>
                 </div>

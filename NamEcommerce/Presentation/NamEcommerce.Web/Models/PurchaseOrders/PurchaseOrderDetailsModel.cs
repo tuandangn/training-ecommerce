@@ -21,4 +21,10 @@ public sealed class PurchaseOrderDetailsModel
 
     [ValidateNever]
     public required EntityOptionListModel AvailableWarehouses { get; set; }
+
+    [ValidateNever]
+    public IList<RelatedGoodsReceiptModel> RelatedGoodsReceipts { get; set; } = [];
+
+    [ValidateNever]
+    public IList<RelatedVendorReturnModel> RelatedVendorReturns { get; set; } = [];
 }

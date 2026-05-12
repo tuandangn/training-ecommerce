@@ -50,6 +50,11 @@ public sealed record VendorReturn : AppAggregateEntity
     public DateTime ReturnDate { get; internal set; }
 
     public DateTime? ConfirmedOnUtc { get; private set; }
+    public DateTime? ReversedOnUtc { get; private set; }
+    public string? ReversedReason { get; private set; }
+
+    public Guid? InspectedByUserId { get; private set; }
+    public DateTime? InspectedOnUtc { get; private set; }
 
     /// <summary>Chi phí phát sinh khi trả hàng cho NCC (vận chuyển, đền bù...). Tự động ghi Expense khi Confirm.</summary>
     public decimal AdditionalCost { get; private set; }
@@ -82,12 +87,14 @@ public sealed record VendorReturn : AppAggregateEntity
         _items.Add(item);
     }
 
-    internal void MoveToInspecting()
+    internal void MoveToInspecting(Guid? inspectorUserId)
     {
         if (Status != VendorReturnStatus.Draft)
             throw new ReturnCannotChangeStatusException(Status.ToString(), nameof(VendorReturnStatus.Inspecting));
 
         Status = VendorReturnStatus.Inspecting;
+        InspectedByUserId = inspectorUserId;
+        InspectedOnUtc = DateTime.UtcNow;
         UpdatedOnUtc = DateTime.UtcNow;
     }
 
@@ -115,6 +122,19 @@ public sealed record VendorReturn : AppAggregateEntity
         UpdatedOnUtc = DateTime.UtcNow;
 
         RaiseDomainEvent(new VendorReturnCancelled(Id));
+    }
+
+    internal void MarkReversed(string reason)
+    {
+        if (Status != VendorReturnStatus.Confirmed)
+            throw new ReturnCannotChangeStatusException(Status.ToString(), nameof(VendorReturnStatus.Reversed));
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ReturnDataIsInvalidException("Error.VendorReturn.ReverseReasonRequired");
+
+        Status = VendorReturnStatus.Reversed;
+        ReversedReason = reason;
+        ReversedOnUtc = DateTime.UtcNow;
+        UpdatedOnUtc = DateTime.UtcNow;
     }
 
     internal void MarkCreated() { /* no event needed at Draft creation */ }

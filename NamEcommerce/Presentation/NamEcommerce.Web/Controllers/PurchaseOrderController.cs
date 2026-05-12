@@ -5,7 +5,6 @@ using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
-using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 
 namespace NamEcommerce.Web.Controllers;
@@ -219,6 +218,61 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    public async Task<IActionResult> BulkReceive(BulkReceivePurchaseOrderModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            NotifyError("Error.InvalidRequest", GetErrorMessage());
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
+
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
+        if (purchaseOrder is null)
+        {
+            NotifyError("Error.PurchaseOrderIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+
+        var lines = (model.Items ?? [])
+            .Where(line => line.ItemId != Guid.Empty && line.Quantity > 0)
+            .Select(line => new BulkReceiveLineCommand
+            {
+                ItemId = line.ItemId,
+                Quantity = line.Quantity,
+                WarehouseId = line.WarehouseId,
+                ActualUnitCost = line.ActualUnitCost
+            })
+            .ToList();
+
+        if (lines.Count == 0)
+        {
+            NotifyError("Error.BulkReceive.NoItemsProvided");
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
+
+        var result = await _mediator.Send(new BulkReceivePurchaseOrderCommand
+        {
+            PurchaseOrderId = model.PurchaseOrderId,
+            Items = lines,
+            AdditionalShipping = model.AdditionalShipping ?? 0,
+            AdditionalTax = model.AdditionalTax ?? 0
+        });
+
+        if (!result.Success)
+            NotifyError(result.ErrorMessage!);
+        else
+        {
+            var count = result.CreatedGoodsReceiptIds.Count;
+            if (count > 1)
+                NotifySuccess("Msg.BulkReceive.CreatedMultiple", count);
+            else
+                NotifySuccess("Msg.SaveSuccess");
+        }
+
+        return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+    }
+
+    [HttpPost]
     public async Task<IActionResult> RemovePurchaseOrderItem([FromBody] DeletePurchaseOrderItemModel model)
     {
         if (!ModelState.IsValid)
@@ -285,6 +339,28 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
         if (success)
             NotificationService.Success(errorMessage ?? LocalizeError("Msg.SaveSuccess"));
+        else
+            NotifyError(errorMessage!);
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ClosePartial(Guid id, string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            NotifyError("Error.PurchaseOrder.CloseReasonRequired");
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        var (success, errorMessage) = await _mediator.Send(new ClosePartialPurchaseOrderCommand
+        {
+            PurchaseOrderId = id,
+            Reason = reason
+        });
+
+        if (success)
+            NotifySuccess("Msg.SaveSuccess");
         else
             NotifyError(errorMessage!);
         return RedirectToAction(nameof(Details), new { id });

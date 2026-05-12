@@ -230,7 +230,7 @@ export default class VendorPicker {
             style="z-index: 1050; display: none; max-height: 300px; overflow-y: auto;"
             role="listbox"></div>
 
-        <div class="alert alert-primary d-none border-0 rounded-3 d-flex align-items-center mb-0 selectedVendorInfo" role="status">
+        <div class="alert alert-light d-none border-0 rounded-3 d-flex align-items-center mb-0 selectedVendorInfo" role="status">
             <i class="bi bi-building-fill fs-4 me-3 flex-shrink-0"></i>
             <div class="flex-grow-1 overflow-hidden">
                 <div class="fw-bold text-truncate name-field"></div>

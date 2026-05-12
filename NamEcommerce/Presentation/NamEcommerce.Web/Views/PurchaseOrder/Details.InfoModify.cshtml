@@ -46,7 +46,7 @@
         <textarea asp-for="Note" class="form-control" rows="2" placeholder="Nhập ghi chú"></textarea>
         <span asp-validation-for="Note" class="text-danger small"></span>
     </div>
-    <div class="mb-4">
+    <div>
         <label class="form-label small fw-bold text-muted text-uppercase d-block mb-2" asp-for="ShippingAmount">Chi phí bổ sung</label>
         <div class="row g-3">
             @if (Model.CanChangeFees)
@@ -90,11 +90,5 @@
                 </div>
             }
         </div>
-    </div>
-    <div class="d-grid">
-        <button type="submit" class="btn btn-outline-secondary">
-            <i class="bi bi-pencil-square me-1"></i>
-            Cập nhật thông tin
-        </button>
     </div>
 </form>

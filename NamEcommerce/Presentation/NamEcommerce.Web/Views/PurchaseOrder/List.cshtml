@@ -3,6 +3,35 @@
     ViewData[ViewConstants.PageTitle] = "Đơn nhập hàng";
     var query = Model.Keywords;
 }
+@functions {
+    // Render HTML cho popover liệt kê hàng hóa. Bootstrap popover yêu cầu HTML string
+    // qua data-bs-content; chuỗi đã escape via Html.Encode để chặn XSS.
+    string BuildItemsPopoverHtml(IList<ItemSummaryModel> items)
+    {
+        if (items.Count == 0)
+            return string.Empty;
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div class=\"po-items-list\">");
+        foreach (var item in items)
+        {
+            var name = System.Net.WebUtility.HtmlEncode(item.ProductName);
+            var ordered = item.QuantityOrdered.DisplayQuantity();
+            var received = item.QuantityReceived.DisplayQuantity();
+            var isDone = item.QuantityReceived >= item.QuantityOrdered;
+            var hasReceived = item.QuantityReceived > 0;
+            var statusClass = isDone ? "text-success" : (hasReceived ? "text-warning" : "text-muted");
+            var icon = isDone ? "bi-check-circle-fill" : (hasReceived ? "bi-hourglass-split" : "bi-circle");
+
+            sb.Append("<div class=\"po-items-row\">");
+            sb.Append($"<div class=\"po-items-name\"><i class=\"bi {icon} {statusClass} me-1\"></i>{name}</div>");
+            sb.Append($"<div class=\"po-items-qty {statusClass}\">{received} / {ordered}</div>");
+            sb.Append("</div>");
+        }
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+}
 @section TitleSection {
     <h1 class="topbar-page-title">Đơn nhập</h1>
     <div class="topbar-page-subtitle">
@@ -43,6 +72,9 @@
                         <th>
                             Nhà cung cấp
                         </th>
+                        <th>
+                            Hàng hóa
+                        </th>
                         <th class="text-end">Tổng tiền</th>
                         <th class="text-center" style="width: 120px;">
                             Trạng thái
@@ -82,8 +114,61 @@
                                         }
                                     </div>
                                 </td>
+                                <td>
+                                    @{
+                                        var itemCount = purchaseOrder.Items.Count;
+                                        var ordered = purchaseOrder.TotalOrdered;
+                                        var received = purchaseOrder.TotalReceived;
+                                        var receivedPct = ordered > 0 ? Math.Min(100, (int)Math.Round(received * 100 / ordered)) : 0;
+                                        var isComplete = ordered > 0 && received >= ordered;
+                                        var hasReceived = received > 0;
+                                        var progressClass = isComplete ? "bg-success" : (hasReceived ? "bg-warning" : "bg-secondary");
+                                    }
+                                    @if (itemCount == 0)
+                                    {
+                                        <span class="text-muted fst-italic small">Chưa có hàng hóa</span>
+                                    }
+                                    else
+                                    {
+                                        <div class="d-none d-lg-block">
+                                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-start po-items-popover"
+                                                    data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
+                                                    data-bs-custom-class="po-items-popover-content"
+                                                    data-bs-title="@($"Hàng hóa ({itemCount} mặt hàng)")"
+                                                    data-bs-content="@BuildItemsPopoverHtml(purchaseOrder.Items)">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge rounded-pill bg-light text-dark border">
+                                                        <i class="bi bi-box-seam me-1"></i>@itemCount mặt hàng
+                                                    </span>
+                                                </div>
+                                                <div class="progress mt-1" style="height: 4px; width: 200px;" role="progressbar" aria-valuenow="@receivedPct" aria-valuemin="0" aria-valuemax="100">
+                                                    <div class="progress-bar @progressClass" style="width: @(receivedPct)%"></div>
+                                                </div>
+                                                <div class="small text-muted mt-1">
+                                                    Đã nhận @received.DisplayQuantity() / @ordered.DisplayQuantity()
+                                                    @if (isComplete)
+                                                    {
+                                                        <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                                    }
+                                                </div>
+                                            </button>
+                                        </div>
+                                        <div class="d-block d-lg-none text-truncate">
+                                            @for(var i = 0; i < purchaseOrder.Items.Count; i++)
+                                            {
+                                                var item = purchaseOrder.Items[i];
+                                                <span class="d-block">
+                                                    @item.ProductName 
+                                                    <span class="text-muted">
+                                                    (@item.QuantityReceived.DisplayQuantity()/@item.QuantityOrdered.DisplayQuantity())
+                                                    </span>
+                                                </span>
+                                            }
+                                        </div>
+                                    }
+                                </td>
                                 <td class="text-end fw-bold text-primary text-nowrap">
-                                    @purchaseOrder.TotalAmount.DisplayCurrency()
+                                    @purchaseOrder.TotalAmount.DisplayCurrencyWithSymbol()
                                 </td>
                                 <td class="text-center">
                                     @{
@@ -107,7 +192,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="6">
+                            <td colspan="7">
                                 <div class="empty-state">
                                     <div class="empty-icon"><i class="bi bi-inbox"></i></div>
                                     <h5>Không tìm thấy đơn nhập hàng nào</h5>
@@ -125,6 +210,32 @@
         }
     </div>
 </div>
+@section Styles {
+    <style>
+        .po-items-popover { line-height: 1.2; }
+        .po-items-popover:hover .badge { background-color: var(--bs-primary-bg-subtle, #e7f1ff) !important; }
+        .po-items-popover-content .popover-body { padding: 0.5rem 0.75rem; }
+        .po-items-list { min-width: 220px; }
+        .po-items-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.25rem 0;
+            font-size: 0.85rem;
+        }
+        .po-items-row + .po-items-row { border-top: 1px dashed var(--bs-border-color, #dee2e6); }
+        .po-items-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 240px;
+        }
+        .po-items-qty { font-variant-numeric: tabular-nums; font-weight: 500; }
+    </style>
+}
+
 @section Scripts {
     <script type="module">
         const txtKeywords = document.getElementById('@Html.IdFor(m => m.Keywords)');
@@ -143,5 +254,10 @@
                 focusEnd(txtKeywords);
             </text>
         }
+
+        // Init popover cho cột "Hàng hóa". site.js auto-init tooltip nhưng không init popover.
+        document.querySelectorAll('.po-items-popover').forEach(el => {
+            new bootstrap.Popover(el, { container: 'body', sanitize: false });
+        });
     </script>
 }

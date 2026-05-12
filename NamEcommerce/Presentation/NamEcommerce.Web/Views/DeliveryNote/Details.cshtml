@@ -238,6 +238,9 @@
             <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
                 <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Danh sách hàng hóa</h5>
             </div>
+            @{
+                var hasReturned = Model.Items.Any(i => i.ReturnedQuantity > 0 || i.PendingReturnQuantity > 0);
+            }
             <div class="card-body p-0 mt-3 flex-grow-1">
                 <div class="table-responsive">
                     <table class="table data-table mb-0">
@@ -246,6 +249,10 @@
                                 <th class="ps-4" style="width: 50px;">#</th>
                                 <th>Tên hàng hóa</th>
                                 <th class="text-end">Số lượng</th>
+                                @if (hasReturned)
+                                {
+                                    <th class="text-end" style="width: 110px;" data-bs-toggle="tooltip" title="Số lượng đã được khách trả (Confirmed)">Đã trả</th>
+                                }
                                 @if (Model.ShowPrice)
                                 {
                                     <th class="text-end">Đơn giá</th>
@@ -263,6 +270,36 @@
                                         <td class="ps-4">@(idx++)</td>
                                         <td class="fw-medium text-dark">@item.ProductName</td>
                                         <td class="text-end fw-bold">@item.Quantity.ToString("N2")</td>
+                                        @if (hasReturned)
+                                        {
+                                            <td class="text-end">
+                                                @if (item.ReturnedQuantity <= 0 && item.PendingReturnQuantity <= 0)
+                                                {
+                                                    <span class="text-muted small">—</span>
+                                                }
+                                                else
+                                                {
+                                                    if (item.ReturnedQuantity >= item.Quantity)
+                                                    {
+                                                        <span class="status-badge danger small" data-bs-toggle="tooltip" title="Toàn bộ đã trả">
+                                                            <i class="bi bi-arrow-return-left"></i> @item.ReturnedQuantity.ToString("N2")
+                                                        </span>
+                                                    }
+                                                    else if (item.ReturnedQuantity > 0)
+                                                    {
+                                                        <span class="status-badge warning small" data-bs-toggle="tooltip" title="Đã trả một phần">
+                                                            @item.ReturnedQuantity.ToString("N2")
+                                                        </span>
+                                                    }
+                                                    if (item.PendingReturnQuantity > 0)
+                                                    {
+                                                        <div class="small text-info mt-1" data-bs-toggle="tooltip" title="Đang chờ xác nhận (Draft/Inspecting)">
+                                                            <i class="bi bi-hourglass-split"></i> @item.PendingReturnQuantity.ToString("N2")
+                                                        </div>
+                                                    }
+                                                }
+                                            </td>
+                                        }
                                         @if (Model.ShowPrice)
                                         {
                                             <td class="text-end text-muted">@item.UnitPrice.ToString("N0") <span class="small">đ</span></td>
@@ -270,17 +307,20 @@
                                         }
                                     </tr>
                                 }
+                                // Cột: # | Name | Qty | (hasReturned: Returned) | (ShowPrice: Price | SubTotal)
+                                // Label colspan = total - 1 (chừa cột cuối cho value)
+                                var summaryLabelColspan = 2 + (hasReturned ? 1 : 0) + (Model.ShowPrice ? 2 : 0);
                                 @if (Model.ShowPrice)
                                 {
                                     <tr class="bg-light border-top">
-                                        <td colspan="4" class="text-end py-2 text-dark small">TỔNG TIỀN HÀNG:</td>
+                                        <td colspan="@summaryLabelColspan" class="text-end py-2 text-dark small">TỔNG TIỀN HÀNG:</td>
                                         <td class="text-end pe-4 py-2 fw-bold">@Model.TotalAmount.ToString("N0") <span class="small">đ</span></td>
                                     </tr>
                                 }
                                 @if (Model.Surcharge > 0)
                                 {
                                     <tr class="bg-light border-top">
-                                        <td colspan="@(Model.ShowPrice ? 4 : 2)" class="text-end py-2 text-dark small">
+                                        <td colspan="@summaryLabelColspan" class="text-end py-2 text-dark small">
                                             PHỤ PHÍ:
                                             @if (!string.IsNullOrEmpty(Model.SurchargeReason))
                                             {
@@ -293,7 +333,7 @@
                                 @if (Model.AmountToCollect > 0)
                                 {
                                     <tr class="fw-bold bg-light border-top border-2">
-                                        <td colspan="@(Model.ShowPrice ? 4 : 2)" class="text-end py-3 text-dark">SỐ TIỀN PHẢI THU:</td>
+                                        <td colspan="@summaryLabelColspan" class="text-end py-3 text-dark">SỐ TIỀN PHẢI THU:</td>
                                         <td class="text-end pe-4 py-3 fs-5 text-primary">@Model.AmountToCollect.ToString("N0") <span class="small">đ</span></td>
                                     </tr>
                                 }
@@ -301,7 +341,7 @@
                             else
                             {
                                 <tr>
-                                    <td colspan="@(Model.ShowPrice ? 5 : 3)" class="text-center py-4">
+                                    <td colspan="@(3 + (hasReturned ? 1 : 0) + (Model.ShowPrice ? 2 : 0))" class="text-center py-4">
                                         Không có hàng hóa
                                     </td>
                                 </tr>

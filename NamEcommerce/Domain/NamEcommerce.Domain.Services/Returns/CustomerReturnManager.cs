@@ -216,7 +216,6 @@ public sealed class CustomerReturnManager(
         customerReturn.GeneratedGoodsReceiptId = generatedGoodsReceiptId;
         await customerReturnRepository.UpdateAsync(customerReturn).ConfigureAwait(false);
 
-        // Ghi chi phí phát sinh vào Expense (vận chuyển, bồi thường...)
         if (customerReturn.AdditionalCost > 0)
         {
             await expenseManager.CreateExpenseAsync(new CreateExpenseDto
@@ -225,7 +224,8 @@ public sealed class CustomerReturnManager(
                 Description = $"Chi phí phát sinh khi nhận hàng trả từ khách {customerReturn.CustomerName}",
                 Amount = customerReturn.AdditionalCost,
                 ExpenseType = ExpenseType.ReturnCost,
-                IncurredDate = customerReturn.ConfirmedOnUtc ?? DateTime.UtcNow
+                IncurredDate = customerReturn.ConfirmedOnUtc ?? DateTime.UtcNow,
+                SourceCustomerReturnId = customerReturn.Id
             }).ConfigureAwait(false);
         }
 

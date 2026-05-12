@@ -267,6 +267,9 @@
   <data name="Error.InsufficientStock" xml:space="preserve">
     <value>Không đủ tồn kho cho sản phẩm '{0}' trong kho '{1}'. Cần: {2}, có sẵn: {3}.</value>
   </data>
+  <data name="Error.GoodsReceiptCannotDeleteDueToReservedStock" xml:space="preserve">
+    <value>Không thể xóa phiếu nhập '{0}' vì hàng trong phiếu đã được giữ cho phiếu xuất khác (sản phẩm '{1}' tại kho '{2}'). Cần huỷ phiếu xuất liên quan hoặc đợi hàng được trả lại trước.</value>
+  </data>
   <data name="Error.CannotReleaseMoreThanReserved" xml:space="preserve">
     <value>Không thể giải phóng nhiều hơn số lượng đã đặt trước. Đã đặt: {0}, yêu cầu: {1}.</value>
   </data>
@@ -581,6 +584,9 @@
   </data>
   <data name="Msg.SaveSuccess" xml:space="preserve">
     <value>Lưu thành công</value>
+  </data>
+  <data name="Msg.BulkReceive.CreatedMultiple" xml:space="preserve">
+    <value>Đã tạo {0} phiếu nhập kho.</value>
   </data>
   <data name="Msg.ImageSizeLimit" xml:space="preserve">
     <value>Kích thước hình ảnh phải nhỏ hơn {0}Mb.</value>

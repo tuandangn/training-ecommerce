@@ -20,7 +20,19 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task DeleteOrderItemAsync(Guid purchaseOrderId, Guid itemId);
     Task<ReceivedGoodsForItemResultDto> ReceiveItemsAsync(ReceivedGoodsForItemDto dto);
 
+    /// <summary>
+    /// Nhận nhiều items cùng 1 lần. Lines được group theo WarehouseId — mỗi group sinh 1 GoodsReceipt.
+    /// Cộng dồn QuantityReceived cho từng PO item, validate aggregate qty không vượt ordered,
+    /// 1 lần UpdateAsync PO ở cuối. Trả về danh sách GoodsReceipt ids đã tạo.
+    /// </summary>
+    Task<BulkReceiveGoodsForPurchaseOrderResultDto> BulkReceiveItemsAsync(BulkReceiveGoodsForPurchaseOrderDto dto);
+
+    /// <summary>Cộng dồn phí vận chuyển và tiền thuế vào đơn nhập sau khi nhận hàng.</summary>
+    Task AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping, decimal additionalTax);
+
     Task ChangeStatusAsync(Guid purchaseOrderId, PurchaseOrderStatus status);
+
+    Task ClosePartialAsync(Guid purchaseOrderId, string reason);
     Task VerifyStatusAsync(Guid purchaseOrderId);
 
     Task<bool> CanChangeStatusToAsync(Guid purchaseOrderId, PurchaseOrderStatus status);

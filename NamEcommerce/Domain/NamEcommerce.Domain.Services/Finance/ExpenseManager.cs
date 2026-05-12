@@ -19,12 +19,31 @@ public class ExpenseManager : IExpenseManager
 
     public async Task<CreateExpenseResultDto> CreateExpenseAsync(CreateExpenseDto dto)
     {
-        var expense = new Expense(Guid.NewGuid(), dto.Title, dto.Amount, dto.ExpenseType, dto.IncurredDate, dto.RecordedByUserId);
+        if (dto.SourceVendorReturnId.HasValue)
+        {
+            var existing = _expenseDataReader.DataSource
+                .FirstOrDefault(e => e.SourceVendorReturnId == dto.SourceVendorReturnId.Value);
+            if (existing is not null)
+                return new CreateExpenseResultDto { CreatedId = existing.Id };
+        }
+        if (dto.SourceCustomerReturnId.HasValue)
+        {
+            var existing = _expenseDataReader.DataSource
+                .FirstOrDefault(e => e.SourceCustomerReturnId == dto.SourceCustomerReturnId.Value);
+            if (existing is not null)
+                return new CreateExpenseResultDto { CreatedId = existing.Id };
+        }
+
+        var expense = new Expense(Guid.NewGuid(), dto.Title, dto.Amount, dto.ExpenseType, dto.IncurredDate, dto.RecordedByUserId)
+        {
+            SourceVendorReturnId = dto.SourceVendorReturnId,
+            SourceCustomerReturnId = dto.SourceCustomerReturnId
+        };
         if (!string.IsNullOrWhiteSpace(dto.Description))
         {
             expense.UpdateInfo(dto.Title, dto.Description, dto.Amount, dto.ExpenseType, dto.IncurredDate);
         }
-        
+
         await _expenseRepository.InsertAsync(expense);
         return new CreateExpenseResultDto { CreatedId = expense.Id };
     }

@@ -8,7 +8,7 @@ using NamEcommerce.Web.Models.Debts;
 
 namespace NamEcommerce.Web.Services.Debts;
 
-public sealed class CustomerRefundModelFactory(AppConfig appConfig, IMediator mediator) : ICustomerRefundModelFactory
+public sealed class CustomerRefundModelFactory(IMediator mediator) : ICustomerRefundModelFactory
 {
     public async Task<CustomerRefundListSearchModel> PrepareRefundListSearchModel(CustomerRefundListSearchModel? model = null)
     {

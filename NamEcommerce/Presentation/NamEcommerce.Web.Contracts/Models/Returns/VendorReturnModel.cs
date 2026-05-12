@@ -17,6 +17,8 @@ public sealed class VendorReturnModel
     public required int Status { get; init; }
     public required DateTime ReturnDate { get; init; }
     public DateTime? ConfirmedOn { get; init; }
+    public DateTime? ReversedOn { get; init; }
+    public string? ReversedReason { get; init; }
 
     /// <summary>Chi phí phát sinh khi trả hàng NCC (vận chuyển, đền bù...).</summary>
     public required decimal AdditionalCost { get; init; }

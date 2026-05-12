@@ -25,8 +25,11 @@ public record Expense : AppAggregateEntity
     public decimal Amount { get; private set; }
     public ExpenseType ExpenseType { get; private set; }
     public DateTime IncurredDate { get; private set; }
-    
+
     public Guid? RecordedByUserId { get; private set; }
+
+    public Guid? SourceVendorReturnId { get; internal set; }
+    public Guid? SourceCustomerReturnId { get; internal set; }
 
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? ModifiedOnUtc { get; private set; }
