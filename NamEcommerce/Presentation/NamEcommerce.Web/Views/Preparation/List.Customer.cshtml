@@ -158,14 +158,6 @@
                                 @if (!item.IsDelivered)
                                 {
                                     <div class="d-flex flex-column gap-1">
-                                        <button class="btn btn-sm btn-outline-success btnMarkDelivered w-100"
-                                                data-order-id="@item.OrderId"
-                                                data-order-item-id="@item.OrderItemId"
-                                                data-product-name="@item.ProductName"
-                                                title="Đánh dấu đã giao">
-                                            <i class="bi bi-check2-circle d-md-none"></i>
-                                            <span class="d-none d-md-inline"><i class="bi bi-check-lg me-1"></i>Đã giao</span>
-                                        </button>
                                         @if (item.StockQuantityAvailable < item.RemainingQuantity)
                                         {
                                             var itemShortage = item.RemainingQuantity - item.StockQuantityAvailable;

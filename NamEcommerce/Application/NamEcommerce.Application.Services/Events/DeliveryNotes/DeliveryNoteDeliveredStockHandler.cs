@@ -28,7 +28,8 @@ public sealed class DeliveryNoteDeliveredStockHandler(
                 item.Quantity,
                 deliveryNote.Id,
                 Guid.Empty,
-                $"Xuất hàng cho phiếu xuất {deliveryNote.Code}").ConfigureAwait(false);
+                $"Xuất hàng cho phiếu xuất {deliveryNote.Code}",
+                releaseReservedStock: deliveryNote.OrderId != Guid.Empty).ConfigureAwait(false);
         }
     }
 }

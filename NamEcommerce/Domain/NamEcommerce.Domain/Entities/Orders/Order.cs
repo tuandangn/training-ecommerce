@@ -77,7 +77,7 @@ public sealed record Order : AppAggregateEntity
     /// Đánh dấu đơn đang bị xoá (soft delete) — raise <see cref="OrderDeleted"/>.
     /// Manager gọi TRƯỚC khi <c>repository.DeleteAsync</c>.
     /// </summary>
-    internal void MarkDeleted() => RaiseDomainEvent(new OrderDeleted(Id, Code));
+    internal void MarkDeleted() => RaiseDomainEvent(new OrderDeleted(Id, Code, GetReservationItems()));
 
     #endregion
 
@@ -135,11 +135,12 @@ public sealed record Order : AppAggregateEntity
         if (OrderDiscount > calculatedSubTotal)
             throw new OrderDiscountIsInvalidException("Chiết khấu không được vượt quá tổng tiền hàng");
 
+        var oldQuantity = orderItem.Quantity;
         orderItem.Update(quantity, unitPrice);
 
         RecalculateTotal();
 
-        RaiseDomainEvent(new OrderItemUpdated(Id, orderItemId, quantity, unitPrice));
+        RaiseDomainEvent(new OrderItemUpdated(Id, orderItemId, orderItem.ProductId, oldQuantity, quantity, unitPrice));
     }
 
     internal void RemoveOrderItem(Guid itemId)
@@ -155,11 +156,14 @@ public sealed record Order : AppAggregateEntity
         if (OrderDiscount > calculatedSubTotal)
             throw new OrderDiscountIsInvalidException("Chiết khấu không được vượt quá tổng tiền hàng");
 
+        var productId = orderItem.ProductId;
+        var quantity = orderItem.Quantity;
+
         _orderItems.Remove(orderItem);
 
         RecalculateTotal();
 
-        RaiseDomainEvent(new OrderItemRemoved(Id, itemId));
+        RaiseDomainEvent(new OrderItemRemoved(Id, itemId, productId, quantity));
     }
 
     internal void SetOrderDiscount(decimal? orderDiscount)
@@ -187,7 +191,7 @@ public sealed record Order : AppAggregateEntity
         OrderTotal = OrderSubTotal - OrderDiscount;
     }
 
-    internal bool CanUpdateInfo() => OrderStatus != OrderStatus.Locked;
+    internal bool CanUpdateInfo() => OrderStatus != OrderStatus.Locked && OrderStatus != OrderStatus.Cancelled;
     internal bool CanChangeStatusTo(OrderStatus toStatus)
     {
         if (!CanUpdateInfo())
@@ -229,6 +233,15 @@ public sealed record Order : AppAggregateEntity
         RaiseDomainEvent(new OrderLocked(Id, reason));
     }
 
+    internal void Cancel()
+    {
+        if (!CanUpdateInfo())
+            throw new OrderCannotChangeStatusException();
+
+        ChangeStatus(OrderStatus.Cancelled);
+        RaiseDomainEvent(new OrderCancelled(Id, GetReservationItems()));
+    }
+
     internal void MarkOrderItemDelivered(Guid orderItemId, Guid pictureId)
     {
         var orderItem = _orderItems.FirstOrDefault(i => i.Id == orderItemId);
@@ -251,6 +264,12 @@ public sealed record Order : AppAggregateEntity
         return true;
     }
     private bool AreAllItemsDelivered() => _orderItems.Count > 0 && _orderItems.All(i => i.IsDelivered);
+
+    private IReadOnlyCollection<OrderReservationItem> GetReservationItems()
+        => _orderItems
+            .GroupBy(i => i.ProductId)
+            .Select(g => new OrderReservationItem(g.Key, g.Sum(i => i.Quantity)))
+            .ToList();
 
     #endregion
 }

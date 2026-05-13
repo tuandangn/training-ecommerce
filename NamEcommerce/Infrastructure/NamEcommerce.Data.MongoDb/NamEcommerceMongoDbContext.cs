@@ -17,7 +17,7 @@ public sealed class NamEcommerceMongoDbContext : IDbContext
 
     public IMongoDatabase Database => _database;
 
-    public IQueryable<TEntity> GetDataSource<TEntity>() where TEntity : AppAggregateEntity 
+    public IQueryable<TEntity> GetDataSource<TEntity>(bool includeHidden = false) where TEntity : AppAggregateEntity 
         => GetCollection<TEntity>().AsQueryable();
 
     public async Task<TEntity> AddAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default) where TEntity : AppAggregateEntity
@@ -58,6 +58,9 @@ public sealed class NamEcommerceMongoDbContext : IDbContext
         return entity;
     }
 
+    public Task<IDataTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IDataTransaction>(NoopDataTransaction.Instance);
+
     private IMongoCollection<TEntity> GetCollection<TEntity>() where TEntity : AppAggregateEntity
         => Database.GetCollection<TEntity>(typeof(TEntity).Name);
     private static FilterDefinition<TEntity> FilterById<TEntity>(TEntity entity)
@@ -66,4 +69,22 @@ public sealed class NamEcommerceMongoDbContext : IDbContext
     private static FilterDefinition<TEntity> FilterById<TEntity>(Guid id)
         where TEntity : AppAggregateEntity
         => Builders<TEntity>.Filter.Eq(e => e.Id, id);
+
+    private sealed class NoopDataTransaction : IDataTransaction
+    {
+        public static readonly NoopDataTransaction Instance = new();
+
+        private NoopDataTransaction()
+        {
+        }
+
+        public Task CommitAsync(CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public Task RollbackAsync(CancellationToken cancellationToken = default)
+            => Task.CompletedTask;
+
+        public ValueTask DisposeAsync()
+            => ValueTask.CompletedTask;
+    }
 }

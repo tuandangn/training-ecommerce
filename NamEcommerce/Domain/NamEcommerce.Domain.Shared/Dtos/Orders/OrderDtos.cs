@@ -85,6 +85,9 @@ public sealed record UpdateOrderResultDto
 public sealed record DeleteOrderDto(Guid OrderId) : BaseOrderDto;
 
 [Serializable]
+public sealed record CancelOrderDto(Guid OrderId) : BaseOrderDto;
+
+[Serializable]
 public sealed record UpdateShippingDto
 {
     public required Guid OrderId { get; init; }

@@ -13,9 +13,11 @@ using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Exceptions.Users;
 using NamEcommerce.Domain.Shared.Helpers;
+using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
 
 namespace NamEcommerce.Domain.Services.Orders;
@@ -26,7 +28,8 @@ public sealed class OrderManager(
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
     IEntityDataReader<User> userDataReader,
-    IEntityDataReader<DeliveryNote> deliveryNoteDataReader) : IOrderManager
+    IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
+    IInventoryStockManager stockManager) : IOrderManager
 {
     private Task<string> GenerateCodeAsync()
     {
@@ -66,6 +69,7 @@ public sealed class OrderManager(
         foreach (var item in dto.Items)
             await order.AddOrderItemAsync(item.ProductId, item.UnitPrice, item.Quantity, productDataReader).ConfigureAwait(false);
         order.SetOrderDiscount(dto.OrderDiscount);
+        await EnsureGlobalAvailableAsync(order.OrderItems.Select(item => (item.ProductId, item.Quantity))).ConfigureAwait(false);
 
         order.ClearDomainEvents();
         order.Place();
@@ -114,6 +118,7 @@ public sealed class OrderManager(
         if (product is null)
             throw new ProductIsNotFoundException(dto.ProductId);
 
+        await EnsureGlobalAvailableAsync([(dto.ProductId, dto.Quantity)]).ConfigureAwait(false);
         await order.AddOrderItemAsync(dto.ProductId, dto.UnitPrice, dto.Quantity, productDataReader).ConfigureAwait(false);
 
         order.UpdatedOnUtc = DateTime.UtcNow;
@@ -142,6 +147,14 @@ public sealed class OrderManager(
             throw new InvalidOperationException("Updated order item quantity cannot less than its delivering quantity.");
         if (deliveryNoteOrderItems.Any(item => item.UnitPrice != dto.UnitPrice))
             throw new InvalidOperationException("Updated order item cannot change unit price of items that are already in delivery notes.");
+
+        var currentItem = order.OrderItems.FirstOrDefault(item => item.Id == dto.OrderItemId);
+        if (currentItem is null)
+            throw new OrderItemIsNotFoundException(dto.OrderItemId);
+
+        var deltaQuantity = dto.Quantity - currentItem.Quantity;
+        if (deltaQuantity > 0)
+            await EnsureGlobalAvailableAsync([(currentItem.ProductId, deltaQuantity)]).ConfigureAwait(false);
 
         order.UpdateOrderItem(dto.OrderItemId, dto.Quantity, dto.UnitPrice);
         order.UpdatedOnUtc = DateTime.UtcNow;
@@ -296,14 +309,43 @@ public sealed class OrderManager(
         if (!order.CanUpdateInfo())
             throw new InvalidOperationException("Order cannot delete.");
 
-        var processingDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
-                                      where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Draft && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                      select deliveryNote;
-        if (processingDeliveryNotes.Any())
+        var activeDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
+                                  where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                  select deliveryNote;
+        if (activeDeliveryNotes.Any())
             throw new InvalidOperationException("Order cannot deleted because it is processing.");
 
         order.MarkDeleted();
 
         await orderRepository.DeleteAsync(order).ConfigureAwait(false);
+    }
+
+    public async Task CancelOrderAsync(CancelOrderDto dto)
+    {
+        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        var activeDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
+                                  where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                  select deliveryNote;
+        if (activeDeliveryNotes.Any())
+            throw new InvalidOperationException("Order cannot cancelled because it is processing.");
+
+        order.Cancel();
+        order.UpdatedOnUtc = DateTime.UtcNow;
+
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
+    }
+
+    private async Task EnsureGlobalAvailableAsync(IEnumerable<(Guid ProductId, decimal Quantity)> items)
+    {
+        foreach (var itemGroup in items.GroupBy(item => item.ProductId))
+        {
+            var requestedQuantity = itemGroup.Sum(item => item.Quantity);
+            var availableQuantity = await stockManager.GetGlobalAvailableForProductAsync(itemGroup.Key).ConfigureAwait(false);
+            if (availableQuantity < requestedQuantity)
+                throw new InsufficientStockException(itemGroup.Key, Guid.Empty, requestedQuantity, availableQuantity);
+        }
     }
 }

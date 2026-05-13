@@ -527,10 +527,10 @@ public sealed class OrderAppService(
             };
         }
 
-        var processingDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
-                                      where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Draft && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                      select deliveryNote;
-        if (processingDeliveryNotes.Any())
+        var activeDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
+                                  where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                  select deliveryNote;
+        if (activeDeliveryNotes.Any())
         {
             return new DeleteOrderResultAppDto
             {

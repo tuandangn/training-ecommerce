@@ -111,11 +111,10 @@
                                     @if (Model.CanUpdateOrderItems)
                                     {
                                         <td class="text-end pe-4">
-                                            <div class="dropdown">
-                                                <button class="btn-table-action" type="button" data-bs-toggle="dropdown">
-                                                    <i class="bi bi-three-dots-vertical"></i>
-                                                </button>
-                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                            <button class="btn-table-action" type="button" data-bs-toggle="dropdown">
+                                                <i class="bi bi-three-dots-vertical"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
                                                     <li>
                                                         <button class="dropdown-item btnEditItem" data-id="@item.Id"
                                                                 data-product="@item.ProductName"
@@ -138,7 +137,6 @@
                                                         </li>
                                                     }
                                                 </ul>
-                                            </div>
                                         </td>
                                     }
                                 </tr>

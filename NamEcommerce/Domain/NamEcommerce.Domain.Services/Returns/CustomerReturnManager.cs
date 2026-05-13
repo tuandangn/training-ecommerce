@@ -181,6 +181,11 @@ public sealed class CustomerReturnManager(
         return Task.FromResult(total);
     }
 
+    /// <summary>
+    /// Hoàn tất hiệu ứng tài chính sau khi CustomerReturn đã sinh GoodsReceipt.
+    /// Khoản hoàn được cấn trừ theo FIFO trên toàn bộ nợ của customer, không giới hạn trong DeliveryNote gốc.
+    /// Đây là chủ ý nghiệp vụ: tiền trả hàng làm giảm công nợ khách hàng theo tuổi nợ, phần vượt nợ sẽ sinh CustomerRefund.
+    /// </summary>
     public async Task FinalizeConfirmAsync(Guid returnId, Guid generatedGoodsReceiptId, decimal netRefundAmount)
     {
         var customerReturn = await customerReturnDataReader.GetByIdAsync(returnId).ConfigureAwait(false);
@@ -207,7 +212,6 @@ public sealed class CustomerReturnManager(
 
         if (netRefundAmount <= 0) return;
 
-        // Giảm CustomerDebt FIFO theo CreatedOnUtc cho toàn bộ nợ của khách hàng
         var orderedDebts = customerDebtDataReader.DataSource
             .Where(d => d.CustomerId == customerReturn.CustomerId)
             .OrderBy(d => d.CreatedOnUtc)

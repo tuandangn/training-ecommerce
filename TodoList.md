@@ -1,6 +1,6 @@
 # TodoList — VLXD Tuấn Khôi / NamEcommerce
 
-> File theo dõi các hạng mục còn pending.
+> File theo dõi các hạng mục còn pending. Các mục đã làm xong đã được xóa để tránh nhiễu.
 
 ---
 
@@ -13,113 +13,163 @@
 
 ---
 
-## 🔧 Pending — Build & Migrations & Smoke Test
+## Pending — Migration / Smoke Test
 
-**Phase 5 cleanup** — chờ Tuấn quyết định:
-- ~~Xóa `OrderCreatedEventHandler.cs`~~ → **Giữ + implement** (xem mục P2 bên dưới — Tuấn chốt reserve stock khi Order tạo, 2026-05-13)
+- [ ] **Tuấn chạy migration cho các thay đổi đã implement**
+  - `CustomerReturn.DeliveryNoteId` chuyển sang required.
+  - Thêm bảng/cấu hình `ProductReservation`.
+  - AI không chạy `Add-Migration` / `Update-Database`.
+
+- [ ] **Smoke test lại P2/P3 sau migration**
+  - Tạo Order có đủ tồn global -> Order được tạo thành công.
+  - Tạo Order vượt tồn global -> bị chặn bằng `Error.InsufficientStock`.
+  - Tạo DeliveryNote từ Order -> Confirm -> global reservation giảm, per-warehouse reservation tăng.
+  - Cancel DeliveryNote đã Confirmed -> per-warehouse reservation giảm, global reservation tăng lại.
+  - Mark Delivered DeliveryNote -> tồn kho bị trừ, công nợ khách hàng được sinh.
+
+---
+
+## P4 — Sales Workflow Hardening Plan
+
+> Mục tiêu: workflow bán hàng không được giao thiếu, khóa đơn sớm, bỏ qua phiếu xuất, hoặc làm lệch reservation/tồn kho/công nợ.
+> Thứ tự làm: chặn đường sai nghiêm trọng trước, sau đó đưa invariant xuống domain, cuối cùng mới xử lý atomic/concurrency.
+
+### P4.1 — Bỏ luồng "Đã giao" trực tiếp trên Preparation ✅ 2026-05-13
+
+**Vấn đề:** Màn Chuẩn bị hàng có nút `Đã giao` mark `OrderItem` delivered trực tiếp, bỏ qua `DeliveryNote`, nên không trừ kho, không snapshot COGS, không sinh công nợ.
+
+**Files dự kiến:**
+- Modify: `NamEcommerce/Presentation/NamEcommerce.Web/Views/Preparation/List.Customer.cshtml`
+- Modify: `NamEcommerce/Presentation/NamEcommerce.Web/Views/Preparation/List.Product.cshtml`
+- Modify: `NamEcommerce/Presentation/NamEcommerce.Web/Views/Preparation/List.cshtml`
+- Modify/Delete nếu không còn dùng: `NamEcommerce/Presentation/NamEcommerce.Web/Controllers/PreparationController.cs`
+- Modify/Delete nếu không còn dùng: `NamEcommerce/Presentation/NamEcommerce.Web.Framework/Commands/Handlers/Preparation/MarkOrderItemDeliveredHandler.cs`
+- Modify/Delete nếu không còn dùng: `NamEcommerce/Presentation/NamEcommerce.Web.Contracts/Commands/Models/Preparation/MarkOrderItemDeliveredCommand.cs`
+
+**Steps:**
+- [x] Xóa/hide nút `btnMarkDelivered` ở 2 partial Preparation; user chỉ còn tạo DeliveryNote.
+- [x] Xóa modal upload proof và JS call `Preparation/MarkDelivered` trong `List.cshtml` nếu không còn reference.
+- [x] Chặn endpoint `PreparationController.MarkDelivered` hoặc xóa hẳn flow command/handler nếu không còn nơi gọi.
+- [x] Search `MarkOrderItemDeliveredCommand`, `MarkOrderItemDeliveredAsync`, `btnMarkDelivered` để đảm bảo không còn UI path đi vòng qua DeliveryNote.
+- [x] Build verify: `rtk dotnet build NamEcommerce\Presentation\NamEcommerce.Web\NamEcommerce.Web.csproj -p:OutDir=C:\tmp\NamEcommerceP4Build\`
+- [ ] Manual verify: vào Preparation -> chỉ tạo được phiếu xuất, không còn nút đánh dấu giao trực tiếp.
+
+### P4.2 — Sửa partial delivery: chỉ lock Order khi đã giao đủ số lượng ✅ 2026-05-13
+
+**Vấn đề:** `DeliveryNoteManager.MarkDeliveredAsync` đang mark `OrderItem.IsDelivered = true` nếu item có trong phiếu xuất, kể cả giao một phần. `Order.TryAutoLock()` có thể khóa đơn sớm.
+
+**Files dự kiến:**
+- Modify: `NamEcommerce/Domain/NamEcommerce.Domain.Services/DeliveryNotes/DeliveryNoteManager.cs`
+- Modify: `NamEcommerce/Domain/NamEcommerce.Domain/Entities/Orders/Order.cs`
+- Modify: `NamEcommerce/Domain/NamEcommerce.Domain/Entities/Orders/OrderItem.cs`
+- Modify nếu cần: `NamEcommerce/Application/NamEcommerce.Application.Services/Events/Orders/OrderReservationEventHandlers.cs`
+- Modify nếu cần: `NamEcommerce/Presentation/NamEcommerce.Web/Models/Orders/OrderDetailsModel.cs`
+
+**Steps:**
+- [x] Định nghĩa rule: OrderItem chỉ considered delivered khi tổng quantity của DeliveryNote `Delivered` cho item đó >= `OrderItem.Quantity`.
+- [x] Trong `DeliveryNoteManager.MarkDeliveredAsync`, sau khi DN delivered, tính delivered quantity theo từng `OrderItemId` bằng tất cả DeliveryNote status `Delivered`.
+- [x] Chỉ gọi `order.MarkOrderItemDelivered(...)` cho item đã giao đủ; không mark delivered cho giao một phần.
+- [x] `TryAutoLock()` chỉ được chạy sau khi tất cả item đã giao đủ theo delivered quantity, hoặc sau khi các item đã được mark delivered đúng rule mới.
+- [x] Kiểm tra `OrderLockedEventHandler`: remaining global release phải dựa trên moved quantity của DN không Draft/Cancelled; nếu item giao một phần thì không release phần còn lại.
+- [x] Build verify bằng command P4.1.
+- [ ] Manual verify: Order 10 cái -> DN delivered 3 cái -> Order chưa lock, item chưa hiện đã giao đủ; delivered thêm 7 cái -> Order mới auto-lock.
+
+### P4.3 — Đưa validation "không xuất vượt remaining" xuống Domain ✅ 2026-05-13
+
+**Vấn đề:** UI có tính remaining, nhưng `DeliveryNoteManager.CreateFromOrderAsync` chỉ check OrderItem tồn tại. Form/request bất thường có thể tạo Draft DN vượt số lượng còn lại.
+
+**Files dự kiến:**
+- Modify: `NamEcommerce/Domain/NamEcommerce.Domain.Services/DeliveryNotes/DeliveryNoteManager.cs`
+- Add/Modify exception nếu cần: `NamEcommerce/Domain/NamEcommerce.Domain.Shared/Exceptions/DeliveryNotes/*`
+- Modify localization nếu thêm error key: `NamEcommerce/Presentation/NamEcommerce.Web/Resources/SharedResource.resx`
+- Modify localization nếu thêm error key: `NamEcommerce/Presentation/NamEcommerce.Web/Resources/SharedResource.vi-VN.resx`
+
+**Steps:**
+- [x] Trước khi add item vào DeliveryNote, lấy tổng quantity của các DeliveryNote cùng OrderItemId với status `!= Cancelled`.
+- [x] Tính `remaining = orderItem.Quantity - alreadyInDeliveryNotes`.
+- [x] Nếu `itemDto.Quantity > remaining`, throw domain exception rõ ràng, ví dụ `Error.QuantityExceedsRemaining`.
+- [x] Giữ validation trong UI/Controller hiện có, nhưng domain là lớp chặn cuối.
+- [x] Build verify bằng command P4.1.
+- [ ] Manual verify: sửa request tạo DN vượt remaining -> bị reject, không tạo Draft DN.
+
+### P4.4 — Order delete/cancel không được để lại Draft DeliveryNote mồ côi ✅ 2026-05-13
+
+**Vấn đề:** `OrderManager.DeleteOrderAsync` / `CancelOrderAsync` đang bỏ qua Draft DeliveryNote. Có thể xóa/cancel Order trong khi Draft DN vẫn trỏ về Order đó.
+
+**Files dự kiến:**
+- Modify: `NamEcommerce/Domain/NamEcommerce.Domain.Services/Orders/OrderManager.cs`
+- Modify nếu cần expose cancel: `NamEcommerce/Application/NamEcommerce.Application.Services/Orders/OrderAppService.cs`
+- Modify nếu cần UI: `NamEcommerce/Presentation/NamEcommerce.Web/Controllers/OrderController.cs`
+
+**Steps:**
+- [x] Chốt rule: Order có bất kỳ DeliveryNote status `!= Cancelled` thì không delete.
+- [x] Áp dụng cùng rule cho `CancelOrderAsync`, hoặc auto-cancel Draft DN nếu Tuấn muốn cancel Order vẫn được phép.
+- [x] Đảm bảo delete/cancel release global reservation đúng một lần, không release phần đã move sang per-warehouse.
+- [x] Build verify bằng command P4.1.
+- [ ] Manual verify: Order có Draft DN -> delete/cancel bị chặn hoặc Draft DN bị auto-cancel theo rule đã chốt.
+
+### P4.5 — Tách dispatch reserved và dispatch non-reserved ✅ 2026-05-13
+
+**Vấn đề:** `InventoryStockManager.DispatchStockAsync` check `QuantityOnHand`, sau đó tự trừ `QuantityReserved` nếu có. Luồng không reserve trước có thể ăn vào hàng đang giữ cho đơn bán.
+
+**Files dự kiến:**
+- Modify: `NamEcommerce/Domain/NamEcommerce.Domain.Services/Inventory/InventoryStockManager.cs`
+- Modify: `NamEcommerce/Domain/NamEcommerce.Domain.Shared/Services/Inventory/IInventoryStockManager.cs`
+- Modify call sites: `NamEcommerce/Application/NamEcommerce.Application.Services/Events/DeliveryNotes/DeliveryNoteDeliveredStockHandler.cs`
+- Review call sites: `NamEcommerce/Domain/NamEcommerce.Domain.Services/DeliveryNotes/DeliveryNoteManager.cs`
+
+**Steps:**
+- [x] Chốt API: dispatch từ stock đã reserve cho sales DN khác với dispatch non-reserved.
+- [x] Sales DeliveryNote delivered: trừ `QuantityOnHand` và release reserved allocation của chính DN.
+- [x] VendorReturn / non-order dispatch: check `QuantityAvailable`, không được trừ vào `QuantityReserved` của đơn bán.
+- [x] Nếu chưa có reservation reference-level, ít nhất không auto-trừ `QuantityReserved` cho non-order flow.
+- [x] Build verify bằng command P4.1.
+- [ ] Manual verify: warehouse có OnHand 10, Reserved 8 cho sales; vendor return 5 phải bị reject nếu available chỉ 2.
+
+### P4.6 — Làm reservation transition atomic hơn ✅ 2026-05-13
+
+**Vấn đề:** các bước release global -> reserve warehouse -> update DN đang là nhiều `SaveChanges`; nếu fail giữa chừng sẽ lệch data.
+
+**Files dự kiến:**
+- Review/Modify: `NamEcommerce/Infrastructure/NamEcommerce.Data/IDbContext.cs`
+- Review/Modify: `NamEcommerce/Infrastructure/NamEcommerce.Data.SqlServer/NamEcommerceEfDbContext.cs`
+- Modify: `NamEcommerce/Domain/NamEcommerce.Domain.Services/DeliveryNotes/DeliveryNoteManager.cs`
+- Modify: `NamEcommerce/Domain/NamEcommerce.Domain.Services/Orders/OrderManager.cs`
+- Modify: `NamEcommerce/Application/NamEcommerce.Application.Services/Events/*`
+
+**Steps:**
+- [x] Map tất cả transition có side-effect nhiều aggregate: Order create/update/delete, DN confirm/cancel/deliver, debt create.
+- [x] Chọn cách làm nhỏ nhất: transaction wrapper trong manager/application service, hoặc UnitOfWork gom `SaveChanges`.
+- [x] Áp dụng trước cho `DeliveryNoteManager.ConfirmAsync` và `CancelAsync` vì đây là nơi move reservation.
+- [x] Sau đó áp dụng cho `MarkDeliveredAsync` để DN status, stock dispatch, order delivered/lock, debt creation không lệch nhau.
+- [x] Build verify bằng command P4.1.
+- [ ] Manual verify: simulate exception giữa transition, data không bị release/reserve nửa vời với status cũ.
+
+### P4.7 — Future: per-order reservation ledger (chưa implement — cần chốt schema)
+
+**Vấn đề:** `ProductReservation.TotalReservedByOrder` chỉ aggregate theo product, không lưu `OrderId`. Đủ cho quick fix, nhưng khó audit và có thể release nhầm nếu data đã lệch.
+
+**Files dự kiến:**
+- Add/Modify entity: `NamEcommerce/Domain/NamEcommerce.Domain/Entities/Inventory/ProductReservation*.cs`
+- Modify manager: `NamEcommerce/Domain/NamEcommerce.Domain.Services/Inventory/ProductReservationManager.cs`
+- Modify mapping: `NamEcommerce/Infrastructure/NamEcommerce.Data.SqlServer/Configurations/Inventory/*`
+- Modify consumers: Order event handlers, `DeliveryNoteManager.ConfirmAsync`, `CancelAsync`, `OrderLockedEventHandler`
+
+**Steps:**
+- [ ] Tuấn chốt schema: mỗi row là `(ProductId, OrderId, ReservedQuantity)` hay bảng ledger append-only.
+- [ ] Migration do Tuấn chạy sau khi code mapping sẵn sàng.
+- [ ] `ReserveAsync/ReleaseAsync/AdjustAsync` phải cập nhật đúng order bucket.
+- [ ] `GetGlobalAvailableForProductAsync` sum tất cả reservation buckets.
+- [ ] DN Confirm release global của đúng `OrderId`, không chỉ check total product.
+- [ ] Build verify bằng command P4.1.
+- [ ] Manual verify: 2 order cùng product, confirm/cancel DN của order A không làm giảm reservation của order B.
+
+**Ghi chú 2026-05-13:** P4.1-P4.6 đã giảm rủi ro workflow chính. P4.7 là đổi schema/migration lớn hơn, nên chưa implement cho tới khi Tuấn chốt kiểu ledger.
 
 ---
 
-## 🩹 Workflow Order → DeliveryNote → CustomerReturn — Plan sửa (2026-05-13)
+## Ghi chú thực hiện
 
-> Kết quả review workflow đơn bán → phiếu xuất kho → trả hàng.
-> Đã thống nhất với Tuấn:
-> - Bỏ tính năng phiếu trả "tự do" (luôn yêu cầu DeliveryNoteId).
-> - Reserve stock NGAY khi Order tạo.
-> - Race condition: quick fix (gộp Inspecting vào query Confirmed), Option 2 (RowVersion) để future.
-> - Thứ tự: bug-first (P0 → P1 → P2 → P3).
-
-### P0 — Bug must-fix (rủi ro mất dữ liệu)
-
-- [x] **Fix `OrderManager.DeleteOrderAsync` (line 299-303)** — điều kiện logic ngược ✅ 2026-05-13
-  - Đã sửa: `Status != Draft && Status == Cancelled` → `Status != Draft && Status != Cancelled`
-  - File: `Domain/NamEcommerce.Domain.Services/Orders/OrderManager.cs:301`
-  - Không có unit test hiện có nào của `DeleteOrderAsync` (verified) → không break test
-  - **Verify (Tuấn manual)**: tạo Order → tạo DN Confirmed → gọi DeleteOrder → phải throw `InvalidOperationException("Order cannot deleted because it is processing.")`
-
-### P1 — Validation gaps + cleanup
-
-- [x] **Bỏ field nullable `CustomerReturn.DeliveryNoteId`** — luôn yêu cầu DN ✅ 2026-05-13
-  - Entity `CustomerReturn`: `Guid DeliveryNoteId`, `string DeliveryNoteCode` ✅
-  - Domain DTO `CreateCustomerReturnDto.DeliveryNoteId`: `required Guid` + `Verify()` check `Guid.Empty` ✅
-  - AppDto `CustomerReturnAppDto`: `required Guid DeliveryNoteId`, `required string DeliveryNoteCode` ✅
-  - AppDto `CreateCustomerReturnAppDto`: `required Guid DeliveryNoteId` + `Validate()` check `Guid.Empty` ✅
-  - `CustomerReturnManager.CreateAsync`: đã xóa nhánh "trả tự do", luôn lấy customer từ DN ✅
-  - `CustomerReturnManager.ConfirmAsync`: đã bỏ `if (DeliveryNoteId.HasValue)`, luôn validate qty ✅
-  - Web Model `CustomerReturnModel`: `required Guid DeliveryNoteId`, `required string DeliveryNoteCode` + xóa comment "trả tự do" ✅
-  - Web Model `CustomerReturnListModel.ItemModel`: `required Guid DeliveryNoteId`, `required string DeliveryNoteCode` ✅
-  - Validator (Web layer): đã có `NotEmpty()` từ trước ✅
-  - Form Model `CreateCustomerReturnModel`: giữ `Guid?` (idiom form-binding, Validator + Verify() ở Domain DTO catch null/empty)
-  - EF Configuration `CustomerReturnMapping`: `.IsRequired()` ✅
-  - Razor View `Details.cshtml`: bỏ nhánh `else "Tạo tự do"` (không reachable nữa) ✅
-  - **Build verified**: NamEcommerce.Web + Application.Contracts + Web.Contracts + Domain.Services.Test all 0 errors
-  - ⚠️ **Migration cần** — Tuấn tự chạy (`Add-Migration RequireDeliveryNoteOnCustomerReturn`)
-  - Lưu ý: nếu DB hiện đang có row `DeliveryNoteId IS NULL` thì migration sẽ fail → cần data migration script trước (Tuấn xác nhận DB hiện chưa có data tự do)
-  - **Verify (Tuấn manual)**: chạy app → tạo CustomerReturn không có DN → trả về lỗi validation
-
-- [x] **Magic number `(int)r.Status == 2` + race quick fix** trong `CustomerReturnManager` ✅ 2026-05-13
-  - Đã rename `GetTotalConfirmedReturnQuantityAsync` → `GetTotalReservedReturnQuantityAsync` (interface + impl)
-  - Đã thay `(int)r.Status == 2` bằng `r.Status == CustomerReturnStatus.Inspecting || r.Status == CustomerReturnStatus.Confirmed`
-  - Đã update internal caller (line 138) + thêm `using NamEcommerce.Domain.Shared.Enums.Returns;`
-  - XML doc cập nhật để document race window thu hẹp (vẫn còn race nhỏ khi 2 phiếu cùng `MoveToInspecting`)
-  - Line 176 `GetListAsync` filter `(int)r.Status == status.Value` **giữ nguyên** — vì status input từ UI là int, không phải refactor cùng scope
-  - **Verify (Tuấn manual)**: tạo 2 phiếu trả cùng DN → A `MoveToInspecting` qty=5 (deliveredQty=10) → B `Confirm` qty=8 → phải reject (`maxAllowed = 10 - 5 = 5 < 8`)
-  - ⚠️ **Note**: `VendorReturnManager.GetTotalConfirmedReturnQuantityAsync` (line 245-265) có CÙNG bug magic number + race. Đối xứng với CustomerReturn. **Cần Tuấn chốt** có mở rộng scope sang VendorReturn trong cùng session hay làm sau.
-
-### P2 — Reserve Stock khi Order tạo (Phương án C — chốt 2026-05-13)
-
-**Phương án đã chọn: C** — Global reservation (`ProductReservation.TotalReservedByOrder` per product, không gắn warehouse). DN.Confirm sẽ "move" từ global → per-warehouse.
-
-**Quy tắc nghiệp vụ:**
-- Order Add/Update/Remove item → adjust global reservation
-- Order Delete → release toàn bộ
-- Order Cancelled (event mới) → release toàn bộ
-- Order Locked (giao xong) → assert global reservation = 0 (đã chuyển hết sang per-warehouse qua DN)
-- DN.Confirm với OrderId → release global + reserve per-warehouse (atomic transition)
-- DN.Cancel với OrderId (was confirmed) → release per-warehouse + reserve global
-- DN tự do (không OrderId) → giữ flow cũ (reserve trực tiếp per-warehouse)
-- Stock check khi Order add item → throw nếu thiếu global available
-
-#### Phase 1 — Domain Foundation ✅ 2026-05-13
-
-- [x] Entity `ProductReservation` (`Domain/Entities/Inventory/ProductReservation.cs`)
-  - Fields: `Id`, `ProductId`, `TotalReservedByOrder`, `UpdatedOnUtc`
-  - Sealed record : AppAggregateEntity, internal ctor
-- [x] DTO `ProductReservationDto` (`Domain.Shared/Dtos/Inventory/`)
-- [x] Interface `IProductReservationManager` với 5 method: `GetTotalReservedAsync`, `GetByProductIdAsync`, `ReserveAsync`, `ReleaseAsync`, `AdjustAsync`
-- [x] Impl `ProductReservationManager` (`Domain.Services/Inventory/`)
-- [x] Extension `ProductReservationExtensions.ToDto()` (`Domain.Services/Extensions/`)
-- [x] EF Configuration `ProductReservationMapping` — unique index trên `ProductId`, decimal(18,2) cho `TotalReservedByOrder`
-- [x] Đăng ký DI trong `Program.cs`
-- ⚠️ **Migration cần** — Tuấn tự chạy (`Add-Migration AddProductReservation`)
-
-#### Phase 2 — Hook Order events (pending)
-- [ ] Sửa `OrderCreatedEventHandler` → reserve global cho từng item (kèm stock check)
-- [ ] Tạo `OrderItemAddedEventHandler` → ReserveAsync (với stock check)
-- [ ] Tạo `OrderItemUpdatedEventHandler` → AdjustAsync theo delta
-- [ ] Tạo `OrderItemRemovedEventHandler` → ReleaseAsync
-- [ ] Tạo `OrderDeletedEventHandler` → release toàn bộ items
-- [ ] **Thêm mới**: `OrderCancelled` event + entity method `Cancel()` + handler
-- [ ] **Thêm mới**: `OrderLockedEventHandler` → assert/release global về 0 (handler riêng cho `OrderLocked`)
-
-#### Phase 3 — Hook DeliveryNote.Confirm/Cancel (pending)
-- [ ] Sửa `DeliveryNoteManager.ConfirmAsync` — nếu DN.OrderId set → release global + reserve per-warehouse
-- [ ] Sửa `DeliveryNoteManager.CancelAsync` — nếu DN.OrderId set + was confirmed → release per-warehouse + reserve global
-
-#### Phase 4 — Stock availability check (pending)
-- [ ] Thêm method `GetGlobalAvailableForProductAsync` trong `IInventoryStockManager` (hoặc helper riêng): `Σ OnHand − Σ Reserved per-warehouse − GlobalReserved`
-- [ ] Tích hợp check vào `OrderManager` (CreateAsync + AddItem/UpdateItem) — throw nếu thiếu
-
-### P3 — Dọn dẹp / Documentation
-
-- [ ] Cập nhật `RETURNS_MODULE_PLAN.md` → mark "Đã implement" (migration `20260509023752_RefactorReturns`)
-- [ ] Document design intent vào XML comment của `CustomerReturnManager.FinalizeConfirmAsync`: **FIFO theo customer (không theo DN gốc)** — đây là chủ ý, không phải bug
-- [ ] Review event "mồ côi" (không có handler): `DeliveryNoteCancelled`, `DeliveryNoteDelivering`, `CustomerReturnCancelled`, `OrderItemAdded/Updated/Removed`, `OrderInfoUpdated`, `OrderShippingUpdated`, `OrderLocked`, `OrderItemDelivered`, `OrderDeleted` → quyết định cho từng cái: (a) implement handler, (b) xóa event, hoặc (c) document là audit-only
-- [ ] **Cross-aggregate refactor (long-term)**: tách logic update Order trong `DeliveryNoteManager.MarkDeliveredAsync` (line 150-165) và `CancelAsync` (release stock + cascade cancel CustomerReturn line 224-245) sang event handler riêng để tuân Domain Event pattern. Không ưu tiên — code hiện vẫn chạy đúng.
-
-### Lưu ý chung khi thực hiện
-
-- **Test**: theo rule hiện hành ở file này (KHÔNG viết unit test mới) — verify bằng smoke test/manual. Nếu Tuấn muốn TDD đúng theo skill `namcommerce`, gỡ rule này trước.
-- **Migration**: P1 (bỏ nullable) và P2 (thêm WarehouseId — nếu chọn phương án A) cần migration — Tuấn tự chạy, AI chỉ chuẩn bị Configuration code.
-
----
+- Không viết/sửa unit test theo rule hiện tại. Mỗi mục cần có build verify và manual smoke test.
+- Nếu build bin Web bị IIS Express lock, dùng output riêng: `-p:OutDir=C:\tmp\NamEcommerceP4Build\`.
+- Mỗi bước nên làm xong -> cập nhật checkbox trong file này -> báo Tuấn trước khi sang bước kế tiếp.

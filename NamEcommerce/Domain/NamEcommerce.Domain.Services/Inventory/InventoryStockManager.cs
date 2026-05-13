@@ -16,13 +16,15 @@ public sealed class InventoryStockManager : IInventoryStockManager
     private readonly IRepository<StockMovementLog> _stockMovementRepository;
     private readonly IEntityDataReader<StockMovementLog> _stockMovementDataReader;
     private readonly IEntityDataReader<InventoryStock> _inventoryStockDataReader;
+    private readonly IEntityDataReader<ProductReservation> _productReservationDataReader;
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
 
-    public InventoryStockManager(IRepository<InventoryStock> inventoryStockRepository, IEntityDataReader<InventoryStock> inventoryStockDataReader, IStockAuditLogger stockAuditLogger, IRepository<StockMovementLog> stockMovementRepository, IEntityDataReader<Product> productDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<StockMovementLog> stockMovementDataReader)
+    public InventoryStockManager(IRepository<InventoryStock> inventoryStockRepository, IEntityDataReader<InventoryStock> inventoryStockDataReader, IStockAuditLogger stockAuditLogger, IRepository<StockMovementLog> stockMovementRepository, IEntityDataReader<Product> productDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<StockMovementLog> stockMovementDataReader, IEntityDataReader<ProductReservation> productReservationDataReader)
     {
         _inventoryStockRepository = inventoryStockRepository;
         _inventoryStockDataReader = inventoryStockDataReader;
+        _productReservationDataReader = productReservationDataReader;
         _stockMovementRepository = stockMovementRepository;
         _productDataReader = productDataReader;
         _warehouseDataReader = warehouseDataReader;
@@ -240,6 +242,19 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return items;
     }
 
+    public Task<decimal> GetGlobalAvailableForProductAsync(Guid productId)
+    {
+        var stockQuery = _inventoryStockDataReader.DataSource.Where(x => x.ProductId == productId);
+        var quantityOnHand = stockQuery.Sum(x => x.QuantityOnHand);
+        var quantityReservedByWarehouse = stockQuery.Sum(x => x.QuantityReserved);
+        var quantityReservedByOrder = _productReservationDataReader.DataSource
+            .Where(x => x.ProductId == productId)
+            .Select(x => x.TotalReservedByOrder)
+            .SingleOrDefault();
+
+        return Task.FromResult(quantityOnHand - quantityReservedByWarehouse - quantityReservedByOrder);
+    }
+
     public async Task<bool> ReserveStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, int? reservationDaysValid = null)
     {
         if (quantity <= 0)
@@ -292,7 +307,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return true;
     }
 
-    public async Task<StockMovementLogDto?> DispatchStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null)
+    public async Task<StockMovementLogDto?> DispatchStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, bool releaseReservedStock = false)
     {
         if (quantity <= 0) return null;
 
@@ -308,9 +323,12 @@ public sealed class InventoryStockManager : IInventoryStockManager
         if (stock is null) 
             return null;
 
-        // Validate sufficient quantity available
-        if (stock.QuantityOnHand < quantity)
-            throw new InvalidOperationException($"Insufficient stock. Available: {stock.QuantityOnHand}, Requested: {quantity}");
+        var availableForDispatch = releaseReservedStock ? stock.QuantityOnHand : stock.QuantityAvailable;
+        if (availableForDispatch < quantity)
+            throw new InsufficientStockException(productId, warehouseId, quantity, availableForDispatch);
+
+        if (releaseReservedStock && stock.QuantityReserved < quantity)
+            throw new InvalidStockOperationException("Error.CannotReleaseMoreThanReserved", stock.QuantityReserved, quantity);
 
         var quantityBefore = stock.QuantityOnHand;
 
@@ -318,9 +336,8 @@ public sealed class InventoryStockManager : IInventoryStockManager
         // If this dispatch is for a reserved order, the reserved allocation is cleared proportionally
         stock.QuantityOnHand -= quantity;
 
-        // Clear reserved allocation if dispatching from reserved stock
-        if (stock.QuantityReserved > 0)
-            stock.QuantityReserved = Math.Max(0, stock.QuantityReserved - quantity);
+        if (releaseReservedStock)
+            stock.QuantityReserved -= quantity;
 
         stock.UpdatedOnUtc = DateTime.UtcNow;
         await _inventoryStockRepository.UpdateAsync(stock).ConfigureAwait(false);

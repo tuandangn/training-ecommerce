@@ -18,4 +18,12 @@ public interface IDbContext
 
     Task<TEntity> UpdateAsync<TEntity>(TEntity entity, CancellationToken cancellationToken = default)
              where TEntity : AppAggregateEntity;
+
+    Task<IDataTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
+}
+
+public interface IDataTransaction : IAsyncDisposable
+{
+    Task CommitAsync(CancellationToken cancellationToken = default);
+    Task RollbackAsync(CancellationToken cancellationToken = default);
 }

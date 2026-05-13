@@ -1,7 +1,9 @@
 # Returns Module — Thiết kế tổng thể
 
 > Tài liệu này mô tả thiết kế nghiệp vụ và kỹ thuật cho module Trả hàng (Returns).
-> **Trạng thái: Chưa bắt đầu code.**
+> **Trạng thái: Đã implement core flow.**
+> Migration đã có: `20260509023752_RefactorReturns`.
+> Cập nhật sau review 2026-05-13: CustomerReturn luôn yêu cầu `DeliveryNoteId`; không còn phiếu trả "tự do".
 
 ---
 
@@ -27,24 +29,27 @@ Module Returns xử lý hai luồng đối xứng:
 ### 2.1 Liên kết
 
 ```
-Order (1) ──── (*) CustomerReturn
+DeliveryNote (1) ──── (*) CustomerReturn
 CustomerReturn (1) ──── (*) CustomerReturnItem
-CustomerReturnItem ──── (0..1) DeliveryNoteItem  (tùy chọn, để tra giá gốc)
+CustomerReturnItem ──── (0..1) DeliveryNoteItem  (để tra giá gốc khi xác định được dòng xuất)
 ```
 
-- Liên kết ở cấp **Order** (không bắt buộc chỉ định DeliveryNote cụ thể).
-- Khách có thể trả hàng từ nhiều lần giao trong cùng 1 đơn.
+- Liên kết bắt buộc với **DeliveryNote**; phiếu trả không còn được tạo tự do.
+- Khách có thể trả một phần số lượng đã giao trên phiếu xuất đó.
 
 ### 2.2 Entity: CustomerReturn
 
 | Field | Kiểu | Mô tả |
 |---|---|---|
 | `Id` | Guid | PK |
-| `OrderId` | Guid | Đơn hàng gốc |
+| `DeliveryNoteId` | Guid | Phiếu xuất kho gốc |
+| `DeliveryNoteCode` | string | Mã phiếu xuất kho gốc |
 | `CustomerId` | Guid | Khách hàng |
 | `WarehouseId` | Guid | Kho nhập hàng trả về |
 | `ReturnDate` | DateTime | Ngày tạo phiếu trả |
 | `Note` | string? | Lý do / ghi chú |
+| `AdditionalCost` | decimal | Chi phí phát sinh khi xử lý trả hàng |
+| `GeneratedGoodsReceiptId` | Guid? | Phiếu nhập kho tự sinh khi Confirm |
 | `Status` | Enum | Xem mục 2.4 |
 
 ### 2.3 Entity: CustomerReturnItem
@@ -54,10 +59,10 @@ CustomerReturnItem ──── (0..1) DeliveryNoteItem  (tùy chọn, để tra
 | `Id` | Guid | PK |
 | `CustomerReturnId` | Guid | FK |
 | `ProductId` | Guid | Sản phẩm |
-| `DeliveryNoteItemId` | Guid? | FK tùy chọn — để tra giá bán gốc |
+| `DeliveryNoteItemId` | Guid? | Dòng phiếu xuất gốc — để tra giá bán gốc khi xác định được |
 | `RequestedQuantity` | decimal | Khách muốn trả bao nhiêu |
 | `AcceptedQuantity` | decimal | Sau kiểm tra: chấp nhận bao nhiêu (≤ RequestedQuantity) |
-| `UnitPrice` | decimal | Giá hoàn lại (mặc định = giá bán gốc) |
+| `ReturnUnitPrice` | decimal | Giá hoàn lại thực tế |
 
 ### 2.4 Status Flow
 
@@ -76,8 +81,8 @@ Draft ──→ Inspecting ──→ Confirmed
 
 ### 2.5 Hiệu ứng khi Confirmed
 
-- **Tồn kho:** Cộng `AcceptedQuantity` vào kho `WarehouseId`
-- **Công nợ khách hàng:** Giảm `Σ(AcceptedQuantity × UnitPrice)`
+- **Tồn kho:** Sinh GoodsReceipt từ CustomerReturn để cộng `AcceptedQuantity` vào kho `WarehouseId`
+- **Công nợ khách hàng:** Giảm `Σ(AcceptedQuantity × ReturnUnitPrice)`
 - **Lưu ý:** Nếu khách đã thanh toán hết → xử lý hoàn tiền/credit sẽ làm ở phase sau
 
 ---
@@ -102,6 +107,8 @@ VendorReturnItem ──── (0..1) GoodsReceiptItem  (tùy chọn, để tra g
 | `WarehouseId` | Guid | Kho xuất hàng trả đi |
 | `ReturnDate` | DateTime | Ngày tạo phiếu trả |
 | `Note` | string? | Lý do / ghi chú |
+| `AdditionalCost` | decimal | Chi phí phát sinh khi trả NCC |
+| `GeneratedDeliveryNoteId` | Guid? | Phiếu xuất tự sinh khi Confirm |
 | `Status` | Enum | Xem mục 3.4 |
 
 ### 3.3 Entity: VendorReturnItem
@@ -114,7 +121,7 @@ VendorReturnItem ──── (0..1) GoodsReceiptItem  (tùy chọn, để tra g
 | `GoodsReceiptItemId` | Guid? | FK tùy chọn — để tra giá nhập gốc |
 | `RequestedQuantity` | decimal | Số lượng muốn trả |
 | `AcceptedQuantity` | decimal | Sau kiểm tra NCC xác nhận: nhận bao nhiêu |
-| `UnitCost` | decimal | Giá hoàn lại (mặc định = giá nhập gốc) |
+| `ReturnUnitCost` | decimal | Giá NCC hoàn trả thực tế |
 
 ### 3.4 Status Flow
 
@@ -133,8 +140,8 @@ Draft ──→ Inspecting ──→ Confirmed
 
 ### 3.5 Hiệu ứng khi Confirmed
 
-- **Tồn kho:** Trừ `AcceptedQuantity` từ kho `WarehouseId`
-- **Công nợ NCC:** Giảm `Σ(AcceptedQuantity × UnitCost)`
+- **Tồn kho:** Sinh DeliveryNote loại trả NCC để trừ `AcceptedQuantity` từ kho `WarehouseId`
+- **Công nợ NCC:** Giảm `Σ(AcceptedQuantity × ReturnUnitCost)`
 
 ---
 
@@ -162,6 +169,8 @@ Draft ──→ Inspecting ──→ Confirmed
 
 ## 6. Thứ tự thực hiện (khi bắt đầu code)
 
+> Đã implement theo migration `20260509023752_RefactorReturns`; danh sách này giữ lại như checklist lịch sử.
+
 1. **Domain Layer:** Entities + Enums + Mark methods + Domain Events
 2. **Domain Services:** `CustomerReturnManager`, `VendorReturnManager`
 3. **Application Layer:** AppService + DTOs + Contracts
@@ -171,6 +180,8 @@ Draft ──→ Inspecting ──→ Confirmed
 ---
 
 ## 7. Files cần tạo mới (ước tính)
+
+> Đã implement; danh sách dưới đây là bản ước tính ban đầu, không còn là checklist pending.
 
 ```
 Domain.Shared/
