@@ -4,7 +4,6 @@ using NamEcommerce.Domain.Shared.Exceptions;
 
 namespace NamEcommerce.Domain.Shared.Dtos.Debts;
 
-/// <summary>Tổng hợp công nợ theo từng khách hàng — dùng cho trang List.</summary>
 [Serializable]
 public sealed record CustomerDebtSummaryDto
 {
@@ -15,12 +14,10 @@ public sealed record CustomerDebtSummaryDto
     public decimal TotalDebtAmount { get; init; }
     public decimal TotalPaidAmount { get; init; }
     public decimal TotalRemainingAmount { get; init; }
-    /// <summary>Tiền cọc / tiền thừa chưa được áp dụng vào nợ.</summary>
     public decimal DepositBalance { get; init; }
     public int DebtCount { get; init; }
 }
 
-/// <summary>Toàn bộ thông tin công nợ của 1 khách hàng — dùng cho trang Details.</summary>
 [Serializable]
 public sealed record CustomerDebtsByCustomerDto
 {
@@ -29,13 +26,9 @@ public sealed record CustomerDebtsByCustomerDto
     public decimal TotalDebtAmount { get; init; }
     public decimal TotalPaidAmount { get; init; }
     public decimal TotalRemainingAmount { get; init; }
-    /// <summary>Tiền cọc / tiền thừa chưa áp dụng.</summary>
     public decimal DepositBalance { get; init; }
-    /// <summary>Danh sách từng phiếu công nợ (kèm payments của từng phiếu).</summary>
     public IList<CustomerDebtDto> Debts { get; init; } = [];
-    /// <summary>Danh sách các khoản tiền cọc chưa áp dụng.</summary>
     public IList<CustomerPaymentDto> Deposits { get; init; } = [];
-    /// <summary>Lịch sử thanh toán gần nhất (tất cả loại).</summary>
     public IList<CustomerPaymentDto> RecentPayments { get; init; } = [];
 }
 
@@ -114,10 +107,6 @@ public sealed record CustomerPaymentDto
     public DateTime CreatedOnUtc { get; init; }
 }
 
-/// <summary>
-/// Tạo công nợ ban đầu (số dư đầu kỳ) cho khách hàng — không gắn phiếu xuất hay đơn hàng.
-/// Dùng khi tạo mới khách hàng mà đã có sẵn nợ cũ.
-/// </summary>
 [Serializable]
 public sealed record CreateInitialCustomerDebtDto
 {

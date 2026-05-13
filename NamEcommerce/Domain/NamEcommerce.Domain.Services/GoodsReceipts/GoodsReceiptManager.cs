@@ -6,6 +6,7 @@ using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Returns;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
@@ -15,7 +16,6 @@ using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
-using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Debts;
@@ -45,22 +45,11 @@ public sealed class GoodsReceiptManager(
     IEntityDataReader<VendorDebt> vendorDebtReader,
     IGoodsReceiptPurchaseOrderLinker goodsReceiptPurchaseOrderLinker) : IGoodsReceiptManager
 {
-    private string GenerateGoodsReceiptCode()
+    private Task<string> GenerateCodeAsync()
     {
-        var now = DateTime.UtcNow;
-        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var monthEnd = monthStart.AddMonths(1);
-        var monthCount = goodsReceiptDataReader.DataSource
-            .Count(g => g.CreatedOnUtc >= monthStart && g.CreatedOnUtc < monthEnd);
-
-        string code;
-        do
-        {
-            code = $"{GoodsReceipt.GoodsReceiptCodePrefix}{now:yyMM}{++monthCount:D3}";
-        }
-        while (goodsReceiptDataReader.DataSource.Any(g => g.Code == code));
-
-        return code;
+        var monthPrefix = $"PNK-{DateTime.UtcNow:yyMM}";
+        var count = ((EntityDataReader<GoodsReceipt>)goodsReceiptDataReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
     }
 
     public async Task<CreateGoodsReceiptResultDto> CreateGoodsReceiptAsync(CreateGoodsReceiptDto dto)
@@ -70,7 +59,7 @@ public sealed class GoodsReceiptManager(
         dto.Verify();
 
         var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), goodsReceiptDataReader, currentUserAccessor);
-        goodsReceipt.SetCode(GenerateGoodsReceiptCode());
+        goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(dto.ReceivedOnUtc);
         goodsReceipt.TruckDriverName = dto.TruckDriverName;
         goodsReceipt.TruckNumberSerial = dto.TruckNumberSerial;
@@ -295,7 +284,7 @@ public sealed class GoodsReceiptManager(
         dto.Verify();
 
         var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), goodsReceiptDataReader, currentUserAccessor);
-        goodsReceipt.SetCode(GenerateGoodsReceiptCode());
+        goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SetToPurchaseOrder(dto.PurchaseOrderId, dto.PurchaseOrderCode);
 
@@ -334,7 +323,7 @@ public sealed class GoodsReceiptManager(
         dto.Verify();
 
         var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), goodsReceiptDataReader, currentUserAccessor);
-        goodsReceipt.SetCode(GenerateGoodsReceiptCode());
+        goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SetToPurchaseOrder(dto.PurchaseOrderId, dto.PurchaseOrderCode);
 
@@ -377,7 +366,7 @@ public sealed class GoodsReceiptManager(
         ArgumentNullException.ThrowIfNull(dto);
 
         var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), goodsReceiptDataReader, currentUserAccessor);
-        goodsReceipt.SetCode(GenerateGoodsReceiptCode());
+        goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SourceType = GoodsReceiptSourceType.FromCustomerReturn;
 
@@ -481,16 +470,15 @@ public sealed class GoodsReceiptManager(
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(goodsReceiptId);
 
-        // Chỉ lấy PO đặt trước ngày nhận hàng và đang ở trạng thái có thể nhận hàng.
         var candidateOrders = purchaseOrderDataReader.DataSource
             .Where(po => po.PlacedOnUtc < goodsReceipt.ReceivedOnUtc
-                      && (po.Status == PurchaseOrderStatus.Approved || po.Status == PurchaseOrderStatus.Receiving))
+                && (goodsReceipt.VendorId == null || po.VendorId == goodsReceipt.VendorId)
+                && (po.Status == PurchaseOrderStatus.Approved || po.Status == PurchaseOrderStatus.Receiving))
             .ToList();
 
         if (candidateOrders.Count == 0)
             return [];
 
-        // GR items gộp theo (ProductId, UnitCost) — UnitCost null = chưa định giá (pending costing).
         var grGroups = goodsReceipt.Items
             .GroupBy(i => (i.ProductId, i.UnitCost))
             .Select(g => (Key: g.Key, ReceivingQty: g.Sum(i => i.Quantity)))
@@ -504,7 +492,6 @@ public sealed class GoodsReceiptManager(
 
         foreach (var po in candidateOrders)
         {
-            // PO items gộp theo (ProductId, UnitCost) — tính số lượng còn lại chưa nhận.
             var poRemainingMap = po.Items
                 .GroupBy(i => (i.ProductId, i.UnitCost))
                 .ToDictionary(
@@ -520,13 +507,11 @@ public sealed class GoodsReceiptManager(
 
                 if (unitCost.HasValue)
                 {
-                    // Exact match: cùng ProductId và cùng UnitCost.
                     if (poRemainingMap.TryGetValue((productId, unitCost.Value), out var exactRemaining))
                         matchedQty += Math.Min(exactRemaining, receivingQty);
                 }
                 else
                 {
-                    // Partial match: cùng ProductId, bất kỳ UnitCost — duyệt theo thứ tự để consume hết remaining.
                     var remaining = receivingQty;
                     foreach (var poKey in poRemainingMap.Keys
                                  .Where(k => k.ProductId == productId && poRemainingMap[k] > 0)

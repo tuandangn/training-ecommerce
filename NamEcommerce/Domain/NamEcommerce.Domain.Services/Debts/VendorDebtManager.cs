@@ -3,6 +3,7 @@ using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
@@ -24,16 +25,16 @@ public sealed class VendorDebtManager(
 {
     private async Task<string> GenerateDebtCodeAsync()
     {
-        var datePrefix = $"CNNCC-{DateTime.UtcNow:yyyyMMdd}";
-        var count = debtReader.DataSource.Count(d => d.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var monthPrefix = $"CN-NCC-{DateTime.UtcNow:yyMM}";
+        var count = ((EntityDataReader<VendorDebt>)debtReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        return $"{monthPrefix}-{(count + 1):D3}";
     }
 
     private async Task<string> GeneratePaymentCodeAsync()
     {
-        var datePrefix = $"PCNCC-{DateTime.UtcNow:yyyyMMdd}";
-        var count = paymentReader.DataSource.Count(p => p.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var monthPrefix = $"PC-NCC-{DateTime.UtcNow:yyMM}";
+        var count = ((EntityDataReader<VendorPayment>)paymentReader).SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
+        return $"{monthPrefix}-{(count + 1):D3}";
     }
 
     public async Task<VendorDebtDto> CreateInitialDebtAsync(CreateInitialVendorDebtDto dto)

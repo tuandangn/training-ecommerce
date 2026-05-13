@@ -5,7 +5,6 @@ using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
-using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
@@ -20,8 +19,7 @@ public sealed class OrderAppService(
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
     IEntityDataReader<User> userDataReader,
-    IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
-    IEntityDataReader<Order> orderDataReader) : IOrderAppService
+    IEntityDataReader<DeliveryNote> deliveryNoteDataReader) : IOrderAppService
 {
     public async Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto)
     {
@@ -428,10 +426,8 @@ public sealed class OrderAppService(
             }
         }
 
-        var code = await NextOrderCodeAsync().ConfigureAwait(false);
         var createOrderDto = new CreateOrderDto
         {
-            Code = code,
             CustomerId = dto.CustomerId,
             Note = dto.Note,
             OrderDiscount = dto.OrderDiscount,
@@ -506,22 +502,6 @@ public sealed class OrderAppService(
             Success = true,
             OrderAutoLocked = updatedOrder?.Status == OrderStatus.Locked
         };
-    }
-
-    public async Task<string> NextOrderCodeAsync()
-    {
-        var code = string.Empty;
-        var now = DateTime.UtcNow;
-        var monthDateStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var monthDateEnd = new DateTime(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month), 23, 59, 59, DateTimeKind.Utc);
-        var monthOrderCount = await Task.Run(() => orderDataReader.DataSource.Where(o => o.CreatedOnUtc >= monthDateStart && o.CreatedOnUtc <= monthDateEnd).Count()).ConfigureAwait(false);
-        do
-        {
-            code = $"{Order.OrderCodePrefix}{now:MMyy}{++monthOrderCount:D3}";
-        }
-        while (await orderManager.DoesCodeExistAsync(code).ConfigureAwait(false));
-
-        return code;
     }
 
     public async Task<DeleteOrderResultAppDto> DeleteOrderAsync(DeleteOrderAppDto dto)

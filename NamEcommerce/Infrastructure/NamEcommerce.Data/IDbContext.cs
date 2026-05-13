@@ -4,7 +4,7 @@ namespace NamEcommerce.Data.Contracts;
 
 public interface IDbContext
 {
-    IQueryable<TEntity> GetDataSource<TEntity>() where TEntity : AppAggregateEntity;
+    IQueryable<TEntity> GetDataSource<TEntity>(bool includeHidden = false) where TEntity : AppAggregateEntity;
 
     Task<IEnumerable<TEntity>> GetDataAsync<TEntity>() where TEntity : AppAggregateEntity;
 

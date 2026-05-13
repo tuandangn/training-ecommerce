@@ -49,18 +49,20 @@ public sealed record PurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
 [Serializable]
 public sealed record CreatePurchaseOrderDto : BasePurchaseOrderDto
 {
-    public required string Code { get; init; }
     public required Guid? CreatedByUserId { get; init; }
-
     public IList<PurchaseOrderItemDto> Items { get; } = [];
+
+    public decimal TaxAmount { get; init; }
+    public decimal ShippingAmount { get; init; }
 
     public override void Verify()
     {
-        if (string.IsNullOrEmpty(Code))
-            throw new PurchaseOrderDataIsInvalidException("Error.PurchaseOrderCodeRequired");
-
         if (ExpectedDeliveryDateUtc < DateTime.UtcNow)
             throw new PurchaseOrderDataIsInvalidException("Error.ExpectedDeliveryDateCannotBeInPast");
+        if (TaxAmount < 0)
+            throw new PurchaseOrderDataIsInvalidException("Error.TaxAmountCannotBeNegative");
+        if (ShippingAmount < 0)
+            throw new PurchaseOrderDataIsInvalidException("Error.ShippingAmountCannotBeNegative");
 
         foreach (var item in Items)
             item.Verify();

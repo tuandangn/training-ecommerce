@@ -4,7 +4,6 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
-using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
@@ -12,7 +11,6 @@ using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
-using System.Reflection;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
 
@@ -137,18 +135,17 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             }
         }
 
-        var code = await NextPurchaseOrderCodeAsync().ConfigureAwait(false);
         var createPurchaseOrderDto = new CreatePurchaseOrderDto
         {
-            Code = code,
             PlacedOnUtc = dto.PlacedOnUtc,
             CreatedByUserId = dto.CreatedByUserId,
             VendorId = dto.VendorId,
             WarehouseId = dto.WarehouseId,
             ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
-            Note = dto.Note
+            Note = dto.Note,
+            TaxAmount = dto.TaxAmount,
+            ShippingAmount = dto.ShippingAmount
         };
-
         foreach (var item in dto.Items)
         {
             createPurchaseOrderDto.Items.Add(new PurchaseOrderItemDto(Guid.NewGuid())
@@ -159,7 +156,6 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 UnitCost = item.UnitCost
             });
         }
-
         var result = await _purchaseOrderManager.CreatePurchaseOrderAsync(createPurchaseOrderDto).ConfigureAwait(false);
 
         return new CreatePurchaseOrderResultAppDto

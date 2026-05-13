@@ -20,6 +20,4 @@ public interface IOrderAppService
     Task<DeleteOrderItemResultAppDto> DeleteOrderItemAsync(DeleteOrderItemAppDto dto);
 
     Task<MarkOrderItemDeliveredResultAppDto> MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredAppDto dto);
-
-    Task<string> NextOrderCodeAsync();
 }

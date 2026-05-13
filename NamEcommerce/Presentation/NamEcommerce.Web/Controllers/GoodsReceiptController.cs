@@ -213,18 +213,24 @@ public sealed class GoodsReceiptController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> QuickCreateAndLink(Guid id, Guid vendorId, DateTime placedOn, Guid? warehouseId, string? note)
+    public async Task<IActionResult> QuickCreateAndLink(
+        Guid id,
+        Guid? vendorId,
+        Guid? warehouseId,
+        string? note,
+        decimal taxAmount = 0m,
+        decimal shippingAmount = 0m,
+        [FromForm(Name = "itemUnitCosts")] IDictionary<Guid, decimal>? itemUnitCosts = null)
     {
-        if (vendorId == Guid.Empty)
-            return Json(new { success = false, message = LocalizeError("Error.Required", LocalizeError("Label.Vendor")) });
-
         var result = await _mediator.Send(new QuickCreateAndLinkPurchaseOrderCommand
         {
             GoodsReceiptId = id,
-            VendorId = vendorId,
-            PlacedOn = placedOn,
+            VendorId = vendorId == Guid.Empty ? null : vendorId,
             WarehouseId = warehouseId,
-            Note = note
+            Note = note,
+            TaxAmount = taxAmount,
+            ShippingAmount = shippingAmount,
+            ItemUnitCosts = itemUnitCosts ?? new Dictionary<Guid, decimal>()
         });
 
         if (!result.Success)

@@ -65,33 +65,12 @@ public sealed class PurchaseOrderManagerTests
     }
 
     [Fact]
-    public async Task CreatePurchaseOrderAsync_CodeIsExists_ThrowsPurchaseOrderCodeExistsException()
-    {
-        var existingCode = "existing-code";
-        var existingCodePurchaseOrder = await CreatePurchaseOrder(existingCode, default, null);
-        var purchaseOrderDataReaderMock = PurchaseOrderDataReader.HasOne(existingCodePurchaseOrder);
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderMock.Object, null!, null!, null!, null!, null!, null!);
-        var dto = new CreatePurchaseOrderDto
-        {
-            PlacedOnUtc = DateTime.UtcNow,
-            Code = existingCode,
-            CreatedByUserId = null,
-            VendorId = Guid.NewGuid(),
-            WarehouseId = null
-        };
-
-        await Assert.ThrowsAsync<PurchaseOrderCodeExistsException>(() => purchaseOrderManager.CreatePurchaseOrderAsync(dto));
-        purchaseOrderDataReaderMock.Verify();
-    }
-
-    [Fact]
     public async Task CreatePurchaseOrderAsync_VendorIsNotFound_ThrowsVendorIsNotFoundException()
     {
         var notFoundVendorId = Guid.NewGuid();
         var dto = new CreatePurchaseOrderDto
         {
             PlacedOnUtc = DateTime.UtcNow,
-            Code = "code",
             CreatedByUserId = null,
             VendorId = notFoundVendorId,
             WarehouseId = null
@@ -111,7 +90,6 @@ public sealed class PurchaseOrderManagerTests
         var dto = new CreatePurchaseOrderDto
         {
             PlacedOnUtc = DateTime.UtcNow,
-            Code = "code",
             CreatedByUserId = null,
             VendorId = Guid.NewGuid(),
             WarehouseId = notFoundWarehouseId
@@ -132,7 +110,6 @@ public sealed class PurchaseOrderManagerTests
         var dto = new CreatePurchaseOrderDto
         {
             PlacedOnUtc = DateTime.UtcNow,
-            Code = "code",
             CreatedByUserId = notFoundCreatedByUserId,
             VendorId = Guid.NewGuid(),
             WarehouseId = null
@@ -153,7 +130,6 @@ public sealed class PurchaseOrderManagerTests
         {
             PlacedOnUtc = default,
             VendorId = default,
-            Code = string.Empty,
             ExpectedDeliveryDateUtc = DateTime.UtcNow.AddDays(-1),
             CreatedByUserId = null,
             WarehouseId = null
@@ -182,7 +158,6 @@ public sealed class PurchaseOrderManagerTests
         var dto = new CreatePurchaseOrderDto
         {
             PlacedOnUtc = DateTime.UtcNow,
-            Code = purchaseOrder.Code,
             CreatedByUserId = purchaseOrder.CreatedByUserId,
             VendorId = purchaseOrder.VendorId,
             WarehouseId = warehouse.Id,

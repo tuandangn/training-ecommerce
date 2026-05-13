@@ -72,7 +72,7 @@
                         <th>
                             Nhà cung cấp
                         </th>
-                        <th>
+                        <th class="d-none d-md-block">
                             Hàng hóa
                         </th>
                         <th class="text-end">Tổng tiền</th>
@@ -108,13 +108,13 @@
                                         {
                                             <div>
                                                 <span class="text-muted small">
-                                                     @HighlighHelper.Highlight(purchaseOrder.VendorPhone, Model.Keywords)
+                                                    @HighlighHelper.Highlight(purchaseOrder.VendorPhone, Model.Keywords)
                                                 </span>
                                             </div>
                                         }
                                     </div>
                                 </td>
-                                <td>
+                                <td class="d-none d-md-block">
                                     @{
                                         var itemCount = purchaseOrder.Items.Count;
                                         var ordered = purchaseOrder.TotalOrdered;
@@ -130,7 +130,7 @@
                                     }
                                     else
                                     {
-                                        <div class="d-none d-lg-block">
+                                        <div>
                                             <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-start po-items-popover"
                                                     data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
                                                     data-bs-custom-class="po-items-popover-content"
@@ -152,18 +152,6 @@
                                                     }
                                                 </div>
                                             </button>
-                                        </div>
-                                        <div class="d-block d-lg-none text-truncate">
-                                            @for(var i = 0; i < purchaseOrder.Items.Count; i++)
-                                            {
-                                                var item = purchaseOrder.Items[i];
-                                                <span class="d-block">
-                                                    @item.ProductName 
-                                                    <span class="text-muted">
-                                                    (@item.QuantityReceived.DisplayQuantity()/@item.QuantityOrdered.DisplayQuantity())
-                                                    </span>
-                                                </span>
-                                            }
                                         </div>
                                     }
                                 </td>
@@ -212,10 +200,22 @@
 </div>
 @section Styles {
     <style>
-        .po-items-popover { line-height: 1.2; }
-        .po-items-popover:hover .badge { background-color: var(--bs-primary-bg-subtle, #e7f1ff) !important; }
-        .po-items-popover-content .popover-body { padding: 0.5rem 0.75rem; }
-        .po-items-list { min-width: 220px; }
+        .po-items-popover {
+            line-height: 1.2;
+        }
+
+            .po-items-popover:hover .badge {
+                background-color: var(--bs-primary-bg-subtle, #e7f1ff) !important;
+            }
+
+        .po-items-popover-content .popover-body {
+            padding: 0.5rem 0.75rem;
+        }
+
+        .po-items-list {
+            min-width: 220px;
+        }
+
         .po-items-row {
             display: flex;
             justify-content: space-between;
@@ -224,7 +224,11 @@
             padding: 0.25rem 0;
             font-size: 0.85rem;
         }
-        .po-items-row + .po-items-row { border-top: 1px dashed var(--bs-border-color, #dee2e6); }
+
+            .po-items-row + .po-items-row {
+                border-top: 1px dashed var(--bs-border-color, #dee2e6);
+            }
+
         .po-items-name {
             flex: 1;
             white-space: nowrap;
@@ -232,7 +236,11 @@
             text-overflow: ellipsis;
             max-width: 240px;
         }
-        .po-items-qty { font-variant-numeric: tabular-nums; font-weight: 500; }
+
+        .po-items-qty {
+            font-variant-numeric: tabular-nums;
+            font-weight: 500;
+        }
     </style>
 }
 
@@ -250,9 +258,9 @@
         }
         @if (!string.IsNullOrEmpty(Model.Keywords))
         {
-            <text>
-                focusEnd(txtKeywords);
-            </text>
+                <text>
+                        focusEnd(txtKeywords);
+                </text>
         }
 
         // Init popover cho cột "Hàng hóa". site.js auto-init tooltip nhưng không init popover.

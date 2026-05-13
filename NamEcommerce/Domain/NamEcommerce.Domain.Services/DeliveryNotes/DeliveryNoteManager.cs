@@ -2,6 +2,7 @@ using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.Returns;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
@@ -27,9 +28,9 @@ public sealed class DeliveryNoteManager(
 {
     private Task<string> GenerateCodeAsync()
     {
-        var datePrefix = $"PXK-{DateTime.UtcNow:yyyyMMdd}";
-        var count = deliveryNoteReader.DataSource.Count(d => d.Code.StartsWith(datePrefix));
-        return Task.FromResult($"{datePrefix}-{(count + 1):D3}");
+        var monthPrefix = $"PXK-{DateTime.UtcNow:yyMM}";
+        var count = ((EntityDataReader<DeliveryNote>)deliveryNoteReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
     }
 
     public async Task<DeliveryNoteDto> CreateFromOrderAsync(CreateDeliveryNoteDto dto)

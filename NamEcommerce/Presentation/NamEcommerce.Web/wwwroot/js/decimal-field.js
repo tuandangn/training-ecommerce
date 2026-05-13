@@ -199,7 +199,7 @@
         var opts = Object.assign({
             name: '', value: null,
             id: null, cssClass: '',
-            placeholder: '0', 
+            placeholder: '0',
             showHint: false
         }, options);
 
@@ -290,26 +290,37 @@
         if (!input) throw new Error('DecimalFields.wrapExistingInput: khong tim thay input');
         if (input.dataset.decimalBound === '1') return { input: input };
 
-        var opts = Object.assign({ showHint: false }, options);
         var isCurr = (type === 'currency');
         var decimals = isCurr ? 0 : 2;
 
-        // 1. Gan data-attributes
+        var opts = Object.assign({
+            showHint: false,
+            includeSuffix: false
+        }, options);
+        if (input.classList.contains('include-hint'))
+            opts.showHint = true;
+        if (input.classList.contains('include-suffix'))
+            opts.includeSuffix = true;
+
         input.dataset.type = type;
         input.dataset.decimals = String(decimals);
 
-        // 2. Them CSS classes
         input.classList.add('form-control', 'decimal-input',
             isCurr ? 'currency-input' : 'quantity-input');
 
-        // 3. Tao wrapper, chen vao DOM tai vi tri hien tai cua input
-        var wrapper = document.createElement('div');
-        wrapper.className = 'decimal-field ' + (isCurr ? 'currency-field' : 'quantity-field');
-        input.parentNode.insertBefore(wrapper, input);
-        wrapper.appendChild(input);
+        var wrapper;
+        if (input.closest('.input-group')) {
+            const inputGroup = input.closest('.input-group');
+            wrapper = inputGroup;
+            input.style.width = '';
+        } else {
+            wrapper = document.createElement('div');
+            wrapper.className = 'decimal-field ' + (isCurr ? 'currency-field' : 'quantity-field');
+            input.parentNode.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+        }
 
-        // 4. Them prefix hoac suffix
-        if (opts.includeSuffix || input.classList.contains('include-suffix')) {
+        if (opts.includeSuffix) {
             if (isCurr) {
                 var prefix = document.createElement('span');
                 prefix.className = 'field-prefix';
@@ -325,14 +336,11 @@
             input.style.paddingRight = '0.5rem';
         }
 
-        // 5. Format gia tri hien tai
         var raw = stripFormatting(input.value, decimals);
         if (raw) input.value = isCurr ? formatCurrency(raw) : formatQuantity(raw);
 
-        // 6. Bind events
         bindInput(input);
-        // 7. Hint doc bang chu
-        var hint = (isCurr && (opts.showHint || input.classList.contains('include-hint'))) ? attachHint(wrapper, input) : null;
+        var hint = (isCurr && (opts.showHint)) ? attachHint(wrapper, input) : null;
 
         return { wrapper: wrapper, input: input, hint: hint };
     }

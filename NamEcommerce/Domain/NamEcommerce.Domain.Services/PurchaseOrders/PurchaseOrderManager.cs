@@ -1,8 +1,10 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
+using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Users;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
@@ -46,14 +48,18 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         _currentUserAccessor = currentUserAccessor;
     }
 
+    private Task<string> GenerateCodeAsync()
+    {
+        var monthPrefix = $"DN-{DateTime.UtcNow:yyMM}";
+        var count = ((EntityDataReader<PurchaseOrder>)_purchaseOrderDataReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
+    }
+
     public async Task<CreatePurchaseOrderResultDto> CreatePurchaseOrderAsync(CreatePurchaseOrderDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
         dto.Verify();
-
-        if (await DoesCodeExistAsync(dto.Code).ConfigureAwait(false))
-            throw new PurchaseOrderCodeExistsException(dto.Code);
 
         var vendor = await _vendorOrderDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
         if (vendor is null)
@@ -82,14 +88,17 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 throw new UserIsNotFoundException(dto.CreatedByUserId.Value);
         }
 
+        var code = await GenerateCodeAsync().ConfigureAwait(false);
         var purchaseOrder = await PurchaseOrder.CreateBuilder()
-            .WithCode(dto.Code, this)
+            .WithCode(code, this)
             .WithVendor(dto.VendorId, _vendorOrderDataReader)
             .WithWarehouse(dto.WarehouseId, _warehouseOrderDataReader)
             .BuildAsync(_purchaseOrderDataReader, _currentUserAccessor);
         purchaseOrder.Note = dto.Note;
         purchaseOrder.ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc;
         purchaseOrder.SetPlacedDate(dto.PlacedOnUtc);
+        purchaseOrder.TaxAmount = dto.TaxAmount;
+        purchaseOrder.ShippingAmount = dto.ShippingAmount;
         foreach (var orderItem in dto.Items)
         {
             await purchaseOrder.AddPurchaseOrderItemAsync(new PurchaseOrderItem(purchaseOrder.Id, orderItem.ProductId, orderItem.QuantityOrdered, orderItem.UnitCost)

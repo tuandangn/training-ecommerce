@@ -5,7 +5,6 @@ public sealed record CustomerReturnAppDto(Guid Id)
 {
     public required string Code { get; init; }
 
-    /// <summary>Phiếu xuất kho nguồn — null nếu phiếu trả tự do.</summary>
     public Guid? DeliveryNoteId { get; init; }
     public string? DeliveryNoteCode { get; init; }
 
@@ -18,7 +17,6 @@ public sealed record CustomerReturnAppDto(Guid Id)
     public required DateTime ReturnDate { get; init; }
     public DateTime? ConfirmedOnUtc { get; init; }
 
-    /// <summary>Chi phí phát sinh khi nhận hàng trả (vận chuyển, bồi thường...).</summary>
     public required decimal AdditionalCost { get; init; }
 
     public Guid? GeneratedGoodsReceiptId { get; init; }

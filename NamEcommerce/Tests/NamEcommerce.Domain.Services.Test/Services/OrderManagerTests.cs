@@ -28,7 +28,6 @@ public sealed class OrderManagerTests
     {
         var dto = new CreateOrderDto
         {
-            Code = "O-CODE-001",
             CustomerId = customerId,
             CreatedByUserId = userId,
             ShippingAddress = "shipping-address",
@@ -56,7 +55,6 @@ public sealed class OrderManagerTests
     {
         var dto = new CreateOrderDto
         {
-            Code = "O-001",
             CustomerId = Guid.NewGuid(),
             CreatedByUserId = null,
             ExpectedShippingDateUtc = DateTime.UtcNow.Date.AddDays(-1)
@@ -71,7 +69,6 @@ public sealed class OrderManagerTests
     {
         var dto = new CreateOrderDto
         {
-            Code = "O-001",
             CustomerId = Guid.NewGuid(),
             CreatedByUserId = null,
             OrderDiscount = -1
@@ -93,24 +90,6 @@ public sealed class OrderManagerTests
         var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderItemDataIsInvalidException>(() => manager.CreateOrderAsync(dto));
-    }
-
-    [Fact]
-    public async Task CreateOrderAsync_CodeAlreadyExists_ThrowsOrderCodeExistsException()
-    {
-        var customer = NewCustomer();
-        var existingOrder = new Order("O-001");
-        var orderDataReaderStub = OrderDataReader.HasOne(existingOrder);
-        var customerDataReaderStub = CustomerDataReader.CustomerById(customer.Id, customer);
-        var dto = new CreateOrderDto
-        {
-            Code = existingOrder.Code,
-            CustomerId = customer.Id,
-            CreatedByUserId = null
-        };
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, customerDataReaderStub.Object, null!, null!);
-
-        await Assert.ThrowsAsync<OrderCodeExistsException>(() => manager.CreateOrderAsync(dto));
     }
 
     [Fact]
@@ -172,8 +151,7 @@ public sealed class OrderManagerTests
 
         Assert.NotEqual(Guid.Empty, result.CreatedId);
         repositoryMock.Verify(r => r.InsertAsync(It.Is<Order>(o =>
-            o.Code == dto.Code
-            && o.CustomerId == customer.Id
+            o.CustomerId == customer.Id
             && o.OrderItems.Count() == 1
             && o.OrderSubTotal == 200
             && o.OrderTotal == 200

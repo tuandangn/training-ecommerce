@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.Users;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
@@ -27,14 +28,18 @@ public sealed class OrderManager(
     IEntityDataReader<User> userDataReader,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader) : IOrderManager
 {
+    private Task<string> GenerateCodeAsync()
+    {
+        var monthPrefix = $"DB-{DateTime.UtcNow:yyMM}";
+        var count = ((EntityDataReader<Order>)orderDataReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
+    }
+
     public async Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
         dto.Verify();
-
-        if (await DoesCodeExistAsync(dto.Code).ConfigureAwait(false))
-            throw new OrderCodeExistsException(dto.Code);
 
         var customer = await customerDataReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
         if (customer is null)
@@ -48,7 +53,8 @@ public sealed class OrderManager(
                 throw new UserIsNotFoundException(dto.CreatedByUserId.Value);
         }
 
-        var order = new Order(dto.Code)
+        var code = await GenerateCodeAsync().ConfigureAwait(false);
+        var order = new Order(code)
         {
             CreatedByUserId = dto.CreatedByUserId,
             CreatedByUsername = user?.Username,
@@ -61,8 +67,6 @@ public sealed class OrderManager(
             await order.AddOrderItemAsync(item.ProductId, item.UnitPrice, item.Quantity, productDataReader).ConfigureAwait(false);
         order.SetOrderDiscount(dto.OrderDiscount);
 
-        // Clear các event AddOrderItem raised trong lúc setup — phiếu chưa được "place" thực sự,
-        // chỉ event OrderPlaced cuối cùng mới phản ánh lifecycle bắt đầu.
         order.ClearDomainEvents();
         order.Place();
 

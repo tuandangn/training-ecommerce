@@ -446,18 +446,7 @@
             <div class="col-lg-4 order-0 order-lg-1">
                 @if (Model.CanModifyInfo && Model.ModifyInfo != null)
                 {
-                    <div class="mb-3">
-                        <div class="content-card-header">
-                            <h5>Thông tin đơn nhập</h5>
-                            <button type="submit" class="btn btn-outline-secondary btn-sm">
-                                <i class="bi bi-floppy me-1"></i>
-                                Cập nhật
-                            </button>
-                        </div>
-                        <div class="content-card-body">
-                            <partial name="Details.InfoModify" model="Model.ModifyInfo" />
-                        </div>
-                    </div>
+                    <partial name="Details.InfoModify" model="Model.ModifyInfo" />
                 }
                 else
                 {

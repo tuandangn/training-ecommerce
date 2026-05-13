@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Services.Common;
 
 namespace NamEcommerce.Domain.Services.Debts;
 
@@ -22,16 +23,16 @@ public sealed class CustomerDebtManager(
 {
     private async Task<string> GenerateDebtCodeAsync()
     {
-        var datePrefix = $"CN-{DateTime.UtcNow:yyyyMMdd}";
-        var count = debtReader.DataSource.Count(d => d.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var monthPrefix = $"CN-KH-{DateTime.UtcNow:yyMM}";
+        var count = ((EntityDataReader<CustomerDebt>)debtReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        return $"{monthPrefix}-{(count + 1):D3}";
     }
 
     private async Task<string> GeneratePaymentCodeAsync()
     {
-        var datePrefix = $"PT-{DateTime.UtcNow:yyyyMMdd}";
-        var count = paymentReader.DataSource.Count(p => p.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var monthPrefix = $"PT-KH-{DateTime.UtcNow:yyMM}";
+        var count = ((EntityDataReader<CustomerPayment>)paymentReader).SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
+        return $"{monthPrefix}-{(count + 1):D3}";
     }
 
     public async Task<CustomerDebtDto> CreateInitialDebtAsync(CreateInitialCustomerDebtDto dto)

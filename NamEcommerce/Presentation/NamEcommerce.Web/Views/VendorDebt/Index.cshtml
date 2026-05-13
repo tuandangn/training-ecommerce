@@ -3,84 +3,339 @@
 @model VendorDebtListModel
 @{
     ViewData[ViewConstants.PageTitle] = "Công nợ nhà cung cấp";
+
+    var hasData = Model.Data?.Pagination.TotalCount > 0;
+    decimal totalDebt = 0, totalPaid = 0, totalRemaining = 0, totalAdvance = 0;
+    int vendorsWithDebt = 0, vendorsWithAdvance = 0;
+    Guid? topDebtorId = null;
+    decimal paymentProgress = 0;
+
+    if (hasData)
+    {
+        totalDebt       = Model.Data!.Sum(x => x.TotalDebtAmount);
+        totalPaid       = Model.Data.Sum(x => x.TotalPaidAmount);
+        totalRemaining  = Model.Data.Sum(x => x.TotalRemainingAmount);
+        totalAdvance    = Model.Data.Sum(x => x.AdvanceBalance);
+        vendorsWithDebt    = Model.Data.Count(x => x.TotalRemainingAmount > 0);
+        vendorsWithAdvance = Model.Data.Count(x => x.AdvanceBalance > 0);
+
+        var top = Model.Data.OrderByDescending(x => x.TotalRemainingAmount).FirstOrDefault();
+        if (top is not null && top.TotalRemainingAmount > 0)
+        {
+            topDebtorId = top.VendorId;
+        }
+        paymentProgress = totalDebt > 0 ? (totalPaid / totalDebt * 100m) : 0m;
+    }
+
+    (string bg, string fg) Avatar(string name)
+    {
+        var palettes = new[]
+        {
+            ("#fee2e2", "#b91c1c"),
+            ("#ffedd5", "#c2410c"),
+            ("#fef3c7", "#a16207"),
+            ("#dcfce7", "#15803d"),
+            ("#cffafe", "#0e7490"),
+            ("#dbeafe", "#1d4ed8"),
+            ("#ede9fe", "#6d28d9"),
+            ("#fce7f3", "#be185d"),
+        };
+        var idx = Math.Abs((name ?? "?").GetHashCode()) % palettes.Length;
+        return palettes[idx];
+    }
+
+    string Initial(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        return char.ToUpper(name.Trim()[0]).ToString();
+    }
+}
+
+@section Styles {
+    <style>
+        /* Stat hero band */
+        .debt-stat-band {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        @@media (max-width: 991.98px) { .debt-stat-band { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @@media (max-width: 575.98px) { .debt-stat-band { grid-template-columns: 1fr; } }
+
+        .stat-card {
+            position: relative;
+            background: #fff;
+            border-radius: var(--card-radius);
+            box-shadow: var(--card-shadow);
+            padding: 1.1rem 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+            overflow: hidden;
+            transition: transform 160ms ease, box-shadow 160ms ease;
+        }
+        .stat-card:hover { transform: translateY(-1px); box-shadow: 0 6px 18px -8px rgba(15,23,42,0.18); }
+
+        .stat-card .stat-icon {
+            width: 44px; height: 44px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 12px;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+        }
+        .stat-card .stat-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--gray-500);
+            margin-bottom: 0.15rem;
+        }
+        .stat-card .stat-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            line-height: 1.15;
+            font-variant-numeric: tabular-nums;
+        }
+        .stat-card .stat-meta {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            margin-top: 0.15rem;
+        }
+
+        /* Featured stat — outstanding balance */
+        .stat-card.is-featured {
+            color: #fff;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 55%, #7f1d1d 100%);
+            box-shadow: 0 10px 22px -10px rgba(185,28,28,0.55);
+        }
+        .stat-card.is-featured .stat-label { color: rgba(255,255,255,0.78); }
+        .stat-card.is-featured .stat-value,
+        .stat-card.is-featured .stat-meta { color: #fff; }
+        .stat-card.is-featured .stat-icon {
+            background: rgba(255,255,255,0.18);
+            color: #fff;
+        }
+        .stat-card.is-featured::after {
+            content: "";
+            position: absolute;
+            inset: auto -20px -30px auto;
+            width: 140px; height: 140px;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.18), transparent 60%);
+            pointer-events: none;
+        }
+
+        .progress-strip {
+            height: 4px;
+            background: rgba(255,255,255,0.25);
+            border-radius: 999px;
+            margin-top: 0.6rem;
+            overflow: hidden;
+        }
+        .progress-strip > span {
+            display: block;
+            height: 100%;
+            background: #fff;
+            border-radius: inherit;
+        }
+
+        /* Table-specific polish */
+        .debt-table { font-variant-numeric: tabular-nums; }
+        .debt-table .vendor-cell { display: flex; align-items: center; gap: 0.75rem; min-width: 220px; }
+        .vendor-avatar {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 700;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+            letter-spacing: 0.01em;
+        }
+        .vendor-name {
+            font-weight: 600;
+            color: var(--gray-900);
+            text-decoration: none;
+            display: inline-flex; align-items: center; gap: 0.4rem;
+        }
+        .vendor-name:hover { color: var(--primary); }
+        .vendor-phone {
+            font-size: 0.78rem;
+            color: var(--gray-500);
+            text-decoration: none;
+            display: inline-flex; align-items: center; gap: 0.3rem;
+        }
+        .vendor-phone:hover { color: var(--primary); }
+
+        .badge-top {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 0.18rem 0.45rem;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #fde68a, #f59e0b);
+            color: #78350f;
+        }
+
+        .debt-progress {
+            display: flex; align-items: center; gap: 0.5rem;
+            min-width: 140px;
+        }
+        .debt-progress .bar {
+            flex: 1;
+            height: 5px;
+            background: var(--gray-100);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .debt-progress .bar > span {
+            display: block; height: 100%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+        .debt-progress.is-paid .bar > span { background: linear-gradient(90deg, #16a34a, #15803d); }
+        .debt-progress .pct {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--gray-500);
+            min-width: 36px;
+            text-align: right;
+        }
+
+        .debt-table tr.row-warning td:first-child { box-shadow: inset 3px 0 0 #f59e0b; }
+        .debt-table tr.row-danger  td:first-child { box-shadow: inset 3px 0 0 #dc2626; }
+
+        .btn-table-action:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+    </style>
 }
 
 <div class="page-header">
     <div>
         <h1 class="page-header-title">Công nợ nhà cung cấp</h1>
-        <p class="page-header-subtitle">Tổng hợp số tiền phải trả cho từng nhà cung cấp — nhấn vào tên để xem chi tiết</p>
+        <p class="page-header-subtitle">
+            Theo dõi số tiền phải trả từng nhà cung cấp — nhấn vào tên để xem chi tiết và ghi nhận thanh toán.
+        </p>
     </div>
 </div>
 
-@* ── Tổng quan nhanh ── *@
-@if (Model.Data?.Pagination.TotalCount > 0)
+@if (hasData)
 {
-    var totalRemaining = Model.Data.Sum(x => x.TotalRemainingAmount);
-    var totalAdvance = Model.Data.Sum(x => x.AdvanceBalance);
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-lg-3">
-            <div class="card border-0 shadow-sm rounded-4 text-center p-3">
-                <div class="text-muted small text-uppercase fw-bold mb-1">Số NCC có nợ</div>
-                <div class="fs-4 fw-bold text-dark">@Model.Data.Pagination.TotalCount</div>
+    <section class="debt-stat-band" aria-label="Tổng quan công nợ">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#dbeafe;color:#1d4ed8;">
+                <i class="bi bi-building" aria-hidden="true"></i>
+            </div>
+            <div>
+                <div class="stat-label">Nhà cung cấp</div>
+                <div class="stat-value">@Model.Data!.Pagination.TotalCount.ToString("N0")</div>
+                <div class="stat-meta">@vendorsWithDebt đang còn nợ</div>
             </div>
         </div>
-        <div class="col-6 col-lg-3">
-            <div class="card border-0 shadow-sm rounded-4 text-center p-3 @(totalRemaining > 0 ? "border-danger border" : "")">
-                <div class="text-muted small text-uppercase fw-bold mb-1">Tổng còn phải trả</div>
-                <div class="fs-5 fw-bold @(totalRemaining > 0 ? "text-danger" : "text-success")">
-                    @totalRemaining.ToString(ViewConstants.CurrencyDisplayFormat)
+
+        <div class="stat-card is-featured">
+            <div class="stat-icon">
+                <i class="bi bi-cash-coin" aria-hidden="true"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="stat-label">Còn phải trả</div>
+                <div class="stat-value">@totalRemaining.ToString(ViewConstants.CurrencyDisplayFormat)</div>
+                <div class="stat-meta">Đã thanh toán @paymentProgress.ToString("N0")% tổng nợ</div>
+                <div class="progress-strip" role="progressbar"
+                     aria-valuenow="@paymentProgress.ToString("N0")" aria-valuemin="0" aria-valuemax="100">
+                    <span style="width: @paymentProgress.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%"></span>
                 </div>
             </div>
         </div>
-        <div class="col-6 col-lg-3">
-            <div class="card border-0 shadow-sm rounded-4 text-center p-3 @(totalAdvance > 0 ? "border-warning border" : "")">
-                <div class="text-muted small text-uppercase fw-bold mb-1">Tổng tiền ứng trước</div>
-                <div class="fs-5 fw-bold @(totalAdvance > 0 ? "text-warning" : "text-muted")">
-                    @totalAdvance.ToString(ViewConstants.CurrencyDisplayFormat)
-                </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#dcfce7;color:#15803d;">
+                <i class="bi bi-check2-circle" aria-hidden="true"></i>
+            </div>
+            <div>
+                <div class="stat-label">Đã thanh toán</div>
+                <div class="stat-value">@totalPaid.ToString(ViewConstants.CurrencyDisplayFormat)</div>
+                <div class="stat-meta">trên tổng @totalDebt.ToString(ViewConstants.CurrencyDisplayFormat)</div>
             </div>
         </div>
-    </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#fef3c7;color:#a16207;">
+                <i class="bi bi-wallet2" aria-hidden="true"></i>
+            </div>
+            <div>
+                <div class="stat-label">Tiền ứng trước</div>
+                <div class="stat-value">@totalAdvance.ToString(ViewConstants.CurrencyDisplayFormat)</div>
+                <div class="stat-meta">@vendorsWithAdvance NCC có ứng trước</div>
+            </div>
+        </div>
+    </section>
 }
 
 <div class="content-card">
     <div class="action-toolbar">
         <partial name="_Search" model="@(new VendorDebtListSearchModel { Keywords = Model.Keywords })" />
     </div>
+
     <div class="table-responsive">
-        <table class="table data-table align-middle">
+        <table class="table data-table debt-table align-middle">
             <thead>
                 <tr>
                     <th class="ps-4">Nhà cung cấp</th>
                     <th class="text-center">Số phiếu</th>
                     <th class="text-end">Tổng nợ</th>
                     <th class="text-end">Đã trả</th>
+                    <th>Tiến độ</th>
                     <th class="text-end">Còn phải trả</th>
-                    <th class="text-end">Tiền ứng trước</th>
-                    <th style="width: 80px;"></th>
+                    <th class="text-end">Ứng trước</th>
+                    <th style="width: 60px;"></th>
                 </tr>
             </thead>
             <tbody>
-                @if (Model.Data?.Pagination.TotalCount > 0)
+                @if (hasData)
                 {
-                    @foreach (var item in Model.Data)
+                    @foreach (var item in Model.Data!)
                     {
-                        <tr>
+                        var (avatarBg, avatarFg) = Avatar(item.VendorName);
+                        var paidPct = item.TotalDebtAmount > 0
+                            ? (item.TotalPaidAmount / item.TotalDebtAmount * 100m)
+                            : 0m;
+                        var isFullyPaid = item.TotalRemainingAmount <= 0 && item.TotalDebtAmount > 0;
+                        var rowClass =
+                            item.TotalRemainingAmount >= 10_000_000m ? "row-danger" :
+                            (item.TotalRemainingAmount >= 1_000_000m ? "row-warning" : "");
+
+                        <tr class="@rowClass">
                             <td class="ps-4">
-                                <a asp-action="Details" asp-route-vendorId="@item.VendorId"
-                                   class="fw-semibold text-decoration-none text-dark">
-                                    <i class="bi bi-building me-1 text-muted"></i>
-                                    @HighlighHelper.Highlight(item.VendorName, Model.Keywords)
-                                </a>
-                                @if (!string.IsNullOrEmpty(item.VendorPhone))
-                                {
-                                    <div>
-                                        <a href="tel:@item.VendorPhone" class="text-muted small text-decoration-none">
-                                            <i class="bi bi-telephone me-1"></i>
-                                            @HighlighHelper.Highlight(item.VendorPhone, Model.Keywords)
+                                <div class="vendor-cell">
+                                    <span class="vendor-avatar" aria-hidden="true"
+                                          style="background:@avatarBg;color:@avatarFg;">@Initial(item.VendorName)</span>
+                                    <div class="min-w-0">
+                                        <a asp-action="Details" asp-route-vendorId="@item.VendorId" class="vendor-name">
+                                            @HighlighHelper.Highlight(item.VendorName, Model.Keywords)
+                                            @if (topDebtorId == item.VendorId)
+                                            {
+                                                <span class="badge-top" title="Nhà cung cấp đang có nợ cao nhất">
+                                                    <i class="bi bi-trophy-fill me-1" aria-hidden="true"></i>Top
+                                                </span>
+                                            }
                                         </a>
+                                        @if (!string.IsNullOrEmpty(item.VendorPhone))
+                                        {
+                                            <div>
+                                                <a href="tel:@item.VendorPhone" class="vendor-phone"
+                                                   aria-label="Gọi @item.VendorName tại @item.VendorPhone">
+                                                    <i class="bi bi-telephone" aria-hidden="true"></i>
+                                                    @HighlighHelper.Highlight(item.VendorPhone, Model.Keywords)
+                                                </a>
+                                            </div>
+                                        }
                                     </div>
-                                }
+                                </div>
                             </td>
                             <td class="text-center">
                                 <span class="badge bg-light text-dark border fw-normal">@item.DebtCount phiếu</span>
@@ -90,6 +345,17 @@
                             </td>
                             <td class="text-end text-success fw-medium">
                                 @item.TotalPaidAmount.ToString(ViewConstants.CurrencyDisplayFormat)
+                            </td>
+                            <td>
+                                <div class="debt-progress @(isFullyPaid ? "is-paid" : "")"
+                                     role="progressbar"
+                                     aria-valuenow="@paidPct.ToString("N0")" aria-valuemin="0" aria-valuemax="100"
+                                     aria-label="Tiến độ thanh toán">
+                                    <div class="bar">
+                                        <span style="width:@paidPct.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)%"></span>
+                                    </div>
+                                    <div class="pct">@paidPct.ToString("N0")%</div>
+                                </div>
                             </td>
                             <td class="text-end fw-bold @(item.TotalRemainingAmount > 0 ? "text-danger" : "text-success")">
                                 @item.TotalRemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)
@@ -107,10 +373,11 @@
                                 }
                             </td>
                             <td class="text-end pe-3">
-                                <a class="btn-table-action" asp-action="Details" asp-route-vendorId="@item.VendorId"
-                                   title="Xem chi tiết">
-                                    <i class="bi bi-chevron-right"></i>
-                                    <span class="visually-hidden">Chi tiết</span>
+                                <a class="btn-table-action"
+                                   asp-action="Details" asp-route-vendorId="@item.VendorId"
+                                   title="Xem chi tiết"
+                                   aria-label="Xem chi tiết công nợ của @item.VendorName">
+                                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
                                 </a>
                             </td>
                         </tr>
@@ -118,12 +385,26 @@
                 }
                 else
                 {
+                    var isFiltered = !string.IsNullOrWhiteSpace(Model.Keywords);
                     <tr>
-                        <td colspan="7">
+                        <td colspan="8">
                             <div class="empty-state py-5">
-                                <div class="empty-icon"><i class="bi bi-building"></i></div>
-                                <h5>Không có công nợ nào</h5>
-                                <p class="text-muted">Các khoản nợ phát sinh khi đơn nhập hàng được xác nhận hoàn tất.</p>
+                                <div class="empty-icon">
+                                    <i class="bi @(isFiltered ? "bi-search" : "bi-building")" aria-hidden="true"></i>
+                                </div>
+                                @if (isFiltered)
+                                {
+                                    <h5>Không tìm thấy nhà cung cấp</h5>
+                                    <p class="text-muted">Không có NCC nào khớp với từ khoá "<strong>@Model.Keywords</strong>".</p>
+                                    <a asp-action="Index" class="btn btn-outline-secondary btn-sm rounded-pill px-4 mt-2">
+                                        <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i> Xoá bộ lọc
+                                    </a>
+                                }
+                                else
+                                {
+                                    <h5>Không có công nợ nào</h5>
+                                    <p class="text-muted">Các khoản nợ phát sinh khi đơn nhập hàng được xác nhận hoàn tất.</p>
+                                }
                             </div>
                         </td>
                     </tr>
@@ -132,8 +413,8 @@
         </table>
     </div>
 
-    @if (Model.Data?.Pagination.TotalCount > 0)
+    @if (hasData)
     {
-        <partial name="_Pager" model="Model.Data.Pagination" />
+        <partial name="_Pager" model="Model.Data!.Pagination" />
     }
 </div>

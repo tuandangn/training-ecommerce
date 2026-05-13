@@ -16,6 +16,7 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
     }
 
     public IQueryable<TEntity> DataSource => _dbContext.GetDataSource<TEntity>();
+    internal IQueryable<TEntity> SecuredDataSource => _dbContext.GetDataSource<TEntity>(true);
 
     public Task<IEnumerable<TEntity>> GetAllAsync()
         => _repository.GetAllAsync();

@@ -7,7 +7,8 @@
       "Bash(dir *)",
       "Bash(rtk wc *)",
       "Bash(rtk grep *)",
-      "Bash(rtk find *)"
+      "Bash(rtk find *)",
+      "Bash(python *)"
     ]
   }
 }

@@ -53,10 +53,17 @@ public sealed record CreatePurchaseOrderAppDto : BasePurchaseOrderAppDto
     public Guid? CreatedByUserId { get; set; }
     public IList<CreatePurchaseOrderItemAppDto> Items { get; init; } = [];
 
+    public decimal TaxAmount { get; init; }
+    public decimal ShippingAmount { get; init; }
+
     public override (bool valid, string? errorMessage) Validate()
     {
         if (Items.Count == 0)
             return (false, "Error.PurchaseOrderItemRequired");
+        if (TaxAmount < 0)
+            return (false, "Error.TaxAmountCannotBeNegative");
+        if (ShippingAmount < 0)
+            return (false, "Error.ShippingAmountCannotBeNegative");
 
         return base.Validate();
     }

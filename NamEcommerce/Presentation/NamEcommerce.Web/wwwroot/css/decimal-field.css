@@ -23,6 +23,12 @@
         transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
         width: 100%;
     }
+        .decimal-field .decimal-input.form-control-sm {
+            padding: .25rem .5rem;
+            font-size: .875rem;
+            border-radius: .2rem;
+            height: calc(1.5em + .5rem + 2px);
+        }
 
         .decimal-field .decimal-input:focus {
             outline: none;

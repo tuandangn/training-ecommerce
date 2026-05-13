@@ -29,8 +29,8 @@ public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
         return Expression.Lambda(equal, parameter);
     }
 
-    public IQueryable<TEntity> GetDataSource<TEntity>() where TEntity : AppAggregateEntity
-        => Set<TEntity>().AsNoTracking();
+    public IQueryable<TEntity> GetDataSource<TEntity>(bool includeHidden) where TEntity : AppAggregateEntity
+        => includeHidden ? Set<TEntity>().IgnoreQueryFilters().AsNoTracking() : Set<TEntity>().AsNoTracking();
 
     public async Task<TEntity?> FindAsync<TEntity>(Guid key, CancellationToken cancellationToken = default)
         where TEntity : AppAggregateEntity

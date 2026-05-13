@@ -14,9 +14,6 @@ public sealed class AppConfig
 
     public string N8nEndpoint { get; set; } = "";
 
-    /// <summary>Danh sách % thuế VAT khả dụng khi nhận hàng (vd: [5, 8, 10, 15]).</summary>
-    public decimal[] TaxRates { get; set; } = [5, 8, 10, 15];
-
-    /// <summary>Tỉ lệ thuế mặc định (%).</summary>
+    public decimal[] TaxRates { get; set; } = [];
     public decimal DefaultTaxRate { get; set; } = 10;
 }
