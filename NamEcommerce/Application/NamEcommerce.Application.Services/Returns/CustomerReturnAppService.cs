@@ -35,7 +35,6 @@ public sealed class CustomerReturnAppService(
             var domainDto = new CreateCustomerReturnDto
             {
                 DeliveryNoteId = dto.DeliveryNoteId,
-                CustomerId = dto.CustomerId,
                 WarehouseId = dto.WarehouseId,
                 Note = dto.Note,
                 AdditionalCost = dto.AdditionalCost,

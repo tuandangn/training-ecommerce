@@ -15,10 +15,16 @@ public interface ICustomerReturnManager
         Guid? customerId, Guid? deliveryNoteId, int? status, int pageIndex, int pageSize);
 
     /// <summary>
-    /// Tính tổng <c>AcceptedQuantity</c> đã trả cho một (deliveryNoteId, productId) qua các phiếu Confirmed.
-    /// Dùng để validate không vượt quá số đã giao. Bỏ qua nếu <c>deliveryNoteId</c> là null (tạo tự do).
+    /// Tính tổng <c>AcceptedQuantity</c> đã chiếm chỗ cho một (deliveryNoteId, productId) — bao gồm cả phiếu
+    /// <c>Inspecting</c> và <c>Confirmed</c>. Dùng để validate không vượt quá số đã giao.
+    /// <para>
+    /// Việc gộp <c>Inspecting</c> nhằm thu hẹp cửa sổ race condition khi hai phiếu trả cùng <c>Confirm</c>:
+    /// workflow là <c>Draft → Inspecting → Confirmed</c>, nên phiếu đã <c>MoveToInspecting</c> được coi như "đã chiếm chỗ".
+    /// Vẫn còn race nhỏ nếu hai phiếu cùng <c>MoveToInspecting</c> đồng thời — giải quyết triệt để cần thêm
+    /// concurrency token (RowVersion) — xem ToDoList.md P2 future work.
+    /// </para>
     /// </summary>
-    Task<decimal> GetTotalConfirmedReturnQuantityAsync(Guid deliveryNoteId, Guid productId, Guid? excludeReturnId = null);
+    Task<decimal> GetTotalReservedReturnQuantityAsync(Guid deliveryNoteId, Guid productId, Guid? excludeReturnId = null);
 
     /// <summary>
     /// Gọi sau khi <c>GoodsReceipt</c> được sinh từ <c>CustomerReturnConfirmedEventHandler</c>:

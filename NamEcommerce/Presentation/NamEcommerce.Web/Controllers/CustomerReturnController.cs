@@ -38,9 +38,7 @@ public sealed class CustomerReturnController : BaseAuthorizedController
             prefilledModel = new CreateCustomerReturnModel
             {
                 DeliveryNoteId = deliveryNoteId,
-                DeliveryNoteDisplayCode = deliveryNoteCode,
-                CustomerId = customerId,
-                CustomerDisplayName = customerName
+                DeliveryNoteDisplayCode = deliveryNoteCode
             };
         }
 
@@ -59,8 +57,7 @@ public sealed class CustomerReturnController : BaseAuthorizedController
 
         var result = await _mediator.Send(new CreateCustomerReturnCommand
         {
-            DeliveryNoteId = model.DeliveryNoteId,
-            CustomerId = model.CustomerId,
+            DeliveryNoteId = model.DeliveryNoteId!.Value,
             WarehouseId = model.WarehouseId!.Value,
             AdditionalCost = model.AdditionalCost,
             Note = model.Note,
@@ -164,12 +161,6 @@ public sealed class CustomerReturnController : BaseAuthorizedController
         return Json(new { success = true, data = model });
     }
 
-    // ── AJAX Pickers ──────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// GET /CustomerReturn/GetDeliveryNotes?customerId=
-    /// Trả về danh sách phiếu xuất kho của khách — dùng cho AJAX dropdown trong form tạo phiếu trả.
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetDeliveryNotes(Guid customerId)
     {
@@ -177,10 +168,6 @@ public sealed class CustomerReturnController : BaseAuthorizedController
         return Json(notes);
     }
 
-    /// <summary>
-    /// GET /CustomerReturn/GetDeliveryNoteItems?deliveryNoteId=&amp;excludeReturnId=
-    /// Trả về danh sách mặt hàng có thể trả của phiếu xuất — bao gồm số lượng đã trả.
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetDeliveryNoteItems(Guid deliveryNoteId, Guid? excludeReturnId = null)
     {
@@ -192,10 +179,6 @@ public sealed class CustomerReturnController : BaseAuthorizedController
         return Json(items);
     }
 
-    /// <summary>
-    /// GET /CustomerReturn/GetByDeliveryNote?deliveryNoteId=
-    /// Trả về danh sách phiếu trả hàng liên kết với phiếu xuất kho — dùng cho section "Khách trả hàng" trên Details.
-    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetByDeliveryNote(Guid deliveryNoteId)
     {

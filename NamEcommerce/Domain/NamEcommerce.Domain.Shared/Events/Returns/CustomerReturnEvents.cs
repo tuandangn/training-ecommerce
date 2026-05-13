@@ -10,7 +10,7 @@ namespace NamEcommerce.Domain.Shared.Events.Returns;
 /// </summary>
 public sealed record CustomerReturnConfirmed(
     Guid CustomerReturnId,
-    Guid? DeliveryNoteId,
+    Guid DeliveryNoteId,
     Guid CustomerId,
     Guid WarehouseId) : DomainEvent;
 

@@ -11,7 +11,7 @@ public sealed record CustomerReturn : AppAggregateEntity
     private CustomerReturn() : base(Guid.Empty) { }
 
     internal CustomerReturn(string code,
-        Guid? deliveryNoteId, string? deliveryNoteCode,
+        Guid deliveryNoteId, string deliveryNoteCode,
         Guid customerId, string customerName,
         Guid warehouseId, string warehouseName,
         string? note, decimal additionalCost,
@@ -32,11 +32,15 @@ public sealed record CustomerReturn : AppAggregateEntity
         CreatedOnUtc = DateTime.UtcNow;
     }
 
+    public DateTime ReturnDate { get; internal set; }
     public string Code { get; private set; } = string.Empty;
+    public string? Note { get; internal set; }
+    public CustomerReturnStatus Status { get; private set; }
+    public decimal AdditionalCost { get; private set; }
+    public DateTime? ConfirmedOnUtc { get; private set; }
 
-    /// <summary>Phiếu xuất kho nguồn — null nếu phiếu trả tự do (không gắn phiếu xuất cụ thể).</summary>
-    public Guid? DeliveryNoteId { get; private set; }
-    public string? DeliveryNoteCode { get; private set; }
+    public Guid DeliveryNoteId { get; private set; }
+    public string DeliveryNoteCode { get; private set; } = string.Empty;
 
     public Guid CustomerId { get; private set; }
     public string CustomerName { get; private set; } = string.Empty;
@@ -44,16 +48,6 @@ public sealed record CustomerReturn : AppAggregateEntity
     public Guid WarehouseId { get; private set; }
     public string WarehouseName { get; private set; } = string.Empty;
 
-    public string? Note { get; internal set; }
-    public CustomerReturnStatus Status { get; private set; }
-    public DateTime ReturnDate { get; internal set; }
-
-    public DateTime? ConfirmedOnUtc { get; private set; }
-
-    /// <summary>Chi phí phát sinh khi nhận hàng trả (vận chuyển, bồi thường...). Tự động ghi Expense khi Confirm.</summary>
-    public decimal AdditionalCost { get; private set; }
-
-    /// <summary>ID phiếu nhập kho được tự động sinh khi Confirm (SourceType=FromCustomerReturn).</summary>
     public Guid? GeneratedGoodsReceiptId { get; internal set; }
 
     public Guid? CreatedByUserId { get; private set; }

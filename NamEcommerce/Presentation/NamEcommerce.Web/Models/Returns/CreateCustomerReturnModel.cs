@@ -7,14 +7,6 @@ namespace NamEcommerce.Web.Models.Returns;
 [Serializable]
 public sealed class CreateCustomerReturnModel
 {
-    /// <summary>Khách hàng — dùng CustomerPicker component.</summary>
-    [Display(Name = "Khách hàng")]
-    public Guid? CustomerId { get; set; }
-
-    [ValidateNever]
-    public string? CustomerDisplayName { get; set; }
-
-    /// <summary>Phiếu xuất kho nguồn — null = tạo tự do (không liên kết phiếu xuất).</summary>
     [Display(Name = "Phiếu xuất kho")]
     public Guid? DeliveryNoteId { get; set; }
 

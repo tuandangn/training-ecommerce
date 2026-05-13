@@ -1,6 +1,5 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
-using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Inventory;
@@ -11,6 +10,8 @@ using NamEcommerce.Domain.Shared.Dtos.Finance;
 using NamEcommerce.Domain.Shared.Dtos.Returns;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Finance;
+using NamEcommerce.Domain.Shared.Enums.Returns;
+using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Returns;
@@ -20,7 +21,6 @@ namespace NamEcommerce.Domain.Services.Returns;
 public sealed class CustomerReturnManager(
     IRepository<CustomerReturn> customerReturnRepository,
     IEntityDataReader<CustomerReturn> customerReturnDataReader,
-    IEntityDataReader<Customer> customerDataReader,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Warehouse> warehouseDataReader,
@@ -37,40 +37,19 @@ public sealed class CustomerReturnManager(
         if (warehouse is null)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseNotFound", dto.WarehouseId);
 
-        Guid customerId;
-        string customerName;
-        Guid? deliveryNoteId = null;
-        string? deliveryNoteCode = null;
+        var deliveryNote = await deliveryNoteDataReader.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
 
-        if (dto.DeliveryNoteId.HasValue)
-        {
-            // Trả theo phiếu xuất — lấy thông tin khách từ DeliveryNote
-            var deliveryNote = await deliveryNoteDataReader.GetByIdAsync(dto.DeliveryNoteId.Value).ConfigureAwait(false);
-            if (deliveryNote is null)
-                throw new ReturnDataIsInvalidException("Error.CustomerReturn.DeliveryNoteNotFound", dto.DeliveryNoteId.Value);
-
-            customerId = deliveryNote.CustomerId;
-            customerName = deliveryNote.CustomerName ?? string.Empty;
-            deliveryNoteId = deliveryNote.Id;
-            deliveryNoteCode = deliveryNote.Code;
-        }
-        else
-        {
-            // Trả tự do — lấy thông tin khách từ CustomerId
-            var customer = await customerDataReader.GetByIdAsync(dto.CustomerId!.Value).ConfigureAwait(false);
-            if (customer is null)
-                throw new ReturnDataIsInvalidException("Error.CustomerReturn.CustomerNotFound", dto.CustomerId.Value);
-
-            customerId = customer.Id;
-            customerName = customer.FullName;
-        }
+        var customerId = deliveryNote.CustomerId;
+        var customerName = deliveryNote.CustomerName ?? string.Empty;
 
         var code = GenerateCode();
 
         var customerReturn = new CustomerReturn(
             code: code,
-            deliveryNoteId: deliveryNoteId,
-            deliveryNoteCode: deliveryNoteCode,
+            deliveryNoteId: deliveryNote.Id,
+            deliveryNoteCode: deliveryNote.Code,
             customerId: customerId,
             customerName: customerName,
             warehouseId: warehouse.Id,
@@ -129,19 +108,16 @@ public sealed class CustomerReturnManager(
         var customerReturn = await customerReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new CustomerReturnNotFoundException(id);
 
-        // Chỉ validate qty nếu phiếu gắn với DeliveryNote cụ thể
-        if (customerReturn.DeliveryNoteId.HasValue)
+        // CustomerReturn luôn gắn DeliveryNote — validate qty không vượt quá số đã giao trừ phần đã trả/đang trả
+        foreach (var item in customerReturn.Items)
         {
-            foreach (var item in customerReturn.Items)
-            {
-                var deliveredQty = GetTotalDeliveredQuantity(customerReturn.DeliveryNoteId.Value, item.ProductId);
-                var previouslyReturned = await GetTotalConfirmedReturnQuantityAsync(
-                    customerReturn.DeliveryNoteId.Value, item.ProductId, excludeReturnId: id).ConfigureAwait(false);
-                var maxAllowed = deliveredQty - previouslyReturned;
+            var deliveredQty = GetTotalDeliveredQuantity(customerReturn.DeliveryNoteId, item.ProductId);
+            var previouslyReturned = await GetTotalReservedReturnQuantityAsync(
+                customerReturn.DeliveryNoteId, item.ProductId, excludeReturnId: id).ConfigureAwait(false);
+            var maxAllowed = deliveredQty - previouslyReturned;
 
-                if (item.AcceptedQuantity > maxAllowed)
-                    throw new ExceedsDeliveredQuantityException(item.ProductId, item.AcceptedQuantity, maxAllowed);
-            }
+            if (item.AcceptedQuantity > maxAllowed)
+                throw new ExceedsDeliveredQuantityException(item.ProductId, item.AcceptedQuantity, maxAllowed);
         }
 
         customerReturn.Confirm();
@@ -187,17 +163,17 @@ public sealed class CustomerReturnManager(
         return Task.FromResult((total, items));
     }
 
-    public Task<decimal> GetTotalConfirmedReturnQuantityAsync(
+    public Task<decimal> GetTotalReservedReturnQuantityAsync(
         Guid deliveryNoteId, Guid productId, Guid? excludeReturnId = null)
     {
         var query = customerReturnDataReader.DataSource
             .Where(r => r.DeliveryNoteId == deliveryNoteId
-                        && (int)r.Status == 2 // Confirmed
+                        && (r.Status == CustomerReturnStatus.Inspecting || r.Status == CustomerReturnStatus.Confirmed)
                         && (excludeReturnId == null || r.Id != excludeReturnId));
 
         decimal total = 0;
-        var confirmedReturns = query.ToList();
-        foreach (var ret in confirmedReturns)
+        var reservedReturns = query.ToList();
+        foreach (var ret in reservedReturns)
             total += ret.Items
                 .Where(i => i.ProductId == productId)
                 .Sum(i => i.AcceptedQuantity);

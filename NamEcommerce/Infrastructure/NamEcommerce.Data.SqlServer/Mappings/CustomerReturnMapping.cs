@@ -13,9 +13,8 @@ public sealed class CustomerReturnMapping : IEntityTypeConfiguration<CustomerRet
         builder.Property(r => r.Code).IsRequired().HasMaxLength(50);
         builder.HasIndex(r => r.Code).IsUnique();
 
-        // Phiếu xuất kho nguồn — nullable (null = trả tự do)
-        builder.Property(r => r.DeliveryNoteId).IsRequired(false);
-        builder.Property(r => r.DeliveryNoteCode).IsRequired(false).HasMaxLength(50);
+        builder.Property(r => r.DeliveryNoteId).IsRequired();
+        builder.Property(r => r.DeliveryNoteCode).IsRequired().HasMaxLength(50);
 
         builder.Property(r => r.CustomerId).IsRequired();
         builder.Property(r => r.CustomerName).IsRequired().HasMaxLength(500);
@@ -36,11 +35,9 @@ public sealed class CustomerReturnMapping : IEntityTypeConfiguration<CustomerRet
         builder.Property(r => r.CreatedOnUtc).IsRequired();
         builder.Property(r => r.UpdatedOnUtc).IsRequired(false);
 
-        // Index hỗ trợ query theo DeliveryNote + filter theo Status
         builder.HasIndex(r => new { r.DeliveryNoteId, r.Status });
         builder.HasIndex(r => new { r.CustomerId, r.Status });
 
-        // Navigation: _items (private backing field)
         builder.Metadata.FindNavigation(nameof(CustomerReturn.Items))
             ?.SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(r => r.Items)

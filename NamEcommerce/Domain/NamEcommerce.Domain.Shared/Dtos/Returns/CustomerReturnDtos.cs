@@ -7,9 +7,8 @@ public sealed record CustomerReturnDto(Guid Id)
 {
     public required string Code { get; init; }
 
-    /// <summary>Phiếu xuất kho nguồn — null nếu phiếu trả tự do (không gắn phiếu xuất cụ thể).</summary>
-    public Guid? DeliveryNoteId { get; init; }
-    public string? DeliveryNoteCode { get; init; }
+    public required Guid DeliveryNoteId { get; init; }
+    public required string DeliveryNoteCode { get; init; }
 
     public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
@@ -24,7 +23,6 @@ public sealed record CustomerReturnDto(Guid Id)
     public required DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
 
-    /// <summary>Chi phí phát sinh khi nhận hàng trả (vận chuyển, bồi thường hư hỏng...). Tự động ghi Expense khi Confirm.</summary>
     public required decimal AdditionalCost { get; init; }
 
     public required IEnumerable<CustomerReturnItemDto> Items { get; init; }
@@ -55,24 +53,16 @@ public sealed record CustomerReturnItemDto(Guid Id)
 [Serializable]
 public sealed record CreateCustomerReturnDto
 {
-    /// <summary>Phiếu xuất kho nguồn — null = tạo tự do (không gắn phiếu xuất).</summary>
-    public Guid? DeliveryNoteId { get; init; }
-
-    /// <summary>Khách hàng — bắt buộc khi DeliveryNoteId = null (tạo tự do).</summary>
-    public Guid? CustomerId { get; init; }
-
+    public required Guid DeliveryNoteId { get; init; }
     public required Guid WarehouseId { get; init; }
     public string? Note { get; init; }
-
-    /// <summary>Chi phí phát sinh (tiền xe, bồi thường...) — giảm vào số tiền hoàn cho khách.</summary>
     public decimal AdditionalCost { get; init; } = 0;
-
     public required IEnumerable<CreateCustomerReturnItemDto> Items { get; init; }
 
     public void Verify()
     {
-        if (DeliveryNoteId is null && (CustomerId is null || CustomerId == Guid.Empty))
-            throw new ReturnDataIsInvalidException("Error.CustomerReturn.CustomerOrDeliveryNoteRequired");
+        if (DeliveryNoteId == Guid.Empty)
+            throw new ReturnDataIsInvalidException("Error.CustomerReturn.DeliveryNoteRequired");
         if (WarehouseId == Guid.Empty)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseRequired");
         if (AdditionalCost < 0)
@@ -98,11 +88,7 @@ public sealed record CreateCustomerReturnItemDto
     public Guid? DeliveryNoteItemId { get; init; }
     public required decimal RequestedQuantity { get; init; }
     public required decimal AcceptedQuantity { get; init; }
-
-    /// <summary>Giá bán gốc (tham chiếu) — null nếu không lấy từ phiếu xuất.</summary>
     public decimal? OriginalUnitPrice { get; init; }
-
-    /// <summary>Giá trả về thực tế — có thể thấp hơn OriginalUnitPrice.</summary>
     public required decimal ReturnUnitPrice { get; init; }
 }
 
