@@ -17,7 +17,8 @@
 
 - [ ] **Tuấn chạy migration cho các thay đổi đã implement**
   - `CustomerReturn.DeliveryNoteId` chuyển sang required.
-  - Thêm bảng/cấu hình `ProductReservation`.
+  - Thêm bảng/cấu hình `ProductReservationLedger` append-only cho global reservation.
+  - Backfill ledger cho các Order đang còn giữ hàng bằng `ProductReservationReason.MigrationBackfill`.
   - AI không chạy `Add-Migration` / `Update-Database`.
 
 - [ ] **Smoke test lại P2/P3 sau migration**
@@ -145,26 +146,31 @@
 - [x] Build verify bằng command P4.1.
 - [ ] Manual verify: simulate exception giữa transition, data không bị release/reserve nửa vời với status cũ.
 
-### P4.7 — Future: per-order reservation ledger (chưa implement — cần chốt schema)
+### P4.7 — Append-only per-order reservation ledger
 
 **Vấn đề:** `ProductReservation.TotalReservedByOrder` chỉ aggregate theo product, không lưu `OrderId`. Đủ cho quick fix, nhưng khó audit và có thể release nhầm nếu data đã lệch.
 
 **Files dự kiến:**
-- Add/Modify entity: `NamEcommerce/Domain/NamEcommerce.Domain/Entities/Inventory/ProductReservation*.cs`
+- Add/Modify entity: `NamEcommerce/Domain/NamEcommerce.Domain/Entities/Inventory/ProductReservationLedger.cs`
+- Add enum: `NamEcommerce/Domain/NamEcommerce.Domain.Shared/Enums/Inventory/ProductReservationReason.cs`
 - Modify manager: `NamEcommerce/Domain/NamEcommerce.Domain.Services/Inventory/ProductReservationManager.cs`
-- Modify mapping: `NamEcommerce/Infrastructure/NamEcommerce.Data.SqlServer/Configurations/Inventory/*`
+- Modify mapping: `NamEcommerce/Infrastructure/NamEcommerce.Data.SqlServer/Mappings/ProductReservationLedgerMapping.cs`
 - Modify consumers: Order event handlers, `DeliveryNoteManager.ConfirmAsync`, `CancelAsync`, `OrderLockedEventHandler`
 
 **Steps:**
-- [ ] Tuấn chốt schema: mỗi row là `(ProductId, OrderId, ReservedQuantity)` hay bảng ledger append-only.
-- [ ] Migration do Tuấn chạy sau khi code mapping sẵn sàng.
-- [ ] `ReserveAsync/ReleaseAsync/AdjustAsync` phải cập nhật đúng order bucket.
-- [ ] `GetGlobalAvailableForProductAsync` sum tất cả reservation buckets.
-- [ ] DN Confirm release global của đúng `OrderId`, không chỉ check total product.
-- [ ] Build verify bằng command P4.1.
+- [x] Tuấn chốt schema: append-only ledger.
+- [x] Tạo ledger entity lưu `ProductId`, `OrderId`, `QuantityDelta`, `Reason`, `ReferenceId`, `CreatedOnUtc`.
+- [ ] Migration do Tuấn chạy sau khi code mapping sẵn sàng; cần backfill reservation còn lại theo từng Order đang active.
+- [x] `ReserveAsync/ReleaseAsync/AdjustAsync` chỉ append dòng ledger, không update tổng hiện tại.
+- [x] `ReleaseAsync` phải check `SUM(QuantityDelta)` theo `(ProductId, OrderId)` để không release nhầm order khác.
+- [x] `GetGlobalAvailableForProductAsync` dùng `SUM(QuantityDelta)` theo `ProductId`.
+- [x] DN Confirm release global của đúng `OrderId`, không chỉ check total product.
+- [x] DN Cancel reserve global lại cho đúng `OrderId`.
+- [x] Order cancel/delete/lock release phần còn lại của đúng `OrderId`.
+- [x] Build verify bằng command P4.1.
 - [ ] Manual verify: 2 order cùng product, confirm/cancel DN của order A không làm giảm reservation của order B.
 
-**Ghi chú 2026-05-13:** P4.1-P4.6 đã giảm rủi ro workflow chính. P4.7 là đổi schema/migration lớn hơn, nên chưa implement cho tới khi Tuấn chốt kiểu ledger.
+**Ghi chú 2026-05-14:** Tuấn đã chọn append-only ledger thay vì bucket `(ProductId, OrderId, ReservedQuantity)`. AI không chạy migration; Tuấn chạy migration sau khi code/mapping sẵn sàng.
 
 ---
 

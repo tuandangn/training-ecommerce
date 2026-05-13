@@ -295,7 +295,7 @@ export default class ProductBrowser {
         if (this.#options.purchase) {
             return product.vendorCount > 0;
         }
-        return product.availableQty > 0;
+        return product.availableQty > 0 || product.vendorCount > 0;
     }
 
     #setLoading(on) {

@@ -1,8 +1,8 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Inventory;
-using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 
@@ -10,77 +10,100 @@ namespace NamEcommerce.Domain.Services.Inventory;
 
 public sealed class ProductReservationManager : IProductReservationManager
 {
-    private readonly IRepository<ProductReservation> _repository;
-    private readonly IEntityDataReader<ProductReservation> _dataReader;
+    private readonly IRepository<ProductReservationLedger> _repository;
+    private readonly IEntityDataReader<ProductReservationLedger> _dataReader;
 
     public ProductReservationManager(
-        IRepository<ProductReservation> repository,
-        IEntityDataReader<ProductReservation> dataReader)
+        IRepository<ProductReservationLedger> repository,
+        IEntityDataReader<ProductReservationLedger> dataReader)
     {
         _repository = repository;
         _dataReader = dataReader;
     }
 
-    public async Task<decimal> GetTotalReservedAsync(Guid productId)
-    {
-        var entry = await GetEntryAsync(productId).ConfigureAwait(false);
-        return entry?.TotalReservedByOrder ?? 0m;
-    }
+    public Task<decimal> GetTotalReservedAsync(Guid productId)
+        => Task.FromResult(_dataReader.DataSource
+            .Where(entry => entry.ProductId == productId)
+            .Sum(entry => entry.QuantityDelta));
 
-    public async Task<ProductReservationDto?> GetByProductIdAsync(Guid productId)
-    {
-        var entry = await GetEntryAsync(productId).ConfigureAwait(false);
-        return entry?.ToDto();
-    }
+    public Task<decimal> GetReservedForOrderAsync(Guid productId, Guid orderId)
+        => Task.FromResult(_dataReader.DataSource
+            .Where(entry => entry.ProductId == productId && entry.OrderId == orderId)
+            .Sum(entry => entry.QuantityDelta));
 
-    public async Task ReserveAsync(Guid productId, decimal quantity, Guid orderId)
+    public Task<ProductReservationDto?> GetByProductIdAsync(Guid productId)
     {
-        if (quantity <= 0)
-            throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
+        var entries = _dataReader.DataSource
+            .Where(entry => entry.ProductId == productId)
+            .ToList();
 
-        var entry = await GetEntryAsync(productId).ConfigureAwait(false);
-        if (entry is null)
+        if (entries.Count == 0)
+            return Task.FromResult<ProductReservationDto?>(null);
+
+        return Task.FromResult<ProductReservationDto?>(new ProductReservationDto
         {
-            var created = new ProductReservation(productId);
-            created.TotalReservedByOrder = quantity;
-            created.UpdatedOnUtc = DateTime.UtcNow;
-            await _repository.InsertAsync(created).ConfigureAwait(false);
-            return;
-        }
-
-        entry.TotalReservedByOrder += quantity;
-        entry.UpdatedOnUtc = DateTime.UtcNow;
-        await _repository.UpdateAsync(entry).ConfigureAwait(false);
+            ProductId = productId,
+            TotalReservedByOrder = entries.Sum(entry => entry.QuantityDelta),
+            UpdatedOnUtc = entries.Max(entry => entry.CreatedOnUtc)
+        });
     }
 
-    public async Task ReleaseAsync(Guid productId, decimal quantity, Guid orderId)
+    public async Task ReserveAsync(
+        Guid productId,
+        decimal quantity,
+        Guid orderId,
+        ProductReservationReason reason,
+        Guid? referenceId = null)
     {
-        if (quantity <= 0)
-            throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
+        EnsureValid(productId, quantity, orderId);
 
-        var entry = await GetEntryAsync(productId).ConfigureAwait(false);
-        if (entry is null || entry.TotalReservedByOrder < quantity)
+        var entry = new ProductReservationLedger(productId, orderId, quantity, reason, referenceId);
+        await _repository.InsertAsync(entry).ConfigureAwait(false);
+    }
+
+    public async Task ReleaseAsync(
+        Guid productId,
+        decimal quantity,
+        Guid orderId,
+        ProductReservationReason reason,
+        Guid? referenceId = null)
+    {
+        EnsureValid(productId, quantity, orderId);
+
+        var reservedForOrder = await GetReservedForOrderAsync(productId, orderId).ConfigureAwait(false);
+        if (reservedForOrder < quantity)
             throw new InvalidStockOperationException(
                 "Error.CannotReleaseMoreThanReserved",
-                entry?.TotalReservedByOrder ?? 0m,
+                reservedForOrder,
                 quantity);
 
-        entry.TotalReservedByOrder -= quantity;
-        entry.UpdatedOnUtc = DateTime.UtcNow;
-        await _repository.UpdateAsync(entry).ConfigureAwait(false);
+        var entry = new ProductReservationLedger(productId, orderId, -quantity, reason, referenceId);
+        await _repository.InsertAsync(entry).ConfigureAwait(false);
     }
 
-    public Task AdjustAsync(Guid productId, decimal deltaQuantity, Guid orderId)
+    public Task AdjustAsync(
+        Guid productId,
+        decimal deltaQuantity,
+        Guid orderId,
+        ProductReservationReason reserveReason,
+        ProductReservationReason releaseReason,
+        Guid? referenceId = null)
     {
         if (deltaQuantity == 0) return Task.CompletedTask;
         return deltaQuantity > 0
-            ? ReserveAsync(productId, deltaQuantity, orderId)
-            : ReleaseAsync(productId, -deltaQuantity, orderId);
+            ? ReserveAsync(productId, deltaQuantity, orderId, reserveReason, referenceId)
+            : ReleaseAsync(productId, -deltaQuantity, orderId, releaseReason, referenceId);
     }
 
-    private Task<ProductReservation?> GetEntryAsync(Guid productId)
+    private static void EnsureValid(Guid productId, decimal quantity, Guid orderId)
     {
-        return Task.Run(() => _dataReader.DataSource
-            .SingleOrDefault(r => r.ProductId == productId));
+        if (productId == Guid.Empty)
+            throw new ArgumentException("ProductId is required.", nameof(productId));
+
+        if (orderId == Guid.Empty)
+            throw new InvalidStockOperationException("Error.OrderRequired");
+
+        if (quantity <= 0)
+            throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
     }
 }

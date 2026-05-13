@@ -7,6 +7,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
@@ -144,13 +145,18 @@ public sealed class DeliveryNoteManager(
             {
                 foreach (var item in itemsByProduct)
                 {
-                    var reservedQuantity = await productReservationManager.GetTotalReservedAsync(item.ProductId).ConfigureAwait(false);
+                    var reservedQuantity = await productReservationManager.GetReservedForOrderAsync(item.ProductId, deliveryNote.OrderId).ConfigureAwait(false);
                     if (reservedQuantity < item.Quantity)
                         throw new InvalidStockOperationException("Error.CannotReleaseMoreThanReserved", reservedQuantity, item.Quantity);
                 }
 
                 foreach (var item in itemsByProduct)
-                    await productReservationManager.ReleaseAsync(item.ProductId, item.Quantity, deliveryNote.OrderId).ConfigureAwait(false);
+                    await productReservationManager.ReleaseAsync(
+                        item.ProductId,
+                        item.Quantity,
+                        deliveryNote.OrderId,
+                        ProductReservationReason.DeliveryNoteConfirmed,
+                        deliveryNote.Id).ConfigureAwait(false);
             }
 
             foreach (var item in itemsByProduct)
@@ -317,7 +323,12 @@ public sealed class DeliveryNoteManager(
                 if (deliveryNote.OrderId != Guid.Empty)
                 {
                     foreach (var item in itemsByProduct)
-                        await productReservationManager.ReserveAsync(item.ProductId, item.Quantity, deliveryNote.OrderId).ConfigureAwait(false);
+                        await productReservationManager.ReserveAsync(
+                            item.ProductId,
+                            item.Quantity,
+                            deliveryNote.OrderId,
+                            ProductReservationReason.DeliveryNoteCancelled,
+                            deliveryNote.Id).ConfigureAwait(false);
                 }
             }
         }).ConfigureAwait(false);

@@ -1,4 +1,5 @@
 using MediatR;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Events.Orders;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
@@ -33,6 +34,8 @@ public sealed class OrderCreatedEventHandler : INotificationHandler<OrderPlaced>
             await _productReservationManager.ReserveAsync(
                 itemGroup.Key,
                 itemGroup.Sum(item => item.Quantity),
+                order.Id,
+                ProductReservationReason.OrderCreated,
                 order.Id).ConfigureAwait(false);
         }
     }

@@ -16,11 +16,11 @@ public sealed class InventoryStockManager : IInventoryStockManager
     private readonly IRepository<StockMovementLog> _stockMovementRepository;
     private readonly IEntityDataReader<StockMovementLog> _stockMovementDataReader;
     private readonly IEntityDataReader<InventoryStock> _inventoryStockDataReader;
-    private readonly IEntityDataReader<ProductReservation> _productReservationDataReader;
+    private readonly IEntityDataReader<ProductReservationLedger> _productReservationDataReader;
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
 
-    public InventoryStockManager(IRepository<InventoryStock> inventoryStockRepository, IEntityDataReader<InventoryStock> inventoryStockDataReader, IStockAuditLogger stockAuditLogger, IRepository<StockMovementLog> stockMovementRepository, IEntityDataReader<Product> productDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<StockMovementLog> stockMovementDataReader, IEntityDataReader<ProductReservation> productReservationDataReader)
+    public InventoryStockManager(IRepository<InventoryStock> inventoryStockRepository, IEntityDataReader<InventoryStock> inventoryStockDataReader, IStockAuditLogger stockAuditLogger, IRepository<StockMovementLog> stockMovementRepository, IEntityDataReader<Product> productDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<StockMovementLog> stockMovementDataReader, IEntityDataReader<ProductReservationLedger> productReservationDataReader)
     {
         _inventoryStockRepository = inventoryStockRepository;
         _inventoryStockDataReader = inventoryStockDataReader;
@@ -249,8 +249,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         var quantityReservedByWarehouse = stockQuery.Sum(x => x.QuantityReserved);
         var quantityReservedByOrder = _productReservationDataReader.DataSource
             .Where(x => x.ProductId == productId)
-            .Select(x => x.TotalReservedByOrder)
-            .SingleOrDefault();
+            .Sum(x => x.QuantityDelta);
 
         return Task.FromResult(quantityOnHand - quantityReservedByWarehouse - quantityReservedByOrder);
     }

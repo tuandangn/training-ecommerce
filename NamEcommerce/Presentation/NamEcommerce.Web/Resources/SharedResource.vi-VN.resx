@@ -267,6 +267,9 @@
   <data name="Error.InsufficientStock" xml:space="preserve">
     <value>Không đủ tồn kho cho sản phẩm '{0}' trong kho '{1}'. Cần: {2}, có sẵn: {3}.</value>
   </data>
+  <data name="Error.ProductInsufficientStock" xml:space="preserve">
+    <value>Không đủ tồn kho cho sản phẩm</value>
+  </data>
   <data name="Error.GoodsReceiptCannotDeleteDueToReservedStock" xml:space="preserve">
     <value>Không thể xóa phiếu nhập '{0}' vì hàng trong phiếu đã được giữ cho phiếu xuất khác (sản phẩm '{1}' tại kho '{2}'). Cần huỷ phiếu xuất liên quan hoặc đợi hàng được trả lại trước.</value>
   </data>

@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Events.Orders;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 
@@ -13,7 +14,12 @@ public sealed class OrderItemAddedEventHandler(
     IProductReservationManager productReservationManager) : INotificationHandler<OrderItemAdded>
 {
     public Task Handle(OrderItemAdded notification, CancellationToken cancellationToken)
-        => productReservationManager.ReserveAsync(notification.ProductId, notification.Quantity, notification.OrderId);
+        => productReservationManager.ReserveAsync(
+            notification.ProductId,
+            notification.Quantity,
+            notification.OrderId,
+            ProductReservationReason.OrderItemAdded,
+            notification.OrderItemId);
 }
 
 public sealed class OrderItemUpdatedEventHandler(
@@ -22,7 +28,13 @@ public sealed class OrderItemUpdatedEventHandler(
     public Task Handle(OrderItemUpdated notification, CancellationToken cancellationToken)
     {
         var deltaQuantity = notification.Quantity - notification.OldQuantity;
-        return productReservationManager.AdjustAsync(notification.ProductId, deltaQuantity, notification.OrderId);
+        return productReservationManager.AdjustAsync(
+            notification.ProductId,
+            deltaQuantity,
+            notification.OrderId,
+            ProductReservationReason.OrderItemIncreased,
+            ProductReservationReason.OrderItemDecreased,
+            notification.OrderItemId);
     }
 }
 
@@ -30,7 +42,12 @@ public sealed class OrderItemRemovedEventHandler(
     IProductReservationManager productReservationManager) : INotificationHandler<OrderItemRemoved>
 {
     public Task Handle(OrderItemRemoved notification, CancellationToken cancellationToken)
-        => productReservationManager.ReleaseAsync(notification.ProductId, notification.Quantity, notification.OrderId);
+        => productReservationManager.ReleaseAsync(
+            notification.ProductId,
+            notification.Quantity,
+            notification.OrderId,
+            ProductReservationReason.OrderItemRemoved,
+            notification.OrderItemId);
 }
 
 public sealed class OrderDeletedEventHandler(
@@ -39,7 +56,12 @@ public sealed class OrderDeletedEventHandler(
     public async Task Handle(OrderDeleted notification, CancellationToken cancellationToken)
     {
         foreach (var item in notification.Items)
-            await productReservationManager.ReleaseAsync(item.ProductId, item.Quantity, notification.OrderId).ConfigureAwait(false);
+            await productReservationManager.ReleaseAsync(
+                item.ProductId,
+                item.Quantity,
+                notification.OrderId,
+                ProductReservationReason.OrderDeleted,
+                notification.OrderId).ConfigureAwait(false);
     }
 }
 
@@ -49,7 +71,12 @@ public sealed class OrderCancelledEventHandler(
     public async Task Handle(OrderCancelled notification, CancellationToken cancellationToken)
     {
         foreach (var item in notification.Items)
-            await productReservationManager.ReleaseAsync(item.ProductId, item.Quantity, notification.OrderId).ConfigureAwait(false);
+            await productReservationManager.ReleaseAsync(
+                item.ProductId,
+                item.Quantity,
+                notification.OrderId,
+                ProductReservationReason.OrderCancelled,
+                notification.OrderId).ConfigureAwait(false);
     }
 }
 
@@ -82,6 +109,11 @@ public sealed class OrderLockedEventHandler(
             .ToList();
 
         foreach (var item in remainingGlobalQuantities)
-            await productReservationManager.ReleaseAsync(item.ProductId, item.Quantity, order.Id).ConfigureAwait(false);
+            await productReservationManager.ReleaseAsync(
+                item.ProductId,
+                item.Quantity,
+                order.Id,
+                ProductReservationReason.OrderLocked,
+                order.Id).ConfigureAwait(false);
     }
 }

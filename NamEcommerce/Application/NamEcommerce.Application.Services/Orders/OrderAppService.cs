@@ -10,16 +10,18 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
+using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
 
 namespace NamEcommerce.Application.Services.Orders;
 
-public sealed class OrderAppService(
-    IOrderManager orderManager,
+public sealed class OrderAppService(IOrderManager orderManager,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
     IEntityDataReader<User> userDataReader,
-    IEntityDataReader<DeliveryNote> deliveryNoteDataReader) : IOrderAppService
+    IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
+    IInventoryStockManager inventoryStockManager) : IOrderAppService
 {
     public async Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto)
     {
@@ -120,6 +122,19 @@ public sealed class OrderAppService(
             };
         }
 
+        if (!product.ProductVendors.Any())
+        {
+            var availableQuantity = await inventoryStockManager.GetGlobalAvailableForProductAsync(dto.ProductId).ConfigureAwait(false);
+            if (availableQuantity < dto.Quantity)
+            {
+                return new AddOrderItemResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.ProductInsufficientStock"
+                };
+            }
+        }
+
         await orderManager.AddOrderItemAsync(dto.OrderId, new AddOrderItemDto
         {
             ProductId = dto.ProductId,
@@ -185,6 +200,31 @@ public sealed class OrderAppService(
                 Success = false,
                 ErrorMessage = "Error.OrderDiscountExceedsTotal"
             };
+        }
+
+
+        var product = await productDataReader.GetByIdAsync(orderItem.ProductId).ConfigureAwait(false);
+        if (product is null)
+        {
+            return new UpdateOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.ProductIsNotFound"
+            };
+        }
+
+        if (!product.ProductVendors.Any())
+        {
+            var needCheckQuantity = Math.Max(0, dto.Quantity - orderItem.Quantity);
+            var availableQuantity = await inventoryStockManager.GetGlobalAvailableForProductAsync(orderItem.ProductId).ConfigureAwait(false);
+            if (availableQuantity < dto.Quantity)
+            {
+                return new UpdateOrderItemResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.ProductInsufficientStock"
+                };
+            }
         }
 
         var deliveryNoteOrderItems = (from deliveryNote in deliveryNoteDataReader.DataSource
@@ -422,6 +462,33 @@ public sealed class OrderAppService(
                 {
                     Success = false,
                     ErrorMessage = "Error.UserIsNotFound"
+                };
+            }
+        }
+
+        foreach (var itemGroup in dto.Items.GroupBy(item => item.ProductId))
+        {
+            var product = await productDataReader.GetByIdAsync(itemGroup.Key).ConfigureAwait(false);
+            if (product is null)
+            {
+                return new CreateOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.ProductIsNotFound"
+                };
+            }
+
+            if (product.ProductVendors.Any())
+                continue;
+
+            var requestedQuantity = itemGroup.Sum(item => item.Quantity);
+            var availableQuantity = await inventoryStockManager.GetGlobalAvailableForProductAsync(itemGroup.Key).ConfigureAwait(false);
+            if (availableQuantity < requestedQuantity)
+            {
+                return new CreateOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.ProductInsufficientStock"
                 };
             }
         }

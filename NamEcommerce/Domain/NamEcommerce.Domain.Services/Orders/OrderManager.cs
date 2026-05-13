@@ -69,7 +69,7 @@ public sealed class OrderManager(
         foreach (var item in dto.Items)
             await order.AddOrderItemAsync(item.ProductId, item.UnitPrice, item.Quantity, productDataReader).ConfigureAwait(false);
         order.SetOrderDiscount(dto.OrderDiscount);
-        await EnsureGlobalAvailableAsync(order.OrderItems.Select(item => (item.ProductId, item.Quantity))).ConfigureAwait(false);
+        await EnsureAvailableForProductsWithoutVendorAsync(order.OrderItems.Select(item => (item.ProductId, item.Quantity))).ConfigureAwait(false);
 
         order.ClearDomainEvents();
         order.Place();
@@ -118,7 +118,7 @@ public sealed class OrderManager(
         if (product is null)
             throw new ProductIsNotFoundException(dto.ProductId);
 
-        await EnsureGlobalAvailableAsync([(dto.ProductId, dto.Quantity)]).ConfigureAwait(false);
+        await EnsureAvailableForProductsWithoutVendorAsync([(dto.ProductId, dto.Quantity)]).ConfigureAwait(false);
         await order.AddOrderItemAsync(dto.ProductId, dto.UnitPrice, dto.Quantity, productDataReader).ConfigureAwait(false);
 
         order.UpdatedOnUtc = DateTime.UtcNow;
@@ -154,7 +154,7 @@ public sealed class OrderManager(
 
         var deltaQuantity = dto.Quantity - currentItem.Quantity;
         if (deltaQuantity > 0)
-            await EnsureGlobalAvailableAsync([(currentItem.ProductId, deltaQuantity)]).ConfigureAwait(false);
+            await EnsureAvailableForProductsWithoutVendorAsync([(currentItem.ProductId, deltaQuantity)]).ConfigureAwait(false);
 
         order.UpdateOrderItem(dto.OrderItemId, dto.Quantity, dto.UnitPrice);
         order.UpdatedOnUtc = DateTime.UtcNow;
@@ -338,10 +338,17 @@ public sealed class OrderManager(
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
-    private async Task EnsureGlobalAvailableAsync(IEnumerable<(Guid ProductId, decimal Quantity)> items)
+    private async Task EnsureAvailableForProductsWithoutVendorAsync(IEnumerable<(Guid ProductId, decimal Quantity)> items)
     {
         foreach (var itemGroup in items.GroupBy(item => item.ProductId))
         {
+            var product = await productDataReader.GetByIdAsync(itemGroup.Key).ConfigureAwait(false);
+            if (product is null)
+                throw new ProductIsNotFoundException(itemGroup.Key);
+
+            if (product.ProductVendors.Any())
+                continue;
+
             var requestedQuantity = itemGroup.Sum(item => item.Quantity);
             var availableQuantity = await stockManager.GetGlobalAvailableForProductAsync(itemGroup.Key).ConfigureAwait(false);
             if (availableQuantity < requestedQuantity)

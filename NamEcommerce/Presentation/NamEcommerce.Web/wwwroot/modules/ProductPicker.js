@@ -75,7 +75,7 @@ class ProductPickerView {
         if (this.#options.purchase) {
             return product.vendorCount > 0;
         }
-        return product.availableQty > 0;
+        return product.availableQty > 0 || product.vendorCount > 0;
     }
 
     renderSuggestion(products, query = '') {

@@ -267,6 +267,9 @@
   <data name="Error.InsufficientStock" xml:space="preserve">
     <value>Insufficient stock for product '{0}' in warehouse '{1}'. Required: {2}, available: {3}.</value>
   </data>
+  <data name="Error.ProductInsufficientStock" xml:space="preserve">
+    <value>Insufficient stock for product</value>
+  </data>
   <data name="Error.GoodsReceiptCannotDeleteDueToReservedStock" xml:space="preserve">
     <value>Goods receipt '{0}' cannot be deleted because its stock is reserved for another delivery (product '{1}' in warehouse '{2}'). Cancel the related delivery note first or wait for the goods to be returned.</value>
   </data>
