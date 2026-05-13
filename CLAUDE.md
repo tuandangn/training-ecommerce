@@ -3,6 +3,15 @@
 > File này được đọc tự động bởi Claude ở đầu mỗi phiên làm việc.
 > Chứa toàn bộ quy ước vận hành, KHÔNG chứa nội dung kỹ thuật của dự án (xem `SYSTEM_DOCUMENTATION.md`).
 
+## Quy tắc bắt buộc cho dự án này
+
+- **Unit test**: KHÔNG viết unit test mới, KHÔNG sửa code trong bất kỳ project `*.Test` nào.
+- **Migration**: AI KHÔNG tự chạy migration (`Add-Migration`, `Update-Database`) — báo Tuấn tự chạy.
+- **Skills**: AI đọc skill `namcommerce` trước khi viết code domain.
+- **Comments**: chỉ viết comment khi THẬT SỰ cần thiết (giải thích WHY khi không hiển nhiên, không phải WHAT).
+
+---
+
 Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
 
 **Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
