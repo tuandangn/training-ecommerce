@@ -47,4 +47,18 @@ public sealed class InventoryController : BaseAuthorizedController
 
         return View(model);
     }
+
+    public async Task<IActionResult> ReservationLedger(Guid productId, int pageNumber = 1)
+    {
+        var pageSize = _appConfig.DefaultPageSize;
+
+        var model = await _mediator.Send(new GetProductReservationLedgerQuery
+        {
+            ProductId = productId,
+            PageIndex = pageNumber - 1,
+            PageSize = pageSize
+        });
+
+        return View(model);
+    }
 }

@@ -9,13 +9,20 @@ public sealed class CreateCustomerReturnModel
 {
     [Display(Name = "Phiếu xuất kho")]
     public Guid? DeliveryNoteId { get; set; }
-
     [ValidateNever]
     public string? DeliveryNoteDisplayCode { get; set; }
 
+    [ValidateNever]
+    public Guid? CustomerId { get; set; }
+    [ValidateNever]
+    public string? CustomerDisplayName { get; set; }
+    [ValidateNever]
+    public string? CustomerDisplayPhone { get; set; }
+    [ValidateNever]
+    public string? CustomerDisplayAddress { get; set; }
+
     [Display(Name = "Kho nhận hàng trả")]
     public Guid? WarehouseId { get; set; }
-
     [ValidateNever]
     public EntityOptionListModel? AvailableWarehouses { get; set; }
 

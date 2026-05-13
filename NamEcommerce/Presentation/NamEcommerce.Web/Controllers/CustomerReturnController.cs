@@ -1,5 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Domain.Entities.Customers;
+using NamEcommerce.Domain.Entities.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Web.Contracts.Commands.Models.Returns;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Models.Returns;
@@ -11,11 +14,16 @@ public sealed class CustomerReturnController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;
     private readonly ICustomerReturnModelFactory _customerReturnModelFactory;
+    private readonly IEntityDataReader<DeliveryNote> _deliveryNoteDataReader;
+    private readonly IEntityDataReader<Customer> _customerDataReader;
 
-    public CustomerReturnController(IMediator mediator, ICustomerReturnModelFactory customerReturnModelFactory)
+    public CustomerReturnController(IMediator mediator, ICustomerReturnModelFactory customerReturnModelFactory,
+        IEntityDataReader<DeliveryNote> deliveryNoteDataReader, IEntityDataReader<Customer> customerDataReader)
     {
         _mediator = mediator;
         _customerReturnModelFactory = customerReturnModelFactory;
+        _deliveryNoteDataReader = deliveryNoteDataReader;
+        _customerDataReader = customerDataReader;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
@@ -26,20 +34,32 @@ public sealed class CustomerReturnController : BaseAuthorizedController
         return View(model);
     }
 
-    public async Task<IActionResult> Create(
-        Guid? deliveryNoteId = null,
-        Guid? customerId = null,
-        string? customerName = null,
-        string? deliveryNoteCode = null)
+    public async Task<IActionResult> Create(Guid? deliveryNoteId = null, Guid? customerId = null)
     {
         CreateCustomerReturnModel? prefilledModel = null;
         if (deliveryNoteId.HasValue || customerId.HasValue)
         {
-            prefilledModel = new CreateCustomerReturnModel
+            prefilledModel = new CreateCustomerReturnModel();
+
+            DeliveryNote? deliveryNote = null;
+            Customer? customer = null;
+            if (deliveryNoteId.HasValue)
+                deliveryNote = await _deliveryNoteDataReader.GetByIdAsync(deliveryNoteId.Value);
+            if (deliveryNote is not null)
             {
-                DeliveryNoteId = deliveryNoteId,
-                DeliveryNoteDisplayCode = deliveryNoteCode
-            };
+                prefilledModel.DeliveryNoteId = deliveryNote.Id;
+                prefilledModel.DeliveryNoteDisplayCode = deliveryNote.Code;
+
+                customer = await _customerDataReader.GetByIdAsync(deliveryNote.CustomerId);
+            }
+            else if (customerId.HasValue)
+            {
+                customer = await _customerDataReader.GetByIdAsync(customerId.Value);
+            }
+            prefilledModel.CustomerId = customer?.Id;
+            prefilledModel.CustomerDisplayName = customer?.FullName;
+            prefilledModel.CustomerDisplayPhone = customer?.PhoneNumber;
+            prefilledModel.CustomerDisplayAddress = customer?.Address;
         }
 
         var model = await _customerReturnModelFactory.PrepareCreateCustomerReturnModel(prefilledModel);

@@ -181,7 +181,8 @@ public sealed class CustomerReturnAppService(
         var result = notes.Select(dn => new DeliveryNotePickerAppDto(dn.Id)
         {
             Code = dn.Code,
-            DeliveredOnUtc = dn.DeliveredOnUtc ?? dn.CreatedOnUtc
+            DeliveredOnUtc = dn.DeliveredOnUtc ?? dn.CreatedOnUtc,
+            WarehouseId = dn.WarehouseId
         }).ToList();
 
         return Task.FromResult(result);

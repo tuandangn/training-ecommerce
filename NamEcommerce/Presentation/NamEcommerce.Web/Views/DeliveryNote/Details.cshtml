@@ -56,8 +56,6 @@
         <a asp-controller="CustomerReturn" asp-action="Create"
            asp-route-deliveryNoteId="@Model.Id"
            asp-route-customerId="@Model.CustomerId"
-           asp-route-customerName="@Model.CustomerName"
-           asp-route-deliveryNoteCode="@Model.Code"
            class="btn btn-outline-secondary d-flex align-items-center">
             <i class="bi bi-arrow-return-left me-2"></i> Tạo phiếu trả
         </a>
@@ -204,8 +202,6 @@
                 <a asp-controller="CustomerReturn" asp-action="Create"
                    asp-route-deliveryNoteId="@Model.Id"
                    asp-route-customerId="@Model.CustomerId"
-                   asp-route-customerName="@Model.CustomerName"
-                   asp-route-deliveryNoteCode="@Model.Code"
                    class="btn btn-sm btn-outline-warning">
                     <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
                 </a>

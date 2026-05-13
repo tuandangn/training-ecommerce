@@ -21,10 +21,9 @@
 <div>
     <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible"></div>
     <form method="post" id="createCustomerReturnForm" asp-antiforgery="true">
+        <input type="hidden" asp-for="CustomerId" id="hiddenCustomerId" />
         <input type="hidden" asp-for="DeliveryNoteId" id="hiddenDeliveryNoteId" />
-
         <div class="row g-3">
-            <!-- Cột trái: danh sách items -->
             <div class="col-lg-8 order-1 order-lg-0">
                 <div class="content-card mb-3">
                     <div class="content-card-header">
@@ -132,6 +131,16 @@
                     <div class="content-card-body">
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Khách hàng <span class="text-danger">*</span>
+                            </label>
+                            <div id="customerPicker"
+                                 data-id="@Model.CustomerId"
+                                 data-name="@Model.CustomerDisplayName"
+                                 data-phone="@Model.CustomerDisplayPhone" data-address="@Model.CustomerDisplayAddress"></div>
+                            <span asp-validation-for="CustomerId" class="small text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase d-block">
                                 Phiếu xuất kho
                                 <span class="badge bg-secondary-subtle text-secondary border ms-1" style="font-size:.65rem;">tuỳ chọn</span>
                             </label>
@@ -154,8 +163,6 @@
                             </select>
                             <span asp-validation-for="WarehouseId" class="small text-danger"></span>
                         </div>
-
-                        <!-- Chi phí phát sinh -->
                         <div class="mb-3">
                             <label asp-for="AdditionalCost" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <input asp-for="AdditionalCost" id="additionalCostInput"
@@ -163,8 +170,6 @@
                                    value="@Model.AdditionalCost.DisplayCurrency()" />
                             <div class="form-text">Vận chuyển, bồi thường... sẽ trừ vào tổng hoàn.</div>
                         </div>
-
-                        <!-- Ghi chú -->
                         <div class="mb-0">
                             <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <textarea asp-for="Note" class="form-control" rows="3" placeholder="Lý do trả hàng, ghi chú..."></textarea>
@@ -186,39 +191,35 @@
     <script type="module">
         import CustomerPicker from '/modules/CustomerPicker.js';
 
-        // ── CustomerPicker ────────────────────────────────────────────────────────
-        const pickerEl = document.getElementById('customerPicker');
+        const customerPickerEl = document.getElementById('customerPicker');
         const hiddenCustomerId = document.getElementById('hiddenCustomerId');
         const hiddenDeliveryNoteId = document.getElementById('hiddenDeliveryNoteId');
         const deliveryNoteSelect = document.getElementById('deliveryNoteSelect');
+        const warehouseSelect = document.getElementById('@Html.IdFor(m => m.WarehouseId)');
 
-        const customerPicker = new CustomerPicker(pickerEl);
+        const customerPicker = new CustomerPicker(customerPickerEl);
 
-        // Lưu deliveryNoteId được pre-fill (từ URL params hoặc validation fail)
-        // TRƯỚC khi selectCustomer() có thể clear nó qua 'select' event.
         let pendingDeliveryNoteId = hiddenDeliveryNoteId.value || null;
 
-        // Nếu server trả về customerId đã chọn (ví dụ khi validation fail hoặc E5 pre-fill)
         const initialCustomerId = hiddenCustomerId.value;
-        const initialCustomerName = pickerEl.dataset.name;
+        const initialCustomerName = customerPickerEl.dataset.name;
         if (initialCustomerId && initialCustomerName) {
-            customerPicker.selectCustomer({ id: initialCustomerId, name: initialCustomerName, phone: '', address: '' });
+            customerPicker.selectCustomer(customerPickerEl.dataset);
         }
 
-        pickerEl.addEventListener('select', async (e) => {
+        customerPickerEl.addEventListener('select', async (e) => {
             hiddenCustomerId.value = e.detail.customer.id;
             hiddenDeliveryNoteId.value = '';
             await loadDeliveryNotes(e.detail.customer.id);
         });
 
-        pickerEl.addEventListener('remove', () => {
+        customerPickerEl.addEventListener('remove', () => {
             hiddenCustomerId.value = '';
             hiddenDeliveryNoteId.value = '';
             resetDeliveryNoteSelect();
             clearItems();
         });
 
-        // ── Delivery Note picker ──────────────────────────────────────────────────
         async function loadDeliveryNotes(customerId) {
             deliveryNoteSelect.disabled = true;
             deliveryNoteSelect.innerHTML = '<option value="">Đang tải...</option>';
@@ -231,20 +232,23 @@
                 notes.forEach(n => {
                     const opt = document.createElement('option');
                     opt.value = n.id;
+                    opt.dataset.warehouseId = n.warehouseId;
+                    opt.dataset.warehouseName = n.warehouseName;
                     const date = new Date(n.deliveredOn).toLocaleDateString('vi-VN');
                     opt.textContent = `${n.code} — ${date}`;
                     deliveryNoteSelect.appendChild(opt);
                 });
                 deliveryNoteSelect.disabled = false;
 
-                // Ưu tiên: pendingDeliveryNoteId (pre-fill từ URL params hoặc validation fail lần đầu)
-                // Fallback: hiddenDeliveryNoteId.value (validation fail sau khi user đã chọn)
                 const noteToSelect = pendingDeliveryNoteId || hiddenDeliveryNoteId.value;
-                pendingDeliveryNoteId = null; // consume — chỉ dùng 1 lần
+                pendingDeliveryNoteId = null;
 
-                if (noteToSelect && deliveryNoteSelect.querySelector(`option[value="${noteToSelect}"]`)) {
+                const selectedOption = deliveryNoteSelect.querySelector(`option[value="${noteToSelect}"]`);
+                if (noteToSelect && selectedOption) {
                     deliveryNoteSelect.value = noteToSelect;
                     hiddenDeliveryNoteId.value = noteToSelect;
+                    if (selectedOption.dataset.warehouseId)
+                        warehouseSelect.value = selectedOption.dataset.warehouseId;
                     updateLoadBtn(true);
                     await loadItemsFromNote(noteToSelect);
                 }
@@ -262,14 +266,16 @@
             const noteId = deliveryNoteSelect.value;
             hiddenDeliveryNoteId.value = noteId;
 
+            const selectedOption = deliveryNoteSelect.querySelector(`option[value="${noteToSelect}"]`);
+            if (selectedOption.dataset.warehouseId)
+                warehouseSelect.value = selectedOption.dataset.warehouseId;
+
             if (!noteId) {
-                // Trả tự do — giữ nguyên items
                 updateLoadBtn(false);
                 return;
             }
 
             updateLoadBtn(true);
-            // Auto-load items từ phiếu xuất
             await loadItemsFromNote(noteId);
         });
 
