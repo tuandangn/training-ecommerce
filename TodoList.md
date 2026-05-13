@@ -39,17 +39,23 @@
 
 ### P1 — Validation gaps + cleanup
 
-- [ ] **Bỏ field nullable `CustomerReturn.DeliveryNoteId`** — luôn yêu cầu DN
-  - Entity `CustomerReturn`: `Guid? DeliveryNoteId` → `Guid DeliveryNoteId`; `string? DeliveryNoteCode` → `string DeliveryNoteCode`
-  - DTO `CreateCustomerReturnDto.DeliveryNoteId` → required (`Guid` thay vì `Guid?`); cập nhật `Verify()`
-  - DTO `UpdateCustomerReturnDto` & AppDto tương ứng
-  - `CustomerReturnManager.CreateAsync`: xóa nhánh "trả tự do" (line 45-66), luôn lấy customer từ DN
-  - `CustomerReturnManager.ConfirmAsync`: bỏ `if (customerReturn.DeliveryNoteId.HasValue)` — luôn validate qty (line 132-145)
-  - Model + Validator (Web layer) + Controller: enforce required, cập nhật ModelFactory nếu có nhánh phụ thuộc null
-  - EF Configuration `CustomerReturnMapping`: đổi `.IsRequired(false)` → `.IsRequired()`
-  - **Migration cần** — Tuấn tự chạy (`Add-Migration RequireDeliveryNoteOnCustomerReturn`)
-  - Verify: chạy app → tạo CustomerReturn không có DN → trả về lỗi validation
+- [x] **Bỏ field nullable `CustomerReturn.DeliveryNoteId`** — luôn yêu cầu DN ✅ 2026-05-13
+  - Entity `CustomerReturn`: `Guid DeliveryNoteId`, `string DeliveryNoteCode` ✅
+  - Domain DTO `CreateCustomerReturnDto.DeliveryNoteId`: `required Guid` + `Verify()` check `Guid.Empty` ✅
+  - AppDto `CustomerReturnAppDto`: `required Guid DeliveryNoteId`, `required string DeliveryNoteCode` ✅
+  - AppDto `CreateCustomerReturnAppDto`: `required Guid DeliveryNoteId` + `Validate()` check `Guid.Empty` ✅
+  - `CustomerReturnManager.CreateAsync`: đã xóa nhánh "trả tự do", luôn lấy customer từ DN ✅
+  - `CustomerReturnManager.ConfirmAsync`: đã bỏ `if (DeliveryNoteId.HasValue)`, luôn validate qty ✅
+  - Web Model `CustomerReturnModel`: `required Guid DeliveryNoteId`, `required string DeliveryNoteCode` + xóa comment "trả tự do" ✅
+  - Web Model `CustomerReturnListModel.ItemModel`: `required Guid DeliveryNoteId`, `required string DeliveryNoteCode` ✅
+  - Validator (Web layer): đã có `NotEmpty()` từ trước ✅
+  - Form Model `CreateCustomerReturnModel`: giữ `Guid?` (idiom form-binding, Validator + Verify() ở Domain DTO catch null/empty)
+  - EF Configuration `CustomerReturnMapping`: `.IsRequired()` ✅
+  - Razor View `Details.cshtml`: bỏ nhánh `else "Tạo tự do"` (không reachable nữa) ✅
+  - **Build verified**: NamEcommerce.Web + Application.Contracts + Web.Contracts + Domain.Services.Test all 0 errors
+  - ⚠️ **Migration cần** — Tuấn tự chạy (`Add-Migration RequireDeliveryNoteOnCustomerReturn`)
   - Lưu ý: nếu DB hiện đang có row `DeliveryNoteId IS NULL` thì migration sẽ fail → cần data migration script trước (Tuấn xác nhận DB hiện chưa có data tự do)
+  - **Verify (Tuấn manual)**: chạy app → tạo CustomerReturn không có DN → trả về lỗi validation
 
 - [x] **Magic number `(int)r.Status == 2` + race quick fix** trong `CustomerReturnManager` ✅ 2026-05-13
   - Đã rename `GetTotalConfirmedReturnQuantityAsync` → `GetTotalReservedReturnQuantityAsync` (interface + impl)

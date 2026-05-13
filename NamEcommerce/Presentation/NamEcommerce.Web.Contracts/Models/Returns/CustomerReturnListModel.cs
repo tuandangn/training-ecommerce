@@ -15,8 +15,8 @@ public sealed class CustomerReturnListModel
     {
         public required string Code { get; init; }
         public required string CustomerName { get; init; }
-        public Guid? DeliveryNoteId { get; init; }
-        public string? DeliveryNoteCode { get; init; }
+        public required Guid DeliveryNoteId { get; init; }
+        public required string DeliveryNoteCode { get; init; }
         public required string WarehouseName { get; init; }
         public required int Status { get; init; }
         public required DateTime ReturnDate { get; init; }

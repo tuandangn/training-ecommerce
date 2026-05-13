@@ -6,9 +6,8 @@ public sealed class CustomerReturnModel
     public required Guid Id { get; init; }
     public required string Code { get; init; }
 
-    /// <summary>Phiếu xuất kho nguồn — null nếu phiếu trả tự do.</summary>
-    public Guid? DeliveryNoteId { get; init; }
-    public string? DeliveryNoteCode { get; init; }
+    public required Guid DeliveryNoteId { get; init; }
+    public required string DeliveryNoteCode { get; init; }
 
     public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }

@@ -11,8 +11,8 @@ public sealed record CustomerReturnAppDto(Guid Id)
     public required decimal AdditionalCost { get; init; }
     public Guid? GeneratedGoodsReceiptId { get; init; }
 
-    public Guid DeliveryNoteId { get; init; }
-    public string DeliveryNoteCode { get; init; } = string.Empty;
+    public required Guid DeliveryNoteId { get; init; }
+    public required string DeliveryNoteCode { get; init; }
 
     public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
@@ -51,7 +51,7 @@ public sealed record CustomerReturnItemAppDto(Guid Id)
 [Serializable]
 public sealed record CreateCustomerReturnAppDto
 {
-    public Guid DeliveryNoteId { get; init; }
+    public required Guid DeliveryNoteId { get; init; }
     public required Guid WarehouseId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
@@ -59,6 +59,8 @@ public sealed record CreateCustomerReturnAppDto
 
     public (bool valid, string? errorMessage) Validate()
     {
+        if (DeliveryNoteId == Guid.Empty)
+            return (false, "Error.CustomerReturn.DeliveryNoteRequired");
         if (WarehouseId == Guid.Empty)
             return (false, "Error.CustomerReturn.WarehouseRequired");
         if (AdditionalCost < 0)
