@@ -66,19 +66,49 @@
   - **Verify (Tuấn manual)**: tạo 2 phiếu trả cùng DN → A `MoveToInspecting` qty=5 (deliveredQty=10) → B `Confirm` qty=8 → phải reject (`maxAllowed = 10 - 5 = 5 < 8`)
   - ⚠️ **Note**: `VendorReturnManager.GetTotalConfirmedReturnQuantityAsync` (line 245-265) có CÙNG bug magic number + race. Đối xứng với CustomerReturn. **Cần Tuấn chốt** có mở rộng scope sang VendorReturn trong cùng session hay làm sau.
 
-### P2 — Reserve Stock khi Order tạo (feature — cần phân tích trước)
+### P2 — Reserve Stock khi Order tạo (Phương án C — chốt 2026-05-13)
 
-- [ ] **Thiết kế Reserve Stock cho Order** — Hiện `OrderCreatedEventHandler` là stub rỗng
-  - **Blocker**: Order entity hiện KHÔNG có `WarehouseId` — không biết reserve ở kho nào
-  - **Phương án A**: Thêm `WarehouseId` vào Order (required field). Cần migration + UI thay đổi. Rõ ràng nhất.
-  - **Phương án B**: Reserve theo "default warehouse" trong AppConfig. Đơn giản nhưng cứng nhắc.
-  - **Phương án C**: Reserve cấp `InventoryStock.TotalReserved` không gắn warehouse. Đến lúc tạo DN thì allocate kho cụ thể.
-  - **Action**: Tuấn quyết định phương án. Sau khi chốt mới breakdown thành sub-task.
-  - **Ràng buộc khi implement**:
-    - Khi Order add/remove/update item → phải release+re-reserve.
-    - Khi Order delete → release toàn bộ.
-    - Khi DeliveryNote.Confirm → KHÔNG reserve lần nữa (vì đã reserve từ Order); chỉ allocate sang `Reserved-by-DN`.
-    - Khi DeliveryNote.Cancel (DN có OrderId) → trả về `Reserved-by-Order`, KHÔNG release hẳn.
+**Phương án đã chọn: C** — Global reservation (`ProductReservation.TotalReservedByOrder` per product, không gắn warehouse). DN.Confirm sẽ "move" từ global → per-warehouse.
+
+**Quy tắc nghiệp vụ:**
+- Order Add/Update/Remove item → adjust global reservation
+- Order Delete → release toàn bộ
+- Order Cancelled (event mới) → release toàn bộ
+- Order Locked (giao xong) → assert global reservation = 0 (đã chuyển hết sang per-warehouse qua DN)
+- DN.Confirm với OrderId → release global + reserve per-warehouse (atomic transition)
+- DN.Cancel với OrderId (was confirmed) → release per-warehouse + reserve global
+- DN tự do (không OrderId) → giữ flow cũ (reserve trực tiếp per-warehouse)
+- Stock check khi Order add item → throw nếu thiếu global available
+
+#### Phase 1 — Domain Foundation ✅ 2026-05-13
+
+- [x] Entity `ProductReservation` (`Domain/Entities/Inventory/ProductReservation.cs`)
+  - Fields: `Id`, `ProductId`, `TotalReservedByOrder`, `UpdatedOnUtc`
+  - Sealed record : AppAggregateEntity, internal ctor
+- [x] DTO `ProductReservationDto` (`Domain.Shared/Dtos/Inventory/`)
+- [x] Interface `IProductReservationManager` với 5 method: `GetTotalReservedAsync`, `GetByProductIdAsync`, `ReserveAsync`, `ReleaseAsync`, `AdjustAsync`
+- [x] Impl `ProductReservationManager` (`Domain.Services/Inventory/`)
+- [x] Extension `ProductReservationExtensions.ToDto()` (`Domain.Services/Extensions/`)
+- [x] EF Configuration `ProductReservationMapping` — unique index trên `ProductId`, decimal(18,2) cho `TotalReservedByOrder`
+- [x] Đăng ký DI trong `Program.cs`
+- ⚠️ **Migration cần** — Tuấn tự chạy (`Add-Migration AddProductReservation`)
+
+#### Phase 2 — Hook Order events (pending)
+- [ ] Sửa `OrderCreatedEventHandler` → reserve global cho từng item (kèm stock check)
+- [ ] Tạo `OrderItemAddedEventHandler` → ReserveAsync (với stock check)
+- [ ] Tạo `OrderItemUpdatedEventHandler` → AdjustAsync theo delta
+- [ ] Tạo `OrderItemRemovedEventHandler` → ReleaseAsync
+- [ ] Tạo `OrderDeletedEventHandler` → release toàn bộ items
+- [ ] **Thêm mới**: `OrderCancelled` event + entity method `Cancel()` + handler
+- [ ] **Thêm mới**: `OrderLockedEventHandler` → assert/release global về 0 (handler riêng cho `OrderLocked`)
+
+#### Phase 3 — Hook DeliveryNote.Confirm/Cancel (pending)
+- [ ] Sửa `DeliveryNoteManager.ConfirmAsync` — nếu DN.OrderId set → release global + reserve per-warehouse
+- [ ] Sửa `DeliveryNoteManager.CancelAsync` — nếu DN.OrderId set + was confirmed → release per-warehouse + reserve global
+
+#### Phase 4 — Stock availability check (pending)
+- [ ] Thêm method `GetGlobalAvailableForProductAsync` trong `IInventoryStockManager` (hoặc helper riêng): `Σ OnHand − Σ Reserved per-warehouse − GlobalReserved`
+- [ ] Tích hợp check vào `OrderManager` (CreateAsync + AddItem/UpdateItem) — throw nếu thiếu
 
 ### P3 — Dọn dẹp / Documentation
 

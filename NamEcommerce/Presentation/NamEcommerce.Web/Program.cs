@@ -150,6 +150,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IPictureManager, PictureManager>();
     services.AddScoped<IWarehouseManager, WarehouseManager>();
     services.AddScoped<IInventoryStockManager, InventoryStockManager>();
+    services.AddScoped<IProductReservationManager, ProductReservationManager>();
     services.AddScoped<IInventoryValidator, InventoryValidator>();
     services.AddScoped<IStockAuditLogger, StockAuditLogger>();
     services.AddScoped<ICustomerManager, CustomerManager>();
