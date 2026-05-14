@@ -23,7 +23,6 @@ public static class DebtExtensions
             Status = (int)debt.Status,
             DueDateUtc = debt.DueDateUtc,
             CreatedOnUtc = debt.CreatedOnUtc,
-            CreatedByUserId = debt.CreatedByUserId,
             Payments = debt.Payments.Select(p => p.ToDto()).ToList()
         };
     }

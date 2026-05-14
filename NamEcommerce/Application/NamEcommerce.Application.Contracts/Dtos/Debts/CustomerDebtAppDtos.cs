@@ -53,7 +53,6 @@ public sealed record CustomerDebtAppDto
     public DateTime? DueDateUtc { get; init; }
 
     public DateTime CreatedOnUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public IList<CustomerPaymentAppDto> Payments { get; init; } = [];
 }
@@ -120,7 +119,6 @@ public sealed record CreateInitialCustomerDebtAppDto
 {
     public required Guid CustomerId { get; init; }
     public required decimal TotalAmount { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public (bool success, string? errorMessage) Validate()
     {

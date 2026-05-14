@@ -3,7 +3,6 @@ using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
-using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
@@ -15,10 +14,10 @@ using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
-using NamEcommerce.Domain.Shared.Exceptions.Users;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Domain.Services.Orders;
 
@@ -27,9 +26,9 @@ public sealed class OrderManager(
     IEntityDataReader<Order> orderDataReader,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
-    IEntityDataReader<User> userDataReader,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
-    IInventoryStockManager stockManager) : IOrderManager
+    IInventoryStockManager stockManager,
+    ICurrentUserAccessor currentUserAccessor) : IOrderManager
 {
     private Task<string> GenerateCodeAsync()
     {
@@ -48,19 +47,10 @@ public sealed class OrderManager(
         if (customer is null)
             throw new CustomerIsNotFoundException(dto.CustomerId);
 
-        User? user = null;
-        if (dto.CreatedByUserId.HasValue)
-        {
-            user = await userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
-            if (user is null)
-                throw new UserIsNotFoundException(dto.CreatedByUserId.Value);
-        }
-
         var code = await GenerateCodeAsync().ConfigureAwait(false);
-        var order = new Order(code)
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        var order = new Order(code, currentUser)
         {
-            CreatedByUserId = dto.CreatedByUserId,
-            CreatedByUsername = user?.Username,
             Note = dto.Note,
             ShippingAddress = string.IsNullOrEmpty(dto.ShippingAddress) ? customer.Address : dto.ShippingAddress,
             ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc

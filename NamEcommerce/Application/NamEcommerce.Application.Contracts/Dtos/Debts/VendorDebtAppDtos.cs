@@ -59,7 +59,6 @@ public sealed record VendorDebtAppDto
     public DateTime? DueDateUtc { get; init; }
 
     public DateTime CreatedOnUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public IList<VendorPaymentAppDto> Payments { get; init; } = [];
 }
@@ -95,7 +94,6 @@ public sealed record CreateVendorDebtAppDto
     public required Guid PurchaseOrderId { get; init; }
     public required decimal TotalAmount { get; init; }
     public DateTime? DueDateUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public (bool valid, string? errorMessage) Validate()
     {
@@ -153,7 +151,6 @@ public sealed record CreateInitialVendorDebtAppDto
 {
     public required Guid VendorId { get; init; }
     public required decimal TotalAmount { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public (bool valid, string? errorMessage) Validate()
     {

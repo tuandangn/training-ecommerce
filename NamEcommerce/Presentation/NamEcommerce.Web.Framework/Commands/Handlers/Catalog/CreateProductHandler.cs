@@ -6,14 +6,12 @@ using NamEcommerce.Application.Contracts.Dtos.StockAdjustment;
 using NamEcommerce.Application.Contracts.StockAdjustment;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Catalog;
-using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Catalog;
 
 public sealed class CreateProductHandler(
     IProductAppService productAppService,
-    IStockAdjustmentNoteAppService stockAdjustmentNoteAppService,
-    ICurrentUserService currentUserService)
+    IStockAdjustmentNoteAppService stockAdjustmentNoteAppService)
     : IRequestHandler<CreateProductCommand, CreateProductResultModel>
 {
     public async Task<CreateProductResultModel> Handle(CreateProductCommand request, CancellationToken cancellationToken)
@@ -50,7 +48,6 @@ public sealed class CreateProductHandler(
         var initialStocks = request.ProductStocks?.ToList();
         if (initialStocks is { Count: > 0 } && result.CreatedId != Guid.Empty)
         {
-            var currenUser = await currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
             foreach (var stock in initialStocks)
             {
                 var noteDto = new CreateStockAdjustmentNoteAppDto
@@ -70,7 +67,7 @@ public sealed class CreateProductHandler(
                 };
 
                 var noteResult = await stockAdjustmentNoteAppService
-                    .CreateAsync(noteDto, currenUser?.Id).ConfigureAwait(false);
+                    .CreateAsync(noteDto).ConfigureAwait(false);
 
                 if (noteResult.Success && noteResult.CreatedId.HasValue)
                 {

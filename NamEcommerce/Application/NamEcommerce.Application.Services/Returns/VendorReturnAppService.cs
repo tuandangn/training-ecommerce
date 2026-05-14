@@ -23,8 +23,7 @@ public sealed class VendorReturnAppService(IVendorReturnManager manager,
 {
     private readonly IVendorReturnManager _manager = manager;
 
-    public async Task<CreateVendorReturnResultAppDto> CreateAsync(
-        CreateVendorReturnAppDto dto, Guid? createdByUserId)
+    public async Task<CreateVendorReturnResultAppDto> CreateAsync(CreateVendorReturnAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
@@ -52,7 +51,7 @@ public sealed class VendorReturnAppService(IVendorReturnManager manager,
                 })
             };
 
-            var result = await _manager.CreateAsync(domainDto, createdByUserId).ConfigureAwait(false);
+            var result = await _manager.CreateAsync(domainDto).ConfigureAwait(false);
             return new CreateVendorReturnResultAppDto { Success = true, CreatedId = result.Id };
         }
         catch (ReturnDataIsInvalidException ex)

@@ -29,8 +29,7 @@ public sealed class CustomerReturnOverRefundedEventHandler(
             CustomerReturnId = notification.CustomerReturnId,
             CustomerReturnCode = customerReturn.Code,
             CustomerDebtId = notification.OverRefundedDebtId,
-            Amount = notification.OverAmount,
-            CreatedByUserId = null
+            Amount = notification.OverAmount
         }).ConfigureAwait(false);
     }
 }

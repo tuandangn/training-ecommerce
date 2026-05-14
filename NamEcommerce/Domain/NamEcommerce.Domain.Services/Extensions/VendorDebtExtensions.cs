@@ -22,8 +22,7 @@ public static class VendorDebtExtensions
             RemainingAmount = debt.RemainingAmount,
             Status = debt.Status,
             DueDateUtc = debt.DueDateUtc,
-            CreatedOnUtc = debt.CreatedOnUtc,
-            CreatedByUserId = debt.CreatedByUserId
+            CreatedOnUtc = debt.CreatedOnUtc
         };
 
     public static VendorPaymentDto ToDto(this VendorPayment payment)

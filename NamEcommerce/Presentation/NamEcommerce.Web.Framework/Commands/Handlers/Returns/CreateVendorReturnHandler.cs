@@ -3,26 +3,20 @@ using NamEcommerce.Application.Contracts.Dtos.Returns;
 using NamEcommerce.Application.Contracts.Returns;
 using NamEcommerce.Web.Contracts.Commands.Models.Returns;
 using NamEcommerce.Web.Contracts.Models.Returns;
-using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Returns;
 
 public sealed class CreateVendorReturnHandler : IRequestHandler<CreateVendorReturnCommand, CreateVendorReturnResultModel>
 {
     private readonly IVendorReturnAppService _vendorReturnAppService;
-    private readonly ICurrentUserService _currentUserService;
 
-    public CreateVendorReturnHandler(
-        IVendorReturnAppService vendorReturnAppService,
-        ICurrentUserService currentUserService)
+    public CreateVendorReturnHandler(IVendorReturnAppService vendorReturnAppService)
     {
         _vendorReturnAppService = vendorReturnAppService;
-        _currentUserService = currentUserService;
     }
 
     public async Task<CreateVendorReturnResultModel> Handle(CreateVendorReturnCommand request, CancellationToken cancellationToken)
     {
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
         var result = await _vendorReturnAppService.CreateAsync(new CreateVendorReturnAppDto
         {
             VendorId = request.VendorId,
@@ -39,7 +33,7 @@ public sealed class CreateVendorReturnHandler : IRequestHandler<CreateVendorRetu
                 OriginalUnitCost = i.OriginalUnitCost,
                 ReturnUnitCost = i.ReturnUnitCost
             }).ToList()
-        }, currentUser?.Id).ConfigureAwait(false);
+        }).ConfigureAwait(false);
 
         return new CreateVendorReturnResultModel
         {

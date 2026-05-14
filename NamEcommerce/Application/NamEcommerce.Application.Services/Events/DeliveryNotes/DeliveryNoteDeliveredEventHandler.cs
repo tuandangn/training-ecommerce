@@ -19,7 +19,7 @@ public sealed class DeliveryNoteDeliveredEventHandler(
 
     public async Task Handle(DeliveryNoteDelivered notification, CancellationToken cancellationToken)
     {
-        // Event đã carry đủ thông tin — vẫn fetch lại để lấy CreatedByUserId (audit) và đảm bảo phiếu vẫn ở trạng thái Delivered.
+        // Event đã carry đủ thông tin, vẫn fetch lại để đảm bảo phiếu vẫn ở trạng thái Delivered.
         var deliveryNote = await _deliveryNoteManager.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote == null) return;
 
@@ -31,8 +31,7 @@ public sealed class DeliveryNoteDeliveredEventHandler(
             CustomerId = notification.CustomerId,
             DeliveryNoteId = notification.DeliveryNoteId,
             TotalAmount = notification.TotalAmount, // "phiếu đã xuất thì phải thu đủ"
-            DueDateUtc = null,
-            CreatedByUserId = deliveryNote.CreatedByUserId
+            DueDateUtc = null
         };
 
         await _debtManager.CreateDebtFromDeliveryNoteAsync(createDebtDto).ConfigureAwait(false);

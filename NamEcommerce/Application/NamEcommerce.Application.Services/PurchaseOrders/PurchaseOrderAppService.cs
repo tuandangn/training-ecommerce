@@ -122,23 +122,9 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             }
         }
 
-        if (dto.CreatedByUserId.HasValue)
-        {
-            var user = await _userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
-            if (user is null)
-            {
-                return new CreatePurchaseOrderResultAppDto
-                {
-                    Success = false,
-                    ErrorMessage = "Error.UserIsNotFound"
-                };
-            }
-        }
-
         var createPurchaseOrderDto = new CreatePurchaseOrderDto
         {
             PlacedOnUtc = dto.PlacedOnUtc,
-            CreatedByUserId = dto.CreatedByUserId,
             VendorId = dto.VendorId,
             WarehouseId = dto.WarehouseId,
             ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,

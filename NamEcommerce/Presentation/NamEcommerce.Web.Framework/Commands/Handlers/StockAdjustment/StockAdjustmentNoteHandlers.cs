@@ -3,13 +3,11 @@ using NamEcommerce.Application.Contracts.Dtos.StockAdjustment;
 using NamEcommerce.Application.Contracts.StockAdjustment;
 using NamEcommerce.Web.Contracts.Commands.StockAdjustment;
 using NamEcommerce.Web.Contracts.Models.StockAdjustment;
-using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.StockAdjustment;
 
 public sealed class CreateStockAdjustmentNoteHandler(
-    IStockAdjustmentNoteAppService appService,
-    ICurrentUserService currentUserService) : IRequestHandler<CreateStockAdjustmentNoteCommand, CreateStockAdjustmentNoteResultModel>
+    IStockAdjustmentNoteAppService appService) : IRequestHandler<CreateStockAdjustmentNoteCommand, CreateStockAdjustmentNoteResultModel>
 {
     public async Task<CreateStockAdjustmentNoteResultModel> Handle(
         CreateStockAdjustmentNoteCommand request, CancellationToken cancellationToken)
@@ -27,8 +25,7 @@ public sealed class CreateStockAdjustmentNoteHandler(
             }).ToList()
         };
 
-        var currentUser = await currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
-        var result = await appService.CreateAsync(dto, currentUser?.Id).ConfigureAwait(false);
+        var result = await appService.CreateAsync(dto).ConfigureAwait(false);
         return new CreateStockAdjustmentNoteResultModel
         {
             Success = result.Success,

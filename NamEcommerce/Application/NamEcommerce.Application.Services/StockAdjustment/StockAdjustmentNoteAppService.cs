@@ -11,7 +11,7 @@ namespace NamEcommerce.Application.Services.StockAdjustment;
 
 public sealed class StockAdjustmentNoteAppService(IStockAdjustmentNoteManager manager) : IStockAdjustmentNoteAppService
 {
-    public async Task<CreateStockAdjustmentNoteResultAppDto> CreateAsync(CreateStockAdjustmentNoteAppDto dto, Guid? createdByUserId)
+    public async Task<CreateStockAdjustmentNoteResultAppDto> CreateAsync(CreateStockAdjustmentNoteAppDto dto)
     {
         var (valid, error) = dto.Validate();
         if (!valid) return new CreateStockAdjustmentNoteResultAppDto { Success = false, ErrorMessage = error };
@@ -30,7 +30,7 @@ public sealed class StockAdjustmentNoteAppService(IStockAdjustmentNoteManager ma
                     PhysicalQuantity = i.PhysicalQuantity
                 }).ToList()
             };
-            var result = await manager.CreateAsync(domainDto, createdByUserId).ConfigureAwait(false);
+            var result = await manager.CreateAsync(domainDto).ConfigureAwait(false);
             return new CreateStockAdjustmentNoteResultAppDto { Success = true, CreatedId = result.Id };
         }
         catch (NamEcommerceDomainException ex)

@@ -5,7 +5,6 @@ using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
-using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -19,7 +18,6 @@ namespace NamEcommerce.Application.Services.Orders;
 public sealed class OrderAppService(IOrderManager orderManager,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
-    IEntityDataReader<User> userDataReader,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
     IInventoryStockManager inventoryStockManager) : IOrderAppService
 {
@@ -453,19 +451,6 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
-        if (dto.CreatedByUserId.HasValue)
-        {
-            var user = await userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
-            if (user is null)
-            {
-                return new CreateOrderResultAppDto
-                {
-                    Success = false,
-                    ErrorMessage = "Error.UserIsNotFound"
-                };
-            }
-        }
-
         foreach (var itemGroup in dto.Items.GroupBy(item => item.ProductId))
         {
             var product = await productDataReader.GetByIdAsync(itemGroup.Key).ConfigureAwait(false);
@@ -498,7 +483,6 @@ public sealed class OrderAppService(IOrderManager orderManager,
             CustomerId = dto.CustomerId,
             Note = dto.Note,
             OrderDiscount = dto.OrderDiscount,
-            CreatedByUserId = dto.CreatedByUserId,
             ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc,
             ShippingAddress = dto.ShippingAddress
         };

@@ -21,8 +21,7 @@ public sealed class CustomerReturnAppService(
 {
     private readonly ICustomerReturnManager _manager = manager;
 
-    public async Task<CreateCustomerReturnResultAppDto> CreateAsync(
-        CreateCustomerReturnAppDto dto, Guid? createdByUserId)
+    public async Task<CreateCustomerReturnResultAppDto> CreateAsync(CreateCustomerReturnAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
@@ -49,7 +48,7 @@ public sealed class CustomerReturnAppService(
                 })
             };
 
-            var result = await _manager.CreateAsync(domainDto, createdByUserId).ConfigureAwait(false);
+            var result = await _manager.CreateAsync(domainDto).ConfigureAwait(false);
             return new CreateCustomerReturnResultAppDto { Success = true, CreatedId = result.Id };
         }
         catch (ReturnDataIsInvalidException ex)

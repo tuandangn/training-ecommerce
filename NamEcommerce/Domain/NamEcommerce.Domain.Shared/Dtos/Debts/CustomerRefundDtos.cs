@@ -39,7 +39,6 @@ public sealed record CreateCustomerRefundDto
     public required string CustomerReturnCode { get; init; }
     public Guid? CustomerDebtId { get; init; }
     public required decimal Amount { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public void Verify()
     {

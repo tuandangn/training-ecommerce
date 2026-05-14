@@ -15,6 +15,7 @@ using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Returns;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Domain.Services.Returns;
 
@@ -26,9 +27,10 @@ public sealed class CustomerReturnManager(
     IEntityDataReader<Warehouse> warehouseDataReader,
     IEntityDataReader<CustomerDebt> customerDebtDataReader,
     IRepository<CustomerDebt> customerDebtRepository,
-    IExpenseManager expenseManager) : ICustomerReturnManager
+    IExpenseManager expenseManager,
+    ICurrentUserAccessor currentUserAccessor) : ICustomerReturnManager
 {
-    public async Task<CustomerReturnDto> CreateAsync(CreateCustomerReturnDto dto, Guid? createdByUserId)
+    public async Task<CustomerReturnDto> CreateAsync(CreateCustomerReturnDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
@@ -45,6 +47,7 @@ public sealed class CustomerReturnManager(
         var customerName = deliveryNote.CustomerName ?? string.Empty;
 
         var code = GenerateCode();
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
 
         var customerReturn = new CustomerReturn(
             code: code,
@@ -56,7 +59,7 @@ public sealed class CustomerReturnManager(
             warehouseName: warehouse.Name,
             note: dto.Note,
             additionalCost: dto.AdditionalCost,
-            createdByUserId: createdByUserId);
+            createdByUserId: currentUser?.Id);
 
         foreach (var itemDto in dto.Items)
         {

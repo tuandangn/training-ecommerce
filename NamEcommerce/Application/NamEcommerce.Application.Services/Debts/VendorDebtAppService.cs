@@ -242,16 +242,14 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
             VendorId = dto.VendorId,
             PurchaseOrderId = dto.PurchaseOrderId,
             TotalAmount = dto.TotalAmount,
-            DueDateUtc = dto.DueDateUtc,
-            CreatedByUserId = dto.CreatedByUserId
-        }; 
+            DueDateUtc = dto.DueDateUtc
+        };
     
     private static CreateInitialVendorDebtDto MapToDomainDto(CreateInitialVendorDebtAppDto dto)
         => new()
         {
             VendorId = dto.VendorId,
-            TotalAmount = dto.TotalAmount,
-            CreatedByUserId = dto.CreatedByUserId
+            TotalAmount = dto.TotalAmount
         };
 
     private static CreateVendorPaymentDto MapToDomainDto(CreateVendorPaymentAppDto dto)

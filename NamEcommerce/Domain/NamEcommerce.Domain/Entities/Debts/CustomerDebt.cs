@@ -19,7 +19,7 @@ public sealed record CustomerDebt : AppAggregateEntity
     internal CustomerDebt(string code, Guid customerId, string customerName, 
         Guid deliveryNoteId, string deliveryNoteCode, 
         Guid orderId, string orderCode,
-        decimal totalAmount, DateTime? dueDateUtc, Guid? createdByUserId) : base(Guid.NewGuid())
+        decimal totalAmount, DateTime? dueDateUtc) : base(Guid.NewGuid())
     {
         Code = code;
         CustomerId = customerId;
@@ -33,13 +33,12 @@ public sealed record CustomerDebt : AppAggregateEntity
         PaidAmount = 0;
         Status = DebtStatus.Outstanding;
         DueDateUtc = dueDateUtc;
-        CreatedByUserId = createdByUserId;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
     /// <summary>Constructor cho công nợ ban đầu (số dư đầu kỳ) — không gắn phiếu xuất hay đơn hàng.</summary>
     internal CustomerDebt(string code, Guid customerId, string customerName,
-        decimal totalAmount, Guid? createdByUserId) : base(Guid.NewGuid())
+        decimal totalAmount) : base(Guid.NewGuid())
     {
         Code = code;
         CustomerId = customerId;
@@ -53,7 +52,6 @@ public sealed record CustomerDebt : AppAggregateEntity
         PaidAmount = 0;
         Status = DebtStatus.Outstanding;
         DueDateUtc = null;
-        CreatedByUserId = createdByUserId;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
@@ -99,7 +97,6 @@ public sealed record CustomerDebt : AppAggregateEntity
     public DebtStatus Status { get; private set; }
     public DateTime? DueDateUtc { get; private set; }
     
-    public Guid? CreatedByUserId { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 

@@ -48,8 +48,7 @@ public sealed class CustomerDebtManager(
             code: code,
             customerId: customer.Id,
             customerName: customer.FullName,
-            totalAmount: dto.TotalAmount,
-            createdByUserId: dto.CreatedByUserId
+            totalAmount: dto.TotalAmount
         )
         {
             CustomerAddress = customer.Address,
@@ -87,8 +86,7 @@ public sealed class CustomerDebtManager(
             orderId: deliveryNote.OrderId,
             orderCode: deliveryNote.OrderCode ?? string.Empty,
             totalAmount: dto.TotalAmount,
-            dueDateUtc: dto.DueDateUtc,
-            createdByUserId: dto.CreatedByUserId
+            dueDateUtc: dto.DueDateUtc
         )
         {
             CustomerAddress = customer.PhoneNumber,
@@ -444,8 +442,7 @@ public sealed class CustomerDebtManager(
             RemainingAmount = debt.RemainingAmount,
             Status = debt.Status,
             DueDateUtc = debt.DueDateUtc,
-            CreatedOnUtc = debt.CreatedOnUtc,
-            CreatedByUserId = debt.CreatedByUserId
+            CreatedOnUtc = debt.CreatedOnUtc
         };
     }
 

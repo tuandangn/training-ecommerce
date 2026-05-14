@@ -51,8 +51,7 @@ public sealed class VendorDebtManager(
             code: code,
             vendorId: vendor.Id,
             vendorName: vendor.Name,
-            totalAmount: dto.TotalAmount,
-            createdByUserId: dto.CreatedByUserId
+            totalAmount: dto.TotalAmount
         )
         {
             VendorPhone = vendor.PhoneNumber,
@@ -90,8 +89,7 @@ public sealed class VendorDebtManager(
             purchaseOrderId: purchaseOrder.Id,
             purchaseOrderCode: purchaseOrder.Code,
             totalAmount: dto.TotalAmount,
-            dueDateUtc: dto.DueDateUtc,
-            createdByUserId: dto.CreatedByUserId
+            dueDateUtc: dto.DueDateUtc
         )
         {
             VendorPhone = vendor.PhoneNumber,
@@ -149,8 +147,7 @@ public sealed class VendorDebtManager(
             vendorName: vendor.Name,
             goodsReceiptId: goodsReceipt.Id,
             totalAmount: dto.TotalAmount,
-            dueDateUtc: dto.DueDateUtc,
-            createdByUserId: dto.CreatedByUserId
+            dueDateUtc: dto.DueDateUtc
         )
         {
             VendorPhone = vendor.PhoneNumber,

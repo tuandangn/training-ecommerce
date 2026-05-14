@@ -13,6 +13,7 @@ using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
+using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Returns;
@@ -28,6 +29,7 @@ public sealed class DeliveryNoteManager(
     IInventoryStockManager stockManager,
     IProductReservationManager productReservationManager,
     IEntityDataReader<CustomerReturn> customerReturnReader,
+    IEntityDataReader<VendorReturn> vendorReturnReader,
     ICustomerReturnManager customerReturnManager) : IDeliveryNoteManager
 {
     private Task<string> GenerateCodeAsync()
@@ -90,7 +92,7 @@ public sealed class DeliveryNoteManager(
             surcharge: dto.Surcharge,
             amountToCollect: dto.AmountToCollect,
             surchargeReason: dto.SurchargeReason,
-            createdByUserId: dto.CreatedByUserId
+            createdByUserId: order.CreatedByUserId
         )
         {
             OrderCode = order.Code,
@@ -239,13 +241,16 @@ public sealed class DeliveryNoteManager(
     {
         ArgumentNullException.ThrowIfNull(dto);
 
+        var vendorReturn = await vendorReturnReader.GetByIdAsync(dto.VendorReturnId).ConfigureAwait(false)
+            ?? throw new VendorReturnNotFoundException(dto.VendorReturnId);
+
         var code = await GenerateCodeAsync().ConfigureAwait(false);
 
         var deliveryNote = new DeliveryNote(
             code: code,
             warehouseId: dto.WarehouseId,
             note: null,
-            createdByUserId: null);
+            createdByUserId: vendorReturn.CreatedByUserId);
 
         deliveryNote.SourceType = DeliveryNoteSourceType.ToVendorReturn;
 

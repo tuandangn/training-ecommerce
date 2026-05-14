@@ -36,7 +36,6 @@ public sealed class VendorDebtMapping : IEntityTypeConfiguration<VendorDebt>
         builder.Property(x => x.Status).IsRequired();
         builder.Property(x => x.DueDateUtc).IsRequired(false);
 
-        builder.Property(x => x.CreatedByUserId).IsRequired(false);
         builder.Property(x => x.CreatedOnUtc).IsRequired();
         builder.Property(x => x.UpdatedOnUtc).IsRequired(false);
     }

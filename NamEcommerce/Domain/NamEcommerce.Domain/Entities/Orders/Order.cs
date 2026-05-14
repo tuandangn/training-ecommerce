@@ -7,6 +7,7 @@ using NamEcommerce.Domain.Shared.Events.Orders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
+using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Helpers;
 
 namespace NamEcommerce.Domain.Entities.Orders;
@@ -16,9 +17,11 @@ public sealed record Order : AppAggregateEntity
 {
     public const string OrderCodePrefix = "DB";
 
-    internal Order(string code) : base(Guid.NewGuid())
+    internal Order(string code, CurrentUserInfoDto? createdByUser) : base(Guid.NewGuid())
     {
         Code = code;
+        CreatedByUserId = createdByUser?.Id;
+        CreatedByUsername = createdByUser?.Username;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
@@ -49,7 +52,7 @@ public sealed record Order : AppAggregateEntity
     private readonly List<OrderItem> _orderItems = [];
     public IEnumerable<OrderItem> OrderItems => _orderItems.AsReadOnly();
 
-    public Guid? CreatedByUserId { get; init; }
+    public Guid? CreatedByUserId { get; private set; }
     internal string? CreatedByUsername { get; set; }
 
     public DateTime CreatedOnUtc { get; }
