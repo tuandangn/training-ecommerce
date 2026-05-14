@@ -250,7 +250,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         options.Filters.Add<GlobalExceptionFilter>();
         options.ModelBinderProviders.Insert(0, new TrimModelBinderProvider());
         options.ModelBinderProviders.Insert(0, new DecimalModelBinderProvider());
-    }).AddSessionStateTempDataProvider();
+    });
+    mvcBuilder.AddSessionStateTempDataProvider();
     if (builder.Environment.IsDevelopment())
     {
         mvcBuilder.AddRazorRuntimeCompilation();

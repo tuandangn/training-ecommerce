@@ -1,6 +1,9 @@
 @model PurchaseOrderDetailsModel
 @{
     ViewData[ViewConstants.PageTitle] = $"Đơn nhập - {Model.Info.Code}";
+    var purchaseOrderStatus = (PurchaseOrderStatus)Model.Info.Status;
+    var hasReceipts = Model.RelatedGoodsReceipts.Count > 0;
+    var hasReturns = Model.RelatedVendorReturns.Count > 0;
 }
 @functions {
     string BuildReceiptItemsHtml(IList<RelatedGoodsReceiptItemModel> items)
@@ -60,6 +63,14 @@
     <h1 class="topbar-page-title">
         Đơn nhập
         <span class="text-muted">@Model.Info.Code</span>
+        @if (purchaseOrderStatus != PurchaseOrderStatus.Draft)
+        {
+            <span class="text-muted small">
+                <span class="status-badge @purchaseOrderStatus.GetDisplayColor()">
+                    @purchaseOrderStatus.GetDisplayText()
+                </span>
+            </span>
+        }
     </h1>
     <div class="topbar-page-subtitle">
         <nav aria-label="breadcrumb">
@@ -126,7 +137,7 @@
                                                         }
                                                         <span class="fw-medium product-name">@item.ProductName</span>
                                                     </div>
-                                                    <input type="hidden" class="product-id" value="@item.ProductId"/>
+                                                    <input type="hidden" class="product-id" value="@item.ProductId" />
                                                 </td>
                                                 <td class="text-end">
                                                     <span class="quantity-text">@item.QuantityOrdered.DisplayQuantity()</span>
@@ -265,182 +276,180 @@
                             </div>
                         </div>
                     </div>
-                    <div class="content-card-body">
-                        @{
-    var hasReceipts = Model.RelatedGoodsReceipts.Count > 0;
-    var hasReturns = Model.RelatedVendorReturns.Count > 0;
-}
-@if (hasReceipts || hasReturns)
-{
-    <div class="row g-3 mt-1">
-        <div class="col-12">
-            <div class="content-card mb-3 h-100">
-                <div class="content-card-header">
-                    <h5 class="mb-0">
-                        Phiếu nhận hàng
-                        @if (hasReceipts)
-                        {
-                            <span class="badge rounded-pill bg-light text-dark border ms-1">@Model.RelatedGoodsReceipts.Count phiếu</span>
-                        }
-                    </h5>
-                </div>
-                @if (!hasReceipts)
-                {
-                    <div class="content-card-body text-center py-4">
-                        <div class="text-muted small">
-                            Chưa có phiếu nhận hàng nào.
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <div class="table-responsive">
-                        <table class="table data-table mb-0 align-middle">
-                            <thead>
-                                <tr>
-                                    <th class="ps-3">Mã phiếu</th>
-                                    <th>Kho nhập</th>
-                                    <th class="d-none d-lg-table-cell">Hàng hóa</th>
-                                    <th class="text-end">Số lượng</th>
-                                    <th class="text-end pe-3">Giá trị</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var receipt in Model.RelatedGoodsReceipts)
-                                {
-                                    var receiptItemsHtml = BuildReceiptItemsHtml(receipt.Items);
-                                    foreach(var item in receipt.Items){
-                                    <tr>
-                                        <td class="ps-3">
-                                            <a asp-action="Details" asp-controller="GoodsReceipt" asp-route-id="@receipt.Id" class="text-decoration-none fw-medium text-nowrap"
-                                               data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="right"
-                                               data-bs-custom-class="po-items-popover-content"
-                                               data-bs-title="@($"{receipt.ItemCount} mặt hàng")"
-                                               data-bs-content="@receiptItemsHtml">
-                                                @receipt.Code
-                                            </a>
-                                            <div class="small text-muted text-nowrap">
-                                                @receipt.ReceivedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                    @if (hasReceipts || hasReturns)
+                    {
+                        <div class="content-card-body">
+                            <div class="row g-3 mt-1">
+                                <div class="col-12">
+                                    <div class="content-card mb-3 h-100">
+                                        <div class="content-card-header">
+                                            <h5 class="mb-0">
+                                                Phiếu nhận hàng
+                                                @if (hasReceipts)
+                                                {
+                                                    <span class="badge rounded-pill bg-light text-dark border ms-1">@Model.RelatedGoodsReceipts.Count phiếu</span>
+                                                }
+                                            </h5>
+                                        </div>
+                                        @if (!hasReceipts)
+                                        {
+                                            <div class="content-card-body text-center py-4">
+                                                <div class="text-muted small">
+                                                    Chưa có phiếu nhận hàng nào.
+                                                </div>
                                             </div>
-                                        </td>
-                                        <td>
-                                            <span class="small">@item.WarehouseName</span>
-                                        </td>
-                                        <td class="d-none d-lg-table-cell">
-                                            @item.ProductName
-                                        </td>
-                                        <td class="text-end">
-                                            <span class="fw-medium">@item.Quantity.DisplayQuantity()</span>
-                                        </td>
-                                        <td class="text-end pe-3 text-nowrap">
-                                            @if (item.UnitCost.HasValue)
-                                            {
-                                                <span class="fw-bold text-primary">@((item.UnitCost.Value * item.Quantity).DisplayCurrencyWithSymbol())</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
-                                                    <i class="bi bi-hourglass-split me-1"></i>Chờ định giá
-                                                </span>
-                                            }
-                                        </td>
-                                    </tr>
-                                    }
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-            </div>
-        </div>
-        <div class="col-12">
-            <div class="content-card mb-3 h-100">
-                <div class="content-card-header">
-                    <h5 class="mb-0">
-                        Phiếu trả hàng
-                        @if (hasReturns)
-                        {
-                            <span class="badge rounded-pill bg-light text-dark border ms-1">@Model.RelatedVendorReturns.Count phiếu</span>
-                        }
-                    </h5>
-                </div>
-                @if (!hasReturns)
-                {
-                    <div class="content-card-body text-center py-4">
-                        <div class="text-muted small">
-                            Chưa có phiếu trả hàng nào.
+                                        }
+                                        else
+                                        {
+                                            <div class="table-responsive">
+                                                <table class="table data-table mb-0 align-middle">
+                                                    <thead>
+                                                        <tr>
+                                                            <th class="ps-3">Mã phiếu</th>
+                                                            <th>Kho nhập</th>
+                                                            <th class="d-none d-lg-table-cell">Hàng hóa</th>
+                                                            <th class="text-end">Số lượng</th>
+                                                            <th class="text-end pe-3">Giá trị</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var receipt in Model.RelatedGoodsReceipts)
+                                                        {
+                                                            var receiptItemsHtml = BuildReceiptItemsHtml(receipt.Items);
+                                                            foreach (var item in receipt.Items)
+                                                            {
+                                                                <tr>
+                                                                    <td class="ps-3">
+                                                                        <a asp-action="Details" asp-controller="GoodsReceipt" asp-route-id="@receipt.Id" class="text-decoration-none fw-medium text-nowrap"
+                                                                           data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="right"
+                                                                           data-bs-custom-class="po-items-popover-content"
+                                                                           data-bs-title="@($"{receipt.ItemCount} mặt hàng")"
+                                                                           data-bs-content="@receiptItemsHtml">
+                                                                            @receipt.Code
+                                                                        </a>
+                                                                        <div class="small text-muted text-nowrap">
+                                                                            @receipt.ReceivedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                                                                        </div>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="small">@item.WarehouseName</span>
+                                                                    </td>
+                                                                    <td class="d-none d-lg-table-cell">
+                                                                        @item.ProductName
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <span class="fw-medium">@item.Quantity.DisplayQuantity()</span>
+                                                                    </td>
+                                                                    <td class="text-end pe-3 text-nowrap">
+                                                                        @if (item.UnitCost.HasValue)
+                                                                        {
+                                                                            <span class="fw-bold text-primary">@((item.UnitCost.Value * item.Quantity).DisplayCurrencyWithSymbol())</span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
+                                                                                <i class="bi bi-hourglass-split me-1"></i>Chờ định giá
+                                                                            </span>
+                                                                        }
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="content-card mb-3 h-100">
+                                        <div class="content-card-header">
+                                            <h5 class="mb-0">
+                                                Phiếu trả hàng
+                                                @if (hasReturns)
+                                                {
+                                                    <span class="badge rounded-pill bg-light text-dark border ms-1">@Model.RelatedVendorReturns.Count phiếu</span>
+                                                }
+                                            </h5>
+                                        </div>
+                                        @if (!hasReturns)
+                                        {
+                                            <div class="content-card-body text-center py-4">
+                                                <div class="text-muted small">
+                                                    Chưa có phiếu trả hàng nào.
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="table-responsive">
+                                                <table class="table data-table mb-0 align-middle">
+                                                    <thead>
+                                                        <tr>
+                                                            <th class="ps-3">Mã phiếu</th>
+                                                            <th>Kho xuất</th>
+                                                            <th class="d-none d-lg-table-cell">Hàng hóa</th>
+                                                            <th class="text-end">Số lượng</th>
+                                                            <th class="text-end pe-3">Giá trị</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var vendorReturn in Model.RelatedVendorReturns)
+                                                        {
+                                                            var returnStatus = (VendorReturnStatus)vendorReturn.Status;
+                                                            var returnItemsHtml = BuildReturnItemsHtml(vendorReturn.Items);
+                                                            @foreach (var item in vendorReturn.Items)
+                                                            {
+                                                                <tr>
+                                                                    <td class="ps-3">
+                                                                        <a asp-action="Details" asp-controller="VendorReturn" asp-route-id="@vendorReturn.Id" class="text-decoration-none fw-medium text-nowrap"
+                                                                           data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="left"
+                                                                           data-bs-custom-class="po-items-popover-content"
+                                                                           data-bs-title="@($"{vendorReturn.Code} — {vendorReturn.ItemCount} mặt hàng")"
+                                                                           data-bs-content="@returnItemsHtml">
+                                                                            @vendorReturn.Code
+                                                                        </a>
+                                                                        <div class="small text-muted text-nowrap">
+                                                                            @vendorReturn.ReturnDate.ToString(ViewConstants.DefaultDateTimeFormat)
+                                                                        </div>
+                                                                        <span class="status-badge @ReturnStatusColor(returnStatus)">
+                                                                            @ReturnStatusText(returnStatus)
+                                                                        </span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <span class="small">@vendorReturn.WarehouseName</span>
+                                                                    </td>
+                                                                    <td>
+                                                                        @item.ProductName
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <span class="fw-medium">@item.AcceptedQuantity.DisplayQuantity()</span>
+                                                                    </td>
+                                                                    <td class="text-end pe-3 text-nowrap">
+                                                                        <span class="fw-bold text-danger">@((item.AcceptedQuantity * item.ReturnUnitCost).DisplayCurrencyWithSymbol())</span>
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                            @if (vendorReturn.AdditionalCost > 0)
+                                                            {
+                                                                <tr>
+                                                                    <td colspan="5" class="text-end pe-3 text-danger fw-medium">
+                                                                        <div data-bs-toggle="tooltip" title="Chi phí phát sinh đã trừ vào tổng thu hồi">
+                                                                            Phát sinh chi phí: @vendorReturn.AdditionalCost.DisplayCurrencyWithSymbol()
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                }
-                else
-                {
-                    <div class="table-responsive">
-                        <table class="table data-table mb-0 align-middle">
-                            <thead>
-                                <tr>
-                                    <th class="ps-3">Mã phiếu</th>
-                                    <th>Kho xuất</th>
-                                    <th class="d-none d-lg-table-cell">Hàng hóa</th>
-                                    <th class="text-end">Số lượng</th>
-                                    <th class="text-end pe-3">Giá trị</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var vendorReturn in Model.RelatedVendorReturns)
-                                {
-                                    var returnStatus = (VendorReturnStatus)vendorReturn.Status;
-                                    var returnItemsHtml = BuildReturnItemsHtml(vendorReturn.Items);
-                                    @foreach(var item in vendorReturn.Items) {
-                                        <tr>
-                                            <td class="ps-3">
-                                                <a asp-action="Details" asp-controller="VendorReturn" asp-route-id="@vendorReturn.Id" class="text-decoration-none fw-medium text-nowrap"
-                                                   data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="left"
-                                                   data-bs-custom-class="po-items-popover-content"
-                                                   data-bs-title="@($"{vendorReturn.Code} — {vendorReturn.ItemCount} mặt hàng")"
-                                                   data-bs-content="@returnItemsHtml">
-                                                    @vendorReturn.Code
-                                                </a>
-                                                <div class="small text-muted text-nowrap">
-                                                    @vendorReturn.ReturnDate.ToString(ViewConstants.DefaultDateTimeFormat)
-                                                </div>
-                                            <span class="status-badge @ReturnStatusColor(returnStatus)">
-                                                @ReturnStatusText(returnStatus)
-                                            </span>
-                                            </td>
-                                            <td>
-                                                <span class="small">@vendorReturn.WarehouseName</span>
-                                            </td>
-                                            <td>
-                                                @item.ProductName
-                                            </td>
-                                            <td class="text-end">
-                                                <span class="fw-medium">@item.AcceptedQuantity.DisplayQuantity()</span>
-                                            </td>
-                                            <td class="text-end pe-3 text-nowrap">
-                                                <span class="fw-bold text-danger">@((item.AcceptedQuantity * item.ReturnUnitCost).DisplayCurrencyWithSymbol())</span>
-                                            </td>
-                                        </tr>
-                                    }
-                                            @if (vendorReturn.AdditionalCost > 0)
-                                            {
-                                    <tr>
-                                        <td colspan="5" class="text-end pe-3 text-danger fw-medium">
-                                                <div data-bs-toggle="tooltip" title="Chi phí phát sinh đã trừ vào tổng thu hồi">
-                                                    Phát sinh chi phí: @vendorReturn.AdditionalCost.DisplayCurrencyWithSymbol()
-                                                </div>
-                                        </td>
-                                    </tr>
-                                            }
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-            </div>
-        </div>
-    </div>
-}
-                    </div>
+                    }
                 </div>
             </div>
             <div class="col-lg-4 order-0 order-lg-1">
@@ -504,11 +513,11 @@
             }
             @if (Model.Info.Status != (int)PurchaseOrderStatus.Completed && Model.Info.Status != (int)PurchaseOrderStatus.Cancelled)
             {
-                    <form asp-action="CancelPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline">
-                        <button type="submit" class="btn btn-outline-danger">
-                            <i class="bi bi-x-circle me-1"></i> Hủy đơn
-                        </button>
-                    </form>
+                <form asp-action="CancelPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline">
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="bi bi-x-circle me-1"></i> Hủy đơn
+                    </button>
+                </form>
             }
         </div>
     </div>
@@ -564,7 +573,7 @@
                         <div class="mb-3">
                             <div id="productPicker"></div>
                             <input type="text" class="visually-hidden" id="itemProductId" name="ProductId" value=""
-                                data-val="true" data-val-required="Vui lòng chọn hàng hóa"/>
+                                   data-val="true" data-val-required="Vui lòng chọn hàng hóa" />
                             <span class="small text-danger field-validation-valid"
                                   data-valmsg-for="ProductId" data-valmsg-replace="true"></span>
                         </div>
@@ -643,7 +652,7 @@
                     <div class="modal-body py-4">
                         <input type="hidden" name="PurchaseOrderId" value="@Model.Info.Id" />
                         <input type="hidden" name="PurchaseOrderItemId" id="modalItemId" />
-                        
+
                         <div class="alert alert-info border-0 mb-4">
                             <div class="small fw-bold">
                                 Sản phẩm:
@@ -714,524 +723,544 @@
                     <input type="hidden" name="PurchaseOrderId" value="@Model.Info.Id" />
 
                     <script type="application/json" id="bulkReceiveData">
-                    {
-                        "defaultWarehouseId": @Json.Serialize(Model.Info.WarehouseId),
-                        "items": [
-                            @for (var idx = 0; idx < remainingItems.Count; idx++)
-                            {
-                                var item = remainingItems[idx];
-                                <text>{
-                                    "id": "@item.Id",
-                                    "name": @Json.Serialize(item.ProductName),
-                                    "remaining": @item.RemainingQuantity.ToString("#"),
-                                    "unitCost": @item.UnitCost.ToString("#")
-                                }@(idx < remainingItems.Count - 1 ? "," : "")</text>
-                            }
-                        ],
-                        "warehouses": [
-                            @for (var w = 0; w < warehouseOptions.Count; w++)
-                            {
-                                var option = warehouseOptions[w];
-                                <text>{
-                                    "id": "@option.Id",
-                                    "name": @Json.Serialize(option.Name)
-                                }@(w < warehouseOptions.Count - 1 ? "," : "")</text>
-                            }
-                        ]
-                    }
-                    </script>
+                                        {
+                                            "defaultWarehouseId": @Json.Serialize(Model.Info.WarehouseId),
+                                            "items": [
+                                                @for (var idx = 0; idx < remainingItems.Count; idx++)
+                                                {
+                                                            var item = remainingItems[idx];
+                                                            <text>{
+                                                                        "id": "@item.Id",
+                                                                        "name": @Json.Serialize(item.ProductName),
+                                                                        "remaining": @item.RemainingQuantity.ToString("#"),
+                                                                        "unitCost": @item.UnitCost.ToString("#")
+                                                                    }@(idx < remainingItems.Count - 1 ? "," : "")</text>
+                                                        }
+                                                    ],
+                                                    "warehouses": [
+                                                        @for (var w = 0; w < warehouseOptions.Count; w++)
+                                                        {
+                                                                    var option = warehouseOptions[w];
+                                                                    <text>{
+                                                                                "id": "@option.Id",
+                                                                                "name": @Json.Serialize(option.Name)
+                                                                            }@(w < warehouseOptions.Count - 1 ? "," : "")</text>
+                                                                }
+                                                            ]
+                                                        }
+                            </script>
 
-                    <div class="modal-body py-3">
-                        <div class="alert alert-info border-0 small mb-3">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Mỗi dòng = một lần nhận: cùng một hàng hóa có thể chia ra nhiều dòng để nhận vào các kho khác nhau.
-                        </div>
-
-                        <div class="table-responsive">
-                            <table class="table table-sm align-middle mb-0" id="bulkReceiveTable">
-                                <thead class="text-muted small text-uppercase">
-                                    <tr>
-                                        <th class="ps-0">Hàng hóa</th>
-                                        <th style="width: 22%">Kho nhận</th>
-                                        <th class="text-end" style="width: 14%">Số lượng</th>
-                                        <th class="text-end" style="width: 18%">Giá vốn thực tế</th>
-                                        <th class="text-end pe-0" style="width: 1%"></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="bulkReceiveTableBody"></tbody>
-                            </table>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="bulkReceiveAddRow">
-                                <i class="bi bi-plus-lg me-1"></i> Thêm dòng
-                            </button>
-                            <span class="small text-danger d-none" id="bulkReceiveItemsError">
-                                Vui lòng thêm ít nhất một dòng nhận hàng.
-                            </span>
-                        </div>
-
-                        <hr class="my-3" />
-
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label small fw-medium text-muted" for="bulkAdditionalShipping">
-                                    Phí vận chuyển <span class="text-body-tertiary fw-normal">(tùy chọn)</span>
-                                </label>
-                                <input id="bulkAdditionalShipping" name="AdditionalShipping"
-                                       class="form-control no-additional-element no-hint"
-                                       data-decimal="currency" value="" placeholder="0" />
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small fw-medium text-muted d-flex justify-content-between align-items-end" for="bulkAdditionalTax">
-                                    <span>Thuế <span class="text-body-tertiary fw-normal">(tùy chọn)</span></span>
-                                    <div class="btn-group btn-group-sm" role="group" aria-label="Chế độ thuế">
-                                        <input type="radio" class="btn-check" name="bulkTaxMode" id="bulkTaxModeAmount" value="amount" checked />
-                                        <label class="btn btn-outline-secondary py-0 px-2" for="bulkTaxModeAmount">Số tiền</label>
-                                        <input type="radio" class="btn-check" name="bulkTaxMode" id="bulkTaxModePercent" value="percent" />
-                                        <label class="btn btn-outline-secondary py-0 px-2" for="bulkTaxModePercent">%</label>
-                                    </div>
-                                </label>
-                                <div class="input-group">
-                                    <input id="bulkAdditionalTaxInput" class="form-control no-additional-element no-hint"
-                                           data-decimal="currency" value="" placeholder="0" />
-                                    <span class="input-group-text d-none" id="bulkAdditionalTaxSuffix">%</span>
+                            <div class="modal-body py-3">
+                                <div class="alert alert-info border-0 small mb-3">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Mỗi dòng = một lần nhận: cùng một hàng hóa có thể chia ra nhiều dòng để nhận vào các kho khác nhau.
                                 </div>
-                                <input type="hidden" name="AdditionalTax" id="bulkAdditionalTax" value="0" />
-                                <div class="small text-muted mt-1 d-none" id="bulkAdditionalTaxHint"></div>
-                            </div>
-                        </div>
 
-                        <hr class="my-3" />
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle mb-0" id="bulkReceiveTable">
+                                        <thead class="text-muted small text-uppercase">
+                                            <tr>
+                                                <th class="ps-0">Hàng hóa</th>
+                                                <th style="width: 22%">Kho nhận</th>
+                                                <th class="text-end" style="width: 14%">Số lượng</th>
+                                                <th class="text-end" style="width: 18%">Giá vốn thực tế</th>
+                                                <th class="text-end pe-0" style="width: 1%"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="bulkReceiveTableBody"></tbody>
+                                    </table>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="bulkReceiveAddRow">
+                                        <i class="bi bi-plus-lg me-1"></i> Thêm dòng
+                                    </button>
+                                    <span class="small text-danger d-none" id="bulkReceiveItemsError">
+                                        Vui lòng thêm ít nhất một dòng nhận hàng.
+                                    </span>
+                                </div>
 
-                        <div class="order-summary">
-                            <div class="order-summary-row">
-                                <span class="label">Tạm tính đợt nhận</span>
-                                <span class="value" id="bulkSubtotal">0</span>
+                                <hr class="my-3" />
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-medium text-muted" for="bulkAdditionalShipping">
+                                            Phí vận chuyển <span class="text-body-tertiary fw-normal">(tùy chọn)</span>
+                                        </label>
+                                        <input id="bulkAdditionalShipping" name="AdditionalShipping"
+                                               class="form-control no-additional-element no-hint"
+                                               data-decimal="currency" value="" placeholder="0" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small fw-medium text-muted d-flex justify-content-between align-items-end" for="bulkAdditionalTax">
+                                            <span>Thuế <span class="text-body-tertiary fw-normal">(tùy chọn)</span></span>
+                                            <div class="btn-group btn-group-sm" role="group" aria-label="Chế độ thuế">
+                                                <input type="radio" class="btn-check" name="bulkTaxMode" id="bulkTaxModeAmount" value="amount" checked />
+                                                <label class="btn btn-outline-secondary py-0 px-2" for="bulkTaxModeAmount">Số tiền</label>
+                                                <input type="radio" class="btn-check" name="bulkTaxMode" id="bulkTaxModePercent" value="percent" />
+                                                <label class="btn btn-outline-secondary py-0 px-2" for="bulkTaxModePercent">%</label>
+                                            </div>
+                                        </label>
+                                        <div class="input-group">
+                                            <input id="bulkAdditionalTaxInput" class="form-control no-additional-element no-hint"
+                                                   data-decimal="currency" value="" placeholder="0" />
+                                            <span class="input-group-text d-none" id="bulkAdditionalTaxSuffix">%</span>
+                                        </div>
+                                        <input type="hidden" name="AdditionalTax" id="bulkAdditionalTax" value="0" />
+                                        <div class="small text-muted mt-1 d-none" id="bulkAdditionalTaxHint"></div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-3" />
+
+                                <div class="order-summary">
+                                    <div class="order-summary-row">
+                                        <span class="label">Tạm tính đợt nhận</span>
+                                        <span class="value" id="bulkSubtotal">0</span>
+                                    </div>
+                                    <div class="order-summary-row">
+                                        <span class="label">Phí vận chuyển</span>
+                                        <span class="value text-muted" id="bulkShippingDisplay">0</span>
+                                    </div>
+                                    <div class="order-summary-row">
+                                        <span class="label">Thuế</span>
+                                        <span class="value text-muted" id="bulkTaxDisplay">0</span>
+                                    </div>
+                                    <div class="order-summary-row total">
+                                        <span class="label">Cộng dồn vào đơn</span>
+                                        <span class="value" id="bulkGrandTotal">0</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="order-summary-row">
-                                <span class="label">Phí vận chuyển</span>
-                                <span class="value text-muted" id="bulkShippingDisplay">0</span>
+                            <div class="modal-footer border-0 pt-0 pb-3">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                                <button type="submit" class="btn btn-success" id="bulkReceiveSubmit">
+                                    <i class="bi bi-check-lg me-1"></i> Xác nhận nhận hàng
+                                </button>
                             </div>
-                            <div class="order-summary-row">
-                                <span class="label">Thuế</span>
-                                <span class="value text-muted" id="bulkTaxDisplay">0</span>
-                            </div>
-                            <div class="order-summary-row total">
-                                <span class="label">Cộng dồn vào đơn</span>
-                                <span class="value" id="bulkGrandTotal">0</span>
-                            </div>
-                        </div>
+                        </form>
                     </div>
-                    <div class="modal-footer border-0 pt-0 pb-3">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-success" id="bulkReceiveSubmit">
-                            <i class="bi bi-check-lg me-1"></i> Xác nhận nhận hàng
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
-    </div>
-}
-
-@section Styles {
-    <style>
-        .po-items-popover-content .popover-body { padding: 0.5rem 0.75rem; }
-        .po-items-list { min-width: 240px; }
-        .po-items-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.25rem 0;
-            font-size: 0.85rem;
-        }
-        .po-items-row + .po-items-row { border-top: 1px dashed var(--bs-border-color, #dee2e6); }
-        .po-items-name {
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 280px;
-        }
-        .po-items-qty { font-variant-numeric: tabular-nums; font-weight: 500; }
-
-        /* Tinh chỉnh cards related documents */
-        .content-card.h-100 { display: flex; flex-direction: column; }
-        .content-card.h-100 > .table-responsive { flex: 1; }
-    </style>
-}
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-
-    @if (Model.RelatedGoodsReceipts.Count > 0 || Model.RelatedVendorReturns.Count > 0)
-    {
-        <script>
-            // Init popover cho mã phiếu nhận/trả hàng. Bootstrap không auto-init popover.
-            document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
-                bootstrap.Popover.getOrCreateInstance(el, { container: 'body', sanitize: false });
-            });
-        </script>
-    }
-    
-    <script type="module">
-        import ProductPicker from '/modules/ProductPicker.js';
-
-        let productPickerInstance = null;
-
-        document.addEventListener('DOMContentLoaded', function() {
-        // Initialize Product Picker for Add Product Modal
-        const addProductModal = document.getElementById('addProductModal');
-        if (addProductModal) {
-        initializeProductPicker();
-
-        addProductModal.addEventListener('hidden.bs.modal', function() {
-        // Reset form when modal closes
-        resetAddProductForm();
-        });
         }
 
-        // Handle Add Product Form Submission
-        const addProductForm = document.getElementById('addProductForm');
-        if (addProductForm) {
-        addProductForm.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        if(!$(this).valid())
-        return;
-        await submitAddProductForm();
-        });
-        }
-
-        // Initialize Receive Item Modal
-        const receiveItemModal = document.getElementById('receiveItemModal');
-        if (receiveItemModal) {
-        receiveItemModal.addEventListener('show.bs.modal', function(event) {
-        const button = event.relatedTarget;
-        const itemId = button.getAttribute('data-item-id');
-        const itemName = button.getAttribute('data-item-name');
-        const remainingRaw = button.getAttribute('data-item-remaining');
-        const remaining = DecimalFields.formatQuantity(remainingRaw);
-        const unitCostRaw = parseFloat(button.getAttribute('data-item-unit-cost')) || 0;
-        const unitPriceRaw = parseFloat(button.getAttribute('data-item-unit-price')) || 0;
-
-        document.getElementById('modalItemId').value = itemId;
-        document.getElementById('modalItemName').innerText = itemName;
-        document.getElementById('modalItemRemaining').innerText = remaining;
-        document.getElementById('modalReceivedQty').value = remaining;
-        document.getElementById('modalReceivedQty').max = remainingRaw;
-
-        // Pre-fill selling price with current UnitPrice; display unit cost for reference
-        const sellingPriceInput = document.getElementById('modalSellingPrice');
-        const unitCostDisplay = document.getElementById('modalItemUnitCost');
-        sellingPriceInput.value = DecimalFields.formatCurrency(String(Math.trunc(unitPriceRaw)));
-        sellingPriceInput.setAttribute('data-unit-cost', unitCostRaw);
-        unitCostDisplay.innerText = DecimalFields.formatCurrency(String(Math.trunc(unitCostRaw)));
-        updateSellingPriceWarning();
-        });
-
-        // Warning when selling price <= unit cost (lỗ)
-        const sellingPriceInput = document.getElementById('modalSellingPrice');
-        if (sellingPriceInput) {
-        sellingPriceInput.addEventListener('input', updateSellingPriceWarning);
-        sellingPriceInput.addEventListener('change', updateSellingPriceWarning);
-        }
-        }
-
-        function updateSellingPriceWarning() {
-        const sellingPriceInput = document.getElementById('modalSellingPrice');
-        const warningBox = document.getElementById('modalSellingPriceWarning');
-        if (!sellingPriceInput || !warningBox) return;
-        // Currency format trên UI là "3.400.000" (dấu chấm phân cách nghìn) — không có phần thập phân.
-        const stripped = (window.DecimalFields && typeof DecimalFields.stripFormatting === 'function')
-            ? DecimalFields.stripFormatting(sellingPriceInput.value, false)
-            : (sellingPriceInput.value || '').toString().replace(/[^0-9]/g, '');
-        const unitCost = parseFloat(sellingPriceInput.getAttribute('data-unit-cost')) || 0;
-        const sellingPrice = parseFloat(stripped);
-        if (!isNaN(sellingPrice) && sellingPrice > 0 && sellingPrice <= unitCost) {
-        warningBox.classList.remove('d-none');
-        } else {
-        warningBox.classList.add('d-none');
-        }
-        }
-
-        // Handle Remove Item Button
-        document.querySelectorAll('.btnRemoveItem').forEach(btn => {
-        btn.addEventListener('click', async function(e) {
-        e.preventDefault();
-        const itemId = this.getAttribute('data-id');
-        const purchaseOrderId = this.getAttribute('data-purchaseorder');
-        const itemName = this.getAttribute('data-name');
-
-        if (confirm(`Bạn có chắc chắn muốn xóa "${itemName}" khỏi đơn hàng?`)) {
-        await removeItem(itemId, purchaseOrderId);
-        }
-        });
-        });
-        });
-
-        function initializeProductPicker() {
-        const container = document.getElementById('productPicker');
-        if (container && !productPickerInstance) {
-        productPickerInstance = new ProductPicker(container, { purchase: true });
-        productPickerInstance.setVendor('@Model.Info.VendorId', '@Html.Raw(Model.Info.VendorName)');
-        container.addEventListener('select', (e) => {
-        onProductSelected(e.detail.product);
-        });
-        container.addEventListener('remove', onProductRemove);
-        
-        }
-        }
-
-        let detailsRecentPrices = [];
-
-        async function onProductSelected(product) {
-        const modalProductInfo = document.getElementById('modalProductInfo');
-        const itemUnitPrice = document.getElementById('itemUnitPrice');
-        const itemProductId = document.getElementById('itemProductId');
-        const btnAddProduct = document.getElementById('btnAddItem');
-
-        modalProductInfo.classList.remove('d-none');
-        itemUnitPrice.value = 0;
-        itemProductId.value = product.id;
-        btnAddProduct.classList.remove('d-none');
-
-        // Fetch giá nhập gần nhất
-        detailsRecentPrices = [];
-        try {
-        const res = await fetch(`@Url.Action("RecentPurchasePrices")?productId=${product.id}`);
-        if (res.ok) detailsRecentPrices = await res.json();
-        } catch {}
-
-        // VendorId của đơn nhập hiện tại (server-side)
-        const currentVendorId = '@Model.Info.VendorId.ToString()';
-
-        // Tự động điền giá theo NCC đang chọn
-        if (currentVendorId) {
-        const match = detailsRecentPrices.find(p => p.vendorId === currentVendorId);
-        if (match) {
-        itemUnitPrice.value = match.unitCost;
-        DecimalFields.autoWrap(itemUnitPrice.closest('div') ?? document.body);
-        }
-        }
-
-        renderDetailsPriceTable(currentVendorId);
-        renderDetailsAutoFillInfo(currentVendorId);
-        }
-
-        function onProductRemove() {
-        const modalProductInfo = document.getElementById('modalProductInfo');
-        const itemUnitPrice = document.getElementById('itemUnitPrice');
-        const itemProductId = document.getElementById('itemProductId');
-        const btnAddProduct = document.getElementById('btnAddItem');
-
-        modalProductInfo.classList.add('d-none');
-        itemUnitPrice.value = 0;
-        itemProductId.value = '';
-        btnAddProduct.classList.add('d-none');
-        detailsRecentPrices = [];
-        document.getElementById('recentPricesHint')?.classList.add('d-none');
-        document.getElementById('recentPricesAutoFillInfo')?.classList.add('d-none');
-        }
-
-        function renderDetailsPriceTable(currentVendorId) {
-        const hintEl = document.getElementById('recentPricesHint');
-        const emptyEl = document.getElementById('recentPricesEmpty');
-        const tableWrapper = document.getElementById('recentPricesTableWrapper');
-        const tbody = document.getElementById('recentPricesTbody');
-        if (!hintEl || !tbody) return;
-
-        hintEl.classList.remove('d-none');
-
-        if (detailsRecentPrices.length === 0) {
-        tableWrapper?.classList.add('d-none');
-        emptyEl?.classList.remove('d-none');
-        return;
-        }
-
-        tableWrapper?.classList.remove('d-none');
-        emptyEl?.classList.add('d-none');
-        tbody.innerHTML = '';
-
-        detailsRecentPrices.forEach(p => {
-        const isCurrentVendor = currentVendorId && p.vendorId === currentVendorId;
-        const tr = document.createElement('tr');
-        tr.className = isCurrentVendor ? 'table-success' : '';
-        tr.style.cursor = 'pointer';
-        tr.title = `Đơn: ${p.purchaseOrderCode}`;
-        tr.innerHTML = `
-            <td class="ps-0 py-1 text-nowrap">
-                ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success"></i>' : ''}
-                <span class="fw-medium">${escapeHtmlDetails(p.vendorName ?? 'Không rõ')}</span>
-                <div class="text-muted" style="font-size:0.72rem">${escapeHtmlDetails(p.purchaseOrderCode)}</div>
-            </td>
-            <td class="text-end py-1 fw-semibold text-nowrap">
-                ${DecimalFields.formatCurrency(String(p.unitCost))}
-            </td>
-            <td class="text-end py-1 text-muted text-nowrap" style="font-size:0.75rem">${escapeHtmlDetails(p.purchaseDate)}</td>`;
-
-        tr.addEventListener('click', () => {
-        const priceInput = document.getElementById('itemUnitPrice');
-        if (priceInput) {
-        priceInput.value = p.unitCost;
-        DecimalFields.autoWrap(priceInput.closest('div') ?? document.body);
-        }
-        });
-        tbody.appendChild(tr);
-        });
-        }
-
-        function renderDetailsAutoFillInfo(currentVendorId) {
-        const infoEl = document.getElementById('recentPricesAutoFillInfo');
-        const textEl = document.getElementById('recentPricesAutoFillText');
-        if (!infoEl || !textEl) return;
-
-        if (detailsRecentPrices.length === 0) { infoEl.classList.add('d-none'); return; }
-
-        if (currentVendorId) {
-        const match = detailsRecentPrices.find(p => p.vendorId === currentVendorId);
-        if (match) {
-        textEl.textContent = `Đã tự động điền giá nhập gần nhất của nhà cung cấp này (${DecimalFields.formatCurrency(String(match.unitCost))}).`;
-        infoEl.className = 'small text-success mb-1';
-        infoEl.classList.remove('d-none');
-        } else {
-        textEl.textContent = 'Nhà cung cấp này chưa có lịch sử nhập hàng cho sản phẩm — vui lòng nhập giá thủ công.';
-        infoEl.className = 'small text-warning mb-1';
-        infoEl.classList.remove('d-none');
-        }
-        } else {
-        textEl.textContent = 'Nhấn vào hàng trong bảng bên dưới để chọn giá nhập.';
-        infoEl.className = 'small text-info mb-1';
-        infoEl.classList.remove('d-none');
-        }
-        }
-
-        function escapeHtmlDetails(str) {
-        return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }
-
-        async function submitAddProductForm() {
-        const form = document.getElementById('addProductForm');
-
-        try {
-        const response = await fetch('@Url.Action("AddPurchaseOrderItem")', {
-        method: 'POST',
-        headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: $(form).serialize()
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-        // Close modal and refresh page
-        bootstrap.Modal.getInstance(document.getElementById('addProductModal'))?.hide();
-        setTimeout(() => location.reload(), 300);
-        } else {
-        alert('Lỗi: ' + (data.errorMessage || 'Không thể thêm sản phẩm'));
-        }
-        } catch (error) {
-        console.error('Error:', error);
-        alert('Có lỗi xảy ra khi thêm sản phẩm');
-        }
-        }
-
-        function resetAddProductForm() {
-        document.getElementById('itemQuantity').value = '1';
-        document.getElementById('itemUnitPrice').value = '';
-        document.getElementById('modalProductInfo').classList.add('d-none');
-
-        if (productPickerInstance) {
-        productPickerInstance.clear();
-        }
-        }
-
-        async function removeItem(itemId, purchaseOrderId) {
-        try {
-        const response = await fetch('@Url.Action("RemovePurchaseOrderItem")', {
-        method: 'POST',
-        headers: {
-        'Content-Type': 'application/json',
-        'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
-        },
-        body: JSON.stringify({
-        purchaseOrderItemId: itemId,
-        purchaseOrderId: purchaseOrderId
-        })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-        // Remove row from table
-        document.querySelector(`tr[data-item-id="${itemId}"]`)?.remove();
-
-        // Refresh page after short delay
-        setTimeout(() => location.reload(), 300);
-        } else {
-        alert('Lỗi: ' + (data.errorMessage || 'Không thể xóa sản phẩm'));
-        }
-        } catch (error) {
-        console.error('Error:', error);
-        alert('Có lỗi xảy ra khi xóa sản phẩm');
-        }
-        }
-
-    </script>
-    <script type="module">
-        import {Vendor, default as VendorPicker} from '/modules/VendorPicker.js';
-
-        (() => {
-            const elementVendorPicker = document.getElementById('vendorPicker');
-            if (!elementVendorPicker)
-                return;
-
-            let editPurchaseOrderState = {
-
-            };
-            function setState(patch){
-                const newState = Object.assign({}, editPurchaseOrderState, patch);
-                editPurchaseOrderState = newState;
-                renderState();
-            }
-            function renderState() {
-                getEl('VendorId').value = editPurchaseOrderState.vendor?.id ?? '';
-            }
-
-            const {vendorPicker, vendor} = bindVendorPicker();
-
-            setState({ vendor });
-
-            function bindVendorPicker() {
-                const vendorPicker = new VendorPicker(elementVendorPicker);
-
-                elementVendorPicker.addEventListener('select', (e) => {
-                    setState({ vendor: e.detail?.vendor ? new Vendor(e.detail.vendor) : null });
-                });
-                elementVendorPicker.addEventListener('remove', () => {
-                     setState({ vendor: null });
-                });
-
-                const initialVendor = elementVendorPicker.dataset;
-                if (initialVendor.id) {
-                    var vendor = new Vendor(initialVendor);
-                    vendorPicker.displayVendor(vendor);
-                    return {vendorPicker, vendor: initialVendor};
+        @section Styles {
+            <style>
+                .po-items-popover-content .popover-body {
+                    padding: 0.5rem 0.75rem;
                 }
-                return {vendorPicker, vendor: null};
-            }
-        })();
-    </script>
-    @if (Model.Info.CanReceiveGoods && Model.Info.Items.Any(i => i.RemainingQuantity > 0))
-    {
-        <script type="module">
-            import BulkReceiveController from '/modules/BulkReceiveController.js';
 
-            document.addEventListener('DOMContentLoaded', () => {
-                const modalEl = document.getElementById('bulkReceiveModal');
-                if (!modalEl) return;
-                new BulkReceiveController().init(modalEl);
-            });
-        </script>
-    }
-}
+                .po-items-list {
+                    min-width: 240px;
+                }
+
+                .po-items-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.25rem 0;
+                    font-size: 0.85rem;
+                }
+
+                    .po-items-row + .po-items-row {
+                        border-top: 1px dashed var(--bs-border-color, #dee2e6);
+                    }
+
+                .po-items-name {
+                    flex: 1;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 280px;
+                }
+
+                .po-items-qty {
+                    font-variant-numeric: tabular-nums;
+                    font-weight: 500;
+                }
+
+                /* Tinh chỉnh cards related documents */
+                .content-card.h-100 {
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                    .content-card.h-100 > .table-responsive {
+                        flex: 1;
+                    }
+            </style>
+        }
+        @section Scripts {
+            <partial name="_ValidationScriptsPartial" />
+
+            @if (Model.RelatedGoodsReceipts.Count > 0 || Model.RelatedVendorReturns.Count > 0)
+            {
+                <script>
+                    // Init popover cho mã phiếu nhận/trả hàng. Bootstrap không auto-init popover.
+                    document.querySelectorAll('[data-bs-toggle="popover"]').forEach(el => {
+                        bootstrap.Popover.getOrCreateInstance(el, { container: 'body', sanitize: false });
+                    });
+                </script>
+            }
+
+            <script type="module">
+                import ProductPicker from '/modules/ProductPicker.js';
+
+                let productPickerInstance = null;
+
+                document.addEventListener('DOMContentLoaded', function() {
+                // Initialize Product Picker for Add Product Modal
+                const addProductModal = document.getElementById('addProductModal');
+                if (addProductModal) {
+                initializeProductPicker();
+
+                addProductModal.addEventListener('hidden.bs.modal', function() {
+                // Reset form when modal closes
+                resetAddProductForm();
+                });
+                }
+
+                // Handle Add Product Form Submission
+                const addProductForm = document.getElementById('addProductForm');
+                if (addProductForm) {
+                addProductForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                if(!$(this).valid())
+                return;
+                await submitAddProductForm();
+                });
+                }
+
+                // Initialize Receive Item Modal
+                const receiveItemModal = document.getElementById('receiveItemModal');
+                if (receiveItemModal) {
+                receiveItemModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const itemId = button.getAttribute('data-item-id');
+                const itemName = button.getAttribute('data-item-name');
+                const remainingRaw = button.getAttribute('data-item-remaining');
+                const remaining = DecimalFields.formatQuantity(remainingRaw);
+                const unitCostRaw = parseFloat(button.getAttribute('data-item-unit-cost')) || 0;
+                const unitPriceRaw = parseFloat(button.getAttribute('data-item-unit-price')) || 0;
+
+                document.getElementById('modalItemId').value = itemId;
+                document.getElementById('modalItemName').innerText = itemName;
+                document.getElementById('modalItemRemaining').innerText = remaining;
+                document.getElementById('modalReceivedQty').value = remaining;
+                document.getElementById('modalReceivedQty').max = remainingRaw;
+
+                // Pre-fill selling price with current UnitPrice; display unit cost for reference
+                const sellingPriceInput = document.getElementById('modalSellingPrice');
+                const unitCostDisplay = document.getElementById('modalItemUnitCost');
+                sellingPriceInput.value = DecimalFields.formatCurrency(String(Math.trunc(unitPriceRaw)));
+                sellingPriceInput.setAttribute('data-unit-cost', unitCostRaw);
+                unitCostDisplay.innerText = DecimalFields.formatCurrency(String(Math.trunc(unitCostRaw)));
+                updateSellingPriceWarning();
+                });
+
+                // Warning when selling price <= unit cost (lỗ)
+                const sellingPriceInput = document.getElementById('modalSellingPrice');
+                if (sellingPriceInput) {
+                sellingPriceInput.addEventListener('input', updateSellingPriceWarning);
+                sellingPriceInput.addEventListener('change', updateSellingPriceWarning);
+                }
+                }
+
+                function updateSellingPriceWarning() {
+                const sellingPriceInput = document.getElementById('modalSellingPrice');
+                const warningBox = document.getElementById('modalSellingPriceWarning');
+                if (!sellingPriceInput || !warningBox) return;
+                // Currency format trên UI là "3.400.000" (dấu chấm phân cách nghìn) — không có phần thập phân.
+                const stripped = (window.DecimalFields && typeof DecimalFields.stripFormatting === 'function')
+                    ? DecimalFields.stripFormatting(sellingPriceInput.value, false)
+                    : (sellingPriceInput.value || '').toString().replace(/[^0-9]/g, '');
+                const unitCost = parseFloat(sellingPriceInput.getAttribute('data-unit-cost')) || 0;
+                const sellingPrice = parseFloat(stripped);
+                if (!isNaN(sellingPrice) && sellingPrice > 0 && sellingPrice <= unitCost) {
+                warningBox.classList.remove('d-none');
+                } else {
+                warningBox.classList.add('d-none');
+                }
+                }
+
+                // Handle Remove Item Button
+                document.querySelectorAll('.btnRemoveItem').forEach(btn => {
+                btn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                const itemId = this.getAttribute('data-id');
+                const purchaseOrderId = this.getAttribute('data-purchaseorder');
+                const itemName = this.getAttribute('data-name');
+
+                if (confirm(`Bạn có chắc chắn muốn xóa "${itemName}" khỏi đơn hàng?`)) {
+                await removeItem(itemId, purchaseOrderId);
+                }
+                });
+                });
+                });
+
+                function initializeProductPicker() {
+                const container = document.getElementById('productPicker');
+                if (container && !productPickerInstance) {
+                productPickerInstance = new ProductPicker(container, { purchase: true });
+                productPickerInstance.setVendor('@Model.Info.VendorId', '@Html.Raw(Model.Info.VendorName)');
+                container.addEventListener('select', (e) => {
+                onProductSelected(e.detail.product);
+                });
+                container.addEventListener('remove', onProductRemove);
+
+                }
+                }
+
+                let detailsRecentPrices = [];
+
+                async function onProductSelected(product) {
+                const modalProductInfo = document.getElementById('modalProductInfo');
+                const itemUnitPrice = document.getElementById('itemUnitPrice');
+                const itemProductId = document.getElementById('itemProductId');
+                const btnAddProduct = document.getElementById('btnAddItem');
+
+                modalProductInfo.classList.remove('d-none');
+                itemUnitPrice.value = 0;
+                itemProductId.value = product.id;
+                btnAddProduct.classList.remove('d-none');
+
+                // Fetch giá nhập gần nhất
+                detailsRecentPrices = [];
+                try {
+                const res = await fetch(`@Url.Action("RecentPurchasePrices")?productId=${product.id}`);
+                if (res.ok) detailsRecentPrices = await res.json();
+                } catch {}
+
+                // VendorId của đơn nhập hiện tại (server-side)
+                const currentVendorId = '@Model.Info.VendorId.ToString()';
+
+                // Tự động điền giá theo NCC đang chọn
+                if (currentVendorId) {
+                const match = detailsRecentPrices.find(p => p.vendorId === currentVendorId);
+                if (match) {
+                itemUnitPrice.value = match.unitCost;
+                DecimalFields.autoWrap(itemUnitPrice.closest('div') ?? document.body);
+                }
+                }
+
+                renderDetailsPriceTable(currentVendorId);
+                renderDetailsAutoFillInfo(currentVendorId);
+                }
+
+                function onProductRemove() {
+                const modalProductInfo = document.getElementById('modalProductInfo');
+                const itemUnitPrice = document.getElementById('itemUnitPrice');
+                const itemProductId = document.getElementById('itemProductId');
+                const btnAddProduct = document.getElementById('btnAddItem');
+
+                modalProductInfo.classList.add('d-none');
+                itemUnitPrice.value = 0;
+                itemProductId.value = '';
+                btnAddProduct.classList.add('d-none');
+                detailsRecentPrices = [];
+                document.getElementById('recentPricesHint')?.classList.add('d-none');
+                document.getElementById('recentPricesAutoFillInfo')?.classList.add('d-none');
+                }
+
+                function renderDetailsPriceTable(currentVendorId) {
+                const hintEl = document.getElementById('recentPricesHint');
+                const emptyEl = document.getElementById('recentPricesEmpty');
+                const tableWrapper = document.getElementById('recentPricesTableWrapper');
+                const tbody = document.getElementById('recentPricesTbody');
+                if (!hintEl || !tbody) return;
+
+                hintEl.classList.remove('d-none');
+
+                if (detailsRecentPrices.length === 0) {
+                tableWrapper?.classList.add('d-none');
+                emptyEl?.classList.remove('d-none');
+                return;
+                }
+
+                tableWrapper?.classList.remove('d-none');
+                emptyEl?.classList.add('d-none');
+                tbody.innerHTML = '';
+
+                detailsRecentPrices.forEach(p => {
+                const isCurrentVendor = currentVendorId && p.vendorId === currentVendorId;
+                const tr = document.createElement('tr');
+                tr.className = isCurrentVendor ? 'table-success' : '';
+                tr.style.cursor = 'pointer';
+                tr.title = `Đơn: ${p.purchaseOrderCode}`;
+                tr.innerHTML = `
+                    <td class="ps-0 py-1 text-nowrap">
+                        ${isCurrentVendor ? '<i class="bi bi-arrow-right-short text-success"></i>' : ''}
+                        <span class="fw-medium">${escapeHtmlDetails(p.vendorName ?? 'Không rõ')}</span>
+                        <div class="text-muted" style="font-size:0.72rem">${escapeHtmlDetails(p.purchaseOrderCode)}</div>
+                    </td>
+                    <td class="text-end py-1 fw-semibold text-nowrap">
+                        ${DecimalFields.formatCurrency(String(p.unitCost))}
+                    </td>
+                    <td class="text-end py-1 text-muted text-nowrap" style="font-size:0.75rem">${escapeHtmlDetails(p.purchaseDate)}</td>`;
+
+                tr.addEventListener('click', () => {
+                const priceInput = document.getElementById('itemUnitPrice');
+                if (priceInput) {
+                priceInput.value = p.unitCost;
+                DecimalFields.autoWrap(priceInput.closest('div') ?? document.body);
+                }
+                });
+                tbody.appendChild(tr);
+                });
+                }
+
+                function renderDetailsAutoFillInfo(currentVendorId) {
+                const infoEl = document.getElementById('recentPricesAutoFillInfo');
+                const textEl = document.getElementById('recentPricesAutoFillText');
+                if (!infoEl || !textEl) return;
+
+                if (detailsRecentPrices.length === 0) { infoEl.classList.add('d-none'); return; }
+
+                if (currentVendorId) {
+                const match = detailsRecentPrices.find(p => p.vendorId === currentVendorId);
+                if (match) {
+                textEl.textContent = `Đã tự động điền giá nhập gần nhất của nhà cung cấp này (${DecimalFields.formatCurrency(String(match.unitCost))}).`;
+                infoEl.className = 'small text-success mb-1';
+                infoEl.classList.remove('d-none');
+                } else {
+                textEl.textContent = 'Nhà cung cấp này chưa có lịch sử nhập hàng cho sản phẩm — vui lòng nhập giá thủ công.';
+                infoEl.className = 'small text-warning mb-1';
+                infoEl.classList.remove('d-none');
+                }
+                } else {
+                textEl.textContent = 'Nhấn vào hàng trong bảng bên dưới để chọn giá nhập.';
+                infoEl.className = 'small text-info mb-1';
+                infoEl.classList.remove('d-none');
+                }
+                }
+
+                function escapeHtmlDetails(str) {
+                return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                }
+
+                async function submitAddProductForm() {
+                const form = document.getElementById('addProductForm');
+
+                try {
+                const response = await fetch('@Url.Action("AddPurchaseOrderItem")', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: $(form).serialize()
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                // Close modal and refresh page
+                bootstrap.Modal.getInstance(document.getElementById('addProductModal'))?.hide();
+                setTimeout(() => location.reload(), 300);
+                } else {
+                alert('Lỗi: ' + (data.errorMessage || 'Không thể thêm sản phẩm'));
+                }
+                } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi thêm sản phẩm');
+                }
+                }
+
+                function resetAddProductForm() {
+                document.getElementById('itemQuantity').value = '1';
+                document.getElementById('itemUnitPrice').value = '';
+                document.getElementById('modalProductInfo').classList.add('d-none');
+
+                if (productPickerInstance) {
+                productPickerInstance.clear();
+                }
+                }
+
+                async function removeItem(itemId, purchaseOrderId) {
+                try {
+                const response = await fetch('@Url.Action("RemovePurchaseOrderItem")', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({
+                purchaseOrderItemId: itemId,
+                purchaseOrderId: purchaseOrderId
+                })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                // Remove row from table
+                document.querySelector(`tr[data-item-id="${itemId}"]`)?.remove();
+
+                // Refresh page after short delay
+                setTimeout(() => location.reload(), 300);
+                } else {
+                alert('Lỗi: ' + (data.errorMessage || 'Không thể xóa sản phẩm'));
+                }
+                } catch (error) {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi xóa sản phẩm');
+                }
+                }
+
+            </script>
+            <script type="module">
+                import {Vendor, default as VendorPicker} from '/modules/VendorPicker.js';
+
+                (() => {
+                    const elementVendorPicker = document.getElementById('vendorPicker');
+                    if (!elementVendorPicker)
+                        return;
+
+                    let editPurchaseOrderState = {
+
+                    };
+                    function setState(patch){
+                        const newState = Object.assign({}, editPurchaseOrderState, patch);
+                        editPurchaseOrderState = newState;
+                        renderState();
+                    }
+                    function renderState() {
+                        getEl('VendorId').value = editPurchaseOrderState.vendor?.id ?? '';
+                    }
+
+                    const {vendorPicker, vendor} = bindVendorPicker();
+
+                    setState({ vendor });
+
+                    function bindVendorPicker() {
+                        const vendorPicker = new VendorPicker(elementVendorPicker);
+
+                        elementVendorPicker.addEventListener('select', (e) => {
+                            setState({ vendor: e.detail?.vendor ? new Vendor(e.detail.vendor) : null });
+                        });
+                        elementVendorPicker.addEventListener('remove', () => {
+                             setState({ vendor: null });
+                        });
+
+                        const initialVendor = elementVendorPicker.dataset;
+                        if (initialVendor.id) {
+                            var vendor = new Vendor(initialVendor);
+                            vendorPicker.displayVendor(vendor);
+                            return {vendorPicker, vendor: initialVendor};
+                        }
+                        return {vendorPicker, vendor: null};
+                    }
+                })();
+            </script>
+            @if (Model.Info.CanReceiveGoods && Model.Info.Items.Any(i => i.RemainingQuantity > 0))
+            {
+                <script type="module">
+                    import BulkReceiveController from '/modules/BulkReceiveController.js';
+
+                    document.addEventListener('DOMContentLoaded', () => {
+                        const modalEl = document.getElementById('bulkReceiveModal');
+                        if (!modalEl) return;
+                        new BulkReceiveController().init(modalEl);
+                    });
+                </script>
+            }
+        }

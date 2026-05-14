@@ -28,6 +28,15 @@ $(function () {
     });
 })
 
+function showPageLoading() {
+    const mask = document.getElementById('loading-mask');
+    mask.style.display = 'flex';
+}
+function hidePageLoading() {
+    const mask = document.getElementById('loading-mask');
+    mask.style.display = 'none';
+}
+
 function isFormValid(form) {
     try {
         return $(form).valid();
@@ -66,11 +75,12 @@ function parseNumber(value, defaultVal = 0) {
     return Number.isFinite(n) ? n : defaultVal;
 }
 
-function debounce(fn, ms, checkFn) {
+function debounce(fn, ms, checkFn, beforeFn) {
     let timer;
 
     const debounced = (...args) => {
         clearTimeout(timer);
+        if (beforeFn) beforeFn();
         if (checkFn && !checkFn())
             return;
         timer = setTimeout(() => fn(...args), ms);

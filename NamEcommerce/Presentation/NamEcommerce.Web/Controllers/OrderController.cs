@@ -85,7 +85,7 @@ public sealed class OrderController : BaseAuthorizedController
         }
 
         NotifySuccess("Msg.SaveSuccess");
-        return RedirectToAction(nameof(List));
+        return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
     public async Task<IActionResult> Details(Guid id)

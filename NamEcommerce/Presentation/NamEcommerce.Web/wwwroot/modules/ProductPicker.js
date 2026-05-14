@@ -54,9 +54,12 @@ class ProductApi {
 class ProductPickerView {
     #options;
 
+    #isValidProductFn;
+
     constructor(target, options) {
         this.target = target;
         this.#options = Object.assign({ purchase: false }, options);
+        this.#isValidProductFn = this.#options.checkProduct;
 
         target.innerHTML = ProductPickerView.#template();
         target.classList.add('position-relative');
@@ -69,13 +72,6 @@ class ProductPickerView {
         this.clearBtn = target.querySelector('.clearProduct');
         this.spinner = target.querySelector('.searchSpinner');
         this.searchIcon = target.querySelector('.searchIcon');
-    }
-
-    isValidProduct(product) {
-        if (this.#options.purchase) {
-            return product.vendorCount > 0;
-        }
-        return product.availableQty > 0 || product.vendorCount > 0;
     }
 
     renderSuggestion(products, query = '') {
@@ -160,12 +156,12 @@ class ProductPickerView {
     }
 
     setLoading(isLoading) {
-        //    this.spinner.classList.toggle('d-none', !isLoading);
-        //    this.searchIcon.classList.toggle('d-none', isLoading);
+        this.spinner.classList.toggle('d-none', !isLoading);
+        this.searchIcon.classList.toggle('d-none', isLoading);
     }
 
     #buildItem(product, query) {
-        const isDisabled = !this.isValidProduct(product);
+        const isDisabled = !this.#isValidProductFn(product);
 
         const pictureHtml = product.picture
             ? `<img class="img-fluid img-thumbnail" src="${product.picture}" alt="${product.name}" />`
@@ -280,11 +276,11 @@ class ProductPickerView {
 }
 
 export default class ProductPicker {
-    #selected = null;
-    #debounceTimer = null;
-
     static #DEBOUNCE_MS = 500;
     static #MIN_QUERY_LEN = 0;
+
+    #selected;
+    #checkProduct = () => true;
 
     constructor(target, options) {
         if (!(target instanceof HTMLElement))
@@ -293,6 +289,7 @@ export default class ProductPicker {
         var opts = Object.assign({
             purchase: false
         }, options)
+        this.#checkProduct = opts.checkProduct;
 
         this.api = new ProductApi();
         this.view = new ProductPickerView(target, opts);
@@ -303,19 +300,14 @@ export default class ProductPicker {
     #bindEvents() {
         const { view } = this;
 
-        // Input / Focus → debounce → search
-        const onInput = (e) => {
-            clearTimeout(this.#debounceTimer);
-            const query = e.target.value.trim();
-
-            if (query.length < ProductPicker.#MIN_QUERY_LEN) {
+        const onInput = debounce(e => this.#search(view.input.value.trim()), ProductPicker.#DEBOUNCE_MS
+            , () => {
+                const query = view.input.value.trim();
+                return query.length >= ProductPicker.#MIN_QUERY_LEN;
+            }, () => {
                 this.api.cancel();
                 view.hideSuggestion();
-                return;
-            }
-
-            this.#debounceTimer = setTimeout(() => this.#search(query), ProductPicker.#DEBOUNCE_MS);
-        };
+            });
 
         view.input.addEventListener('input', onInput);
         view.input.addEventListener('focus', onInput);
@@ -357,6 +349,10 @@ export default class ProductPicker {
     }
 
     #select(product) {
+        if (!this.#checkProduct(product)) {
+            toast('Hàng hóa không phù hợp', 'Vui lòng chọn hàng hóa khác.', 'warning');
+            return;
+        }
         this.#selected = product;
         this.view.showProduct(product);
         this.#dispatch('select', { product });

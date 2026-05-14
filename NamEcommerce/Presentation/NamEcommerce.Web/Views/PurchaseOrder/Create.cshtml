@@ -1,5 +1,4 @@
 @model CreatePurchaseOrderModel
-@using System.Text.Json
 @inject WarehouseSettings WarehouseSettings
 @{
     ViewData["Title"] = "Thêm đơn nhập";
@@ -25,14 +24,14 @@
         <div class="row g-3">
             <div class="col-md-8">
                 <div class="content-card">
-                    <div class="content-card-body-flush border-bottom">
+                    <div class="content-card-body-flush border-bottom pt-2">
                         <div class="content-card-header">
                             <h5>
                                 Thông tin đơn nhập
                             </h5>
                         </div>
                         <div class="content-card-body">
-                            <div class="row">
+                            <div class="row g-3">
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label for="vendorSearch" class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
@@ -269,7 +268,7 @@
                 <div class="modal-footer border-0 pt-0 pb-3">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" id="addItemToTable" class="btn btn-success d-none">
-                        <i class="bi bi-plus-lg me-1"></i>Thêm vào
+                        <i class="bi bi-plus-lg me-1"></i> Thêm vào
                     </button>
                 </div>
             </form>

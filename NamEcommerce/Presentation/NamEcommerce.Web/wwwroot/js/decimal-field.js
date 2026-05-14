@@ -147,6 +147,8 @@
         });
 
         input.addEventListener('keypress', function (e) {
+            if (e.key == 'Enter' || e.code == 'Enter' || e.keyCode == 13)
+                return;
             var char = String.fromCharCode(e.which);
             if (!/\d/.test(char) && !(decimals > 0 && char === '.')) e.preventDefault();
             if (char === '.' && this.value.includes('.')) e.preventDefault();

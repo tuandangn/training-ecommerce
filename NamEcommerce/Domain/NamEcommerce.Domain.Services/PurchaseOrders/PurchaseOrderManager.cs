@@ -1,7 +1,6 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
-using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Services.Common;

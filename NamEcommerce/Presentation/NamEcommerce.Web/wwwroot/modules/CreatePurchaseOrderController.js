@@ -65,13 +65,14 @@ class PurchaseOrderState {
 
 export default class CreatePurchaseOrderController {
     #initialized = false;
-    #state;
     #activeRowIndex = null;
+
+    #state;
 
     #addItemController;
     #priceController;
 
-    #browser = null;
+    #browser;
     #productPicker;
     #vendorPicker;
 
@@ -136,7 +137,7 @@ export default class CreatePurchaseOrderController {
         form.addEventListener('submit', e => {
             if (!this.#state.items.length) {
                 e.preventDefault();
-                toast('Chưa có hàng hóa nào', 'Vui lòng thêm hàng hóa nhập.', 'warning');
+                toast('Chưa có hàng hóa nào', 'Vui lòng thêm hàng hóa', 'warning');
             }
         });
     }
@@ -153,7 +154,7 @@ export default class CreatePurchaseOrderController {
             if (item.unitCost) continue;
             if (!item.appropriateVendorIds.includes(vendor.id))
                 continue;
-            const price = await this.#priceController.getPriceOfProduct(item.productInfo.id, vendor.id);
+            const price = await this.#priceController.getProductCostOfVendor(item.productInfo.id, vendor.id);
             if (price)
                 itemPriceMap.set(item, price);
         }
@@ -361,6 +362,10 @@ export default class CreatePurchaseOrderController {
     }
 
     async #addOrIncrementItem(product) {
+        if (!this.#isValidProduct(product)) {
+            toast('Hàng hóa không phù hợp', 'Vui lòng chọn hàng hóa khác.', 'warning');
+            return;
+        }
         const items = Array.from(this.#state.items);
         const existingIndex = items.findIndex(item => item.productInfo.id === product.id);
         if (existingIndex !== -1) {
@@ -371,7 +376,7 @@ export default class CreatePurchaseOrderController {
         } else {
             let unitCost = 0;
             if (this.#state.vendor)
-                unitCost = await this.#priceController.getPriceOfProduct(product.id, this.#state.vendor.id) ?? 0;
+                unitCost = await this.#priceController.getProductCostOfVendor(product.id, this.#state.vendor.id) ?? 0;
             items.push(new PurchaseOrderItem(new ProductInfo(product), 1, unitCost));
             this.#activeRowIndex = items.length - 1;
             this.#setState({ items });
@@ -391,16 +396,15 @@ export default class CreatePurchaseOrderController {
                 $(form).valid();
             return;
         }
-
-        const validator = $(form).data('validator');
         for (const trigger of triggers) {
             if (typeof trigger != 'string' && !(trigger instanceof HTMLElement))
                 continue;
-            validator.element(trigger);
+            this.#validator.element(trigger);
         }
+    }
 
-    //    const canSubmit = this.#state.items.length > 0 && (this.#initialized ? $(form).valid() : $(form).data('validator').checkForm());
-    //    form.querySelector('[type="submit"]').disabled = !canSubmit;
+    #isValidProduct(product) {
+        return product.vendorCount > 0;
     }
 
     #shouldRemoveVendor() {
@@ -507,7 +511,7 @@ export default class CreatePurchaseOrderController {
 
     #bindProductPicker() {
         const el = getEl('productPicker');
-        this.#productPicker = new ProductPicker(el, { purchase: true });
+        this.#productPicker = new ProductPicker(el, { purchase: true, checkProduct: this.#isValidProduct });
 
         el.addEventListener('select', (e) => {
             const product = e.detail?.product ? new ProductInfo(e.detail.product) : null;

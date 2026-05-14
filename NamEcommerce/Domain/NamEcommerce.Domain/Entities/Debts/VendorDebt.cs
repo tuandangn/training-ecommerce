@@ -14,7 +14,6 @@ public sealed record VendorDebt : AppAggregateEntity
         VendorName = string.Empty;
     }
 
-    /// <summary>Constructor cho công nợ từ đơn nhập hàng (PurchaseOrder).</summary>
     internal VendorDebt(string code, Guid vendorId, string vendorName,
         Guid purchaseOrderId, string purchaseOrderCode,
         decimal totalAmount, DateTime? dueDateUtc, Guid? createdByUserId) : base(Guid.NewGuid())
@@ -33,7 +32,6 @@ public sealed record VendorDebt : AppAggregateEntity
         CreatedOnUtc = DateTime.UtcNow;
     }
 
-    /// <summary>Constructor cho công nợ từ phiếu nhập kho (GoodsReceipt).</summary>
     internal VendorDebt(string code, Guid vendorId, string vendorName,
         Guid goodsReceiptId,
         decimal totalAmount, DateTime? dueDateUtc, Guid? createdByUserId) : base(Guid.NewGuid())
@@ -51,7 +49,6 @@ public sealed record VendorDebt : AppAggregateEntity
         CreatedOnUtc = DateTime.UtcNow;
     }
 
-    /// <summary>Constructor cho công nợ ban đầu (số dư đầu kỳ) — không gắn PO hay phiếu nhập.</summary>
     internal VendorDebt(string code, Guid vendorId, string vendorName,
         decimal totalAmount, Guid? createdByUserId) : base(Guid.NewGuid())
     {
@@ -107,7 +104,6 @@ public sealed record VendorDebt : AppAggregateEntity
     public Guid? PurchaseOrderId { get; private set; }
     public string? PurchaseOrderCode { get; private set; }
 
-    /// <summary>Phiếu nhập kho liên kết — nullable (chỉ có nếu sinh từ GoodsReceipt).</summary>
     public Guid? GoodsReceiptId { get; private set; }
 
     public decimal TotalAmount { get; private set; }
@@ -155,10 +151,6 @@ public sealed record VendorDebt : AppAggregateEntity
         UpdatedOnUtc = DateTime.UtcNow;
     }
 
-    /// <summary>
-    /// Giảm công nợ NCC do trả hàng — <c>RemainingAmount</c> có thể xuống âm (NCC nợ lại mình).
-    /// Idempotent: caller kiểm tra <c>returnId</c> trước khi gọi để tránh áp dụng 2 lần.
-    /// </summary>
     internal void ApplyReturn(decimal amount, Guid returnId)
     {
         if (amount <= 0) return;
@@ -188,16 +180,9 @@ public sealed record VendorDebt : AppAggregateEntity
             Status = PaidAmount > 0 ? DebtStatus.PartiallyPaid : DebtStatus.Outstanding;
     }
 
-    /// <summary>
-    /// Đánh dấu phiếu công nợ vừa được khởi tạo — Manager gọi trước <c>InsertAsync</c>.
-    /// </summary>
     internal void MarkCreated()
         => RaiseDomainEvent(new VendorDebtCreated(Id, VendorId, TotalAmount, PurchaseOrderId, GoodsReceiptId));
 
-    /// <summary>
-    /// Đánh dấu phiếu công nợ vừa được cập nhật — raise <see cref="VendorDebtUpdated"/>.
-    /// Nếu sau update <c>Status == FullyPaid</c> thì raise thêm <see cref="VendorDebtFullyPaid"/> để handler downstream xử lý (ví dụ thông báo, cập nhật báo cáo).
-    /// </summary>
     internal void MarkUpdated()
     {
         RaiseDomainEvent(new VendorDebtUpdated(Id));

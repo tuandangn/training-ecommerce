@@ -31,7 +31,7 @@ export class ProductPriceController {
         return recentPrices;
     }
 
-    async getPriceOfProduct(productId, vendorId) {
+    async getProductCostOfVendor(productId, vendorId) {
         if (!productId) {
             throw new Error('productId is required');
         }
@@ -49,6 +49,10 @@ export class ProductPriceController {
         }
     }
 
+    async getProductPriceForCustomer(productId, customerId) {
+        //*TODO*
+        return 0;
+    }
 }
 
 export class ProductPricePicker {

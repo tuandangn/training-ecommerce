@@ -57,27 +57,12 @@ public sealed record Order : AppAggregateEntity
 
     #region Events
 
-    /// <summary>
-    /// Đánh dấu đơn vừa được khởi tạo xong (sau khi setup customer + items + discount).
-    /// Manager gọi method này NGAY TRƯỚC khi insert vào repository để raise <see cref="OrderPlaced"/>.
-    /// </summary>
     internal void Place() => RaiseDomainEvent(new OrderPlaced(Id, Code, CustomerId, OrderTotal));
 
-    /// <summary>
-    /// Đánh dấu thông tin chung (note, expected shipping date, discount...) vừa được cập nhật.
-    /// Manager gọi method này sau khi set properties để raise <see cref="OrderInfoUpdated"/>.
-    /// </summary>
     internal void MarkInfoUpdated() => RaiseDomainEvent(new OrderInfoUpdated(Id));
 
-    /// <summary>
-    /// Đánh dấu thông tin shipping (address / expected date) vừa được cập nhật để raise <see cref="OrderShippingUpdated"/>.
-    /// </summary>
     internal void MarkShippingUpdated() => RaiseDomainEvent(new OrderShippingUpdated(Id));
 
-    /// <summary>
-    /// Đánh dấu đơn đang bị xoá (soft delete) — raise <see cref="OrderDeleted"/>.
-    /// Manager gọi TRƯỚC khi <c>repository.DeleteAsync</c>.
-    /// </summary>
     internal void MarkDeleted() => RaiseDomainEvent(new OrderDeleted(Id, Code, GetReservationItems()));
 
     #endregion
