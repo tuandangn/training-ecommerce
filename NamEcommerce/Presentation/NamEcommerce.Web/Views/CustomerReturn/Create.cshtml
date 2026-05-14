@@ -266,7 +266,7 @@
             const noteId = deliveryNoteSelect.value;
             hiddenDeliveryNoteId.value = noteId;
 
-            const selectedOption = deliveryNoteSelect.querySelector(`option[value="${noteToSelect}"]`);
+            const selectedOption = deliveryNoteSelect.querySelector(`option[value="${noteId}"]`);
             if (selectedOption.dataset.warehouseId)
                 warehouseSelect.value = selectedOption.dataset.warehouseId;
 

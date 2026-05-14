@@ -280,7 +280,7 @@ export default class ProductPicker {
     static #MIN_QUERY_LEN = 0;
 
     #selected;
-    #checkProduct = () => true;
+    #checkProduct;
 
     constructor(target, options) {
         if (!(target instanceof HTMLElement))
@@ -289,6 +289,7 @@ export default class ProductPicker {
         var opts = Object.assign({
             purchase: false
         }, options)
+        opts.checkProduct ??= () => true;
         this.#checkProduct = opts.checkProduct;
 
         this.api = new ProductApi();

@@ -62,7 +62,11 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label asp-for="OrderDiscount" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                                        <input type="number" asp-for="OrderDiscount" class="form-control" min="0" placeholder="Nhập giảm giá" disabled />
+                                        <input asp-for="OrderDiscount" class="form-control" placeholder="Nhập giảm giá"
+                                               data-decimal="currency" autocomplete="off"
+                                               data-val="true" disabled="@(Model.Items.Count == 0)"
+                                               data-val-range="Giảm giá phải lớn hơn hoặc bằng 0" data-val-range-min=""
+                                               data-val-number="Giảm giá phải là số" />
                                         <span asp-validation-for="OrderDiscount" class="small text-danger"></span>
                                     </div>
                                     <div>
