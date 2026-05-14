@@ -172,6 +172,7 @@ public sealed class ProductController : BaseAuthorizedController
             name = productInfo.Name,
             unitMeasurement = productInfo.UnitMeasurement,
             picture = productInfo.PictureUrl,
+            unitPrice = productInfo.UnitPrice,
             availableQty = productInfo.QuantityAvailable,
             categoryName = productInfo.CategoryName,
             availableWarehouses = productInfo.AvailableWarehouses,
@@ -180,6 +181,33 @@ public sealed class ProductController : BaseAuthorizedController
             availableVendors = productInfo.AvailableVendors.Select(v => new { key = v.Id.ToString(), value = v.Name })
         }).ToList();
         return Json(products);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> PickItem(Guid id)
+    {
+        var model = await _mediator.Send(new GetProductsByIdsForOrderQuery
+        {
+            Ids = [id]
+        });
+        var product = model.FirstOrDefault();
+        if (product is null)
+            return NotFound();
+
+        return Json(new
+        {
+            id = product.Id,
+            name = product.Name,
+            unitMeasurement = product.UnitMeasurement,
+            picture = product.PictureUrl,
+            unitPrice = product.CurrentUnitPrice,
+            availableQty = product.QuantityAvailable,
+            categoryName = product.CategoryName,
+            availableWarehouses = product.AvailableWarehouses,
+            vendorCount = product.AvailableVendors.Count,
+            firstVendorId = product.AvailableVendors.FirstOrDefault()?.Id.ToString(),
+            availableVendors = product.AvailableVendors.Select(v => new { key = v.Id.ToString(), value = v.Name })
+        });
     }
 
     [HttpPost]

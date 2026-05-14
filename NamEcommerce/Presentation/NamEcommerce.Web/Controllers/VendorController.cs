@@ -178,4 +178,20 @@ public sealed class VendorController : BaseAuthorizedController
         }).ToList();
         return Json(vendors);
     }
+
+    [HttpGet]
+    public async Task<IActionResult> PickItem(Guid id)
+    {
+        var vendor = await _mediator.Send(new GetVendorQuery { Id = id });
+        if (vendor is null)
+            return NotFound();
+
+        return Json(new
+        {
+            id = vendor.Id,
+            name = vendor.Name,
+            phone = vendor.PhoneNumber,
+            address = vendor.Address
+        });
+    }
 }

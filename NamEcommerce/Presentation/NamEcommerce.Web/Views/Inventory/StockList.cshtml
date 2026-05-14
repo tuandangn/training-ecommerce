@@ -94,6 +94,7 @@
                             <th class="text-end py-3">Chờ giao</th>
                             <th class="text-end py-3">Sẵn có</th>
                             <th class="py-3" style="min-width: 200px;">Độ khả dụng</th>
+                            <th class="text-end py-3">Mức CB</th>
                             <th class="py-3">Cập nhật</th>
                             <th class="text-end pe-4 py-3">Thao tác</th>
                         </tr>
@@ -150,10 +151,29 @@
                                         <span class="small fw-bold text-@stockHealth text-end" style="min-width: 42px;">@availablePercent.ToString("N0")%</span>
                                     </div>
                                 </td>
+                                <td class="text-end">
+                                    @if (item.ReorderLevel > 0)
+                                    {
+                                        <span class="fw-semibold">@item.ReorderLevel.DisplayQuantity()</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
                                 <td class="text-muted small">
                                     <i class="bi bi-clock me-1" aria-hidden="true"></i> @item.UpdatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
                                 </td>
                                 <td class="text-end pe-4">
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 btn-set-stock-levels"
+                                            data-id="@item.Id"
+                                            data-product-name="@item.ProductName"
+                                            data-warehouse-name="@item.WarehouseName"
+                                            data-reorder-level="@item.ReorderLevel"
+                                            data-max-stock-level="@item.MaxStockLevel"
+                                            title="Cấu hình mức tồn">
+                                        <i class="bi bi-sliders" aria-hidden="true"></i>
+                                    </button>
                                     <a class="btn btn-outline-dark btn-sm rounded-pill px-3"
                                        asp-action="MovementLogs"
                                        asp-route-productId="@item.ProductId"
@@ -285,6 +305,52 @@
     }
 </div>
 
+<div class="modal fade" id="setStockLevelsModal" tabindex="-1" aria-labelledby="setStockLevelsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="setStockLevelsModalLabel">
+                    <i class="bi bi-sliders me-2"></i>Cấu hình mức tồn
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <form id="setStockLevelsForm">
+                <div class="modal-body pt-0">
+                    <input type="hidden" id="setStockLevels-id" name="Id" />
+                    <div class="mb-3">
+                        <label class="form-label small text-muted mb-1">Sản phẩm</label>
+                        <div id="setStockLevels-productName" class="fw-semibold"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted mb-1">Kho</label>
+                        <div id="setStockLevels-warehouseName" class="fw-semibold"></div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label for="setStockLevels-reorderLevel" class="form-label">Mức cảnh báo</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="setStockLevels-reorderLevel" name="ReorderLevel" required />
+                            <div class="form-text">Hàng sẽ vào danh sách cảnh báo nếu tồn ≤ mức này.</div>
+                        </div>
+                        <div class="col-6">
+                            <label for="setStockLevels-maxStockLevel" class="form-label">Mức tối đa</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="setStockLevels-maxStockLevel" name="MaxStockLevel" required />
+                            <div class="form-text">Để 0 nếu không giới hạn.</div>
+                        </div>
+                    </div>
+                    <div id="setStockLevels-error" class="alert alert-danger mt-3 d-none small mb-0"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4" id="setStockLevels-submit">
+                        <span class="spinner-border spinner-border-sm me-2 d-none" id="setStockLevels-spinner" role="status"></span>
+                        Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         (function () {
@@ -316,6 +382,63 @@
             gridBtn.addEventListener('click', function () {
                 localStorage.setItem(STORAGE_KEY, 'grid');
                 applyMode('grid');
+            });
+        })();
+
+        (function () {
+            const modalEl = document.getElementById('setStockLevelsModal');
+            if (!modalEl) return;
+            const modal = new bootstrap.Modal(modalEl);
+            const form = document.getElementById('setStockLevelsForm');
+            const idInput = document.getElementById('setStockLevels-id');
+            const productNameEl = document.getElementById('setStockLevels-productName');
+            const warehouseNameEl = document.getElementById('setStockLevels-warehouseName');
+            const reorderInput = document.getElementById('setStockLevels-reorderLevel');
+            const maxInput = document.getElementById('setStockLevels-maxStockLevel');
+            const errorEl = document.getElementById('setStockLevels-error');
+            const submitBtn = document.getElementById('setStockLevels-submit');
+            const spinner = document.getElementById('setStockLevels-spinner');
+
+            document.querySelectorAll('.btn-set-stock-levels').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    idInput.value = this.dataset.id;
+                    productNameEl.textContent = this.dataset.productName;
+                    warehouseNameEl.textContent = this.dataset.warehouseName;
+                    reorderInput.value = this.dataset.reorderLevel || '0';
+                    maxInput.value = this.dataset.maxStockLevel || '0';
+                    errorEl.classList.add('d-none');
+                    errorEl.textContent = '';
+                    modal.show();
+                });
+            });
+
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                errorEl.classList.add('d-none');
+                submitBtn.disabled = true;
+                spinner.classList.remove('d-none');
+
+                const formData = new FormData(form);
+                try {
+                    const response = await fetch('@Url.Action("SetStockLevels", "Inventory")', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        modal.hide();
+                        window.location.reload();
+                    } else {
+                        errorEl.textContent = result.errorMessage || 'Có lỗi xảy ra.';
+                        errorEl.classList.remove('d-none');
+                    }
+                } catch (err) {
+                    errorEl.textContent = 'Lỗi kết nối tới máy chủ.';
+                    errorEl.classList.remove('d-none');
+                } finally {
+                    submitBtn.disabled = false;
+                    spinner.classList.add('d-none');
+                }
             });
         })();
     </script>

@@ -55,4 +55,11 @@ public interface IInventoryStockManager
     /// Default expiration: 7 days if reservationDaysValid not set.
     /// </summary>
     Task<int> ReleaseExpiredReservationsAsync();
+
+    /// <summary>
+    /// Cập nhật ngưỡng cảnh báo tồn kho (ReorderLevel) và ngưỡng tối đa (MaxStockLevel) cho một stock record.
+    /// </summary>
+    /// <exception cref="StockNotFoundException">không tìm thấy InventoryStock theo Id</exception>
+    /// <exception cref="InvalidStockOperationException">dto không hợp lệ (ReorderLevel/MaxStockLevel âm hoặc MaxStockLevel &lt; ReorderLevel)</exception>
+    Task SetStockLevelsAsync(SetStockLevelsDto dto);
 }

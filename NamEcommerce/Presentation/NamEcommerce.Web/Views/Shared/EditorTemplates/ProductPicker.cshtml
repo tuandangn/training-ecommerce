@@ -1,0 +1,319 @@
+@model Guid?
+@using System.Text.Json
+@{
+    var htmlAttrs = ViewData["htmlAttributes"] as IDictionary<string, object>;
+    var attrs = htmlAttrs is null
+        ? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+        : new Dictionary<string, object>(htmlAttrs, StringComparer.OrdinalIgnoreCase);
+    var extraClass = attrs.TryGetValue("class", out var cls) ? cls?.ToString() : string.Empty;
+    var fieldId = Html.IdFor(m => m).ToString();
+    var pickerId = $"{fieldId}_productPicker";
+
+    attrs["class"] = $"form-control visually-hidden product-picker-source {extraClass}".Trim();
+    attrs["autocomplete"] = "off";
+
+    var vendorId = ViewData["vendorId"]?.ToString();
+    var categoryId = ViewData["categoryId"]?.ToString();
+    var warehouseId = ViewData["warehouseId"]?.ToString();
+    var vendorSelector = ViewData["vendorSelector"]?.ToString();
+    var categorySelector = ViewData["categorySelector"]?.ToString();
+    var warehouseSelector = ViewData["warehouseSelector"]?.ToString();
+}
+
+@Html.TextBoxFor(m => m, attrs)
+<div id="@pickerId" class="product-picker-editor"
+     data-search-url="@Url.Action("Search", "Product")"
+     data-item-url="@Url.Action("PickItem", "Product")"
+     data-placeholder="@(ViewData["placeholder"]?.ToString() ?? "Tìm hàng hóa theo tên...")"
+     data-vendor-id="@vendorId"
+     data-category-id="@categoryId"
+     data-warehouse-id="@warehouseId"
+     data-vendor-selector="@vendorSelector"
+     data-category-selector="@categorySelector"
+     data-warehouse-selector="@warehouseSelector"></div>
+
+<style>
+    #@pickerId {
+        position: relative;
+    }
+
+    #@pickerId .product-picker-menu {
+        z-index: 1050;
+        max-height: 360px;
+        overflow-y: auto;
+    }
+
+    #@pickerId .product-picker-selected {
+        min-height: 68px;
+    }
+
+    #@pickerId .product-picker-thumb,
+    #@pickerId .product-picker-thumb-placeholder {
+        width: 56px;
+        height: 56px;
+        border-radius: 6px;
+        flex: 0 0 auto;
+    }
+
+    #@pickerId .product-picker-thumb {
+        object-fit: cover;
+    }
+
+    #@pickerId .product-picker-thumb-placeholder {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bs-light, #f8f9fa);
+        color: var(--bs-secondary-color, #6c757d);
+    }
+
+    .product-picker-source.input-validation-error + #@pickerId .product-picker-control {
+        border-color: var(--bs-danger, #dc3545);
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const source = document.getElementById(@Html.Raw(JsonSerializer.Serialize(fieldId)));
+        const root = document.getElementById(@Html.Raw(JsonSerializer.Serialize(pickerId)));
+        if (!source || !root || root.dataset.ready === 'true') return;
+        root.dataset.ready = 'true';
+
+        root.innerHTML = `
+            <div class="input-group product-picker-search">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" class="form-control product-picker-control" autocomplete="off"
+                       placeholder="${escapeAttr(root.dataset.placeholder)}" aria-autocomplete="list" />
+            </div>
+            <div class="list-group position-absolute w-100 shadow product-picker-menu d-none" role="listbox"></div>
+            <div class="alert alert-light border d-none mb-0 product-picker-selected" role="status">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="product-picker-selected-media"></div>
+                    <div class="flex-grow-1 overflow-hidden product-picker-selected-text"></div>
+                    <button type="button" class="btn btn-light btn-sm product-picker-clear" title="Xóa hàng hóa">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>`;
+
+        const searchBox = root.querySelector('.product-picker-control');
+        const searchPanel = root.querySelector('.product-picker-search');
+        const menu = root.querySelector('.product-picker-menu');
+        const selectedPanel = root.querySelector('.product-picker-selected');
+        const selectedMedia = root.querySelector('.product-picker-selected-media');
+        const selectedText = root.querySelector('.product-picker-selected-text');
+        const clearButton = root.querySelector('.product-picker-clear');
+        let debounceTimer = null;
+        let abortController = null;
+
+        searchBox.addEventListener('input', queueSearch);
+        searchBox.addEventListener('focus', queueSearch);
+        searchBox.addEventListener('keydown', onSearchKeydown);
+        clearButton.addEventListener('click', clear);
+        document.addEventListener('click', function (event) {
+            if (!root.contains(event.target)) hideMenu();
+        });
+
+        bindFilter(root.dataset.vendorSelector);
+        bindFilter(root.dataset.categorySelector);
+        bindFilter(root.dataset.warehouseSelector);
+        loadInitialValue();
+
+        function bindFilter(selector) {
+            if (!selector) return;
+            document.querySelector(selector)?.addEventListener('change', function () {
+                clear();
+                if (document.activeElement === searchBox) queueSearch();
+            });
+        }
+
+        function onSearchKeydown(event) {
+            if (event.key === 'Escape') {
+                hideMenu();
+                searchBox.blur();
+            }
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                menu.querySelector('.list-group-item-action')?.focus();
+            }
+        }
+
+        function queueSearch() {
+            window.clearTimeout(debounceTimer);
+            abortController?.abort();
+            debounceTimer = window.setTimeout(search, 400);
+        }
+
+        async function search() {
+            const url = new URL(root.dataset.searchUrl, window.location.origin);
+            url.searchParams.set('q', searchBox.value.trim());
+            setParam(url, 'vid', filterValue('vendor'));
+            setParam(url, 'cid', filterValue('category'));
+            setParam(url, 'wid', filterValue('warehouse'));
+            abortController = new AbortController();
+
+            try {
+                const response = await fetch(url, { signal: abortController.signal });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                renderMenu(await response.json());
+            } catch (error) {
+                if (error.name !== 'AbortError') renderError('Không thể tải dữ liệu. Vui lòng thử lại.');
+            }
+        }
+
+        async function loadInitialValue() {
+            if (!source.value) return;
+            const url = new URL(root.dataset.itemUrl, window.location.origin);
+            url.searchParams.set('id', source.value);
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) return;
+                selectProduct(await response.json(), false);
+            } catch {
+                clear(false);
+            }
+        }
+
+        function renderMenu(items) {
+            menu.innerHTML = '';
+            if (!items.length) {
+                menu.innerHTML = '<div class="list-group-item text-center text-muted small py-3">Không tìm thấy hàng hóa</div>';
+                showMenu();
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+            items.forEach(function (product) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'list-group-item list-group-item-action text-start';
+                button.innerHTML = productHtml(product, true);
+                button.addEventListener('click', function () { selectProduct(product, true); });
+                bindMenuKeyboard(button);
+                fragment.appendChild(button);
+            });
+            menu.appendChild(fragment);
+            showMenu();
+        }
+
+        function selectProduct(product, shouldValidate) {
+            source.value = product.id || '';
+            searchBox.value = '';
+            selectedMedia.innerHTML = productMedia(product);
+            selectedText.innerHTML = productHtml(product, false);
+            searchPanel.classList.add('d-none');
+            selectedPanel.classList.remove('d-none');
+            hideMenu();
+            notifyChanged(shouldValidate);
+        }
+
+        function productHtml(product, inList) {
+            const name = inList ? highlight(product.name, searchBox.value) : escapeHtml(product.name);
+            const category = product.categoryName
+                ? `<span class="badge bg-light text-dark border">${escapeHtml(product.categoryName)}</span>`
+                : '';
+            const vendors = vendorText(product);
+            const content = `
+                <div class="d-flex justify-content-between gap-2">
+                    <div class="fw-semibold text-truncate">${name}</div>
+                    ${category}
+                </div>
+                <div class="small text-muted">${stockText(product)}</div>
+                ${vendors}`;
+
+            if (!inList) return content;
+
+            return `
+                <div class="d-flex align-items-center gap-3">
+                    ${productMedia(product)}
+                    <div class="flex-grow-1 overflow-hidden">${content}</div>
+                </div>`;
+        }
+
+        function productMedia(product) {
+            if (product.picture) {
+                return `<img class="product-picker-thumb border" src="${escapeAttr(product.picture)}" alt="${escapeAttr(product.name || '')}" />`;
+            }
+
+            return '<span class="product-picker-thumb-placeholder"><i class="bi bi-box-seam fs-5"></i></span>';
+        }
+
+        function stockText(product) {
+            const qty = Number(product.availableQty ?? 0);
+            const unit = product.unitMeasurement ? ` ${escapeHtml(String(product.unitMeasurement).toLowerCase())}` : '';
+            return `Tồn khả dụng: ${formatQuantity(qty)}${unit}`;
+        }
+
+        function vendorText(product) {
+            if (!Array.isArray(product.availableVendors) || product.availableVendors.length === 0) return '';
+            return `<div class="small text-muted"><i class="bi bi-truck me-1"></i>${escapeHtml(product.availableVendors.map(v => v.value).join(' | '))}</div>`;
+        }
+
+        function clear(shouldValidate = true) {
+            source.value = '';
+            searchBox.value = '';
+            selectedPanel.classList.add('d-none');
+            searchPanel.classList.remove('d-none');
+            hideMenu();
+            notifyChanged(shouldValidate);
+        }
+
+        function notifyChanged(shouldValidate) {
+            source.dispatchEvent(new Event('input', { bubbles: true }));
+            source.dispatchEvent(new Event('change', { bubbles: true }));
+            if (shouldValidate && window.jQuery) {
+                const input = window.jQuery(source);
+                if (typeof input.valid === 'function') input.valid();
+            }
+        }
+
+        function bindMenuKeyboard(button) {
+            button.addEventListener('keydown', function (event) {
+                if (event.key === 'ArrowDown') { event.preventDefault(); button.nextElementSibling?.focus(); }
+                if (event.key === 'ArrowUp') { event.preventDefault(); button.previousElementSibling?.focus() ?? searchBox.focus(); }
+                if (event.key === 'Escape') { hideMenu(); searchBox.focus(); }
+                if (event.key === 'Enter') { event.preventDefault(); button.click(); }
+            });
+        }
+
+        function filterValue(name) {
+            const fixedValue = root.dataset[`${name}Id`];
+            if (fixedValue) return fixedValue;
+
+            const selector = root.dataset[`${name}Selector`];
+            if (!selector) return null;
+
+            return document.querySelector(selector)?.value || null;
+        }
+
+        function setParam(url, key, value) {
+            if (value) url.searchParams.set(key, value);
+        }
+
+        function formatQuantity(value) {
+            if (window.DecimalFields?.formatQuantity) return window.DecimalFields.formatQuantity(value);
+            return new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(value);
+        }
+
+        function renderError(message) {
+            menu.innerHTML = `<div class="list-group-item text-center text-danger small py-3">${escapeHtml(message)}</div>`;
+            showMenu();
+        }
+
+        function showMenu() { menu.classList.remove('d-none'); }
+        function hideMenu() { menu.classList.add('d-none'); menu.innerHTML = ''; }
+
+        function highlight(text, query) {
+            const safeText = escapeHtml(text || '');
+            const cleanQuery = (query || '').trim();
+            if (!cleanQuery) return safeText;
+            return safeText.replace(new RegExp(`(${escapeRegExp(escapeHtml(cleanQuery))})`, 'gi'), '<mark class="bg-warning px-0">$1</mark>');
+        }
+        function escapeHtml(value) {
+            return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+        }
+        function escapeAttr(value) { return escapeHtml(value).replaceAll('`', '&#096;'); }
+        function escapeRegExp(value) { return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    });
+</script>

@@ -15,6 +15,8 @@ public sealed record InventoryStockAppDto
     public required decimal TotalReservedByOrder { get; init; }
     public required decimal QuantityAvailable { get; init; }
     public required DateTime UpdatedOnUtc { get; init; }
+    public decimal ReorderLevel { get; init; }
+    public decimal MaxStockLevel { get; init; }
 }
 
 [Serializable]
@@ -65,4 +67,32 @@ public sealed class ResultAppDto
     public required bool Success { get; init; }
     public required string? ErrorMessage { get; init; }
     public Guid? CreatedId { get; set; }
+}
+
+[Serializable]
+public sealed record SetStockLevelsAppDto(Guid Id)
+{
+    public required decimal ReorderLevel { get; init; }
+    public required decimal MaxStockLevel { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (Id == Guid.Empty)
+            return (false, "Error.StockIdRequired");
+        if (ReorderLevel < 0)
+            return (false, "Error.ReorderLevelMustBeNonNegative");
+        if (MaxStockLevel < 0)
+            return (false, "Error.MaxStockLevelMustBeNonNegative");
+        if (MaxStockLevel > 0 && MaxStockLevel < ReorderLevel)
+            return (false, "Error.MaxStockLevelMustBeGreaterOrEqualReorderLevel");
+        return (true, null);
+    }
+}
+
+[Serializable]
+public sealed record SetStockLevelsResultAppDto
+{
+    public required bool Success { get; init; }
+    public Guid UpdatedId { get; set; }
+    public string? ErrorMessage { get; set; }
 }

@@ -1,0 +1,227 @@
+@model Guid?
+@using System.Text.Json
+@{
+    var htmlAttrs = ViewData["htmlAttributes"] as IDictionary<string, object>;
+    var attrs = htmlAttrs is null
+        ? new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+        : new Dictionary<string, object>(htmlAttrs, StringComparer.OrdinalIgnoreCase);
+    var extraClass = attrs.TryGetValue("class", out var cls) ? cls?.ToString() : string.Empty;
+    var fieldId = Html.IdFor(m => m).ToString();
+    var pickerId = $"{fieldId}_vendorPicker";
+
+    attrs["class"] = $"form-control visually-hidden vendor-picker-source {extraClass}".Trim();
+    attrs["autocomplete"] = "off";
+}
+
+@Html.TextBoxFor(m => m, attrs)
+<div id="@pickerId" class="vendor-picker-editor"
+     data-search-url="@Url.Action("Search", "Vendor")"
+     data-item-url="@Url.Action("PickItem", "Vendor")"
+     data-placeholder="@(ViewData["placeholder"]?.ToString() ?? "Tìm nhà cung cấp theo tên, SĐT...")"></div>
+
+<style>
+    #@pickerId {
+        position: relative;
+    }
+
+    #@pickerId .vendor-picker-menu {
+        z-index: 1050;
+        max-height: 320px;
+        overflow-y: auto;
+    }
+
+    #@pickerId .vendor-picker-selected {
+        min-height: 58px;
+    }
+
+    #@pickerId .vendor-picker-icon {
+        width: 42px;
+        height: 42px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: var(--bs-success-bg-subtle, #d1e7dd);
+        color: var(--bs-success, #198754);
+        flex: 0 0 auto;
+    }
+
+    .vendor-picker-source.input-validation-error + #@pickerId .vendor-picker-control {
+        border-color: var(--bs-danger, #dc3545);
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const source = document.getElementById(@Html.Raw(JsonSerializer.Serialize(fieldId)));
+        const root = document.getElementById(@Html.Raw(JsonSerializer.Serialize(pickerId)));
+        if (!source || !root || root.dataset.ready === 'true') return;
+        root.dataset.ready = 'true';
+
+        root.innerHTML = `
+            <div class="input-group vendor-picker-search">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" class="form-control vendor-picker-control" autocomplete="off"
+                       placeholder="${escapeAttr(root.dataset.placeholder)}" aria-autocomplete="list" />
+            </div>
+            <div class="list-group position-absolute w-100 shadow vendor-picker-menu d-none" role="listbox"></div>
+            <div class="alert alert-light border d-none mb-0 vendor-picker-selected" role="status">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="vendor-picker-icon"><i class="bi bi-building"></i></span>
+                    <div class="flex-grow-1 overflow-hidden vendor-picker-selected-text"></div>
+                    <button type="button" class="btn btn-light btn-sm vendor-picker-clear" title="Xóa nhà cung cấp">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>`;
+
+        const searchBox = root.querySelector('.vendor-picker-control');
+        const searchPanel = root.querySelector('.vendor-picker-search');
+        const menu = root.querySelector('.vendor-picker-menu');
+        const selectedPanel = root.querySelector('.vendor-picker-selected');
+        const selectedText = root.querySelector('.vendor-picker-selected-text');
+        const clearButton = root.querySelector('.vendor-picker-clear');
+        let debounceTimer = null;
+        let abortController = null;
+
+        searchBox.addEventListener('input', queueSearch);
+        searchBox.addEventListener('focus', queueSearch);
+        searchBox.addEventListener('keydown', onSearchKeydown);
+        clearButton.addEventListener('click', clear);
+        document.addEventListener('click', function (event) {
+            if (!root.contains(event.target)) hideMenu();
+        });
+
+        loadInitialValue();
+
+        function onSearchKeydown(event) {
+            if (event.key === 'Escape') {
+                hideMenu();
+                searchBox.blur();
+            }
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                menu.querySelector('.list-group-item-action')?.focus();
+            }
+        }
+
+        function queueSearch() {
+            window.clearTimeout(debounceTimer);
+            abortController?.abort();
+            debounceTimer = window.setTimeout(search, 400);
+        }
+
+        async function search() {
+            const url = new URL(root.dataset.searchUrl, window.location.origin);
+            url.searchParams.set('q', searchBox.value.trim());
+            abortController = new AbortController();
+
+            try {
+                const response = await fetch(url, { signal: abortController.signal });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                renderMenu(await response.json());
+            } catch (error) {
+                if (error.name !== 'AbortError') renderError('Không thể tải dữ liệu. Vui lòng thử lại.');
+            }
+        }
+
+        async function loadInitialValue() {
+            if (!source.value) return;
+            const url = new URL(root.dataset.itemUrl, window.location.origin);
+            url.searchParams.set('id', source.value);
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) return;
+                selectVendor(await response.json(), false);
+            } catch {
+                clear(false);
+            }
+        }
+
+        function renderMenu(items) {
+            menu.innerHTML = '';
+            if (!items.length) {
+                menu.innerHTML = '<div class="list-group-item text-center text-muted small py-3">Không tìm thấy nhà cung cấp</div>';
+                showMenu();
+                return;
+            }
+
+            const fragment = document.createDocumentFragment();
+            items.forEach(function (vendor) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'list-group-item list-group-item-action text-start';
+                button.innerHTML = `
+                    <div class="fw-semibold">${highlight(vendor.name, searchBox.value)}</div>
+                    ${vendor.phone ? `<div class="small text-muted"><i class="bi bi-telephone me-1"></i>${escapeHtml(vendor.phone)}</div>` : ''}
+                    ${vendor.address ? `<div class="small text-muted text-truncate"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(vendor.address)}</div>` : ''}`;
+                button.addEventListener('click', function () { selectVendor(vendor, true); });
+                bindMenuKeyboard(button);
+                fragment.appendChild(button);
+            });
+            menu.appendChild(fragment);
+            showMenu();
+        }
+
+        function selectVendor(vendor, shouldValidate) {
+            source.value = vendor.id || '';
+            searchBox.value = '';
+            selectedText.innerHTML = `
+                <div class="fw-semibold text-truncate">${escapeHtml(vendor.name)}</div>
+                ${vendor.phone ? `<div class="small text-muted">${escapeHtml(vendor.phone)}</div>` : ''}
+                ${vendor.address ? `<div class="small text-muted text-truncate">${escapeHtml(vendor.address)}</div>` : ''}`;
+            searchPanel.classList.add('d-none');
+            selectedPanel.classList.remove('d-none');
+            hideMenu();
+            notifyChanged(shouldValidate);
+        }
+
+        function clear(shouldValidate = true) {
+            source.value = '';
+            searchBox.value = '';
+            selectedPanel.classList.add('d-none');
+            searchPanel.classList.remove('d-none');
+            hideMenu();
+            notifyChanged(shouldValidate);
+        }
+
+        function notifyChanged(shouldValidate) {
+            source.dispatchEvent(new Event('input', { bubbles: true }));
+            source.dispatchEvent(new Event('change', { bubbles: true }));
+            if (shouldValidate && window.jQuery) {
+                const input = window.jQuery(source);
+                if (typeof input.valid === 'function') input.valid();
+            }
+        }
+
+        function bindMenuKeyboard(button) {
+            button.addEventListener('keydown', function (event) {
+                if (event.key === 'ArrowDown') { event.preventDefault(); button.nextElementSibling?.focus(); }
+                if (event.key === 'ArrowUp') { event.preventDefault(); button.previousElementSibling?.focus() ?? searchBox.focus(); }
+                if (event.key === 'Escape') { hideMenu(); searchBox.focus(); }
+                if (event.key === 'Enter') { event.preventDefault(); button.click(); }
+            });
+        }
+
+        function renderError(message) {
+            menu.innerHTML = `<div class="list-group-item text-center text-danger small py-3">${escapeHtml(message)}</div>`;
+            showMenu();
+        }
+
+        function showMenu() { menu.classList.remove('d-none'); }
+        function hideMenu() { menu.classList.add('d-none'); menu.innerHTML = ''; }
+
+        function highlight(text, query) {
+            const safeText = escapeHtml(text || '');
+            const cleanQuery = (query || '').trim();
+            if (!cleanQuery) return safeText;
+            return safeText.replace(new RegExp(`(${escapeRegExp(escapeHtml(cleanQuery))})`, 'gi'), '<mark class="bg-warning px-0">$1</mark>');
+        }
+        function escapeHtml(value) {
+            return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+        }
+        function escapeAttr(value) { return escapeHtml(value).replaceAll('`', '&#096;'); }
+        function escapeRegExp(value) { return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    });
+</script>

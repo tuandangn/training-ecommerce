@@ -202,7 +202,9 @@ public sealed class InventoryStockManager : IInventoryStockManager
                 QuantityOnHand = x.s.QuantityOnHand,
                 QuantityReserved = x.s.QuantityReserved,
                 QuantityAvailable = x.s.QuantityOnHand - x.s.QuantityReserved,
-                UpdatedOnUtc = x.s.UpdatedOnUtc
+                UpdatedOnUtc = x.s.UpdatedOnUtc,
+                ReorderLevel = x.s.ReorderLevel,
+                MaxStockLevel = x.s.MaxStockLevel
             })
             .ToList();
 
@@ -233,7 +235,9 @@ public sealed class InventoryStockManager : IInventoryStockManager
                 QuantityOnHand = x.s.QuantityOnHand,
                 QuantityReserved = x.s.QuantityReserved,
                 QuantityAvailable = x.s.QuantityOnHand - x.s.QuantityReserved,
-                UpdatedOnUtc = x.s.UpdatedOnUtc
+                UpdatedOnUtc = x.s.UpdatedOnUtc,
+                ReorderLevel = x.s.ReorderLevel,
+                MaxStockLevel = x.s.MaxStockLevel
             })
             .OrderByDescending(x => x.UpdatedOnUtc)
             .ThenBy(x => x.ProductName)
@@ -492,5 +496,20 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return Task.Run(() => (from inventoryStock in _inventoryStockDataReader.DataSource
                                where inventoryStock.ProductId == productId && inventoryStock.WarehouseId == warehouseId
                                select inventoryStock).SingleOrDefault());
+    }
+
+    public async Task SetStockLevelsAsync(SetStockLevelsDto dto)
+    {
+        dto.Verify();
+
+        var stock = await _inventoryStockDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        if (stock is null)
+            throw new StockNotFoundException("Error.StockNotFound", dto.Id);
+
+        stock.ReorderLevel = dto.ReorderLevel;
+        stock.MaxStockLevel = dto.MaxStockLevel;
+        stock.UpdatedOnUtc = DateTime.UtcNow;
+
+        await _inventoryStockRepository.UpdateAsync(stock).ConfigureAwait(false);
     }
 }

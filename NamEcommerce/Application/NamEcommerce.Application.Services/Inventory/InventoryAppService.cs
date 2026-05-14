@@ -5,6 +5,8 @@ using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Inventory;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Application.Services.Inventory;
@@ -48,7 +50,9 @@ public sealed class InventoryAppService : IInventoryAppService
             QuantityReserved = x.QuantityReserved,
             TotalReservedByOrder = reservedByOrder.GetValueOrDefault(x.ProductId),
             QuantityAvailable = x.QuantityAvailable,
-            UpdatedOnUtc = x.UpdatedOnUtc
+            UpdatedOnUtc = x.UpdatedOnUtc,
+            ReorderLevel = x.ReorderLevel,
+            MaxStockLevel = x.MaxStockLevel
         }).ToList();
 
         return PagedDataAppDto.Create(items, pageIndex, pageSize, total);
@@ -94,6 +98,32 @@ public sealed class InventoryAppService : IInventoryAppService
         }).ToList();
 
         return PagedDataAppDto.Create(items, pageIndex, pageSize, total);
+    }
+
+    public async Task<SetStockLevelsResultAppDto> SetStockLevelsAsync(SetStockLevelsAppDto dto)
+    {
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return new SetStockLevelsResultAppDto { Success = false, ErrorMessage = errorMessage };
+
+        try
+        {
+            await _stockManager.SetStockLevelsAsync(new SetStockLevelsDto(dto.Id)
+            {
+                ReorderLevel = dto.ReorderLevel,
+                MaxStockLevel = dto.MaxStockLevel
+            }).ConfigureAwait(false);
+        }
+        catch (StockNotFoundException ex)
+        {
+            return new SetStockLevelsResultAppDto { Success = false, ErrorMessage = ex.Message };
+        }
+        catch (InvalidStockOperationException ex)
+        {
+            return new SetStockLevelsResultAppDto { Success = false, ErrorMessage = ex.Message };
+        }
+
+        return new SetStockLevelsResultAppDto { Success = true, UpdatedId = dto.Id };
     }
 
     public async Task<IPagedDataAppDto<ProductReservationLedgerAppDto>> GetProductReservationLedgerAsync(Guid productId, int pageIndex, int pageSize)

@@ -21,6 +21,8 @@ public sealed class InventoryStockListModel
         public required decimal TotalReservedByOrder { get; init; }
         public required decimal QuantityAvailable { get; init; }
         public required DateTime UpdatedOn { get; init; }
+        public decimal ReorderLevel { get; init; }
+        public decimal MaxStockLevel { get; init; }
     }
 }
 

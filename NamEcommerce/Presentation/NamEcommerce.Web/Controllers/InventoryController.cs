@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
+using NamEcommerce.Web.Models.Inventory;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -60,5 +62,24 @@ public sealed class InventoryController : BaseAuthorizedController
         });
 
         return View(model);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> SetStockLevels(SetStockLevelsModel model)
+    {
+        if (!ModelState.IsValid)
+        {
+            var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+            return Json(new { success = false, errorMessage = errors });
+        }
+
+        var result = await _mediator.Send(new SetStockLevelsCommand
+        {
+            Id = model.Id,
+            ReorderLevel = model.ReorderLevel,
+            MaxStockLevel = model.MaxStockLevel
+        });
+
+        return Json(new { success = result.Success, errorMessage = result.ErrorMessage });
     }
 }
