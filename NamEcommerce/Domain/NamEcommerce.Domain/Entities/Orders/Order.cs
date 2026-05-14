@@ -17,6 +17,10 @@ public sealed record Order : AppAggregateEntity
 {
     public const string OrderCodePrefix = "DB";
 
+    internal Order(string code) : this(code, null)
+    {
+    }
+
     internal Order(string code, CurrentUserInfoDto? createdByUser) : base(Guid.NewGuid())
     {
         Code = code;

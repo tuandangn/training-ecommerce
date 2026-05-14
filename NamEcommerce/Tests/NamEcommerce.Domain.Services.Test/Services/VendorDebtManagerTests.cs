@@ -109,8 +109,7 @@ public sealed class VendorDebtManagerTests
             purchaseOrderId: purchaseOrderId,
             purchaseOrderCode: "PO-001",
             totalAmount: 1_000_000,
-            dueDateUtc: null,
-            createdByUserId: null);
+            dueDateUtc: null);
 
         var debtReaderStub = VendorDebtDataReader.WithData(existingDebt);
         var paymentReaderStub = VendorPaymentDataReader.Empty();
@@ -263,8 +262,7 @@ public sealed class VendorDebtManagerTests
             purchaseOrderId: purchaseOrder.Id,
             purchaseOrderCode: purchaseOrder.Code,
             totalAmount: totalAmount,
-            dueDateUtc: null,
-            createdByUserId: null);
+            dueDateUtc: null);
 
         var debtReaderStub = VendorDebtDataReader.Empty();
         var vendorReaderStub = VendorDataReader.VendorById(vendor.Id, vendor);
@@ -364,8 +362,7 @@ public sealed class VendorDebtManagerTests
             purchaseOrderId: Guid.NewGuid(),
             purchaseOrderCode: "PO-001",
             totalAmount: 1_000_000,
-            dueDateUtc: null,
-            createdByUserId: null);
+            dueDateUtc: null);
         var paymentAmount = 400_000m;
         var dto = new CreateVendorPaymentDto
         {
@@ -427,8 +424,7 @@ public sealed class VendorDebtManagerTests
             purchaseOrderId: Guid.NewGuid(),
             purchaseOrderCode: "PO-001",
             totalAmount: 500_000,
-            dueDateUtc: null,
-            createdByUserId: null);
+            dueDateUtc: null);
         var exceedingAmount = 600_000m; // vượt quá TotalAmount
         var dto = new CreateVendorPaymentDto
         {
@@ -470,8 +466,7 @@ public sealed class VendorDebtManagerTests
             purchaseOrderId: Guid.NewGuid(),
             purchaseOrderCode: "PO-001",
             totalAmount: totalAmount,
-            dueDateUtc: null,
-            createdByUserId: null);
+            dueDateUtc: null);
         var dto = new CreateVendorPaymentDto
         {
             VendorId = vendor.Id,
@@ -524,8 +519,7 @@ public sealed class VendorDebtManagerTests
             purchaseOrderId: Guid.NewGuid(),
             purchaseOrderCode: "PO-001",
             totalAmount: 300_000,
-            dueDateUtc: null,
-            createdByUserId: null);
+            dueDateUtc: null);
         var debt2 = new VendorDebt(
             code: "CNNCC-002",
             vendorId: vendor.Id,
@@ -533,8 +527,7 @@ public sealed class VendorDebtManagerTests
             purchaseOrderId: Guid.NewGuid(),
             purchaseOrderCode: "PO-002",
             totalAmount: 500_000,
-            dueDateUtc: null,
-            createdByUserId: null);
+            dueDateUtc: null);
 
         var paymentAmount = 700_000m; // đủ trả hết debt1 (300k) + 400k của debt2
         var dto = new CreateVendorPaymentDto
@@ -584,8 +577,7 @@ public sealed class VendorDebtManagerTests
             purchaseOrderId: Guid.NewGuid(),
             purchaseOrderCode: "PO-001",
             totalAmount: 200_000,
-            dueDateUtc: null,
-            createdByUserId: null);
+            dueDateUtc: null);
 
         var paymentAmount = 350_000m; // dư 150k sau khi trả hết debt
         var dto = new CreateVendorPaymentDto
@@ -694,8 +686,7 @@ public sealed class VendorDebtManagerTests
             purchaseOrderId: Guid.NewGuid(),
             purchaseOrderCode: "PO-001",
             totalAmount: totalAmount,
-            dueDateUtc: null,
-            createdByUserId: null);
+            dueDateUtc: null);
 
         // Bước 1: Outstanding
         Assert.Equal(DebtStatus.Outstanding, debt.Status);
@@ -743,8 +734,7 @@ public sealed class VendorDebtManagerTests
             purchaseOrderId: Guid.NewGuid(),
             purchaseOrderCode: "PO-001",
             totalAmount: 1_000_000,
-            dueDateUtc: null,
-            createdByUserId: null);
+            dueDateUtc: null);
 
         var payment = new VendorPayment(
             code: "PCNCC-001",
@@ -804,8 +794,7 @@ public sealed class VendorDebtManagerTests
             vendorName: vendor.Name,
             goodsReceiptId: goodsReceiptId,
             totalAmount: 5_000_000,
-            dueDateUtc: null,
-            createdByUserId: null);
+            dueDateUtc: null);
         var payment = new VendorPayment(
             code: "PCNCC-GR-001",
             vendorId: vendor.Id,
@@ -844,8 +833,7 @@ public sealed class VendorDebtManagerTests
             vendorName: "NCC Khác",
             goodsReceiptId: Guid.NewGuid(),
             totalAmount: 100_000,
-            dueDateUtc: null,
-            createdByUserId: null);
+            dueDateUtc: null);
         var queriedGoodsReceiptId = Guid.NewGuid();
 
         var debtReaderStub = VendorDebtDataReader.WithData(unrelatedDebt);
