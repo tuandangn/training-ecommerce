@@ -34,8 +34,6 @@ public sealed record Order : AppAggregateEntity
         }
     }
     internal string NormalizedShippingAddress { get; private set; } = "";
-    private readonly List<OrderItem> _orderItems = [];
-    public IEnumerable<OrderItem> OrderItems => _orderItems.AsReadOnly();
     public decimal OrderSubTotal { get; private set; }
     public decimal OrderTotal { get; private set; }
     public decimal OrderDiscount { get; private set; }
@@ -47,6 +45,9 @@ public sealed record Order : AppAggregateEntity
     internal string? CustomerName { get; private set; }
     internal string? CustomerPhone { get; private set; }
     internal string? CustomerAddress { get; private set; }
+
+    private readonly List<OrderItem> _orderItems = [];
+    public IEnumerable<OrderItem> OrderItems => _orderItems.AsReadOnly();
 
     public Guid? CreatedByUserId { get; init; }
     internal string? CreatedByUsername { get; set; }
