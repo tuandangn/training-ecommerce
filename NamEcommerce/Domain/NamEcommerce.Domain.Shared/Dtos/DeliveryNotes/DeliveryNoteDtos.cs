@@ -73,7 +73,6 @@ public sealed record CreateDeliveryNoteDto
     public decimal Surcharge { get; init; }
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
-    public Guid? CreatedByUserId { get; init; }
     public required IList<CreateDeliveryNoteItemDto> Items { get; init; } = [];
 
     public void Verify()

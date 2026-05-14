@@ -35,7 +35,7 @@ public sealed class VendorReturnManager(
     IExpenseManager expenseManager,
     ICurrentUserAccessor currentUserAccessor) : IVendorReturnManager
 {
-    public async Task<VendorReturnDto> CreateAsync(CreateVendorReturnDto dto, Guid? createdByUserId)
+    public async Task<VendorReturnDto> CreateAsync(CreateVendorReturnDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
@@ -57,6 +57,7 @@ public sealed class VendorReturnManager(
             throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseNotFound", dto.WarehouseId);
 
         var code = GenerateCode();
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
 
         var vendorReturn = new VendorReturn(
             code: code,
@@ -68,7 +69,7 @@ public sealed class VendorReturnManager(
             warehouseName: warehouse.Name,
             note: dto.Note,
             additionalCost: dto.AdditionalCost,
-            createdByUserId: createdByUserId);
+            createdByUserId: currentUser?.Id);
 
         foreach (var itemDto in dto.Items)
         {

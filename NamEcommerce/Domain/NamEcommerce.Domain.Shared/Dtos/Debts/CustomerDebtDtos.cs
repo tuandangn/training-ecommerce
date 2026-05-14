@@ -55,7 +55,6 @@ public sealed record CustomerDebtDto
     public DateTime? DueDateUtc { get; init; }
     
     public DateTime CreatedOnUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public IList<CustomerPaymentDto> Payments { get; init; } = [];
 }
@@ -67,7 +66,6 @@ public sealed record CreateCustomerDebtDto
     public required Guid DeliveryNoteId { get; init; }
     public required decimal TotalAmount { get; init; }
     public DateTime? DueDateUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public void Verify()
     {
@@ -112,7 +110,6 @@ public sealed record CreateInitialCustomerDebtDto
 {
     public required Guid CustomerId { get; init; }
     public required decimal TotalAmount { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public void Verify()
     {

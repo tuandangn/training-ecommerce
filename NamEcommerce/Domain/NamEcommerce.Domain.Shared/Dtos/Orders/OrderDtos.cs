@@ -50,7 +50,6 @@ public sealed record OrderDto(Guid Id) : BaseOrderDto
 public sealed record CreateOrderDto : BaseOrderDto
 {
     public required Guid CustomerId { get; init; }
-    public required Guid? CreatedByUserId { get; init; }
     public string? ShippingAddress { get; set; }
     public IList<AddOrderItemDto> Items { get; } = [];
 

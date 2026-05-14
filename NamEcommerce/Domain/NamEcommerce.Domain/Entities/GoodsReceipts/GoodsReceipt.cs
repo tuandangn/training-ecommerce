@@ -29,6 +29,14 @@ public sealed record GoodsReceipt : AppAggregateEntity
         CreatedOnUtc = DateTime.UtcNow;
     }
 
+    private GoodsReceipt(Guid id, Guid? createdByUserId, string? createdByUsername = null) : base(id)
+    {
+        Code = string.Empty;
+        CreatedByUserId = createdByUserId;
+        CreatedByUsername = createdByUsername;
+        CreatedOnUtc = DateTime.UtcNow;
+    }
+
     public string Code { get; private set; }
 
     internal void SetCode(string code) => Code = code;
@@ -197,6 +205,17 @@ public sealed record GoodsReceipt : AppAggregateEntity
         var goodsReceipt = new GoodsReceipt(id, currentUser);
 
         return goodsReceipt;
+    }
+
+    internal static async Task<GoodsReceipt> CreateFromSourceAsync(Guid id, IGetByIdService<GoodsReceipt> byIdGetter, Guid? createdByUserId, string? createdByUsername = null)
+    {
+        ArgumentNullException.ThrowIfNull(byIdGetter);
+
+        var sameIdGoodsReceipt = await byIdGetter.GetByIdAsync(id).ConfigureAwait(false);
+        if (sameIdGoodsReceipt is not null)
+            throw new GoodsReceiptIdIsExistingException(id);
+
+        return new GoodsReceipt(id, createdByUserId, createdByUsername);
     }
 
     #endregion

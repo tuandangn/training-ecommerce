@@ -1,5 +1,6 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Debts;
+using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
@@ -7,13 +8,15 @@ using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Exceptions;
+using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.Debts;
 
 namespace NamEcommerce.Domain.Services.Debts;
 
 public sealed class CustomerRefundManager(
     IRepository<CustomerRefund> refundRepository,
-    IEntityDataReader<CustomerRefund> refundReader) : ICustomerRefundManager
+    IEntityDataReader<CustomerRefund> refundReader,
+    IEntityDataReader<CustomerReturn> customerReturnReader) : ICustomerRefundManager
 {
     private async Task<string> GenerateCodeAsync()
     {
@@ -34,6 +37,8 @@ public sealed class CustomerRefundManager(
             return MapToDto(existing);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
+        var customerReturn = await customerReturnReader.GetByIdAsync(dto.CustomerReturnId).ConfigureAwait(false)
+            ?? throw new CustomerReturnNotFoundException(dto.CustomerReturnId);
 
         var refund = new CustomerRefund(
             code: code,
@@ -43,7 +48,7 @@ public sealed class CustomerRefundManager(
             customerReturnCode: dto.CustomerReturnCode,
             customerDebtId: dto.CustomerDebtId,
             amount: dto.Amount,
-            createdByUserId: dto.CreatedByUserId);
+            createdByUserId: customerReturn.CreatedByUserId);
 
         refund.MarkCreated();
         var inserted = await refundRepository.InsertAsync(refund).ConfigureAwait(false);

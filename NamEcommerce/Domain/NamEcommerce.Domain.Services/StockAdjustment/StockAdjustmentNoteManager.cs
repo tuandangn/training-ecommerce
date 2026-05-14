@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Shared.Dtos.StockAdjustment;
 using NamEcommerce.Domain.Shared.Enums.StockAdjustment;
 using NamEcommerce.Domain.Shared.Exceptions.StockAdjustment;
 using NamEcommerce.Domain.Shared.Services.StockAdjustment;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Domain.Services.StockAdjustment;
 
@@ -17,7 +18,8 @@ public sealed class StockAdjustmentNoteManager(
     IEntityDataReader<StockAdjustmentNote> noteDataReader,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Warehouse> warehouseDataReader,
-    IEntityDataReader<InventoryStock> stockDataReader) : IStockAdjustmentNoteManager
+    IEntityDataReader<InventoryStock> stockDataReader,
+    ICurrentUserAccessor currentUserAccessor) : IStockAdjustmentNoteManager
 {
     private string GenerateCode()
     {
@@ -26,7 +28,7 @@ public sealed class StockAdjustmentNoteManager(
         return $"{prefix}-{(count + 1):D3}";
     }
 
-    public async Task<StockAdjustmentNoteDto> CreateAsync(CreateStockAdjustmentNoteDto dto, Guid? createdByUserId)
+    public async Task<StockAdjustmentNoteDto> CreateAsync(CreateStockAdjustmentNoteDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
@@ -36,7 +38,8 @@ public sealed class StockAdjustmentNoteManager(
             throw new Shared.Exceptions.NamEcommerceDomainException("Error.StockAdjustment.WarehouseNotFound");
 
         var code = GenerateCode();
-        var note = new StockAdjustmentNote(code, dto.WarehouseId, warehouse.Name, dto.Note, createdByUserId);
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        var note = new StockAdjustmentNote(code, dto.WarehouseId, warehouse.Name, dto.Note, currentUser?.Id);
 
         foreach (var itemDto in dto.Items)
         {

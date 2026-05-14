@@ -63,7 +63,6 @@ public sealed record VendorDebtDto
     public DateTime? DueDateUtc { get; init; }
 
     public DateTime CreatedOnUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public IList<VendorPaymentDto> Payments { get; init; } = [];
 }
@@ -75,7 +74,6 @@ public sealed record CreateVendorDebtDto
     public required Guid PurchaseOrderId { get; init; }
     public required decimal TotalAmount { get; init; }
     public DateTime? DueDateUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public void Verify()
     {
@@ -95,7 +93,6 @@ public sealed record CreateVendorDebtFromGoodsReceiptDto
     public required Guid GoodsReceiptId { get; init; }
     public required decimal TotalAmount { get; init; }
     public DateTime? DueDateUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public void Verify()
     {
@@ -117,7 +114,6 @@ public sealed record CreateInitialVendorDebtDto
 {
     public required Guid VendorId { get; init; }
     public required decimal TotalAmount { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public void Verify()
     {

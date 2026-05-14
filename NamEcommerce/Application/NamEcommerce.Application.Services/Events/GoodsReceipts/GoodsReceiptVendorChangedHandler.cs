@@ -46,8 +46,7 @@ public sealed class GoodsReceiptVendorChangedHandler : INotificationHandler<Good
         {
             VendorId = goodsReceipt.VendorId.Value,
             GoodsReceiptId = goodsReceipt.Id,
-            TotalAmount = totalAmount,
-            CreatedByUserId = goodsReceipt.CreatedByUserId
+            TotalAmount = totalAmount
         }).ConfigureAwait(false);
     }
 }

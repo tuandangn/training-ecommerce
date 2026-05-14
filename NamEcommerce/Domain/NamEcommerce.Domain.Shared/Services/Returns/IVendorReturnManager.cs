@@ -4,7 +4,7 @@ namespace NamEcommerce.Domain.Shared.Services.Returns;
 
 public interface IVendorReturnManager
 {
-    Task<VendorReturnDto> CreateAsync(CreateVendorReturnDto dto, Guid? createdByUserId);
+    Task<VendorReturnDto> CreateAsync(CreateVendorReturnDto dto);
     Task<VendorReturnDto> UpdateAsync(UpdateVendorReturnDto dto);
     Task MoveToInspectingAsync(Guid id);
     Task ConfirmAsync(Guid id);

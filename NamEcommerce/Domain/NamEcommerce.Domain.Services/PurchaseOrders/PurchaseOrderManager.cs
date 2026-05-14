@@ -2,7 +2,6 @@ using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
-using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
@@ -13,7 +12,6 @@ using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
-using NamEcommerce.Domain.Shared.Exceptions.Users;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
@@ -27,21 +25,19 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private readonly IEntityDataReader<PurchaseOrder> _purchaseOrderDataReader;
     private readonly IEntityDataReader<Vendor> _vendorOrderDataReader;
     private readonly IEntityDataReader<Warehouse> _warehouseOrderDataReader;
-    private readonly IEntityDataReader<User> _userDataReader;
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IGoodsReceiptManager _goodsReceiptManager;
     private readonly ICurrentUserAccessor _currentUserAccessor;
 
     public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
-        IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader,
+        IEntityDataReader<Product> productDataReader,
         IGoodsReceiptManager goodsReceiptManager, ICurrentUserAccessor currentUserAccessor)
     {
         _purchaseOrderRepository = poRepository;
         _purchaseOrderDataReader = purchaseOrderDataReader;
         _vendorOrderDataReader = vendorOrderDataReader;
         _warehouseOrderDataReader = warehouseOrderDataReader;
-        _userDataReader = userDataReader;
         _productDataReader = productDataReader;
         _goodsReceiptManager = goodsReceiptManager;
         _currentUserAccessor = currentUserAccessor;
@@ -78,13 +74,6 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             var warehouse = await _warehouseOrderDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
             if (warehouse is null)
                 throw new WarehouseIsNotFoundException(dto.WarehouseId.Value);
-        }
-
-        if (dto.CreatedByUserId.HasValue)
-        {
-            var user = await _userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
-            if (user is null)
-                throw new UserIsNotFoundException(dto.CreatedByUserId.Value);
         }
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);

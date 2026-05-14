@@ -16,7 +16,7 @@ public sealed record VendorDebt : AppAggregateEntity
 
     internal VendorDebt(string code, Guid vendorId, string vendorName,
         Guid purchaseOrderId, string purchaseOrderCode,
-        decimal totalAmount, DateTime? dueDateUtc, Guid? createdByUserId) : base(Guid.NewGuid())
+        decimal totalAmount, DateTime? dueDateUtc) : base(Guid.NewGuid())
     {
         Code = code;
         VendorId = vendorId;
@@ -28,13 +28,12 @@ public sealed record VendorDebt : AppAggregateEntity
         PaidAmount = 0;
         Status = DebtStatus.Outstanding;
         DueDateUtc = dueDateUtc;
-        CreatedByUserId = createdByUserId;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
     internal VendorDebt(string code, Guid vendorId, string vendorName,
         Guid goodsReceiptId,
-        decimal totalAmount, DateTime? dueDateUtc, Guid? createdByUserId) : base(Guid.NewGuid())
+        decimal totalAmount, DateTime? dueDateUtc) : base(Guid.NewGuid())
     {
         Code = code;
         VendorId = vendorId;
@@ -45,12 +44,11 @@ public sealed record VendorDebt : AppAggregateEntity
         PaidAmount = 0;
         Status = DebtStatus.Outstanding;
         DueDateUtc = dueDateUtc;
-        CreatedByUserId = createdByUserId;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
     internal VendorDebt(string code, Guid vendorId, string vendorName,
-        decimal totalAmount, Guid? createdByUserId) : base(Guid.NewGuid())
+        decimal totalAmount) : base(Guid.NewGuid())
     {
         Code = code;
         VendorId = vendorId;
@@ -60,7 +58,6 @@ public sealed record VendorDebt : AppAggregateEntity
         PaidAmount = 0;
         Status = DebtStatus.Outstanding;
         DueDateUtc = null;
-        CreatedByUserId = createdByUserId;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
@@ -113,7 +110,6 @@ public sealed record VendorDebt : AppAggregateEntity
     public DebtStatus Status { get; private set; }
     public DateTime? DueDateUtc { get; private set; }
 
-    public Guid? CreatedByUserId { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 

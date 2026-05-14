@@ -7,7 +7,7 @@ namespace NamEcommerce.Domain.Shared.Services.StockAdjustment;
 
 public interface IStockAdjustmentNoteManager
 {
-    Task<StockAdjustmentNoteDto> CreateAsync(CreateStockAdjustmentNoteDto dto, Guid? createdByUserId);
+    Task<StockAdjustmentNoteDto> CreateAsync(CreateStockAdjustmentNoteDto dto);
     Task ApproveAsync(Guid id);
     Task CancelAsync(Guid id);
     Task<StockAdjustmentNoteDto?> GetByIdAsync(Guid id);

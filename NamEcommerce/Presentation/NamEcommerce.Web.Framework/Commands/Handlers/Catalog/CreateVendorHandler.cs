@@ -5,7 +5,6 @@ using NamEcommerce.Application.Contracts.Dtos.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Catalog;
-using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Catalog;
 
@@ -13,13 +12,11 @@ public sealed class CreateVendorHandler : IRequestHandler<CreateVendorCommand, C
 {
     private readonly IVendorAppService _vendorAppService;
     private readonly IVendorDebtAppService _vendorDebtAppService;
-    private readonly ICurrentUserService _currentUserService;
 
-    public CreateVendorHandler(IVendorAppService vendorAppService, IVendorDebtAppService vendorDebtAppService, ICurrentUserService currentUserService)
+    public CreateVendorHandler(IVendorAppService vendorAppService, IVendorDebtAppService vendorDebtAppService)
     {
         _vendorAppService = vendorAppService;
         _vendorDebtAppService = vendorDebtAppService;
-        _currentUserService = currentUserService;
     }
 
     public async Task<CreateVendorResultModel> Handle(CreateVendorCommand request, CancellationToken cancellationToken)
@@ -42,12 +39,10 @@ public sealed class CreateVendorHandler : IRequestHandler<CreateVendorCommand, C
 
         if (request.InitialDebt.HasValue && request.InitialDebt.Value > 0)
         {
-            var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
             await _vendorDebtAppService.CreateInitialDebtAsync(new CreateInitialVendorDebtAppDto
             {
                 VendorId = result.CreatedId!.Value,
-                TotalAmount = request.InitialDebt.Value,
-                CreatedByUserId = currentUser?.Id
+                TotalAmount = request.InitialDebt.Value
             }).ConfigureAwait(false);
         }
 

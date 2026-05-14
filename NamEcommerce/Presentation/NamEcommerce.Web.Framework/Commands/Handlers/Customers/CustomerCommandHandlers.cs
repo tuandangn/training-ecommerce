@@ -5,7 +5,6 @@ using NamEcommerce.Application.Contracts.Customers;
 using NamEcommerce.Application.Contracts.Dtos.Customers;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
-using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Customers;
 
@@ -13,13 +12,11 @@ public sealed class CreateCustomerHandler : IRequestHandler<CreateCustomerComman
 {
     private readonly ICustomerAppService _customerAppService;
     private readonly ICustomerDebtAppService _customerDebtAppService;
-    private readonly ICurrentUserService _currentUserService;
 
-    public CreateCustomerHandler(ICustomerAppService customerAppService, ICustomerDebtAppService customerDebtAppService, ICurrentUserService currentUserService)
+    public CreateCustomerHandler(ICustomerAppService customerAppService, ICustomerDebtAppService customerDebtAppService)
     {
         _customerAppService = customerAppService;
         _customerDebtAppService = customerDebtAppService;
-        _currentUserService = currentUserService;
     }
 
     public async Task<CreateCustomerResultModel> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
@@ -44,12 +41,10 @@ public sealed class CreateCustomerHandler : IRequestHandler<CreateCustomerComman
         // Tạo công nợ ban đầu nếu có
         if (request.InitialDebt.HasValue && request.InitialDebt.Value > 0)
         {
-            var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
             await _customerDebtAppService.CreateInitialDebtAsync(new CreateInitialCustomerDebtAppDto
             {
                 CustomerId = result.CreatedId!.Value,
-                TotalAmount = request.InitialDebt.Value,
-                CreatedByUserId = currentUser?.Id
+                TotalAmount = request.InitialDebt.Value
             }).ConfigureAwait(false);
         }
 

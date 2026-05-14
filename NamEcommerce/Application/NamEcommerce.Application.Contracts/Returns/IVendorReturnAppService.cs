@@ -4,7 +4,7 @@ namespace NamEcommerce.Application.Contracts.Returns;
 
 public interface IVendorReturnAppService
 {
-    Task<CreateVendorReturnResultAppDto> CreateAsync(CreateVendorReturnAppDto dto, Guid? createdByUserId);
+    Task<CreateVendorReturnResultAppDto> CreateAsync(CreateVendorReturnAppDto dto);
     Task<UpdateVendorReturnResultAppDto> UpdateAsync(UpdateVendorReturnAppDto dto);
     Task<ConfirmVendorReturnResultAppDto> MoveToInspectingAsync(Guid id);
     Task<ConfirmVendorReturnResultAppDto> ConfirmAsync(Guid id);

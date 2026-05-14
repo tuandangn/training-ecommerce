@@ -141,7 +141,6 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
         => new()
         {
             CustomerId = dto.CustomerId,
-            CreatedByUserId = dto.CreatedByUserId,
             TotalAmount = dto.TotalAmount
         };
 

@@ -5,7 +5,6 @@ using NamEcommerce.Application.Contracts.GoodsReceipts;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Commands.Models.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Models.GoodsReceipts;
-using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.GoodsReceipts;
 
@@ -17,16 +16,13 @@ public sealed class QuickCreateAndLinkPurchaseOrderHandler
 {
     private readonly IGoodsReceiptAppService _goodsReceiptAppService;
     private readonly IPurchaseOrderAppService _purchaseOrderAppService;
-    private readonly ICurrentUserService _currentUserService;
 
     public QuickCreateAndLinkPurchaseOrderHandler(
         IGoodsReceiptAppService goodsReceiptAppService,
-        IPurchaseOrderAppService purchaseOrderAppService,
-        ICurrentUserService currentUserService)
+        IPurchaseOrderAppService purchaseOrderAppService)
     {
         _goodsReceiptAppService = goodsReceiptAppService;
         _purchaseOrderAppService = purchaseOrderAppService;
-        _currentUserService = currentUserService;
     }
 
     public async Task<QuickCreateAndLinkPurchaseOrderResultModel> Handle(
@@ -96,10 +92,6 @@ public sealed class QuickCreateAndLinkPurchaseOrderHandler
             }
         }
 
-        var currentUser = await _currentUserService
-            .GetCurrentUserInfoAsync()
-            .ConfigureAwait(false);
-
         // Build PO items với UnitCost lấy từ chính GR item (đã có hoặc vừa được set ở trên).
         var poItems = goodsReceipt.Items
             .Select(i => new CreatePurchaseOrderItemAppDto
@@ -117,7 +109,6 @@ public sealed class QuickCreateAndLinkPurchaseOrderHandler
             VendorId = effectiveVendorId.Value,
             WarehouseId = request.WarehouseId,
             Note = request.Note,
-            CreatedByUserId = currentUser?.Id,
             Items = poItems,
             TaxAmount = request.TaxAmount,
             ShippingAmount = request.ShippingAmount
