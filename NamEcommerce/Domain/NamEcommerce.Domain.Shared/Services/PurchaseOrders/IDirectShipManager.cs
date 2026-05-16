@@ -67,4 +67,8 @@ public interface IDirectShipManager
     Task<IList<DirectShipAllocationStatusDto>> GetDirectShipAllocationsForOrderItemsAsync(
         IReadOnlyList<Guid> orderItemIds,
         CancellationToken ct = default);
+
+    Task<IList<DirectShipAllocationForPoItemDto>> GetDirectShipAllocationsForPoItemsAsync(
+        IReadOnlyList<Guid> purchaseOrderItemIds,
+        CancellationToken ct = default);
 }

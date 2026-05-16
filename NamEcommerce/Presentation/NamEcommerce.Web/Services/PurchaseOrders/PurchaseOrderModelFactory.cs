@@ -1,4 +1,5 @@
 using MediatR;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -12,11 +13,13 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 {
     private readonly IMediator _mediator;
     private readonly AppConfig _appConfig;
+    private readonly IDirectShipAppService _directShipAppService;
 
-    public PurchaseOrderModelFactory(IMediator mediator, AppConfig appConfig)
+    public PurchaseOrderModelFactory(IMediator mediator, AppConfig appConfig, IDirectShipAppService directShipAppService)
     {
         _mediator = mediator;
         _appConfig = appConfig;
+        _directShipAppService = directShipAppService;
     }
 
     public async Task<PurchaseOrderListModel> PreparePurchaseOrderListModel(PurchaseOrderListSearchModel searchModel)
@@ -157,6 +160,32 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                     CurrentUnitPrice = item.CurrentUnitPrice,
                     UnitCost = item.UnitCost,
                     SellingPrice = item.CurrentUnitPrice
+                });
+            }
+        }
+
+        var poItemIds = purchaseOrderInfo.Items.Select(i => i.Id).ToList();
+        if (poItemIds.Count > 0)
+        {
+            var dsAllocations = await _directShipAppService
+                .GetDirectShipAllocationsForPoItemsAsync(poItemIds)
+                .ConfigureAwait(false);
+
+            foreach (var alloc in dsAllocations)
+            {
+                if (!model.DirectShipAllocationsPerItem.TryGetValue(alloc.PurchaseOrderItemId, out var list))
+                {
+                    list = [];
+                    model.DirectShipAllocationsPerItem[alloc.PurchaseOrderItemId] = list;
+                }
+                list.Add(new PurchaseOrderDetailsModel.DirectShipAllocationForPoModel
+                {
+                    AllocationId = alloc.AllocationId,
+                    DirectShipAddress = alloc.DirectShipAddress,
+                    DirectShipContactName = alloc.DirectShipContactName,
+                    DirectShipContactPhone = alloc.DirectShipContactPhone,
+                    AllocatedQuantity = alloc.AllocatedQuantity,
+                    Status = alloc.Status
                 });
             }
         }

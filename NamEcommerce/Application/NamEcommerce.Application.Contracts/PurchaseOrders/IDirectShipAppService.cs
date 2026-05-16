@@ -17,4 +17,7 @@ public interface IDirectShipAppService
 
     Task<IList<DirectShipAllocationStatusAppDto>> GetDirectShipAllocationsForOrderAsync(
         IReadOnlyList<Guid> orderItemIds);
+
+    Task<IList<DirectShipAllocationForPoItemAppDto>> GetDirectShipAllocationsForPoItemsAsync(
+        IReadOnlyList<Guid> purchaseOrderItemIds);
 }

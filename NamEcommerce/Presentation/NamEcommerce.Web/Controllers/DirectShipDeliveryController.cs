@@ -86,6 +86,27 @@ public sealed class DirectShipDeliveryController(IDirectShipAppService directShi
 
         return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdateAddress([FromBody] UpdateDirectShipAddressRequest request)
+    {
+        if (request.AllocationId == Guid.Empty || string.IsNullOrWhiteSpace(request.NewAddress))
+            return Json(new { success = false, message = "Dữ liệu không hợp lệ." });
+
+        var result = await directShipAppService.UpdateDirectShipAddressAsync(new UpdateDirectShipAddressAppDto
+        {
+            AllocationId = request.AllocationId,
+            NewAddress = request.NewAddress,
+            NewContactName = request.NewContactName,
+            NewContactPhone = request.NewContactPhone,
+            Reason = request.Reason
+        }).ConfigureAwait(false);
+
+        if (result.Success)
+            return Json(new { success = true });
+
+        return Json(new { success = false, message = result.ErrorMessage });
+    }
 }
 
 public sealed class ConfirmDirectShipDeliveryRequest
@@ -99,4 +120,13 @@ public sealed class RejectDirectShipDeliveryRequest
 {
     public Guid DeliveryNoteId { get; set; }
     public required string Reason { get; set; }
+}
+
+public sealed class UpdateDirectShipAddressRequest
+{
+    public Guid AllocationId { get; set; }
+    public required string NewAddress { get; set; }
+    public string? NewContactName { get; set; }
+    public string? NewContactPhone { get; set; }
+    public string? Reason { get; set; }
 }

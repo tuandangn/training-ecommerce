@@ -27,4 +27,19 @@ public sealed class PurchaseOrderDetailsModel
 
     [ValidateNever]
     public IList<RelatedVendorReturnModel> RelatedVendorReturns { get; set; } = [];
+
+    [ValidateNever]
+    public IDictionary<Guid, IList<DirectShipAllocationForPoModel>> DirectShipAllocationsPerItem { get; set; }
+        = new Dictionary<Guid, IList<DirectShipAllocationForPoModel>>();
+
+    [Serializable]
+    public sealed record DirectShipAllocationForPoModel
+    {
+        public Guid AllocationId { get; init; }
+        public string DirectShipAddress { get; init; } = string.Empty;
+        public string? DirectShipContactName { get; init; }
+        public string? DirectShipContactPhone { get; init; }
+        public decimal AllocatedQuantity { get; init; }
+        public int Status { get; init; }
+    }
 }

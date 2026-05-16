@@ -207,6 +207,36 @@
                                                 }
 
                                             </tr>
+                                            @if (Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var dsAllocations))
+                                            {
+                                                foreach (var alloc in dsAllocations)
+                                                {
+                                                    <tr class="table-light">
+                                                        <td colspan="3" class="ps-5 py-1 small">
+                                                            <i class="bi bi-send me-1 text-primary"></i>
+                                                            <strong>Giao thẳng:</strong>
+                                                            @alloc.DirectShipAddress
+                                                            @if (!string.IsNullOrEmpty(alloc.DirectShipContactName))
+                                                            { <span class="text-muted ms-2">— @alloc.DirectShipContactName</span> }
+                                                            @if (!string.IsNullOrEmpty(alloc.DirectShipContactPhone))
+                                                            { <span class="text-muted ms-1">(@alloc.DirectShipContactPhone)</span> }
+                                                        </td>
+                                                        <td class="py-1 text-end small text-muted">@alloc.AllocatedQuantity.DisplayQuantity()</td>
+                                                        <td class="py-1"></td>
+                                                        <td class="py-1 text-center d-none d-md-table-cell"></td>
+                                                        <td class="py-1 text-center">
+                                                            <button class="btn btn-sm btn-outline-secondary py-0 px-2 btnEditDirectShipAddress"
+                                                                    data-allocation-id="@alloc.AllocationId"
+                                                                    data-address="@alloc.DirectShipAddress"
+                                                                    data-contact-name="@(alloc.DirectShipContactName ?? "")"
+                                                                    data-contact-phone="@(alloc.DirectShipContactPhone ?? "")">
+                                                                <i class="bi bi-pencil-square"></i>
+                                                                <span class="d-none d-lg-inline ms-1">Sửa địa chỉ giao</span>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
                                         }
                                     }
                                     else
@@ -843,6 +873,43 @@
             </div>
         }
 
+        <div class="modal fade" id="editDirectShipAddressModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold">Sửa địa chỉ giao</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-4">
+                        <input type="hidden" id="editDsAllocationId" />
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Địa chỉ giao <span class="text-danger">*</span></label>
+                            <textarea id="editDsAddress" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Người nhận</label>
+                            <input id="editDsContactName" type="text" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase">Điện thoại</label>
+                            <input id="editDsContactPhone" type="text" class="form-control" />
+                        </div>
+                        <div id="editDsSuccessBanner" class="alert alert-warning border-0 d-none">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            Đã cập nhật — vui lòng in lại phiếu giao cho NCC.
+                        </div>
+                        <div id="editDsErrorBanner" class="alert alert-danger border-0 small d-none"></div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 pb-4">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                        <button type="button" class="btn btn-primary" id="btnSaveDirectShipAddress">
+                            <i class="bi bi-save me-1"></i> Lưu
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         @section Styles {
             <style>
                 .po-items-popover-content .popover-body {
@@ -892,6 +959,49 @@
         }
         @section Scripts {
             <partial name="_ValidationScriptsPartial" />
+
+            <script>
+                document.querySelectorAll('.btnEditDirectShipAddress').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        document.getElementById('editDsAllocationId').value = this.dataset.allocationId;
+                        document.getElementById('editDsAddress').value = this.dataset.address || '';
+                        document.getElementById('editDsContactName').value = this.dataset.contactName || '';
+                        document.getElementById('editDsContactPhone').value = this.dataset.contactPhone || '';
+                        document.getElementById('editDsSuccessBanner').classList.add('d-none');
+                        document.getElementById('editDsErrorBanner').classList.add('d-none');
+                        bootstrap.Modal.getOrCreate(document.getElementById('editDirectShipAddressModal')).show();
+                    });
+                });
+
+                document.getElementById('btnSaveDirectShipAddress')?.addEventListener('click', async function() {
+                    const allocationId = document.getElementById('editDsAllocationId').value;
+                    const newAddress = document.getElementById('editDsAddress').value.trim();
+                    const successBanner = document.getElementById('editDsSuccessBanner');
+                    const errorBanner = document.getElementById('editDsErrorBanner');
+                    successBanner.classList.add('d-none');
+                    errorBanner.classList.add('d-none');
+                    if (!newAddress) {
+                        errorBanner.textContent = 'Địa chỉ giao không được để trống.';
+                        errorBanner.classList.remove('d-none');
+                        return;
+                    }
+                    try {
+                        const resp = await fetch('/DirectShipDelivery/UpdateAddress', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
+                            body: JSON.stringify({
+                                allocationId,
+                                newAddress,
+                                newContactName: document.getElementById('editDsContactName').value.trim() || null,
+                                newContactPhone: document.getElementById('editDsContactPhone').value.trim() || null
+                            })
+                        });
+                        const data = await resp.json();
+                        if (data.success) successBanner.classList.remove('d-none');
+                        else { errorBanner.textContent = data.message || 'Có lỗi xảy ra.'; errorBanner.classList.remove('d-none'); }
+                    } catch { errorBanner.textContent = 'Lỗi kết nối.'; errorBanner.classList.remove('d-none'); }
+                });
+            </script>
 
             @if (Model.RelatedGoodsReceipts.Count > 0 || Model.RelatedVendorReturns.Count > 0)
             {
