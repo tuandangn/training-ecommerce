@@ -1,5 +1,4 @@
 @model OrderDetailsModel
-@using System.Text
 @inject IWebHelper WebHelper
 @{
     ViewData[ViewConstants.PageTitle] = $"Đơn bán - {Model.Code}";
@@ -42,26 +41,6 @@
     };
     @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
 }
-@if (Model.AllocatedPurchaseOrders?.HasItems ?? false)
-{
-    var totalPendingQuantity = Model.AllocatedPurchaseOrders.Items.Sum(po => po.PendingQuantity);
-    <div class="d-flex align-items-center gap-2 mb-3">
-        <button type="button" class="btn btn-outline-primary btn-sm"
-                onclick="openCoworkOffcanvas({ title: 'Đơn nhập đã phân bổ', url: '/Order/AllocatedPurchaseOrders/@Model.Id', size: 'lg' })">
-            <i class="bi bi-truck me-1"></i>
-            Xem đơn nhập đã phân bổ
-            <span class="badge bg-primary ms-1">@Model.AllocatedPurchaseOrders?.Items.Count</span>
-        </button>
-        @if (totalPendingQuantity > 0)
-        {
-            <span class="text-muted small">Còn chờ @totalPendingQuantity.DisplayQuantity()</span>
-        }
-        else
-        {
-            <span class="text-success small"><i class="bi bi-check-circle"></i> Đã nhận đủ</span>
-        }
-    </div>
-}
 <div class="content-card mb-3 position-relative">
     <div class="content-card-body-flush">
         <div class="row g-3">
@@ -69,18 +48,55 @@
                 <div class="mb-3">
                     <div class="content-card-header">
                         <h5>Danh sách hàng hóa</h5>
-                        @if (Model.CanUpdateOrderItems)
-                        {
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                                <i class="bi bi-plus-lg me-1"></i>
-                                <span class="d-none d-lg-inline">Thêm hàng hóa</span>
-                                <span class="d-lg-none">Thêm</span>
-                            </button>
-                        }
                     </div>
                     <div class="content-card-body-flush">
                         <div class="table-responsive">
-                            <table class="table data-table mb-0">
+                            <table class="table data-table caption-top mb-0">
+                                @if (Model.CanUpdateOrderItems
+                                    || Model.ShortageInfo.HasShortage
+                                    || Model.AllocatedPurchaseOrders!.HasItems)
+                                {
+                                    <caption>
+                                        <div class="d-flex align-items-center justify-content-between px-2">
+                                            <div>
+                                                @if (Model.AllocatedPurchaseOrders!.HasItems)
+                                                {
+                                                    @if (Model.AllocatedPurchaseOrders!.Items.Any(item => item.PendingQuantity > 0))
+                                                    {
+                                                        <span class="text-muted small ps-2">
+                                                            Đang chờ nhập hàng
+                                                            <span class="fw-medium">@Model.AllocatedPurchaseOrders.Items.Count(po => po.PendingQuantity > 0)</span>
+                                                            đơn.
+                                                            <a href="#" onclick="openCoworkOffcanvas({ title: 'Đơn nhập đã phân bổ', url: '/Order/AllocatedPurchaseOrders/@Model.Id', size: 'lg' })">
+                                                                Xem
+                                                            </a>
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-success small">
+                                                            <i class="bi bi-check-circle"></i> Đã nhận đủ
+                                                        </span>
+                                                    }
+                                                }
+                                                else if (Model.ShortageInfo.HasShortage)
+                                                {
+                                                    <span class="text-muted small ps-2">
+                                                        @Model.ShortageInfo.Items.Count mặt hàng chưa đủ tồn kho
+                                                    </span>
+                                                }
+                                            </div>
+                                            @if (Model.CanUpdateOrderItems)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                                                    <i class="bi bi-plus-lg me-1"></i>
+                                                    <span class="d-none d-lg-inline">Thêm hàng hóa</span>
+                                                    <span class="d-lg-none">Thêm</span>
+                                                </button>
+                                            }
+                                        </div>
+                                    </caption>
+                                }
                                 <thead>
                                     <tr>
                                         <th class="ps-3">Hàng hóa</th>
@@ -208,12 +224,6 @@
                 </div>
             </div>
             <div class="col-lg-4 order-0 order-lg-1">
-                @{
-                    var isOrderLocked = Model.Status == (int)OrderStatus.Locked;
-                    var hasDeliveryNotes = Model.DeliveryNotes.Count > 0;
-                    var allItemsCovered = Model.AreAllItemsFullyCovered;
-                    var canCreateDeliveryNotes = !isOrderLocked && !allItemsCovered;
-                }
                 @if (orderStatus == OrderStatus.Locked)
                 {
                     <div class="content-card mb-3">
@@ -307,46 +317,6 @@
                             </span>
                         </div>
                     </div>
-                    @if (!isOrderLocked || hasDeliveryNotes)
-                    {
-                        <div class="content-card-header pb-2">
-                            <h5>Phiếu xuất kho</h5>
-                            @if (canCreateDeliveryNotes)
-                            {
-                                <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#createDeliveryNoteModal">
-                                    <i class="bi bi-box-arrow-in-up me-1"></i> Xuất
-                                </button>
-                            }
-                        </div>
-                        <div class="content-card-body pb-0 pt-2">
-                            @if (hasDeliveryNotes)
-                            {
-                                <div class="mb-3">
-                                    <label class="form-label small fw-medium text-muted mb-2">Phiếu xuất kho hiện có:</label>
-                                    <div class="list-group list-group-sm">
-                                        @foreach (var dn in Model.DeliveryNotes)
-                                        {
-                                            <a href="@Url.Action("Details", "DeliveryNote", new { id = dn.Id })" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                                                <span>@dn.Code</span>
-                                                <i class="bi bi-arrow-right small text-muted"></i>
-                                            </a>
-                                        }
-                                    </div>
-                                    @if (allItemsCovered)
-                                    {
-                                        <div class="alert alert-success mb-0 mt-3" role="alert" style="padding: 0.5rem 0.75rem; font-size: 0.875rem;">
-                                            <i class="bi bi-check-circle me-2"></i>
-                                            <span>Tất cả hàng hóa đã được xuất kho đầy đủ.</span>
-                                        </div>
-                                    }
-                                </div>
-                            }
-                            else
-                            {
-                                <span class="text-muted fst-italic small">Không có phiếu xuất nào.</span>
-                            }
-                        </div>
-                    }
                     <div class="content-card-header pb-2">
                         <h5>Ghi chú</h5>
                         @if (Model.CanUpdateInfo)
@@ -372,39 +342,59 @@
             </div>
         </div>
     </div>
-    <div class="content-card-footer d-flex align-items-center justify-content-between">
-        <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
-            <i class="bi bi-arrow-left"></i>
-            Trở về
-        </a>
-        <div>
-            @if (Model.Status != (int)OrderStatus.Locked)
-            {
-                @if (Model.DeliveryNotes.Count > 0)
+    <div class="content-card-footer">
+        <div class="d-flex align-items-center justify-content-between gap-1">
+            <div class="d-flex flex-row-reverse align-items-center gap-1">
+                @if (Model.Status != (int)OrderStatus.Locked)
                 {
-                    <a asp-controller="DeliveryNote" asp-action="List" asp-route-keywords="@Model.Code" class="btn btn-light text-dark">
-                        <i class="bi bi-card-list me-1"></i> Phiếu xuất hàng
-                    </a>
+                    @if (Model.DeliveryNotes.Count > 0)
+                    {
+                        <a asp-controller="DeliveryNote" asp-action="List" asp-route-keywords="@Model.Code" class="btn btn-secondary">
+                            <i class="bi bi-card-list me-1"></i>
+                            Phiếu xuất
+                        </a>
+                    }
+                    @if (!Model.AreAllItemsFullyCovered)
+                    {
+                        <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@Model.Id" class="btn btn-success">
+                            <i class="bi bi-box-arrow-in-up me-1"></i>
+                            Xuất hàng
+                        </a>
+                    }
                 }
-                @if (!Model.AreAllItemsFullyCovered)
+                @if (Model.AllocatedPurchaseOrders?.HasItems ?? false)
                 {
-                    <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@Model.Id" class="btn btn-success">
-                        <i class="bi bi-box-arrow-in-up me-1"></i>
-                        Xuất hàng
-                    </a>
+                    <div class="d-flex align-items-center">
+                        <button type="button" class="btn btn-outline-primary" onclick="openCoworkOffcanvas({ title: 'Đơn nhập đã phân bổ', url: '/Order/AllocatedPurchaseOrders/@Model.Id', size: 'lg' })">
+                            <i class="bi bi-truck me-1"></i>
+                            Đơn nhập
+                        </button>
+                    </div>
                 }
-            }
-            <button type="button" class="btn btn-info text-white" onclick="window.print()">
-                <i class="bi bi-printer me-1"></i>
-                In đơn
-            </button>
-            @if (Model.CanLockOrder)
-            {
-                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#lockModal">
-                    <i class="bi bi-lock me-1"></i>
-                    Khóa đơn
+                <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm d-none d-sm-inline-block">
+                    <i class="bi bi-arrow-left"></i>
+                    Trở về
+                </a>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+                <button type="button" class="btn btn-info text-white" onclick="window.print()">
+                    <i class="bi bi-printer me-1"></i>
+                    In đơn
                 </button>
-            }
+                @if (Model.CanLockOrder)
+                {
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#lockModal">
+                        <i class="bi bi-lock me-1"></i>
+                        Khóa đơn
+                    </button>
+                }
+            </div>
+        </div>
+        <div class="text-center mt-3 d-block d-sm-none">
+            <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                <i class="bi bi-arrow-left"></i>
+                Trở về
+            </a>
         </div>
     </div>
 </div>
@@ -670,7 +660,7 @@
     </div>
 }
 
-@if (!isOrderLocked)
+@if (Model.Status != (int)OrderStatus.Locked)
 {
     <div class="modal fade" id="createDeliveryNoteModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">

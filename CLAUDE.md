@@ -75,6 +75,15 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ---
 
+## 5. Design System
+
+- Trước khi viết/sửa UI, luôn đọc `DESIGN.md`.
+- Tuân thủ màu sắc, typography, spacing, radius và component guidance trong `DESIGN.md`.
+- Nếu sửa `DESIGN.md`, chạy `npm run design:lint` để kiểm tra.
+- Không tự ý đổi gu thiết kế nếu user không yêu cầu.
+
+
+
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 # RTK (Rust Token Killer) - Token-Optimized Commands
 

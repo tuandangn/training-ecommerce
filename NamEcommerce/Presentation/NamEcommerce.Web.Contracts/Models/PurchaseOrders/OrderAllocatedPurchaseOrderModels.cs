@@ -20,7 +20,7 @@ public sealed record OrderAllocatedPurchaseOrderModel
     public required string StatusClass { get; init; }
     public required Guid VendorId { get; init; }
     public required string VendorName { get; init; }
-    public required DateTime CreatedOn { get; init; }
+    public required DateTime PlacedOn { get; init; }
     public DateTime? ExpectedDeliveryDate { get; init; }
     public IList<OrderAllocatedPurchaseOrderItemModel> Items { get; init; } = [];
     public int ItemCount => Items.Count;

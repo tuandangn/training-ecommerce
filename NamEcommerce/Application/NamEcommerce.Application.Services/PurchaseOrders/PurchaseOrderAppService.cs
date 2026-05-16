@@ -603,7 +603,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 Status = (int)dto.Status,
                 VendorId = dto.VendorId,
                 VendorName = dto.VendorName,
-                CreatedOnUtc = dto.CreatedOnUtc,
+                PlacedOnUtc = dto.PlacedOnUtc,
                 ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
                 Items = dto.Items.Select(item => new OrderAllocatedPurchaseOrderItemAppDto
                 {

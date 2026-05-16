@@ -209,7 +209,8 @@ public sealed class PurchaseOrderAllocationManager(
         var purchaseOrderItemIds = allocations.Select(allocation => allocation.PurchaseOrderItemId).ToHashSet();
 
         var purchaseOrders = purchaseOrderReader.DataSource
-            .Where(purchaseOrder => purchaseOrder.Items.Any(item => purchaseOrderItemIds.Contains(item.Id)))
+            .Where(purchaseOrder => purchaseOrder.Status != PurchaseOrderStatus.Cancelled 
+                && purchaseOrder.Items.Any(item => purchaseOrderItemIds.Contains(item.Id)))
             .ToList();
 
         var poItemToPurchaseOrder = purchaseOrders
@@ -258,11 +259,11 @@ public sealed class PurchaseOrderAllocationManager(
                 Status = group.PurchaseOrder.Status,
                 VendorId = group.PurchaseOrder.VendorId,
                 VendorName = vendors.TryGetValue(group.PurchaseOrder.VendorId, out var vendorName) ? vendorName : string.Empty,
-                CreatedOnUtc = group.PurchaseOrder.CreatedOnUtc,
+                PlacedOnUtc = group.PurchaseOrder.PlacedOnUtc,
                 ExpectedDeliveryDateUtc = group.PurchaseOrder.ExpectedDeliveryDateUtc,
                 Items = group.Items
             })
-            .OrderByDescending(dto => dto.CreatedOnUtc)
+            .OrderByDescending(dto => dto.PlacedOnUtc)
             .ToList();
 
         return Task.FromResult<IList<OrderAllocatedPurchaseOrderDto>>(result);

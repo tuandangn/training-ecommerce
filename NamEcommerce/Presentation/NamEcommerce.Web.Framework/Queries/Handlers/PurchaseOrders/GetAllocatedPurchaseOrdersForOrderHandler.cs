@@ -31,7 +31,7 @@ public sealed class GetAllocatedPurchaseOrdersForOrderHandler
             .ConfigureAwait(false);
 
         var items = purchaseOrders
-            .OrderByDescending(purchaseOrder => purchaseOrder.CreatedOnUtc)
+            .OrderByDescending(purchaseOrder => purchaseOrder.PlacedOnUtc)
             .Select(purchaseOrder => new OrderAllocatedPurchaseOrderModel
             {
                 PurchaseOrderId = purchaseOrder.PurchaseOrderId,
@@ -41,7 +41,7 @@ public sealed class GetAllocatedPurchaseOrdersForOrderHandler
                 StatusClass = GetStatusClass(purchaseOrder.Status),
                 VendorId = purchaseOrder.VendorId,
                 VendorName = purchaseOrder.VendorName,
-                CreatedOn = purchaseOrder.CreatedOnUtc.ToLocalTime(),
+                PlacedOn = purchaseOrder.PlacedOnUtc.ToLocalTime(),
                 ExpectedDeliveryDate = purchaseOrder.ExpectedDeliveryDateUtc?.ToLocalTime(),
                 Items = purchaseOrder.Items.Select(item => new OrderAllocatedPurchaseOrderItemModel
                 {

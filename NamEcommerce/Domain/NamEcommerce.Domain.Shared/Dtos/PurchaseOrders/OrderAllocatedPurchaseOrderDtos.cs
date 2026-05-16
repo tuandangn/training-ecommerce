@@ -10,7 +10,7 @@ public sealed record OrderAllocatedPurchaseOrderDto
     public required PurchaseOrderStatus Status { get; init; }
     public required Guid VendorId { get; init; }
     public required string VendorName { get; init; }
-    public required DateTime CreatedOnUtc { get; init; }
+    public required DateTime PlacedOnUtc { get; init; }
     public DateTime? ExpectedDeliveryDateUtc { get; init; }
     public IList<OrderAllocatedPurchaseOrderItemDto> Items { get; init; } = [];
 }

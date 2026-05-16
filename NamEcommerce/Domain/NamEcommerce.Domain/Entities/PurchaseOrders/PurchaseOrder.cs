@@ -35,24 +35,27 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
     public DateTime PlacedOnUtc { get; private set; }
     public string Code { get; private set; }
-
     public Guid VendorId { get; private set; }
     public Guid? WarehouseId { get; private set; }
     public Guid? CreatedByUserId { get; }
-
+    public DateTime? ExpectedDeliveryDateUtc { get; internal set; }
+    public string? Note { get; internal set; }
     public PurchaseOrderStatus Status { get; private set; }
 
-    public DateTime? ExpectedDeliveryDateUtc { get; internal set; }
+    public string? CloseReason { get; private set; }
+    public DateTime? ClosedOnUtc { get; private set; }
 
-    public string? Note { get; internal set; }
+    public Guid? ApprovedByUserId { get; private set; }
+    public DateTime? ApprovedOnUtc { get; private set; }
+    public DateTime? LastReceivedOnUtc { get; private set; }
 
-    public decimal Subtotal => _items.Sum(x => x.TotalCost);
     public decimal TaxAmount { get; internal set; }
     public decimal ShippingAmount { get; internal set; }
     public decimal AccumulatedShippingAmount { get; internal set; }
     public decimal AccumulatedTaxAmount { get; internal set; }
     public decimal TotalShipping => ShippingAmount + AccumulatedShippingAmount;
     public decimal TotalTax => TaxAmount + AccumulatedTaxAmount;
+    public decimal Subtotal => _items.Sum(x => x.TotalCost);
     public decimal TotalAmount => Subtotal + TotalShipping + TotalTax;
 
     private readonly List<PurchaseOrderItem> _items = [];
@@ -62,18 +65,6 @@ public sealed record PurchaseOrder : AppAggregateEntity
     public DateTime? UpdatedOnUtc { get; internal set; }
 
     public byte[] RowVersion { get; private set; } = [];
-
-    public string? CloseReason { get; private set; }
-    public DateTime? ClosedOnUtc { get; private set; }
-
-    /// <summary>User duyệt đơn (set khi Status chuyển sang Approved). Null nếu chưa duyệt.</summary>
-    public Guid? ApprovedByUserId { get; private set; }
-
-    /// <summary>Thời điểm duyệt (UTC). Null nếu chưa duyệt.</summary>
-    public DateTime? ApprovedOnUtc { get; private set; }
-
-    /// <summary>Thời điểm nhận hàng gần nhất (UTC) — set khi MarkItemReceived hoặc MarkBulkReceived.</summary>
-    public DateTime? LastReceivedOnUtc { get; private set; }
 
     #region Methods
 
@@ -232,42 +223,21 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
     #region Domain Event Markers
 
-    /// <summary>
-    /// Đánh dấu đơn nhập vừa được tạo — Manager gọi trước <c>InsertAsync</c>.
-    /// Event sẽ được dispatch sau khi <c>SaveChanges</c> thành công bởi <c>DomainEventDispatchInterceptor</c>.
-    /// </summary>
     internal void MarkCreated()
         => RaiseDomainEvent(new PurchaseOrderCreated(Id, Code, VendorId, WarehouseId));
 
-    /// <summary>
-    /// Đánh dấu đơn nhập vừa cập nhật thông tin chung — raise <see cref="PurchaseOrderUpdated"/>.
-    /// </summary>
     internal void MarkUpdated()
         => RaiseDomainEvent(new PurchaseOrderUpdated(Id));
 
-    /// <summary>
-    /// Đánh dấu trạng thái đơn nhập vừa thay đổi — raise <see cref="PurchaseOrderStatusChanged"/> với
-    /// trạng thái cũ + mới phục vụ tracking + side-effect khác (notify, audit log, ...).
-    /// </summary>
     internal void MarkStatusChanged(PurchaseOrderStatus oldStatus)
         => RaiseDomainEvent(new PurchaseOrderStatusChanged(Id, oldStatus, Status));
 
-    /// <summary>
-    /// Đánh dấu một dòng hàng vừa được thêm vào đơn nhập — raise <see cref="PurchaseOrderItemAdded"/>.
-    /// </summary>
     internal void MarkItemAdded(PurchaseOrderItem item)
         => RaiseDomainEvent(new PurchaseOrderItemAdded(Id, item.Id, item.ProductId, item.QuantityOrdered, item.UnitCost));
 
-    /// <summary>
-    /// Đánh dấu một dòng hàng vừa bị xoá — raise <see cref="PurchaseOrderItemRemoved"/>.
-    /// </summary>
     internal void MarkItemRemoved(Guid itemId)
         => RaiseDomainEvent(new PurchaseOrderItemRemoved(Id, itemId));
 
-    /// <summary>
-    /// Đánh dấu một dòng hàng vừa được nhận hàng — raise <see cref="PurchaseOrderItemReceived"/>.
-    /// Handler sẽ subscribe event này để verify + transition trạng thái đơn (Approved → Receiving → Completed).
-    /// </summary>
     internal void MarkItemReceived(Guid itemId, decimal receivedQuantity)
     {
         LastReceivedOnUtc = DateTime.UtcNow;

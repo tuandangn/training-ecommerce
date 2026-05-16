@@ -1,8 +1,9 @@
 # Plan — Direct-Ship Workflow (Giao thẳng từ NCC đến khách)
 
-> Trạng thái: **APPROVED — open questions đã chốt 2026-05-16**
+> Trạng thái: **APPROVED — refactored sau code review 2026-05-16**
 > Ngày soạn: 2026-05-16
 > Liên hệ: feature "Shortage & Auto-PO" đã hoàn tất, plan này extend `PurchaseOrderItemAllocation` đã có
+> Đã align với code thật (xem AGENTS.md), tránh double-count receive, không phá lifecycle DN/PO hiện có
 
 ---
 
@@ -29,7 +30,10 @@ Hệ thống hiện chưa hỗ trợ workflow này — đang phải tách thành
 
 ## 3. Thay đổi Domain
 
-### 3.1. Extend `PurchaseOrderItemAllocation`
+### 3.1. Extend `PurchaseOrderItemAllocation` — CHỈ thêm direct-ship fields
+
+> File: `Domain/Entities/PurchaseOrders/PurchaseOrderItemAllocation.cs`
+> Hiện entity chỉ có `AllocatedQuantity`, `ReceivedQuantity`, `CreatedOnUtc` + 2 method `IncreaseReceived` / `ReduceAllocationToReceived`. Status partial/full hoàn toàn derive được từ quantity, **KHÔNG thêm status enum** vào allocation (tránh trộn receipt-status với delivery-status).
 
 Thêm fields:
 
@@ -38,97 +42,185 @@ Thêm fields:
 - `DirectShipContactName` (string, max 200, nullable)
 - `DirectShipContactPhone` (string, max 50, nullable)
 - `DirectShipPriority` (int, default 0) — số càng cao càng ưu tiên khi NCC giao thiếu
-- `AllocationStatus` enum mở rộng: `Allocated`, `PartiallyReceived`, `FullyReceived`, `DeliveryPending`, `DeliveryConfirmed`, `Cancelled`
 
 Constraint domain:
 - Nếu `IsDirectShip = true` thì `DirectShipAddress` bắt buộc không null/empty.
 
-### 3.2. Bổ sung Warehouse Virtual
+Status được lookup runtime:
+- **Receipt status** (Pending / Partial / Full): derive từ `ReceivedQuantity` vs `AllocatedQuantity`.
+- **Delivery status** (cho direct-ship): lookup từ `DeliveryNote.Status` của DN liên kết.
 
-- `Warehouse` thêm cột `WarehouseType` enum: `Physical` (mặc định), `DirectShipTransit`, `ReturnTransit` (mở rộng tương lai).
-- Seed 1 record `Warehouse` tên "Direct-Ship Transit", `WarehouseType = DirectShipTransit`, không hiển thị trong dropdown chọn kho bình thường.
-- Toàn bộ logic kiểm kê/tồn kho cuối kỳ filter `WarehouseType = Physical`.
+### 3.2. `WarehouseType` — chỉ thêm value mới
 
-### 3.3. Extend `DeliveryNote`
+> File: `Domain.Shared/Enums/Inventory/WarehouseType.cs`
+> Enum hiện có: `Main`, `SubWarehouse`, `ReturnWarehouse`. **Giữ nguyên thứ tự**, chỉ append `DirectShipTransit` vào cuối để tránh ảnh hưởng data migration.
 
-- `DeliveryConfirmationStatus` enum: `NotApplicable` (default cho DN thường), `PendingConfirmation`, `Confirmed`, `Rejected`
-- `IsDirectShip` (bool, default false)
-- `ConfirmedAt` (DateTime UTC, nullable)
-- `ConfirmedNote` (string, nullable) — ghi chú khi confirm/reject
-- `SourceGoodsReceiptId` (FK, nullable) — link tới GR đã tạo ra DN này (khác với DN bình thường tạo từ SO)
-
-### 3.4. Domain Manager mới: `IDirectShipManager`
-
-Methods chính:
-
-```
-Task<Result> MarkAllocationAsDirectShipAsync(
-    Guid allocationId,
-    string address, string contactName, string contactPhone, int priority,
-    CancellationToken ct);
-
-Task<DistributionResult> DistributeReceivedQuantityAsync(
-    Guid purchaseOrderItemId, decimal receivedQty,
-    CancellationToken ct);
-// Logic: sort allocations theo (IsDirectShip desc, DirectShipPriority desc, CreatedAt asc),
-//        chia receivedQty theo thứ tự đó.
-//        Trả về 2 nhóm: AllocationReceipts (direct-ship → kho ảo + tạo DN Pending),
-//                       WarehouseReceipts (phần dư → kho chính).
-
-Task<Result> ConfirmDeliveryAsync(
-    Guid deliveryNoteId, DateTime confirmedAtUtc, string note,
-    CancellationToken ct);
-// Effect: DN PendingConfirmation → Confirmed,
-//         StockMovement: kho ảo "Direct-Ship Transit" out,
-//         Trigger event để Invoice/Debt module tạo phải thu.
-
-Task<Result> RejectDeliveryAsync(
-    Guid deliveryNoteId, string reason,
-    CancellationToken ct);
-// Effect: DN PendingConfirmation → Rejected,
-//         StockMovement: kho ảo → kho chính (chuyển hàng về kho để bán cho khách khác).
+```csharp
+public enum WarehouseType
+{
+    Main,
+    SubWarehouse,
+    ReturnWarehouse,
+    DirectShipTransit  // NEW — kho ảo cho hàng direct-ship đang chờ khách confirm
+}
 ```
 
-### 3.5. Domain Event
+- Seed 1 record `Warehouse` tên "Direct-Ship Transit", `WarehouseType = DirectShipTransit`, **không hiển thị** trong dropdown chọn kho bình thường (filter theo type).
+- Logic kiểm kê / báo cáo tồn cuối kỳ filter `WarehouseType != DirectShipTransit` (hoặc whitelist `Main + SubWarehouse + ReturnWarehouse` tuỳ context hiện tại).
 
-- `AllocationMarkedAsDirectShipEvent`
-- `DirectShipDeliveryPendingEvent` (raised khi GR sinh DN Pending)
-- `DirectShipDeliveryConfirmedEvent` (Invoice/Debt module subscribe)
-- `DirectShipDeliveryRejectedEvent` (Inventory module subscribe để di chuyển kho — giá vốn = giá PO)
-- `SoCancelledWithDirectShipReceivedEvent` (Inventory subscribe để chuyển hàng kho ảo → kho chính, giá vốn giá PO)
-- `DirectShipAddressUpdatedEvent` (audit log + cảnh báo tái in phiếu)
-- `VendorOversupplyAcceptedEvent` (raised khi user chọn nhận phần thừa NCC giao)
+### 3.3. `DeliveryNoteSourceType` — thêm value `DirectShipToCustomer`
 
-> Các event này đi qua **Outbox Pattern** đã hoàn thiện Phase 4 (2026-05-06).
+> File: `Domain.Shared/Enums/DeliveryNotes/DeliveryNoteSourceType.cs`
+> Hiện có: `ToCustomer = 0`, `ToVendorReturn = 1`, `ToAdjustment = 2`. Thêm value mới:
 
-### 3.6. Entity audit: `DirectShipAddressChangeLog`
+```csharp
+DirectShipToCustomer = 3
+```
+
+**KHÔNG thêm field `DeliveryConfirmationStatus`.** Tận dụng lifecycle hiện có:
+- `DeliveryNoteStatus.Draft (10)` → tạo nháp ngay khi GR ghi nhận direct-ship.
+- `DeliveryNoteStatus.Confirmed (20)` → đang chờ khách xác nhận (mặc định status sau khi GR done).
+- `DeliveryNoteStatus.Delivered (40)` → khách đã xác nhận nhận đủ → `DeliveryNoteDeliveredEventHandler` tự sinh `CustomerDebt` (timing chuẩn cho HĐ VAT).
+- `DeliveryNoteStatus.Cancelled (50)` → khách từ chối / SO huỷ.
+
+Bonus field cần thiết (nếu chưa có): `SourcePurchaseOrderItemId` (FK, nullable) — link tới `PurchaseOrderItem` đã sinh ra DN này (audit). Có thể thêm bằng cách reuse field hiện có nếu phù hợp, **xác minh khi đụng code D1**.
+
+> Filter "Pending Direct-Ship Confirmation" = `Status = Confirmed AND SourceType = DirectShipToCustomer`.
+
+### 3.4. `IInventoryStockManager` — thêm `TransferStockAsync`
+
+> File: `Domain.Shared/Services/Inventory/IInventoryStockManager.cs`
+> Hiện có: `ReceiveStockAsync`, `RevertReceiveAsync`, `ReserveStockAsync`, `ReleaseReservedStockAsync`, `DispatchStockAsync`. **KHÔNG có** method transfer giữa 2 warehouse.
+> `StockMovementType.Transfer` đã có trong enum (`StockMovementLog.cs:47`).
+
+```csharp
+/// <summary>
+/// Chuyển hàng giữa 2 warehouse trong cùng 1 product.
+/// Ghi 2 log: Outbound từ fromWarehouseId + Inbound vào toWarehouseId (movementType = Transfer).
+/// Bảo toàn AverageCost: vào kho đích với UnitCost được truyền (= giá PO khi reject direct-ship).
+/// </summary>
+Task<(StockMovementLogDto? OutLog, StockMovementLogDto? InLog)> TransferStockAsync(
+    Guid productId,
+    Guid fromWarehouseId,
+    Guid toWarehouseId,
+    decimal quantity,
+    decimal unitCost,
+    Guid? referenceId,
+    Guid userId,
+    string? note = null);
+```
+
+Dùng bởi:
+- Reject DeliveryNote → transfer kho ảo → kho chính, unitCost = giá PO của allocation.
+- Cancel SO khi allocation `FullyReceived` → transfer kho ảo → kho chính, unitCost = giá PO của allocation.
+
+### 3.5. Refactor `PurchaseOrderAllocationManager.SyncReceivedForPurchaseOrderItemAsync`
+
+> File: `Domain.Services/PurchaseOrders/PurchaseOrderAllocationManager.cs:85`
+> Hiện sort `OrderBy(CreatedOnUtc)` (FIFO thuần). Đổi sang **direct-ship priority FIFO**:
+
+```csharp
+var allocations = allocationReader.DataSource
+    .Where(a => a.PurchaseOrderItemId == purchaseOrderItemId)
+    .OrderByDescending(a => a.IsDirectShip)       // direct-ship trước
+    .ThenByDescending(a => a.DirectShipPriority)  // priority cao trước
+    .ThenBy(a => a.CreatedOnUtc)                  // sau cùng FIFO
+    .ToList();
+```
+
+Quan trọng: **đây là method DUY NHẤT phân bổ received quantity vào allocations.** Không tạo manager mới chạy song song → tránh double-count.
+
+Sau khi `IncreaseReceivedAsync` cho 1 allocation direct-ship: thêm hook gọi `IDirectShipManager.OnAllocationReceivedAsync(allocation, receivedDelta)` để orchestration tạo DN draft + transfer kho ảo (xem 3.6).
+
+### 3.6. Domain Manager mới: `IDirectShipManager` (chỉ orchestration)
+
+> File: `Domain.Services/DirectShip/DirectShipManager.cs` (mới)
+> **KHÔNG tự phân bổ received quantity** (đã có `SyncReceivedForPurchaseOrderItemAsync` lo). Chỉ làm orchestration:
+
+```csharp
+// Set/update direct-ship info cho allocation (kèm audit log)
+Task UpdateAllocationDirectShipInfoAsync(
+    Guid allocationId, string address, string contactName, string contactPhone,
+    int priority, Guid editedByUserId, string? reason);
+
+// Hook gọi từ SyncReceivedForPurchaseOrderItemAsync khi 1 allocation direct-ship vừa
+// IncreaseReceived. Tạo DN status=Confirmed, source=DirectShipToCustomer, warehouse=DirectShipTransit
+// (chưa Delivered → CustomerDebt chưa sinh, chờ khách confirm).
+// Transfer hàng từ warehouse chính (vừa nhập) sang DirectShipTransit qua IInventoryStockManager.
+Task OnAllocationReceivedAsync(Guid allocationId, decimal receivedDelta);
+
+// Khách xác nhận: chuyển DN sang Delivered → DeliveryNoteDeliveredEventHandler tự sinh CustomerDebt.
+Task ConfirmCustomerReceiptAsync(Guid deliveryNoteId, DateTime confirmedAtUtc, string? note);
+
+// Khách từ chối: DN → Cancelled + Transfer kho ảo → kho chính (giá PO).
+Task RejectCustomerReceiptAsync(Guid deliveryNoteId, string reason);
+
+// SO huỷ trong khi allocation đã FullyReceived: Transfer kho ảo → kho chính (giá PO),
+// cancel DN nếu còn.
+Task HandleSoCancelledForReceivedDirectShipAsync(Guid orderId);
+```
+
+### 3.7. Domain Events
+
+- `AllocationDirectShipInfoUpdatedEvent` (audit log: who/when/old/new).
+- `DirectShipDeliveryNoteCreatedEvent` (sau khi `OnAllocationReceivedAsync` tạo DN draft) — optional, dùng để notify user "có 1 DN chờ confirm".
+- `VendorOversupplyAcceptedEvent` (user chấp nhận phần thừa NCC giao — sinh GR riêng cho free stock + VendorDebt).
+
+> KHÔNG cần event riêng cho "DirectShipConfirmed" / "DirectShipRejected" — đã có `DeliveryNoteDelivered` / `DeliveryNoteCancelled` raised từ status lifecycle, và `DeliveryNoteDeliveredEventHandler` đã sinh `CustomerDebt`.
+> Các event đi qua **Outbox Pattern** đã hoàn thiện Phase 4 (2026-05-06).
+
+### 3.8. Entity mới: `DirectShipAddressChangeLog`
 
 Lưu lịch sử edit địa chỉ giao trên allocation:
 - `Id`, `AllocationId` (FK), `OldAddress`, `NewAddress`, `OldContactName`, `NewContactName`, `OldContactPhone`, `NewContactPhone`, `EditedByUserId`, `EditedAt` (UTC), `Reason` (nullable string user nhập).
 
 ## 4. Thay đổi Application Layer
 
+> Entry point nhận hàng KHÔNG ở `IGoodsReceiptAppService.ReceiveAsync`. Flow thật:
+> `PurchaseOrderAppService.ReceiveAsync` / `BulkReceiveGoodsAsync` → `PurchaseOrderManager.ReceiveItemsAsync` (line 481) → `MarkItemReceived` fire event → `PurchaseOrderItemReceivedEventHandler` gọi `SyncReceivedForPurchaseOrderItemAsync` → đồng thời `_goodsReceiptManager.CreateFromPurchaseOrderReceivingAsync` tạo GR.
+> Plan này tích hợp đúng vào chuỗi đó, **không tạo entry point song song**.
+
 ### 4.1. `IDirectShipAppService`
 
 ```
-Task<DirectShipAllocationDto> CreateAsync(CreateDirectShipAllocationRequestDto);
-Task ConfirmDeliveryAsync(ConfirmDeliveryRequestDto);
-Task RejectDeliveryAsync(RejectDeliveryRequestDto);
+Task UpdateAllocationDirectShipInfoAsync(UpdateDirectShipInfoDto);
+Task ConfirmCustomerReceiptAsync(ConfirmReceiptDto);
+Task RejectCustomerReceiptAsync(RejectReceiptDto);
 Task<PagedResult<DirectShipPendingDeliveryDto>> GetPendingDeliveriesAsync(FilterDto);
 ```
 
+> KHÔNG có `CreateAsync` riêng — direct-ship info được attach vào `PurchaseOrderItemAllocation` lúc tạo PO qua Shortage Aggregation (xem 4.2).
+
 ### 4.2. Extend `IPurchaseOrderAppService`
 
-- `CreateAsync` / `AddItemsToExistingDraftAsync` (đã có ở Shortage P6.6): nhận thêm tham số `DirectShipInfo` cho từng item.
-- Method mới `UpdateAllocationDirectShipInfoAsync` cho phép sửa địa chỉ giao sau khi PO đã tạo.
+- `CreateAsync` / `AddItemsToExistingDraftAsync` (đã có ở Shortage P6.6): nhận thêm tham số `DirectShipInfo` per item (nullable). Khi có, set 5 field direct-ship lúc tạo allocation.
+- **Relax validation `ReceiveAsync` (`PurchaseOrderAppService.cs:368`) và `BulkReceiveGoodsAsync` (`:438`)** — hiện chặn `QuantityReceived + dto.ReceivedQuantity > QuantityOrdered`. Đổi thành:
+  - Default (`dto.AcceptOversupply == false`): giữ behaviour chặn cũ → return error code mới `Error.PurchaseOrderOversupplyRequiresConfirmation` (UI phát hiện code này → bật modal).
+  - Khi `dto.AcceptOversupply == true`: cho phép vượt, **nhưng phần thừa không tăng `PurchaseOrderItem.QuantityReceived`** (giữ ≤ ordered). Phần thừa xử lý riêng (xem 4.4).
 
-### 4.3. Extend `IGoodsReceiptAppService`
+### 4.3. Hook direct-ship vào flow nhận hàng
 
-- Khi gọi `ReceiveAsync`, sau bước cập nhật tồn kho thường → invoke `IDirectShipManager.DistributeReceivedQuantityAsync`.
-- Auto sinh `DeliveryNote` với `DeliveryConfirmationStatus = PendingConfirmation` cho phần direct-ship.
-- Trả về `GoodsReceiptResultDto` thêm field `GeneratedDirectShipDeliveryNoteIds` để UI hiển thị link.
+- **Sửa `PurchaseOrderItemReceivedEventHandler.Handle`**: sau khi gọi `SyncReceivedForPurchaseOrderItemAsync`, manager đã trả về (hoặc query lại) danh sách allocation vừa `IncreaseReceived` mà `IsDirectShip = true` → gọi `IDirectShipManager.OnAllocationReceivedAsync` để:
+  1. Tạo `DeliveryNote` status = `Confirmed`, source = `DirectShipToCustomer`, warehouse = Direct-Ship Transit, link `OrderId` từ `OrderItemId` của allocation.
+  2. Transfer hàng từ warehouse chính (vừa nhập) sang Direct-Ship Transit qua `IInventoryStockManager.TransferStockAsync(unitCost = PurchaseOrderItem.UnitCost)`.
+- **KHÔNG sửa** `PurchaseOrderManager.ReceiveItemsAsync` — vẫn auto-tạo GR vào warehouse chính như cũ. Việc tách kho xử lý hậu kỳ qua Transfer.
 
-### 4.4. Print Service
+> Lý do approach Transfer post-receipt thay vì split GR: ít rủi ro phá `GoodsReceiptCreatedHandler` đã wire `VendorDebt + AverageCost`. Audit trail vẫn rõ: 1 GR vào kho chính + 1 Transfer + 1 DN.
+
+### 4.4. Xử lý NCC giao thừa (oversupply)
+
+Khi `AcceptOversupply = true` và `receivedQty > orderedQty`:
+- `PurchaseOrderItem.QuantityReceived` chỉ tăng tối đa = `QuantityOrdered`.
+- Phần dư (`receivedQty - orderedQty`) tạo riêng 1 `GoodsReceipt` "free stock" qua method mới `IGoodsReceiptManager.CreateFreeStockFromOversupplyAsync` — link reference tới PO + vendor + product + warehouse chính, **không link** `PurchaseOrderItemId` (vì PO line đã đủ).
+- `GoodsReceiptCreatedHandler` đã có sẵn → tự cộng tồn + sinh `VendorDebt` cho phần thừa theo `UnitCost` của PO line.
+- Raise `VendorOversupplyAcceptedEvent` cho báo cáo / audit.
+
+### 4.5. Cancel SO / Reject DN — flow chuyển kho
+
+- `OrderAppService.CancelAsync`: trước khi cancel, gọi `IDirectShipManager.HasReceivedDirectShipAllocationsAsync(orderId)`. Nếu có → trả flag về UI để hiện modal cảnh báo. Sau khi user confirm → cancel + gọi `IDirectShipManager.HandleSoCancelledForReceivedDirectShipAsync`.
+- `IDirectShipAppService.RejectCustomerReceiptAsync`: gọi `IDirectShipManager.RejectCustomerReceiptAsync` (chuyển DN sang `Cancelled` + Transfer kho ảo → kho chính, unitCost = giá PO của allocation).
+
+### 4.6. Print Service
 
 - `IPurchaseOrderPrintService.GenerateVendorDeliveryInstructionAsync(poId)` — sinh PDF phiếu cho NCC, tách rõ 2 section:
   - **Giao thẳng tới khách**: liệt kê địa chỉ + người liên hệ + SP + qty.
@@ -153,12 +245,11 @@ Task<PagedResult<DirectShipPendingDeliveryDto>> GetPendingDeliveriesAsync(Filter
 
 ### 5.3. Goods Receipt Confirm screen
 
-- Khi quantity nhận **< quantity PO** (giao thiếu): hiển thị bảng phân bổ ưu tiên trước khi confirm.
-  - Bảng cho phép user override thứ tự ưu tiên (drag-drop hoặc edit số priority).
-- Khi quantity nhận **> quantity PO** (giao thừa): bật modal "NCC giao thừa Y đơn vị" với 3 lựa chọn:
-  - **Nhập kho chính** → phần thừa stock-in kho chính, ghi nhận công nợ NCC tăng theo giá PO.
-  - **Từ chối nhận phần thừa** → chỉ ghi nhận quantity PO, phần thừa không vào hệ thống.
-  - **Hủy GR** → đóng modal, không lưu gì.
+- Khi quantity nhận **< quantity PO** (giao thiếu): không cần UI riêng — `SyncReceivedForPurchaseOrderItemAsync` đã ưu tiên direct-ship theo `IsDirectShip + Priority`. UI chỉ hiển thị summary "Đã phân bổ: 30 direct-ship / 50 về kho" sau khi confirm.
+- Khi quantity nhận **> quantity PO** (giao thừa): submit lần đầu với `AcceptOversupply = false` → AppService trả error code `Error.PurchaseOrderOversupplyRequiresConfirmation`. UI catch code này → bật modal "NCC giao thừa Y đơn vị" với 3 lựa chọn:
+  - **Nhập kho chính** → submit lại với `AcceptOversupply = true`. AppService giữ `QuantityReceived = QuantityOrdered`, phần thừa tạo GR free stock + `VendorDebt`.
+  - **Từ chối nhận phần thừa** → submit lại với `ReceivedQuantity = QuantityOrdered` (cắt phần thừa khỏi DTO).
+  - **Hủy GR** → đóng modal, không submit gì.
 
 ### 5.4. Trang mới: `/DirectShipDeliveries/Pending`
 
@@ -205,23 +296,27 @@ Sau migration, chạy seed:
 
 | Phase | Tên | Phụ thuộc | Estimate |
 |-------|-----|-----------|----------|
-| **D1** | Domain entity + enum + DirectShipManager (stubs) | Sau khi Shortage P6.7.10 done | 1 ngày |
-| **D2** | Application service + GR integration | D1 | 1.5 ngày |
-| **D3** | Migration + seed (Tuấn chạy) + build verify | D2 | 0.5 ngày |
-| **D4** | Print service + phiếu giao NCC | D2 | 1 ngày |
-| **D5** | UI Shortage Aggregation — direct-ship checkbox + form | D2 | 1 ngày |
-| **D6** | UI Trang Pending Deliveries + Confirm/Reject flow | D2 | 1.5 ngày |
-| **D7** | UI SO Details + DN Details direct-ship indicators + flow cancel SO (modal xác nhận chuyển kho) | D2 | 0.75 ngày |
-| **D8** | UI edit địa chỉ direct-ship + audit log + popup NCC giao thừa | D2 | 1 ngày |
-| **D9** | Báo cáo direct-ship: theo NCC / khách / SP, tỷ lệ direct-ship, pending > 7 ngày | D2 | 1 ngày |
-| **D10** | E2E smoke test workflow đầy đủ | D3-D9 | 0.5 ngày |
+| **D1** | Domain — enum extensions + 5 field allocation + `DirectShipAddressChangeLog` + interfaces (stubs) | Shortage feature đã done | 1 ngày |
+| **D2** | Domain services — `TransferStockAsync`, refactor `SyncReceivedForPurchaseOrderItemAsync` (priority sort), implement `DirectShipManager` orchestration | D1 | 1.5 ngày |
+| **D3** | Application — extend `IPurchaseOrderAppService` (relax oversupply, accept DirectShipInfo), `IDirectShipAppService`, hook `PurchaseOrderItemReceivedEventHandler`, `CreateFreeStockFromOversupplyAsync` | D2 | 1.5 ngày |
+| **D4** | Migration + seed (Tuấn chạy) + build verify | D3 | 0.5 ngày |
+| **D5** | Print service + phiếu giao NCC | D3 | 1 ngày |
+| **D6** | UI Shortage Aggregation — direct-ship checkbox + form | D3 | 1 ngày |
+| **D7** | UI Trang Pending Deliveries + Confirm/Reject flow | D3 | 1.5 ngày |
+| **D8** | UI SO Details + DN Details + flow cancel SO (modal xác nhận chuyển kho) | D3 | 0.75 ngày |
+| **D9** | UI edit địa chỉ direct-ship + audit log + modal NCC giao thừa | D3 | 1 ngày |
+| **D10** | Báo cáo direct-ship: theo NCC / khách / SP, tỷ lệ direct-ship, pending > 7 ngày | D3 | 1 ngày |
+| **D11** | Manual smoke checklist (documented) + build verify — KHÔNG viết test code | D4-D10 | 0.5 ngày |
 
-**Tổng:** ~9.75 ngày work.
+**Tổng:** ~11.25 ngày work.
 
 ## 8. Liên hệ với feature đang dở
 
-- **Phải đợi** Shortage feature P6.7.10 build verify xong (1 mục còn lại trong TodoList).
-- Sau đó, plan này tạo phase D1..D8 thay thế dần các mục Shortage còn lại nếu có overlap.
+- Feature Shortage & Auto-PO **đã hoàn tất** (TodoList đã clear hết các mục Shortage). Plan này build trên hạ tầng đã có:
+  - `PurchaseOrderItemAllocation` entity + repo + manager.
+  - `SyncReceivedForPurchaseOrderItemAsync` (sẽ refactor priority sort).
+  - `_GlobalOffcanvas.cshtml` + `cowork-offcanvas.js` — reuse cho UI Pending Deliveries / SO Details.
+  - Outbox Pattern đã wire — events đi qua đó tự nhiên.
 - Branch: tiếp tục `dev-assistant`.
 
 ## 9. Quyết định trên Open Questions (chốt 2026-05-16)
@@ -243,9 +338,10 @@ Sau migration, chạy seed:
    - Audit log lại mỗi lần edit (who/when/old/new) — quan trọng vì NCC có thể đã in phiếu cũ.
    - Khi edit → re-generate "Phiếu giao hàng cho NCC" tự động + cảnh báo "Hãy gửi lại phiếu mới cho NCC".
 
-5. **NCC giao thừa**: ✅ **Hỏi user mỗi lần**.
-   - Khi `receivedQty > orderedQty` trên GR → modal "NCC giao thừa Y đơn vị. Xử lý: [Nhập kho chính] / [Từ chối nhận phần thừa] / [Hủy GR]".
-   - Nếu user chọn "Nhập kho chính": phần thừa stock-in kho chính, ghi nhận tăng công nợ NCC tương ứng (giá PO).
+5. **NCC giao thừa**: ✅ **Hỏi user mỗi lần** — cơ chế:
+   - AppService relax validation: lần submit đầu (`AcceptOversupply = false`) → trả error code `Error.PurchaseOrderOversupplyRequiresConfirmation`. UI bật modal "NCC giao thừa Y đơn vị. Xử lý: [Nhập kho chính] / [Từ chối nhận phần thừa] / [Hủy GR]".
+   - Nếu user chọn "Nhập kho chính" → submit lại với `AcceptOversupply = true`. `PurchaseOrderItem.QuantityReceived` chỉ tăng tới `QuantityOrdered`; phần thừa được tạo GR free stock riêng (link tới PO/vendor/product, không link `PurchaseOrderItemId`) → `GoodsReceiptCreatedHandler` đã có sẵn sinh `VendorDebt` theo giá PO.
+   - Nếu user chọn "Từ chối": submit lại với `ReceivedQuantity = QuantityOrdered`.
 
 6. **Hóa đơn VAT mua từ NCC**: ⏸️ **Ngoài scope phase này** — chưa làm.
    - Workflow xuất HĐ VAT mua hiện chưa được hệ thống hóa.
@@ -258,11 +354,13 @@ Sau migration, chạy seed:
 
 | Rủi ro | Mức | Mitigation |
 |--------|-----|------------|
-| Phá vỡ flow Shortage Aggregation hiện có khi extend | Cao | Test kỹ scenario P6.6.7 sau khi merge |
-| Tính toán phân bổ khi giao thiếu sai logic | Cao | Manual smoke test với 3 scenario (đủ / thiếu vừa / thiếu nhiều) |
-| User quên Confirm Delivery → tồn kho ảo phình to | Trung | Báo cáo "Direct-ship pending > 7 ngày" + email reminder (phase sau) |
-| Hóa đơn VAT chốt sai timing | Trung | Confirm Delivery workflow đã được thiết kế để tránh, nhưng cần test |
-| Migration trên DB production có data: enum default | Thấp | Default `NotApplicable` cho DN cũ, default `false` cho IsDirectShip |
+| **Double-count allocation received** (manager mới + `SyncReceivedForPurchaseOrderItemAsync` chạy song song) | Rất cao | Plan này KHÔNG tạo phân bổ song song — chỉ sửa `SyncReceivedForPurchaseOrderItemAsync` thêm priority sort. `DirectShipManager` chỉ orchestration (tạo DN + transfer), không tự cộng `ReceivedQuantity`. |
+| Tính toán phân bổ khi giao thiếu sai priority | Cao | Manual smoke D11 với 3 scenario (đủ / thiếu vừa / thiếu nhiều), kiểm tra direct-ship được nhận trước. |
+| Phá vỡ `GoodsReceiptCreatedHandler` đã wire VendorDebt / AverageCost | Cao | Approach Transfer post-receipt — KHÔNG sửa logic tạo GR / pipeline handler hiện có. |
+| User quên Confirm DN → tồn kho ảo phình to | Trung | Báo cáo "Pending > 7 ngày" (D10) — email reminder làm sau. |
+| HĐ VAT chốt sai timing | Trung | Tận dụng lifecycle DN có sẵn: chỉ `Delivered` mới sinh `CustomerDebt`. Confirm flow KHÔNG bypass status. |
+| Migration trên DB có data: enum default | Thấp | `IsDirectShip` default false (allocation cũ không ảnh hưởng); `DeliveryNoteSourceType.DirectShipToCustomer = 3` chỉ DN mới mới có; `WarehouseType.DirectShipTransit` chỉ seed 1 record. |
+| `Order.CancelAsync` chưa biết về direct-ship → hủy SO trong khi hàng đã ở kho ảo, không transfer về | Cao | D8 gate `OrderAppService.CancelAsync` qua `IDirectShipManager.HasReceivedDirectShipAllocationsAsync` trước khi cho phép cancel. |
 
 ## 11. Ngoài scope (làm sau)
 
@@ -274,48 +372,70 @@ Sau migration, chạy seed:
 
 ---
 
-## Phụ lục A — Sơ đồ trạng thái
+## Phụ lục A — Sơ đồ trạng thái (đã align với code)
 
 ```
-SO created → Shortage detected → PO created with allocations
-                                       │
-                                       ▼
-                          [Allocation: IsDirectShip=true]
-                                       │
-                                       ▼
-                              NCC giao hàng
-                                       │
-                          ┌────────────┴────────────┐
-                          ▼                         ▼
-                  GR phần direct-ship       GR phần kho chính
-                  → Kho ảo Transit          → Kho thật
-                          │
-                          ▼
-                  Auto-tạo DN PendingConfirmation
-                          │
-                  ┌───────┴───────┐
-                  ▼               ▼
-              Confirm          Reject
-                  │               │
-                  ▼               ▼
-          DN Confirmed       Hàng chuyển về
-          + Invoice xuất     kho chính
-          + Debt created     + Notify Sales
+SO created → Shortage → PO + allocation (IsDirectShip=true, Address...)
+                                  │
+                                  ▼
+                  PurchaseOrderManager.ReceiveItemsAsync
+                  → GR vào WAREHOUSE CHÍNH (100 bao)
+                  → fire PurchaseOrderItemReceived
+                                  │
+                                  ▼
+          PurchaseOrderItemReceivedEventHandler:
+          ① SyncReceivedForPurchaseOrderItemAsync
+             (sort: IsDirectShip↓, Priority↓, CreatedOnUtc↑)
+             → IncreaseReceived cho từng allocation
+          ② Với allocation direct-ship vừa receive:
+             IDirectShipManager.OnAllocationReceivedAsync
+             → Tạo DN Status=Confirmed, Source=DirectShipToCustomer,
+                Warehouse=DirectShipTransit
+             → TransferStockAsync(MAIN → DirectShipTransit, qty, unitCost=PO)
+                                  │
+                                  ▼
+                  [DN Confirmed, chờ khách xác nhận]
+                                  │
+                  ┌───────────────┴───────────────┐
+                  ▼                               ▼
+        Confirm (khách nhận đủ)            Reject (khách từ chối)
+        DN: Confirmed → Delivered          DN: Confirmed → Cancelled
+        ↓ DeliveryNoteDelivered            TransferStockAsync
+        DeliveryNoteDeliveredEventHandler  (DirectShipTransit → MAIN,
+        → CustomerDebt sinh                 unitCost = giá PO)
+        (timing chuẩn HĐ VAT)
 ```
 
-## Phụ lục B — Field mapping nhanh
+## Phụ lục B — Field mapping nhanh (refactored)
 
-| Layer | Field cũ | Field mới |
-|-------|----------|-----------|
-| PurchaseOrderItemAllocation | (đã có) | + IsDirectShip, DirectShipAddress, DirectShipContactName, DirectShipContactPhone, DirectShipPriority, AllocationStatus |
-| Warehouse | + WarehouseType |
-| DeliveryNote | + DeliveryConfirmationStatus, IsDirectShip, ConfirmedAt, ConfirmedNote, SourceGoodsReceiptId |
-| DirectShipAddressChangeLog (new) | (new entity) | Id, AllocationId, OldAddress, NewAddress, OldContactName, NewContactName, OldContactPhone, NewContactPhone, EditedByUserId, EditedAt, Reason |
+| Layer | Thay đổi |
+|-------|----------|
+| `PurchaseOrderItemAllocation` | + `IsDirectShip`, `DirectShipAddress`, `DirectShipContactName`, `DirectShipContactPhone`, `DirectShipPriority` (KHÔNG có status enum) |
+| `WarehouseType` enum | + `DirectShipTransit` (giữ Main, SubWarehouse, ReturnWarehouse) |
+| `DeliveryNoteSourceType` enum | + `DirectShipToCustomer = 3` (giữ ToCustomer, ToVendorReturn, ToAdjustment) |
+| `DeliveryNote` | (KHÔNG thêm status / confirmation field — reuse `Status` lifecycle hiện có) |
+| `DirectShipAddressChangeLog` (new entity) | Id, AllocationId, OldAddress, NewAddress, OldContactName, NewContactName, OldContactPhone, NewContactPhone, EditedByUserId, EditedAt, Reason |
+| `IInventoryStockManager` | + `TransferStockAsync(productId, fromWarehouseId, toWarehouseId, qty, unitCost, referenceId, userId, note)` |
+| `PurchaseOrderAllocationManager.SyncReceivedForPurchaseOrderItemAsync` | Refactor sort: `IsDirectShip↓, Priority↓, CreatedOnUtc↑` |
+| `PurchaseOrderAppService.ReceiveAsync/BulkReceive` | Relax validation: thêm flag `AcceptOversupply`, error code `Error.PurchaseOrderOversupplyRequiresConfirmation` |
+| `IGoodsReceiptManager` | + `CreateFreeStockFromOversupplyAsync(po, vendor, product, warehouse, qty, unitCost)` |
 
-## Phụ lục C — Báo cáo Direct-Ship (Phase D9)
+## Phụ lục C — Báo cáo Direct-Ship (Phase D10)
 
 1. **Báo cáo direct-ship theo NCC**: tháng/quý/năm. Cột: NCC, Số PO, Số bao direct-ship, Số bao về kho, Tỷ lệ direct-ship.
 2. **Báo cáo direct-ship theo khách**: top khách nhận hàng giao thẳng. Cột: Khách, Số SO, Số bao, Tổng tiền.
 3. **Báo cáo direct-ship theo SP**: SP nào hay direct-ship. Cột: SP, Qty direct-ship, Qty qua kho, Tỷ lệ.
-4. **Báo cáo Pending Confirmation quá hạn**: DN PendingConfirmation > 7 ngày — alert cho user.
-5. **Báo cáo Reject Delivery**: tỷ lệ DN bị reject + lý do — đánh giá chất lượng giao thẳng.
+4. **Báo cáo Pending Confirmation quá hạn**: DN `Status=Confirmed AND SourceType=DirectShipToCustomer` quá 7 ngày — alert cho user.
+5. **Báo cáo Reject Delivery**: tỷ lệ DN bị `Cancelled` (source DirectShipToCustomer) + lý do — đánh giá chất lượng giao thẳng.
+
+## Phụ lục D — Manual Smoke Checklist (Phase D11)
+
+> Theo AGENTS.md: KHÔNG viết test code trong project `*.Test`. Phase D11 = checklist tay, có thể ghi vào `docs/DIRECT_SHIP_SMOKE_CHECKLIST.md` riêng. Tuấn chạy local server + UI thật, đánh dấu pass/fail.
+
+1. **Happy path**: SO 30 + PO 100 direct-ship → NCC giao 100 → kiểm tra: GR 100 vào kho chính → Transfer 30 sang DirectShipTransit → DN tạo Status=Confirmed → bấm Confirm → DN Delivered → `CustomerDebt` sinh đúng giá bán.
+2. **Giao thiếu**: NCC giao 80/100 → kiểm tra: 30 direct-ship đủ → 50 vào kho chính → DN tạo đủ 30.
+3. **Giao thừa**: NCC giao 110 → modal hiện ra → chọn "Nhập kho chính" → kiểm tra: PO QuantityReceived = 100, 1 GR free stock 10 + `VendorDebt` tăng theo giá PO × 10.
+4. **Reject DN**: DN Status=Confirmed → bấm Reject với reason → DN Cancelled → 30 bao về kho chính, AverageCost tính lại theo giá PO.
+5. **Cancel SO sau GR**: SO có allocation FullyReceived → bấm Cancel → modal cảnh báo → confirm → hàng về kho chính → SO Cancelled.
+6. **Edit địa chỉ**: PO đã confirm có allocation direct-ship → bấm "Sửa địa chỉ giao" → save → audit log có entry mới + banner "Gửi lại phiếu cho NCC".
+7. **N-N allocation**: 1 SO chia 2 PO (1 direct-ship, 1 thường) → cả 2 PO receive đủ → SO Details hiển thị đủ 2 DN.
