@@ -324,6 +324,36 @@
     }
 </div>
 
+<template id="vendorCardTemplate">
+    <div class="shortage-order-card shortage-group" data-vendor-id="" data-vendor-name="">
+        <div class="shortage-order-card-header">
+            <div class="shortage-vendor-heading">
+                <input type="checkbox" class="form-check-input group-check" />
+                <span class="shortage-vendor-icon"><i class="bi bi-building"></i></span>
+                <div>
+                    <div class="shortage-vendor-name">__VENDOR_NAME__</div>
+                    <div class="shortage-vendor-meta"></div>
+                </div>
+            </div>
+            <div class="shortage-group-money">
+                <strong class="group-total">0đ</strong>
+                <span>tạm tính</span>
+            </div>
+        </div>
+        <div class="shortage-order-card-controls">
+            <label class="shortage-inline-field">
+                <span><i class="bi bi-calendar2-week"></i>Hẹn nhận:</span>
+                <input type="date" class="form-control expected-date" value="@defaultExpectedDate" />
+            </label>
+            <label class="shortage-inline-field shortage-note-field">
+                <span><i class="bi bi-stickies"></i>Ghi chú:</span>
+                <input type="text" class="form-control group-note" maxlength="1000" />
+            </label>
+        </div>
+        <div class="shortage-order-items"></div>
+    </div>
+</template>
+
 <div class="modal fade" id="existingDraftModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content border-0 shadow">
