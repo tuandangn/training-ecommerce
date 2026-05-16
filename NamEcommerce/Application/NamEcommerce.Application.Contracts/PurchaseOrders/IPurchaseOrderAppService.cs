@@ -32,4 +32,6 @@ public interface IPurchaseOrderAppService
     Task<IList<OrderAllocatedPurchaseOrderAppDto>> GetAllocatedPurchaseOrdersForOrderAsync(Guid orderId);
 
     Task<string> NextPurchaseOrderCodeAsync();
+
+    Task<CommonActionResultDto> UpdateAllocationDirectShipInfoAsync(Guid allocationId, string address, string? contactName, string? contactPhone, int priority);
 }

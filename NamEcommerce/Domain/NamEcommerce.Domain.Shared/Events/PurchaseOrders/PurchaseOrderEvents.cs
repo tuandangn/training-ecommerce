@@ -47,6 +47,7 @@ public sealed record PurchaseOrderItemRemoved(Guid PurchaseOrderId, Guid Purchas
 public sealed record PurchaseOrderItemReceived(
     Guid PurchaseOrderId,
     Guid PurchaseOrderItemId,
-    decimal ReceivedQuantity) : DomainEvent;
+    decimal ReceivedQuantity,
+    Guid? GoodsReceiptId = null) : DomainEvent;
 
 public sealed record PurchaseOrderBulkReceived(Guid PurchaseOrderId) : DomainEvent;

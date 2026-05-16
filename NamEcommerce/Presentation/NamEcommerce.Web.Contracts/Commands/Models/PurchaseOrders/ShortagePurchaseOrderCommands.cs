@@ -34,6 +34,15 @@ public sealed class CreatePurchaseOrderFromShortageGroupCommand
 }
 
 [Serializable]
+public sealed class DirectShipInfoCommand
+{
+    public string Address { get; init; } = string.Empty;
+    public string? ContactName { get; init; }
+    public string? ContactPhone { get; init; }
+    public int Priority { get; init; }
+}
+
+[Serializable]
 public sealed class CreatePurchaseOrderFromShortageItemCommand
 {
     public Guid OrderItemId { get; init; }
@@ -41,6 +50,7 @@ public sealed class CreatePurchaseOrderFromShortageItemCommand
     public decimal Quantity { get; init; }
     public decimal UnitCost { get; init; }
     public string? Note { get; init; }
+    public DirectShipInfoCommand? DirectShipInfo { get; init; }
     public IList<CreatePurchaseOrderFromShortageActionCommand> Actions { get; init; } = [];
 }
 

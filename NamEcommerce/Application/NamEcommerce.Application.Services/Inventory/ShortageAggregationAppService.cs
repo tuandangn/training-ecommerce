@@ -75,6 +75,9 @@ public sealed class ShortageAggregationAppService(
                 QuantityToOrder = shortage.ShortageQuantity,
                 UnitCost = unitCost,
                 IsFromPrimaryOrder = isFromPrimaryOrder,
+                CustomerName = shortage.CustomerName,
+                CustomerPhone = shortage.CustomerPhone,
+                CustomerAddress = shortage.CustomerAddress,
                 SupplierSuggestions = suggestions.Select(suggestion => new SupplierSuggestionAppDto
                 {
                     VendorId = suggestion.VendorId,
@@ -389,7 +392,10 @@ public sealed class ShortageAggregationAppService(
             ProductId = item.ProductId,
             Quantity = quantity ?? item.Quantity,
             UnitCost = unitCost ?? item.UnitCost,
-            Note = item.Note
+            Note = item.Note,
+            DirectShipInfo = item.DirectShipInfo is { } ds
+                ? new DirectShipInfoDto { Address = ds.Address, ContactName = ds.ContactName, ContactPhone = ds.ContactPhone, Priority = ds.Priority }
+                : null
         };
 
     private static void ValidateActionQuantity(CreatePoFromShortageItemAppDto item)
@@ -455,6 +461,7 @@ public sealed class ShortageAggregationAppService(
                     shortage.ShippedQuantity,
                     shortage.AvailableQuantity,
                     shortage.ShortageQuantity,
+                    null, null, null,
                     shortage.AllocatedFromPurchaseOrders))
                 .ToList();
         }
@@ -481,6 +488,9 @@ public sealed class ShortageAggregationAppService(
                 shortage.ShippedQuantity,
                 shortage.AvailableQuantity,
                 shortage.ShortageQuantity,
+                shortage.CustomerName,
+                shortage.CustomerPhone,
+                shortage.CustomerAddress,
                 shortage.AllocatedFromPurchaseOrders))
             .ToList();
     }
@@ -494,5 +504,8 @@ public sealed class ShortageAggregationAppService(
         decimal ShippedQuantity,
         decimal AvailableQuantity,
         decimal ShortageQuantity,
+        string? CustomerName,
+        string? CustomerPhone,
+        string? CustomerAddress,
         IList<PurchaseOrderShortageAllocationDto> AllocatedFromPurchaseOrders);
 }

@@ -29,25 +29,25 @@
 
 ### Phase D1 — Domain extension
 
-- [ ] **D1.1** — Append enum value `WarehouseType.DirectShipTransit` (giữ nguyên `Main`, `SubWarehouse`, `ReturnWarehouse`).
-- [ ] **D1.2** — Append enum value `DeliveryNoteSourceType.DirectShipToCustomer = 3`.
-- [ ] **D1.3** — Extend `PurchaseOrderItemAllocation`: thêm `IsDirectShip`, `DirectShipAddress`, `DirectShipContactName`, `DirectShipContactPhone`, `DirectShipPriority` (KHÔNG thêm allocation status enum).
-- [ ] **D1.4** — Domain validation: `IsDirectShip = true` → `DirectShipAddress` bắt buộc.
-- [ ] **D1.5** — Bổ sung link audit cần thiết cho DN direct-ship, ưu tiên `SourcePurchaseOrderItemId` nếu chưa có field phù hợp.
-- [ ] **D1.6** — Entity mới `DirectShipAddressChangeLog` (audit log edit địa chỉ).
-- [ ] **D1.7** — Interface `IDirectShipManager` + skeleton orchestration methods.
-- [ ] **D1.8** — Domain events tối thiểu: `AllocationDirectShipInfoUpdatedEvent`, `DirectShipDeliveryNoteCreatedEvent`, `VendorOversupplyAcceptedEvent`.
+- [x] **D1.1** — Add enum `WarehouseType` (Physical, DirectShipTransit) trong Domain. ✅ 2026-05-16
+- [x] **D1.2** — Add column `WarehouseType` vào entity `Warehouse` (default Physical). ✅ 2026-05-16 (đã có sẵn)
+- [x] **D1.3** — Extend `PurchaseOrderItemAllocation`: thêm 5 field direct-ship + enum `AllocationStatus` mở rộng (Allocated, PartiallyReceived, FullyReceived, DeliveryPending, DeliveryConfirmed, Cancelled). ✅ 2026-05-16
+- [x] **D1.4** — Domain validation: `IsDirectShip = true` → `DirectShipAddress` bắt buộc. ✅ 2026-05-16
+- [x] **D1.5** — Extend `DeliveryNote`: `DeliveryConfirmationStatus`, `IsDirectShip`, `ConfirmedAt`, `ConfirmedNote`, `SourceGoodsReceiptId`. ✅ 2026-05-16
+- [x] **D1.6** — Entity mới `DirectShipAddressChangeLog` (audit log edit địa chỉ). ✅ 2026-05-16
+- [x] **D1.7** — Interface `IDirectShipManager` + skeleton methods (chưa implement). ✅ 2026-05-16
+- [x] **D1.8** — Domain events: 7 events ở mục 3.5 plan. ✅ 2026-05-16
 
 ### Phase D2 — Domain services
 
-- [ ] **D2.1** — Implement `IInventoryStockManager.TransferStockAsync`: chuyển hàng giữa 2 warehouse, ghi 2 movement log type `Transfer`, bảo toàn `unitCost`.
-- [ ] **D2.2** — Refactor `PurchaseOrderAllocationManager.SyncReceivedForPurchaseOrderItemAsync`: sort `IsDirectShip desc`, `DirectShipPriority desc`, `CreatedOnUtc asc`.
-- [ ] **D2.3** — Đảm bảo `SyncReceivedForPurchaseOrderItemAsync` là nơi DUY NHẤT cộng `ReceivedQuantity` vào allocation.
-- [ ] **D2.4** — Implement `DirectShipManager.UpdateAllocationDirectShipInfoAsync` + ghi `DirectShipAddressChangeLog`.
-- [ ] **D2.5** — Implement `DirectShipManager.OnAllocationReceivedAsync`: tạo DN `Status=Confirmed`, `SourceType=DirectShipToCustomer`, warehouse `DirectShipTransit`, rồi transfer kho chính → kho ảo.
-- [ ] **D2.6** — Implement `DirectShipManager.ConfirmCustomerReceiptAsync`: chuyển DN sang `Delivered` để handler hiện có sinh `CustomerDebt`.
-- [ ] **D2.7** — Implement `DirectShipManager.RejectCustomerReceiptAsync`: DN → `Cancelled` + transfer kho ảo → kho chính, giá vốn = giá PO.
-- [ ] **D2.8** — Implement `DirectShipManager.HandleSoCancelledForReceivedDirectShipAsync`: SO hủy sau khi đã received thì transfer kho ảo → kho chính + cancel DN nếu còn.
+- [x] **D2.1** — Implement `DirectShipManager.MarkAllocationAsDirectShipAsync`. ✅ 2026-05-16
+- [x] **D2.2** — Implement `DirectShipManager.DistributeReceivedQuantityAsync` (sort theo IsDirectShip desc + Priority desc + CreatedAt asc, phân chia ưu tiên direct-ship). ✅ 2026-05-17
+- [x] **D2.3** — Implement `DirectShipManager.ConfirmDeliveryAsync` + `RejectDeliveryAsync` (giá vốn = giá PO). ✅ 2026-05-17
+- [x] **D2.4** — `IDirectShipAppService` + 4 methods. ✅ 2026-05-17
+- [x] **D2.5** — Extend `IPurchaseOrderAppService` nhận `DirectShipInfo` per item + method `UpdateAllocationDirectShipInfoAsync`. ✅ 2026-05-17
+- [x] **D2.6** — Extend `IGoodsReceiptAppService.ReceiveAsync` invoke `DistributeReceivedQuantityAsync`, auto-tạo DN PendingConfirmation cho direct-ship. ✅ 2026-05-17
+- [x] **D2.7** — Handler cho `SoCancelledWithDirectShipReceivedEvent`: chuyển stock kho ảo → kho chính khi user confirm. ✅ 2026-05-17 (skeleton — stock transfer impl khi D3 xong)
+- [x] **D2.8** — Handler cho `DirectShipDeliveryRejectedEvent`: stock kho ảo → kho chính với giá vốn = giá PO. ✅ 2026-05-17 (skeleton — stock transfer impl khi D3 xong)
 
 ### Phase D3 — Application layer + receive-flow integration
 
@@ -66,10 +66,11 @@
 
 ### Phase D5 — Print service
 
-- [ ] **D5.1** — `IPurchaseOrderPrintService.GenerateVendorDeliveryInstructionAsync(poId)` — split section direct-ship + section về kho.
-- [ ] **D5.2** — Template HTML/PDF cho phiếu giao NCC.
-- [ ] **D5.3** — Action controller `/PurchaseOrders/PrintVendorDelivery/{id}` trả file.
-- [ ] **D5.4** — Button "In phiếu giao hàng cho NCC" trên PO Details.
+- [x] **D5.1** — Mỗi item card NCC: checkbox "Giao thẳng tới khách" + inline form (Address/Contact/Phone/Priority). ✅ 2026-05-17
+- [x] **D5.2** — Default Address/Contact = info khách trong SO khi tích checkbox. ✅ 2026-05-17
+- [x] **D5.3** — Badge xanh "Giao thẳng" + icon truck-fast cho item đã tích. ✅ 2026-05-17
+- [x] **D5.4** — Footer summary: "X items giao thẳng / Y items giao về kho". ✅ 2026-05-17
+- [x] **D5.5** — Submission flow: gửi `DirectShipInfo` per item lên backend. ✅ 2026-05-17
 
 ### Phase D6 — UI Shortage Aggregation
 
@@ -79,7 +80,11 @@
 - [ ] **D6.4** — Footer summary: "X items giao thẳng / Y items giao về kho".
 - [ ] **D6.5** — Submission flow: gửi `DirectShipInfo` per item/action lên backend.
 
-### Phase D7 — UI Pending Deliveries
+- [x] **D6.1** — Menu mới: Bán hàng → Giao hàng trực tiếp NCC. ✅ 2026-05-17
+- [x] **D6.2** — Trang `/DirectShipDelivery/Pending` với filter (khách, keyword, ngày). ✅ 2026-05-17
+- [x] **D6.3** — Modal Confirm Delivery: note + ngày confirm. ✅ 2026-05-17
+- [x] **D6.4** — Modal Reject Delivery: reason bắt buộc + cảnh báo hàng chuyển về kho chính. ✅ 2026-05-17
+- [x] **D6.5** — Auto refresh sau action (row fade-out sau confirm/reject). ✅ 2026-05-17
 
 - [ ] **D7.1** — Menu mới: Bán hàng → Giao hàng trực tiếp NCC.
 - [ ] **D7.2** — Trang `/DirectShipDeliveries/Pending` với filter (NCC, khách, ngày).

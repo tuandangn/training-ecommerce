@@ -176,6 +176,9 @@ public sealed class ShortageQueryService(
                     ShippedQuantity = shippedQuantity,
                     AvailableQuantity = availableQuantity,
                     ShortageQuantity = Math.Max(0, stillNeeded - availableQuantity - allocatedIncoming),
+                    CustomerName = order.CustomerName,
+                    CustomerPhone = order.CustomerPhone,
+                    CustomerAddress = order.CustomerAddress,
                     AllocatedFromPurchaseOrders = allocations
                 });
             }

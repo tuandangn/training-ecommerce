@@ -39,6 +39,9 @@ public sealed class ShortageAggregationItemModel
     public decimal QuantityToOrder { get; set; }
     public decimal UnitCost { get; set; }
     public bool IsFromPrimaryOrder { get; set; } = true;
+    public string? CustomerName { get; set; }
+    public string? CustomerPhone { get; set; }
+    public string? CustomerAddress { get; set; }
     public IList<SupplierSuggestionModel> SupplierSuggestions { get; set; } = [];
     public IList<PurchaseOrderShortageAllocationModel> AllocatedFromPurchaseOrders { get; set; } = [];
 }

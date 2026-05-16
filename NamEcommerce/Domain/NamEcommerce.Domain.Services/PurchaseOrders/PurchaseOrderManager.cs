@@ -6,13 +6,16 @@ using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Helpers;
+using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Users;
@@ -28,12 +31,15 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IGoodsReceiptManager _goodsReceiptManager;
     private readonly IPurchaseOrderAllocationManager? _purchaseOrderAllocationManager;
+    private readonly IDirectShipManager? _directShipManager;
+    private readonly IDeliveryNoteManager? _deliveryNoteManager;
     private readonly ICurrentUserAccessor _currentUserAccessor;
 
     public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
         IEntityDataReader<Product> productDataReader,
         IGoodsReceiptManager goodsReceiptManager, IPurchaseOrderAllocationManager? purchaseOrderAllocationManager,
+        IDirectShipManager? directShipManager, IDeliveryNoteManager? deliveryNoteManager,
         ICurrentUserAccessor currentUserAccessor)
     {
         _purchaseOrderRepository = poRepository;
@@ -43,14 +49,25 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         _productDataReader = productDataReader;
         _goodsReceiptManager = goodsReceiptManager;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
+        _directShipManager = directShipManager;
+        _deliveryNoteManager = deliveryNoteManager;
         _currentUserAccessor = currentUserAccessor;
     }
 
     public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
         IEntityDataReader<Product> productDataReader,
+        IGoodsReceiptManager goodsReceiptManager, IPurchaseOrderAllocationManager? purchaseOrderAllocationManager,
+        ICurrentUserAccessor currentUserAccessor)
+        : this(poRepository, purchaseOrderDataReader, vendorOrderDataReader, warehouseOrderDataReader, productDataReader, goodsReceiptManager, purchaseOrderAllocationManager, null, null, currentUserAccessor)
+    {
+    }
+
+    public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
+        IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
+        IEntityDataReader<Product> productDataReader,
         IGoodsReceiptManager goodsReceiptManager, ICurrentUserAccessor currentUserAccessor)
-        : this(poRepository, purchaseOrderDataReader, vendorOrderDataReader, warehouseOrderDataReader, productDataReader, goodsReceiptManager, null, currentUserAccessor)
+        : this(poRepository, purchaseOrderDataReader, vendorOrderDataReader, warehouseOrderDataReader, productDataReader, goodsReceiptManager, null, null, null, currentUserAccessor)
     {
     }
 
@@ -98,7 +115,12 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         foreach (var (purchaseOrderItem, source, _) in allocationSources)
         {
-            await _purchaseOrderAllocationManager.AllocateAsync(purchaseOrderItem.Id, source.OrderItemId, source.Quantity).ConfigureAwait(false);
+            var allocation = await _purchaseOrderAllocationManager.AllocateAsync(purchaseOrderItem.Id, source.OrderItemId, source.Quantity).ConfigureAwait(false);
+            if (source.DirectShipInfo is { } ds && _directShipManager is not null)
+            {
+                await _directShipManager.MarkAllocationAsDirectShipAsync(
+                    allocation.Id, ds.Address, ds.ContactName, ds.ContactPhone, ds.Priority).ConfigureAwait(false);
+            }
         }
     }
 
@@ -514,6 +536,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         // MarkItemReceived vẫn phải fire để PurchaseOrderItemReceivedEventHandler
         // chạy VerifyStatus (Approved → Receiving → Completed).
+        // GoodsReceiptId sẽ được set sau khi tạo GR bên dưới (passed via overload).
         purchaseOrder.MarkItemReceived(purchaseOrderItem.Id, dto.ReceivedQuantity);
 
         await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
@@ -521,7 +544,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         // Tạo GoodsReceipt tự động (SourceType=FromVendor) với 1 item tương ứng.
         // Handler GoodsReceiptCreatedHandler sẽ: cộng tồn kho + thử sinh VendorDebt.
         // Nếu item có UnitCost: Handler GoodsReceiptItemUnitCostSetHandler cập nhật AverageCost.
-        await _goodsReceiptManager.CreateFromPurchaseOrderReceivingAsync(new CreateGoodsReceiptFromPurchaseOrderDto
+        var grResult = await _goodsReceiptManager.CreateFromPurchaseOrderReceivingAsync(new CreateGoodsReceiptFromPurchaseOrderDto
         {
             PurchaseOrderId = purchaseOrder.Id,
             PurchaseOrderCode = purchaseOrder.Code,
@@ -531,6 +554,33 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             Quantity = dto.ReceivedQuantity,
             UnitCost = purchaseOrderItem.UnitCost
         }).ConfigureAwait(false);
+
+        // Direct-ship distribution: phân bổ hàng nhận vào allocations (ưu tiên direct-ship trước).
+        // Nếu không có IDirectShipManager, việc phân bổ do PurchaseOrderItemReceivedEventHandler đảm nhiệm.
+        if (_directShipManager != null && _deliveryNoteManager != null)
+        {
+            var distributeResult = await _directShipManager.DistributeReceivedQuantityAsync(
+                purchaseOrderItem.Id, dto.ReceivedQuantity).ConfigureAwait(false);
+
+            var transitWarehouse = _warehouseOrderDataReader.DataSource
+                .FirstOrDefault(w => w.WarehouseType == WarehouseType.DirectShipTransit);
+
+            if (transitWarehouse != null)
+            {
+                foreach (var receipt in distributeResult.DirectShipReceipts)
+                {
+                    await _deliveryNoteManager.CreateForDirectShipAsync(
+                        new CreateDeliveryNoteForDirectShipDto
+                        {
+                            GoodsReceiptId = grResult.CreatedId,
+                            OrderItemId = receipt.OrderItemId,
+                            Quantity = receipt.Quantity,
+                            DirectShipWarehouseId = transitWarehouse.Id,
+                            ShippingAddress = receipt.DirectShipAddress ?? string.Empty
+                        }).ConfigureAwait(false);
+                }
+            }
+        }
 
         return new ReceivedGoodsForItemResultDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {

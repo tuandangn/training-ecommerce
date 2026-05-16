@@ -11,6 +11,7 @@ using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
 
@@ -18,6 +19,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 {
     private readonly IPurchaseOrderManager _purchaseOrderManager;
     private readonly IPurchaseOrderAllocationManager _purchaseOrderAllocationManager;
+    private readonly IDirectShipManager? _directShipManager;
     private readonly IEntityDataReader<Vendor> _vendorDataReader;
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
     private readonly IEntityDataReader<User> _userDataReader;
@@ -27,7 +29,8 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     public PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
         IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
         IEntityDataReader<PurchaseOrder> purchaseOrderDataReader, IEntityDataReader<Vendor> vendorDataReader,
-        IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader)
+        IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader,
+        IDirectShipManager? directShipManager = null)
     {
         _purchaseOrderManager = purchaseOrderManager;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
@@ -36,6 +39,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         _warehouseDataReader = warehouseDataReader;
         _userDataReader = userDataReader;
         _productDataReader = productDataReader;
+        _directShipManager = directShipManager;
     }
 
     public async Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status)
@@ -615,5 +619,23 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 }).ToList()
             })
             .ToList();
+    }
+
+    public async Task<CommonActionResultDto> UpdateAllocationDirectShipInfoAsync(
+        Guid allocationId, string address, string? contactName, string? contactPhone, int priority)
+    {
+        if (_directShipManager == null)
+            return CommonActionResultDto.CreateError("Error.DirectShipNotConfigured");
+        try
+        {
+            await _directShipManager.MarkAllocationAsDirectShipAsync(
+                allocationId, address, contactName, contactPhone, priority)
+                .ConfigureAwait(false);
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (Exception ex)
+        {
+            return CommonActionResultDto.CreateError(ex.Message);
+        }
     }
 }

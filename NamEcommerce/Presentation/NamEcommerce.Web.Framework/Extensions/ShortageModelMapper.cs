@@ -57,6 +57,9 @@ public static class ShortageModelMapper
             QuantityToOrder = dto.QuantityToOrder,
             UnitCost = dto.UnitCost,
             IsFromPrimaryOrder = dto.IsFromPrimaryOrder,
+            CustomerName = dto.CustomerName,
+            CustomerPhone = dto.CustomerPhone,
+            CustomerAddress = dto.CustomerAddress,
             SupplierSuggestions = dto.SupplierSuggestions.Select(ToModel).ToList(),
             AllocatedFromPurchaseOrders = dto.AllocatedFromPurchaseOrders.Select(ToModel).ToList()
         };

@@ -22,6 +22,13 @@ public interface IDeliveryNoteManager
     /// </summary>
     Task<Guid> CreateAsDeliveredAsync(CreateDeliveryNoteFromVendorReturnDto dto);
 
+    /// <summary>
+    /// Tự động tạo DeliveryNote (Status=Draft, DeliveryConfirmationStatus=PendingConfirmation)
+    /// khi GoodsReceipt phân bổ hàng cho allocation direct-ship.
+    /// Manager tự tìm Order/Customer/Product từ <paramref name="dto"/>.OrderItemId.
+    /// </summary>
+    Task<Guid> CreateForDirectShipAsync(CreateDeliveryNoteForDirectShipDto dto, CancellationToken ct = default);
+
     Task<DeliveryNoteDto?> GetByIdAsync(Guid id);
     
     Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize, string? keywords = null, Guid? orderId = null, IEnumerable<DeliveryNoteStatus>? status = null);

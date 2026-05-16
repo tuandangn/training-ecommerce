@@ -184,6 +184,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IWarehouseAppService, WarehouseAppService>();
     services.AddScoped<IPurchaseOrderManager, PurchaseOrderManager>();
     services.AddScoped<IPurchaseOrderAllocationManager, PurchaseOrderAllocationManager>();
+    services.AddScoped<IDirectShipManager, DirectShipManager>();
+    services.AddScoped<IDirectShipAppService, DirectShipAppService>();
     services.AddScoped<ISupplierSuggestionService, SupplierSuggestionService>();
     services.AddScoped<IPurchaseOrderAppService, PurchaseOrderAppService>();
     services.AddScoped<IShortageAggregationAppService, ShortageAggregationAppService>();

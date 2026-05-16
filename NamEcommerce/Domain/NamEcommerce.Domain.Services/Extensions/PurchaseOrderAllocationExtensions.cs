@@ -12,6 +12,12 @@ public static class PurchaseOrderAllocationExtensions
             OrderItemId = allocation.OrderItemId,
             AllocatedQuantity = allocation.AllocatedQuantity,
             ReceivedQuantity = allocation.ReceivedQuantity,
+            Status = allocation.Status,
+            IsDirectShip = allocation.IsDirectShip,
+            DirectShipAddress = allocation.DirectShipAddress,
+            DirectShipContactName = allocation.DirectShipContactName,
+            DirectShipContactPhone = allocation.DirectShipContactPhone,
+            DirectShipPriority = allocation.DirectShipPriority,
             CreatedOnUtc = allocation.CreatedOnUtc
         };
 }

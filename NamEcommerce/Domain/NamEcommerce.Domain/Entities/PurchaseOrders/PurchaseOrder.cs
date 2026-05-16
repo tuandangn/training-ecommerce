@@ -238,10 +238,14 @@ public sealed record PurchaseOrder : AppAggregateEntity
     internal void MarkItemRemoved(Guid itemId)
         => RaiseDomainEvent(new PurchaseOrderItemRemoved(Id, itemId));
 
-    internal void MarkItemReceived(Guid itemId, decimal receivedQuantity)
+    /// <summary>
+    /// Đánh dấu một dòng hàng vừa được nhận hàng — raise <see cref="PurchaseOrderItemReceived"/>.
+    /// Handler sẽ subscribe event này để verify + transition trạng thái đơn (Approved → Receiving → Completed).
+    /// </summary>
+    internal void MarkItemReceived(Guid itemId, decimal receivedQuantity, Guid? goodsReceiptId = null)
     {
         LastReceivedOnUtc = DateTime.UtcNow;
-        RaiseDomainEvent(new PurchaseOrderItemReceived(Id, itemId, receivedQuantity));
+        RaiseDomainEvent(new PurchaseOrderItemReceived(Id, itemId, receivedQuantity, goodsReceiptId));
     }
 
     internal void MarkBulkReceived()

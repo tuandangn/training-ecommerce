@@ -42,6 +42,15 @@ public sealed record RelatedPurchaseOrderDto(Guid Id)
 }
 
 [Serializable]
+public sealed record DirectShipInfoDto
+{
+    public required string Address { get; init; }
+    public string? ContactName { get; init; }
+    public string? ContactPhone { get; init; }
+    public int Priority { get; init; }
+}
+
+[Serializable]
 public sealed record CreatePoFromShortageItemDto
 {
     public required Guid OrderItemId { get; init; }
@@ -49,6 +58,7 @@ public sealed record CreatePoFromShortageItemDto
     public required decimal Quantity { get; init; }
     public decimal UnitCost { get; init; }
     public string? Note { get; init; }
+    public DirectShipInfoDto? DirectShipInfo { get; init; }
 
     public void Verify()
     {

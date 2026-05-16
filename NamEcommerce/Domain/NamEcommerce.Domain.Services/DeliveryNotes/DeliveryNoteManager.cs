@@ -274,6 +274,52 @@ public sealed class DeliveryNoteManager(
         return inserted.Id;
     }
 
+    public async Task<Guid> CreateForDirectShipAsync(CreateDeliveryNoteForDirectShipDto dto, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var order = orderReader.DataSource
+            .FirstOrDefault(o => o.OrderItems.Any(oi => oi.Id == dto.OrderItemId))
+            ?? throw new OrderIsNotFoundException(dto.OrderItemId);
+
+        var orderItem = order.OrderItems.First(oi => oi.Id == dto.OrderItemId);
+
+        var code = await GenerateCodeAsync().ConfigureAwait(false);
+
+        var deliveryNote = new DeliveryNote(
+            code: code,
+            orderId: order.Id,
+            customerId: order.CustomerId,
+            customerName: order.CustomerName ?? string.Empty,
+            customerPhone: order.CustomerPhone,
+            customerAddress: order.CustomerAddress,
+            shippingAddress: dto.ShippingAddress,
+            warehouseId: dto.DirectShipWarehouseId,
+            showPrice: false,
+            note: null,
+            surcharge: 0,
+            amountToCollect: 0,
+            surchargeReason: null,
+            createdByUserId: null)
+        {
+            OrderCode = order.Code
+        };
+
+        deliveryNote.AddItem(
+            orderItemId: orderItem.Id,
+            productId: orderItem.ProductId,
+            productName: orderItem.ProductName ?? string.Empty,
+            quantity: dto.Quantity,
+            unitPrice: orderItem.UnitPrice);
+
+        deliveryNote.SetAsDirectShip(dto.GoodsReceiptId);
+        deliveryNote.MarkCreated();
+
+        var inserted = await deliveryNoteRepository.InsertAsync(deliveryNote, ct).ConfigureAwait(false);
+
+        return inserted.Id;
+    }
+
     public async Task CancelAsync(Guid id)
     {
         await ExecuteInTransactionAsync(async () =>
@@ -457,6 +503,8 @@ public sealed class DeliveryNoteManager(
             Note = deliveryNote.Note,
             Status = deliveryNote.Status,
             SourceType = deliveryNote.SourceType,
+            IsDirectShip = deliveryNote.IsDirectShip,
+            DeliveryConfirmationStatus = deliveryNote.DeliveryConfirmationStatus,
             DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
             DeliveryProofPictureId = deliveryNote.DeliveryProofPictureId,
             DeliveryReceiverName = deliveryNote.DeliveryReceiverName,

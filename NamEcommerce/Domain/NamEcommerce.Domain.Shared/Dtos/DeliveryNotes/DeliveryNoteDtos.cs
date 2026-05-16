@@ -25,6 +25,8 @@ public sealed record DeliveryNoteDto
     
     public DeliveryNoteStatus Status { get; init; }
     public DeliveryNoteSourceType SourceType { get; init; }
+    public bool IsDirectShip { get; init; }
+    public DeliveryConfirmationStatus DeliveryConfirmationStatus { get; init; }
     
     public DateTime? DeliveredOnUtc { get; init; }
     public Guid? DeliveryProofPictureId { get; init; }
@@ -131,4 +133,19 @@ public sealed record CreateDeliveryNoteFromVendorReturnItemDto
     public required string ProductName { get; init; }
     public required decimal Quantity { get; init; }
     public required decimal UnitCost { get; init; }
+}
+
+/// <summary>
+/// DTO để tạo DeliveryNote tự động (Status=Draft, DeliveryConfirmationStatus=PendingConfirmation)
+/// khi GoodsReceipt phân bổ hàng cho một allocation direct-ship.
+/// DeliveryNoteManager sẽ tự tìm Order/Customer từ OrderItemId.
+/// </summary>
+[Serializable]
+public sealed record CreateDeliveryNoteForDirectShipDto
+{
+    public required Guid GoodsReceiptId { get; init; }
+    public required Guid OrderItemId { get; init; }
+    public required decimal Quantity { get; init; }
+    public required Guid DirectShipWarehouseId { get; init; }
+    public required string ShippingAddress { get; init; }
 }
