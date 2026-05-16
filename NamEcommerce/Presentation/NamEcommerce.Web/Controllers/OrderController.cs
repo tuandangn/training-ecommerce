@@ -6,6 +6,7 @@ using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
+using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.Orders;
 using NamEcommerce.Web.Services.Orders;
@@ -98,6 +99,15 @@ public sealed class OrderController : BaseAuthorizedController
         }
 
         return View(model);
+    }
+
+    public async Task<IActionResult> AllocatedPurchaseOrders(Guid id)
+    {
+        var listModel = await _mediator.Send(new GetAllocatedPurchaseOrdersForOrderQuery
+        {
+            OrderId = id
+        });
+        return PartialView("_AllocatedPurchaseOrdersOffcanvasBody", listModel);
     }
 
     [HttpPost]

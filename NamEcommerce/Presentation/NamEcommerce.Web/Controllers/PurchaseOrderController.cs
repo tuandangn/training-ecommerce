@@ -33,6 +33,42 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         var model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel();
         return View(model);
     }
+
+    [HttpGet("/PurchaseOrders/ShortageAggregation")]
+    public async Task<IActionResult> ShortageAggregation([FromQuery] GetShortageAggregationQuery query)
+    {
+        var model = await _mediator.Send(query).ConfigureAwait(false);
+        return View(model);
+    }
+
+    [HttpPost("/PurchaseOrders/CheckExistingDrafts")]
+    public async Task<IActionResult> CheckExistingDrafts([FromBody] CheckExistingDraftsCommand command)
+    {
+        var result = await _mediator.Send(command).ConfigureAwait(false);
+        return Json(result);
+    }
+
+    [HttpPost("/PurchaseOrders/CheckRelatedPurchaseOrders")]
+    public async Task<IActionResult> CheckRelatedPurchaseOrders([FromBody] CheckRelatedPurchaseOrdersCommand command)
+    {
+        var result = await _mediator.Send(command).ConfigureAwait(false);
+        return Json(result);
+    }
+
+    [HttpPost("/PurchaseOrders/CreateFromShortage")]
+    public async Task<IActionResult> CreateFromShortage([FromBody] CreatePurchaseOrdersFromShortageCommand command)
+    {
+        var result = await _mediator.Send(command).ConfigureAwait(false);
+        if (!result.Success)
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+
+        return Json(new
+        {
+            success = true,
+            items = result.Items
+        });
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create(CreatePurchaseOrderModel model)
     {
@@ -103,16 +139,16 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return View(model);
         }
 
-        await _mediator.Send(new SubmitsPurchaseOrderCommand
-        {
-            PurchaseOrderId = result.CreatedId!.Value
-        });
+        //await _mediator.Send(new SubmitsPurchaseOrderCommand
+        //{
+        //    PurchaseOrderId = result.CreatedId!.Value
+        //});
 
-        await _mediator.Send(new ChangePurchaseOrderStatusCommand
-        {
-            PurchaseOrderId = result.CreatedId!.Value,
-            Status = (int)PurchaseOrderStatus.Approved
-        });
+        //await _mediator.Send(new ChangePurchaseOrderStatusCommand
+        //{
+        //    PurchaseOrderId = result.CreatedId!.Value,
+        //    Status = (int)PurchaseOrderStatus.Approved
+        //});
 
         NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });

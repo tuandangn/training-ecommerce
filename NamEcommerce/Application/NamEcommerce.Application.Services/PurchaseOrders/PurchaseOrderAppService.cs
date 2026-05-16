@@ -17,6 +17,7 @@ namespace NamEcommerce.Application.Services.PurchaseOrders;
 public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 {
     private readonly IPurchaseOrderManager _purchaseOrderManager;
+    private readonly IPurchaseOrderAllocationManager _purchaseOrderAllocationManager;
     private readonly IEntityDataReader<Vendor> _vendorDataReader;
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
     private readonly IEntityDataReader<User> _userDataReader;
@@ -24,10 +25,12 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     private readonly IEntityDataReader<PurchaseOrder> _purchaseOrderDataReader;
 
     public PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
+        IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
         IEntityDataReader<PurchaseOrder> purchaseOrderDataReader, IEntityDataReader<Vendor> vendorDataReader,
         IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader)
     {
         _purchaseOrderManager = purchaseOrderManager;
+        _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
         _purchaseOrderDataReader = purchaseOrderDataReader;
         _vendorDataReader = vendorDataReader;
         _warehouseDataReader = warehouseDataReader;
@@ -586,6 +589,31 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 UnitCost: d.UnitCost,
                 PurchaseOrderCode: d.PurchaseOrderCode,
                 PurchaseDate: d.PurchaseDateUtc.ToLocalTime()))
+            .ToList();
+    }
+
+    public async Task<IList<OrderAllocatedPurchaseOrderAppDto>> GetAllocatedPurchaseOrdersForOrderAsync(Guid orderId)
+    {
+        var domainDtos = await _purchaseOrderAllocationManager.GetAllocatedPurchaseOrdersForOrderAsync(orderId).ConfigureAwait(false);
+        return domainDtos
+            .Select(dto => new OrderAllocatedPurchaseOrderAppDto
+            {
+                PurchaseOrderId = dto.PurchaseOrderId,
+                PurchaseOrderCode = dto.PurchaseOrderCode,
+                Status = (int)dto.Status,
+                VendorId = dto.VendorId,
+                VendorName = dto.VendorName,
+                CreatedOnUtc = dto.CreatedOnUtc,
+                ExpectedDeliveryDateUtc = dto.ExpectedDeliveryDateUtc,
+                Items = dto.Items.Select(item => new OrderAllocatedPurchaseOrderItemAppDto
+                {
+                    OrderItemId = item.OrderItemId,
+                    ProductId = item.ProductId,
+                    ProductName = item.ProductName,
+                    AllocatedQuantity = item.AllocatedQuantity,
+                    ReceivedQuantity = item.ReceivedQuantity
+                }).ToList()
+            })
             .ToList();
     }
 }

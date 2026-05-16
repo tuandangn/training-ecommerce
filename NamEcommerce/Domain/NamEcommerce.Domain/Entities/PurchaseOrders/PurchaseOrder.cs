@@ -134,7 +134,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
     }
     internal void RemoveWarehouse() => WarehouseId = null;
 
-    internal async Task AddPurchaseOrderItemAsync(PurchaseOrderItem item, IGetByIdService<Product> byIdGetter)
+    internal async Task AddPurchaseOrderItemAsync(PurchaseOrderItem item, IGetByIdService<Product> byIdGetter, bool requireVendorProduct = true)
     {
         if (item.PurchaseOrderId != Id)
             throw new InvalidOperationException("The item does not belong to this purchase order.");
@@ -145,7 +145,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
         if (product is null)
             throw new ProductIsNotFoundException(item.ProductId);
 
-        if (!product.ProductVendors.Any(v => v.VendorId == VendorId))
+        if (requireVendorProduct && !product.ProductVendors.Any(v => v.VendorId == VendorId))
             throw new InvalidOperationException("The product does not belong to the selected vendor.");
 
         _items.Add(item);

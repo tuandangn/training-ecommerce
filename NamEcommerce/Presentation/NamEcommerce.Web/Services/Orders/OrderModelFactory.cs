@@ -5,7 +5,9 @@ using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
+using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Models.Orders;
 
 namespace NamEcommerce.Web.Services.Orders;
@@ -129,6 +131,16 @@ public sealed class OrderModelFactory : IOrderModelFactory
 
             model.DeliveryNotes.Add(dnModel);
         }
+
+        model.ShortageInfo = await _mediator.Send(new GetOrderShortageInfoQuery
+        {
+            OrderId = orderId
+        }).ConfigureAwait(false);
+
+        model.AllocatedPurchaseOrders = await _mediator.Send(new GetAllocatedPurchaseOrdersForOrderQuery
+        {
+            OrderId = orderId
+        }).ConfigureAwait(false);
 
         return model;
     }

@@ -29,5 +29,7 @@ public interface IPurchaseOrderAppService
 
     Task<IList<RecentPurchasePriceAppDto>> GetRecentPurchasePricesAsync(Guid productId);
 
+    Task<IList<OrderAllocatedPurchaseOrderAppDto>> GetAllocatedPurchaseOrdersForOrderAsync(Guid orderId);
+
     Task<string> NextPurchaseOrderCodeAsync();
 }

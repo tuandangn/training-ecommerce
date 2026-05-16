@@ -1,0 +1,903 @@
+@model ShortageAggregationModel
+@using System.Globalization
+@{
+    ViewData[ViewConstants.PageTitle] = "Hàng cần nhập";
+
+    var allItems = Model.VendorGroups.SelectMany(group => group.Items).ToList();
+    var validGroups = Model.VendorGroups.Where(group => !group.IsNoVendorGroup && group.VendorId.HasValue).ToList();
+    var noVendorItems = Model.VendorGroups.Where(group => group.IsNoVendorGroup).SelectMany(group => group.Items).ToList();
+    var relatedOrders = allItems.Select(item => item.OrderCode)
+        .Where(code => !string.IsNullOrWhiteSpace(code))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToList();
+    var estimatedTotal = Model.VendorGroups.Sum(group => group.TotalAmount);
+    var defaultExpectedDate = DateTime.Today.AddDays(7).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+}
+
+@section TitleSection {
+    <h1 class="topbar-page-title">Hàng cần nhập</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="PurchaseOrder" class="text-decoration-none">Đơn nhập</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Hàng cần nhập</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<div class="shortage-order-page">
+    <div class="shortage-workspace-header">
+        <div>
+            <h2>Hàng cần nhập</h2>
+            <div class="shortage-workspace-subtitle">
+                @allItems.Count mặt hàng thiếu · @relatedOrders.Count đơn liên quan · Ước tính @estimatedTotal.DisplayCurrencyWithSymbol()
+            </div>
+        </div>
+        <button type="button" class="shortage-more-button" aria-label="Tùy chọn">
+            <i class="bi bi-three-dots"></i>
+        </button>
+    </div>
+
+    @if (Model.OrderId.HasValue || Model.DeliveryNoteId.HasValue || Model.ProductId.HasValue)
+    {
+        <div class="shortage-active-filters">
+            @if (relatedOrders.Count >= 1)
+            {
+                var primaryOrderCode = allItems.FirstOrDefault(item => item.IsFromPrimaryOrder)?.OrderCode;
+                <a class="shortage-filter-chip" href="/PurchaseOrders/ShortageAggregation">
+                    Lọc theo đơn: @(primaryOrderCode ?? relatedOrders[0])
+                    <i class="bi bi-x"></i>
+                </a>
+            }
+            else if (Model.ProductId.HasValue)
+            {
+                <a class="shortage-filter-chip" href="/PurchaseOrders/ShortageAggregation">
+                    Đang lọc mặt hàng
+                    <i class="bi bi-x"></i>
+                </a>
+            }
+        </div>
+    }
+
+    @{
+        var secondaryItemCount = allItems.Count(item => !item.IsFromPrimaryOrder);
+    }
+    @if ((Model.OrderId.HasValue || Model.DeliveryNoteId.HasValue) && secondaryItemCount > 0)
+    {
+        <div class="alert alert-info shortage-related-banner" role="alert">
+            <i class="bi bi-info-circle me-1"></i>
+            Có <strong>@secondaryItemCount</strong> mặt hàng thiếu từ đơn khác cùng nhà cung cấp gợi ý. Tick chọn để gộp chung vào phiếu nhập, tiết kiệm chi phí giao hàng.
+        </div>
+    }
+
+    @if (Model.DeliveryNoteId.HasValue)
+    {
+        <form method="get" action="/PurchaseOrders/ShortageAggregation" class="shortage-scope-form">
+            <input type="hidden" name="deliveryNoteId" value="@Model.DeliveryNoteId" />
+            <input type="hidden" name="productId" value="@Model.ProductId" />
+            <select name="includeSalesOrderScope" class="form-select shortage-page-select" onchange="this.form.submit()">
+                <option value="false" selected="@(!Model.IncludeSalesOrderScope)">Phạm vi: Phiếu xuất hiện tại</option>
+                <option value="true" selected="@(Model.IncludeSalesOrderScope)">Phạm vi: Toàn bộ đơn bán</option>
+            </select>
+        </form>
+    }
+
+    <div class="shortage-page-filters">
+        <select id="vendorFilter" class="form-select shortage-page-select">
+            <option value="">NCC: Tất cả</option>
+            @foreach (var group in validGroups)
+            {
+                <option value="@group.VendorId">@group.VendorName</option>
+            }
+        </select>
+        <select id="productFilter" class="form-select shortage-page-select">
+            <option value="">Mặt hàng: Tất cả</option>
+            @foreach (var product in allItems.GroupBy(item => item.ProductId).Select(group => group.First()).OrderBy(item => item.ProductName))
+            {
+                <option value="@product.ProductId">@product.ProductName</option>
+            }
+        </select>
+    </div>
+
+    <div id="createShortageResult" class="alert alert-success d-none"></div>
+
+    @if (!Model.HasShortage)
+    {
+        <div class="content-card">
+            <div class="content-card-body text-center py-5">
+                <i class="bi bi-check-circle text-success fs-1 d-block mb-2"></i>
+                <div class="fw-semibold">Không có hàng thiếu cần nhập</div>
+                <div class="text-muted small">Các đơn đang lọc hiện có đủ tồn khả dụng hoặc đã được phân bổ.</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        foreach (var group in validGroups)
+        {
+            var groupUnitSummary = string.Join(" · ", group.Items
+                .GroupBy(item => string.IsNullOrWhiteSpace(item.UnitMeasurementName) ? "sp" : item.UnitMeasurementName!)
+                .Select(unitGroup => $"{unitGroup.Sum(item => item.QuantityToOrder).DisplayQuantity()} {unitGroup.Key}"));
+            var groupLastPurchaseDate = group.Items
+                .SelectMany(item => item.SupplierSuggestions.Where(suggestion => suggestion.VendorId == group.VendorId && suggestion.LastPurchaseDate.HasValue))
+                .Select(suggestion => suggestion.LastPurchaseDate!.Value)
+                .DefaultIfEmpty()
+                .Max();
+           var groupHasPrimary = group.Items.Any(groupItem => groupItem.IsFromPrimaryOrder);
+
+            <div class="shortage-order-card shortage-group" data-vendor-id="@group.VendorId" data-vendor-name="@group.VendorName">
+                <div class="shortage-order-card-header">
+                    <div class="shortage-vendor-heading">
+                        <input type="checkbox" class="form-check-input group-check" @(groupHasPrimary ? "checked" : "") />
+                        <span class="shortage-vendor-icon">
+                            <i class="bi bi-building"></i>
+                        </span>
+                        <div>
+                            <div class="shortage-vendor-name">@group.VendorName</div>
+                            <div class="shortage-vendor-meta">
+                                @group.Items.Count mặt hàng · @groupUnitSummary
+                                @if (groupLastPurchaseDate != default)
+                                {
+                                    <span> · Nhập gần nhất @groupLastPurchaseDate.ToString("dd/MM/yyyy")</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="shortage-group-money">
+                        <strong class="group-total">@group.TotalAmount.DisplayCurrencyWithSymbol()</strong>
+                        <span>tạm tính</span>
+                    </div>
+                </div>
+
+                <div class="shortage-order-card-controls">
+                    <label class="shortage-inline-field">
+                        <span><i class="bi bi-calendar2-week"></i>Hẹn nhận:</span>
+                        <input type="date" class="form-control expected-date" value="@defaultExpectedDate" />
+                    </label>
+                    <label class="shortage-inline-field shortage-note-field">
+                        <span><i class="bi bi-stickies"></i>Ghi chú:</span>
+                        <input type="text" class="form-control group-note" maxlength="1000" placeholder="VD: gấp, đặt cho @string.Join(", ", relatedOrders.Take(2))" />
+                    </label>
+                </div>
+
+                <div class="shortage-order-items">
+                    @{
+                        var groupPrimaryItems = group.Items.Where(groupItem => groupItem.IsFromPrimaryOrder).ToList();
+                        var groupSecondaryItems = group.Items.Where(groupItem => !groupItem.IsFromPrimaryOrder).ToList();
+                        var groupPrimaryOrderCodes = groupPrimaryItems.Select(groupItem => groupItem.OrderCode).Distinct().ToList();
+                        var groupedItems = new List<(string? Label, IList<ShortageAggregationItemModel> Items)>();
+                        if (groupPrimaryItems.Count > 0)
+                        {
+                            var primaryLabel = groupPrimaryOrderCodes.Count == 1
+                                ? $"Mặt hàng của đơn {groupPrimaryOrderCodes[0]}"
+                                : "Mặt hàng của đơn đang xem";
+                            groupedItems.Add((primaryLabel, groupPrimaryItems));
+                        }
+                        if (groupSecondaryItems.Count > 0)
+                        {
+                            groupedItems.Add(($"Có thể gộp thêm từ đơn khác ({groupSecondaryItems.Count})", groupSecondaryItems));
+                        }
+                    }
+                    @foreach (var (sectionLabel, sectionItems) in groupedItems)
+                    {
+                        if (!string.IsNullOrEmpty(sectionLabel) && groupedItems.Count > 1)
+                        {
+                            var isSecondarySection = sectionItems.Any() && !sectionItems[0].IsFromPrimaryOrder;
+                            <div class="shortage-subgroup-label @(isSecondarySection ? "shortage-subgroup-secondary" : "shortage-subgroup-primary")">
+                                <i class="bi @(isSecondarySection ? "bi-plus-circle" : "bi-check-circle")"></i>
+                                <span>@sectionLabel</span>
+                            </div>
+                        }
+
+                        foreach (var item in sectionItems)
+                        {
+                        var unitName = string.IsNullOrWhiteSpace(item.UnitMeasurementName) ? "sp" : item.UnitMeasurementName!;
+                        var currentSuggestion = item.SupplierSuggestions.FirstOrDefault(suggestion => suggestion.VendorId == group.VendorId);
+                        var lastPrice = currentSuggestion?.LastUnitPrice ?? item.UnitCost;
+                        var lastPurchaseText = currentSuggestion?.LastPurchaseDate?.ToString("dd/MM");
+                        var itemTotal = item.QuantityToOrder * item.UnitCost;
+
+                        <div class="shortage-order-item @(item.IsFromPrimaryOrder ? "" : "shortage-item-secondary")"
+                             data-order-item-id="@item.OrderItemId"
+                             data-order-code="@item.OrderCode"
+                             data-product-id="@item.ProductId"
+                             data-product-name="@item.ProductName"
+                             data-unit-name="@unitName"
+                             data-is-primary="@(item.IsFromPrimaryOrder ? "true" : "false")">
+                            <div class="shortage-item-check">
+                                <input type="checkbox" class="form-check-input item-check" @(item.IsFromPrimaryOrder ? "checked" : "") />
+                            </div>
+                            <div class="shortage-item-main">
+                                <div class="shortage-item-topline">
+                                    <div>
+                                        <div class="shortage-item-name">@item.ProductName</div>
+                                        <div class="shortage-item-meta">
+                                            Tồn @item.AvailableQuantity.DisplayQuantity() @unitName · Cần thêm @item.ShortageQuantity.DisplayQuantity() @unitName
+                                            @if (lastPrice > 0)
+                                            {
+                                                <span> · Giá lần trước @lastPrice.DisplayCurrency()</span>
+                                                @if (!string.IsNullOrWhiteSpace(lastPurchaseText))
+                                                {
+                                                    <span> (@lastPurchaseText)</span>
+                                                }
+                                            }
+                                        </div>
+                                        <div class="shortage-item-orders">
+                                            Cho đơn: @item.OrderCode (@item.ShortageQuantity.DisplayQuantity() @unitName)
+                                            @if (item.AllocatedFromPurchaseOrders.Any())
+                                            {
+                                                <span> · </span>
+                                                foreach (var allocation in item.AllocatedFromPurchaseOrders.Take(2))
+                                                {
+                                                    <a asp-controller="PurchaseOrder" asp-action="Details" asp-route-id="@allocation.PurchaseOrderId">
+                                                        @allocation.PurchaseOrderCode
+                                                    </a>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="shortage-item-total item-total">@itemTotal.DisplayCurrencyWithSymbol()</div>
+                                </div>
+
+                                <div class="shortage-item-inputs">
+                                    <label>
+                                        <span>SL:</span>
+                                        <input type="number"
+                                               class="form-control quantity-to-order"
+                                               min="0"
+                                               step="any"
+                                               value="@item.QuantityToOrder.ToString("0.##", CultureInfo.InvariantCulture)" />
+                                        <span>@unitName</span>
+                                    </label>
+                                    <span class="shortage-input-separator">×</span>
+                                    <label>
+                                        <span>Giá:</span>
+                                        <input type="number"
+                                               class="form-control unit-cost"
+                                               min="0"
+                                               step="any"
+                                               value="@item.UnitCost.ToString("0.##", CultureInfo.InvariantCulture)" />
+                                        <span>đ</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+
+        if (noVendorItems.Count > 0)
+        {
+            <div class="shortage-unmapped-alert">
+                <div class="shortage-unmapped-icon">
+                    <i class="bi bi-question-circle"></i>
+                </div>
+                <div>
+                    <div class="fw-semibold">Chưa có NCC gợi ý cho @noVendorItems.Count mặt hàng</div>
+                    <div>Khi có mặt hàng thiếu mà chưa map với NCC nào, hệ thống sẽ liệt kê ở đây để anh chọn NCC thủ công.</div>
+                </div>
+            </div>
+        }
+
+        <div class="shortage-create-bar">
+            <div>
+                <div id="selectedShortageSummary" class="shortage-create-summary">Sẽ xử lý 0 NCC · 0 mặt hàng</div>
+                <div class="shortage-create-total">Tổng <span id="stickyGrandTotalAmount">0đ</span></div>
+            </div>
+            <div class="shortage-create-actions">
+                <a class="btn btn-outline-secondary" asp-controller="PurchaseOrder" asp-action="List">Hủy</a>
+                <button type="button" class="btn btn-dark btn-create-from-shortage">
+                    Tạo phiếu nhập <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="modal fade" id="existingDraftModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title">Đơn nhập liên quan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="related-po-help">Chọn phân bổ từ PO đang có, ghép thêm vào PO nháp, hoặc tạo PO mới cho phần còn thiếu.</div>
+                <div id="existingDraftList" class="related-po-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-dark" id="btnConfirmCreateFromShortage">Xác nhận</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const formatter = new Intl.NumberFormat('vi-VN');
+            const quantityFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
+            const tolerance = 0.0001;
+            const groups = Array.from(document.querySelectorAll('.shortage-group'));
+            const resultBox = document.getElementById('createShortageResult');
+            const createButtons = Array.from(document.querySelectorAll('.btn-create-from-shortage'));
+            const vendorFilter = document.getElementById('vendorFilter');
+            const productFilter = document.getElementById('productFilter');
+            const draftModalEl = document.getElementById('existingDraftModal');
+            const draftModal = draftModalEl ? new bootstrap.Modal(draftModalEl) : null;
+            const draftList = document.getElementById('existingDraftList');
+            const confirmButton = document.getElementById('btnConfirmCreateFromShortage');
+            let modalContext = { lines: [] };
+
+            function parseDecimal(value) {
+                value = String(value || '').replace(',', '.');
+                const number = Number(value);
+                return Number.isFinite(number) ? number : 0;
+            }
+
+            function readDecimal(input) {
+                return parseDecimal(input?.value);
+            }
+
+            function formatInputNumber(value) {
+                if (!Number.isFinite(value)) return '0';
+                return Number.parseFloat(value.toFixed(4)).toString();
+            }
+
+            function formatMoney(value) {
+                return formatter.format(value) + 'đ';
+            }
+
+            function formatQuantity(value, unitName) {
+                return `${quantityFormatter.format(value)} ${unitName || 'sp'}`;
+            }
+
+            function formatDate(value) {
+                if (!value) return '';
+                const date = new Date(value);
+                return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('vi-VN');
+            }
+
+            function equalsId(left, right) {
+                return String(left || '').toLowerCase() === String(right || '').toLowerCase();
+            }
+
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, char => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[char]));
+            }
+
+            function syncGroupCheck(group) {
+                const groupCheck = group.querySelector('.group-check');
+                const itemChecks = Array.from(group.querySelectorAll('.item-check'));
+                const checkedCount = itemChecks.filter(check => check.checked).length;
+                groupCheck.checked = checkedCount === itemChecks.length && itemChecks.length > 0;
+                groupCheck.indeterminate = checkedCount > 0 && checkedCount < itemChecks.length;
+            }
+
+            function refreshTotals() {
+                let grandTotal = 0;
+                let selectedGroupCount = 0;
+                let selectedItemCount = 0;
+
+                groups.forEach(group => {
+                    let groupTotal = 0;
+                    let groupSelectedItems = 0;
+                    const groupHidden = group.classList.contains('d-none');
+
+                    group.querySelectorAll('.shortage-order-item').forEach(row => {
+                        const rowHidden = row.classList.contains('d-none');
+                        const checked = row.querySelector('.item-check')?.checked;
+                        const rowTotal = readDecimal(row.querySelector('.quantity-to-order')) * readDecimal(row.querySelector('.unit-cost'));
+                        const itemTotalEl = row.querySelector('.item-total');
+                        if (itemTotalEl) itemTotalEl.textContent = formatMoney(rowTotal);
+
+                        row.classList.toggle('is-not-selected', !checked);
+                        if (checked && !rowHidden && !groupHidden) {
+                            groupTotal += rowTotal;
+                            groupSelectedItems++;
+                        }
+                    });
+
+                    if (groupSelectedItems > 0) {
+                        selectedGroupCount++;
+                        selectedItemCount += groupSelectedItems;
+                    }
+
+                    grandTotal += groupTotal;
+                    const totalEl = group.querySelector('.group-total');
+                    if (totalEl) totalEl.textContent = formatMoney(groupTotal);
+                    syncGroupCheck(group);
+                });
+
+                const stickyGrandTotalEl = document.getElementById('stickyGrandTotalAmount');
+                if (stickyGrandTotalEl) stickyGrandTotalEl.textContent = formatMoney(grandTotal);
+
+                const summaryEl = document.getElementById('selectedShortageSummary');
+                if (summaryEl) summaryEl.textContent = `Sẽ xử lý ${selectedGroupCount} NCC · ${selectedItemCount} mặt hàng`;
+
+                createButtons.forEach(button => button.disabled = selectedItemCount === 0);
+            }
+
+            function applyFilters() {
+                const vendorId = vendorFilter?.value || '';
+                const productId = productFilter?.value || '';
+
+                groups.forEach(group => {
+                    const matchesVendor = !vendorId || group.dataset.vendorId === vendorId;
+                    let visibleRows = 0;
+
+                    group.querySelectorAll('.shortage-order-item').forEach(row => {
+                        const matchesProduct = !productId || row.dataset.productId === productId;
+                        const visible = matchesVendor && matchesProduct;
+                        row.classList.toggle('d-none', !visible);
+                        if (visible) visibleRows++;
+                    });
+
+                    group.classList.toggle('d-none', !matchesVendor || visibleRows === 0);
+                });
+
+                refreshTotals();
+            }
+
+            function getSelectedLines() {
+                return groups
+                    .filter(group => !group.classList.contains('d-none'))
+                    .flatMap(group => Array.from(group.querySelectorAll('.shortage-order-item'))
+                    .filter(row => !row.classList.contains('d-none') && row.querySelector('.item-check')?.checked)
+                    .map(row => ({
+                        group,
+                        row,
+                        vendorId: group.dataset.vendorId,
+                        vendorName: group.dataset.vendorName || '',
+                        orderItemId: row.dataset.orderItemId,
+                        orderCode: row.dataset.orderCode || '',
+                        productId: row.dataset.productId,
+                        productName: row.dataset.productName || '',
+                        unitName: row.dataset.unitName || 'sp',
+                        quantity: readDecimal(row.querySelector('.quantity-to-order')),
+                        unitCost: readDecimal(row.querySelector('.unit-cost')),
+                        expectedDeliveryDate: group.querySelector('.expected-date')?.value || null,
+                        note: group.querySelector('.group-note')?.value || null
+                    }))
+                    .filter(line => line.quantity > 0));
+            }
+
+            function buildPayloadForLines(lines, actionResolver) {
+                const groupMap = new Map();
+                lines.forEach((line, index) => {
+                    if (!groupMap.has(line.vendorId)) {
+                        groupMap.set(line.vendorId, {
+                            vendorId: line.vendorId,
+                            expectedDeliveryDate: line.expectedDeliveryDate,
+                            note: line.note,
+                            items: []
+                        });
+                    }
+
+                    const actions = actionResolver
+                        ? actionResolver(line, index)
+                        : [{
+                            actionType: 'CreateNew',
+                            quantity: line.quantity,
+                            unitCost: line.unitCost
+                        }];
+
+                    groupMap.get(line.vendorId).items.push({
+                        orderItemId: line.orderItemId,
+                        productId: line.productId,
+                        quantity: line.quantity,
+                        unitCost: line.unitCost,
+                        actions
+                    });
+                });
+
+                return {
+                    groups: Array.from(groupMap.values()).filter(group => group.items.length > 0)
+                };
+            }
+
+            async function postJson(url, body) {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                return await response.json();
+            }
+
+            async function createPurchaseOrders(payload) {
+                if (payload.groups.length === 0) return;
+
+                createButtons.forEach(button => button.disabled = true);
+                const result = await postJson('/PurchaseOrders/CreateFromShortage', payload);
+                createButtons.forEach(button => button.disabled = false);
+                refreshTotals();
+
+                if (!result.success) {
+                    alert(result.errorMessage || result.message || 'Không thể tạo đơn nhập.');
+                    return;
+                }
+
+                const links = result.items.map(item =>
+                    `<a class="alert-link" href="/PurchaseOrder/Details/${item.purchaseOrderId}">${escapeHtml(item.purchaseOrderCode)}</a>`);
+                resultBox.innerHTML = `Đã tạo/cập nhật ${result.items.length} đơn nhập: ${links.join(', ')}`;
+                resultBox.classList.remove('d-none');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function renderActionRow({ actionType, label, details, quantity, maxQuantity, checked, poId, poItemId, isNew }) {
+                const maxAttr = maxQuantity ? `max="${formatInputNumber(maxQuantity)}"` : '';
+                return `
+                    <div class="related-action-row ${isNew ? 'related-new-action' : ''}">
+                        <input class="form-check-input related-action-check" type="checkbox" ${checked ? 'checked' : ''}
+                               data-action-type="${escapeHtml(actionType)}"
+                               data-po-id="${escapeHtml(poId || '')}"
+                               data-po-item-id="${escapeHtml(poItemId || '')}">
+                        <div class="related-action-copy">
+                            <div class="related-action-label">${label}</div>
+                            <div class="related-action-details">${details}</div>
+                        </div>
+                        <input type="number"
+                               class="form-control related-action-qty ${isNew ? 'shortage-new-action-qty' : ''}"
+                               min="0"
+                               step="any"
+                               ${maxAttr}
+                               value="${formatInputNumber(quantity)}">
+                    </div>`;
+            }
+
+            function renderPurchaseOrderCard(po, line, allocationRows, mergeRow) {
+                const createdOn = formatDate(po.createdOn);
+                const expectedOn = formatDate(po.expectedDeliveryDate);
+                const meta = [
+                    createdOn ? `Tạo ${createdOn}` : '',
+                    expectedOn ? `Dự kiến ${expectedOn}` : '',
+                    `${formatMoney(po.totalAmount)} · ${po.itemCount} mặt hàng`
+                ].filter(Boolean).join(' · ');
+
+                return `
+                    <div class="related-po-card">
+                        <div class="related-po-heading">
+                            <div>
+                                <div class="related-po-code">
+                                    ${escapeHtml(po.code)}
+                                    <span class="status-badge ${escapeHtml(po.statusClass || 'secondary')}">${escapeHtml(po.statusName || '')}</span>
+                                </div>
+                                <div class="related-po-vendor">${escapeHtml(po.vendorName || line.vendorName)}</div>
+                                <div class="related-po-meta">${escapeHtml(meta)}</div>
+                            </div>
+                        </div>
+                        <div class="related-po-actions">
+                            ${allocationRows}
+                            ${mergeRow}
+                        </div>
+                    </div>`;
+            }
+
+            function renderRelatedLine(line, index, purchaseOrders) {
+                let remaining = line.quantity;
+                const poCards = purchaseOrders.map(po => {
+                    const matchingItems = (po.items || [])
+                        .filter(item => equalsId(item.productId, line.productId) && item.availableForAllocation > 0 && po.canAllocate);
+
+                    const allocationRows = matchingItems.map(item => {
+                        const quantity = Math.min(Math.max(remaining, 0), item.availableForAllocation);
+                        const checked = quantity > 0;
+                        if (checked) remaining -= quantity;
+
+                        return renderActionRow({
+                            actionType: 'AllocateFromExisting',
+                            label: 'Phân bổ từ PO này',
+                            details: `Còn trống ${formatQuantity(item.availableForAllocation, line.unitName)} / ${formatQuantity(item.quantityOrdered, line.unitName)}`,
+                            quantity,
+                            maxQuantity: Math.min(item.availableForAllocation, line.quantity),
+                            checked,
+                            poId: po.id,
+                            poItemId: item.purchaseOrderItemId
+                        });
+                    }).join('');
+
+                    const mergeQuantity = Math.max(remaining, 0) || line.quantity;
+                    const mergeRow = po.canMerge
+                        ? renderActionRow({
+                            actionType: 'MergeIntoDraft',
+                            label: 'Ghép thêm vào PO nháp',
+                            details: `Thêm ${escapeHtml(line.productName)} vào ${escapeHtml(po.code)}`,
+                            quantity: mergeQuantity,
+                            maxQuantity: line.quantity,
+                            checked: false,
+                            poId: po.id
+                        })
+                        : '';
+
+                    return allocationRows || mergeRow
+                        ? renderPurchaseOrderCard(po, line, allocationRows, mergeRow)
+                        : '';
+                }).filter(Boolean).join('');
+
+                const newQuantity = Math.max(remaining, 0);
+                const newRow = renderActionRow({
+                    actionType: 'CreateNew',
+                    label: 'Tạo PO mới',
+                    details: `Cho phần còn lại của ${escapeHtml(line.productName)}`,
+                    quantity: newQuantity,
+                    maxQuantity: line.quantity,
+                    checked: newQuantity > 0,
+                    isNew: true
+                });
+
+                const orderBreakdown = line.underlying && line.underlying.length > 1
+                    ? `<div class="related-line-orders">Cho ${line.underlying.length} đơn: ${line.underlying.map(u => `${escapeHtml(u.orderCode || '')} (${formatQuantity(u.quantity, line.unitName)})`).join(', ')}</div>`
+                    : '';
+
+                return `
+                    <div class="related-line-card" data-line-index="${index}" data-quantity="${formatInputNumber(line.quantity)}" data-unit-cost="${formatInputNumber(line.unitCost)}" data-unit-name="${escapeHtml(line.unitName)}">
+                        <div class="related-line-heading">
+                            <div>
+                                <div class="related-line-product">${escapeHtml(line.productName)}</div>
+                                <div class="related-line-meta">Cần xử lý ${formatQuantity(line.quantity, line.unitName)} · NCC ${escapeHtml(line.vendorName)}</div>
+                                ${orderBreakdown}
+                            </div>
+                            <div class="related-line-balance" data-line-balance></div>
+                        </div>
+                        <div class="related-po-stack">
+                            ${poCards || '<div class="related-po-empty">Chưa có PO phù hợp để phân bổ hoặc ghép.</div>'}
+                            <div class="related-po-card related-new-card">
+                                <div class="related-po-actions">${newRow}</div>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            function groupLinesForDisplay(lines) {
+                const map = new Map();
+                lines.forEach(line => {
+                    const key = `${line.vendorId || ''}|${line.productId || ''}|${formatInputNumber(line.unitCost)}`;
+                    if (!map.has(key)) {
+                        map.set(key, {
+                            key,
+                            vendorId: line.vendorId,
+                            vendorName: line.vendorName,
+                            productId: line.productId,
+                            productName: line.productName,
+                            unitCost: line.unitCost,
+                            unitName: line.unitName,
+                            quantity: 0,
+                            underlying: []
+                        });
+                    }
+                    const groupLine = map.get(key);
+                    groupLine.quantity += line.quantity;
+                    groupLine.underlying.push({
+                        orderItemId: line.orderItemId,
+                        orderCode: line.orderCode || '',
+                        quantity: line.quantity,
+                        original: line
+                    });
+                });
+                return Array.from(map.values());
+            }
+
+            function getLineActionState(card) {
+                const actions = [];
+                let total = 0;
+                let overMax = false;
+
+                card.querySelectorAll('.related-action-check:checked').forEach(check => {
+                    const row = check.closest('.related-action-row');
+                    const input = row?.querySelector('.related-action-qty');
+                    const quantity = readDecimal(input);
+                    const max = parseDecimal(input?.getAttribute('max'));
+                    if (max > 0 && quantity > max + tolerance) overMax = true;
+                    if (quantity <= 0) return;
+
+                    total += quantity;
+                    actions.push({
+                        actionType: check.dataset.actionType,
+                        purchaseOrderId: check.dataset.poId || null,
+                        purchaseOrderItemId: check.dataset.poItemId || null,
+                        quantity,
+                        unitCost: parseDecimal(card.dataset.unitCost)
+                    });
+                });
+
+                return { actions, total, overMax };
+            }
+
+            function balanceNewAction(card) {
+                const needed = parseDecimal(card.dataset.quantity);
+                let nonNewTotal = 0;
+                card.querySelectorAll('.related-action-check:checked').forEach(check => {
+                    if (check.dataset.actionType === 'CreateNew') return;
+                    const input = check.closest('.related-action-row')?.querySelector('.related-action-qty');
+                    nonNewTotal += readDecimal(input);
+                });
+
+                const newCheck = card.querySelector('.related-action-check[data-action-type="CreateNew"]');
+                const newInput = newCheck?.closest('.related-action-row')?.querySelector('.related-action-qty');
+                if (newCheck?.checked && newInput) {
+                    newInput.value = formatInputNumber(Math.max(0, needed - nonNewTotal));
+                }
+            }
+
+            function refreshRelatedModal() {
+                if (!confirmButton) return;
+
+                let isValid = true;
+                draftList.querySelectorAll('.related-line-card').forEach(card => {
+                    const needed = parseDecimal(card.dataset.quantity);
+                    const unitName = card.dataset.unitName || 'sp';
+                    const state = getLineActionState(card);
+                    const remaining = needed - state.total;
+                    const balanceEl = card.querySelector('[data-line-balance]');
+                    const invalid = state.overMax || Math.abs(remaining) > tolerance;
+                    card.classList.toggle('is-invalid', invalid);
+
+                    if (state.overMax) {
+                        balanceEl.textContent = 'Vượt số lượng có thể dùng';
+                    } else if (Math.abs(remaining) <= tolerance) {
+                        balanceEl.textContent = 'Đủ số lượng';
+                    } else if (remaining > 0) {
+                        balanceEl.textContent = `Còn thiếu ${formatQuantity(remaining, unitName)}`;
+                    } else {
+                        balanceEl.textContent = `Vượt ${formatQuantity(Math.abs(remaining), unitName)}`;
+                    }
+
+                    if (invalid) isValid = false;
+                });
+
+                confirmButton.disabled = !isValid;
+            }
+
+            function renderRelatedModal(originalLines, relatedPurchaseOrders) {
+                const relatedByVendor = new Map();
+                relatedPurchaseOrders.forEach(po => {
+                    const key = String(po.vendorId || '').toLowerCase();
+                    if (!relatedByVendor.has(key)) relatedByVendor.set(key, []);
+                    relatedByVendor.get(key).push(po);
+                });
+
+                const displayLines = groupLinesForDisplay(originalLines);
+                modalContext = { originalLines, displayLines };
+
+                draftList.innerHTML = displayLines.map((displayLine, index) => {
+                    const purchaseOrders = relatedByVendor.get(String(displayLine.vendorId || '').toLowerCase()) || [];
+                    return renderRelatedLine(displayLine, index, purchaseOrders);
+                }).join('');
+
+                draftList.querySelectorAll('.related-line-card').forEach(balanceNewAction);
+                refreshRelatedModal();
+                draftModal?.show();
+            }
+
+            async function beginCreateFromShortage() {
+                const lines = getSelectedLines();
+                if (lines.length === 0) return;
+
+                const vendorIds = [...new Set(lines.map(line => line.vendorId).filter(Boolean))];
+                const productIds = [...new Set(lines.map(line => line.productId).filter(Boolean))];
+
+                createButtons.forEach(button => button.disabled = true);
+                try {
+                    const related = await postJson('/PurchaseOrders/CheckRelatedPurchaseOrders', { vendorIds, productIds });
+                    const relatedItems = related.items || [];
+                    if (relatedItems.length === 0) {
+                        await createPurchaseOrders(buildPayloadForLines(lines));
+                        return;
+                    }
+
+                    renderRelatedModal(lines, relatedItems);
+                } catch {
+                    alert('Không thể kiểm tra đơn nhập liên quan.');
+                } finally {
+                    createButtons.forEach(button => button.disabled = false);
+                    refreshTotals();
+                }
+            }
+
+            function buildPayloadFromModal() {
+                const actionsByOrderItem = new Map();
+
+                modalContext.displayLines.forEach((displayLine, index) => {
+                    const card = draftList.querySelector(`.related-line-card[data-line-index="${index}"]`);
+                    const totalActions = card ? getLineActionState(card).actions : [];
+                    const remainingActions = totalActions.map(action => ({ ...action, remaining: action.quantity }));
+
+                    displayLine.underlying.forEach(underlying => {
+                        let needed = underlying.quantity;
+                        const lineActions = [];
+
+                        remainingActions.forEach(action => {
+                            if (action.remaining <= 0 || needed <= 0) return;
+                            const take = Math.min(action.remaining, needed);
+                            lineActions.push({
+                                actionType: action.actionType,
+                                purchaseOrderId: action.purchaseOrderId,
+                                purchaseOrderItemId: action.purchaseOrderItemId,
+                                quantity: take,
+                                unitCost: action.unitCost
+                            });
+                            action.remaining -= take;
+                            needed -= take;
+                        });
+
+                        actionsByOrderItem.set(underlying.orderItemId, lineActions);
+                    });
+                });
+
+                return buildPayloadForLines(modalContext.originalLines, (line) => {
+                    const actions = actionsByOrderItem.get(line.orderItemId);
+                    if (actions && actions.length > 0) return actions;
+                    return [{
+                        actionType: 'CreateNew',
+                        quantity: line.quantity,
+                        unitCost: line.unitCost
+                    }];
+                });
+            }
+
+            async function confirmRelatedActions() {
+                refreshRelatedModal();
+                if (confirmButton?.disabled) return;
+
+                const payload = buildPayloadFromModal();
+                if (payload.groups.some(group => group.items.some(item => item.actions.length === 0))) {
+                    alert('Mỗi mặt hàng cần có ít nhất một lựa chọn xử lý.');
+                    return;
+                }
+
+                draftModal?.hide();
+                await createPurchaseOrders(payload);
+            }
+
+            groups.forEach(group => {
+                group.querySelector('.group-check')?.addEventListener('change', event => {
+                    group.querySelectorAll('.item-check').forEach(check => {
+                        check.checked = event.target.checked;
+                    });
+                    refreshTotals();
+                });
+
+                group.querySelectorAll('.item-check').forEach(check => {
+                    check.addEventListener('change', refreshTotals);
+                });
+            });
+
+            createButtons.forEach(button => button.addEventListener('click', beginCreateFromShortage));
+            vendorFilter?.addEventListener('change', applyFilters);
+            productFilter?.addEventListener('change', applyFilters);
+            draftList?.addEventListener('change', event => {
+                const card = event.target.closest?.('.related-line-card');
+                if (!card) return;
+                if (!event.target.classList?.contains('shortage-new-action-qty')) balanceNewAction(card);
+                refreshRelatedModal();
+            });
+            draftList?.addEventListener('input', event => {
+                const card = event.target.closest?.('.related-line-card');
+                if (!card) return;
+                if (!event.target.classList?.contains('shortage-new-action-qty')) balanceNewAction(card);
+                refreshRelatedModal();
+            });
+
+            confirmButton?.addEventListener('click', confirmRelatedActions);
+
+            document.querySelectorAll('.quantity-to-order, .unit-cost').forEach(input => {
+                input.addEventListener('input', refreshTotals);
+            });
+
+            applyFilters();
+            refreshTotals();
+        })();
+    </script>
+}

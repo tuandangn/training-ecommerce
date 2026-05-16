@@ -258,6 +258,16 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return Task.FromResult(quantityOnHand - quantityReservedByWarehouse - quantityReservedByOrder);
     }
 
+    internal async Task<decimal> ComputeAvailableForOrderAsync(Guid productId, Guid orderId)
+    {
+        var globalAvailable = await GetGlobalAvailableForProductAsync(productId).ConfigureAwait(false);
+        var reservedForOrder = _productReservationDataReader.DataSource
+            .Where(x => x.ProductId == productId && x.OrderId == orderId)
+            .Sum(x => x.QuantityDelta);
+
+        return Math.Max(0, globalAvailable + reservedForOrder);
+    }
+
     public async Task<bool> ReserveStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, int? reservationDaysValid = null)
     {
         if (quantity <= 0)

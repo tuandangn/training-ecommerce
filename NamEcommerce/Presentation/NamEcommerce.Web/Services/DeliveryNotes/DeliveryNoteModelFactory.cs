@@ -7,6 +7,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Common;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Web.Models.DeliveryNotes;
@@ -207,6 +208,11 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 model.DeliveryProofPictureUrl = picture.Base64Value;
             }
         }
+
+        model.ShortageInfo = await _mediator.Send(new GetDeliveryNoteShortageInfoQuery
+        {
+            DeliveryNoteId = id
+        }).ConfigureAwait(false);
 
         return model;
     }

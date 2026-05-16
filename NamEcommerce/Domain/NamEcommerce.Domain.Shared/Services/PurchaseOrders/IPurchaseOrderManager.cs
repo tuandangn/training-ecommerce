@@ -12,8 +12,12 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task<PurchaseOrderDto?> GetPurchaseOrderByCodeAsync(string code);
 
     Task<IList<RecentPurchasePriceDto>> GetRecentPurchasePricesAsync(Guid productId);
+    Task<ExistingDraftPurchaseOrderDto?> FindDraftForVendorAsync(Guid vendorId);
+    Task<IList<RelatedPurchaseOrderDto>> FindRelatedPurchaseOrdersAsync(Guid vendorId, IList<Guid> productIds, IList<PurchaseOrderStatus> statuses);
 
     Task<CreatePurchaseOrderResultDto> CreatePurchaseOrderAsync(CreatePurchaseOrderDto dto);
+    Task<CreatePoFromShortageResultDto> CreatePurchaseOrderFromShortageAsync(CreatePoFromShortageDto dto);
+    Task<CreatePoFromShortageResultDto> AddItemsToExistingDraftAsync(Guid purchaseOrderId, IList<CreatePoFromShortageItemDto> items);
     Task<UpdatePurchaseOrderResultDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderDto dto);
     
     Task<AddPurchaseOrderItemResultDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemDto dto);

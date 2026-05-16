@@ -6,6 +6,7 @@ using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 
 namespace NamEcommerce.Domain.Services.GoodsReceipts;
 
@@ -13,7 +14,8 @@ public sealed class GoodsReceiptPurchaseOrderLinker(
     IRepository<GoodsReceipt> goodsReceiptRepository,
     IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
     IRepository<PurchaseOrder> purchaseOrderRepository,
-    IEntityDataReader<PurchaseOrder> purchaseOrderDataReader) : IGoodsReceiptPurchaseOrderLinker
+    IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
+    IPurchaseOrderAllocationManager purchaseOrderAllocationManager) : IGoodsReceiptPurchaseOrderLinker
 {
     public async Task LinkAsync(SetGoodsReceiptToPurchaseOrderDto dto)
     {
@@ -56,6 +58,14 @@ public sealed class GoodsReceiptPurchaseOrderLinker(
         purchaseOrder.VerifyStatus();
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
         await purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+
+        foreach (var itemId in resolvePoItems.Select(item => item.itemId).Distinct())
+        {
+            var purchaseOrderItem = purchaseOrder.Items.First(item => item.Id == itemId);
+            await purchaseOrderAllocationManager
+                .SyncReceivedForPurchaseOrderItemAsync(itemId, purchaseOrderItem.QuantityReceived)
+                .ConfigureAwait(false);
+        }
     }
 
     private static List<GoodsReceiptBucket> BuildGoodsReceiptBuckets(GoodsReceipt goodsReceipt)

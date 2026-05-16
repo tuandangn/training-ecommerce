@@ -16,14 +16,25 @@ namespace NamEcommerce.Application.Services.Events.PurchaseOrders;
 public sealed class PurchaseOrderItemReceivedEventHandler : INotificationHandler<PurchaseOrderItemReceived>
 {
     private readonly IPurchaseOrderManager _purchaseOrderManager;
+    private readonly IPurchaseOrderAllocationManager _purchaseOrderAllocationManager;
 
-    public PurchaseOrderItemReceivedEventHandler(IPurchaseOrderManager purchaseOrderManager)
+    public PurchaseOrderItemReceivedEventHandler(IPurchaseOrderManager purchaseOrderManager, IPurchaseOrderAllocationManager purchaseOrderAllocationManager)
     {
         _purchaseOrderManager = purchaseOrderManager;
+        _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
     }
 
     public async Task Handle(PurchaseOrderItemReceived notification, CancellationToken cancellationToken)
     {
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(notification.PurchaseOrderId).ConfigureAwait(false);
+        var item = purchaseOrder?.Items.FirstOrDefault(item => item.Id == notification.PurchaseOrderItemId);
+        if (item is not null)
+        {
+            await _purchaseOrderAllocationManager
+                .SyncReceivedForPurchaseOrderItemAsync(item.Id, item.QuantityReceived)
+                .ConfigureAwait(false);
+        }
+
         await _purchaseOrderManager.VerifyStatusAsync(notification.PurchaseOrderId).ConfigureAwait(false);
     }
 }

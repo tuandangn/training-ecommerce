@@ -159,7 +159,13 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         if (result.Success)
             return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
 
-        return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+        return Json(new
+        {
+            success = false,
+            message = LocalizeError(result.ErrorMessage!),
+            shortageItems = result.ShortageItems,
+            aggregationUrl = Url.Action("ShortageAggregation", "PurchaseOrder", new { deliveryNoteId = id })
+        });
     }
 
     [HttpPost]

@@ -1,3 +1,5 @@
+using NamEcommerce.Web.Contracts.Models.Inventory;
+
 namespace NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 
 public sealed class DeliveryNoteDetailsModel
@@ -34,6 +36,7 @@ public sealed class DeliveryNoteDetailsModel
     public decimal AmountToCollect { get; set; }
 
     public IList<DeliveryNoteItemModel> Items { get; set; } = [];
+    public ShortageInfoModel ShortageInfo { get; set; } = new();
 }
 
 public sealed class DeliveryNoteItemModel

@@ -66,6 +66,21 @@
     </div>
 </div>
 
+@if (Model.ShortageInfo.HasShortage)
+{
+    var shortageNoticeViewData = new ViewDataDictionary(ViewData)
+    {
+        ["ShortageModalId"] = "deliveryNoteShortageModal",
+        ["ShortageMessage"] = $"Phiếu xuất có {Model.ShortageInfo.Items.Count} mặt hàng chưa đủ tồn kho. Cần nhập thêm hàng từ nhà cung cấp trước khi xác nhận xuất.",
+        ["ShortageActionUrl"] = $"/PurchaseOrders/ShortageAggregation?deliveryNoteId={Model.Id}",
+        ["ShortageActionText"] = "Nhập hàng thiếu",
+        ["ShortagePrimaryQuantityLabel"] = "Cần xuất",
+        ["ShortageSecondaryQuantityLabel"] = "Tồn khả dụng",
+        ["ShortageUseShippedQuantity"] = false
+    };
+    @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
+}
+
 <div class="row g-4">
     <!-- Cột trái: Thông tin phiếu (col-md-4) -->
     <div class="col-lg-4 order-lg-2">
@@ -407,6 +422,42 @@
     </div>
 </div>
 
+<div class="modal fade" id="shortageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title">Thiếu hàng để xuất kho</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="shortage-alert-panel mb-3">
+                    <div class="shortage-alert-content">
+                        <span class="shortage-alert-icon">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </span>
+                        <div class="shortage-alert-message">Phiếu xuất chưa thể xác nhận vì tồn khả dụng không đủ.</div>
+                    </div>
+                </div>
+                <div id="shortageModalItems" class="shortage-modal-list small">
+                    @foreach (var item in Model.ShortageInfo.Items)
+                    {
+                        <div class="shortage-modal-item">
+                            <span class="fw-semibold text-dark">@item.ProductName</span>
+                            <strong class="shortage-danger">@item.ShortageQuantity.ToString("#,##0.##")</strong>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                <a class="btn shortage-action-btn" id="shortageAggregationLink" href="/PurchaseOrders/ShortageAggregation?deliveryNoteId=@Model.Id">
+                    <i class="bi bi-truck"></i>Nhập hàng thiếu
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <script>
         $(document).ready(function () {
@@ -511,6 +562,10 @@
                         if (res.success) {
                             location.reload();
                         } else {
+                            if (res.shortageItems && res.shortageItems.length) {
+                                showShortageModal(res);
+                                return;
+                            }
                             alert(res.message);
                         }
                     },
@@ -522,6 +577,25 @@
             }
 
             // ── Tải danh sách phiếu trả hàng ────────────────────────────────
+            function showShortageModal(res) {
+                const itemsEl = document.getElementById('shortageModalItems');
+                const linkEl = document.getElementById('shortageAggregationLink');
+                const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[char]));
+                if (linkEl && res.aggregationUrl) linkEl.href = res.aggregationUrl;
+                itemsEl.innerHTML = res.shortageItems.map(item =>
+                    '<div class="shortage-modal-item">' +
+                    '<span class="fw-semibold text-dark">' + escapeHtml(item.productName) + '</span>' +
+                    '<strong class="shortage-danger">' + Number(item.shortageQuantity || 0).toLocaleString('vi-VN') + '</strong>' +
+                    '</div>').join('');
+                new bootstrap.Modal(document.getElementById('shortageModal')).show();
+            }
+
             (function loadCustomerReturns() {
                 const card = document.getElementById('customerReturnsCard');
                 if (!card) return;
