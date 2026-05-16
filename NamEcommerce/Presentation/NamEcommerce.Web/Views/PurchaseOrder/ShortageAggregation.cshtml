@@ -226,14 +226,14 @@
                                         <div class="shortage-item-name">@item.ProductName</div>
                                         <div class="shortage-item-meta">
                                             Tồn @item.AvailableQuantity.DisplayQuantity() @unitName · Cần thêm @item.ShortageQuantity.DisplayQuantity() @unitName
-                                            @if (lastPrice > 0)
+                                            <span class="shortage-item-lastprice">@if (lastPrice > 0)
                                             {
-                                                <span> · Giá lần trước @lastPrice.DisplayCurrency()</span>
-                                                @if (!string.IsNullOrWhiteSpace(lastPurchaseText))
+                                                <text> · Giá lần trước @lastPrice.DisplayCurrency()</text>
+                                                if (!string.IsNullOrWhiteSpace(lastPurchaseText))
                                                 {
-                                                    <span> (@lastPurchaseText)</span>
+                                                    <text> (@lastPurchaseText)</text>
                                                 }
-                                            }
+                                            }</span>
                                         </div>
                                         <div class="shortage-item-orders">
                                             Cho đơn: @item.OrderCode (@item.ShortageQuantity.DisplayQuantity() @unitName)
@@ -457,15 +457,12 @@
                     if (unitCostInput) unitCostInput.value = formatInputNumber(Number(suggestion.lastUnitPrice));
                 }
 
-                const metaEl = row.querySelector('.shortage-item-meta');
-                if (metaEl) {
-                    // Replace "Giá lần trước …" suffix so it reflects the newly chosen vendor
-                    const priceText = suggestion.lastUnitPrice != null
+                const lastPriceEl = row.querySelector('.shortage-item-lastprice');
+                if (lastPriceEl) {
+                    lastPriceEl.textContent = suggestion.lastUnitPrice != null
                         ? ` · Giá lần trước ${formatMoney(Number(suggestion.lastUnitPrice))}` +
                           (suggestion.lastPurchaseDate ? ` (${suggestion.lastPurchaseDate})` : '')
                         : '';
-                    const unitName = row.dataset.unitName || 'sp';
-                    metaEl.innerHTML = metaEl.innerHTML.replace(/ · Giá lần trước[^<]*/, '') + escapeHtml(priceText).replace(/&middot;/g, '·');
                 }
 
                 if (sourceGroup) syncGroupCheck(sourceGroup);
