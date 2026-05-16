@@ -431,6 +431,49 @@
                 return card;
             }
 
+            function handleItemVendorChange(select) {
+                const row = select.closest('.shortage-order-item');
+                if (!row) return;
+
+                const sourceGroup = row.closest('.shortage-group');
+                let suggestions = [];
+                try {
+                    suggestions = JSON.parse(row.dataset.suggestions || '[]');
+                } catch {
+                    suggestions = [];
+                }
+
+                const vendorId = select.value;
+                const suggestion = suggestions.find(s => equalsId(s.vendorId, vendorId));
+                if (!suggestion) return;
+
+                const targetGroup = findOrCreateVendorGroup(vendorId, suggestion.vendorName);
+                if (targetGroup === sourceGroup) return;
+
+                targetGroup.querySelector('.shortage-order-items').appendChild(row);
+
+                if (suggestion.lastUnitPrice != null) {
+                    const unitCostInput = row.querySelector('.unit-cost');
+                    if (unitCostInput) unitCostInput.value = formatInputNumber(Number(suggestion.lastUnitPrice));
+                }
+
+                const metaEl = row.querySelector('.shortage-item-meta');
+                if (metaEl) {
+                    // Replace "Giá lần trước …" suffix so it reflects the newly chosen vendor
+                    const priceText = suggestion.lastUnitPrice != null
+                        ? ` · Giá lần trước ${formatMoney(Number(suggestion.lastUnitPrice))}` +
+                          (suggestion.lastPurchaseDate ? ` (${suggestion.lastPurchaseDate})` : '')
+                        : '';
+                    const unitName = row.dataset.unitName || 'sp';
+                    metaEl.innerHTML = metaEl.innerHTML.replace(/ · Giá lần trước[^<]*/, '') + escapeHtml(priceText).replace(/&middot;/g, '·');
+                }
+
+                if (sourceGroup) syncGroupCheck(sourceGroup);
+                syncGroupCheck(targetGroup);
+                refreshTotals();
+                applyFilters();
+            }
+
             function parseDecimal(value) {
                 value = String(value || '').replace(',', '.');
                 const number = Number(value);
@@ -958,17 +1001,10 @@
                 await createPurchaseOrders(payload);
             }
 
-            groups.forEach(group => {
-                group.querySelector('.group-check')?.addEventListener('change', event => {
-                    group.querySelectorAll('.item-check').forEach(check => {
-                        check.checked = event.target.checked;
-                    });
-                    refreshTotals();
-                });
+            groups.forEach(wireGroup);
 
-                group.querySelectorAll('.item-check').forEach(check => {
-                    check.addEventListener('change', refreshTotals);
-                });
+            document.querySelectorAll('.item-vendor').forEach(select => {
+                select.addEventListener('change', () => handleItemVendorChange(select));
             });
 
             createButtons.forEach(button => button.addEventListener('click', beginCreateFromShortage));
