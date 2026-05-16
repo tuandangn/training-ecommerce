@@ -14,4 +14,7 @@ public interface IDirectShipAppService
     Task<CommonActionResultDto> RejectDeliveryAsync(RejectDirectShipDeliveryAppDto dto);
 
     Task<IList<PendingDirectShipDeliveryAppDto>> GetPendingDeliveriesAsync(PendingDirectShipFilterAppDto filter);
+
+    Task<IList<DirectShipAllocationStatusAppDto>> GetDirectShipAllocationsForOrderAsync(
+        IReadOnlyList<Guid> orderItemIds);
 }

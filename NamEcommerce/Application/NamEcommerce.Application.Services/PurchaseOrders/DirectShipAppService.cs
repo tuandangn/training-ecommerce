@@ -98,4 +98,18 @@ public sealed class DirectShipAppService(
             }).ToList()
         }).ToList();
     }
+
+    public async Task<IList<DirectShipAllocationStatusAppDto>> GetDirectShipAllocationsForOrderAsync(
+        IReadOnlyList<Guid> orderItemIds)
+    {
+        var items = await directShipManager.GetDirectShipAllocationsForOrderItemsAsync(orderItemIds)
+            .ConfigureAwait(false);
+        return items.Select(a => new DirectShipAllocationStatusAppDto
+        {
+            AllocationId = a.AllocationId,
+            OrderItemId = a.OrderItemId,
+            Status = a.Status,
+            AllocatedQuantity = a.AllocatedQuantity
+        }).ToList();
+    }
 }

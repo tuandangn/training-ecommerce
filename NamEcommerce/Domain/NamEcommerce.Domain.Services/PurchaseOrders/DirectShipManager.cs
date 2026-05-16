@@ -182,4 +182,20 @@ public sealed class DirectShipManager(
 
         return Task.FromResult(dtos);
     }
+
+    public Task<IList<DirectShipAllocationStatusDto>> GetDirectShipAllocationsForOrderItemsAsync(
+        IReadOnlyList<Guid> orderItemIds, CancellationToken ct = default)
+    {
+        IList<DirectShipAllocationStatusDto> results = allocationReader.DataSource
+            .Where(a => a.IsDirectShip && orderItemIds.Contains(a.OrderItemId))
+            .Select(a => new DirectShipAllocationStatusDto
+            {
+                AllocationId = a.Id,
+                OrderItemId = a.OrderItemId,
+                Status = (int)a.Status,
+                AllocatedQuantity = a.AllocatedQuantity
+            })
+            .ToList();
+        return Task.FromResult(results);
+    }
 }
