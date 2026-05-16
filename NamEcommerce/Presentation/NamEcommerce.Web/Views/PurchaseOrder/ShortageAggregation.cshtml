@@ -379,7 +379,9 @@
             const formatter = new Intl.NumberFormat('vi-VN');
             const quantityFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
             const tolerance = 0.0001;
-            const groups = Array.from(document.querySelectorAll('.shortage-group'));
+            let groups = Array.from(document.querySelectorAll('.shortage-group'));
+            const vendorCardTemplate = document.getElementById('vendorCardTemplate');
+            const shortagePage = document.querySelector('.shortage-order-page');
             const resultBox = document.getElementById('createShortageResult');
             const createButtons = Array.from(document.querySelectorAll('.btn-create-from-shortage'));
             const vendorFilter = document.getElementById('vendorFilter');
@@ -389,6 +391,45 @@
             const draftList = document.getElementById('existingDraftList');
             const confirmButton = document.getElementById('btnConfirmCreateFromShortage');
             let modalContext = { lines: [] };
+
+            function wireGroup(group) {
+                group.querySelector('.group-check')?.addEventListener('change', event => {
+                    group.querySelectorAll('.item-check').forEach(check => {
+                        check.checked = event.target.checked;
+                    });
+                    refreshTotals();
+                });
+                group.querySelectorAll('.item-check').forEach(check => {
+                    check.addEventListener('change', refreshTotals);
+                });
+            }
+
+            function findOrCreateVendorGroup(vendorId, vendorName) {
+                const existing = groups.find(group => equalsId(group.dataset.vendorId, vendorId));
+                if (existing) return existing;
+
+                const fragment = vendorCardTemplate.content.cloneNode(true);
+                const card = fragment.querySelector('.shortage-group');
+                card.dataset.vendorId = vendorId;
+                card.dataset.vendorName = vendorName;
+                const nameEl = card.querySelector('.shortage-vendor-name');
+                if (nameEl) nameEl.textContent = vendorName;
+
+                const createBar = shortagePage.querySelector('.shortage-create-bar');
+                shortagePage.insertBefore(card, createBar);
+
+                groups.push(card);
+                wireGroup(card);
+
+                if (vendorFilter && !Array.from(vendorFilter.options).some(option => equalsId(option.value, vendorId))) {
+                    const option = document.createElement('option');
+                    option.value = vendorId;
+                    option.textContent = vendorName;
+                    vendorFilter.appendChild(option);
+                }
+
+                return card;
+            }
 
             function parseDecimal(value) {
                 value = String(value || '').replace(',', '.');
