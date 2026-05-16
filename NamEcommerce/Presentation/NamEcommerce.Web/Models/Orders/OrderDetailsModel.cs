@@ -33,6 +33,18 @@ public sealed record OrderDetailsModel
     public IList<DeliveryNoteBasicModel> DeliveryNotes { get; init; } = [];
     public OrderAllocatedPurchaseOrderListModel? AllocatedPurchaseOrders { get; set; }
     public ShortageInfoModel ShortageInfo { get; set; } = new();
+    public IList<DirectShipAllocationModel> DirectShipAllocations { get; set; } = [];
+
+    [Serializable]
+    public sealed record DirectShipAllocationModel
+    {
+        public Guid AllocationId { get; init; }
+        public string ProductName { get; init; } = string.Empty;
+        public int Status { get; init; }
+        public decimal AllocatedQuantity { get; init; }
+        public Guid? DeliveryNoteId { get; init; }
+        public string? DeliveryNoteCode { get; init; }
+    }
 
     public DateTime CreatedOn { get; set; }
 
