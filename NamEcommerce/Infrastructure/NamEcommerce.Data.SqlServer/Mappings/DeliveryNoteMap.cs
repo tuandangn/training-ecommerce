@@ -41,6 +41,15 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.Property(d => d.DeliveryProofPictureId).IsRequired(false);
         builder.Property(d => d.DeliveryReceiverName).HasMaxLength(255).IsRequired(false);
         
+        builder.Property(d => d.IsDirectShip).IsRequired().HasDefaultValue(false);
+        builder.Property(d => d.DeliveryConfirmationStatus)
+            .IsRequired()
+            .HasDefaultValue(DeliveryConfirmationStatus.NotApplicable)
+            .HasConversion<int>();
+        builder.Property(d => d.ConfirmedAtUtc).IsRequired(false);
+        builder.Property(d => d.ConfirmedNote).HasMaxLength(2000).IsRequired(false);
+        builder.Property(d => d.SourceGoodsReceiptId).IsRequired(false);
+
         builder.Property(d => d.CreatedByUserId).IsRequired(false);
         builder.Property(d => d.CreatedOnUtc).IsRequired();
         builder.Property(d => d.UpdatedOnUtc).IsRequired(false);

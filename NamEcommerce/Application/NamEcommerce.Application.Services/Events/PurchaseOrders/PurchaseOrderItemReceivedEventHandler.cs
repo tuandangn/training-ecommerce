@@ -9,32 +9,30 @@ namespace NamEcommerce.Application.Services.Events.PurchaseOrders;
 /// Khi một dòng hàng vừa được nhận hàng, gọi <see cref="IPurchaseOrderManager.VerifyStatusAsync"/>
 /// để tự transition trạng thái đơn (Approved → Receiving → Completed) tuỳ theo mức độ đã nhận.
 ///
-/// <para>Trước đây handler này lắng nghe <c>EntityUpdatedNotification&lt;PurchaseOrder&gt;</c> nên
-/// chạy trên MỌI lần update đơn (kể cả update note, vendor, warehouse...) — tốn nhiều round trip
-/// vô nghĩa. Sau khi migrate sang concrete event, handler chỉ chạy đúng khi có item được nhận.</para>
+/// <para>Nếu <see cref="IDirectShipManager"/> được inject, việc phân bổ allocation đã được thực hiện
+/// inline trong <see cref="IPurchaseOrderManager"/> — handler chỉ verify status, bỏ qua Sync.</para>
 /// </summary>
-public sealed class PurchaseOrderItemReceivedEventHandler : INotificationHandler<PurchaseOrderItemReceived>
+public sealed class PurchaseOrderItemReceivedEventHandler(
+    IPurchaseOrderManager purchaseOrderManager,
+    IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
+    IDirectShipManager? directShipManager = null) : INotificationHandler<PurchaseOrderItemReceived>
 {
-    private readonly IPurchaseOrderManager _purchaseOrderManager;
-    private readonly IPurchaseOrderAllocationManager _purchaseOrderAllocationManager;
-
-    public PurchaseOrderItemReceivedEventHandler(IPurchaseOrderManager purchaseOrderManager, IPurchaseOrderAllocationManager purchaseOrderAllocationManager)
-    {
-        _purchaseOrderManager = purchaseOrderManager;
-        _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
-    }
-
     public async Task Handle(PurchaseOrderItemReceived notification, CancellationToken cancellationToken)
     {
-        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(notification.PurchaseOrderId).ConfigureAwait(false);
-        var item = purchaseOrder?.Items.FirstOrDefault(item => item.Id == notification.PurchaseOrderItemId);
-        if (item is not null)
+        // Khi direct-ship được kích hoạt, PurchaseOrderManager đã phân bổ allocation inline.
+        // Khi không có direct-ship, event handler phân bổ FIFO như cũ.
+        if (directShipManager == null)
         {
-            await _purchaseOrderAllocationManager
-                .SyncReceivedForPurchaseOrderItemAsync(item.Id, item.QuantityReceived)
-                .ConfigureAwait(false);
+            var purchaseOrder = await purchaseOrderManager.GetPurchaseOrderByIdAsync(notification.PurchaseOrderId).ConfigureAwait(false);
+            var item = purchaseOrder?.Items.FirstOrDefault(i => i.Id == notification.PurchaseOrderItemId);
+            if (item is not null)
+            {
+                await purchaseOrderAllocationManager
+                    .SyncReceivedForPurchaseOrderItemAsync(item.Id, item.QuantityReceived)
+                    .ConfigureAwait(false);
+            }
         }
 
-        await _purchaseOrderManager.VerifyStatusAsync(notification.PurchaseOrderId).ConfigureAwait(false);
+        await purchaseOrderManager.VerifyStatusAsync(notification.PurchaseOrderId).ConfigureAwait(false);
     }
 }

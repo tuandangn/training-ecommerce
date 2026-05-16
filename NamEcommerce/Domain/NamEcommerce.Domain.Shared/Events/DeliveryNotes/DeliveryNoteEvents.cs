@@ -36,3 +36,23 @@ public sealed record DeliveryNoteDelivered(
 public sealed record DeliveryNoteCancelled(
     Guid DeliveryNoteId,
     bool WasReservingStock) : DomainEvent;
+
+// ── Direct-Ship Events ──────────────────────────────────────────────────────
+
+/// <summary>
+/// Khách đã xác nhận nhận hàng giao thẳng — Invoice/Debt module subscribe để sinh phải thu.
+/// </summary>
+public sealed record DirectShipDeliveryConfirmed(
+    Guid DeliveryNoteId,
+    Guid OrderId,
+    Guid CustomerId,
+    decimal TotalAmount) : DomainEvent;
+
+/// <summary>
+/// Khách từ chối / hàng giao thất bại — Inventory module subscribe để chuyển stock kho ảo → kho chính.
+/// Giá vốn = giá PO của allocation (không phải bình quân).
+/// </summary>
+public sealed record DirectShipDeliveryRejected(
+    Guid DeliveryNoteId,
+    Guid OrderId,
+    Guid? SourceGoodsReceiptId) : DomainEvent;

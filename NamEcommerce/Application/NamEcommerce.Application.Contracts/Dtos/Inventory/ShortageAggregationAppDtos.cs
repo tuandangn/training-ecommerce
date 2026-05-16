@@ -45,6 +45,9 @@ public sealed record ShortageAggregationItemAppDto
     public required decimal QuantityToOrder { get; init; }
     public decimal UnitCost { get; init; }
     public bool IsFromPrimaryOrder { get; init; } = true;
+    public string? CustomerName { get; init; }
+    public string? CustomerPhone { get; init; }
+    public string? CustomerAddress { get; init; }
     public IList<SupplierSuggestionAppDto> SupplierSuggestions { get; init; } = [];
     public IList<PurchaseOrderShortageAllocationAppDto> AllocatedFromPurchaseOrders { get; init; } = [];
 }
@@ -115,6 +118,15 @@ public sealed record CheckRelatedPurchaseOrdersAppDto
 }
 
 [Serializable]
+public sealed record DirectShipInfoAppDto
+{
+    public required string Address { get; init; }
+    public string? ContactName { get; init; }
+    public string? ContactPhone { get; init; }
+    public int Priority { get; init; }
+}
+
+[Serializable]
 public sealed record CreatePoFromShortageItemAppDto
 {
     public required Guid OrderItemId { get; init; }
@@ -122,6 +134,7 @@ public sealed record CreatePoFromShortageItemAppDto
     public required decimal Quantity { get; init; }
     public decimal UnitCost { get; init; }
     public string? Note { get; init; }
+    public DirectShipInfoAppDto? DirectShipInfo { get; init; }
     public IList<CreatePoFromShortageActionAppDto> Actions { get; init; } = [];
 }
 

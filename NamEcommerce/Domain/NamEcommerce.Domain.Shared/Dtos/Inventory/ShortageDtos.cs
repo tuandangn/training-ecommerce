@@ -21,6 +21,9 @@ public sealed record OrderItemShortageDto
     public required decimal ShippedQuantity { get; init; }
     public required decimal AvailableQuantity { get; init; }
     public required decimal ShortageQuantity { get; init; }
+    public string? CustomerName { get; init; }
+    public string? CustomerPhone { get; init; }
+    public string? CustomerAddress { get; init; }
     public IList<PurchaseOrderShortageAllocationDto> AllocatedFromPurchaseOrders { get; init; } = [];
 }
 

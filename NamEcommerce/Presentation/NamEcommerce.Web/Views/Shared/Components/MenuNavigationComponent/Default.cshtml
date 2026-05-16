@@ -9,10 +9,10 @@
     
     <!-- Bán hàng -->
     <li class="nav-item">
-        <a class="nav-link @(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseSales" aria-expanded="@(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn") ? "true" : "false")">
+        <a class="nav-link @(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn", "DirectShipDelivery") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseSales" aria-expanded="@(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn", "DirectShipDelivery") ? "true" : "false")">
             <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Bán hàng
         </a>
-        <div class="collapse @(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn") ? "show" : "")" id="collapseSales">
+        <div class="collapse @(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn", "DirectShipDelivery") ? "show" : "")" id="collapseSales">
             <ul class="nav flex-column sub-menu">
                 <li class="nav-item">
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("Order") ? "active" : "")" asp-controller="Order" asp-action="List">Đơn hàng</a>
@@ -22,6 +22,11 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("Preparation") ? "active" : "")" asp-controller="Preparation" asp-action="List">Chuẩn bị hàng</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("DirectShipDelivery") ? "active" : "")" asp-controller="DirectShipDelivery" asp-action="Pending">
+                        <i class="bi bi-truck-fast me-1 text-success"></i>Giao hàng trực tiếp NCC
+                    </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("Customer") ? "active" : "")" asp-controller="Customer" asp-action="List">Khách hàng</a>

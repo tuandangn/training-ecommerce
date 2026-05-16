@@ -1,4 +1,5 @@
 using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 
 namespace NamEcommerce.Domain.Entities.PurchaseOrders;
@@ -20,6 +21,7 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
         OrderItemId = orderItemId;
         AllocatedQuantity = allocatedQuantity;
         ReceivedQuantity = 0;
+        Status = AllocationStatus.Allocated;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
@@ -27,6 +29,16 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
     public Guid OrderItemId { get; private set; }
     public decimal AllocatedQuantity { get; private set; }
     public decimal ReceivedQuantity { get; private set; }
+    public AllocationStatus Status { get; private set; }
+
+    // Direct-ship fields
+    public bool IsDirectShip { get; private set; }
+    public string? DirectShipAddress { get; private set; }
+    public string? DirectShipContactName { get; private set; }
+    public string? DirectShipContactPhone { get; private set; }
+    /// <summary>Số càng cao càng ưu tiên khi NCC giao thiếu.</summary>
+    public int DirectShipPriority { get; private set; }
+
     public DateTime CreatedOnUtc { get; private set; }
 
     internal void IncreaseReceived(decimal receivedQuantity)
@@ -37,10 +49,47 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
             throw new PurchaseOrderItemDataIsInvalidException("Error.ReceivedQuantityCannotExceedAllocatedQuantity");
 
         ReceivedQuantity += receivedQuantity;
+        Status = ReceivedQuantity >= AllocatedQuantity ? AllocationStatus.FullyReceived : AllocationStatus.PartiallyReceived;
     }
 
     internal void ReduceAllocationToReceived()
     {
         AllocatedQuantity = ReceivedQuantity;
     }
+
+    /// <summary>
+    /// Đánh dấu allocation là direct-ship. Address bắt buộc khi IsDirectShip = true.
+    /// </summary>
+    internal void SetDirectShip(string address, string? contactName, string? contactPhone, int priority)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+            throw new PurchaseOrderItemDataIsInvalidException("Error.DirectShipAddressRequired");
+
+        IsDirectShip = true;
+        DirectShipAddress = address;
+        DirectShipContactName = contactName;
+        DirectShipContactPhone = contactPhone;
+        DirectShipPriority = priority;
+    }
+
+    internal void ClearDirectShip()
+    {
+        IsDirectShip = false;
+        DirectShipAddress = null;
+        DirectShipContactName = null;
+        DirectShipContactPhone = null;
+        DirectShipPriority = 0;
+    }
+
+    internal void UpdateDirectShipInfo(string address, string? contactName, string? contactPhone)
+    {
+        if (string.IsNullOrWhiteSpace(address))
+            throw new PurchaseOrderItemDataIsInvalidException("Error.DirectShipAddressRequired");
+
+        DirectShipAddress = address;
+        DirectShipContactName = contactName;
+        DirectShipContactPhone = contactPhone;
+    }
+
+    internal void SetStatus(AllocationStatus newStatus) => Status = newStatus;
 }

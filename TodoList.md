@@ -28,25 +28,25 @@
 
 ### Phase D1 — Domain extension
 
-- [ ] **D1.1** — Add enum `WarehouseType` (Physical, DirectShipTransit) trong Domain.
-- [ ] **D1.2** — Add column `WarehouseType` vào entity `Warehouse` (default Physical).
-- [ ] **D1.3** — Extend `PurchaseOrderItemAllocation`: thêm 5 field direct-ship + enum `AllocationStatus` mở rộng (Allocated, PartiallyReceived, FullyReceived, DeliveryPending, DeliveryConfirmed, Cancelled).
-- [ ] **D1.4** — Domain validation: `IsDirectShip = true` → `DirectShipAddress` bắt buộc.
-- [ ] **D1.5** — Extend `DeliveryNote`: `DeliveryConfirmationStatus`, `IsDirectShip`, `ConfirmedAt`, `ConfirmedNote`, `SourceGoodsReceiptId`.
-- [ ] **D1.6** — Entity mới `DirectShipAddressChangeLog` (audit log edit địa chỉ).
-- [ ] **D1.7** — Interface `IDirectShipManager` + skeleton methods (chưa implement).
-- [ ] **D1.8** — Domain events: 7 events ở mục 3.5 plan.
+- [x] **D1.1** — Add enum `WarehouseType` (Physical, DirectShipTransit) trong Domain. ✅ 2026-05-16
+- [x] **D1.2** — Add column `WarehouseType` vào entity `Warehouse` (default Physical). ✅ 2026-05-16 (đã có sẵn)
+- [x] **D1.3** — Extend `PurchaseOrderItemAllocation`: thêm 5 field direct-ship + enum `AllocationStatus` mở rộng (Allocated, PartiallyReceived, FullyReceived, DeliveryPending, DeliveryConfirmed, Cancelled). ✅ 2026-05-16
+- [x] **D1.4** — Domain validation: `IsDirectShip = true` → `DirectShipAddress` bắt buộc. ✅ 2026-05-16
+- [x] **D1.5** — Extend `DeliveryNote`: `DeliveryConfirmationStatus`, `IsDirectShip`, `ConfirmedAt`, `ConfirmedNote`, `SourceGoodsReceiptId`. ✅ 2026-05-16
+- [x] **D1.6** — Entity mới `DirectShipAddressChangeLog` (audit log edit địa chỉ). ✅ 2026-05-16
+- [x] **D1.7** — Interface `IDirectShipManager` + skeleton methods (chưa implement). ✅ 2026-05-16
+- [x] **D1.8** — Domain events: 7 events ở mục 3.5 plan. ✅ 2026-05-16
 
 ### Phase D2 — Application layer + GR integration
 
-- [ ] **D2.1** — Implement `DirectShipManager.MarkAllocationAsDirectShipAsync`.
-- [ ] **D2.2** — Implement `DirectShipManager.DistributeReceivedQuantityAsync` (sort theo IsDirectShip desc + Priority desc + CreatedAt asc, phân chia ưu tiên direct-ship).
-- [ ] **D2.3** — Implement `DirectShipManager.ConfirmDeliveryAsync` + `RejectDeliveryAsync` (giá vốn = giá PO).
-- [ ] **D2.4** — `IDirectShipAppService` + 4 methods.
-- [ ] **D2.5** — Extend `IPurchaseOrderAppService` nhận `DirectShipInfo` per item + method `UpdateAllocationDirectShipInfoAsync`.
-- [ ] **D2.6** — Extend `IGoodsReceiptAppService.ReceiveAsync` invoke `DistributeReceivedQuantityAsync`, auto-tạo DN PendingConfirmation cho direct-ship.
-- [ ] **D2.7** — Handler cho `SoCancelledWithDirectShipReceivedEvent`: chuyển stock kho ảo → kho chính khi user confirm.
-- [ ] **D2.8** — Handler cho `DirectShipDeliveryRejectedEvent`: stock kho ảo → kho chính với giá vốn = giá PO.
+- [x] **D2.1** — Implement `DirectShipManager.MarkAllocationAsDirectShipAsync`. ✅ 2026-05-16
+- [x] **D2.2** — Implement `DirectShipManager.DistributeReceivedQuantityAsync` (sort theo IsDirectShip desc + Priority desc + CreatedAt asc, phân chia ưu tiên direct-ship). ✅ 2026-05-17
+- [x] **D2.3** — Implement `DirectShipManager.ConfirmDeliveryAsync` + `RejectDeliveryAsync` (giá vốn = giá PO). ✅ 2026-05-17
+- [x] **D2.4** — `IDirectShipAppService` + 4 methods. ✅ 2026-05-17
+- [x] **D2.5** — Extend `IPurchaseOrderAppService` nhận `DirectShipInfo` per item + method `UpdateAllocationDirectShipInfoAsync`. ✅ 2026-05-17
+- [x] **D2.6** — Extend `IGoodsReceiptAppService.ReceiveAsync` invoke `DistributeReceivedQuantityAsync`, auto-tạo DN PendingConfirmation cho direct-ship. ✅ 2026-05-17
+- [x] **D2.7** — Handler cho `SoCancelledWithDirectShipReceivedEvent`: chuyển stock kho ảo → kho chính khi user confirm. ✅ 2026-05-17 (skeleton — stock transfer impl khi D3 xong)
+- [x] **D2.8** — Handler cho `DirectShipDeliveryRejectedEvent`: stock kho ảo → kho chính với giá vốn = giá PO. ✅ 2026-05-17 (skeleton — stock transfer impl khi D3 xong)
 
 ### Phase D3 — Migration & seed
 
@@ -63,19 +63,19 @@
 
 ### Phase D5 — UI Shortage Aggregation (extend trang đã có)
 
-- [ ] **D5.1** — Mỗi item card NCC: checkbox "Giao thẳng tới khách" + inline form (Address/Contact/Phone/Priority).
-- [ ] **D5.2** — Default Address/Contact = info khách trong SO khi tích checkbox.
-- [ ] **D5.3** — Badge xanh "Giao thẳng" + icon truck-fast cho item đã tích.
-- [ ] **D5.4** — Footer summary: "X items giao thẳng / Y items giao về kho".
-- [ ] **D5.5** — Submission flow: gửi `DirectShipInfo` per item lên backend.
+- [x] **D5.1** — Mỗi item card NCC: checkbox "Giao thẳng tới khách" + inline form (Address/Contact/Phone/Priority). ✅ 2026-05-17
+- [x] **D5.2** — Default Address/Contact = info khách trong SO khi tích checkbox. ✅ 2026-05-17
+- [x] **D5.3** — Badge xanh "Giao thẳng" + icon truck-fast cho item đã tích. ✅ 2026-05-17
+- [x] **D5.4** — Footer summary: "X items giao thẳng / Y items giao về kho". ✅ 2026-05-17
+- [x] **D5.5** — Submission flow: gửi `DirectShipInfo` per item lên backend. ✅ 2026-05-17
 
 ### Phase D6 — UI Pending Deliveries
 
-- [ ] **D6.1** — Menu mới: Bán hàng → Giao hàng trực tiếp NCC.
-- [ ] **D6.2** — Trang `/DirectShipDeliveries/Pending` với filter (NCC, khách, ngày).
-- [ ] **D6.3** — Modal Confirm Delivery: note + ngày confirm.
-- [ ] **D6.4** — Modal Reject Delivery: reason bắt buộc + cảnh báo hàng chuyển về kho chính.
-- [ ] **D6.5** — Auto refresh sau action.
+- [x] **D6.1** — Menu mới: Bán hàng → Giao hàng trực tiếp NCC. ✅ 2026-05-17
+- [x] **D6.2** — Trang `/DirectShipDelivery/Pending` với filter (khách, keyword, ngày). ✅ 2026-05-17
+- [x] **D6.3** — Modal Confirm Delivery: note + ngày confirm. ✅ 2026-05-17
+- [x] **D6.4** — Modal Reject Delivery: reason bắt buộc + cảnh báo hàng chuyển về kho chính. ✅ 2026-05-17
+- [x] **D6.5** — Auto refresh sau action (row fade-out sau confirm/reject). ✅ 2026-05-17
 
 ### Phase D7 — UI SO Details + DN Details + Cancel flow
 

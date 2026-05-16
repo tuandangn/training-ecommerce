@@ -826,6 +826,77 @@ body {
     font-weight: 700;
 }
 
+.shortage-direct-ship-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.shortage-ds-check-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+    user-select: none;
+}
+
+.shortage-ds-check-label input[type="checkbox"] {
+    cursor: pointer;
+}
+
+.shortage-ds-icon {
+    color: var(--gray-500);
+}
+
+.shortage-ds-badge {
+    font-size: 0.75rem;
+}
+
+.shortage-direct-ship-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+}
+
+.shortage-ds-field {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+}
+
+.shortage-ds-field .form-control {
+    min-height: 2rem;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+}
+
+.shortage-ds-field:not(.shortage-ds-priority-field) .form-control {
+    width: 11rem;
+}
+
+.shortage-ds-priority-field .form-control {
+    width: 4rem;
+    text-align: right;
+}
+
+.shortage-ds-summary {
+    font-size: 0.8125rem;
+    color: #16a34a;
+    margin-top: 0.125rem;
+}
+
 .shortage-unmapped-alert {
     display: flex;
     gap: 0.75rem;

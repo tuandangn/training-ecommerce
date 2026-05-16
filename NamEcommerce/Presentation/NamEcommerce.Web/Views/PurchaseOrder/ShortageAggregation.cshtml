@@ -216,6 +216,9 @@
                              data-product-name="@item.ProductName"
                              data-unit-name="@unitName"
                              data-is-primary="@(item.IsFromPrimaryOrder ? "true" : "false")"
+                             data-customer-name="@(item.CustomerName ?? "")"
+                             data-customer-phone="@(item.CustomerPhone ?? "")"
+                             data-customer-address="@(item.CustomerAddress ?? "")"
                              data-suggestions="@suggestionsJson">
                             <div class="shortage-item-check">
                                 <input type="checkbox" class="form-check-input item-check" @(item.IsFromPrimaryOrder ? "checked" : "") />
@@ -288,6 +291,32 @@
                                         </label>
                                     }
                                 </div>
+                                <div class="shortage-direct-ship-toggle">
+                                    <label class="shortage-ds-check-label">
+                                        <input type="checkbox" class="form-check-input direct-ship-check" />
+                                        <i class="bi bi-truck-flatbed shortage-ds-icon"></i>
+                                        <span>Giao thẳng tới khách</span>
+                                    </label>
+                                    <span class="badge bg-success shortage-ds-badge d-none"><i class="bi bi-truck-fast me-1"></i>Giao thẳng</span>
+                                </div>
+                                <div class="shortage-direct-ship-form d-none">
+                                    <label class="shortage-ds-field">
+                                        <span>Địa chỉ giao:</span>
+                                        <input type="text" class="form-control ds-address" placeholder="Địa chỉ giao hàng" maxlength="500" />
+                                    </label>
+                                    <label class="shortage-ds-field">
+                                        <span>Liên hệ:</span>
+                                        <input type="text" class="form-control ds-contact-name" placeholder="Tên người nhận" maxlength="200" />
+                                    </label>
+                                    <label class="shortage-ds-field">
+                                        <span>Điện thoại:</span>
+                                        <input type="text" class="form-control ds-contact-phone" placeholder="SĐT người nhận" maxlength="50" />
+                                    </label>
+                                    <label class="shortage-ds-field shortage-ds-priority-field">
+                                        <span>Ưu tiên:</span>
+                                        <input type="number" class="form-control ds-priority" min="0" step="1" value="0" />
+                                    </label>
+                                </div>
                             </div>
                         </div>
                         }
@@ -312,6 +341,7 @@
         <div class="shortage-create-bar">
             <div>
                 <div id="selectedShortageSummary" class="shortage-create-summary">Sẽ xử lý 0 NCC · 0 mặt hàng</div>
+                <div id="directShipSummary" class="shortage-ds-summary d-none"></div>
                 <div class="shortage-create-total">Tổng <span id="stickyGrandTotalAmount">0đ</span></div>
             </div>
             <div class="shortage-create-actions">
@@ -392,6 +422,27 @@
             const confirmButton = document.getElementById('btnConfirmCreateFromShortage');
             let modalContext = { lines: [] };
 
+            const directShipSummaryEl = document.getElementById('directShipSummary');
+
+            function handleDirectShipToggle(row, checkbox) {
+                const form = row.querySelector('.shortage-direct-ship-form');
+                const badge = row.querySelector('.shortage-ds-badge');
+                const isChecked = checkbox.checked;
+                form?.classList.toggle('d-none', !isChecked);
+                badge?.classList.toggle('d-none', !isChecked);
+
+                if (isChecked && form) {
+                    const addrInput = form.querySelector('.ds-address');
+                    if (addrInput && !addrInput.value) {
+                        addrInput.value = row.dataset.customerAddress || '';
+                        form.querySelector('.ds-contact-name').value = row.dataset.customerName || '';
+                        form.querySelector('.ds-contact-phone').value = row.dataset.customerPhone || '';
+                    }
+                }
+
+                refreshTotals();
+            }
+
             function wireGroup(group) {
                 group.querySelector('.group-check')?.addEventListener('change', event => {
                     group.querySelectorAll('.item-check').forEach(check => {
@@ -401,6 +452,12 @@
                 });
                 group.querySelectorAll('.item-check').forEach(check => {
                     check.addEventListener('change', refreshTotals);
+                });
+                group.querySelectorAll('.direct-ship-check').forEach(check => {
+                    check.addEventListener('change', () => {
+                        const row = check.closest('.shortage-order-item');
+                        if (row) handleDirectShipToggle(row, check);
+                    });
                 });
             }
 
@@ -526,6 +583,8 @@
                 let grandTotal = 0;
                 let selectedGroupCount = 0;
                 let selectedItemCount = 0;
+                let directShipCount = 0;
+                let warehouseCount = 0;
 
                 groups.forEach(group => {
                     let groupTotal = 0;
@@ -543,6 +602,11 @@
                         if (checked && !rowHidden && !groupHidden) {
                             groupTotal += rowTotal;
                             groupSelectedItems++;
+                            if (row.querySelector('.direct-ship-check')?.checked) {
+                                directShipCount++;
+                            } else {
+                                warehouseCount++;
+                            }
                         }
                     });
 
@@ -562,6 +626,15 @@
 
                 const summaryEl = document.getElementById('selectedShortageSummary');
                 if (summaryEl) summaryEl.textContent = `Sẽ xử lý ${selectedGroupCount} NCC · ${selectedItemCount} mặt hàng`;
+
+                if (directShipSummaryEl) {
+                    if (directShipCount > 0 || warehouseCount > 0) {
+                        directShipSummaryEl.classList.remove('d-none');
+                        directShipSummaryEl.textContent = `${directShipCount} giao thẳng · ${warehouseCount} về kho`;
+                    } else {
+                        directShipSummaryEl.classList.add('d-none');
+                    }
+                }
 
                 createButtons.forEach(button => button.disabled = selectedItemCount === 0);
             }
@@ -592,21 +665,34 @@
                     .filter(group => !group.classList.contains('d-none'))
                     .flatMap(group => Array.from(group.querySelectorAll('.shortage-order-item'))
                     .filter(row => !row.classList.contains('d-none') && row.querySelector('.item-check')?.checked)
-                    .map(row => ({
-                        group,
-                        row,
-                        vendorId: group.dataset.vendorId,
-                        vendorName: group.dataset.vendorName || '',
-                        orderItemId: row.dataset.orderItemId,
-                        orderCode: row.dataset.orderCode || '',
-                        productId: row.dataset.productId,
-                        productName: row.dataset.productName || '',
-                        unitName: row.dataset.unitName || 'sp',
-                        quantity: readDecimal(row.querySelector('.quantity-to-order')),
-                        unitCost: readDecimal(row.querySelector('.unit-cost')),
-                        expectedDeliveryDate: group.querySelector('.expected-date')?.value || null,
-                        note: group.querySelector('.group-note')?.value || null
-                    }))
+                    .map(row => {
+                        const dsCheck = row.querySelector('.direct-ship-check');
+                        const isDirectShip = dsCheck?.checked || false;
+                        const dsForm = row.querySelector('.shortage-direct-ship-form');
+                        const directShip = isDirectShip && dsForm ? {
+                            address: dsForm.querySelector('.ds-address')?.value || '',
+                            contactName: dsForm.querySelector('.ds-contact-name')?.value || null,
+                            contactPhone: dsForm.querySelector('.ds-contact-phone')?.value || null,
+                            priority: parseInt(dsForm.querySelector('.ds-priority')?.value || '0', 10) || 0
+                        } : null;
+
+                        return {
+                            group,
+                            row,
+                            vendorId: group.dataset.vendorId,
+                            vendorName: group.dataset.vendorName || '',
+                            orderItemId: row.dataset.orderItemId,
+                            orderCode: row.dataset.orderCode || '',
+                            productId: row.dataset.productId,
+                            productName: row.dataset.productName || '',
+                            unitName: row.dataset.unitName || 'sp',
+                            quantity: readDecimal(row.querySelector('.quantity-to-order')),
+                            unitCost: readDecimal(row.querySelector('.unit-cost')),
+                            expectedDeliveryDate: group.querySelector('.expected-date')?.value || null,
+                            note: group.querySelector('.group-note')?.value || null,
+                            directShip
+                        };
+                    })
                     .filter(line => line.quantity > 0));
             }
 
@@ -635,6 +721,7 @@
                         productId: line.productId,
                         quantity: line.quantity,
                         unitCost: line.unitCost,
+                        directShipInfo: line.directShip,
                         actions
                     });
                 });
