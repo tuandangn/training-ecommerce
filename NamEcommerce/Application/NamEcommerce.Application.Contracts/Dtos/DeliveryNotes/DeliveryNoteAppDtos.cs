@@ -25,7 +25,9 @@ public sealed record DeliveryNoteAppDto
     public string? Note { get; init; }
     
     public int Status { get; init; }
-    
+    public bool IsDirectShip { get; init; }
+    public int DeliveryConfirmationStatus { get; init; }
+
     public DateTime? DeliveredOnUtc { get; init; }
     public Guid? DeliveryProofPictureId { get; init; }
     public string? DeliveryReceiverName { get; init; }
