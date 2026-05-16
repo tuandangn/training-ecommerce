@@ -51,7 +51,6 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
 public sealed record CreateOrderAppDto : BaseOrderAppDto
 {
     public required Guid CustomerId { get; init; }
-    public required Guid? CreatedByUserId { get; init; }
     public string? ShippingAddress { get; set; }
     public IList<OrderItemAppDto> Items { get; } = [];
 

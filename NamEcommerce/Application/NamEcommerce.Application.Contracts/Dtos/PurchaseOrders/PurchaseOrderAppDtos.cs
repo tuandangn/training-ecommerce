@@ -30,6 +30,8 @@ public sealed record PurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto
 
     public decimal TaxAmount { get; set; }
     public decimal ShippingAmount { get; set; }
+    public decimal AccumulatedTaxAmount { get; set; }
+    public decimal AccumulatedShippingAmount { get; set; }
     public decimal TotalAmount { get; set; }
 
     public IList<PurchaseOrderItemAppDto> Items { get; } = [];
@@ -48,8 +50,22 @@ public sealed record PurchaseOrderAppDto(Guid Id) : BasePurchaseOrderAppDto
 [Serializable]
 public sealed record CreatePurchaseOrderAppDto : BasePurchaseOrderAppDto
 {
-    public Guid? CreatedByUserId { get; set; }
     public IList<CreatePurchaseOrderItemAppDto> Items { get; init; } = [];
+
+    public decimal TaxAmount { get; init; }
+    public decimal ShippingAmount { get; init; }
+
+    public override (bool valid, string? errorMessage) Validate()
+    {
+        if (Items.Count == 0)
+            return (false, "Error.PurchaseOrderItemRequired");
+        if (TaxAmount < 0)
+            return (false, "Error.TaxAmountCannotBeNegative");
+        if (ShippingAmount < 0)
+            return (false, "Error.ShippingAmountCannotBeNegative");
+
+        return base.Validate();
+    }
 }
 [Serializable]
 public sealed record CreatePurchaseOrderResultAppDto

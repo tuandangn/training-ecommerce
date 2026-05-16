@@ -6,7 +6,7 @@ public class DeliveryNoteItemMap : IEntityTypeConfiguration<DeliveryNoteItem>
 {
     public void Configure(EntityTypeBuilder<DeliveryNoteItem> builder)
     {
-        builder.ToTable("DeliveryNoteItem", DbScheme);
+        builder.ToTable(nameof(DeliveryNoteItem), DbScheme);
         builder.HasKey(d => d.Id);
 
         builder.Property(d => d.DeliveryNoteId).IsRequired();

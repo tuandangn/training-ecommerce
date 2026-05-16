@@ -7,6 +7,7 @@ using NamEcommerce.Domain.Shared.Events.Orders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
+using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Helpers;
 
 namespace NamEcommerce.Domain.Entities.Orders;
@@ -16,9 +17,15 @@ public sealed record Order : AppAggregateEntity
 {
     public const string OrderCodePrefix = "DB";
 
-    internal Order(string code) : base(Guid.NewGuid())
+    internal Order(string code) : this(code, null)
+    {
+    }
+
+    internal Order(string code, CurrentUserInfoDto? createdByUser) : base(Guid.NewGuid())
     {
         Code = code;
+        CreatedByUserId = createdByUser?.Id;
+        CreatedByUsername = createdByUser?.Username;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
@@ -34,8 +41,6 @@ public sealed record Order : AppAggregateEntity
         }
     }
     internal string NormalizedShippingAddress { get; private set; } = "";
-    private readonly List<OrderItem> _orderItems = [];
-    public IEnumerable<OrderItem> OrderItems => _orderItems.AsReadOnly();
     public decimal OrderSubTotal { get; private set; }
     public decimal OrderTotal { get; private set; }
     public decimal OrderDiscount { get; private set; }
@@ -48,7 +53,10 @@ public sealed record Order : AppAggregateEntity
     internal string? CustomerPhone { get; private set; }
     internal string? CustomerAddress { get; private set; }
 
-    public Guid? CreatedByUserId { get; init; }
+    private readonly List<OrderItem> _orderItems = [];
+    public IEnumerable<OrderItem> OrderItems => _orderItems.AsReadOnly();
+
+    public Guid? CreatedByUserId { get; private set; }
     internal string? CreatedByUsername { get; set; }
 
     public DateTime CreatedOnUtc { get; }
@@ -56,28 +64,13 @@ public sealed record Order : AppAggregateEntity
 
     #region Events
 
-    /// <summary>
-    /// Đánh dấu đơn vừa được khởi tạo xong (sau khi setup customer + items + discount).
-    /// Manager gọi method này NGAY TRƯỚC khi insert vào repository để raise <see cref="OrderPlaced"/>.
-    /// </summary>
     internal void Place() => RaiseDomainEvent(new OrderPlaced(Id, Code, CustomerId, OrderTotal));
 
-    /// <summary>
-    /// Đánh dấu thông tin chung (note, expected shipping date, discount...) vừa được cập nhật.
-    /// Manager gọi method này sau khi set properties để raise <see cref="OrderInfoUpdated"/>.
-    /// </summary>
     internal void MarkInfoUpdated() => RaiseDomainEvent(new OrderInfoUpdated(Id));
 
-    /// <summary>
-    /// Đánh dấu thông tin shipping (address / expected date) vừa được cập nhật để raise <see cref="OrderShippingUpdated"/>.
-    /// </summary>
     internal void MarkShippingUpdated() => RaiseDomainEvent(new OrderShippingUpdated(Id));
 
-    /// <summary>
-    /// Đánh dấu đơn đang bị xoá (soft delete) — raise <see cref="OrderDeleted"/>.
-    /// Manager gọi TRƯỚC khi <c>repository.DeleteAsync</c>.
-    /// </summary>
-    internal void MarkDeleted() => RaiseDomainEvent(new OrderDeleted(Id, Code));
+    internal void MarkDeleted() => RaiseDomainEvent(new OrderDeleted(Id, Code, GetReservationItems()));
 
     #endregion
 
@@ -135,11 +128,12 @@ public sealed record Order : AppAggregateEntity
         if (OrderDiscount > calculatedSubTotal)
             throw new OrderDiscountIsInvalidException("Chiết khấu không được vượt quá tổng tiền hàng");
 
+        var oldQuantity = orderItem.Quantity;
         orderItem.Update(quantity, unitPrice);
 
         RecalculateTotal();
 
-        RaiseDomainEvent(new OrderItemUpdated(Id, orderItemId, quantity, unitPrice));
+        RaiseDomainEvent(new OrderItemUpdated(Id, orderItemId, orderItem.ProductId, oldQuantity, quantity, unitPrice));
     }
 
     internal void RemoveOrderItem(Guid itemId)
@@ -155,11 +149,14 @@ public sealed record Order : AppAggregateEntity
         if (OrderDiscount > calculatedSubTotal)
             throw new OrderDiscountIsInvalidException("Chiết khấu không được vượt quá tổng tiền hàng");
 
+        var productId = orderItem.ProductId;
+        var quantity = orderItem.Quantity;
+
         _orderItems.Remove(orderItem);
 
         RecalculateTotal();
 
-        RaiseDomainEvent(new OrderItemRemoved(Id, itemId));
+        RaiseDomainEvent(new OrderItemRemoved(Id, itemId, productId, quantity));
     }
 
     internal void SetOrderDiscount(decimal? orderDiscount)
@@ -187,7 +184,7 @@ public sealed record Order : AppAggregateEntity
         OrderTotal = OrderSubTotal - OrderDiscount;
     }
 
-    internal bool CanUpdateInfo() => OrderStatus != OrderStatus.Locked;
+    internal bool CanUpdateInfo() => OrderStatus != OrderStatus.Locked && OrderStatus != OrderStatus.Cancelled;
     internal bool CanChangeStatusTo(OrderStatus toStatus)
     {
         if (!CanUpdateInfo())
@@ -229,6 +226,15 @@ public sealed record Order : AppAggregateEntity
         RaiseDomainEvent(new OrderLocked(Id, reason));
     }
 
+    internal void Cancel()
+    {
+        if (!CanUpdateInfo())
+            throw new OrderCannotChangeStatusException();
+
+        ChangeStatus(OrderStatus.Cancelled);
+        RaiseDomainEvent(new OrderCancelled(Id, GetReservationItems()));
+    }
+
     internal void MarkOrderItemDelivered(Guid orderItemId, Guid pictureId)
     {
         var orderItem = _orderItems.FirstOrDefault(i => i.Id == orderItemId);
@@ -251,6 +257,12 @@ public sealed record Order : AppAggregateEntity
         return true;
     }
     private bool AreAllItemsDelivered() => _orderItems.Count > 0 && _orderItems.All(i => i.IsDelivered);
+
+    private IReadOnlyCollection<OrderReservationItem> GetReservationItems()
+        => _orderItems
+            .GroupBy(i => i.ProductId)
+            .Select(g => new OrderReservationItem(g.Key, g.Sum(i => i.Quantity)))
+            .ToList();
 
     #endregion
 }

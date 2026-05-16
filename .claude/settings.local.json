@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rtk git *)",
+      "Bash(rtk dotnet *)",
+      "Bash(rtk ls *)",
+      "Bash(dir *)",
+      "Bash(rtk wc *)",
+      "Bash(rtk grep *)",
+      "Bash(rtk find *)",
+      "Bash(python *)"
+    ]
+  }
+}

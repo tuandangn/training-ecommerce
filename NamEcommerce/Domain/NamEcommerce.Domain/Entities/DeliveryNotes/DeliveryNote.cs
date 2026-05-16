@@ -16,6 +16,26 @@ public sealed record DeliveryNote : AppAggregateEntity
         _items = [];
     }
 
+    /// <summary>
+    /// Constructor dùng cho DeliveryNote tự sinh khi VendorReturn.Confirmed —
+    /// không có Order/Customer. SourceType phải được set thành <see cref="DeliveryNoteSourceType.ToVendorReturn"/> ngay sau.
+    /// </summary>
+    internal DeliveryNote(string code, Guid warehouseId, string? note, Guid? createdByUserId) : base(Guid.NewGuid())
+    {
+        Code = code;
+        WarehouseId = warehouseId;
+        Note = note;
+        CreatedByUserId = createdByUserId;
+        Status = DeliveryNoteStatus.Draft;
+        CreatedOnUtc = DateTime.UtcNow;
+        // Sentinel values — không liên quan đến Order hay Customer
+        OrderId = Guid.Empty;
+        CustomerId = Guid.Empty;
+        CustomerName = string.Empty;
+        ShippingAddress = string.Empty;
+        _items = [];
+    }
+
     internal DeliveryNote(string code, Guid orderId,
         Guid customerId, string customerName, string? customerPhone, string? customerAddress,
         string shippingAddress, Guid warehouseId, bool showPrice, string? note,
@@ -64,7 +84,15 @@ public sealed record DeliveryNote : AppAggregateEntity
     public decimal AmountToCollect { get; internal set; }
     
     public DeliveryNoteStatus Status { get; private set; }
-    
+
+    /// <summary>
+    /// Nguồn gốc phiếu xuất. Mặc định <see cref="DeliveryNoteSourceType.ToCustomer"/> (xuất bán cho khách).
+    /// Phase B sẽ thêm <see cref="DeliveryNoteSourceType.ToVendorReturn"/> khi VendorReturn.Confirmed
+    /// auto-sinh phiếu xuất loại này. Handler downstream phân nhánh theo property này (ví dụ:
+    /// <c>DeliveryNoteDeliveredEventHandler</c> skip sinh <c>CustomerDebt</c> khi không phải <c>ToCustomer</c>).
+    /// </summary>
+    public DeliveryNoteSourceType SourceType { get; internal set; } = DeliveryNoteSourceType.ToCustomer;
+
     public DateTime? DeliveredOnUtc { get; private set; }
     public Guid? DeliveryProofPictureId { get; private set; }
     public string? DeliveryReceiverName { get; private set; }
@@ -82,6 +110,29 @@ public sealed record DeliveryNote : AppAggregateEntity
     internal void AddItem(Guid orderItemId, Guid productId, string productName, decimal quantity, decimal unitPrice)
     {
         _items.Add(new DeliveryNoteItem(Id, orderItemId, productId, productName, quantity, unitPrice));
+    }
+
+    /// <summary>
+    /// Thêm item không gắn với OrderItem — dùng khi auto-sinh DeliveryNote từ VendorReturn.
+    /// OrderItemId = Guid.Empty (sentinel). UnitPrice = UnitCost của VendorReturnItem.
+    /// </summary>
+    internal void AddItemFromVendorReturn(Guid productId, string productName, decimal quantity, decimal unitCost)
+    {
+        _items.Add(new DeliveryNoteItem(Id, Guid.Empty, productId, productName, quantity, unitCost));
+    }
+
+    /// <summary>
+    /// Đánh dấu Delivered ngay (không qua Draft→Confirmed→Delivering) —
+    /// chỉ dùng khi auto-sinh từ VendorReturn.Confirmed. Raise <see cref="DeliveryNoteDelivered"/>
+    /// để handler downstream trừ tồn kho (SourceType guard sẽ bỏ qua sinh CustomerDebt).
+    /// </summary>
+    internal void MarkAsDeliveredFromVendorReturn()
+    {
+        Status = DeliveryNoteStatus.Delivered;
+        DeliveredOnUtc = DateTime.UtcNow;
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
     }
 
     /// <summary>

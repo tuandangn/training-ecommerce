@@ -17,7 +17,6 @@ public sealed class RecordVendorAdvancePaymentHandler(
     public async Task<CommonActionResultModel> Handle(RecordVendorAdvancePaymentCommand request, CancellationToken cancellationToken)
     {
         var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
-
         var dto = new CreateVendorPaymentAppDto
         {
             VendorId = request.Model.VendorId,

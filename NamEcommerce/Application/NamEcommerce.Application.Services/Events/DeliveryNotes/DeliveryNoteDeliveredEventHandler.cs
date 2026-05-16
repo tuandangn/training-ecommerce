@@ -1,5 +1,6 @@
 using MediatR;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
@@ -18,17 +19,19 @@ public sealed class DeliveryNoteDeliveredEventHandler(
 
     public async Task Handle(DeliveryNoteDelivered notification, CancellationToken cancellationToken)
     {
-        // Event đã carry đủ thông tin — vẫn fetch lại để lấy CreatedByUserId (audit) và đảm bảo phiếu vẫn ở trạng thái Delivered.
+        // Event đã carry đủ thông tin, vẫn fetch lại để đảm bảo phiếu vẫn ở trạng thái Delivered.
         var deliveryNote = await _deliveryNoteManager.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote == null) return;
+
+        // Guard: phiếu xuất do trả NCC không sinh công nợ khách hàng.
+        if (deliveryNote.SourceType == DeliveryNoteSourceType.ToVendorReturn) return;
 
         var createDebtDto = new CreateCustomerDebtDto
         {
             CustomerId = notification.CustomerId,
             DeliveryNoteId = notification.DeliveryNoteId,
             TotalAmount = notification.TotalAmount, // "phiếu đã xuất thì phải thu đủ"
-            DueDateUtc = null,
-            CreatedByUserId = deliveryNote.CreatedByUserId
+            DueDateUtc = null
         };
 
         await _debtManager.CreateDebtFromDeliveryNoteAsync(createDebtDto).ConfigureAwait(false);

@@ -1,0 +1,841 @@
+@model CreateVendorReturnModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Tạo phiếu trả hàng NCC";
+}
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Thêm mới
+        <span class="text-muted">Phiếu trả hàng NCC</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="VendorReturn" class="text-decoration-none">Trả hàng nhà cung cấp</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<div>
+    <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible"></div>
+    <form method="post" id="createVendorReturnForm" asp-antiforgery="true">
+        <input type="hidden" asp-for="VendorId" id="hiddenVendorId" />
+        <input type="hidden" asp-for="GoodsReceiptId" id="hiddenGoodsReceiptId" />
+        <input type="hidden" id="hiddenFilterPurchaseOrderId" value="@Model.FilterPurchaseOrderId" />
+
+        @if (Model.FilterPurchaseOrderId.HasValue)
+        {
+            <div class="alert alert-info border-0 d-flex align-items-center justify-content-between py-2 mb-3" id="filterPoBanner">
+                <div>
+                    <i class="bi bi-funnel-fill me-1"></i>
+                    Đang lọc phiếu nhập theo đơn nhập
+                    <strong class="ms-1">@Model.FilterPurchaseOrderCode</strong>
+                </div>
+                <button type="button" class="btn btn-sm btn-link text-decoration-none" id="btnClearPoFilter">
+                    <i class="bi bi-x-circle me-1"></i>Bỏ lọc
+                </button>
+            </div>
+        }
+
+        <div class="alert alert-warning border-0 d-none mb-3" id="fullyReturnedBanner">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            <strong>Đơn nhập này đã trả hết hàng.</strong>
+            Không còn hàng để tạo phiếu trả mới. Bạn có thể
+            <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 align-baseline" id="btnSwitchFreeMode">bỏ lọc để trả tự do</button>
+            hoặc trở về.
+        </div>
+
+        <div class="row g-3">
+            <!-- Cột trái: danh sách items -->
+            <div class="col-lg-8 order-1 order-lg-0">
+                <div class="content-card mb-3">
+                    <div class="content-card-header">
+                        <h5>Danh sách hàng trả</h5>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnLoadFromReceipt" style="display:none!important">
+                                <i class="bi bi-arrow-repeat me-1"></i>Load từ phiếu nhập
+                            </button>
+                            <button type="button" class="btn btn-sm bg-light text-primary" id="btnAddFreeItem">
+                                <i class="bi bi-plus-lg me-1"></i>Thêm hàng
+                            </button>
+                        </div>
+                    </div>
+                    <div class="content-card-body-flush">
+                        <div class="table-responsive">
+                            <table class="table data-table mb-0" id="returnItemsTable">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-3" style="min-width:160px">Hàng hóa</th>
+                                        <th class="text-center" style="width:60px">ĐVT</th>
+                                        <th class="text-end" style="width:80px">Đã nhập</th>
+                                        <th class="text-end" style="width:80px">Đã trả</th>
+                                        <th class="text-end" style="width:80px">Còn lại</th>
+                                        <th class="text-end" style="width:100px">SL trả</th>
+                                        <th class="text-end" style="width:110px">Giá vốn gốc</th>
+                                        <th class="text-end" style="width:115px">Giá trả NCC</th>
+                                        <th class="text-end" style="width:115px">Thành tiền</th>
+                                        <th style="width:36px"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsTableBody">
+                                    @for (var i = 0; i < Model.Items.Count; i++)
+                                    {
+                                        var item = Model.Items[i];
+                                        <tr>
+                                            <td class="ps-3">
+                                                <div class="fw-medium">@item.ProductDisplayName</div>
+                                                <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
+                                                <input type="hidden" name="Items[@i].GoodsReceiptItemId" value="@item.GoodsReceiptItemId" />
+                                                <input type="hidden" name="Items[@i].OriginalUnitCost" value="@item.OriginalUnitCost" class="item-orig-cost" />
+                                            </td>
+                                            <td class="text-center text-muted small"></td>
+                                            <td class="text-end text-muted small">—</td>
+                                            <td class="text-end text-muted small">—</td>
+                                            <td class="text-end text-muted small">—</td>
+                                            <td class="text-end">
+                                                <input name="Items[@i].RequestedQuantity" value="@item.RequestedQuantity.DisplayQuantity()"
+                                                       class="form-control form-control-sm text-end item-req-qty"
+                                                       data-decimal="quantity" min="0.001" placeholder="0" />
+                                            </td>
+                                            <td class="text-end text-muted small">
+                                                @(item.OriginalUnitCost.HasValue ? item.OriginalUnitCost.Value.DisplayCurrency() : "—")
+                                            </td>
+                                            <td class="text-end">
+                                                <input name="Items[@i].ReturnUnitCost" value="@item.ReturnUnitCost.DisplayCurrency()"
+                                                       class="form-control form-control-sm text-end item-return-cost"
+                                                       data-decimal="currency" min="0" placeholder="0" />
+                                            </td>
+                                            <td class="text-end item-subtotal text-muted small">
+                                                @((item.RequestedQuantity * item.ReturnUnitCost).DisplayCurrency())
+                                            </td>
+                                            <td class="pe-2">
+                                                <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noItemsMessage" class="py-4 text-center text-muted"
+                             style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
+                            Chọn nhà cung cấp và phiếu nhập, hoặc nhấn "+ Thêm hàng" để tạo tự do.
+                        </div>
+                    </div>
+                    <!-- Footer: Chi phí + Tổng -->
+                    <div class="content-card-footer py-2">
+                        <div class="d-flex justify-content-end align-items-center gap-3">
+                            <span class="text-muted small">Tổng giá trị trả:</span>
+                            <span id="totalReturnValue" class="fw-semibold text-primary">0 ₫</span>
+                        </div>
+                        <div class="d-flex justify-content-end align-items-center gap-3 mt-1">
+                            <span class="text-muted small">Chi phí phát sinh:</span>
+                            <span id="additionalCostDisplay" class="text-danger small fw-medium">0 ₫</span>
+                        </div>
+                        <div class="d-flex justify-content-end align-items-center gap-3 mt-1 border-top pt-2">
+                            <span class="text-muted small fw-bold">Tổng thu hồi từ NCC:</span>
+                            <span id="netRecoveryAmount" class="fw-bold text-success fs-6">0 ₫</span>
+                        </div>
+                    </div>
+                    <div class="content-card-footer py-2 d-flex align-items-center justify-content-between border-top">
+                        <a asp-action="List" class="btn btn-link text-decoration-none">
+                            <span class="text-muted small">Trở về</span>
+                        </a>
+                        <button type="submit" class="btn btn-primary d-lg-none">Tạo phiếu</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cột phải: thông tin phiếu -->
+            <div class="col-lg-4">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h5>Thông tin phiếu trả</h5>
+                    </div>
+                    <div class="content-card-body">
+
+                        <!-- Nhà cung cấp -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Nhà cung cấp <span class="text-danger">*</span>
+                            </label>
+                            <div id="vendorPicker"
+                                 data-id="@Model.VendorId"
+                                 data-name="@Model.VendorDisplayName"
+                                 data-phone=""></div>
+                            <span asp-validation-for="VendorId" class="small text-danger"></span>
+                        </div>
+
+                        <!-- Phiếu nhập kho (optional) -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Phiếu nhập kho
+                                <span class="badge bg-secondary-subtle text-secondary border ms-1" style="font-size:.65rem;">tuỳ chọn</span>
+                            </label>
+                            <div class="dropdown w-100" id="goodsReceiptDropdown">
+                                <button type="button" id="goodsReceiptToggle"
+                                        class="form-select text-start gr-picker-toggle"
+                                        data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                                        aria-expanded="false" disabled>
+                                    <span id="goodsReceiptToggleLabel" class="text-muted">(Chọn nhà cung cấp trước)</span>
+                                </button>
+                                <ul class="dropdown-menu w-100 shadow-sm gr-picker-menu" id="goodsReceiptMenu"></ul>
+                            </div>
+                            <div class="form-text">Để trống nếu tạo phiếu trả tự do.</div>
+                        </div>
+
+                        <!-- Kho xuất -->
+                        <div class="mb-3">
+                            <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <select asp-for="WarehouseId" id="warehouseSelect" class="form-select">
+                                <option value="">(Chọn kho xuất hàng)</option>
+                                @if (Model.AvailableWarehouses is not null)
+                                {
+                                    foreach (var warehouse in Model.AvailableWarehouses)
+                                    {
+                                        <option value="@warehouse.Id" selected="@(Model.WarehouseId == warehouse.Id)">@warehouse.Name</option>
+                                    }
+                                }
+                            </select>
+                            <div id="warehouseFilterHint" class="small text-muted mt-1 d-none">
+                                <i class="bi bi-info-circle me-1"></i>
+                                <span id="warehouseFilterHintText"></span>
+                            </div>
+                            <span asp-validation-for="WarehouseId" class="small text-danger"></span>
+                        </div>
+
+                        <!-- Chi phí phát sinh -->
+                        <div class="mb-3">
+                            <label asp-for="AdditionalCost" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <input asp-for="AdditionalCost" id="additionalCostInput"
+                                   class="form-control" data-decimal="currency" min="0" placeholder="0"
+                                   value="@Model.AdditionalCost.DisplayCurrency()" />
+                            <div class="form-text">Vận chuyển, đền bù... sẽ trừ vào tổng thu hồi.</div>
+                        </div>
+
+                        <!-- Ghi chú -->
+                        <div class="mb-0">
+                            <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
+                            <textarea asp-for="Note" class="form-control" rows="3" placeholder="Lý do trả hàng, ghi chú..."></textarea>
+                        </div>
+                    </div>
+                    <div class="content-card-footer d-none d-lg-block">
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Tạo phiếu</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Styles {
+    <style>
+        .gr-picker-toggle {
+            min-height: calc(2.25rem + 2px);
+            line-height: 1.2;
+            white-space: normal;
+            padding-right: 2.25rem;
+        }
+        .gr-picker-toggle .gr-toggle-line1 { font-weight: 500; }
+        .gr-picker-toggle .gr-toggle-line2 { font-size: .78rem; color: var(--bs-secondary-color); }
+        .gr-picker-menu {
+            max-height: 60vh;
+            overflow-y: auto;
+            padding: .25rem 0;
+        }
+        .gr-picker-menu .gr-option {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: .55rem .9rem;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+            border-bottom: 1px solid var(--bs-border-color-translucent);
+        }
+        .gr-picker-menu .gr-option:last-child { border-bottom: 0; }
+        .gr-picker-menu .gr-option:hover:not(:disabled) { background: var(--bs-light); }
+        .gr-picker-menu .gr-option.active { background: var(--bs-primary-bg-subtle); }
+        .gr-picker-menu .gr-option:disabled { cursor: not-allowed; opacity: .55; }
+        .gr-picker-menu .gr-option .gr-line1 {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: .5rem;
+        }
+        .gr-picker-menu .gr-option .gr-code { font-weight: 600; font-size: .95rem; }
+        .gr-picker-menu .gr-option .gr-total { font-weight: 600; color: var(--bs-primary); white-space: nowrap; }
+        .gr-picker-menu .gr-option .gr-line2 {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .35rem .75rem;
+            margin-top: .15rem;
+            font-size: .78rem;
+            color: var(--bs-secondary-color);
+        }
+        .gr-picker-menu .gr-empty {
+            padding: 1rem;
+            text-align: center;
+            color: var(--bs-secondary-color);
+            font-size: .85rem;
+        }
+    </style>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script type="module">
+        import VendorPicker from '/modules/VendorPicker.js';
+
+        // ── VendorPicker ──────────────────────────────────────────────────────────
+        const pickerEl = document.getElementById('vendorPicker');
+        const hiddenVendorId = document.getElementById('hiddenVendorId');
+        const hiddenGoodsReceiptId = document.getElementById('hiddenGoodsReceiptId');
+        const goodsReceiptToggle = document.getElementById('goodsReceiptToggle');
+        const goodsReceiptToggleLabel = document.getElementById('goodsReceiptToggleLabel');
+        const goodsReceiptMenu = document.getElementById('goodsReceiptMenu');
+        const warehouseSelect = document.getElementById('warehouseSelect');
+        const filterPoId = (document.getElementById('hiddenFilterPurchaseOrderId')?.value || '').trim();
+
+        const vendorPicker = new VendorPicker(pickerEl);
+
+        // Snapshot toàn bộ warehouse options từ server (option[0] = placeholder).
+        const allWarehouseOptions = Array.from(warehouseSelect.options)
+            .map(o => ({ id: o.value, name: o.textContent }));
+        // Danh sách GR + map theo id để truy cập nhanh.
+        let allGoodsReceipts = [];
+        const goodsReceiptsById = new Map();
+        // ID GR đang chọn (sync với hiddenGoodsReceiptId)
+        let selectedReceiptId = (hiddenGoodsReceiptId.value || '').trim();
+        // WarehouseIds của GR đang chọn — dùng để auto-fill kho khi validate pass.
+        let currentGoodsReceiptWarehouseIds = [];
+        // Set<Guid> kho hợp lệ; null = chưa validate (hiển thị toàn bộ).
+        let validWarehouseIds = null;
+        let validateTimer = null;
+
+        // Lưu goodsReceiptId được pre-fill (từ URL params hoặc validation fail)
+        // TRƯỚC khi selectVendor() có thể clear nó qua 'select' event.
+        let pendingGoodsReceiptId = hiddenGoodsReceiptId.value || null;
+
+        // "Bỏ lọc" PO filter — điều hướng lại trang không kèm param.
+        document.getElementById('btnClearPoFilter')?.addEventListener('click', () => {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('purchaseOrderId');
+            url.searchParams.delete('purchaseOrderCode');
+            window.location.href = url.toString();
+        });
+
+        document.getElementById('btnSwitchFreeMode')?.addEventListener('click', () => {
+            document.getElementById('btnClearPoFilter')?.click();
+        });
+
+        // Khôi phục nếu validation fail hoặc E5 pre-fill
+        const initialVendorId = hiddenVendorId.value;
+        const initialVendorName = pickerEl.dataset.name;
+        if (initialVendorId && initialVendorName) {
+            vendorPicker.selectVendor({ id: initialVendorId, name: initialVendorName, phone: '' });
+        }
+
+        pickerEl.addEventListener('select', async (e) => {
+            hiddenVendorId.value = e.detail.vendor.id;
+            hiddenGoodsReceiptId.value = '';
+            await loadGoodsReceipts(e.detail.vendor.id);
+        });
+
+        pickerEl.addEventListener('remove', () => {
+            hiddenVendorId.value = '';
+            hiddenGoodsReceiptId.value = '';
+            resetGoodsReceiptSelect();
+            clearItems();
+        });
+
+        // ── Goods Receipt picker (custom dropdown) ────────────────────────────────
+        async function loadGoodsReceipts(vendorId) {
+            goodsReceiptToggle.disabled = true;
+            setToggleLabel('<span class="text-muted">Đang tải...</span>');
+            goodsReceiptMenu.innerHTML = '';
+            allGoodsReceipts = [];
+            goodsReceiptsById.clear();
+            hideFullyReturnedBanner();
+
+            try {
+                const params = new URLSearchParams({ vendorId });
+                if (filterPoId) params.set('purchaseOrderId', filterPoId);
+
+                const res = await fetch(`/VendorReturn/GetGoodsReceipts?${params.toString()}`);
+                const receipts = await res.json();
+
+                allGoodsReceipts = receipts;
+                receipts.forEach(r => goodsReceiptsById.set(r.id, r));
+
+                renderGoodsReceiptMenu();
+                goodsReceiptToggle.disabled = false;
+
+                // Cảnh báo khi MỌI GR đã trả hết (chỉ áp dụng khi lọc theo PO)
+                if (filterPoId && receipts.length > 0 && receipts.every(r => r.isFullyReturned)) {
+                    showFullyReturnedBanner();
+                }
+
+                const receiptToSelect = pendingGoodsReceiptId || selectedReceiptId;
+                pendingGoodsReceiptId = null;
+
+                const candidate = receipts.find(r => r.id === receiptToSelect && !r.isFullyReturned);
+                if (candidate) {
+                    await setSelectedReceipt(candidate.id);
+                } else {
+                    setSelectedReceipt('');
+                }
+            } catch {
+                setToggleLabel('<span class="text-danger">Lỗi tải dữ liệu</span>');
+            }
+        }
+
+        function renderGoodsReceiptMenu() {
+            goodsReceiptMenu.innerHTML = '';
+
+            // "Không chọn / Bỏ chọn" option
+            const placeholderText = filterPoId ? '— Bỏ chọn —' : '(Không chọn — trả tự do)';
+            const liClear = document.createElement('li');
+            liClear.innerHTML = `<button type="button" class="gr-option small text-muted" data-receipt-id="">
+                <i class="bi bi-dash-circle me-1"></i>${escapeHtml(placeholderText)}
+            </button>`;
+            goodsReceiptMenu.appendChild(liClear);
+
+            if (allGoodsReceipts.length === 0) {
+                const li = document.createElement('li');
+                li.innerHTML = `<div class="gr-empty">${filterPoId
+                    ? 'Đơn nhập này chưa có phiếu nhập nào.'
+                    : 'Nhà cung cấp này chưa có phiếu nhập nào.'}</div>`;
+                goodsReceiptMenu.appendChild(li);
+                return;
+            }
+
+            allGoodsReceipts.forEach(r => {
+                goodsReceiptMenu.appendChild(buildReceiptMenuItem(r));
+            });
+        }
+
+        function buildReceiptMenuItem(r) {
+            const li = document.createElement('li');
+            const date = formatReceiptDate(r.receivedOn);
+            const warehouses = (r.warehouseNames || []).join(' + ');
+            const poBadge = r.purchaseOrderCode
+                ? `<span class="badge bg-secondary-subtle text-secondary border" style="font-size:.65rem;">PO ${escapeHtml(r.purchaseOrderCode)}</span>`
+                : '';
+            const returnedBadge = r.isFullyReturned
+                ? `<span class="badge bg-danger-subtle text-danger border" style="font-size:.65rem;">Đã trả hết</span>`
+                : '';
+            const pendingBadge = r.isPendingCosting
+                ? `<span class="badge bg-warning-subtle text-warning-emphasis border" style="font-size:.65rem;">Chờ định giá</span>`
+                : '';
+            const totalHtml = r.totalValue > 0
+                ? `<span class="gr-total">${Number(r.totalValue).toLocaleString('vi-VN')} ₫</span>`
+                : '';
+
+            const parts = [];
+            if (date) parts.push(`<span><i class="bi bi-calendar3 me-1"></i>${escapeHtml(date)}</span>`);
+            if (warehouses) parts.push(`<span><i class="bi bi-building me-1"></i>${escapeHtml(warehouses)}</span>`);
+            if (r.itemCount > 0) parts.push(`<span><i class="bi bi-box me-1"></i>${r.itemCount} mặt hàng</span>`);
+
+            li.innerHTML = `
+                <button type="button" class="gr-option" data-receipt-id="${r.id}" ${r.isFullyReturned ? 'disabled' : ''}>
+                    <div class="gr-line1">
+                        <span>
+                            <span class="gr-code">${escapeHtml(r.code)}</span>
+                            ${poBadge} ${returnedBadge} ${pendingBadge}
+                        </span>
+                        ${totalHtml}
+                    </div>
+                    <div class="gr-line2">${parts.join('')}</div>
+                </button>`;
+            return li;
+        }
+
+        async function setSelectedReceipt(id) {
+            selectedReceiptId = id || '';
+            hiddenGoodsReceiptId.value = selectedReceiptId;
+            updateMenuActive();
+            updateToggleLabelFromSelection();
+
+            if (!selectedReceiptId) {
+                updateLoadBtn(false);
+                currentGoodsReceiptWarehouseIds = [];
+                return;
+            }
+            updateLoadBtn(true);
+            await loadItemsFromReceipt(selectedReceiptId);
+        }
+
+        function updateMenuActive() {
+            goodsReceiptMenu.querySelectorAll('.gr-option').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.receiptId === selectedReceiptId);
+            });
+        }
+
+        function updateToggleLabelFromSelection() {
+            if (!selectedReceiptId) {
+                const placeholder = filterPoId
+                    ? '(Chọn phiếu nhập của đơn này)'
+                    : '(Không chọn — trả tự do)';
+                setToggleLabel(`<span class="text-muted">${escapeHtml(placeholder)}</span>`);
+                return;
+            }
+            const r = goodsReceiptsById.get(selectedReceiptId);
+            if (!r) {
+                setToggleLabel('');
+                return;
+            }
+            const date = formatReceiptDate(r.receivedOn);
+            const warehouses = (r.warehouseNames || []).join(' + ');
+            const line2Parts = [];
+            if (date) line2Parts.push(escapeHtml(date));
+            if (warehouses) line2Parts.push('Kho ' + escapeHtml(warehouses));
+            if (r.itemCount > 0) line2Parts.push(`${r.itemCount} mặt hàng`);
+
+            setToggleLabel(`
+                <div class="gr-toggle-line1">${escapeHtml(r.code)}${r.purchaseOrderCode
+                    ? ` <span class="badge bg-secondary-subtle text-secondary border ms-1" style="font-size:.65rem;">PO ${escapeHtml(r.purchaseOrderCode)}</span>`
+                    : ''}</div>
+                <div class="gr-toggle-line2">${line2Parts.join(' · ')}</div>
+            `);
+        }
+
+        function setToggleLabel(html) {
+            goodsReceiptToggleLabel.innerHTML = html;
+            // Reset placeholder color when content has structure
+            goodsReceiptToggleLabel.classList.remove('text-muted');
+        }
+
+        function formatReceiptDate(raw) {
+            if (!raw) return '';
+            try { return new Date(raw).toLocaleDateString('vi-VN'); }
+            catch { return ''; }
+        }
+
+        function showFullyReturnedBanner() {
+            document.getElementById('fullyReturnedBanner')?.classList.remove('d-none');
+        }
+        function hideFullyReturnedBanner() {
+            document.getElementById('fullyReturnedBanner')?.classList.add('d-none');
+        }
+
+        goodsReceiptMenu.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.gr-option');
+            if (!btn || btn.disabled) return;
+            await setSelectedReceipt(btn.dataset.receiptId);
+            // Đóng dropdown sau khi chọn (data-bs-auto-close="outside" không tự đóng)
+            bootstrap.Dropdown.getInstance(goodsReceiptToggle)?.hide();
+        });
+
+        function escapeHtml(s) {
+            return String(s ?? '')
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function resetGoodsReceiptSelect() {
+            allGoodsReceipts = [];
+            goodsReceiptsById.clear();
+            goodsReceiptMenu.innerHTML = '';
+            selectedReceiptId = '';
+            hiddenGoodsReceiptId.value = '';
+            currentGoodsReceiptWarehouseIds = [];
+            goodsReceiptToggle.disabled = true;
+            setToggleLabel('<span class="text-muted">(Chọn nhà cung cấp trước)</span>');
+            hideFullyReturnedBanner();
+            updateLoadBtn(false);
+        }
+
+        function updateLoadBtn(show) {
+            const btn = document.getElementById('btnLoadFromReceipt');
+            btn.style.setProperty('display', show ? 'inline-flex' : 'none', 'important');
+        }
+
+        // ── Load items từ phiếu nhập ─────────────────────────────────────────────
+        async function loadItemsFromReceipt(receiptId) {
+            try {
+                const gr = goodsReceiptsById.get(receiptId);
+                currentGoodsReceiptWarehouseIds = Array.isArray(gr?.warehouseIds) ? gr.warehouseIds : [];
+
+                const res = await fetch(`/VendorReturn/GetGoodsReceiptItems?goodsReceiptId=${receiptId}`);
+                const items = await res.json();
+                clearItems();
+                items.forEach(item => addItemRowFromReceipt(item));
+                updateFooter();
+
+                // Validate kho ngay sau khi load items, ưu tiên auto-fill kho của GR
+                await validateWarehouses(true);
+            } catch {
+                alert('Không thể tải danh sách hàng từ phiếu nhập.');
+            }
+        }
+
+        document.getElementById('btnLoadFromReceipt').addEventListener('click', async () => {
+            if (selectedReceiptId) await loadItemsFromReceipt(selectedReceiptId);
+        });
+
+        // ── Item table ────────────────────────────────────────────────────────────
+        let rowIndex = @Model.Items.Count;
+        const tbody = document.getElementById('itemsTableBody');
+        const noMsg = document.getElementById('noItemsMessage');
+
+        function clearItems() {
+            tbody.innerHTML = '';
+            updateEmptyState();
+        }
+
+        function updateEmptyState() {
+            noMsg.style.display = tbody.rows.length === 0 ? 'block' : 'none';
+        }
+
+        function fmtCurrency(val) {
+            return Number(val || 0).toLocaleString('vi-VN') + ' ₫';
+        }
+
+        function fmtQty(val) {
+            const n = Number(val || 0);
+            return n % 1 === 0 ? n.toLocaleString('vi-VN') : n.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+        }
+
+        function addItemRowFromReceipt(item) {
+            const i = rowIndex++;
+            const origCost = item.unitPrice || 0;
+            const available = item.availableQty ?? (item.originalQty - item.alreadyReturnedQty);
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="ps-3">
+                    <div class="fw-medium">${item.productName}</div>
+                    <input type="hidden" name="Items[${i}].ProductId" value="${item.productId}" />
+                    <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="${item.sourceItemId ?? ''}" />
+                    <input type="hidden" name="Items[${i}].OriginalUnitCost" value="${origCost}" class="item-orig-cost" />
+                </td>
+                <td class="text-center text-muted small">${item.unit}</td>
+                <td class="text-end text-muted small">${fmtQty(item.originalQty)}</td>
+                <td class="text-end text-muted small">${fmtQty(item.alreadyReturnedQty)}</td>
+                <td class="text-end text-muted small fw-medium ${available > 0 ? 'text-success' : 'text-danger'}">${fmtQty(available)}</td>
+                <td class="text-end">
+                    <input name="Items[${i}].RequestedQuantity" value="${available > 0 ? available : ''}"
+                           class="form-control form-control-sm text-end item-req-qty"
+                           data-decimal="quantity" min="0.001" max="${available}" placeholder="0" />
+                </td>
+                <td class="text-end text-muted small">${origCost > 0 ? fmtCurrency(origCost) : '—'}</td>
+                <td class="text-end">
+                    <input name="Items[${i}].ReturnUnitCost" value="${origCost}"
+                           class="form-control form-control-sm text-end item-return-cost"
+                           data-decimal="currency" min="0" placeholder="0" />
+                </td>
+                <td class="text-end item-subtotal text-muted small">—</td>
+                <td class="pe-2">
+                    <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>`;
+            tbody.appendChild(tr);
+            updateEmptyState();
+        }
+
+        function addFreeItemRow() {
+            const i = rowIndex++;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="ps-3">
+                    <input name="Items[${i}].ProductId" value=""
+                           class="form-control form-control-sm item-product-id" placeholder="ProductId..." />
+                    <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="" />
+                    <input type="hidden" name="Items[${i}].OriginalUnitCost" value="" class="item-orig-cost" />
+                </td>
+                <td class="text-center text-muted small">—</td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end">
+                    <input name="Items[${i}].RequestedQuantity" value=""
+                           class="form-control form-control-sm text-end item-req-qty"
+                           data-decimal="quantity" min="0.001" placeholder="0" />
+                </td>
+                <td class="text-end text-muted small">—</td>
+                <td class="text-end">
+                    <input name="Items[${i}].ReturnUnitCost" value=""
+                           class="form-control form-control-sm text-end item-return-cost"
+                           data-decimal="currency" min="0" placeholder="0" />
+                </td>
+                <td class="text-end item-subtotal text-muted small">—</td>
+                <td class="pe-2">
+                    <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>`;
+            tbody.appendChild(tr);
+            updateEmptyState();
+        }
+
+        document.getElementById('btnAddFreeItem').addEventListener('click', addFreeItemRow);
+
+        tbody.addEventListener('click', e => {
+            const btn = e.target.closest('.btn-remove-item');
+            if (btn) {
+                btn.closest('tr').remove();
+                updateEmptyState();
+                updateFooter();
+                debouncedValidate();
+            }
+        });
+
+        tbody.addEventListener('input', e => {
+            if (e.target.matches('.item-req-qty, .item-return-cost')) {
+                const row = e.target.closest('tr');
+                const qty = parseDecimal(row.querySelector('.item-req-qty')?.value);
+                const cost = parseDecimal(row.querySelector('.item-return-cost')?.value);
+                const sub = row.querySelector('.item-subtotal');
+                if (sub) sub.textContent = fmtCurrency(qty * cost);
+                updateFooter();
+                if (e.target.matches('.item-req-qty')) debouncedValidate();
+            }
+        });
+
+        // ── Validate warehouse stock ─────────────────────────────────────────────
+        function collectItemQuantities() {
+            const out = [];
+            tbody.querySelectorAll('tr').forEach(row => {
+                const pidInput = row.querySelector('input[name$=".ProductId"]') ?? row.querySelector('.item-product-id');
+                const qtyInput = row.querySelector('.item-req-qty');
+                const productId = (pidInput?.value || '').trim();
+                const qty = parseDecimal(qtyInput?.value);
+                if (productId && qty > 0) out.push({ productId, requiredQty: qty });
+            });
+            return out;
+        }
+
+        function rebuildWarehouseDropdown() {
+            const currentVal = warehouseSelect.value;
+            const placeholder = allWarehouseOptions[0];
+            warehouseSelect.innerHTML = '';
+
+            const ph = document.createElement('option');
+            ph.value = placeholder.id;
+            ph.textContent = placeholder.name;
+            warehouseSelect.appendChild(ph);
+
+            allWarehouseOptions.slice(1).forEach(w => {
+                if (validWarehouseIds === null || validWarehouseIds.has(w.id)) {
+                    const opt = document.createElement('option');
+                    opt.value = w.id;
+                    opt.textContent = w.name;
+                    if (w.id === currentVal) opt.selected = true;
+                    warehouseSelect.appendChild(opt);
+                }
+            });
+        }
+
+        function showHint(text, level) {
+            const el = document.getElementById('warehouseFilterHint');
+            const textEl = document.getElementById('warehouseFilterHintText');
+            if (!el || !textEl) return;
+            el.classList.remove('d-none');
+            el.className = 'small mt-1 ' + (level === 'warning' ? 'text-warning' : 'text-muted');
+            textEl.textContent = text;
+        }
+
+        function hideHint() {
+            document.getElementById('warehouseFilterHint')?.classList.add('d-none');
+        }
+
+        async function validateWarehouses(autoFillFromReceipt) {
+            const items = collectItemQuantities();
+
+            if (items.length === 0) {
+                // Không có dòng hợp lệ → reset filter, hiển thị toàn bộ kho
+                validWarehouseIds = null;
+                rebuildWarehouseDropdown();
+                hideHint();
+                return;
+            }
+
+            try {
+                const res = await fetch('/VendorReturn/GetValidWarehouses', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items })
+                });
+                if (!res.ok) throw new Error('validate failed');
+                const ids = await res.json();
+                validWarehouseIds = new Set(ids);
+
+                const currentVal = warehouseSelect.value;
+                rebuildWarehouseDropdown();
+
+                const validCount = ids.length;
+
+                if (autoFillFromReceipt && currentGoodsReceiptWarehouseIds.length > 0) {
+                    const grWh = currentGoodsReceiptWarehouseIds[0];
+                    if (validWarehouseIds.has(grWh)) {
+                        warehouseSelect.value = grWh;
+                        showHint(`Đã chọn kho theo phiếu nhập. ${validCount} kho còn đủ tồn.`, 'info');
+                        return;
+                    }
+                    warehouseSelect.value = '';
+                    showHint('Kho của phiếu nhập không đủ tồn — vui lòng chọn kho khác trong danh sách.', 'warning');
+                    return;
+                }
+
+                if (currentVal && !validWarehouseIds.has(currentVal)) {
+                    warehouseSelect.value = '';
+                    showHint('Kho đang chọn không đủ tồn để trả — vui lòng chọn lại.', 'warning');
+                    return;
+                }
+
+                if (validCount === 0) {
+                    showHint('Không có kho nào đủ tồn cho phiếu trả này.', 'warning');
+                } else {
+                    showHint(`Đang hiển thị ${validCount} kho còn đủ tồn cho phiếu trả này.`, 'info');
+                }
+            } catch {
+                // im lặng — không phá flow nhập liệu
+            }
+        }
+
+        function debouncedValidate() {
+            clearTimeout(validateTimer);
+            validateTimer = setTimeout(() => validateWarehouses(false), 350);
+        }
+
+        // ── Footer ───────────────────────────────────────────────────────────────
+        const additionalCostInput = document.getElementById('additionalCostInput');
+
+        function parseDecimal(str) {
+            if (!str) return 0;
+            return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+        }
+
+        function updateFooter() {
+            let total = 0;
+            tbody.querySelectorAll('tr').forEach(row => {
+                const qty = parseDecimal(row.querySelector('.item-req-qty')?.value);
+                const cost = parseDecimal(row.querySelector('.item-return-cost')?.value);
+                total += qty * cost;
+            });
+
+            const addCost = parseDecimal(additionalCostInput.value);
+            const net = Math.max(0, total - addCost);
+
+            document.getElementById('totalReturnValue').textContent = fmtCurrency(total);
+            document.getElementById('additionalCostDisplay').textContent = fmtCurrency(addCost);
+            document.getElementById('netRecoveryAmount').textContent = fmtCurrency(net);
+        }
+
+        additionalCostInput.addEventListener('input', updateFooter);
+        updateFooter();
+
+        if (initialVendorId) {
+            loadGoodsReceipts(initialVendorId);
+        } else if (tbody.querySelectorAll('tr').length > 0) {
+            // Có items pre-rendered (validation fail) nhưng chưa có vendor → vẫn validate kho
+            validateWarehouses(false);
+        }
+    </script>
+}

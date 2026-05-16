@@ -4,6 +4,7 @@ using NamEcommerce.Web.Contracts.Models.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
+using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Models.GoodsReceipts;
 
 namespace NamEcommerce.Web.Services.GoodsReceipts;
@@ -89,6 +90,7 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
         var model = new GoodsReceiptDetailsModel
         {
             Id = goodsReceipt.Id,
+            Code = goodsReceipt.Code,
             CreatedOn = goodsReceipt.ReceivedOn,
             TruckDriverName = goodsReceipt.TruckDriverName,
             TruckNumberSerial = goodsReceipt.TruckNumberSerial,
@@ -106,8 +108,15 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
             PurchaseOrderCode = goodsReceipt.PurchaseOrderCode
         };
 
+        // Tổng số lượng đã trả NCC (Confirmed) — group theo GoodsReceiptItemId.
+        var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByGoodsReceiptQuery
+        {
+            GoodsReceiptId = id
+        }).ConfigureAwait(false);
+
         foreach (var item in goodsReceipt.Items)
         {
+            returnedQuantities.TryGetValue(item.Id, out var summary);
             model.Items.Add(new GoodsReceiptDetailsModel.ItemModel(item.Id)
             {
                 ProductId = item.ProductId,
@@ -116,7 +125,9 @@ public sealed class GoodsReceiptModelFactory : IGoodsReceiptModelFactory
                 WarehouseName = item.WarehouseName,
                 Quantity = item.Quantity,
                 UnitCost = item.UnitCost,
-                IsPendingCosting = item.IsPendingCosting
+                IsPendingCosting = item.IsPendingCosting,
+                ReturnedQuantity = summary?.ConfirmedQuantity ?? 0m,
+                PendingReturnQuantity = summary?.PendingQuantity ?? 0m
             });
         }
 

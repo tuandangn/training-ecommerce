@@ -1,3 +1,6 @@
+using NamEcommerce.Web.Contracts.Models.Inventory;
+using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
+
 namespace NamEcommerce.Web.Models.Orders;
 
 [Serializable]
@@ -28,6 +31,8 @@ public sealed record OrderDetailsModel
 
     public IList<OrderItemModel> Items { get; init; } = [];
     public IList<DeliveryNoteBasicModel> DeliveryNotes { get; init; } = [];
+    public OrderAllocatedPurchaseOrderListModel? AllocatedPurchaseOrders { get; set; }
+    public ShortageInfoModel ShortageInfo { get; set; } = new();
 
     public DateTime CreatedOn { get; set; }
 

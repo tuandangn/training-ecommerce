@@ -267,6 +267,12 @@
   <data name="Error.InsufficientStock" xml:space="preserve">
     <value>Insufficient stock for product '{0}' in warehouse '{1}'. Required: {2}, available: {3}.</value>
   </data>
+  <data name="Error.ProductInsufficientStock" xml:space="preserve">
+    <value>Insufficient stock for product</value>
+  </data>
+  <data name="Error.GoodsReceiptCannotDeleteDueToReservedStock" xml:space="preserve">
+    <value>Goods receipt '{0}' cannot be deleted because its stock is reserved for another delivery (product '{1}' in warehouse '{2}'). Cancel the related delivery note first or wait for the goods to be returned.</value>
+  </data>
   <data name="Error.CannotReleaseMoreThanReserved" xml:space="preserve">
     <value>Cannot release more than reserved quantity. Reserved: {0}, requested: {1}.</value>
   </data>
@@ -293,6 +299,9 @@
   </data>
   <data name="Error.OrderItemRequired" xml:space="preserve">
     <value>Order must have at least one item.</value>
+  </data>
+  <data name="Error.PurchaseOrderItemRequired" xml:space="preserve">
+    <value>Purchase order must have at least one item.</value>
   </data>
   <data name="Error.OrderCannotLock" xml:space="preserve">
     <value>Order cannot be locked at current state.</value>
@@ -378,6 +387,12 @@
   <data name="Error.PurchaseOrderIsNotFound" xml:space="preserve">
     <value>Purchase order not found.</value>
   </data>
+  <data name="Error.PurchaseOrder.VendorIsNotAppropriate" xml:space="preserve">
+    <value>Appropriate vendor for products is not found</value>
+  </data>
+  <data name="Error.PurchaseOrder.NoVendorsAppropriate" xml:space="preserve">
+    <value>Vendor is not appropriate for products</value>
+  </data>
   <data name="Error.PurchaseOrderCannotSubmit" xml:space="preserve">
     <value>Purchase order cannot be submitted at current state.</value>
   </data>
@@ -429,9 +444,6 @@
   <data name="Error.PurchaseOrderCannotUpdateOrderItems" xml:space="preserve">
     <value>Purchase order items cannot be updated at current state.</value>
   </data>
-  <data name="Error.PurchaseOrderCannotAddItem" xml:space="preserve">
-    <value>Cannot add items to purchase order at current state.</value>
-  </data>
   <data name="Error.PurchaseOrderReceiveQuantityExceedsOrderedQuantity" xml:space="preserve">
     <value>Receive quantity exceeds the ordered quantity.</value>
   </data>
@@ -452,6 +464,12 @@
   </data>
   <data name="Error.DeliveryNoteCannotChangeStatus" xml:space="preserve">
     <value>Delivery note cannot change status from '{0}' to '{1}'.</value>
+  </data>
+  <data name="Error.DeliveryNoteHasConfirmedReturns" xml:space="preserve">
+    <value>Cannot cancel this delivery note because it has confirmed customer returns. Please process the returns first.</value>
+  </data>
+  <data name="Error.GoodsReceiptHasConfirmedReturns" xml:space="preserve">
+    <value>Cannot delete this goods receipt because it has confirmed vendor returns. Please process the returns first.</value>
   </data>
   <data name="Error.DeliveryProofRequired" xml:space="preserve">
     <value>Delivery proof is required.</value>
@@ -569,6 +587,9 @@
   </data>
   <data name="Msg.SaveSuccess" xml:space="preserve">
     <value>Saved successfully.</value>
+  </data>
+  <data name="Msg.BulkReceive.CreatedMultiple" xml:space="preserve">
+    <value>Created {0} goods receipts.</value>
   </data>
   <data name="Msg.ImageSizeLimit" xml:space="preserve">
     <value>Image size must be less than {0}Mb.</value>
@@ -791,5 +812,8 @@
   </data>
   <data name="Label.ExpectedDeliveryDate" xml:space="preserve">
     <value>Expected delivery date</value>
+  </data>
+  <data name="Error.PurchaseOrder.ProductsAreNotFound" xml:space="preserve">
+    <value>Products are not found</value>
   </data>
 </root>

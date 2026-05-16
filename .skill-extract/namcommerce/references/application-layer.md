@@ -183,3 +183,37 @@ public static class XyzExtensions
     };
 }
 ```
+
+---
+
+## Template: Domain Event Handler
+
+Handler subscribe concrete event (raise từ entity qua `Mark*()`) — đặt tại `Application.Services/Events/{Module}/{Entity}{Action}Handler.cs`. Một handler = một concern.
+
+```csharp
+// NamEcommerce.Application.Services/Events/Xyz/XyzCreatedHandler.cs
+public sealed class XyzCreatedHandler : INotificationHandler<XyzCreated>
+{
+    private readonly ISomeOtherManager _someOtherManager;
+
+    public XyzCreatedHandler(ISomeOtherManager someOtherManager)
+    {
+        _someOtherManager = someOtherManager;
+    }
+
+    public async Task Handle(XyzCreated notification, CancellationToken cancellationToken)
+    {
+        // 1 handler chỉ làm 1 việc (Reserve Stock / sinh CustomerDebt / dọn ảnh...)
+        // Đảm bảo idempotent — handler có thể chạy lại sau retry/restart.
+        await _someOtherManager.DoSomethingAsync(notification.XyzId).ConfigureAwait(false);
+    }
+}
+```
+
+**Quy tắc Handler:**
+- Subscribe **concrete event** (`XyzCreated`, `XyzUpdated`, `XyzDeleted`...) — KHÔNG còn dùng `EntityCreatedNotification<T>` / `EntityUpdatedNotification<T>` / `EntityDeletedNotification<T>` (legacy đang cleanup ở Phase 5).
+- Handler là `INotificationHandler<TEvent>` (MediatR) — tự động dispatch sau SaveChanges qua interceptor.
+- Handler nên **idempotent** (nếu chạy 2 lần với cùng event → cùng kết quả) để chuẩn bị cho Outbox Phase 4 retry.
+- Một event có thể có nhiều handler — mỗi handler một concern. Chia nhỏ để dễ test, không sợ side-effect lan.
+- Inject Manager / DataReader / AppService cần thiết qua constructor.
+- KHÔNG inject `IEventPublisher` — handler chỉ subscribe, không publish (việc publish thuộc về entity raise event).

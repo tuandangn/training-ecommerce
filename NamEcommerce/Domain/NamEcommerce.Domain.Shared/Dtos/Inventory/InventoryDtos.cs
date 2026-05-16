@@ -1,3 +1,5 @@
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
+
 namespace NamEcommerce.Domain.Shared.Dtos.Inventory;
 
 [Serializable]
@@ -11,6 +13,25 @@ public sealed record InventoryStockDto(Guid Id)
     public required decimal QuantityReserved { get; init; }
     public required decimal QuantityAvailable { get; init; }
     public required DateTime UpdatedOnUtc { get; init; }
+    public decimal ReorderLevel { get; init; }
+    public decimal MaxStockLevel { get; init; }
+}
+
+[Serializable]
+public sealed record SetStockLevelsDto(Guid Id)
+{
+    public required decimal ReorderLevel { get; init; }
+    public required decimal MaxStockLevel { get; init; }
+
+    public void Verify()
+    {
+        if (ReorderLevel < 0)
+            throw new InvalidStockOperationException("Error.ReorderLevelMustBeNonNegative");
+        if (MaxStockLevel < 0)
+            throw new InvalidStockOperationException("Error.MaxStockLevelMustBeNonNegative");
+        if (MaxStockLevel > 0 && MaxStockLevel < ReorderLevel)
+            throw new InvalidStockOperationException("Error.MaxStockLevelMustBeGreaterOrEqualReorderLevel");
+    }
 }
 
 [Serializable]

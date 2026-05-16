@@ -1,3 +1,5 @@
+using NamEcommerce.Application.Contracts.Dtos.Common;
+
 namespace NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 
 [Serializable]
@@ -56,3 +58,60 @@ public sealed record ReceivedGoodsForItemAppDto(Guid PurchaseOrderId, Guid Purch
 
 [Serializable]
 public sealed record DeletePurchaseOrderItemAppDto(Guid PurchaseOrderId, Guid ItemId);
+
+/// <summary>DTO cho một dòng item trong batch nhận hàng.</summary>
+[Serializable]
+public sealed record BulkReceiveItemAppDto
+{
+    public required Guid ItemId { get; init; }
+    public required decimal Quantity { get; set; }
+    public required Guid? WarehouseId { get; set; }
+    public decimal? ActualUnitCost { get; set; }
+}
+
+/// <summary>DTO cho thao tác nhận nhiều hàng hóa cùng lúc (bulk receive).</summary>
+[Serializable]
+public sealed record BulkReceiveGoodsAppDto(Guid PurchaseOrderId)
+{
+    public IList<BulkReceiveItemAppDto> Items { get; init; } = [];
+
+    /// <summary>Phí vận chuyển cộng thêm vào đơn (tùy chọn).</summary>
+    public decimal AdditionalShipping { get; set; }
+
+    /// <summary>Tiền thuế cộng thêm vào đơn, đã được tính từ % rate (tùy chọn).</summary>
+    public decimal AdditionalTax { get; set; }
+
+    public Guid? ReceivedByUserId { get; set; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (Items.Count == 0)
+            return (false, "Error.BulkReceive.NoItemsProvided");
+
+        foreach (var item in Items)
+        {
+            if (item.Quantity <= 0)
+                return (false, "Error.PurchaseOrderQuantityMustBePositive");
+        }
+
+        if (AdditionalShipping < 0)
+            return (false, "Error.ShippingAmountCannotBeNegative");
+        if (AdditionalTax < 0)
+            return (false, "Error.TaxAmountCannotBeNegative");
+
+        return (true, string.Empty);
+    }
+}
+
+/// <summary>Kết quả bulk receive — kèm danh sách GoodsReceipt IDs đã tạo để UI có thể link/show.</summary>
+[Serializable]
+public sealed record BulkReceiveGoodsResultAppDto : CommonActionResultDto
+{
+    public IReadOnlyList<Guid> CreatedGoodsReceiptIds { get; init; } = [];
+
+    public static BulkReceiveGoodsResultAppDto CreateSuccess(IReadOnlyList<Guid> createdIds)
+        => new() { Success = true, CreatedGoodsReceiptIds = createdIds };
+
+    public static new BulkReceiveGoodsResultAppDto CreateError(string? errorMessage)
+        => new() { Success = false, ErrorMessage = errorMessage };
+}

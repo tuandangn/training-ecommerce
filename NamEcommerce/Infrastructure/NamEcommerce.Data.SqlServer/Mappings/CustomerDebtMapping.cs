@@ -7,7 +7,7 @@ public sealed class CustomerDebtMapping : IEntityTypeConfiguration<CustomerDebt>
 {
     public void Configure(EntityTypeBuilder<CustomerDebt> builder)
     {
-        builder.ToTable("CustomerDebt", DbScheme);
+        builder.ToTable(nameof(CustomerDebt), DbScheme);
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Code).IsRequired().HasMaxLength(100);
@@ -34,7 +34,6 @@ public sealed class CustomerDebtMapping : IEntityTypeConfiguration<CustomerDebt>
         builder.Property(x => x.Status).IsRequired();
         builder.Property(x => x.DueDateUtc).IsRequired(false);
         
-        builder.Property(x => x.CreatedByUserId).IsRequired(false);
         builder.Property(x => x.CreatedOnUtc).IsRequired();
         builder.Property(x => x.UpdatedOnUtc).IsRequired(false);
     }

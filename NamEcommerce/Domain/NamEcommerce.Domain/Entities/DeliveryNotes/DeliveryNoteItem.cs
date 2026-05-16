@@ -11,7 +11,14 @@ public sealed record DeliveryNoteItem : AppEntity
     
     public decimal Quantity { get; private set; }
     public decimal UnitPrice { get; private set; }
-    
+
+    /// <summary>
+    /// Giá vốn bình quân tại thời điểm xuất kho (snapshot khi MarkDelivered).
+    /// Null nếu phiếu chưa giao hoặc chưa có dữ liệu giá vốn.
+    /// Dùng để tính COGS chính xác trong báo cáo tài chính.
+    /// </summary>
+    public decimal? CostAtDispatch { get; internal set; }
+
     public decimal SubTotal => Quantity * UnitPrice;
 
     public DeliveryNoteItem(Guid id) : base(id)

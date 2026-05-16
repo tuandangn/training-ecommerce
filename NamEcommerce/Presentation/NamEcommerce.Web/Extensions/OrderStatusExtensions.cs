@@ -14,8 +14,9 @@ public static class OrderStatusExtensions
     {
         public string GetDisplayText() => status switch
         {
-            OrderStatus.Pending => "Chưa giao",
-            OrderStatus.Locked => "Đã giao",
+            OrderStatus.Pending => "Chưa khóa",
+            OrderStatus.Locked => "Đã khóa",
+            OrderStatus.Cancelled => "Đã hủy",
             _ => throw new InvalidDataException(nameof(status)),
         };
 
@@ -23,6 +24,7 @@ public static class OrderStatusExtensions
         {
             OrderStatus.Pending => "bg-light text-dark",
             OrderStatus.Locked => "bg-success text-light",
+            OrderStatus.Cancelled => "bg-danger text-light",
             _ => throw new InvalidDataException(nameof(status)),
         };
     }

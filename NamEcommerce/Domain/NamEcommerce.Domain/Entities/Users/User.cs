@@ -1,5 +1,6 @@
 ﻿using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Events.Users;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Users;
 using NamEcommerce.Domain.Shared.Helpers;
@@ -103,6 +104,36 @@ public sealed record User : AppAggregateEntity
 
         return user;
     }
+
+    #endregion
+
+    #region Domain Event Markers
+
+    /// <summary>
+    /// Đánh dấu user vừa được tạo — Manager gọi trước <c>InsertAsync</c>.
+    /// Event sẽ được dispatch sau khi <c>SaveChanges</c> thành công bởi <c>DomainEventDispatchInterceptor</c>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new UserCreated(Id, Username, FullName));
+
+    /// <summary>
+    /// Đánh dấu thông tin user vừa cập nhật — raise <see cref="UserUpdated"/>.
+    /// </summary>
+    internal void MarkUpdated()
+        => RaiseDomainEvent(new UserUpdated(Id));
+
+    /// <summary>
+    /// Đánh dấu mật khẩu user vừa được đổi — raise <see cref="UserPasswordChanged"/>.
+    /// Manager gọi sau khi <see cref="SetPasswordAsync"/> + <c>UpdateAsync</c> thành công.
+    /// </summary>
+    internal void MarkPasswordChanged()
+        => RaiseDomainEvent(new UserPasswordChanged(Id));
+
+    /// <summary>
+    /// Đánh dấu user bị xoá — raise <see cref="UserDeleted"/>.
+    /// </summary>
+    internal void MarkDeleted()
+        => RaiseDomainEvent(new UserDeleted(Id, Username));
 
     #endregion
 

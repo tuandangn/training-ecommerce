@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore.Storage;
+
 namespace NamEcommerce.Data.SqlServer;
 
 public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
@@ -29,8 +31,8 @@ public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
         return Expression.Lambda(equal, parameter);
     }
 
-    public IQueryable<TEntity> GetDataSource<TEntity>() where TEntity : AppAggregateEntity
-        => Set<TEntity>().AsNoTracking();
+    public IQueryable<TEntity> GetDataSource<TEntity>(bool includeHidden) where TEntity : AppAggregateEntity
+        => includeHidden ? Set<TEntity>().IgnoreQueryFilters().AsNoTracking() : Set<TEntity>().AsNoTracking();
 
     public async Task<TEntity?> FindAsync<TEntity>(Guid key, CancellationToken cancellationToken = default)
         where TEntity : AppAggregateEntity
@@ -71,5 +73,23 @@ public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
         Update(entity);
         await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity;
+    }
+
+    async Task<IDataTransaction> IDbContext.BeginTransactionAsync(CancellationToken cancellationToken)
+    {
+        var transaction = await Database.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        return new EfDataTransaction(transaction);
+    }
+
+    private sealed class EfDataTransaction(IDbContextTransaction transaction) : IDataTransaction
+    {
+        public Task CommitAsync(CancellationToken cancellationToken = default)
+            => transaction.CommitAsync(cancellationToken);
+
+        public Task RollbackAsync(CancellationToken cancellationToken = default)
+            => transaction.RollbackAsync(cancellationToken);
+
+        public ValueTask DisposeAsync()
+            => transaction.DisposeAsync();
     }
 }

@@ -1,5 +1,11 @@
 @using NamEcommerce.Web
 @using Microsoft.Extensions.Localization
+@using NamEcommerce.Domain.Shared.Helpers
+@using NamEcommerce.Domain.Shared.Enums.Inventory
+@using NamEcommerce.Domain.Shared.Enums.PurchaseOrders
+@using NamEcommerce.Domain.Shared.Enums.Orders
+@using NamEcommerce.Domain.Shared.Enums.Returns
+@using NamEcommerce.Domain.Shared.Settings
 @using NamEcommerce.Web.Resources
 @using NamEcommerce.Web.Constants
 @using NamEcommerce.Web.Extensions;
@@ -18,6 +24,7 @@
 @using NamEcommerce.Web.Contracts.Configurations
 @using NamEcommerce.Web.Contracts.Models.DeliveryNotes
 @using NamEcommerce.Web.Contracts.Models.GoodsReceipts
+@using NamEcommerce.Web.Contracts.Models.Returns
 @using NamEcommerce.Web.Models
 @using NamEcommerce.Web.Models.Common
 @using NamEcommerce.Web.Models.Catalog
@@ -27,11 +34,7 @@
 @using NamEcommerce.Web.Models.Preparations
 @using NamEcommerce.Web.Models.DeliveryNotes
 @using NamEcommerce.Web.Models.GoodsReceipts
-@using NamEcommerce.Domain.Shared.Helpers
-@using NamEcommerce.Domain.Shared.Enums.Inventory
-@using NamEcommerce.Domain.Shared.Enums.PurchaseOrders
-@using NamEcommerce.Domain.Shared.Enums.Orders
-@using NamEcommerce.Domain.Shared.Settings
+@using NamEcommerce.Web.Models.Returns
 
 @inject IInformationService Information
 @inject IStringLocalizer<SharedResource> L

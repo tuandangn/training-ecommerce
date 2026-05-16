@@ -13,7 +13,7 @@ public sealed class InventoryStockManagerTests
     public async Task UpdateAverageCostAsync_NewAverageCostIsNegative_ThrowsInvalidStockOperationException()
     {
         // Arrange — không cần mock data reader vì validation chạy trước khi truy cập store
-        var manager = new InventoryStockManager(null!, null!, null!, null!, null!, null!, null!);
+        var manager = new InventoryStockManager(null!, null!, null!, null!, null!, null!, null!, null!);
 
         // Act + Assert
         var ex = await Assert.ThrowsAsync<InvalidStockOperationException>(() =>
@@ -36,7 +36,7 @@ public sealed class InventoryStockManagerTests
             stockMovementRepository: null!,
             productDataReader: null!,
             warehouseDataReader: null!,
-            stockMovementDataReader: null!);
+            stockMovementDataReader: null!, null!);
 
         // Act + Assert
         var ex = await Assert.ThrowsAsync<StockNotFoundException>(() =>
@@ -65,7 +65,7 @@ public sealed class InventoryStockManagerTests
             stockMovementRepository: null!,
             productDataReader: null!,
             warehouseDataReader: null!,
-            stockMovementDataReader: null!);
+            stockMovementDataReader: null!, null!);
 
         // Act
         await manager.UpdateAverageCostAsync(productId, warehouseId, 50m);
@@ -94,7 +94,7 @@ public sealed class InventoryStockManagerTests
             stockMovementRepository: null!,
             productDataReader: null!,
             warehouseDataReader: null!,
-            stockMovementDataReader: null!);
+            stockMovementDataReader: null!, null!);
 
         var beforeUpdatedOnUtc = existing.UpdatedOnUtc;
 
@@ -127,7 +127,7 @@ public sealed class InventoryStockManagerTests
             stockMovementRepository: null!,
             productDataReader: null!,
             warehouseDataReader: null!,
-            stockMovementDataReader: null!);
+            stockMovementDataReader: null!, null!);
 
         // Act
         await manager.UpdateAverageCostAsync(productId, warehouseId, 0m);

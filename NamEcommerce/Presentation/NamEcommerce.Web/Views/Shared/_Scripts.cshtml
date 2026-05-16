@@ -1,13 +1,14 @@
 ﻿@using System.Text.Json
-@inject CultureConfig CultureCfg
 @inject WarehouseSettings WarehouseSettings
 
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/chartjs/chart.umd.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
 <script src="~/lib/lightbox/js/lightbox.min.js" defer></script>
 <script src="~/lib/sweet-alert-2/sweetalert2.js" defer></script>
 <script src="~/lib/notyf/notyf.min.js"></script>
 <script src="~/js/notification-center.js" asp-append-version="true"></script>
+<script src="~/js/cowork-offcanvas.js" asp-append-version="true"></script>
 <script src="~/js/site.js" asp-append-version="true" defer></script>
 <script src="~/js/currency-hint.js" asp-append-version="true" defer></script>
 <script src="~/js/decimal-field.js" asp-append-version="true" defer></script>
@@ -15,38 +16,55 @@
     import { setWarehouseSettings } from '/modules/Settings.js';
     setWarehouseSettings(@Html.Raw(JsonSerializer.Serialize(WarehouseSettings)))
 </script>
-<script>
-    // Cấu hình Flatpickr từ server (appsettings.json → CultureConfig)
-    window._fp = {
-        locale:   '@CultureCfg.FlatpickrLocale',
-        dateFmt:  '@CultureCfg.FlatpickrDateFormat',
-        dtFmt:    '@CultureCfg.FlatpickrDateTimeFormat'
-    };
-</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/l10n/@(CultureCfg.FlatpickrLocale).js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/l10n/vn.js" defer></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        var cfg = window._fp;
+        var cfg = {
+            locale: 'vn',
+            dateFmt: 'd/m/Y',
+            dtFmt: 'd/m/Y H:i'
+        };
 
-        // input[type="date"] → altInput hiện cfg.dateFmt, hidden submit Y-m-d
         flatpickr('input[type="date"]', {
             locale:     cfg.locale,
             dateFormat: 'Y-m-d',
             altInput:   true,
             altFormat:  cfg.dateFmt,
-            allowInput: true
+            allowInput: false,
+            closeOnSelect: true,
+            clickOpens: true,
+            onReady: function(selectedDates, dateStr, instance) {
+                const original = instance.input;
+                original.type = "text";
+                original.classList.add("visually-hidden");
+                instance._input?.classList.add('bg-white');
+            },
+            onChange: function(selectedDates, dateStr, instance) {
+                $(instance.input.form).data('validator')?.element(instance.input);
+            }
         });
 
-        // input[type="datetime-local"] → altInput hiện cfg.dtFmt, hidden submit Y-m-d\TH:i
         flatpickr('input[type="datetime-local"]', {
             locale:      cfg.locale,
-            dateFormat:  'Y-m-d\\TH:i',
+            dateFormat:  'Y-m-d\\TH:i:S',
             altInput:    true,
             altFormat:   cfg.dtFmt,
             enableTime:  true,
             time_24hr:   true,
-            allowInput:  true
+            allowInput:  false,
+            closeOnSelect: true,
+            clickOpens: true,
+            onReady: function(selectedDates, dateStr, instance) {
+                const original = instance.input;
+                original.type = "text";
+                original.classList.add("visually-hidden");
+                instance._input?.classList.add('bg-white');
+            },
+            onChange: function(selectedDates, dateStr, instance) {
+                $(instance.input.form).data('validator')?.element(instance.input);
+                if(selectedDates.length) instance.close();
+            }
         });
 
         // Sidebar toggle (mobile)

@@ -63,7 +63,6 @@ public sealed record VendorDebtDto
     public DateTime? DueDateUtc { get; init; }
 
     public DateTime CreatedOnUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public IList<VendorPaymentDto> Payments { get; init; } = [];
 }
@@ -75,7 +74,6 @@ public sealed record CreateVendorDebtDto
     public required Guid PurchaseOrderId { get; init; }
     public required decimal TotalAmount { get; init; }
     public DateTime? DueDateUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public void Verify()
     {
@@ -95,7 +93,6 @@ public sealed record CreateVendorDebtFromGoodsReceiptDto
     public required Guid GoodsReceiptId { get; init; }
     public required decimal TotalAmount { get; init; }
     public DateTime? DueDateUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public void Verify()
     {
@@ -103,6 +100,25 @@ public sealed record CreateVendorDebtFromGoodsReceiptDto
             throw new NamEcommerceDomainException("Error.VendorRequired");
         if (GoodsReceiptId == Guid.Empty)
             throw new NamEcommerceDomainException("Error.GoodsReceiptRequired");
+        if (TotalAmount <= 0)
+            throw new NamEcommerceDomainException("Error.VendorDebtTotalAmountMustBePositive");
+    }
+}
+
+/// <summary>
+/// Tạo công nợ ban đầu (số dư đầu kỳ) cho nhà cung cấp — không gắn PO hay phiếu nhập.
+/// Dùng khi tạo mới NCC mà đã có sẵn nợ cũ.
+/// </summary>
+[Serializable]
+public sealed record CreateInitialVendorDebtDto
+{
+    public required Guid VendorId { get; init; }
+    public required decimal TotalAmount { get; init; }
+
+    public void Verify()
+    {
+        if (VendorId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.VendorRequired");
         if (TotalAmount <= 0)
             throw new NamEcommerceDomainException("Error.VendorDebtTotalAmountMustBePositive");
     }

@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Services.Common;
 
 namespace NamEcommerce.Domain.Services.Debts;
 
@@ -22,16 +23,41 @@ public sealed class CustomerDebtManager(
 {
     private async Task<string> GenerateDebtCodeAsync()
     {
-        var datePrefix = $"CN-{DateTime.UtcNow:yyyyMMdd}";
-        var count = debtReader.DataSource.Count(d => d.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var monthPrefix = $"CN-KH-{DateTime.UtcNow:yyMM}";
+        var count = ((EntityDataReader<CustomerDebt>)debtReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        return $"{monthPrefix}-{(count + 1):D3}";
     }
 
     private async Task<string> GeneratePaymentCodeAsync()
     {
-        var datePrefix = $"PT-{DateTime.UtcNow:yyyyMMdd}";
-        var count = paymentReader.DataSource.Count(p => p.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var monthPrefix = $"PT-KH-{DateTime.UtcNow:yyMM}";
+        var count = ((EntityDataReader<CustomerPayment>)paymentReader).SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
+        return $"{monthPrefix}-{(count + 1):D3}";
+    }
+
+    public async Task<CustomerDebtDto> CreateInitialDebtAsync(CreateInitialCustomerDebtDto dto)
+    {
+        dto.Verify();
+
+        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
+
+        var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
+
+        var debt = new CustomerDebt(
+            code: code,
+            customerId: customer.Id,
+            customerName: customer.FullName,
+            totalAmount: dto.TotalAmount
+        )
+        {
+            CustomerAddress = customer.Address,
+            CustomerPhone = customer.PhoneNumber
+        };
+
+        debt.MarkCreated();
+        var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
+        return MapToDto(inserted);
     }
 
     public async Task<CustomerDebtDto> CreateDebtFromDeliveryNoteAsync(CreateCustomerDebtDto dto)
@@ -60,8 +86,7 @@ public sealed class CustomerDebtManager(
             orderId: deliveryNote.OrderId,
             orderCode: deliveryNote.OrderCode ?? string.Empty,
             totalAmount: dto.TotalAmount,
-            dueDateUtc: dto.DueDateUtc,
-            createdByUserId: dto.CreatedByUserId
+            dueDateUtc: dto.DueDateUtc
         )
         {
             CustomerAddress = customer.PhoneNumber,
@@ -80,6 +105,7 @@ public sealed class CustomerDebtManager(
             await paymentRepository.UpdateAsync(deposit).ConfigureAwait(false);
         }
 
+        debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
         return MapToDto(inserted);
     }
@@ -118,6 +144,7 @@ public sealed class CustomerDebtManager(
             {
                 debt.ApplyPayment(payment.Amount);
                 payment.MarkAsApplied();
+                debt.MarkUpdated();
                 await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
             }
         }
@@ -130,10 +157,12 @@ public sealed class CustomerDebtManager(
                 debt.ApplyPayment(payment.Amount);
                 payment.MarkAsApplied();
                 payment.CustomerDebtId = debt.Id;
+                debt.MarkUpdated();
                 await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
             }
         }
 
+        payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
         return MapToPaymentDto(inserted);
     }
@@ -228,7 +257,9 @@ public sealed class CustomerDebtManager(
             debt.ApplyPayment(applyAmount);
             payment.MarkAsApplied();
 
+            debt.MarkUpdated();
             await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+            payment.MarkCreated();
             var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
             results.Add(MapToPaymentDto(inserted));
 
@@ -250,6 +281,7 @@ public sealed class CustomerDebtManager(
                 recordedByUserId: dto.RecordedByUserId,
                 note: string.IsNullOrEmpty(dto.Note) ? "Tiền dư sau khi thanh toán nợ" : dto.Note
             );
+            overpayment.MarkCreated();
             var inserted = await paymentRepository.InsertAsync(overpayment).ConfigureAwait(false);
             results.Add(MapToPaymentDto(inserted));
         }
@@ -410,8 +442,7 @@ public sealed class CustomerDebtManager(
             RemainingAmount = debt.RemainingAmount,
             Status = debt.Status,
             DueDateUtc = debt.DueDateUtc,
-            CreatedOnUtc = debt.CreatedOnUtc,
-            CreatedByUserId = debt.CreatedByUserId
+            CreatedOnUtc = debt.CreatedOnUtc
         };
     }
 

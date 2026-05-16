@@ -34,33 +34,22 @@ public sealed class CreateProductModel
     [Display(Name = "Hình ảnh")]
     public Base64ImageModel? ImageFile { get; set; }
 
-    [Display(Name = "Quản lý hàng tồn")]
-    public bool HasExistingStockQuantity { get; set; }
+    // Tồn kho ban đầu
+    [ValidateNever]
     public ProductInventoryModel? ProductInventory { get; set; }
 
-    [Serializable]
+    public bool HasExistingStockQuantity =>
+        ProductInventory?.ProductStocks.Any(s => s.Quantity > 0) ?? false;
+
     public sealed class ProductInventoryModel
     {
-        [Display(Name = "Giá nhập")]
-        [UIHint("Currency")]
-        public decimal CostPrice { get; set; }
-
-        [Display(Name = "Giá bán")]
-        [UIHint("Currency")]
-        public decimal UnitPrice { get; set; }
-
-        public IList<ProductStockModel> ProductStocks { get; set; } = [];
+        public List<ProductStockModel> ProductStocks { get; set; } = [];
     }
 
-    [Serializable]
     public sealed class ProductStockModel
     {
-        [Display(Name = "Kho hàng")]
-        public Guid? WarehouseId { get; set; }
-        [ValidateNever]
-        public string? WarehouseName { get; set; }
-
-        [Display(Name = "Số lượng")]
+        public Guid WarehouseId { get; set; }
+        public string WarehouseName { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
     }
 }

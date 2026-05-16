@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Users;
+using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Events.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.Media;
@@ -16,19 +17,45 @@ namespace NamEcommerce.Domain.Entities.GoodsReceipts;
 [Serializable]
 public sealed record GoodsReceipt : AppAggregateEntity
 {
-    private GoodsReceipt() : base(Guid.Empty) { }
+    public const string GoodsReceiptCodePrefix = "PN";
+
+    private GoodsReceipt() : base(Guid.Empty) { Code = string.Empty; }
 
     private GoodsReceipt(Guid id, CurrentUserInfoDto? createdByUser) : base(id)
     {
+        Code = string.Empty;
         CreatedByUserId = createdByUser?.Id;
         CreatedByUsername = createdByUser?.Username;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
+    private GoodsReceipt(Guid id, Guid? createdByUserId, string? createdByUsername = null) : base(id)
+    {
+        Code = string.Empty;
+        CreatedByUserId = createdByUserId;
+        CreatedByUsername = createdByUsername;
+        CreatedOnUtc = DateTime.UtcNow;
+    }
+
+    public string Code { get; private set; }
+
+    internal void SetCode(string code) => Code = code;
+
     public DateTime ReceivedOnUtc { get; private set; }
+
+    /// <summary>
+    /// Nguồn gốc phiếu nhập — quyết định business rule của handler (sinh / không sinh VendorDebt, v.v.).
+    /// Mặc định <see cref="GoodsReceiptSourceType.FromVendor"/>; chỉ Manager / handler nội bộ mới được đổi.
+    /// </summary>
+    public GoodsReceiptSourceType SourceType { get; internal set; } = GoodsReceiptSourceType.FromVendor;
 
     public Guid? PurchaseOrderId { get; private set; }
     public string? PurchaseOrderCode { get; private set; }
+
+    /// <summary>Link các GoodsReceipt cùng đợt bulk-receive (nhiều kho trong 1 lần nhập). Null nếu tạo lẻ.</summary>
+    public Guid? BulkReceiveBatchId { get; private set; }
+
+    internal void SetBulkReceiveBatchId(Guid batchId) => BulkReceiveBatchId = batchId;
 
     public string? TruckDriverName
     {
@@ -66,13 +93,38 @@ public sealed record GoodsReceipt : AppAggregateEntity
     internal async Task AddItemAsync(Guid productId, Guid? warehouseId, decimal quantity, decimal? unitCost,
         IGetByIdService<Product> productByIdGetter, WarehouseSettings warehouseSettings, IGetByIdService<Warehouse> warehouseByIdGetter)
     {
-        var hasSameProductAndWarehouse = Items.Any(item => item.ProductId == productId && item.WarehouseId == warehouseId);
-        if (hasSameProductAndWarehouse)
-            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.SameProductAndWarehouseExisting");
-
         var item = await GoodsReceiptItem.CreateAsync(productId, warehouseId, quantity, unitCost, productByIdGetter, warehouseSettings, warehouseByIdGetter).ConfigureAwait(false);
         _items.Add(item);
     }
+
+    internal void AddItem(GoodsReceiptItem item)
+    {
+        if (item is null)
+            throw new ArgumentNullException(nameof(item));
+
+        _items.Add(item);
+    }
+
+    internal void SplitToNewItemWithQuantity(Guid itemId, decimal quantity)
+    {
+        var item = Items.FirstOrDefault(i => i.Id == itemId);
+        if (item is null)
+            throw new GoodsReceiptItemIsNotFoundException(itemId);
+
+        if (quantity > item.Quantity)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.SplitQuantityTooLarge");
+
+        if (quantity == item.Quantity)
+            return;
+
+        item.Quantity -= quantity;
+        var newItem = item.CopyWithQuantity(quantity);
+
+        _items.Add(newItem);
+    }
+
+    internal void RaiseItemSplitOnLinking(Guid purchaseOrderId, Guid originalItemId, Guid productId, decimal splitQuantity, decimal assignedUnitCost)
+        => RaiseDomainEvent(new GoodsReceiptItemSplitOnLinking(Id, purchaseOrderId, originalItemId, productId, splitQuantity, assignedUnitCost));
 
     internal void ItemUnitCost(Guid itemId, decimal unitCost)
     {
@@ -155,13 +207,54 @@ public sealed record GoodsReceipt : AppAggregateEntity
         return goodsReceipt;
     }
 
-    #endregion
+    internal static async Task<GoodsReceipt> CreateFromSourceAsync(Guid id, IGetByIdService<GoodsReceipt> byIdGetter, Guid? createdByUserId, string? createdByUsername = null)
+    {
+        ArgumentNullException.ThrowIfNull(byIdGetter);
 
+        var sameIdGoodsReceipt = await byIdGetter.GetByIdAsync(id).ConfigureAwait(false);
+        if (sameIdGoodsReceipt is not null)
+            throw new GoodsReceiptIdIsExistingException(id);
+
+        return new GoodsReceipt(id, createdByUserId, createdByUsername);
+    }
+
+    #endregion
 
     #region Events
 
     private void MarkSetToPurchaseOrder(Guid purchaseOrderId) => RaiseDomainEvent(new GoodsReceiptSetToPurchaseOrder(Id, purchaseOrderId));
     private void MarkRemovedFromPurchaseOrder(Guid purchaseOrderId) => RaiseDomainEvent(new GoodsReceiptRemovedFromPurchaseOrder(Id, purchaseOrderId));
+
+    /// <summary>
+    /// Manager gọi trước <c>InsertAsync</c>. Handler sẽ cộng tồn kho cho từng item có WarehouseId
+    /// và thử sinh công nợ NCC nếu phiếu được tạo với đủ vendor + UnitCost.
+    /// </summary>
+    internal void MarkCreated() => RaiseDomainEvent(new GoodsReceiptCreated(Id));
+
+    /// <summary>
+    /// Manager gọi sau khi cập nhật thông tin chung (note, truck, ảnh, vendor inline) qua
+    /// <c>UpdateGoodsReceiptAsync</c>. Hiện không có handler subscribe — chủ yếu để audit/tracking.
+    /// </summary>
+    internal void MarkUpdated() => RaiseDomainEvent(new GoodsReceiptUpdated(Id));
+
+    /// <summary>
+    /// Manager gọi sau <c>SetUnitCost</c> cho 1 dòng hàng. Handler sẽ tính lại AverageCost
+    /// theo Full Recalculation và thử sinh công nợ NCC.
+    /// </summary>
+    internal void MarkItemUnitCostSet(Guid itemId) => RaiseDomainEvent(new GoodsReceiptItemUnitCostSet(Id, itemId));
+
+    /// <summary>
+    /// Manager gọi sau khi gắn / đổi / bỏ vendor qua <c>SetGoodsReceiptVendorAsync</c>.
+    /// Handler sẽ thử sinh công nợ NCC (idempotent).
+    /// </summary>
+    internal void MarkVendorChanged() => RaiseDomainEvent(new GoodsReceiptVendorChanged(Id));
+
+    /// <summary>
+    /// Manager gọi trước <c>DeleteAsync</c>. Event mang theo toàn bộ <c>PictureIds</c> hiện tại
+    /// để handler dọn ảnh khỏi storage. Handler còn hoàn nguyên tồn kho cho các item có WarehouseId
+    /// (re-fetch entity vì soft delete).
+    /// </summary>
+    internal void MarkDeleted() => RaiseDomainEvent(new GoodsReceiptDeleted(Id, _pictureIds.ToList().AsReadOnly()));
 
     #endregion
 }

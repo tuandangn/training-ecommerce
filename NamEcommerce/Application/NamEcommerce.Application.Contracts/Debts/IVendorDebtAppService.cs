@@ -11,6 +11,8 @@ public interface IVendorDebtAppService
     /// </summary>
     Task<CreateVendorDebtResultAppDto> CreateDebtFromPurchaseOrderAsync(CreateVendorDebtAppDto dto);
 
+    Task<CreateInitialVendorDebtResultAppDto> CreateInitialDebtAsync(CreateInitialVendorDebtAppDto dto);
+
     /// <summary>
     /// Ghi nhận thanh toán cho 1 phiếu nợ cụ thể.
     /// Không throw — lỗi được trả về trong <see cref="RecordVendorPaymentResultAppDto"/>.

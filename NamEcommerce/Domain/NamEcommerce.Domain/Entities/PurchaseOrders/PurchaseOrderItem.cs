@@ -12,12 +12,11 @@ public record PurchaseOrderItem : AppEntity
         ProductId = productId;
         QuantityOrdered = quantityOrdered;
         UnitCost = unitCost;
-
-        CreatedOnUtc = DateTime.UtcNow;
     }
 
     public Guid PurchaseOrderId { get; private set; }
     public Guid ProductId { get; private set; }
+    public Guid? WarehouseId { get; private set; }
 
     public decimal QuantityOrdered { get; internal set; }
     public decimal QuantityReceived { get; private set; }
@@ -25,8 +24,6 @@ public record PurchaseOrderItem : AppEntity
     public decimal TotalCost => QuantityOrdered * UnitCost;
 
     public string? Note { get; internal set; }
-
-    public DateTime CreatedOnUtc { get; private set; }
 
     #region Methods
 
@@ -39,6 +36,16 @@ public record PurchaseOrderItem : AppEntity
             throw new PurchaseOrderReceiveQuantityExceedsOrderedQuantityException();
 
         QuantityReceived += quantityReceived;
+    }
+
+    internal void RevertQuantityReceived(decimal quantity)
+    {
+        if (quantity < 0)
+            throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be greater than or equal to 0");
+        if (quantity > QuantityReceived)
+            throw new ArgumentOutOfRangeException(nameof(quantity), "Cannot revert more than QuantityReceived");
+
+        QuantityReceived -= quantity;
     }
 
     internal bool CanReceiveQuantity(decimal receivingQuantity)

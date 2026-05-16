@@ -58,7 +58,8 @@ public sealed class VendorController : BaseAuthorizedController
             Name = model.Name!,
             PhoneNumber = model.PhoneNumber!,
             Address = model.Address,
-            DisplayOrder = model.DisplayOrder
+            DisplayOrder = model.DisplayOrder,
+            InitialDebt = model.InitialDebt
         });
         if (!createVendorResult.Success)
         {
@@ -176,5 +177,21 @@ public sealed class VendorController : BaseAuthorizedController
             address = vendor.Address
         }).ToList();
         return Json(vendors);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> PickItem(Guid id)
+    {
+        var vendor = await _mediator.Send(new GetVendorQuery { Id = id });
+        if (vendor is null)
+            return NotFound();
+
+        return Json(new
+        {
+            id = vendor.Id,
+            name = vendor.Name,
+            phone = vendor.PhoneNumber,
+            address = vendor.Address
+        });
     }
 }

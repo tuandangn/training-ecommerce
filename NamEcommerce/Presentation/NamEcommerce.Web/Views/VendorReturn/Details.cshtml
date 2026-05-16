@@ -1,0 +1,415 @@
+@using NamEcommerce.Domain.Shared.Enums.Returns
+@model NamEcommerce.Web.Contracts.Models.Returns.VendorReturnModel
+@{
+    ViewData[ViewConstants.PageTitle] = $"Phiếu trả NCC - {Model.Code}";
+
+    var status = (VendorReturnStatus)Model.Status;
+    var (badgeClass, badgeText) = status switch
+    {
+        VendorReturnStatus.Draft => ("bg-secondary", "Bản nháp"),
+        VendorReturnStatus.Inspecting => ("bg-warning text-dark", "Đang kiểm tra"),
+        VendorReturnStatus.Confirmed => ("bg-success", "Đã xác nhận"),
+        VendorReturnStatus.Cancelled => ("bg-danger", "Đã huỷ"),
+        VendorReturnStatus.Reversed => ("bg-dark", "Đã đảo ngược"),
+        _ => ("bg-secondary", "—")
+    };
+}
+@Html.AntiForgeryToken()
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        @Model.Code
+        <span class="badge @badgeClass ms-2" style="font-size:.75rem;vertical-align:middle;">@badgeText</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="VendorReturn" class="text-decoration-none">Trả hàng nhà cung cấp</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.Code</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<div class="row g-3">
+    <!-- Cột trái: danh sách hàng trả -->
+    <div class="col-lg-8 order-1 order-lg-0">
+        <div class="content-card">
+            <div class="content-card-header">
+                <h5 class="mb-0">
+                    Danh sách hàng trả
+                    <span class="badge bg-light text-muted border ms-1" style="font-size:.72rem;font-weight:500;">
+                        @Model.Items.Count mặt hàng
+                    </span>
+                </h5>
+                <span class="fw-semibold text-success">@Model.NetRecoveryAmount.DisplayCurrency()</span>
+            </div>
+            <div class="content-card-body-flush">
+                <div class="table-responsive">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Hàng hóa</th>
+                                <th class="text-end" style="width:110px">SL yêu cầu</th>
+                                <th class="text-end" style="width:110px">SL chấp nhận</th>
+                                <th class="text-end" style="width:120px">Giá vốn gốc</th>
+                                <th class="text-end" style="width:120px">Giá trả NCC</th>
+                                <th class="text-end pe-4" style="width:130px">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr class="align-middle">
+                                    <td class="ps-4">
+                                        <div class="fw-medium">@item.ProductName</div>
+                                        @if (item.GoodsReceiptItemId.HasValue)
+                                        {
+                                            <div class="text-muted" style="font-size:.75rem;"><i class="bi bi-link-45deg me-1"></i>Từ phiếu nhập</div>
+                                        }
+                                    </td>
+                                    <td class="text-end text-muted">@item.RequestedQuantity.DisplayQuantity()</td>
+                                    <td class="text-end fw-medium">@item.AcceptedQuantity.DisplayQuantity()</td>
+                                    <td class="text-end text-muted small">
+                                        @(item.OriginalUnitCost.HasValue ? item.OriginalUnitCost.Value.DisplayCurrency() : "—")
+                                    </td>
+                                    <td class="text-end text-muted">@item.ReturnUnitCost.DisplayCurrency()</td>
+                                    <td class="text-end pe-4 fw-semibold">@item.AcceptedTotal.DisplayCurrency()</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="5" class="ps-4 text-end text-muted small fw-medium pe-3">Tổng giá trị trả</td>
+                                <td class="text-end pe-4 fw-semibold text-dark">@Model.Items.Sum(i => i.AcceptedTotal).DisplayCurrency()</td>
+                            </tr>
+                            @if (Model.AdditionalCost > 0)
+                            {
+                                <tr>
+                                    <td colspan="5" class="ps-4 text-end text-muted small fw-medium pe-3">Chi phí phát sinh</td>
+                                    <td class="text-end pe-4 fw-medium text-danger">−@Model.AdditionalCost.DisplayCurrency()</td>
+                                </tr>
+                            }
+                            <tr class="table-success">
+                                <td colspan="5" class="ps-4 text-end small fw-bold pe-3">Tổng thu hồi từ NCC</td>
+                                <td class="text-end pe-4 fw-bold text-success">@Model.NetRecoveryAmount.DisplayCurrency()</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="content-card-footer py-2 d-flex align-items-center justify-content-between">
+                <a asp-action="List" class="btn btn-link text-decoration-none text-muted small">
+                    <i class="bi bi-arrow-left me-1"></i>Trở về
+                </a>
+                <div class="d-flex gap-2">
+                    @if (status == VendorReturnStatus.Draft)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-warning btn-move-inspecting" data-id="@Model.Id">
+                            <i class="bi bi-search me-1"></i>Chuyển sang kiểm tra
+                        </button>
+                    }
+                    @if (status == VendorReturnStatus.Inspecting)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-success btn-confirm" data-id="@Model.Id">
+                            <i class="bi bi-check-circle me-1"></i>Xác nhận trả hàng
+                        </button>
+                    }
+                    @if (status == VendorReturnStatus.Draft || status == VendorReturnStatus.Inspecting)
+                    {
+                        <form method="post" asp-action="Cancel" asp-route-id="@Model.Id"
+                              onsubmit="return confirm('Bạn có chắc muốn huỷ phiếu trả hàng này?')">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-circle me-1"></i>Huỷ phiếu
+                            </button>
+                        </form>
+                    }
+                    @if (status == VendorReturnStatus.Confirmed)
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#reverseModal">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Đảo ngược
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (status == VendorReturnStatus.Confirmed)
+    {
+        <div class="modal fade" id="reverseModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <form asp-action="Reverse" asp-route-id="@Model.Id" method="post">
+                        @Html.AntiForgeryToken()
+                        <div class="modal-header border-0 pb-0">
+                            <h5 class="modal-title fw-bold">
+                                <i class="bi bi-arrow-counterclockwise me-2 text-danger"></i>
+                                Đảo ngược phiếu trả NCC
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-danger border-0 small">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                Thao tác này sẽ <strong>hoàn nguyên</strong>: cộng lại tồn kho, tăng lại công nợ NCC, xóa chi phí phát sinh đã ghi. Không thể undo.
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold text-muted text-uppercase" for="reverseReason">Lý do đảo ngược</label>
+                                <textarea name="reason" id="reverseReason" class="form-control" rows="3" required minlength="3" maxlength="1000"
+                                          placeholder="VD: Khách trả lại hàng, NCC giao lại, lập sai phiếu, ..."></textarea>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-0 pt-0 pb-3">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Xác nhận đảo ngược
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Cột phải: thông tin phiếu -->
+    <div class="col-lg-4 order-0 order-lg-1">
+        <!-- Thông tin phiếu -->
+        <div class="content-card mb-3">
+            <div class="content-card-header">
+                <h5 class="mb-0">Thông tin phiếu</h5>
+                @if (status == VendorReturnStatus.Draft)
+                {
+                    <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#editInfoModal">
+                        <i class="bi bi-pencil me-1"></i>Sửa
+                    </button>
+                }
+            </div>
+            <div class="content-card-body p-0">
+                <dl class="receipt-info-list mb-0">
+                    <div class="receipt-info-row">
+                        <dt>Trạng thái</dt>
+                        <dd><span class="badge @badgeClass">@badgeText</span></dd>
+                    </div>
+                    <div class="receipt-info-row">
+                        <dt>Ngày trả</dt>
+                        <dd class="fw-semibold">@Model.ReturnDate.ToString(ViewConstants.DefaultDateFormat)</dd>
+                    </div>
+                    @if (Model.ConfirmedOn.HasValue)
+                    {
+                        <div class="receipt-info-row">
+                            <dt>Xác nhận</dt>
+                            <dd class="text-success fw-semibold">@Model.ConfirmedOn.Value.ToString(ViewConstants.DefaultDateTimeFormat)</dd>
+                        </div>
+                    }
+                    @if (Model.ReversedOn.HasValue)
+                    {
+                        <div class="receipt-info-row">
+                            <dt>Đảo ngược</dt>
+                            <dd class="text-dark fw-semibold">@Model.ReversedOn.Value.ToString(ViewConstants.DefaultDateTimeFormat)</dd>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.ReversedReason))
+                        {
+                            <div class="receipt-info-row">
+                                <dt>Lý do</dt>
+                                <dd class="text-secondary">@Model.ReversedReason</dd>
+                            </div>
+                        }
+                    }
+                    @if (Model.AdditionalCost > 0)
+                    {
+                        <div class="receipt-info-row">
+                            <dt>Chi phí</dt>
+                            <dd class="text-danger fw-medium">@Model.AdditionalCost.DisplayCurrency()</dd>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Note))
+                    {
+                        <div class="receipt-info-row">
+                            <dt>Ghi chú</dt>
+                            <dd class="text-secondary">@Model.Note</dd>
+                        </div>
+                    }
+                    <div class="receipt-info-row">
+                        <dt>Tạo lúc</dt>
+                        <dd class="text-muted small">@Model.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+        <!-- Nhà cung cấp & nguồn hàng -->
+        <div class="content-card mb-3">
+            <div class="content-card-header">
+                <h5 class="mb-0">Nhà cung cấp</h5>
+            </div>
+            <div class="content-card-body p-0">
+                <dl class="receipt-info-list mb-0">
+                    <div class="receipt-info-row">
+                        <dt>NCC</dt>
+                        <dd class="fw-semibold"><i class="bi bi-building-fill me-1 text-primary"></i>@Model.VendorName</dd>
+                    </div>
+                    <div class="receipt-info-row">
+                        <dt>Kho xuất</dt>
+                        <dd class="text-muted"><i class="bi bi-building me-1"></i>@Model.WarehouseName</dd>
+                    </div>
+                    @if (Model.GoodsReceiptId.HasValue)
+                    {
+                        <div class="receipt-info-row">
+                            <dt>Phiếu nhập</dt>
+                            <dd>
+                                <a asp-controller="GoodsReceipt" asp-action="Details" asp-route-id="@Model.GoodsReceiptId"
+                                   class="text-decoration-none">
+                                    <i class="bi bi-box-arrow-in-down me-1"></i>Xem phiếu nhập
+                                </a>
+                            </dd>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="receipt-info-row">
+                            <dt>Nguồn</dt>
+                            <dd><span class="badge bg-secondary-subtle text-secondary border">Tạo tự do</span></dd>
+                        </div>
+                    }
+                    @if (Model.PurchaseOrderId.HasValue)
+                    {
+                        <div class="receipt-info-row">
+                            <dt>Đặt hàng</dt>
+                            <dd>
+                                <a asp-controller="PurchaseOrder" asp-action="Details" asp-route-id="@Model.PurchaseOrderId"
+                                   class="text-decoration-none">
+                                    <i class="bi bi-file-earmark-text me-1"></i>Xem PO
+                                </a>
+                            </dd>
+                        </div>
+                    }
+                </dl>
+            </div>
+        </div>
+
+        <!-- Phiếu xuất kho sinh ra (nếu đã xác nhận) -->
+        @if (Model.GeneratedDeliveryNoteId.HasValue)
+        {
+            <div class="content-card">
+                <div class="content-card-header">
+                    <h5 class="mb-0">Phiếu xuất kho</h5>
+                </div>
+                <div class="content-card-body">
+                    <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@Model.GeneratedDeliveryNoteId"
+                       class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none fs-6 px-3 py-2">
+                        <i class="bi bi-box-arrow-up me-1"></i>Xem phiếu xuất kho
+                    </a>
+                    <div class="text-muted small mt-1">Phiếu xuất kho được tự động tạo khi xác nhận trả hàng NCC.</div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- Modal: Sửa thông tin -->
+<div class="modal fade" id="editInfoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Cập nhật thông tin</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <div class="mb-3">
+                    <label class="form-label small fw-medium text-muted" for="editReturnDate">Ngày trả hàng</label>
+                    <input type="date" id="editReturnDate" name="returnDate"
+                           value="@Model.ReturnDate.ToString("yyyy-MM-dd")" class="form-control" />
+                </div>
+                <div class="mb-0">
+                    <label class="form-label small fw-medium text-muted" for="editNote">Ghi chú</label>
+                    <textarea id="editNote" name="note" class="form-control" rows="3"
+                              placeholder="Ghi chú..." maxlength="2000">@Model.Note</textarea>
+                </div>
+                <div id="editInfoError" class="alert alert-danger d-none mt-3 py-2 mb-0"></div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnSaveInfo" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+<style>
+    .receipt-info-list { margin: 0; }
+    .receipt-info-row {
+        display: flex;
+        align-items: baseline;
+        padding: .6rem 1.25rem;
+        border-bottom: 1px solid var(--bs-border-color-translucent);
+        gap: .75rem;
+    }
+    .receipt-info-row:last-child { border-bottom: none; }
+    .receipt-info-row dt {
+        font-size: .75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        color: var(--bs-secondary);
+        width: 72px;
+        flex-shrink: 0;
+    }
+    .receipt-info-row dd { margin: 0; font-size: .875rem; }
+</style>
+}
+
+@section Scripts {
+    <script type="module">
+        import { toast } from "/modules/modals.js";
+
+        const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+        const returnId = '@Model.Id';
+
+        // ── Chuyển sang kiểm tra ────────────────────────────────────────────
+        document.querySelector('.btn-move-inspecting')?.addEventListener('click', async () => {
+            if (!confirm('Xác nhận chuyển phiếu sang trạng thái Đang kiểm tra?')) return;
+            const fd = new FormData();
+            fd.append('id', returnId);
+            fd.append('__RequestVerificationToken', antiForgeryToken);
+            try {
+                const res = await fetch('@Url.Action("MoveToInspecting")', { method: 'POST', body: fd }).then(r => r.json());
+                if (res.success) location.reload();
+                else toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
+            } catch { toast('Lỗi', 'Lỗi kết nối. Vui lòng thử lại.', 'danger'); }
+        });
+
+        // ── Xác nhận trả hàng ───────────────────────────────────────────────
+        document.querySelector('.btn-confirm')?.addEventListener('click', async () => {
+            if (!confirm('Xác nhận phiếu trả hàng NCC? Hệ thống sẽ tự động tạo phiếu xuất kho và giảm công nợ nhà cung cấp.')) return;
+            const fd = new FormData();
+            fd.append('id', returnId);
+            fd.append('__RequestVerificationToken', antiForgeryToken);
+            try {
+                const res = await fetch('@Url.Action("Confirm")', { method: 'POST', body: fd }).then(r => r.json());
+                if (res.success) location.reload();
+                else toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
+            } catch { toast('Lỗi', 'Lỗi kết nối. Vui lòng thử lại.', 'danger'); }
+        });
+
+        // ── Lưu thông tin ───────────────────────────────────────────────────
+        document.getElementById('btnSaveInfo')?.addEventListener('click', async () => {
+            const errEl = document.getElementById('editInfoError');
+            errEl.classList.add('d-none');
+            const fd = new FormData();
+            fd.append('id', returnId);
+            fd.append('returnDate', document.getElementById('editReturnDate').value);
+            fd.append('note', document.getElementById('editNote').value);
+            fd.append('__RequestVerificationToken', antiForgeryToken);
+            try {
+                const res = await fetch('@Url.Action("Update")', { method: 'POST', body: fd }).then(r => r.json());
+                if (res.success) location.reload();
+                else { errEl.textContent = res.message || 'Cập nhật thất bại.'; errEl.classList.remove('d-none'); }
+            } catch { errEl.textContent = 'Lỗi kết nối. Vui lòng thử lại.'; errEl.classList.remove('d-none'); }
+        });
+    </script>
+}

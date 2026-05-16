@@ -1,0 +1,87 @@
+@model NamEcommerce.Web.Contracts.Models.Inventory.ProductReservationLedgerListModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Ledger dat hang";
+}
+
+<section class="content-title my-4 text-center">
+    <h1>
+        Ledger dat hang
+        <span class="text-muted d-block fs-3 ps-2">
+            @Model.ProductName
+        </span>
+    </h1>
+</section>
+
+<section class="content-data p-4 mb-5 shadow">
+    <div class="mb-3">
+        <a asp-action="StockList" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Quay lai
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Ngay phat sinh</th>
+                    <th>Don hang</th>
+                    <th class="text-end">So luong</th>
+                    <th>Ly do</th>
+                    <th>Reference</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Data.Pagination.TotalCount > 0)
+                {
+                    @foreach (var item in Model.Data)
+                    {
+                        var isPositive = item.QuantityDelta > 0;
+                        var colorClass = isPositive ? "text-primary" : "text-success";
+                        var sign = isPositive ? "+" : "";
+
+                        <tr>
+                            <td>@item.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</td>
+                            <td>
+                                @if (!string.IsNullOrWhiteSpace(item.OrderCode))
+                                {
+                                    <a asp-controller="Order" asp-action="Details" asp-route-id="@item.OrderId" class="fw-semibold text-decoration-none">
+                                        @item.OrderCode
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">@item.OrderId</span>
+                                }
+                            </td>
+                            <td class="text-end fw-bold @colorClass">@sign@item.QuantityDelta.DisplayQuantity()</td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    @((ProductReservationReason)item.Reason)
+                                </span>
+                            </td>
+                            <td class="text-muted small">@item.ReferenceId</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            Chua co ledger dat hang cho san pham nay.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            @if (Model.Data.Pagination.TotalCount > 0)
+            {
+                <tfoot>
+                    <tr>
+                        <td colspan="5" class="ps-0">
+                            <partial name="_Pager" model="Model.Data.Pagination" />
+                        </td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+</section>

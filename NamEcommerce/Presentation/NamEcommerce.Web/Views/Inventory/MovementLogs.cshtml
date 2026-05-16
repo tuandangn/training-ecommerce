@@ -36,9 +36,10 @@
                 {
                     @foreach (var item in Model.Data)
                     {
-                        var isPositive = item.Quantity > 0;
-                        var sign = isPositive ? "+" : "";
-                        var colorClass = isPositive ? "text-success" : (item.Quantity < 0 ? "text-danger" : "text-muted");
+                        var isPositive = item.QuantityAfter > item.QuantityBefore;
+                        var isNegative = item.QuantityAfter < item.QuantityBefore;
+                        var sign = isPositive ? "+" : isNegative ? "-" : "";
+                        var colorClass = isPositive ? "text-success" : (isNegative ? "text-danger" : "text-muted");
 
                         <tr>
                             <td>@item.CreatedOnUtc.ToLocalTime().ToString("g")</td>

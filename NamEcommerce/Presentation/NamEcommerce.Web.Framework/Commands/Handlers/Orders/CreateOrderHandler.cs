@@ -2,7 +2,6 @@ using MediatR;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.Dtos.Orders;
-using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Extensions;
@@ -12,25 +11,21 @@ namespace NamEcommerce.Web.Framework.Commands.Handlers.Orders;
 public sealed class CreateOrderHandler : IRequestHandler<CreateOrderCommand, CreateOrderResultModel>
 {
     private readonly IOrderAppService _orderAppService;
-    private readonly ICurrentUserService _currentUserService;
 
-    public CreateOrderHandler(IOrderAppService orderAppService, ICurrentUserService currentUserService)
+    public CreateOrderHandler(IOrderAppService orderAppService)
     {
         _orderAppService = orderAppService;
-        _currentUserService = currentUserService;
     }
 
     public async Task<CreateOrderResultModel> Handle(CreateOrderCommand request, CancellationToken cancellationToken)
     {
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
         var dto = new CreateOrderAppDto
         {
             CustomerId = request.CustomerId,
             OrderDiscount = request.OrderDiscount,
             Note = request.Note,
             ExpectedShippingDateUtc = DateTimeHelper.ToUniversalTime(request.ExpectedShippingDate.ToEndOfDate()),
-            ShippingAddress = request.ShippingAddress,
-            CreatedByUserId = currentUser?.Id
+            ShippingAddress = request.ShippingAddress
         };
         foreach (var item in request.Items)
         {

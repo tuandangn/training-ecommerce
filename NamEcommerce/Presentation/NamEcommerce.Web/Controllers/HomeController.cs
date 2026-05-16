@@ -1,21 +1,23 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Models;
+using NamEcommerce.Web.Services.Dashboard;
 using System.Diagnostics;
 
 namespace NamEcommerce.Web.Controllers;
 
 public sealed class HomeController : BaseController
 {
-    private readonly ILogger<HomeController> _logger;
+    private readonly IDashboardModelFactory _dashboardModelFactory;
 
-    public HomeController(ILogger<HomeController> logger)
+    public HomeController(IDashboardModelFactory dashboardModelFactory)
     {
-        _logger = logger;
+        _dashboardModelFactory = dashboardModelFactory;
     }
 
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
-        return View();
+        var model = await _dashboardModelFactory.PrepareDashboardModelAsync().ConfigureAwait(false);
+        return View(model);
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]

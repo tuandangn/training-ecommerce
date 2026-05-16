@@ -11,6 +11,12 @@ public interface IVendorDebtManager
     Task<VendorDebtDto> CreateDebtFromPurchaseOrderAsync(CreateVendorDebtDto dto);
 
     /// <summary>
+    /// Tạo công nợ ban đầu (số dư đầu kỳ) cho nhà cung cấp — không gắn PO hay phiếu nhập.
+    /// Gọi khi tạo mới NCC mà đã có sẵn nợ cũ.
+    /// </summary>
+    Task<VendorDebtDto> CreateInitialDebtAsync(CreateInitialVendorDebtDto dto);
+
+    /// <summary>
     /// Tạo công nợ từ phiếu nhập kho (idempotent — trả về existing nếu đã tồn tại).
     /// Chỉ gọi khi phiếu đã có vendor và tất cả items đã được set UnitCost.
     /// </summary>
@@ -39,6 +45,8 @@ public interface IVendorDebtManager
     /// Trả <c>null</c> nếu phiếu nhập đó chưa sinh nợ.
     /// </summary>
     Task<VendorDebtDto?> GetDebtByGoodsReceiptIdAsync(Guid goodsReceiptId);
+
+    Task DeleteDebtFromGoodsReceiptAsync(Guid goodsReceiptId);
 
     Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId);
 

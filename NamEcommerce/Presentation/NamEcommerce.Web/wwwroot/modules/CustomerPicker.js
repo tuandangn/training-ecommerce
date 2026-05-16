@@ -25,8 +25,6 @@ export default class CustomerPicker {
         this.#init();
     }
 
-    // ─── Khởi tạo ───────────────────────────────────────────────────────────────
-
     #init() {
         this.target.innerHTML = this.#template();
         this.target.classList.add('position-relative');
@@ -43,8 +41,6 @@ export default class CustomerPicker {
         this.clearBtn = q('.clearCustomer');
         this.searchIcon = q('.searchIcon');
     }
-
-    // ─── Sự kiện ────────────────────────────────────────────────────────────────
 
     #bindEvents() {
         this.input.addEventListener('input', (e) => this.#onInput(e));
@@ -83,8 +79,6 @@ export default class CustomerPicker {
         }
     }
 
-    // ─── Tìm kiếm ───────────────────────────────────────────────────────────────
-
     async #search(query) {
         this.#setLoading(true);
 
@@ -121,8 +115,6 @@ export default class CustomerPicker {
         this.#abortController?.abort();
         this.#abortController = null;
     }
-
-    // ─── Render ─────────────────────────────────────────────────────────────────
 
     #renderSuggestion(query = '') {
         this.suggestion.innerHTML = '';
@@ -166,7 +158,6 @@ export default class CustomerPicker {
         this.suggestion.style.display = 'block';
     }
 
-    /** Highlight từ khóa tìm kiếm trong kết quả */
     #highlight(text, query) {
         if (!query) return text;
         const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -190,8 +181,6 @@ export default class CustomerPicker {
         this.input.readonly = isLoading;
     }
 
-    // ─── Chọn / Xóa khách hàng ──────────────────────────────────────────────────
-
     displayCustomer(customer) {
         this.displayInfo.querySelector('.name-field').textContent = customer.name;
         this.displayInfo.querySelector('.phone-field').textContent = customer.phone;
@@ -201,6 +190,7 @@ export default class CustomerPicker {
         this.displayInfo.classList.remove('d-none');
         this.#hideSuggestion();
     }
+
     selectCustomer(customer) {
         this.#selectedCustomer = customer instanceof Customer ? customer : new Customer(customer);
 
@@ -217,8 +207,6 @@ export default class CustomerPicker {
         this.#dispatch('remove');
     }
 
-    // ─── Tiện ích ────────────────────────────────────────────────────────────────
-
     #dispatch(eventName, detail = {}) {
         this.target.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
     }
@@ -227,7 +215,6 @@ export default class CustomerPicker {
         return this.#selectedCustomer;
     }
 
-    // ─── Template HTML ───────────────────────────────────────────────────────────
     #template() {
         return `
         <div class="input-group-container">

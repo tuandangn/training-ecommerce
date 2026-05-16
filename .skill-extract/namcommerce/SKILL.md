@@ -152,8 +152,45 @@ public sealed record Category : AppAggregateEntity
 
 - `Verify()` throw exception nếu invalid
 - Dùng `IRepository<T>` để Write, `IEntityDataReader<T>` để Read
-- Publish events: `IEventPublisher.EntityCreated/Updated/Deleted`
+- **Domain Event:** entity raise event qua `entity.Mark*()` (gọi `RaiseDomainEvent`); SaveChanges interceptor dispatch qua MediatR sau commit. KHÔNG còn dùng `IEventPublisher.EntityCreated/Updated/Deleted` (legacy, đang cleanup). Xem mục [Domain Event Pattern](#domain-event-pattern) bên dưới.
 - Mọi method public phải có unit test (TDD)
+
+---
+
+## Domain Event Pattern
+
+**Pattern hiện tại** (sau Phase 1-3 refactor):
+
+1. **Concrete event** là `sealed record` extending `DomainEvent` (đã implement `IDomainEvent : INotification`), nằm tại `Domain.Shared/Events/{Module}/{Entity}Events.cs`. Mỗi event mang chính xác data handler cần (KHÔNG truyền nguyên entity).
+2. **Entity** kế thừa `AppAggregateEntity` (có sẵn `RaiseDomainEvent(IDomainEvent)` + collection `DomainEvents`). Entity expose `internal void Mark*()` method để raise event:
+   ```csharp
+   internal void MarkPlaced() => RaiseDomainEvent(new OrderPlaced(Id, OrderCode, CustomerId, OrderTotal));
+   internal void MarkInfoUpdated() => RaiseDomainEvent(new OrderInfoUpdated(Id));
+   internal void MarkDeleted() => RaiseDomainEvent(new OrderDeleted(Id, OrderCode));
+   ```
+3. **Manager** chỉ gọi `entity.Mark*()` ngay TRƯỚC `_repository.InsertAsync/UpdateAsync/DeleteAsync` — KHÔNG inject `IEventPublisher`:
+   ```csharp
+   xyz.MarkUpdated();
+   var updated = await _xyzRepository.UpdateAsync(xyz).ConfigureAwait(false);
+   ```
+4. **SaveChanges interceptor** (Infrastructure) tự động dispatch toàn bộ `DomainEvents` qua MediatR `Publish` SAU KHI commit thành công, sau đó gọi `ClearDomainEvents()`.
+5. **Handler** subscribe concrete event qua `INotificationHandler<TConcreteEvent>` đặt tại `Application.Services/Events/{Module}/{Entity}{Action}Handler.cs`. Một handler = một concern (Reserve Stock, Sinh CustomerDebt, Cleanup ảnh...).
+
+**Capture snapshot trong event khi cần** — đặc biệt với `MarkDeleted()` của entity có quan hệ con: capture danh sách Id của con vào event TRƯỚC khi soft delete (handler không còn lấy được sau khi entity bị soft-deleted).
+
+```csharp
+// Ví dụ — GoodsReceipt.MarkDeleted
+internal void MarkDeleted()
+{
+    var pictureIds = _pictureIds.ToList(); // snapshot trước khi entity bị xoá
+    RaiseDomainEvent(new GoodsReceiptDeleted(Id, pictureIds));
+}
+```
+
+**Quy tắc Mark/Raise:**
+- Method Mark phải là `internal` — chỉ Manager gọi được.
+- Method Mark KHÔNG đụng state (không SetXxx); chỉ raise event. Nếu đổi state, đổi state trước rồi mới Mark.
+- KHÔNG raise event trong constructor — Manager gọi `entity.MarkCreated()` sau `Insert` (giống pattern Update/Delete).
 
 ---
 

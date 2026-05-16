@@ -59,6 +59,22 @@ public sealed class CustomerController : BaseAuthorizedController
         }));
     }
 
+    [HttpGet]
+    public async Task<IActionResult> PickItem(Guid id)
+    {
+        var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = id });
+        if (customer is null)
+            return NotFound();
+
+        return Json(new
+        {
+            id = customer.Id,
+            name = customer.FullName,
+            phone = customer.PhoneNumber,
+            address = customer.Address
+        });
+    }
+
     public IActionResult Create()
     {
         return View(new CreateCustomerModel());
@@ -75,8 +91,9 @@ public sealed class CustomerController : BaseAuthorizedController
             FullName = model.FullName!,
             PhoneNumber = model.PhoneNumber!,
             Email = model.Email,
-            Address = model.Address,
-            Note = model.Note
+            Address = model.Address ?? string.Empty,
+            Note = model.Note,
+            InitialDebt = model.InitialDebt
         });
 
         if (!result.Success)
@@ -123,7 +140,7 @@ public sealed class CustomerController : BaseAuthorizedController
             FullName = model.FullName!,
             PhoneNumber = model.PhoneNumber!,
             Email = model.Email,
-            Address = model.Address,
+            Address = model.Address ?? string.Empty,
             Note = model.Note
         });
 

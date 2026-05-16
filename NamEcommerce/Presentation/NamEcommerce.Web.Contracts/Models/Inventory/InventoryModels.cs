@@ -18,44 +18,12 @@ public sealed class InventoryStockListModel
         public required string WarehouseName { get; init; }
         public required decimal QuantityOnHand { get; init; }
         public required decimal QuantityReserved { get; init; }
+        public required decimal TotalReservedByOrder { get; init; }
         public required decimal QuantityAvailable { get; init; }
         public required DateTime UpdatedOn { get; init; }
+        public decimal ReorderLevel { get; init; }
+        public decimal MaxStockLevel { get; init; }
     }
-}
-
-[Serializable]
-public sealed record AdjustStockResultModel
-{
-    public required bool Success { get; init; }
-    public required string? ErrorMessage { get; init; }
-}
-
-[Serializable]
-public sealed record ReserveStockResultModel
-{
-    public required bool Success { get; init; }
-    public required string? ErrorMessage { get; init; }
-}
-
-[Serializable]
-public sealed record ReleaseReservedStockResultModel
-{
-    public required bool Success { get; init; }
-    public required string? ErrorMessage { get; init; }
-}
-
-[Serializable]
-public sealed record DispatchStockResultModel
-{
-    public required bool Success { get; init; }
-    public required string? ErrorMessage { get; init; }
-}
-
-[Serializable]
-public sealed record ReceiveStockResultModel
-{
-    public required bool Success { get; init; }
-    public required string? ErrorMessage { get; init; }
 }
 
 [Serializable]
@@ -76,5 +44,25 @@ public sealed class StockMovementLogListModel
         public required decimal QuantityAfter { get; init; }
         public required DateTime CreatedOnUtc { get; init; }
         public string? Note { get; init; }
+    }
+}
+
+[Serializable]
+public sealed class ProductReservationLedgerListModel
+{
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public required IPagedDataModel<ItemModel> Data { get; init; }
+
+    [Serializable]
+    public sealed record ItemModel(Guid Id)
+    {
+        public required Guid ProductId { get; init; }
+        public required Guid OrderId { get; init; }
+        public string? OrderCode { get; init; }
+        public required decimal QuantityDelta { get; init; }
+        public required int Reason { get; init; }
+        public Guid? ReferenceId { get; init; }
+        public required DateTime CreatedOn { get; init; }
     }
 }

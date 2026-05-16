@@ -1,3 +1,5 @@
+using NamEcommerce.Web.Contracts.Models.Inventory;
+
 namespace NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 
 public sealed class DeliveryNoteDetailsModel
@@ -7,7 +9,8 @@ public sealed class DeliveryNoteDetailsModel
     
     public Guid OrderId { get; set; }
     public string OrderCode { get; set; } = string.Empty;
-    
+
+    public Guid CustomerId { get; set; }
     public string CustomerName { get; set; } = string.Empty;
     public string? CustomerPhone { get; set; }
     public string? CustomerAddress { get; set; }
@@ -33,6 +36,7 @@ public sealed class DeliveryNoteDetailsModel
     public decimal AmountToCollect { get; set; }
 
     public IList<DeliveryNoteItemModel> Items { get; set; } = [];
+    public ShortageInfoModel ShortageInfo { get; set; } = new();
 }
 
 public sealed class DeliveryNoteItemModel
@@ -42,4 +46,10 @@ public sealed class DeliveryNoteItemModel
     public decimal Quantity { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal SubTotal { get; set; }
+
+    /// <summary>Tổng đã trả (Confirmed).</summary>
+    public decimal ReturnedQuantity { get; set; }
+
+    /// <summary>Số đang giữ trong VR Draft/Inspecting.</summary>
+    public decimal PendingReturnQuantity { get; set; }
 }

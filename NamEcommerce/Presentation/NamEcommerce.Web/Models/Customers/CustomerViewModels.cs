@@ -25,6 +25,9 @@ public sealed class CreateCustomerModel
 
     [Display(Name = "Ghi chú")]
     public string? Note { get; set; }
+
+    [Display(Name = "Công nợ ban đầu")]
+    public decimal? InitialDebt { get; set; }
 }
 
 public sealed class EditCustomerModel

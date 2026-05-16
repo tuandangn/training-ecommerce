@@ -1,66 +1,566 @@
+@model NamEcommerce.Web.Contracts.Models.Dashboard.DashboardModel
+@using System.Globalization
+@using System.Text.Json
+
 @{
     ViewData["Title"] = "Trang chủ";
+    ViewData[ViewConstants.PageTitle] = "Dashboard";
+
+    var chartData = new
+    {
+        revenueTrend = new
+        {
+            labels = Model.SalesSummary.RevenueTrend.Select(x => x.Date.ToString("dd/MM")).ToArray(),
+            revenues = Model.SalesSummary.RevenueTrend.Select(x => x.Revenue).ToArray(),
+            profits = Model.SalesSummary.RevenueTrend.Select(x => x.Profit).ToArray()
+        },
+        profitBreakdown = new
+        {
+            labels = new[] { "Giá vốn", "Lãi gộp", "Chi phí" },
+            values = new[]
+            {
+                Model.ProfitSummary.MonthCogs,
+                Model.ProfitSummary.MonthGrossProfit,
+                Model.ProfitSummary.MonthOperatingExpenses
+            }
+        }
+    };
 }
+
+@functions {
+    private static string DateText(DateTime? date)
+    {
+        return date?.ToString(ViewConstants.DefaultDateFormat) ?? "-";
+    }
+
+    private static string StockProgressWidth(decimal quantityOnHand, decimal reorderLevel)
+    {
+        if (reorderLevel <= 0)
+            return "0";
+
+        var percent = Math.Clamp(quantityOnHand / reorderLevel * 100, 0, 100);
+        return percent.ToString("0.##", CultureInfo.InvariantCulture);
+    }
+}
+
 @section TitleSection {
     <h1 class="topbar-page-title">Dashboard</h1>
 }
-<div class="py-2">
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-4 col-lg-3">
-            <a asp-controller="Order" asp-action="List" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
-                <div class="mb-2" style="color: var(--primary); font-size: 2rem;"><i class="bi bi-receipt-cutoff"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800);">Đơn hàng</div>
-                <div class="text-muted small">Quản lý bán hàng</div>
-            </a>
+
+@section Styles {
+    <style>
+        .dashboard-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .dashboard-kpi,
+        .dashboard-panel {
+            background: var(--bs-white, #fff);
+            border: 1px solid var(--bs-border-color, #dee2e6);
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+
+        .dashboard-kpi {
+            min-height: 118px;
+            padding: 1rem;
+        }
+
+        .dashboard-kpi-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            flex: 0 0 auto;
+        }
+
+        .dashboard-kpi-label {
+            color: var(--bs-secondary-color, #6c757d);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .dashboard-kpi-value {
+            color: var(--bs-body-color, #212529);
+            font-size: 1.35rem;
+            font-weight: 700;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+        }
+
+        .dashboard-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1rem 0.75rem;
+        }
+
+        .dashboard-panel-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--bs-body-color, #212529);
+        }
+
+        .dashboard-panel-subtitle {
+            margin: 0.15rem 0 0;
+            color: var(--bs-secondary-color, #6c757d);
+            font-size: 0.82rem;
+        }
+
+        .dashboard-chart-wrap {
+            height: 290px;
+            padding: 0 1rem 1rem;
+        }
+
+        .dashboard-chart-wrap-sm {
+            height: 290px;
+            padding: 0 1rem 1rem;
+        }
+
+        .dashboard-table {
+            margin: 0;
+        }
+
+        .dashboard-table th {
+            color: var(--bs-secondary-color, #6c757d);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .dashboard-table td {
+            vertical-align: middle;
+        }
+
+        .dashboard-link {
+            color: var(--bs-body-color, #212529);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .dashboard-link:hover {
+            color: var(--bs-primary, #0d6efd);
+        }
+
+        .dashboard-empty {
+            color: var(--bs-secondary-color, #6c757d);
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stock-progress {
+            min-width: 150px;
+        }
+
+        .stock-progress .progress {
+            height: 7px;
+            border-radius: 8px;
+        }
+
+        .stock-progress-value {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--bs-secondary-color, #6c757d);
+            font-variant-numeric: tabular-nums;
+        }
+
+        @@media (max-width: 767.98px) {
+            .dashboard-kpi {
+                min-height: 108px;
+                padding: 0.85rem;
+            }
+
+            .dashboard-kpi-value {
+                font-size: 1.05rem;
+            }
+
+            .dashboard-chart-wrap,
+            .dashboard-chart-wrap-sm {
+                height: 250px;
+            }
+        }
+    </style>
+}
+
+<script type="application/json" id="dashboardChartData">
+    @Html.Raw(JsonSerializer.Serialize(chartData))
+</script>
+
+<div class="dashboard-grid">
+    <div class="row g-3">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="dashboard-kpi">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="dashboard-kpi-icon bg-primary"><i class="bi bi-calendar-day"></i></span>
+                    <div class="min-w-0">
+                        <div class="dashboard-kpi-label">Doanh số ngày</div>
+                        <div class="dashboard-kpi-value">@Model.SalesSummary.TodayRevenue.DisplayCurrencyWithSymbol()</div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-6 col-md-4 col-lg-3">
-            <a asp-controller="PurchaseOrder" asp-action="List" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
-                <div class="mb-2" style="color: #0284c7; font-size: 2rem;"><i class="bi bi-truck"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800);">Đơn nhập</div>
-                <div class="text-muted small">Nhập hàng từ NCC</div>
-            </a>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="dashboard-kpi">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="dashboard-kpi-icon bg-info"><i class="bi bi-calendar3"></i></span>
+                    <div class="min-w-0">
+                        <div class="dashboard-kpi-label">Doanh số tháng</div>
+                        <div class="dashboard-kpi-value">@Model.SalesSummary.MonthRevenue.DisplayCurrencyWithSymbol()</div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-6 col-md-4 col-lg-3">
-            <a asp-controller="Inventory" asp-action="StockList" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
-                <div class="mb-2" style="color: #059669; font-size: 2rem;"><i class="bi bi-boxes"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800);">Tồn kho</div>
-                <div class="text-muted small">Theo dõi kho hàng</div>
-            </a>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="dashboard-kpi">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="dashboard-kpi-icon bg-warning"><i class="bi bi-calendar-range"></i></span>
+                    <div class="min-w-0">
+                        <div class="dashboard-kpi-label">Doanh số quý</div>
+                        <div class="dashboard-kpi-value">@Model.SalesSummary.QuarterRevenue.DisplayCurrencyWithSymbol()</div>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-6 col-md-4 col-lg-3">
-            <a asp-controller="Product" asp-action="Index" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
-                <div class="mb-2" style="color: #d97706; font-size: 2rem;"><i class="bi bi-tags"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800);">Hàng hóa</div>
-                <div class="text-muted small">Danh mục sản phẩm</div>
-            </a>
-        </div>
-        <div class="col-6 col-md-4 col-lg-3">
-            <a asp-controller="Customer" asp-action="List" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
-                <div class="mb-2" style="color: #7c3aed; font-size: 2rem;"><i class="bi bi-people"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800);">Khách hàng</div>
-                <div class="text-muted small">CRM đơn giản</div>
-            </a>
-        </div>
-        <div class="col-6 col-md-4 col-lg-3">
-            <a asp-controller="Vendor" asp-action="Index" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
-                <div class="mb-2" style="color: #dc2626; font-size: 2rem;"><i class="bi bi-building"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800);">Nhà cung cấp</div>
-                <div class="text-muted small">Quản lý đối tác</div>
-            </a>
-        </div>
-        <div class="col-6 col-md-4 col-lg-3">
-            <a asp-controller="Warehouse" asp-action="Index" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
-                <div class="mb-2" style="color: #0891b2; font-size: 2rem;"><i class="bi bi-geo-alt"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800);">Kho hàng</div>
-                <div class="text-muted small">Vị trí lưu trữ</div>
-            </a>
-        </div>
-        <div class="col-6 col-md-4 col-lg-3">
-            <a asp-controller="Category" asp-action="Index" class="content-card d-block text-decoration-none hover-lift p-3 text-center">
-                <div class="mb-2" style="color: #16a34a; font-size: 2rem;"><i class="bi bi-grid"></i></div>
-                <div class="fw-semibold" style="color: var(--gray-800);">Danh mục</div>
-                <div class="text-muted small">Phân loại hàng hóa</div>
-            </a>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="dashboard-kpi">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="dashboard-kpi-icon bg-success"><i class="bi bi-calendar4-week"></i></span>
+                    <div class="min-w-0">
+                        <div class="dashboard-kpi-label">Doanh số năm</div>
+                        <div class="dashboard-kpi-value">@Model.SalesSummary.YearRevenue.DisplayCurrencyWithSymbol()</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="dashboard-kpi">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="dashboard-kpi-icon bg-success"><i class="bi bi-graph-up-arrow"></i></span>
+                    <div class="min-w-0">
+                        <div class="dashboard-kpi-label">Lợi nhuận ngày</div>
+                        <div class="dashboard-kpi-value">@Model.ProfitSummary.TodayProfit.DisplayCurrencyWithSymbol()</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="dashboard-kpi">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="dashboard-kpi-icon bg-teal" style="background-color:#0f766e;"><i class="bi bi-bar-chart-line"></i></span>
+                    <div class="min-w-0">
+                        <div class="dashboard-kpi-label">Lợi nhuận tháng</div>
+                        <div class="dashboard-kpi-value">@Model.ProfitSummary.MonthProfit.DisplayCurrencyWithSymbol()</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="dashboard-kpi">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="dashboard-kpi-icon bg-secondary"><i class="bi bi-pie-chart"></i></span>
+                    <div class="min-w-0">
+                        <div class="dashboard-kpi-label">Lợi nhuận quý</div>
+                        <div class="dashboard-kpi-value">@Model.ProfitSummary.QuarterProfit.DisplayCurrencyWithSymbol()</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="dashboard-kpi">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="dashboard-kpi-icon bg-dark"><i class="bi bi-award"></i></span>
+                    <div class="min-w-0">
+                        <div class="dashboard-kpi-label">Lợi nhuận năm</div>
+                        <div class="dashboard-kpi-value">@Model.ProfitSummary.YearProfit.DisplayCurrencyWithSymbol()</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-xl-8">
+            <section class="dashboard-panel h-100">
+                <div class="dashboard-panel-header">
+                    <div>
+                        <h2 class="dashboard-panel-title">Doanh thu 30 ngày</h2>
+                        <p class="dashboard-panel-subtitle">Theo ngày, kèm đường lợi nhuận gộp để đối chiếu.</p>
+                    </div>
+                    <i class="bi bi-activity text-primary"></i>
+                </div>
+                <div class="dashboard-chart-wrap">
+                    <canvas id="dashboardRevenueChart"></canvas>
+                </div>
+            </section>
+        </div>
+        <div class="col-12 col-xl-4">
+            <section class="dashboard-panel h-100">
+                <div class="dashboard-panel-header">
+                    <div>
+                        <h2 class="dashboard-panel-title">Cơ cấu lợi nhuận tháng</h2>
+                        <p class="dashboard-panel-subtitle">Giá vốn, lãi gộp và chi phí vận hành.</p>
+                    </div>
+                    <i class="bi bi-pie-chart-fill text-success"></i>
+                </div>
+                <div class="dashboard-chart-wrap-sm">
+                    <canvas id="dashboardProfitChart"></canvas>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-xl-6">
+            <section class="dashboard-panel h-100">
+                <div class="dashboard-panel-header">
+                    <div>
+                        <h2 class="dashboard-panel-title">5 đơn bán cần xử lý</h2>
+                        <p class="dashboard-panel-subtitle">Đơn còn hàng chưa giao xong.</p>
+                    </div>
+                    <a asp-controller="Order" asp-action="List" class="btn btn-sm btn-light" title="Xem đơn bán"><i class="bi bi-box-arrow-up-right"></i></a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table dashboard-table">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Đơn</th>
+                                <th>Khách hàng</th>
+                                <th class="text-end">Tổng tiền</th>
+                                <th class="text-center">Còn</th>
+                                <th class="text-end pe-3">Hẹn giao</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.PendingOrders.Any())
+                            {
+                                @foreach (var order in Model.PendingOrders)
+                                {
+                                    <tr>
+                                        <td class="ps-3">
+                                            <a asp-controller="Order" asp-action="Details" asp-route-id="@order.Id" class="dashboard-link">@order.Code</a>
+                                            <div class="small text-muted">@order.CreatedOn.ToString(ViewConstants.DefaultDateFormat)</div>
+                                        </td>
+                                        <td class="text-nowrap">@order.CustomerName</td>
+                                        <td class="text-end text-nowrap">@order.TotalAmount.DisplayCurrencyWithSymbol()</td>
+                                        <td class="text-center"><span class="badge bg-warning text-dark">@order.PendingItemCount</span></td>
+                                        <td class="text-end pe-3 text-nowrap">@DateText(order.ExpectedShippingDate)</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="dashboard-empty">Không có đơn bán cần xử lý.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+        <div class="col-12 col-xl-6">
+            <section class="dashboard-panel h-100">
+                <div class="dashboard-panel-header">
+                    <div>
+                        <h2 class="dashboard-panel-title">5 đơn nhập cần xử lý</h2>
+                        <p class="dashboard-panel-subtitle">Đơn nhập chưa nhận đủ hàng.</p>
+                    </div>
+                    <a asp-controller="PurchaseOrder" asp-action="List" class="btn btn-sm btn-light" title="Xem đơn nhập"><i class="bi bi-box-arrow-up-right"></i></a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table dashboard-table">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Đơn</th>
+                                <th>NCC</th>
+                                <th class="text-end">Tổng tiền</th>
+                                <th class="text-end">Còn nhập</th>
+                                <th class="text-end pe-3">Hẹn nhận</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.PendingPurchaseOrders.Any())
+                            {
+                                @foreach (var order in Model.PendingPurchaseOrders)
+                                {
+                                    <tr>
+                                        <td class="ps-3">
+                                            <a asp-controller="PurchaseOrder" asp-action="Details" asp-route-id="@order.Id" class="dashboard-link">@order.Code</a>
+                                            <div class="small text-muted">@order.CreatedOn.ToString(ViewConstants.DefaultDateFormat)</div>
+                                        </td>
+                                        <td class="text-nowrap">@order.VendorName</td>
+                                        <td class="text-end text-nowrap">@order.TotalAmount.DisplayCurrencyWithSymbol()</td>
+                                        <td class="text-end text-nowrap">@order.RemainingQuantity.DisplayQuantity()</td>
+                                        <td class="text-end pe-3 text-nowrap">@DateText(order.ExpectedDeliveryDate)</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="dashboard-empty">Không có đơn nhập cần xử lý.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-xl-6">
+            <section class="dashboard-panel h-100">
+                <div class="dashboard-panel-header">
+                    <div>
+                        <h2 class="dashboard-panel-title">Top 5 khách hàng công nợ</h2>
+                        <p class="dashboard-panel-subtitle">Sắp theo số tiền còn phải thu.</p>
+                    </div>
+                    <i class="bi bi-people text-primary"></i>
+                </div>
+                <div class="table-responsive">
+                    <table class="table dashboard-table">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Khách hàng</th>
+                                <th class="text-end pe-3">Còn nợ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.TopCustomerDebts.Any())
+                            {
+                                @foreach (var debt in Model.TopCustomerDebts)
+                                {
+                                    <tr>
+                                        <td class="ps-3">@debt.CustomerName</td>
+                                        <td class="text-end pe-3 fw-semibold text-nowrap">@debt.TotalRemainingAmount.DisplayCurrencyWithSymbol()</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="2" class="dashboard-empty">Chưa có công nợ khách hàng.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+        <div class="col-12 col-xl-6">
+            <section class="dashboard-panel h-100">
+                <div class="dashboard-panel-header">
+                    <div>
+                        <h2 class="dashboard-panel-title">Top 5 NCC công nợ</h2>
+                        <p class="dashboard-panel-subtitle">Sắp theo số tiền còn phải trả.</p>
+                    </div>
+                    <i class="bi bi-buildings text-success"></i>
+                </div>
+                <div class="table-responsive">
+                    <table class="table dashboard-table">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Nhà cung cấp</th>
+                                <th class="text-end pe-3">Còn nợ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.TopVendorDebts.Any())
+                            {
+                                @foreach (var debt in Model.TopVendorDebts)
+                                {
+                                    <tr>
+                                        <td class="ps-3">@debt.VendorName</td>
+                                        <td class="text-end pe-3 fw-semibold text-nowrap">@debt.TotalRemainingAmount.DisplayCurrencyWithSymbol()</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="2" class="dashboard-empty">Chưa có công nợ nhà cung cấp.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <section class="dashboard-panel">
+        <div class="dashboard-panel-header">
+            <div>
+                <h2 class="dashboard-panel-title">10 hàng tồn thấp</h2>
+                <p class="dashboard-panel-subtitle">Lọc theo tồn hiện tại nhỏ hơn hoặc bằng mức đặt hàng lại.</p>
+            </div>
+            <a asp-controller="Inventory" asp-action="StockList" class="btn btn-sm btn-light" title="Xem tồn kho"><i class="bi bi-box-arrow-up-right"></i></a>
+        </div>
+        <div class="table-responsive">
+            <table class="table dashboard-table">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Hàng hóa</th>
+                        <th>Kho</th>
+                        <th class="text-end">Tồn</th>
+                        <th class="text-end">Giữ</th>
+                        <th class="text-end">Khả dụng</th>
+                        <th class="pe-3">Stock / ReorderLevel</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.LowStockProducts.Any())
+                    {
+                        @foreach (var product in Model.LowStockProducts)
+                        {
+                            var width = StockProgressWidth(product.QuantityOnHand, product.ReorderLevel);
+                            <tr>
+                                <td class="ps-3 fw-semibold">@product.ProductName</td>
+                                <td class="text-nowrap">@product.WarehouseName</td>
+                                <td class="text-end text-nowrap">@product.QuantityOnHand.DisplayQuantity()</td>
+                                <td class="text-end text-nowrap">@product.QuantityReserved.DisplayQuantity()</td>
+                                <td class="text-end text-nowrap">@product.QuantityAvailable.DisplayQuantity()</td>
+                                <td class="pe-3">
+                                    <div class="stock-progress">
+                                        <div class="stock-progress-value">
+                                            <span>@product.QuantityOnHand.DisplayQuantity()</span>
+                                            <span>@product.ReorderLevel.DisplayQuantity()</span>
+                                        </div>
+                                        <div class="progress" role="progressbar" aria-valuenow="@width" aria-valuemin="0" aria-valuemax="100">
+                                            <div class="progress-bar bg-danger" style="width: @(width)%"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="dashboard-empty">Chưa có hàng nào dưới mức tồn cảnh báo.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
 </div>
+
+@section Scripts {
+    <script src="~/js/dashboard.js" asp-append-version="true" defer></script>
+}

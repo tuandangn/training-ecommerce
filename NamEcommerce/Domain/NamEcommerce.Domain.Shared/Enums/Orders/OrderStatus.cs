@@ -2,6 +2,7 @@
 
 public enum OrderStatus
 {
-    Pending,
-    Locked
+    Pending = 0,
+    Locked = 1,
+    Cancelled = 2
 }

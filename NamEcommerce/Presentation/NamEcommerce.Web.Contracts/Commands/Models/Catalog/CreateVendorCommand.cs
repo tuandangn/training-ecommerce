@@ -10,4 +10,6 @@ public sealed class CreateVendorCommand : IRequest<CreateVendorResultModel>
     public required string PhoneNumber { get; init; }
     public string? Address { get; set; }
     public int DisplayOrder { get; set; }
+    /// <summary>Công nợ ban đầu — nếu > 0 sẽ tạo một phiếu VendorDebt số dư đầu kỳ.</summary>
+    public decimal? InitialDebt { get; set; }
 }

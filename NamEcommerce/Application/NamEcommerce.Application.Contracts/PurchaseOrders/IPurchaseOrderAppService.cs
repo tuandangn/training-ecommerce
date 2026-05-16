@@ -5,9 +5,7 @@ namespace NamEcommerce.Application.Contracts.PurchaseOrders;
 
 public interface IPurchaseOrderAppService
 {
-    Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(string? keywords, int pageIndex, int pageSize);
-
-    Task<string> NextPurchaseOrderCodeAsync();
+    Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status);
 
     Task<PurchaseOrderAppDto?> GetPurchaseOrderByIdAsync(Guid id);
     Task<PurchaseOrderAppDto?> GetPurchaseOrderByCodeAsync(string code);
@@ -17,6 +15,8 @@ public interface IPurchaseOrderAppService
 
     Task<CommonActionResultDto> SubmitsPurchaseOrderAsync(Guid id);
     Task<CommonActionResultDto> CancelPurchaseOrderAsync(Guid id);
+    Task<CommonActionResultDto> ClosePartialPurchaseOrderAsync(Guid id, string reason);
+    Task<CommonActionResultDto> ApprovePurchaseOrderAsync(Guid id);
     Task<CommonActionResultDto> ChangeStatusAsync(Guid purchaseOrderId, int newStatus);
 
     Task<CommonActionResultDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemAppDto dto);
@@ -25,5 +25,11 @@ public interface IPurchaseOrderAppService
 
     Task<CommonActionResultDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto);
 
+    Task<BulkReceiveGoodsResultAppDto> BulkReceiveAsync(BulkReceiveGoodsAppDto dto);
+
     Task<IList<RecentPurchasePriceAppDto>> GetRecentPurchasePricesAsync(Guid productId);
+
+    Task<IList<OrderAllocatedPurchaseOrderAppDto>> GetAllocatedPurchaseOrdersForOrderAsync(Guid orderId);
+
+    Task<string> NextPurchaseOrderCodeAsync();
 }

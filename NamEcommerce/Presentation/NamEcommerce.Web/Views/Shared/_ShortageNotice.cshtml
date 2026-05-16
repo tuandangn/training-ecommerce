@@ -1,0 +1,132 @@
+@model ShortageInfoModel
+@{
+    var modalId = ViewData["ShortageModalId"] as string ?? "shortageDetailsModal";
+    var modalTitleId = $"{modalId}Title";
+    var message = ViewData["ShortageMessage"] as string ?? "Đơn hàng đang có mặt hàng chưa đủ tồn kho. Cần nhập thêm hàng từ nhà cung cấp trước khi giao đủ cho khách.";
+    var actionUrl = ViewData["ShortageActionUrl"] as string ?? "/PurchaseOrders/ShortageAggregation";
+    var actionText = ViewData["ShortageActionText"] as string ?? "Nhập hàng thiếu";
+    var primaryQuantityLabel = ViewData["ShortagePrimaryQuantityLabel"] as string ?? "Cần";
+    var secondaryQuantityLabel = ViewData["ShortageSecondaryQuantityLabel"] as string ?? "Tồn khả dụng";
+    var useShippedQuantity = ViewData["ShortageUseShippedQuantity"] is bool shippedQuantity && shippedQuantity;
+    var estimatedTotal = Model.Items.Sum(item => item.ShortageQuantity * item.UnitCost);
+}
+
+<div class="shortage-notice mb-3">
+    <div class="shortage-alert-panel">
+        <div class="shortage-alert-content">
+            <span class="shortage-alert-icon">
+                <i class="bi bi-exclamation-triangle"></i>
+            </span>
+            <div class="shortage-alert-copy">
+                <div class="shortage-alert-message">@message</div>
+            </div>
+        </div>
+        <button type="button"
+                class="btn shortage-action-btn"
+                data-bs-toggle="modal"
+                data-bs-target="#@modalId"
+                aria-controls="@modalId">
+            <i class="bi bi-eye"></i>
+            <span>Xem hàng thiếu</span>
+        </button>
+    </div>
+
+    <div class="modal fade shortage-detail-modal" id="@modalId" tabindex="-1" aria-labelledby="@modalTitleId" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content border-0 shadow shortage-detail-modal-content">
+                <div class="modal-header shortage-detail-header">
+                    <div>
+                        <h5 class="modal-title shortage-detail-title" id="@modalTitleId">Chi tiết hàng thiếu</h5>
+                        <div class="shortage-detail-summary">
+                            @Model.Items.Count mặt hàng · Tổng giá trị ước tính @estimatedTotal.DisplayCurrencyWithSymbol()
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+
+                <div class="modal-body p-0">
+                    <div class="shortage-detail-list">
+                        @foreach (var item in Model.Items)
+                        {
+                            var secondaryQuantity = useShippedQuantity ? item.ShippedQuantity : item.AvailableQuantity;
+                            var hasPurchaseOrder = item.AllocatedFromPurchaseOrders.Any();
+
+                            <div class="shortage-detail-row">
+                                <div class="shortage-row-main">
+                                    <div>
+                                        <div class="shortage-product-name">@item.ProductName</div>
+                                        <div class="shortage-quantity-line">
+                                            <span>@primaryQuantityLabel @item.RequiredQuantity.DisplayQuantity()</span>
+                                            <span>· @secondaryQuantityLabel @secondaryQuantity.DisplayQuantity()</span>
+                                            <span class="shortage-danger">· Thiếu @item.ShortageQuantity.DisplayQuantity()</span>
+                                        </div>
+                                    </div>
+                                    <div class="shortage-po-status">
+                                        @if (hasPurchaseOrder)
+                                        {
+                                            foreach (var allocation in item.AllocatedFromPurchaseOrders.Take(2))
+                                            {
+                                                <a class="shortage-po-link"
+                                                   href="@Url.Action("Details", "PurchaseOrder", new { id = allocation.PurchaseOrderId })">
+                                                    <i class="bi bi-cart-check"></i>
+                                                    <span>
+                                                        Đã đặt @allocation.PurchaseOrderCode
+                                                        <span>(@allocation.ReceivedQuantity.DisplayQuantity()/@allocation.AllocatedQuantity.DisplayQuantity())</span>
+                                                        @if (allocation.ExpectedReceiveDate.HasValue)
+                                                        {
+                                                            <span>· về @allocation.ExpectedReceiveDate.Value.ToString("dd/MM")</span>
+                                                        }
+                                                    </span>
+                                                </a>
+                                            }
+                                            @if (item.AllocatedFromPurchaseOrders.Count > 2)
+                                            {
+                                                <span class="shortage-more-po">+@(item.AllocatedFromPurchaseOrders.Count - 2)</span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="shortage-no-po">
+                                                <i class="bi bi-info-circle"></i>
+                                                Chưa có đơn nhập
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="shortage-supplier-line">
+                                    <span class="shortage-supplier-label">Nhà cung cấp có thể nhập:</span>
+                                    @if (item.SupplierSuggestions.Any())
+                                    {
+                                        foreach (var suggestion in item.SupplierSuggestions.Take(3))
+                                        {
+                                            <span class="shortage-supplier-chip">
+                                                @suggestion.VendorName
+                                                @if (suggestion.LastPurchaseDate.HasValue)
+                                                {
+                                                    <span>· lần cuối @suggestion.LastPurchaseDate.Value.ToString("dd/MM")</span>
+                                                }
+                                            </span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="shortage-supplier-chip muted">Chưa có NCC gợi ý</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="modal-footer shortage-detail-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                    <a class="btn shortage-action-btn" href="@actionUrl">
+                        <i class="bi bi-truck"></i>
+                        <span>@actionText</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

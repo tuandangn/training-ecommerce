@@ -8,3 +8,43 @@
 <link rel="stylesheet" href="~/css/decimal-field.css" asp-append-version="true" />
 <link rel="stylesheet" href="~/NamEcommerce.Web.styles.css" asp-append-version="true" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css" />
+<style>
+    .loader-wrapper {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8); /* Nền trắng mờ */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999; /* Luôn nằm trên cùng */
+        backdrop-filter: blur(5px); /* Làm mờ hậu cảnh (hiện đại) */
+    }
+
+    .loader-content {
+        text-align: center;
+        color: #333;
+        font-family: Arial, sans-serif;
+    }
+
+    .spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db; /* Màu xanh thương hiệu */
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+    }
+
+    @@keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>

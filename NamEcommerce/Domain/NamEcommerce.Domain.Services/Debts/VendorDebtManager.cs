@@ -3,12 +3,12 @@ using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Debts;
 using NamEcommerce.Domain.Shared.Services.Debts;
 
@@ -21,21 +21,46 @@ public sealed class VendorDebtManager(
     IEntityDataReader<VendorPayment> paymentReader,
     IEntityDataReader<Vendor> vendorReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
-    IEntityDataReader<GoodsReceipt> goodsReceiptReader,
-    IEventPublisher eventPublisher) : IVendorDebtManager
+    IEntityDataReader<GoodsReceipt> goodsReceiptReader) : IVendorDebtManager
 {
     private async Task<string> GenerateDebtCodeAsync()
     {
-        var datePrefix = $"CNNCC-{DateTime.UtcNow:yyyyMMdd}";
-        var count = debtReader.DataSource.Count(d => d.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var monthPrefix = $"CN-NCC-{DateTime.UtcNow:yyMM}";
+        var count = ((EntityDataReader<VendorDebt>)debtReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        return $"{monthPrefix}-{(count + 1):D3}";
     }
 
     private async Task<string> GeneratePaymentCodeAsync()
     {
-        var datePrefix = $"PCNCC-{DateTime.UtcNow:yyyyMMdd}";
-        var count = paymentReader.DataSource.Count(p => p.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var monthPrefix = $"PC-NCC-{DateTime.UtcNow:yyMM}";
+        var count = ((EntityDataReader<VendorPayment>)paymentReader).SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
+        return $"{monthPrefix}-{(count + 1):D3}";
+    }
+
+    public async Task<VendorDebtDto> CreateInitialDebtAsync(CreateInitialVendorDebtDto dto)
+    {
+        dto.Verify();
+
+        var vendor = await vendorReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        if (vendor == null)
+            throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
+
+        var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
+
+        var debt = new VendorDebt(
+            code: code,
+            vendorId: vendor.Id,
+            vendorName: vendor.Name,
+            totalAmount: dto.TotalAmount
+        )
+        {
+            VendorPhone = vendor.PhoneNumber,
+            VendorAddress = vendor.Address
+        };
+
+        debt.MarkCreated();
+        await debtRepository.InsertAsync(debt).ConfigureAwait(false);
+        return debt.ToDto();
     }
 
     public async Task<VendorDebtDto> CreateDebtFromPurchaseOrderAsync(CreateVendorDebtDto dto)
@@ -64,8 +89,7 @@ public sealed class VendorDebtManager(
             purchaseOrderId: purchaseOrder.Id,
             purchaseOrderCode: purchaseOrder.Code,
             totalAmount: dto.TotalAmount,
-            dueDateUtc: dto.DueDateUtc,
-            createdByUserId: dto.CreatedByUserId
+            dueDateUtc: dto.DueDateUtc
         )
         {
             VendorPhone = vendor.PhoneNumber,
@@ -93,8 +117,8 @@ public sealed class VendorDebtManager(
             await paymentRepository.UpdateAsync(advance).ConfigureAwait(false);
         }
 
+        debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return inserted.ToDto();
     }
 
@@ -123,8 +147,7 @@ public sealed class VendorDebtManager(
             vendorName: vendor.Name,
             goodsReceiptId: goodsReceipt.Id,
             totalAmount: dto.TotalAmount,
-            dueDateUtc: dto.DueDateUtc,
-            createdByUserId: dto.CreatedByUserId
+            dueDateUtc: dto.DueDateUtc
         )
         {
             VendorPhone = vendor.PhoneNumber,
@@ -150,8 +173,8 @@ public sealed class VendorDebtManager(
             await paymentRepository.UpdateAsync(advance).ConfigureAwait(false);
         }
 
+        debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return inserted.ToDto();
     }
 
@@ -194,13 +217,13 @@ public sealed class VendorDebtManager(
                 payment.MarkAsApplied();
                 payment.PurchaseOrderId = debt.PurchaseOrderId;
                 payment.PurchaseOrderCode = debt.PurchaseOrderCode;
+                debt.MarkUpdated();
                 await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-                await eventPublisher.EntityUpdated(debt).ConfigureAwait(false);
             }
         }
 
+        payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return inserted.ToDto();
     }
 
@@ -248,8 +271,9 @@ public sealed class VendorDebtManager(
             debt.ApplyPayment(applyAmount);
             payment.MarkAsApplied();
 
+            debt.MarkUpdated();
             await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-            await eventPublisher.EntityUpdated(debt).ConfigureAwait(false);
+            payment.MarkCreated();
             var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
             results.Add(inserted.ToDto());
 
@@ -271,6 +295,7 @@ public sealed class VendorDebtManager(
                 recordedByUserId: dto.RecordedByUserId,
                 note: string.IsNullOrEmpty(dto.Note) ? "Tiền dư sau khi thanh toán nợ NCC" : dto.Note
             );
+            overpayment.MarkCreated();
             var inserted = await paymentRepository.InsertAsync(overpayment).ConfigureAwait(false);
             results.Add(inserted.ToDto());
         }
@@ -300,8 +325,8 @@ public sealed class VendorDebtManager(
             note: dto.Note
         );
 
+        payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return inserted.ToDto();
     }
 
@@ -333,6 +358,15 @@ public sealed class VendorDebtManager(
 
         var dto = debt.ToDto();
         return dto with { Payments = payments.Select(p => p.ToDto()).ToList() };
+    }
+
+    public async Task DeleteDebtFromGoodsReceiptAsync(Guid goodsReceiptId)
+    {
+        var debt = debtReader.DataSource
+            .FirstOrDefault(d => d.GoodsReceiptId == goodsReceiptId);
+        if (debt == null) return;
+
+        await debtRepository.DeleteAsync(debt).ConfigureAwait(false);
     }
 
     public async Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId)

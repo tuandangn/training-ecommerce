@@ -4,8 +4,6 @@ using NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Models.Inventory;
-using NamEcommerce.Web.Contracts.Services;
-using NamEcommerce.Web.Contracts.Models.Inventory;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -13,13 +11,11 @@ public sealed class InventoryController : BaseAuthorizedController
 {
     private readonly AppConfig _appConfig;
     private readonly IMediator _mediator;
-    private readonly ICurrentUserService _currentUserService;
 
-    public InventoryController(AppConfig appConfig, IMediator mediator, ICurrentUserService currentUserService)
+    public InventoryController(AppConfig appConfig, IMediator mediator)
     {
         _appConfig = appConfig;
         _mediator = mediator;
-        _currentUserService = currentUserService;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(StockList));
@@ -39,44 +35,6 @@ public sealed class InventoryController : BaseAuthorizedController
         return View(model);
     }
 
-    public async Task<IActionResult> AdjustStock(Guid productId, Guid warehouseId)
-    {
-        // Simple form
-        var model = new AdjustStockModel
-        {
-            ProductId = productId,
-            WarehouseId = warehouseId
-        };
-        return View(model);
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> AdjustStock(AdjustStockModel model)
-    {
-        if (!ModelState.IsValid)
-            return View(model);
-
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
-
-        var result = await _mediator.Send(new AdjustStockCommand
-        {
-            ProductId = model.ProductId,
-            WarehouseId = model.WarehouseId,
-            NewQuantity = model.NewQuantity,
-            Note = model.Note,
-            ModifiedByUserId = currentUser?.Id ?? Guid.Empty
-        });
-
-        if (!result.Success)
-        {
-            AddLocalizedModelError(result.ErrorMessage);
-            return View(model);
-        }
-
-        NotifySuccess("Msg.SaveSuccess");
-        return RedirectToAction(nameof(StockList));
-    }
-
     public async Task<IActionResult> MovementLogs(Guid productId, Guid warehouseId, int pageNumber = 1)
     {
         var pageSize = _appConfig.DefaultPageSize;
@@ -92,173 +50,36 @@ public sealed class InventoryController : BaseAuthorizedController
         return View(model);
     }
 
-    #region Reserve Stock
-
-    public async Task<IActionResult> ReserveStock(Guid productId, Guid warehouseId)
+    public async Task<IActionResult> ReservationLedger(Guid productId, int pageNumber = 1)
     {
-        var model = new ReserveStockModel
+        var pageSize = _appConfig.DefaultPageSize;
+
+        var model = await _mediator.Send(new GetProductReservationLedgerQuery
         {
             ProductId = productId,
-            WarehouseId = warehouseId
-        };
+            PageIndex = pageNumber - 1,
+            PageSize = pageSize
+        });
+
         return View(model);
     }
 
     [HttpPost]
-    public async Task<IActionResult> ReserveStock(ReserveStockModel model)
+    public async Task<IActionResult> SetStockLevels(SetStockLevelsModel model)
     {
         if (!ModelState.IsValid)
-            return View(model);
-
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
-
-        var result = await _mediator.Send(new ReserveStockCommand
         {
-            ProductId = model.ProductId,
-            WarehouseId = model.WarehouseId,
-            Quantity = model.Quantity,
-            ReferenceId = model.ReferenceId,
-            UserId = currentUser?.Id ?? Guid.Empty,
-            Note = model.Note
-        });
-
-        if (!result.Success)
-        {
-            AddLocalizedModelError(result.ErrorMessage);
-            return View(model);
+            var errors = string.Join("; ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+            return Json(new { success = false, errorMessage = errors });
         }
 
-        NotifySuccess("Msg.SaveSuccess");
-        return RedirectToAction(nameof(StockList));
-    }
-
-    #endregion
-
-    #region Release Reserved Stock
-
-    public async Task<IActionResult> ReleaseReservedStock(Guid productId, Guid warehouseId)
-    {
-        var model = new ReleaseReservedStockModel
+        var result = await _mediator.Send(new SetStockLevelsCommand
         {
-            ProductId = productId,
-            WarehouseId = warehouseId
-        };
-        return View(model);
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> ReleaseReservedStock(ReleaseReservedStockModel model)
-    {
-        if (!ModelState.IsValid)
-            return View(model);
-
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
-
-        var result = await _mediator.Send(new ReleaseReservedStockCommand
-        {
-            ProductId = model.ProductId,
-            WarehouseId = model.WarehouseId,
-            Quantity = model.Quantity,
-            ReferenceId = model.ReferenceId,
-            UserId = currentUser?.Id ?? Guid.Empty,
-            Note = model.Note
+            Id = model.Id,
+            ReorderLevel = model.ReorderLevel,
+            MaxStockLevel = model.MaxStockLevel
         });
 
-        if (!result.Success)
-        {
-            AddLocalizedModelError(result.ErrorMessage);
-            return View(model);
-        }
-
-        NotifySuccess("Msg.SaveSuccess");
-        return RedirectToAction(nameof(StockList));
+        return Json(new { success = result.Success, errorMessage = result.ErrorMessage });
     }
-
-    #endregion
-
-    #region Dispatch Stock
-
-    public async Task<IActionResult> DispatchStock(Guid productId, Guid warehouseId)
-    {
-        var model = new DispatchStockModel
-        {
-            ProductId = productId,
-            WarehouseId = warehouseId
-        };
-        return View(model);
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> DispatchStock(DispatchStockModel model)
-    {
-        if (!ModelState.IsValid)
-            return View(model);
-
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
-
-        var result = await _mediator.Send(new DispatchStockCommand
-        {
-            ProductId = model.ProductId,
-            WarehouseId = model.WarehouseId,
-            Quantity = model.Quantity,
-            ReferenceId = model.ReferenceId,
-            UserId = currentUser?.Id ?? Guid.Empty,
-            Note = model.Note
-        });
-
-        if (!result.Success)
-        {
-            AddLocalizedModelError(result.ErrorMessage);
-            return View(model);
-        }
-
-        NotifySuccess("Msg.SaveSuccess");
-        return RedirectToAction(nameof(StockList));
-    }
-
-    #endregion
-
-    #region Receive Stock
-
-    public async Task<IActionResult> ReceiveStock(Guid productId, Guid warehouseId)
-    {
-        var model = new ReceiveStockModel
-        {
-            ProductId = productId,
-            WarehouseId = warehouseId,
-            ReferenceType = 0
-        };
-        return View(model);
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> ReceiveStock(ReceiveStockModel model)
-    {
-        if (!ModelState.IsValid)
-            return View(model);
-
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
-
-        var result = await _mediator.Send(new ReceiveStockCommand
-        {
-            ProductId = model.ProductId,
-            WarehouseId = model.WarehouseId,
-            Quantity = model.Quantity,
-            ReferenceType = model.ReferenceType,
-            ReferenceId = model.ReferenceId,
-            UserId = currentUser?.Id ?? Guid.Empty,
-            Note = model.Note
-        });
-
-        if (!result.Success)
-        {
-            AddLocalizedModelError(result.ErrorMessage);
-            return View(model);
-        }
-
-        NotifySuccess("Msg.SaveSuccess");
-        return RedirectToAction(nameof(StockList));
-    }
-
-    #endregion
 }

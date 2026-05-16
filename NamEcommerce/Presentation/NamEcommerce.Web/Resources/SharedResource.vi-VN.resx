@@ -267,6 +267,12 @@
   <data name="Error.InsufficientStock" xml:space="preserve">
     <value>Không đủ tồn kho cho sản phẩm '{0}' trong kho '{1}'. Cần: {2}, có sẵn: {3}.</value>
   </data>
+  <data name="Error.ProductInsufficientStock" xml:space="preserve">
+    <value>Không đủ tồn kho cho sản phẩm</value>
+  </data>
+  <data name="Error.GoodsReceiptCannotDeleteDueToReservedStock" xml:space="preserve">
+    <value>Không thể xóa phiếu nhập '{0}' vì hàng trong phiếu đã được giữ cho phiếu xuất khác (sản phẩm '{1}' tại kho '{2}'). Cần huỷ phiếu xuất liên quan hoặc đợi hàng được trả lại trước.</value>
+  </data>
   <data name="Error.CannotReleaseMoreThanReserved" xml:space="preserve">
     <value>Không thể giải phóng nhiều hơn số lượng đã đặt trước. Đã đặt: {0}, yêu cầu: {1}.</value>
   </data>
@@ -292,6 +298,9 @@
     <value>Không thể xóa khách hàng đã có đơn hàng.</value>
   </data>
   <data name="Error.OrderItemRequired" xml:space="preserve">
+    <value>Vui lòng chọn ít nhất một hàng hóa.</value>
+  </data>
+  <data name="Error.PurchaseOrderItemRequired" xml:space="preserve">
     <value>Vui lòng chọn ít nhất một hàng hóa.</value>
   </data>
   <data name="Error.OrderCannotLock" xml:space="preserve">
@@ -378,6 +387,12 @@
   <data name="Error.PurchaseOrderIsNotFound" xml:space="preserve">
     <value>Không tìm thấy đơn mua hàng.</value>
   </data>
+  <data name="Error.PurchaseOrder.VendorIsNotAppropriate" xml:space="preserve">
+    <value>Không có nhà cung cấp phù hợp với hàng hóa trong đơn</value>
+  </data>
+  <data name="Error.PurchaseOrder.NoVendorsAppropriate" xml:space="preserve">
+    <value>Nhà cung cấp không phù hợp cung cấp hàng hóa trong đơn</value>
+  </data>
   <data name="Error.PurchaseOrderCannotSubmit" xml:space="preserve">
     <value>Không thể xác nhận đơn mua hàng ở trạng thái hiện tại.</value>
   </data>
@@ -397,25 +412,25 @@
     <value>Không thể cập nhật ngày giao hàng ở trạng thái hiện tại.</value>
   </data>
   <data name="Error.PurchaseOrderHasNoItemsForShipping" xml:space="preserve">
-    <value>Đơn mua hàng không có sản phẩm để áp dụng phí vận chuyển.</value>
+    <value>Đơn mua hàng không có hàng hóa để áp dụng phí vận chuyển.</value>
   </data>
   <data name="Error.PurchaseOrderHasNoItemsForTax" xml:space="preserve">
-    <value>Đơn mua hàng không có sản phẩm để áp dụng thuế.</value>
+    <value>Đơn mua hàng không có hàng hóa để áp dụng thuế.</value>
   </data>
   <data name="Error.PurchaseOrderCannotAddItems" xml:space="preserve">
-    <value>Không thể thêm sản phẩm vào đơn mua hàng có trạng thái {0}.</value>
+    <value>Không thể thêm hàng hóa vào đơn mua hàng có trạng thái {0}.</value>
   </data>
   <data name="Error.PurchaseOrderCannotReceiveGoods" xml:space="preserve">
     <value>Không thể nhận hàng cho đơn mua hàng {0}.</value>
   </data>
   <data name="Error.PurchaseOrderItemIsNotFound" xml:space="preserve">
-    <value>Không tìm thấy sản phẩm có ID {0} trong đơn mua hàng {1}.</value>
+    <value>Không tìm thấy hàng hóa có ID {0} trong đơn mua hàng {1}.</value>
   </data>
   <data name="Error.PurchaseOrderReceiveQuantityExceedsOrdered" xml:space="preserve">
     <value>Số lượng nhận {0} vượt quá số lượng đã đặt.</value>
   </data>
   <data name="Error.PurchaseOrderCannotDeleteItems" xml:space="preserve">
-    <value>Chỉ có thể xóa sản phẩm trong đơn mua hàng ở trạng thái Nháp.</value>
+    <value>Chỉ có thể xóa hàng hóa trong đơn mua hàng ở trạng thái Nháp.</value>
   </data>
   <data name="Error.WarehouseRequired" xml:space="preserve">
     <value>Kho hàng không được để trống.</value>
@@ -428,9 +443,6 @@
   </data>
   <data name="Error.PurchaseOrderCannotUpdateOrderItems" xml:space="preserve">
     <value>Không thể cập nhật chi tiết đơn nhập hàng ở trạng thái hiện tại.</value>
-  </data>
-  <data name="Error.PurchaseOrderCannotAddItem" xml:space="preserve">
-    <value>Không thể thêm sản phẩm vào đơn nhập hàng ở trạng thái hiện tại.</value>
   </data>
   <data name="Error.PurchaseOrderReceiveQuantityExceedsOrderedQuantity" xml:space="preserve">
     <value>Số lượng nhận vượt quá số lượng đặt hàng.</value>
@@ -452,6 +464,12 @@
   </data>
   <data name="Error.DeliveryNoteCannotChangeStatus" xml:space="preserve">
     <value>Không thể chuyển trạng thái phiếu giao hàng từ '{0}' sang '{1}'.</value>
+  </data>
+  <data name="Error.DeliveryNoteHasConfirmedReturns" xml:space="preserve">
+    <value>Không thể hủy phiếu xuất kho này vì đã có phiếu trả hàng được xác nhận liên kết. Vui lòng xử lý phiếu trả trước.</value>
+  </data>
+  <data name="Error.GoodsReceiptHasConfirmedReturns" xml:space="preserve">
+    <value>Không thể xóa phiếu nhập kho này vì đã có phiếu trả hàng NCC được xác nhận liên kết. Vui lòng xử lý phiếu trả trước.</value>
   </data>
   <data name="Error.DeliveryProofRequired" xml:space="preserve">
     <value>Bằng chứng giao hàng là bắt buộc.</value>
@@ -569,6 +587,9 @@
   </data>
   <data name="Msg.SaveSuccess" xml:space="preserve">
     <value>Lưu thành công</value>
+  </data>
+  <data name="Msg.BulkReceive.CreatedMultiple" xml:space="preserve">
+    <value>Đã tạo {0} phiếu nhập kho.</value>
   </data>
   <data name="Msg.ImageSizeLimit" xml:space="preserve">
     <value>Kích thước hình ảnh phải nhỏ hơn {0}Mb.</value>
@@ -791,5 +812,8 @@
   </data>
   <data name="Label.ExpectedDeliveryDate" xml:space="preserve">
     <value>Ngày giao dự kiến</value>
+  </data>
+  <data name="Error.PurchaseOrder.ProductsAreNotFound" xml:space="preserve">
+    <value>Hàng hóa không tồn tại</value>
   </data>
 </root>

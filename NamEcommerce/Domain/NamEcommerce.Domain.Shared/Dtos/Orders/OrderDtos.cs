@@ -49,9 +49,7 @@ public sealed record OrderDto(Guid Id) : BaseOrderDto
 [Serializable]
 public sealed record CreateOrderDto : BaseOrderDto
 {
-    public required string Code { get; init; }
     public required Guid CustomerId { get; init; }
-    public required Guid? CreatedByUserId { get; init; }
     public string? ShippingAddress { get; set; }
     public IList<AddOrderItemDto> Items { get; } = [];
 
@@ -84,6 +82,9 @@ public sealed record UpdateOrderResultDto
 
 [Serializable]
 public sealed record DeleteOrderDto(Guid OrderId) : BaseOrderDto;
+
+[Serializable]
+public sealed record CancelOrderDto(Guid OrderId) : BaseOrderDto;
 
 [Serializable]
 public sealed record UpdateShippingDto

@@ -1,10 +1,10 @@
 using NamEcommerce.Domain.Entities.Catalog;
-using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Events.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
@@ -15,6 +15,8 @@ namespace NamEcommerce.Domain.Entities.PurchaseOrders;
 [Serializable]
 public sealed record PurchaseOrder : AppAggregateEntity
 {
+    public const string PurchaseOrderCodePrefix = "DN";
+
     private PurchaseOrder() : base(Guid.Empty)
     {
         Code = string.Empty;
@@ -47,7 +49,11 @@ public sealed record PurchaseOrder : AppAggregateEntity
     public decimal Subtotal => _items.Sum(x => x.TotalCost);
     public decimal TaxAmount { get; internal set; }
     public decimal ShippingAmount { get; internal set; }
-    public decimal TotalAmount => Subtotal + TaxAmount + ShippingAmount;
+    public decimal AccumulatedShippingAmount { get; internal set; }
+    public decimal AccumulatedTaxAmount { get; internal set; }
+    public decimal TotalShipping => ShippingAmount + AccumulatedShippingAmount;
+    public decimal TotalTax => TaxAmount + AccumulatedTaxAmount;
+    public decimal TotalAmount => Subtotal + TotalShipping + TotalTax;
 
     private readonly List<PurchaseOrderItem> _items = [];
     public IEnumerable<PurchaseOrderItem> Items => _items.AsReadOnly();
@@ -55,7 +61,33 @@ public sealed record PurchaseOrder : AppAggregateEntity
     public DateTime CreatedOnUtc { get; }
     public DateTime? UpdatedOnUtc { get; internal set; }
 
+    public byte[] RowVersion { get; private set; } = [];
+
+    public string? CloseReason { get; private set; }
+    public DateTime? ClosedOnUtc { get; private set; }
+
+    /// <summary>User duyệt đơn (set khi Status chuyển sang Approved). Null nếu chưa duyệt.</summary>
+    public Guid? ApprovedByUserId { get; private set; }
+
+    /// <summary>Thời điểm duyệt (UTC). Null nếu chưa duyệt.</summary>
+    public DateTime? ApprovedOnUtc { get; private set; }
+
+    /// <summary>Thời điểm nhận hàng gần nhất (UTC) — set khi MarkItemReceived hoặc MarkBulkReceived.</summary>
+    public DateTime? LastReceivedOnUtc { get; private set; }
+
     #region Methods
+
+    internal void ClosePartial(string reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new PurchaseOrderDataIsInvalidException("Error.PurchaseOrder.CloseReasonRequired");
+        if (Status != PurchaseOrderStatus.Receiving)
+            throw new PurchaseOrderCannotChangeStatusException();
+
+        Status = PurchaseOrderStatus.Completed;
+        CloseReason = reason;
+        ClosedOnUtc = DateTime.UtcNow;
+    }
 
     internal void SetPlacedDate(DateTime placedOnUtc)
     {
@@ -102,7 +134,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
     }
     internal void RemoveWarehouse() => WarehouseId = null;
 
-    internal async Task AddPurchaseOrderItemAsync(PurchaseOrderItem item, IGetByIdService<Product> byIdGetter)
+    internal async Task AddPurchaseOrderItemAsync(PurchaseOrderItem item, IGetByIdService<Product> byIdGetter, bool requireVendorProduct = true)
     {
         if (item.PurchaseOrderId != Id)
             throw new InvalidOperationException("The item does not belong to this purchase order.");
@@ -113,7 +145,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
         if (product is null)
             throw new ProductIsNotFoundException(item.ProductId);
 
-        if (!product.ProductVendors.Any(v => v.VendorId == VendorId))
+        if (requireVendorProduct && !product.ProductVendors.Any(v => v.VendorId == VendorId))
             throw new InvalidOperationException("The product does not belong to the selected vendor.");
 
         _items.Add(item);
@@ -130,7 +162,10 @@ public sealed record PurchaseOrder : AppAggregateEntity
         _items.Remove(orderItem);
     }
 
-    public bool CanUpdatePurchaseOrderItems() => Status == PurchaseOrderStatus.Draft;
+    public bool CanUpdatePurchaseOrderItems()
+        => Status == PurchaseOrderStatus.Draft
+           || Status == PurchaseOrderStatus.Submitted
+           || (Status == PurchaseOrderStatus.Approved && !_items.Any(item => item.QuantityReceived > 0));
     public bool CanReceiveGoods() => Status == PurchaseOrderStatus.Approved || Status == PurchaseOrderStatus.Receiving;
     private bool CanUpdateStatus() => Status != PurchaseOrderStatus.Completed && Status != PurchaseOrderStatus.Cancelled;
     public bool CanChangeStatusTo(PurchaseOrderStatus toStatus)
@@ -151,12 +186,18 @@ public sealed record PurchaseOrder : AppAggregateEntity
         return Enum.IsDefined(toStatus);
     }
 
-    internal void ChangeStatus(PurchaseOrderStatus status)
+    internal void ChangeStatus(PurchaseOrderStatus status, Guid? actingUserId = null)
     {
         if (!CanChangeStatusTo(status))
             throw new PurchaseOrderCannotChangeStatusException();
 
         Status = status;
+
+        if (status == PurchaseOrderStatus.Approved && !ApprovedOnUtc.HasValue)
+        {
+            ApprovedByUserId = actingUserId;
+            ApprovedOnUtc = DateTime.UtcNow;
+        }
     }
     internal bool VerifyStatus()
     {
@@ -176,6 +217,67 @@ public sealed record PurchaseOrder : AppAggregateEntity
         }
 
         return false;
+    }
+
+    internal bool RevertReceivingIfEmpty()
+    {
+        if (Status != PurchaseOrderStatus.Receiving) return false;
+        if (Items.Any(item => item.QuantityReceived > 0)) return false;
+
+        Status = PurchaseOrderStatus.Approved;
+        return true;
+    }
+
+    #endregion
+
+    #region Domain Event Markers
+
+    /// <summary>
+    /// Đánh dấu đơn nhập vừa được tạo — Manager gọi trước <c>InsertAsync</c>.
+    /// Event sẽ được dispatch sau khi <c>SaveChanges</c> thành công bởi <c>DomainEventDispatchInterceptor</c>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new PurchaseOrderCreated(Id, Code, VendorId, WarehouseId));
+
+    /// <summary>
+    /// Đánh dấu đơn nhập vừa cập nhật thông tin chung — raise <see cref="PurchaseOrderUpdated"/>.
+    /// </summary>
+    internal void MarkUpdated()
+        => RaiseDomainEvent(new PurchaseOrderUpdated(Id));
+
+    /// <summary>
+    /// Đánh dấu trạng thái đơn nhập vừa thay đổi — raise <see cref="PurchaseOrderStatusChanged"/> với
+    /// trạng thái cũ + mới phục vụ tracking + side-effect khác (notify, audit log, ...).
+    /// </summary>
+    internal void MarkStatusChanged(PurchaseOrderStatus oldStatus)
+        => RaiseDomainEvent(new PurchaseOrderStatusChanged(Id, oldStatus, Status));
+
+    /// <summary>
+    /// Đánh dấu một dòng hàng vừa được thêm vào đơn nhập — raise <see cref="PurchaseOrderItemAdded"/>.
+    /// </summary>
+    internal void MarkItemAdded(PurchaseOrderItem item)
+        => RaiseDomainEvent(new PurchaseOrderItemAdded(Id, item.Id, item.ProductId, item.QuantityOrdered, item.UnitCost));
+
+    /// <summary>
+    /// Đánh dấu một dòng hàng vừa bị xoá — raise <see cref="PurchaseOrderItemRemoved"/>.
+    /// </summary>
+    internal void MarkItemRemoved(Guid itemId)
+        => RaiseDomainEvent(new PurchaseOrderItemRemoved(Id, itemId));
+
+    /// <summary>
+    /// Đánh dấu một dòng hàng vừa được nhận hàng — raise <see cref="PurchaseOrderItemReceived"/>.
+    /// Handler sẽ subscribe event này để verify + transition trạng thái đơn (Approved → Receiving → Completed).
+    /// </summary>
+    internal void MarkItemReceived(Guid itemId, decimal receivedQuantity)
+    {
+        LastReceivedOnUtc = DateTime.UtcNow;
+        RaiseDomainEvent(new PurchaseOrderItemReceived(Id, itemId, receivedQuantity));
+    }
+
+    internal void MarkBulkReceived()
+    {
+        LastReceivedOnUtc = DateTime.UtcNow;
+        RaiseDomainEvent(new PurchaseOrderBulkReceived(Id));
     }
 
     #endregion

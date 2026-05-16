@@ -50,14 +50,36 @@
                 <i class="bi bi-x-circle me-1"></i> Hủy phiếu
             </button>
         }
-        
+
         <div class="vr mx-1"></div>
+
+        <a asp-controller="CustomerReturn" asp-action="Create"
+           asp-route-deliveryNoteId="@Model.Id"
+           asp-route-customerId="@Model.CustomerId"
+           class="btn btn-outline-secondary d-flex align-items-center">
+            <i class="bi bi-arrow-return-left me-2"></i> Tạo phiếu trả
+        </a>
 
         <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-primary d-flex align-items-center">
             <i class="bi bi-printer me-2"></i> In phiếu
         </a>
     </div>
 </div>
+
+@if (Model.ShortageInfo.HasShortage)
+{
+    var shortageNoticeViewData = new ViewDataDictionary(ViewData)
+    {
+        ["ShortageModalId"] = "deliveryNoteShortageModal",
+        ["ShortageMessage"] = $"Phiếu xuất có {Model.ShortageInfo.Items.Count} mặt hàng chưa đủ tồn kho. Cần nhập thêm hàng từ nhà cung cấp trước khi xác nhận xuất.",
+        ["ShortageActionUrl"] = $"/PurchaseOrders/ShortageAggregation?deliveryNoteId={Model.Id}",
+        ["ShortageActionText"] = "Nhập hàng thiếu",
+        ["ShortagePrimaryQuantityLabel"] = "Cần xuất",
+        ["ShortageSecondaryQuantityLabel"] = "Tồn khả dụng",
+        ["ShortageUseShippedQuantity"] = false
+    };
+    @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
+}
 
 <div class="row g-4">
     <!-- Cột trái: Thông tin phiếu (col-md-4) -->
@@ -188,10 +210,48 @@
 
     <!-- Cột phải: Danh sách hàng hóa (col-md-8) -->
     <div class="col-lg-8 order-lg-1">
+        <!-- Khách trả hàng -->
+        <div class="content-card mb-4" id="customerReturnsCard" data-delivery-note-id="@Model.Id">
+            <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0 d-flex align-items-center justify-content-between">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-arrow-return-left me-2 text-warning"></i>Khách trả hàng</h5>
+                <a asp-controller="CustomerReturn" asp-action="Create"
+                   asp-route-deliveryNoteId="@Model.Id"
+                   asp-route-customerId="@Model.CustomerId"
+                   class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div id="customerReturnsLoading" class="px-4 py-3 text-center text-muted small">
+                    <span class="spinner-border spinner-border-sm me-1"></span>Đang tải...
+                </div>
+                <div id="customerReturnsEmpty" class="d-none px-4 py-3 text-center text-muted small fst-italic">
+                    — Chưa có phiếu trả hàng nào liên kết
+                </div>
+                <div id="customerReturnsList" class="d-none">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Mã phiếu</th>
+                                <th>Ngày trả</th>
+                                <th class="text-center">Trạng thái</th>
+                                <th class="text-end">Số mặt hàng</th>
+                                <th class="text-end pe-4">Tổng giá trị</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerReturnsTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div class="content-card h-100 d-flex flex-column">
             <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
                 <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Danh sách hàng hóa</h5>
             </div>
+            @{
+                var hasReturned = Model.Items.Any(i => i.ReturnedQuantity > 0 || i.PendingReturnQuantity > 0);
+            }
             <div class="card-body p-0 mt-3 flex-grow-1">
                 <div class="table-responsive">
                     <table class="table data-table mb-0">
@@ -200,6 +260,10 @@
                                 <th class="ps-4" style="width: 50px;">#</th>
                                 <th>Tên hàng hóa</th>
                                 <th class="text-end">Số lượng</th>
+                                @if (hasReturned)
+                                {
+                                    <th class="text-end" style="width: 110px;" data-bs-toggle="tooltip" title="Số lượng đã được khách trả (Confirmed)">Đã trả</th>
+                                }
                                 @if (Model.ShowPrice)
                                 {
                                     <th class="text-end">Đơn giá</th>
@@ -217,6 +281,36 @@
                                         <td class="ps-4">@(idx++)</td>
                                         <td class="fw-medium text-dark">@item.ProductName</td>
                                         <td class="text-end fw-bold">@item.Quantity.ToString("N2")</td>
+                                        @if (hasReturned)
+                                        {
+                                            <td class="text-end">
+                                                @if (item.ReturnedQuantity <= 0 && item.PendingReturnQuantity <= 0)
+                                                {
+                                                    <span class="text-muted small">—</span>
+                                                }
+                                                else
+                                                {
+                                                    if (item.ReturnedQuantity >= item.Quantity)
+                                                    {
+                                                        <span class="status-badge danger small" data-bs-toggle="tooltip" title="Toàn bộ đã trả">
+                                                            <i class="bi bi-arrow-return-left"></i> @item.ReturnedQuantity.ToString("N2")
+                                                        </span>
+                                                    }
+                                                    else if (item.ReturnedQuantity > 0)
+                                                    {
+                                                        <span class="status-badge warning small" data-bs-toggle="tooltip" title="Đã trả một phần">
+                                                            @item.ReturnedQuantity.ToString("N2")
+                                                        </span>
+                                                    }
+                                                    if (item.PendingReturnQuantity > 0)
+                                                    {
+                                                        <div class="small text-info mt-1" data-bs-toggle="tooltip" title="Đang chờ xác nhận (Draft/Inspecting)">
+                                                            <i class="bi bi-hourglass-split"></i> @item.PendingReturnQuantity.ToString("N2")
+                                                        </div>
+                                                    }
+                                                }
+                                            </td>
+                                        }
                                         @if (Model.ShowPrice)
                                         {
                                             <td class="text-end text-muted">@item.UnitPrice.ToString("N0") <span class="small">đ</span></td>
@@ -224,17 +318,20 @@
                                         }
                                     </tr>
                                 }
+                                // Cột: # | Name | Qty | (hasReturned: Returned) | (ShowPrice: Price | SubTotal)
+                                // Label colspan = total - 1 (chừa cột cuối cho value)
+                                var summaryLabelColspan = 2 + (hasReturned ? 1 : 0) + (Model.ShowPrice ? 2 : 0);
                                 @if (Model.ShowPrice)
                                 {
                                     <tr class="bg-light border-top">
-                                        <td colspan="4" class="text-end py-2 text-dark small">TỔNG TIỀN HÀNG:</td>
+                                        <td colspan="@summaryLabelColspan" class="text-end py-2 text-dark small">TỔNG TIỀN HÀNG:</td>
                                         <td class="text-end pe-4 py-2 fw-bold">@Model.TotalAmount.ToString("N0") <span class="small">đ</span></td>
                                     </tr>
                                 }
                                 @if (Model.Surcharge > 0)
                                 {
                                     <tr class="bg-light border-top">
-                                        <td colspan="@(Model.ShowPrice ? 4 : 2)" class="text-end py-2 text-dark small">
+                                        <td colspan="@summaryLabelColspan" class="text-end py-2 text-dark small">
                                             PHỤ PHÍ:
                                             @if (!string.IsNullOrEmpty(Model.SurchargeReason))
                                             {
@@ -247,7 +344,7 @@
                                 @if (Model.AmountToCollect > 0)
                                 {
                                     <tr class="fw-bold bg-light border-top border-2">
-                                        <td colspan="@(Model.ShowPrice ? 4 : 2)" class="text-end py-3 text-dark">SỐ TIỀN PHẢI THU:</td>
+                                        <td colspan="@summaryLabelColspan" class="text-end py-3 text-dark">SỐ TIỀN PHẢI THU:</td>
                                         <td class="text-end pe-4 py-3 fs-5 text-primary">@Model.AmountToCollect.ToString("N0") <span class="small">đ</span></td>
                                     </tr>
                                 }
@@ -255,7 +352,7 @@
                             else
                             {
                                 <tr>
-                                    <td colspan="@(Model.ShowPrice ? 5 : 3)" class="text-center py-4">
+                                    <td colspan="@(3 + (hasReturned ? 1 : 0) + (Model.ShowPrice ? 2 : 0))" class="text-center py-4">
                                         Không có hàng hóa
                                     </td>
                                 </tr>
@@ -322,6 +419,42 @@
                 </div>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="modal fade" id="shortageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title">Thiếu hàng để xuất kho</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="shortage-alert-panel mb-3">
+                    <div class="shortage-alert-content">
+                        <span class="shortage-alert-icon">
+                            <i class="bi bi-exclamation-triangle"></i>
+                        </span>
+                        <div class="shortage-alert-message">Phiếu xuất chưa thể xác nhận vì tồn khả dụng không đủ.</div>
+                    </div>
+                </div>
+                <div id="shortageModalItems" class="shortage-modal-list small">
+                    @foreach (var item in Model.ShortageInfo.Items)
+                    {
+                        <div class="shortage-modal-item">
+                            <span class="fw-semibold text-dark">@item.ProductName</span>
+                            <strong class="shortage-danger">@item.ShortageQuantity.ToString("#,##0.##")</strong>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
+                <a class="btn shortage-action-btn" id="shortageAggregationLink" href="/PurchaseOrders/ShortageAggregation?deliveryNoteId=@Model.Id">
+                    <i class="bi bi-truck"></i>Nhập hàng thiếu
+                </a>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -429,6 +562,10 @@
                         if (res.success) {
                             location.reload();
                         } else {
+                            if (res.shortageItems && res.shortageItems.length) {
+                                showShortageModal(res);
+                                return;
+                            }
                             alert(res.message);
                         }
                     },
@@ -438,6 +575,62 @@
                     }
                 });
             }
+
+            // ── Tải danh sách phiếu trả hàng ────────────────────────────────
+            function showShortageModal(res) {
+                const itemsEl = document.getElementById('shortageModalItems');
+                const linkEl = document.getElementById('shortageAggregationLink');
+                const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[char]));
+                if (linkEl && res.aggregationUrl) linkEl.href = res.aggregationUrl;
+                itemsEl.innerHTML = res.shortageItems.map(item =>
+                    '<div class="shortage-modal-item">' +
+                    '<span class="fw-semibold text-dark">' + escapeHtml(item.productName) + '</span>' +
+                    '<strong class="shortage-danger">' + Number(item.shortageQuantity || 0).toLocaleString('vi-VN') + '</strong>' +
+                    '</div>').join('');
+                new bootstrap.Modal(document.getElementById('shortageModal')).show();
+            }
+
+            (function loadCustomerReturns() {
+                const card = document.getElementById('customerReturnsCard');
+                if (!card) return;
+                const noteId = card.dataset.deliveryNoteId;
+                const loadingEl = document.getElementById('customerReturnsLoading');
+                const emptyEl = document.getElementById('customerReturnsEmpty');
+                const listEl = document.getElementById('customerReturnsList');
+                const tbody = document.getElementById('customerReturnsTableBody');
+
+                fetch('/CustomerReturn/GetByDeliveryNote?deliveryNoteId=' + noteId)
+                    .then(r => r.json())
+                    .then(function(returns) {
+                        loadingEl.classList.add('d-none');
+                        if (!returns || returns.length === 0) {
+                            emptyEl.classList.remove('d-none');
+                            return;
+                        }
+                        returns.forEach(function(ret) {
+                            var tr = document.createElement('tr');
+                            tr.innerHTML =
+                                '<td class="ps-4"><a href="/CustomerReturn/Details/' + ret.id + '" class="fw-medium text-decoration-none">' + ret.code + '</a></td>' +
+                                '<td class="text-muted small">' + ret.returnDate + '</td>' +
+                                '<td class="text-center"><span class="badge bg-' + ret.statusColor + '">' + ret.statusLabel + '</span></td>' +
+                                '<td class="text-end text-muted small">' + ret.itemCount + '</td>' +
+                                '<td class="text-end pe-4 fw-semibold">' + ret.totalAmount.toLocaleString('vi-VN') + 'đ</td>';
+                            tbody.appendChild(tr);
+                        });
+                        listEl.classList.remove('d-none');
+                    })
+                    .catch(function() {
+                        loadingEl.classList.add('d-none');
+                        emptyEl.textContent = 'Không thể tải dữ liệu phiếu trả.';
+                        emptyEl.classList.remove('d-none');
+                    });
+            })();
         });
     </script>
 }

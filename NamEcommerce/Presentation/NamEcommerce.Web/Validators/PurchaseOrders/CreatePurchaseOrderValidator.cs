@@ -1,7 +1,6 @@
 using FluentValidation;
 using Microsoft.Extensions.Localization;
-using NamEcommerce.Web.Contracts.Extensions;
-using NamEcommerce.Web.Models.Catalog;
+using NamEcommerce.Web.Models.PurchaseOrders;
 using NamEcommerce.Web.Resources;
 
 namespace NamEcommerce.Web.Validators.PurchaseOrders;
@@ -11,14 +10,29 @@ public sealed class CreatePurchaseOrderValidator : AbstractValidator<CreatePurch
     public CreatePurchaseOrderValidator(IStringLocalizer<SharedResource> localizer)
     {
         RuleFor(p => p.VendorId)
-            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.VendorId"]]);
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Vendor"]]);
 
         RuleFor(p => p.PlacedOn)
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.PlaceOrderDate"]])
             .LessThanOrEqualTo(DateTime.Now).WithMessage(p => localizer["Error.PlacedOrderDateCannotBeInFuture"]);
 
-        RuleFor(p => p.ExpectedDeliveryDate)
-            .GreaterThanOrEqualTo(DateTime.Now.Date).WithMessage(p => localizer["Error.ExpectedDeliveryDateCannotBeInPast"])
-            .Must((m, expectedDeliveryDate) => !expectedDeliveryDate.HasValue || expectedDeliveryDate.ToEndOfDate() >= m.PlacedOn)
-            .WithMessage(p => localizer["Error.ExpectedDeliveryDateLessThanPlaceOrderDate"]);
+        RuleFor(p => p.Items)
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Items"]]);
+
+        RuleForEach(p => p.Items).SetValidator(new CreatePurchaseOrderItemValidator(localizer));
+    }
+}
+public sealed class CreatePurchaseOrderItemValidator : AbstractValidator<CreatePurchaseOrderItemModel>
+{
+    public CreatePurchaseOrderItemValidator(IStringLocalizer<SharedResource> localizer)
+    {
+        RuleFor(m => m.ProductId)
+            .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Product"]]);
+
+        RuleFor(m => m.UnitCost)
+            .GreaterThan(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.UnitCost"]]);
+
+        RuleFor(m => m.Quantity)
+            .GreaterThan(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.Quantity"]]);
     }
 }

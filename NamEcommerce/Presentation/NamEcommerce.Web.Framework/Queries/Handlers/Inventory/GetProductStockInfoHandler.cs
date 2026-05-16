@@ -18,13 +18,20 @@ public sealed class GetProductStockInfoHandler : IRequestHandler<GetProductStock
     {
         var stockItems = await _inventoryAppService.GetInventoryStocksForProductAsync(request.ProductId, request.WarehouseId);
 
+        var quantityAvailable = request.WarehouseId.HasValue
+            ? stockItems.Sum(item => item.QuantityAvailable)
+            : await _inventoryAppService.GetGlobalAvailableForProductAsync(request.ProductId).ConfigureAwait(false);
+
         return new ProductStockInfoModel
         {
             ProductId = request.ProductId,
             WarehouseId = request.WarehouseId,
             QuantityOnHand = stockItems.Sum(item => item.QuantityOnHand),
             QuantityReserved = stockItems.Sum(item => item.QuantityReserved),
-            QuantityAvailable = stockItems.Sum(item => item.QuantityAvailable)
+            QuantityAvailable = quantityAvailable,
+            AvailableWarehouseIds = stockItems.Where(item => item.WarehouseId.HasValue && item.QuantityAvailable > 0)
+                .Select(item => item.WarehouseId)
+                .OfType<Guid>().Distinct().ToList()
         };
     }
 }

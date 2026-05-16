@@ -1,0 +1,123 @@
+@model NamEcommerce.Web.Models.Debts.CustomerRefundListSearchModel
+@using NamEcommerce.Domain.Shared.Enums.Debts
+
+@{
+    ViewData["Title"] = "Danh sách hoàn tiền khách hàng";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Hoàn tiền khách hàng</h4>
+</div>
+
+<!-- Filter -->
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small">Tìm kiếm</label>
+                <input type="text" name="FilterKeywords" value="@Model.FilterKeywords"
+                       class="form-control form-control-sm" placeholder="Mã phiếu, tên khách..."/>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">Trạng thái</label>
+                <select name="FilterStatus" class="form-select form-select-sm">
+                    <option value="">-- Tất cả --</option>
+                    <option value="10" selected="@(Model.FilterStatus == 10)">Chờ hoàn tiền</option>
+                    <option value="20" selected="@(Model.FilterStatus == 20)">Đã hoàn tiền</option>
+                    <option value="30" selected="@(Model.FilterStatus == 30)">Đã huỷ</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-primary">Lọc</button>
+                <a asp-action="List" class="btn btn-sm btn-outline-secondary ms-1">Xoá lọc</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Table -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <table class="table table-hover table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Mã phiếu</th>
+                    <th>Khách hàng</th>
+                    <th>Phiếu trả hàng</th>
+                    <th class="text-end">Số tiền hoàn</th>
+                    <th class="text-center">Trạng thái</th>
+                    <th>Ngày tạo</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Data?.Items.Count > 0)
+                {
+                    foreach (var item in Model.Data.Items)
+                    {
+                        var (badgeClass, label) = (CustomerRefundStatus)item.Status switch
+                        {
+                            CustomerRefundStatus.Pending => ("bg-warning text-dark", "Chờ hoàn tiền"),
+                            CustomerRefundStatus.Completed => ("bg-success", "Đã hoàn tiền"),
+                            CustomerRefundStatus.Cancelled => ("bg-secondary", "Đã huỷ"),
+                            _ => ("bg-light text-dark", "?")
+                        };
+                        <tr>
+                            <td><strong>@item.Code</strong></td>
+                            <td>@item.CustomerName</td>
+                            <td>
+                                <a asp-controller="CustomerReturn" asp-action="Details"
+                                   asp-route-id="@item.CustomerReturnId">@item.CustomerReturnCode</a>
+                            </td>
+                            <td class="text-end text-danger fw-bold">@item.Amount.ToString("N0") ₫</td>
+                            <td class="text-center">
+                                <span class="badge @badgeClass">@label</span>
+                            </td>
+                            <td>@item.CreatedOnUtc.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <a asp-action="Details" asp-route-id="@item.Id"
+                                   class="btn btn-xs btn-outline-primary">Chi tiết</a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">Không có phiếu hoàn tiền nào.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (Model.Data != null && Model.Data.TotalCount > Model.PageSize)
+{
+    var totalPages = (int)Math.Ceiling((double)Model.Data.TotalCount / Model.PageSize);
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <span class="text-muted small">
+            Hiển thị @Model.Data.Items.Count / @Model.Data.TotalCount phiếu
+        </span>
+        <div>
+            @if (Model.PageNumber > 1)
+            {
+                <a asp-action="List"
+                   asp-route-FilterKeywords="@Model.FilterKeywords"
+                   asp-route-FilterStatus="@Model.FilterStatus"
+                   asp-route-PageNumber="@(Model.PageNumber - 1)"
+                   asp-route-PageSize="@Model.PageSize"
+                   class="btn btn-sm btn-outline-secondary me-1">← Trước</a>
+            }
+            @if (Model.PageNumber < totalPages)
+            {
+                <a asp-action="List"
+                   asp-route-FilterKeywords="@Model.FilterKeywords"
+                   asp-route-FilterStatus="@Model.FilterStatus"
+                   asp-route-PageNumber="@(Model.PageNumber + 1)"
+                   asp-route-PageSize="@Model.PageSize"
+                   class="btn btn-sm btn-outline-secondary">Sau →</a>
+            }
+        </div>
+    </div>
+}

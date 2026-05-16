@@ -80,7 +80,7 @@ public sealed class ProductModelFactory : IProductModelFactory
         return model;
     }
 
-    public async Task<ProductListModel> PrepareProductListModel(ProductListSearchModel searchModel)
+    public async Task<ProductListModel> PrepareProductListModel(ProductSearchModel searchModel)
     {
         var pageNumber = searchModel?.PageNumber ?? 1;
         var pageSize = searchModel?.PageSize ?? 0;
@@ -90,7 +90,9 @@ public sealed class ProductModelFactory : IProductModelFactory
 
         var model = await _mediator.Send(new GetProductListQuery
         {
-            Keywords = searchModel?.Keywords,
+            Keywords = searchModel?.Q,
+            VendorId = searchModel?.Vid,
+            CategoryId = searchModel?.Cid,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         }).ConfigureAwait(false);

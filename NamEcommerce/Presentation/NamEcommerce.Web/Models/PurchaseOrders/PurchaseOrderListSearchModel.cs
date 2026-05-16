@@ -1,4 +1,5 @@
-﻿using NamEcommerce.Web.Models.Common;
+﻿using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Web.Models.Common;
 
 namespace NamEcommerce.Web.Models.PurchaseOrders;
 
@@ -6,4 +7,5 @@ namespace NamEcommerce.Web.Models.PurchaseOrders;
 public sealed record PurchaseOrderListSearchModel : BasePaginationModel
 {
     public string? Keywords { get; set; }
+    public PurchaseOrderStatus? Status { get; set; }
 }

@@ -24,7 +24,7 @@ public sealed class ProductController : BaseAuthorizedController
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
-    public async Task<IActionResult> List(ProductListSearchModel searchModel)
+    public async Task<IActionResult> List(ProductSearchModel searchModel)
     {
         var model = await _productModelFactory.PrepareProductListModel(searchModel);
 
@@ -72,11 +72,11 @@ public sealed class ProductController : BaseAuthorizedController
         };
         if (model.HasExistingStockQuantity)
         {
-            createProductCommand.UnitPrice = model.ProductInventory!.UnitPrice;
-            createProductCommand.CostPrice = model.ProductInventory!.CostPrice;
-            createProductCommand.ProductStocks = model.ProductInventory!.ProductStocks.Where(stock => stock.Quantity > 0)
+            createProductCommand.ProductStocks = model.ProductInventory!.ProductStocks
+                .Where(stock => stock.Quantity > 0)
                 .Select(stock => new CreateProductCommand.ProductStockModel(stock.WarehouseId, stock.Quantity));
         }
+
         var createProductResult = await _mediator.Send(createProductCommand);
         if (!createProductResult.Success)
         {
@@ -156,29 +156,58 @@ public sealed class ProductController : BaseAuthorizedController
     }
 
     [HttpGet]
-    public async Task<IActionResult> Search(string q, Guid? w, Guid? vendorId, Guid? categoryId)
+    public async Task<IActionResult> Search(ProductSearchModel searchModel, Guid? wid)
     {
         var model = await _mediator.Send(new GetProductListForOrderQuery
         {
-            Keywords = q,
-            VendorId = vendorId,
-            WarehouseId = w,
-            CategoryId = categoryId
+            Keywords = searchModel.Q,
+            VendorId = searchModel.Vid,
+            WarehouseId = wid,
+            CategoryId = searchModel.Cid
         });
 
         var products = model.Data.Items.Select(productInfo => new
         {
             id = productInfo.Id,
             name = productInfo.Name,
+            unitMeasurement = productInfo.UnitMeasurement,
             picture = productInfo.PictureUrl,
+            unitPrice = productInfo.UnitPrice,
             availableQty = productInfo.QuantityAvailable,
             categoryName = productInfo.CategoryName,
-            avaialbeWarehouses = productInfo.AvailableWarehouseIds,
-            vendorCount = productInfo.AvailableVendors.Count,
+            availableWarehouses = productInfo.AvailableWarehouses,
+            vendorCount = productInfo.AvailableVendors.Count(),
             firstVendorId = productInfo.AvailableVendors.FirstOrDefault()?.Id.ToString(),
             availableVendors = productInfo.AvailableVendors.Select(v => new { key = v.Id.ToString(), value = v.Name })
         }).ToList();
         return Json(products);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> PickItem(Guid id)
+    {
+        var model = await _mediator.Send(new GetProductsByIdsForOrderQuery
+        {
+            Ids = [id]
+        });
+        var product = model.FirstOrDefault();
+        if (product is null)
+            return NotFound();
+
+        return Json(new
+        {
+            id = product.Id,
+            name = product.Name,
+            unitMeasurement = product.UnitMeasurement,
+            picture = product.PictureUrl,
+            unitPrice = product.CurrentUnitPrice,
+            availableQty = product.QuantityAvailable,
+            categoryName = product.CategoryName,
+            availableWarehouses = product.AvailableWarehouses,
+            vendorCount = product.AvailableVendors.Count,
+            firstVendorId = product.AvailableVendors.FirstOrDefault()?.Id.ToString(),
+            availableVendors = product.AvailableVendors.Select(v => new { key = v.Id.ToString(), value = v.Name })
+        });
     }
 
     [HttpPost]

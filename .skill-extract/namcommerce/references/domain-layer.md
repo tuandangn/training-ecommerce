@@ -40,8 +40,20 @@ public sealed record Xyz : AppAggregateEntity
         Name = name;
     }
     internal void MarkProcessed() => ProcessedOnUtc = DateTime.UtcNow;
+
+    // Domain Event — raise concrete event, dispatch tự động qua interceptor sau SaveChanges
+    internal void MarkCreated() => RaiseDomainEvent(new XyzCreated(Id, Name));
+    internal void MarkUpdated() => RaiseDomainEvent(new XyzUpdated(Id));
+    internal void MarkDeleted() => RaiseDomainEvent(new XyzDeleted(Id));
 }
 ```
+
+> Concrete event định nghĩa tại `Domain.Shared/Events/{Module}/XyzEvents.cs`:
+> ```csharp
+> public sealed record XyzCreated(Guid XyzId, string Name) : DomainEvent;
+> public sealed record XyzUpdated(Guid XyzId) : DomainEvent;
+> public sealed record XyzDeleted(Guid XyzId) : DomainEvent;
+> ```
 
 ---
 
@@ -102,14 +114,12 @@ public sealed class XyzManager : IXyzManager
 {
     private readonly IRepository<Xyz> _xyzRepository;
     private readonly IEntityDataReader<Xyz> _xyzDataReader;
-    private readonly IEventPublisher _eventPublisher;
+    // Manager KHÔNG inject IEventPublisher — entity tự raise event qua Mark*()
 
-    public XyzManager(IRepository<Xyz> xyzRepository, IEntityDataReader<Xyz> xyzDataReader,
-        IEventPublisher eventPublisher)
+    public XyzManager(IRepository<Xyz> xyzRepository, IEntityDataReader<Xyz> xyzDataReader)
     {
         _xyzRepository = xyzRepository;
         _xyzDataReader = xyzDataReader;
-        _eventPublisher = eventPublisher;
     }
 
     public Task<IPagedDataDto<XyzDto>> GetXyzsAsync(string? keywords, int pageIndex, int pageSize)
@@ -136,8 +146,8 @@ public sealed class XyzManager : IXyzManager
             throw new XyzNameExistsException(dto.Name);
 
         var xyz = new Xyz(Guid.NewGuid(), dto.Name) { DisplayOrder = dto.DisplayOrder };
+        xyz.MarkCreated();                                                     // raise concrete event
         var inserted = await _xyzRepository.InsertAsync(xyz).ConfigureAwait(false);
-        await _eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return new CreateXyzResultDto { CreatedId = inserted.Id };
     }
 
@@ -154,8 +164,8 @@ public sealed class XyzManager : IXyzManager
 
         xyz.SetName(dto.Name);
         xyz.DisplayOrder = dto.DisplayOrder;
+        xyz.MarkUpdated();                                                     // raise concrete event
         var updated = await _xyzRepository.UpdateAsync(xyz).ConfigureAwait(false);
-        await _eventPublisher.EntityUpdated(updated).ConfigureAwait(false);
         return new UpdateXyzResultDto(updated.Id) { Name = dto.Name, DisplayOrder = dto.DisplayOrder };
     }
 
@@ -163,8 +173,8 @@ public sealed class XyzManager : IXyzManager
     {
         var xyz = await _xyzDataReader.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new XyzNotFoundException(id);
+        xyz.MarkDeleted();                                                     // raise event TRƯỚC khi DeleteAsync (snapshot data nếu cần)
         await _xyzRepository.DeleteAsync(xyz).ConfigureAwait(false);
-        await _eventPublisher.EntityDeleted(xyz).ConfigureAwait(false);
     }
 
     public Task<bool> DoesNameExistAsync(string name, Guid? excludeId = null)

@@ -4,7 +4,6 @@ using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
-using NamEcommerce.Web.Models.Catalog;
 using NamEcommerce.Web.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Services.PurchaseOrders;
@@ -31,6 +30,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         var model = await _mediator.Send(new GetPurchaseOrderListQuery
         {
             Keywords = searchModel?.Keywords,
+            Status = (int?)searchModel?.Status,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         });
@@ -40,20 +40,24 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 
     public async Task<CreatePurchaseOrderModel> PrepareCreatePurchaseOrderModel(CreatePurchaseOrderModel? oldModel = null)
     {
-        var vendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
-        var warehouseOptions = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new CreatePurchaseOrderModel
         {
             PlacedOn = DateTime.Now
         };
-        model.AvailableWarehouses = warehouseOptions;
+        model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
-        var vendor = await _mediator.Send(new GetVendorQuery { Id = model.VendorId }).ConfigureAwait(false);
-        if (vendor is not null)
+        if (model.VendorId.HasValue)
         {
-            model.VendorName = vendor.Name;
-            model.VendorPhone = vendor.PhoneNumber;
-            model.VendorAddress = vendor.Address;
+            var vendor = await _mediator.Send(new GetVendorQuery
+            {
+                Id = model.VendorId.Value
+            }).ConfigureAwait(false);
+            if (vendor is not null)
+            {
+                model.VendorName = vendor.Name;
+                model.VendorPhone = vendor.PhoneNumber;
+                model.VendorAddress = vendor.Address;
+            }
         }
 
         if (model.Items.Count > 0)
@@ -65,15 +69,18 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 {
                     Ids = productIds
                 }).ConfigureAwait(false);
-
                 model.Items = model.Items.Where(i => products.Any(p => p.Id == i.ProductId)).ToList();
-
                 foreach (var item in model.Items)
                 {
                     var product = products.First(p => p.Id == item.ProductId);
                     item.ProductDisplayName = product.Name;
                     item.ProductDisplayPicture = product.PictureUrl;
+                    item.AvailableVendors = product.AvailableVendors;
                 }
+            }
+            else
+            {
+                model.Items.Clear();
             }
         }
 
@@ -86,12 +93,21 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         if (purchaseOrderInfo == null)
             return null;
 
-        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var warehouseTask = _mediator.Send(new GetWarehouseOptionListQuery());
+        var receiptsTask = _mediator.Send(new GetRelatedGoodsReceiptsByPurchaseOrderQuery { PurchaseOrderId = id });
+        var returnsTask = _mediator.Send(new GetRelatedVendorReturnsByPurchaseOrderQuery { PurchaseOrderId = id });
+        await Task.WhenAll(warehouseTask, receiptsTask, returnsTask).ConfigureAwait(false);
+
+        var availableWarehouses = await warehouseTask;
+        var relatedReceipts = await receiptsTask;
+        var relatedReturns = await returnsTask;
 
         var model = new PurchaseOrderDetailsModel
         {
             Info = purchaseOrderInfo,
-            AvailableWarehouses = availableWarehouses
+            AvailableWarehouses = availableWarehouses,
+            RelatedGoodsReceipts = relatedReceipts,
+            RelatedVendorReturns = relatedReturns
         };
         model.CanModifyInfo = purchaseOrderInfo.CanModifyInfo;
         if (model.CanModifyInfo)

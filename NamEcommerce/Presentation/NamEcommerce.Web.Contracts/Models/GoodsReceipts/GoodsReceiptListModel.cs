@@ -13,6 +13,7 @@ public sealed class GoodsReceiptListModel
     [Serializable]
     public sealed record ItemModel(Guid Id)
     {
+        public string Code { get; init; } = string.Empty;
         public required DateTime ReceivedOn { get; init; }
         public string? TruckDriverName { get; init; }
         public string? TruckNumberSerial { get; init; }

@@ -2,8 +2,7 @@ import { toast } from "/modules/modals.js";
 import { apiGet } from "/modules/ajax-helper.js";
 import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
-
-// ─── Models ───────────────────────────────────────────────────────────────────
+import ProductBrowser from "/modules/ProductBrowser.js";
 
 class Customer {
     constructor({ id, name, phone, address }) {
@@ -53,17 +52,22 @@ class OrderState {
     }
 }
 
-
-// ─── OrderController ──────────────────────────────────────────────────────────
-
 export default class OrderController {
-    #state;
-    #addItemController = new AddItemController();
+    #initialized = false;
+    #activeRowIndex = null;
 
+    #state;
+
+    #addItemController;
+
+    #productBrowser;
     #productPicker;
     #customerPicker;
 
+    #validator;
+
     constructor() {
+        this.#addItemController = new AddItemController();
 
         this.#bindProductPicker();
         this.#bindAddItemForm();
@@ -74,21 +78,37 @@ export default class OrderController {
         const initialExpectedDate = this.#bindExpectedDate();
         const initialItems = this.#getItems();
 
-        this.#state = Object.assign(new OrderState(),{
+        const browserEl = document.getElementById('productBrowser');
+        if (browserEl) {
+            this.#productBrowser = new ProductBrowser(
+                browserEl,
+                (product) => this.#addOrIncrementItem(product),
+                { colClass: browserEl.dataset.colClass, initialShow: true }
+            );
+            this.#productBrowser.init();
+        }
+
+        this.#bindEvents();
+
+        this.#state = new OrderState();
+        this.#setState({
             customer: initialCustomer,
             discount: initialDiscount,
             expectedDate: initialExpectedDate,
             items: initialItems
         });
+
+        this.#initialized = true;
     }
 
-    // ─── State ────────────────────────────────────────────────────────────────
+    #isValidProduct(product) {
+        return product.availableQty > 0 || product.vendorCount > 0;
+    }
+
     #setState(patch) {
         Object.assign(this.#state, patch);
         this.#render();
     }
-
-    // ─── Render ───────────────────────────────────────────────────────────────
 
     #render() {
         this.#renderSummary();
@@ -96,6 +116,16 @@ export default class OrderController {
         this.#renderItems();
         this.#renderDiscount();
         this.#validateForm();
+    }
+
+    #bindEvents() {
+        const form = document.getElementById('createOrderForm');
+        form.addEventListener('submit', e => {
+            if (!this.#state.items.length) {
+                e.preventDefault();
+                toast('Chưa có hàng hóa nào', 'Vui lòng thêm hàng hóa', 'warning');
+            }
+        });
     }
 
     #renderSummary() {
@@ -164,8 +194,6 @@ export default class OrderController {
             delete discountInput.dataset.valRangeMax;
         }
     }
-
-    // ─── Build item row ───────────────────────────────────────────────────────
 
     #buildItemRow(container, item, index) {
         const { productInfo: p, quantity, unitPrice } = item;
@@ -273,27 +301,46 @@ export default class OrderController {
         this.#setState({ items });
     }
 
-    // ─── Validation ───────────────────────────────────────────────────────────
+    async #addOrIncrementItem(product) {
+        if (!this.#isValidProduct(product)) {
+            toast('Hàng hóa không phù hợp', 'Vui lòng chọn hàng hóa khác.', 'warning');
+            return;
+        }
+        const items = Array.from(this.#state.items);
+        const existingIndex = items.findIndex(item => item.productInfo.id === product.id);
+        if (existingIndex !== -1) {
+            const existingItem = items[existingIndex];
+            existingItem.quantity += 1;
+            this.#activeRowIndex = existingIndex;
+            this.#setState({ items });
+        } else {
+            let unitPrice = 0;
+            // if (this.#state.customer)
+            //     unitPrice = await this.#priceController.getProductPriceForCustomer(product.id, this.#state.customer.id) ?? 0;
+            items.push(new OrderItem(new ProductInfo(product), 1, unitPrice));
+            this.#activeRowIndex = items.length - 1;
+            this.#setState({ items });
+        }
+    }
 
-    #validateForm() {
+    #validateForm(triggers) {
         const form = document.getElementById('createOrderForm');
         if (!form) return;
 
-        // Re-parse unobtrusive validation
         $(form).removeData('validator').removeData('unobtrusiveValidation');
         $.validator.unobtrusive.parse(form);
+        this.#validator = $(form).data('validator');
 
-        const customerValid = this.#validateCustomer();
-        const dateValid = this.#validateExpectedDate();
-        const canSubmit = Boolean(
-            this.#state.items.length > 0 &&
-            customerValid &&
-            dateValid
-        );
-
-        form.querySelectorAll('[type="submit"]').forEach(btn => {
-            btn.disabled = !canSubmit;
-        });
+        if (!Array.isArray(triggers)) {
+            if (this.#initialized)
+                $(form).valid();
+            return;
+        }
+        for (const trigger of triggers) {
+            if (typeof trigger != 'string' && !(trigger instanceof HTMLElement))
+                continue;
+            this.#validator.element(trigger);
+        }
     }
 
     #validateCustomer() {
@@ -323,8 +370,6 @@ export default class OrderController {
         return true;
     }
 
-    // ─── Event bindings ───────────────────────────────────────────────────────
-
     #bindCustomerPicker() {
         const el = getEl('customerPicker');
         this.#customerPicker = new CustomerPicker(el);
@@ -347,7 +392,7 @@ export default class OrderController {
 
     #bindProductPicker() {
         const el = getEl('productPicker');
-        this.#productPicker = new ProductPicker(el);
+        this.#productPicker = new ProductPicker(el, { checkProduct: this.#isValidProduct });
 
         el.addEventListener('select', (e) => {
             this.#addItemController.setProduct(e.detail?.product ? new ProductInfo(e.detail.product) : null);
@@ -422,8 +467,6 @@ export default class OrderController {
         document.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
     }
 }
-
-// ─── AddItemController ────────────────────────────────────────────────────────
 
 export class AddItemController {
     state = {
@@ -533,9 +576,6 @@ export class AddItemController {
         }
     }
 
-    /** Toggle hoặc ép trạng thái bảng lịch sử giá.
-     * @param {boolean|undefined} forceShow - true: luôn hiện, false: luôn ẩn, undefined: toggle
-     */
     #togglePriceHistory(forceShow) {
         const container = getEl('priceHistoryContainer');
         const toggleBtn = getEl('togglePriceHistoryBtn');

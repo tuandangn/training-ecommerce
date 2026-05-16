@@ -16,6 +16,12 @@ public interface IDeliveryNoteManager
     
     Task CancelAsync(Guid id);
     
+    /// <summary>
+    /// Tự động tạo DeliveryNote ở trạng thái Delivered ngay khi VendorReturn được Confirm.
+    /// SourceType=ToVendorReturn — handler downstream trừ tồn kho nhưng KHÔNG sinh CustomerDebt.
+    /// </summary>
+    Task<Guid> CreateAsDeliveredAsync(CreateDeliveryNoteFromVendorReturnDto dto);
+
     Task<DeliveryNoteDto?> GetByIdAsync(Guid id);
     
     Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize, string? keywords = null, Guid? orderId = null, IEnumerable<DeliveryNoteStatus>? status = null);
