@@ -18,8 +18,9 @@ else
                         <div class="d-flex align-items-end justify-content-between">
                             <a class="fw-medium text-decoration-none" asp-controller="PurchaseOrder" asp-action="Details" asp-route-id="@po.PurchaseOrderId">
                                 <span>@po.PurchaseOrderCode</span>
+                                <span class="badge bg-@po.StatusClass ms-1">@po.StatusName</span>
                             </a>
-                            <span class="text-muted">
+                            <span class="text-muted small">
                                 Ngày đặt @po.PlacedOn.ToString("dd/MM/yyyy HH:mm")
                             </span>
                         </div>
