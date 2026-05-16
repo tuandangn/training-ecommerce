@@ -631,14 +631,16 @@
                 btn.addEventListener('click', async () => {
                     if (!confirm('Xác nhận khách đã nhận hàng?')) return;
                     const id = btn.dataset.id;
-                    const res = await fetch('/DirectShipDelivery/ConfirmDelivery', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value },
-                        body: JSON.stringify({ deliveryNoteId: id, confirmedDate: null, note: null })
-                    });
-                    const data = await res.json();
-                    if (data.success) location.reload();
-                    else alert(data.message || 'Không thể xác nhận.');
+                    try {
+                        const res = await fetch('/DirectShipDelivery/ConfirmDelivery', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
+                            body: JSON.stringify({ deliveryNoteId: id, confirmedDate: null, note: null })
+                        });
+                        const data = await res.json();
+                        if (data.success) location.reload();
+                        else alert(data.message || 'Không thể xác nhận.');
+                    } catch { alert('Lỗi kết nối, vui lòng thử lại.'); }
                 });
             });
 
@@ -647,14 +649,16 @@
                     const reason = prompt('Lý do từ chối:');
                     if (!reason) return;
                     const id = btn.dataset.id;
-                    const res = await fetch('/DirectShipDelivery/RejectDelivery', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value },
-                        body: JSON.stringify({ deliveryNoteId: id, reason })
-                    });
-                    const data = await res.json();
-                    if (data.success) location.reload();
-                    else alert(data.message || 'Không thể từ chối.');
+                    try {
+                        const res = await fetch('/DirectShipDelivery/RejectDelivery', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
+                            body: JSON.stringify({ deliveryNoteId: id, reason })
+                        });
+                        const data = await res.json();
+                        if (data.success) location.reload();
+                        else alert(data.message || 'Không thể từ chối.');
+                    } catch { alert('Lỗi kết nối, vui lòng thử lại.'); }
                 });
             });
 
