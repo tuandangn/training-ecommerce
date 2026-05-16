@@ -458,6 +458,13 @@
                     Khóa đơn
                 </button>
             }
+            @if (Model.CanCancelOrder)
+            {
+                <button type="button" class="btn btn-outline-danger" id="btnCancelOrder">
+                    <i class="bi bi-x-circle me-1"></i>
+                    Hủy đơn
+                </button>
+            }
         </div>
     </div>
 </div>
@@ -723,6 +730,58 @@
     </div>
 }
 
+@if (Model.CanCancelOrder)
+{
+    @if (Model.FullyReceivedDirectShipCount > 0)
+    {
+        <div class="modal fade" id="cancelOrderWarningModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold text-danger">Cảnh báo — Hủy đơn hàng</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-3">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Có <strong>@Model.FullyReceivedDirectShipCount</strong> mặt hàng đang ở kho ảo Direct-Ship Transit (đã giao thẳng từ NCC, chờ khách xác nhận). Hủy đơn sẽ chuyển hàng về kho chính.
+                        </div>
+                        <p>Xác nhận hủy đơn hàng <strong>@Model.Code</strong>?</p>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 pb-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Giữ nguyên</button>
+                        <button type="button" class="btn btn-danger" id="btnConfirmCancelWithDs">
+                            <i class="bi bi-x-circle me-1"></i> Hủy đơn và chuyển kho
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold text-danger">Xác nhận hủy đơn hàng</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-3">
+                        <p>Xác nhận hủy đơn hàng <strong>@Model.Code</strong>? Thao tác này không thể hoàn tác.</p>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 pb-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Giữ nguyên</button>
+                        <button type="button" class="btn btn-danger" id="btnConfirmCancel">
+                            <i class="bi bi-x-circle me-1"></i> Xác nhận hủy
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
 @if (!isOrderLocked)
 {
     <div class="modal fade" id="createDeliveryNoteModal" tabindex="-1" aria-hidden="true">
@@ -813,4 +872,47 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/modules/OrderDetails.js" type="module"></script>
+    @if (Model.CanCancelOrder)
+    {
+        <script>
+        (function() {
+            const cancelBtn = document.getElementById('btnCancelOrder');
+            if (!cancelBtn) return;
+
+            @if (Model.FullyReceivedDirectShipCount > 0)
+            {
+                <text>
+            const modal = new bootstrap.Modal(document.getElementById('cancelOrderWarningModal'));
+            cancelBtn.addEventListener('click', () => modal.show());
+            document.getElementById('btnConfirmCancelWithDs')?.addEventListener('click', submitCancel);
+                </text>
+            }
+            else
+            {
+                <text>
+            const modal = new bootstrap.Modal(document.getElementById('cancelOrderModal'));
+            cancelBtn.addEventListener('click', () => modal.show());
+            document.getElementById('btnConfirmCancel')?.addEventListener('click', submitCancel);
+                </text>
+            }
+
+            async function submitCancel() {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+                try {
+                    const res = await fetch('/Order/CancelOrder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                        body: JSON.stringify({ orderId: '@Model.Id' })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        window.location.href = data.redirectUrl || '/Order/List';
+                    } else {
+                        alert(data.message || 'Không thể hủy đơn.');
+                    }
+                } catch { alert('Lỗi kết nối, vui lòng thử lại.'); }
+            }
+        })();
+        </script>
+    }
 }

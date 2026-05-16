@@ -5,10 +5,12 @@ using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
+using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
@@ -19,6 +21,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
+    IEntityDataReader<PurchaseOrderItemAllocation> allocationDataReader,
     IInventoryStockManager inventoryStockManager) : IOrderAppService
 {
     public async Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto)
@@ -596,5 +599,29 @@ public sealed class OrderAppService(IOrderManager orderManager,
         {
             Success = true
         };
+    }
+
+    public async Task<CancelOrderResultAppDto> CancelOrderAsync(CancelOrderAppDto dto)
+    {
+        try
+        {
+            var fullyReceivedIds = allocationDataReader.DataSource
+                .Where(a => a.IsDirectShip
+                         && a.Status == AllocationStatus.FullyReceived
+                         && dto.OrderItemIds.Contains(a.OrderItemId))
+                .Select(a => a.Id)
+                .ToList();
+
+            await orderManager.CancelOrderAsync(new CancelOrderDto(dto.OrderId)
+            {
+                FullyReceivedAllocationIds = fullyReceivedIds
+            }).ConfigureAwait(false);
+
+            return new CancelOrderResultAppDto { Success = true };
+        }
+        catch (Exception ex)
+        {
+            return new CancelOrderResultAppDto { Success = false, ErrorMessage = ex.Message };
+        }
     }
 }

@@ -325,6 +325,9 @@ public sealed class OrderManager(
         order.Cancel();
         order.UpdatedOnUtc = DateTime.UtcNow;
 
+        if (dto.FullyReceivedAllocationIds.Count > 0)
+            order.RaiseSoCancelledWithDirectShipReceived(dto.FullyReceivedAllocationIds);
+
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 

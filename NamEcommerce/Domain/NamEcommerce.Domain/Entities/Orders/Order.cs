@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Events.Orders;
+using NamEcommerce.Domain.Shared.Events.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
@@ -71,6 +72,9 @@ public sealed record Order : AppAggregateEntity
     internal void MarkShippingUpdated() => RaiseDomainEvent(new OrderShippingUpdated(Id));
 
     internal void MarkDeleted() => RaiseDomainEvent(new OrderDeleted(Id, Code, GetReservationItems()));
+
+    internal void RaiseSoCancelledWithDirectShipReceived(IReadOnlyList<Guid> allocationIds)
+        => RaiseDomainEvent(new SoCancelledWithDirectShipReceived(Id, allocationIds));
 
     #endregion
 

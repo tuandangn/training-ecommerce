@@ -27,7 +27,9 @@ public sealed record OrderDetailsModel
 
     public bool CanUpdateInfo { get; init; }
     public bool CanLockOrder { get; init; }
+    public bool CanCancelOrder { get; set; }
     public bool CanUpdateOrderItems { get; init; }
+    public int FullyReceivedDirectShipCount { get; set; }
 
     public IList<OrderItemModel> Items { get; init; } = [];
     public IList<DeliveryNoteBasicModel> DeliveryNotes { get; init; } = [];

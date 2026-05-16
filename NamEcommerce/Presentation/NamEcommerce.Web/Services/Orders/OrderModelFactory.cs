@@ -2,6 +2,7 @@
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -169,6 +170,10 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 });
             }
         }
+
+        model.CanCancelOrder = order.Status != (int)OrderStatus.Locked
+            && order.Status != (int)OrderStatus.Cancelled;
+        model.FullyReceivedDirectShipCount = model.DirectShipAllocations.Count(a => a.Status == 2);
 
         return model;
     }
