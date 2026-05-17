@@ -28,6 +28,8 @@ public sealed class PurchaseOrderDetailsModel
     [ValidateNever]
     public IList<RelatedVendorReturnModel> RelatedVendorReturns { get; set; } = [];
 
+    public bool CanAllocateItems { get; set; }
+
     [ValidateNever]
     public IDictionary<Guid, IList<DirectShipAllocationForPoModel>> DirectShipAllocationsPerItem { get; set; }
         = new Dictionary<Guid, IList<DirectShipAllocationForPoModel>>();

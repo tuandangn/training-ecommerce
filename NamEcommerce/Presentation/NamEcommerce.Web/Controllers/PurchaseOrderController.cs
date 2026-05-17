@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Models.PurchaseOrders;
@@ -13,11 +15,13 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;
     private readonly IPurchaseOrderModelFactory _purchaseOrderModelFactory;
+    private readonly IPurchaseOrderAppService _purchaseOrderAppService;
 
-    public PurchaseOrderController(IMediator mediator, IPurchaseOrderModelFactory purchaseOrderModelFactory)
+    public PurchaseOrderController(IMediator mediator, IPurchaseOrderModelFactory purchaseOrderModelFactory, IPurchaseOrderAppService purchaseOrderAppService)
     {
         _mediator = mediator;
         _purchaseOrderModelFactory = purchaseOrderModelFactory;
+        _purchaseOrderAppService = purchaseOrderAppService;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
@@ -446,4 +450,57 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
         return RedirectToAction(nameof(Details), new { id });
     }
+
+    [HttpGet]
+    public async Task<IActionResult> EligibleOrderItems(Guid purchaseOrderItemId)
+    {
+        if (purchaseOrderItemId == Guid.Empty)
+            return Json(Array.Empty<object>());
+
+        var items = await _purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+
+        return Json(items.Select(item => new
+        {
+            orderItemId = item.OrderItemId,
+            orderId = item.OrderId,
+            orderCode = item.OrderCode,
+            customerName = item.CustomerName,
+            productName = item.ProductName,
+            totalQuantity = item.TotalQuantity,
+            allocatedOutstanding = item.AllocatedOutstanding,
+            availableToAllocate = item.AvailableToAllocate
+        }));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AllocateToOrder([FromBody] AllocateToOrderRequest request)
+    {
+        if (request is null || request.PurchaseOrderItemId == Guid.Empty || request.OrderItemId == Guid.Empty || request.Quantity <= 0)
+            return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
+
+        var result = await _purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
+        {
+            PurchaseOrderItemId = request.PurchaseOrderItemId,
+            OrderItemId = request.OrderItemId,
+            Quantity = request.Quantity,
+            DirectShipAddress = request.DirectShipAddress,
+            DirectShipContactName = request.DirectShipContactName,
+            DirectShipContactPhone = request.DirectShipContactPhone
+        }).ConfigureAwait(false);
+
+        if (!result.Success)
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+
+        return Json(new { success = true });
+    }
+}
+
+public sealed class AllocateToOrderRequest
+{
+    public Guid PurchaseOrderItemId { get; set; }
+    public Guid OrderItemId { get; set; }
+    public decimal Quantity { get; set; }
+    public string? DirectShipAddress { get; set; }
+    public string? DirectShipContactName { get; set; }
+    public string? DirectShipContactPhone { get; set; }
 }

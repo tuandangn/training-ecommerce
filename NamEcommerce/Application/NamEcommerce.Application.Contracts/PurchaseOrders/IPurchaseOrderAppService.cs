@@ -31,5 +31,9 @@ public interface IPurchaseOrderAppService
 
     Task<IList<OrderAllocatedPurchaseOrderAppDto>> GetAllocatedPurchaseOrdersForOrderAsync(Guid orderId);
 
+    Task<IList<EligibleOrderItemForAllocationAppDto>> GetEligibleOrderItemsForPoItemAsync(Guid purchaseOrderItemId);
+
+    Task<CommonActionResultDto> AllocatePoItemToOrderAsync(AllocatePoItemToOrderAppDto dto);
+
     Task<string> NextPurchaseOrderCodeAsync();
 }

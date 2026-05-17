@@ -13,4 +13,5 @@ public interface IPurchaseOrderAllocationManager
     Task ReleaseAllocationsForOrderItemAsync(Guid orderItemId);
     Task ReleaseAllocationsForOrderAsync(Guid orderId);
     Task<IList<OrderAllocatedPurchaseOrderDto>> GetAllocatedPurchaseOrdersForOrderAsync(Guid orderId);
+    Task<IList<EligibleOrderItemForAllocationDto>> GetEligibleOrderItemsForPoItemAsync(Guid purchaseOrderItemId);
 }

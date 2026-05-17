@@ -104,6 +104,30 @@ public sealed record BulkReceiveGoodsAppDto(Guid PurchaseOrderId)
     }
 }
 
+[Serializable]
+public sealed record EligibleOrderItemForAllocationAppDto
+{
+    public required Guid OrderItemId { get; init; }
+    public required Guid OrderId { get; init; }
+    public required string OrderCode { get; init; }
+    public required string CustomerName { get; init; }
+    public required string ProductName { get; init; }
+    public required decimal TotalQuantity { get; init; }
+    public required decimal AllocatedOutstanding { get; init; }
+    public required decimal AvailableToAllocate { get; init; }
+}
+
+[Serializable]
+public sealed record AllocatePoItemToOrderAppDto
+{
+    public required Guid PurchaseOrderItemId { get; init; }
+    public required Guid OrderItemId { get; init; }
+    public required decimal Quantity { get; init; }
+    public string? DirectShipAddress { get; init; }
+    public string? DirectShipContactName { get; init; }
+    public string? DirectShipContactPhone { get; init; }
+}
+
 /// <summary>Kết quả bulk receive — kèm danh sách GoodsReceipt IDs đã tạo để UI có thể link/show.</summary>
 [Serializable]
 public sealed record BulkReceiveGoodsResultAppDto : CommonActionResultDto

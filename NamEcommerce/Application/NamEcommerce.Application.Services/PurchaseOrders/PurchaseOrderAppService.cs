@@ -655,4 +655,43 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             .ToList();
     }
 
+    public async Task<IList<EligibleOrderItemForAllocationAppDto>> GetEligibleOrderItemsForPoItemAsync(Guid purchaseOrderItemId)
+    {
+        var domainDtos = await _purchaseOrderAllocationManager.GetEligibleOrderItemsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+        return domainDtos.Select(d => new EligibleOrderItemForAllocationAppDto
+        {
+            OrderItemId = d.OrderItemId,
+            OrderId = d.OrderId,
+            OrderCode = d.OrderCode,
+            CustomerName = d.CustomerName,
+            ProductName = d.ProductName,
+            TotalQuantity = d.TotalQuantity,
+            AllocatedOutstanding = d.AllocatedOutstanding,
+            AvailableToAllocate = d.AvailableToAllocate
+        }).ToList();
+    }
+
+    public async Task<CommonActionResultDto> AllocatePoItemToOrderAsync(AllocatePoItemToOrderAppDto dto)
+    {
+        try
+        {
+            var allocation = await _purchaseOrderAllocationManager
+                .AllocateFromExistingPurchaseOrderItemAsync(dto.PurchaseOrderItemId, dto.OrderItemId, dto.Quantity)
+                .ConfigureAwait(false);
+
+            if (!string.IsNullOrWhiteSpace(dto.DirectShipAddress))
+            {
+                await _directShipManager
+                    .MarkAllocationAsDirectShipAsync(allocation.Id, dto.DirectShipAddress, dto.DirectShipContactName, dto.DirectShipContactPhone, 0)
+                    .ConfigureAwait(false);
+            }
+
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (Exception ex)
+        {
+            return CommonActionResultDto.CreateError(ex.Message);
+        }
+    }
+
 }

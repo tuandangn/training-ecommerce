@@ -19,6 +19,19 @@ public sealed record PurchaseOrderItemAllocationDto(Guid Id)
 }
 
 [Serializable]
+public sealed record EligibleOrderItemForAllocationDto
+{
+    public required Guid OrderItemId { get; init; }
+    public required Guid OrderId { get; init; }
+    public required string OrderCode { get; init; }
+    public required string CustomerName { get; init; }
+    public required string ProductName { get; init; }
+    public required decimal TotalQuantity { get; init; }
+    public required decimal AllocatedOutstanding { get; init; }
+    public required decimal AvailableToAllocate { get; init; }
+}
+
+[Serializable]
 public sealed record AllocationReceiptDto
 {
     public required Guid AllocationId { get; init; }

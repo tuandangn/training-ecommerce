@@ -113,6 +113,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             RelatedVendorReturns = relatedReturns
         };
         model.CanModifyInfo = purchaseOrderInfo.CanModifyInfo;
+        model.CanAllocateItems = purchaseOrderInfo.Status <= 30;
         if (model.CanModifyInfo)
         {
             model.ModifyInfo = new EditPurchaseOrderModel

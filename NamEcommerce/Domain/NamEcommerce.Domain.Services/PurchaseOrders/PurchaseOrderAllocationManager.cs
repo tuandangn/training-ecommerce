@@ -5,6 +5,7 @@ using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
@@ -295,6 +296,51 @@ public sealed class PurchaseOrderAllocationManager(
             .ToList();
 
         return Task.FromResult<IList<OrderAllocatedPurchaseOrderDto>>(result);
+    }
+
+    public Task<IList<EligibleOrderItemForAllocationDto>> GetEligibleOrderItemsForPoItemAsync(Guid purchaseOrderItemId)
+    {
+        var purchaseOrderItemContext = purchaseOrderReader.DataSource
+            .SelectMany(po => po.Items.Select(item => new { Item = item }))
+            .FirstOrDefault(ctx => ctx.Item.Id == purchaseOrderItemId);
+        if (purchaseOrderItemContext is null)
+            return Task.FromResult<IList<EligibleOrderItemForAllocationDto>>([]);
+
+        var productId = purchaseOrderItemContext.Item.ProductId;
+
+        var allocatedOutstandingByOrderItemId = allocationReader.DataSource
+            .Where(a => a.Status != AllocationStatus.Cancelled)
+            .GroupBy(a => a.OrderItemId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Sum(a => Math.Max(0m, a.AllocatedQuantity - a.ReceivedQuantity)));
+
+        var result = orderReader.DataSource
+            .Where(order => order.OrderStatus != OrderStatus.Cancelled)
+            .SelectMany(order => order.OrderItems
+                .Where(item => item.ProductId == productId)
+                .Select(item => new { Order = order, Item = item }))
+            .ToList()
+            .Select(ctx =>
+            {
+                var outstanding = allocatedOutstandingByOrderItemId.TryGetValue(ctx.Item.Id, out var v) ? v : 0m;
+                return new EligibleOrderItemForAllocationDto
+                {
+                    OrderItemId = ctx.Item.Id,
+                    OrderId = ctx.Order.Id,
+                    OrderCode = ctx.Order.Code,
+                    CustomerName = ctx.Order.CustomerName ?? string.Empty,
+                    ProductName = ctx.Item.ProductName ?? string.Empty,
+                    TotalQuantity = ctx.Item.Quantity,
+                    AllocatedOutstanding = outstanding,
+                    AvailableToAllocate = Math.Max(0m, ctx.Item.Quantity - outstanding)
+                };
+            })
+            .Where(dto => dto.AvailableToAllocate > 0)
+            .OrderBy(dto => dto.OrderCode)
+            .ToList();
+
+        return Task.FromResult<IList<EligibleOrderItemForAllocationDto>>(result);
     }
 
     private PurchaseOrderItem EnsurePurchaseOrderItemExists(Guid purchaseOrderItemId)
