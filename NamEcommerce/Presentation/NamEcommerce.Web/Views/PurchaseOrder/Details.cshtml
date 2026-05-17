@@ -108,7 +108,7 @@
                                         <th class="text-end">Đã Nhận</th>
                                         <th class="text-end">Đơn giá</th>
                                         <th class="text-end d-none d-md-table-cell @(Model.Info.CanAddItems ? "" : "pe-3")">Thành tiền</th>
-                                        @if (Model.Info.CanAddItems || Model.Info.CanReceiveGoods)
+                                        @if (Model.Info.CanAddItems || Model.Info.CanReceiveGoods || Model.DirectShipAllocationsPerItem.Count > 0)
                                         {
                                             <th class="text-center"></th>
                                         }
@@ -205,6 +205,10 @@
                                                         </div>
                                                     </td>
                                                 }
+                                                else if (Model.DirectShipAllocationsPerItem.Count > 0)
+                                                {
+                                                    <td></td>
+                                                }
 
                                             </tr>
                                             @if (Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var dsAllocations))
@@ -242,12 +246,14 @@
                                                                    asp-route-id="@alloc.DeliveryNoteId"
                                                                    class="ms-2 text-decoration-none">@alloc.DeliveryNoteCode</a>
                                                             }
+                                                            <span class="d-md-none ms-2 status-badge @dsStatusBadge">@dsStatusText</span>
                                                         </td>
                                                         <td class="py-1 text-end small text-muted">
                                                             @alloc.ReceivedQuantity.DisplayQuantity() / @alloc.AllocatedQuantity.DisplayQuantity()
                                                         </td>
-                                                        <td class="py-1"><span class="status-badge @dsStatusBadge">@dsStatusText</span></td>
-                                                        <td class="py-1 text-center d-none d-md-table-cell"></td>
+                                                        <td class="py-1 d-none d-md-table-cell">
+                                                            <span class="status-badge @dsStatusBadge">@dsStatusText</span>
+                                                        </td>
                                                         <td class="py-1 text-center">
                                                             <button class="btn btn-sm btn-outline-secondary py-0 px-2 btnEditDirectShipAddress"
                                                                     data-allocation-id="@alloc.AllocationId"
@@ -266,7 +272,7 @@
                                     else
                                     {
                                         <tr>
-                                            <td colspan="@(Model.Info.CanAddItems ? 6 : 5)">
+                                            <td colspan="@(Model.Info.CanAddItems || Model.Info.CanReceiveGoods || Model.DirectShipAllocationsPerItem.Count > 0 ? 6 : 5)">
                                                 <div class="py-4 text-center text-muted">
                                                     <i class="bi bi-box-seam me-1"></i> Chưa có sản phẩm nào.
                                                 </div>
@@ -695,6 +701,18 @@
 
 @if (Model.Info.CanReceiveGoods)
 {
+    <script type="application/json" id="receiveItemDsData">
+        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.DirectShipAllocationsPerItem.ToDictionary(
+                kvp => kvp.Key.ToString(),
+                kvp => new {
+                    count = kvp.Value.Count,
+                    totalQty = kvp.Value.Sum(a => a.AllocatedQuantity)
+                }
+            )
+        ))
+    </script>
+
     <div class="modal fade" id="receiveItemModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow rounded-4">
@@ -717,6 +735,11 @@
                                 Còn lại cần nhập:
                                 <span id="modalItemRemaining" class="fw-bold">0</span>
                             </div>
+                        </div>
+
+                        <div id="receiveItemDsPanel" class="alert alert-primary border-0 small mb-3 d-none">
+                            <i class="bi bi-send me-1"></i>
+                            <span id="receiveItemDsText"></span>
                         </div>
 
                         <div class="mb-3">
@@ -814,11 +837,15 @@
                                                 @for (var idx = 0; idx < remainingItems.Count; idx++)
                                                 {
                                                             var item = remainingItems[idx];
+                                                            var itemDsQty = Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var itemDsAllocs)
+                                                                ? itemDsAllocs.Sum(a => a.AllocatedQuantity)
+                                                                : 0m;
                                                             <text>{
                                                                         "id": "@item.Id",
                                                                         "name": @Json.Serialize(item.ProductName),
                                                                         "remaining": @item.RemainingQuantity.ToString("#"),
-                                                                        "unitCost": @item.UnitCost.ToString("#")
+                                                                        "unitCost": @item.UnitCost.ToString("#"),
+                                                                        "directShipQty": @itemDsQty.ToString("#")
                                                                     }@(idx < remainingItems.Count - 1 ? "," : "")</text>
                                                         }
                                                     ],
@@ -1098,6 +1125,9 @@
 
                 // Initialize Receive Item Modal
                 let itemRemainingQty = 0;
+                const receiveItemDsMap = (() => {
+                    try { return JSON.parse(document.getElementById('receiveItemDsData')?.textContent ?? '{}'); } catch { return {}; }
+                })();
                 const receiveItemModal = document.getElementById('receiveItemModal');
                 if (receiveItemModal) {
                 receiveItemModal.addEventListener('show.bs.modal', function(event) {
@@ -1118,6 +1148,17 @@
                 document.getElementById('oversupplyWarningPanel').classList.add('d-none');
                 document.getElementById('modalOversupplyAction').value = '';
                 document.getElementById('oversupplyCancel').checked = true;
+
+                const dsPanel = document.getElementById('receiveItemDsPanel');
+                const dsText = document.getElementById('receiveItemDsText');
+                const dsInfo = receiveItemDsMap[itemId];
+                if (dsInfo && dsInfo.totalQty > 0) {
+                    const qtyFmt = window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(dsInfo.totalQty) : dsInfo.totalQty;
+                    dsText.textContent = `${dsInfo.count} phân bổ giao thẳng (${qtyFmt} đv) — hệ thống tự phân phối sau khi nhận.`;
+                    dsPanel.classList.remove('d-none');
+                } else {
+                    dsPanel.classList.add('d-none');
+                }
 
                 // Pre-fill selling price with current UnitPrice; display unit cost for reference
                 const sellingPriceInput = document.getElementById('modalSellingPrice');

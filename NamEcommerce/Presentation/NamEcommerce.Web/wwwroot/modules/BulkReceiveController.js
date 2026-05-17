@@ -194,7 +194,8 @@ export default class BulkReceiveController {
         }
         const remaining = this.#formatQty(item.remaining);
         const unitCost = this.#formatCurrency(item.unitCost);
-        hint.textContent = `Còn lại: ${remaining} • Giá vốn: ${unitCost}`;
+        const dsPart = item.directShipQty > 0 ? ` • Giao thẳng: ${this.#formatQty(item.directShipQty)} đv` : '';
+        hint.textContent = `Còn lại: ${remaining} • Giá vốn: ${unitCost}${dsPart}`;
     }
 
     #parseQty(value) {
