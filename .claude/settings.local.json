@@ -15,7 +15,8 @@
       "Bash(findstr /r \"ConfirmReceiptAsync\\\\|ReceiveAsync\" NamEcommerce\\\\Application\\\\NamEcommerce.Application.Services\\\\PurchaseOrders\\\\*.cs)",
       "Bash(powershell -command \"Select-String -Path 'NamEcommerce/Presentation/NamEcommerce.Web/Resources/SharedResource.vi-VN.resx' -Pattern 'Enums\\\\.' | Select-Object -First 10\")",
       "Bash(powershell -command \"Get-Content 'NamEcommerce/Presentation/NamEcommerce.Web/Resources/SharedResource.resx' | Select-Object -Last 15\")",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Skill(agent-skills:spec)"
     ]
   }
 }
