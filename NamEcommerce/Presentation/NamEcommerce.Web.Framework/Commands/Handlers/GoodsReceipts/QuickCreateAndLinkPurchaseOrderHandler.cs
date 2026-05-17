@@ -1,9 +1,8 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
-using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
-using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Commands.Models.GoodsReceipts;
+using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.GoodsReceipts;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.GoodsReceipts;
@@ -14,15 +13,16 @@ namespace NamEcommerce.Web.Framework.Commands.Handlers.GoodsReceipts;
 public sealed class QuickCreateAndLinkPurchaseOrderHandler
     : IRequestHandler<QuickCreateAndLinkPurchaseOrderCommand, QuickCreateAndLinkPurchaseOrderResultModel>
 {
+    private const int ApprovedPurchaseOrderStatus = 30;
     private readonly IGoodsReceiptAppService _goodsReceiptAppService;
-    private readonly IPurchaseOrderAppService _purchaseOrderAppService;
+    private readonly ISender _sender;
 
     public QuickCreateAndLinkPurchaseOrderHandler(
         IGoodsReceiptAppService goodsReceiptAppService,
-        IPurchaseOrderAppService purchaseOrderAppService)
+        ISender sender)
     {
         _goodsReceiptAppService = goodsReceiptAppService;
-        _purchaseOrderAppService = purchaseOrderAppService;
+        _sender = sender;
     }
 
     public async Task<QuickCreateAndLinkPurchaseOrderResultModel> Handle(
@@ -94,7 +94,7 @@ public sealed class QuickCreateAndLinkPurchaseOrderHandler
 
         // Build PO items với UnitCost lấy từ chính GR item (đã có hoặc vừa được set ở trên).
         var poItems = goodsReceipt.Items
-            .Select(i => new CreatePurchaseOrderItemAppDto
+            .Select(i => new CreatePurchaseOrderItemCommand
             {
                 ProductId = i.ProductId,
                 Quantity = i.Quantity,
@@ -102,17 +102,17 @@ public sealed class QuickCreateAndLinkPurchaseOrderHandler
             })
             .ToList();
 
-        var createResult = await _purchaseOrderAppService.CreatePurchaseOrderAsync(new CreatePurchaseOrderAppDto
+        var createResult = await _sender.Send(new CreatePurchaseOrderCommand
         {
             // Ngày đặt hàng = ngày nhận của phiếu nhập (bỏ field input riêng).
-            PlacedOnUtc = goodsReceipt.ReceivedOnUtc,
+            PlacedOn = DateTime.SpecifyKind(goodsReceipt.ReceivedOnUtc, DateTimeKind.Utc),
             VendorId = effectiveVendorId.Value,
             WarehouseId = request.WarehouseId,
             Note = request.Note,
             Items = poItems,
             TaxAmount = request.TaxAmount,
             ShippingAmount = request.ShippingAmount
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
 
         if (!createResult.Success || !createResult.CreatedId.HasValue)
         {
@@ -124,7 +124,19 @@ public sealed class QuickCreateAndLinkPurchaseOrderHandler
         }
 
         var purchaseOrderId = createResult.CreatedId.Value;
-        await _purchaseOrderAppService.ApprovePurchaseOrderAsync(purchaseOrderId).ConfigureAwait(false);
+        var approveResult = await _sender.Send(new ChangePurchaseOrderStatusCommand
+        {
+            PurchaseOrderId = purchaseOrderId,
+            Status = ApprovedPurchaseOrderStatus
+        }, cancellationToken).ConfigureAwait(false);
+        if (!approveResult.Success)
+        {
+            return new QuickCreateAndLinkPurchaseOrderResultModel
+            {
+                Success = false,
+                ErrorMessage = approveResult.ErrorMessage
+            };
+        }
 
         var linkResult = await _goodsReceiptAppService
             .SetGoodsReceiptToPurchaseOrder(

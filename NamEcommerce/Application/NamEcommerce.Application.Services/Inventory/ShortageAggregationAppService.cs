@@ -1,5 +1,7 @@
 using NamEcommerce.Application.Contracts.Dtos.Inventory;
+using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Common;
@@ -16,6 +18,7 @@ public sealed class ShortageAggregationAppService(
     IShortageQueryService shortageQueryService,
     ISupplierSuggestionService supplierSuggestionService,
     IPurchaseOrderManager purchaseOrderManager,
+    IPurchaseOrderAppService purchaseOrderAppService,
     IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
     IDirectShipManager directShipManager,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
@@ -241,6 +244,101 @@ public sealed class ShortageAggregationAppService(
             .ToList();
     }
 
+    private sealed class CreatedPurchaseOrderItemBucket
+    {
+        public required Guid PurchaseOrderItemId { get; init; }
+        public required Guid ProductId { get; init; }
+        public required decimal UnitCost { get; init; }
+        public decimal RemainingQuantity { get; set; }
+    }
+
+    private async Task<CreatePoFromShortageResultDto> CreatePurchaseOrderFromShortageViaAppServiceAsync(
+        Guid vendorId,
+        Guid? warehouseId,
+        DateTime? expectedDeliveryDateUtc,
+        string? note,
+        IList<CreatePoFromShortageItemDto> items)
+    {
+        var createResult = await purchaseOrderAppService.CreatePurchaseOrderAsync(new CreatePurchaseOrderAppDto
+        {
+            PlacedOnUtc = DateTime.UtcNow,
+            VendorId = vendorId,
+            WarehouseId = warehouseId,
+            ExpectedDeliveryDateUtc = expectedDeliveryDateUtc,
+            Note = note,
+            Items = items.Select(item => new CreatePurchaseOrderItemAppDto
+            {
+                ProductId = item.ProductId,
+                Quantity = item.Quantity,
+                UnitCost = item.UnitCost,
+                Note = item.Note
+            }).ToList()
+        }).ConfigureAwait(false);
+
+        if (!createResult.Success || !createResult.CreatedId.HasValue)
+            throw new InvalidOperationException(createResult.ErrorMessage ?? "Error.PurchaseOrderCreateFailed");
+
+        var purchaseOrder = await purchaseOrderAppService.GetPurchaseOrderByIdAsync(createResult.CreatedId.Value).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Error.PurchaseOrderIsNotFound");
+
+        await AllocateCreatedPurchaseOrderItemsAsync(purchaseOrder, items).ConfigureAwait(false);
+
+        return new CreatePoFromShortageResultDto
+        {
+            PurchaseOrderId = purchaseOrder.Id,
+            PurchaseOrderCode = purchaseOrder.Code,
+            CreatedNew = true
+        };
+    }
+
+    private async Task AllocateCreatedPurchaseOrderItemsAsync(
+        PurchaseOrderAppDto purchaseOrder,
+        IList<CreatePoFromShortageItemDto> items)
+    {
+        var buckets = purchaseOrder.Items
+            .Select(item => new CreatedPurchaseOrderItemBucket
+            {
+                PurchaseOrderItemId = item.Id,
+                ProductId = item.ProductId,
+                UnitCost = item.UnitCost,
+                RemainingQuantity = item.QuantityOrdered
+            })
+            .ToList();
+
+        foreach (var item in items)
+        {
+            var remainingAllocationQuantity = item.AllocationQuantity ?? item.Quantity;
+            if (remainingAllocationQuantity <= 0)
+                continue;
+
+            foreach (var bucket in buckets.Where(bucket =>
+                         bucket.ProductId == item.ProductId
+                         && bucket.UnitCost == item.UnitCost
+                         && bucket.RemainingQuantity > 0))
+            {
+                var allocationQuantity = Math.Min(remainingAllocationQuantity, bucket.RemainingQuantity);
+                var allocation = await purchaseOrderAllocationManager
+                    .AllocateAsync(bucket.PurchaseOrderItemId, item.OrderItemId, allocationQuantity)
+                    .ConfigureAwait(false);
+
+                if (item.DirectShipInfo is { } ds)
+                {
+                    await directShipManager
+                        .MarkAllocationAsDirectShipAsync(allocation.Id, ds.Address, ds.ContactName, ds.ContactPhone, ds.Priority)
+                        .ConfigureAwait(false);
+                }
+
+                bucket.RemainingQuantity -= allocationQuantity;
+                remainingAllocationQuantity -= allocationQuantity;
+                if (remainingAllocationQuantity <= 0)
+                    break;
+            }
+
+            if (remainingAllocationQuantity > 0)
+                throw new InvalidOperationException("Error.PurchaseOrderItemIsNotFound");
+        }
+    }
+
     public async Task<CreatePosFromShortageResultAppDto> CreatePurchaseOrdersFromShortageAsync(CreatePosFromShortageAppDto dto)
     {
         try
@@ -268,14 +366,12 @@ public sealed class ShortageAggregationAppService(
                     }
                     else
                     {
-                        result = await purchaseOrderManager.CreatePurchaseOrderFromShortageAsync(new CreatePoFromShortageDto
-                        {
-                            VendorId = group.VendorId.Value,
-                            WarehouseId = group.WarehouseId,
-                            ExpectedDeliveryDateUtc = group.ExpectedDeliveryDateUtc,
-                            Note = group.Note,
-                            Items = items
-                        }).ConfigureAwait(false);
+                        result = await CreatePurchaseOrderFromShortageViaAppServiceAsync(
+                            group.VendorId.Value,
+                            group.WarehouseId,
+                            group.ExpectedDeliveryDateUtc,
+                            group.Note,
+                            items).ConfigureAwait(false);
                     }
 
                     AddResult(results, new CreatedPurchaseOrderResultAppDto
@@ -361,14 +457,12 @@ public sealed class ShortageAggregationAppService(
 
                 if (newItems.Count > 0)
                 {
-                    var result = await purchaseOrderManager.CreatePurchaseOrderFromShortageAsync(new CreatePoFromShortageDto
-                    {
-                        VendorId = group.VendorId.Value,
-                        WarehouseId = group.WarehouseId,
-                        ExpectedDeliveryDateUtc = group.ExpectedDeliveryDateUtc,
-                        Note = group.Note,
-                        Items = newItems
-                    }).ConfigureAwait(false);
+                    var result = await CreatePurchaseOrderFromShortageViaAppServiceAsync(
+                        group.VendorId.Value,
+                        group.WarehouseId,
+                        group.ExpectedDeliveryDateUtc,
+                        group.Note,
+                        newItems).ConfigureAwait(false);
                     AddResult(results, new CreatedPurchaseOrderResultAppDto
                     {
                         PurchaseOrderId = result.PurchaseOrderId,
