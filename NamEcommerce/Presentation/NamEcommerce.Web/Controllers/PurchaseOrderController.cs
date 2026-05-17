@@ -242,7 +242,8 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             PurchaseOrderItemId = model.PurchaseOrderItemId,
             ReceivedQuantity = model.ReceivedQuantity,
             WarehouseId = model.WarehouseId,
-            SellingPrice = model.SellingPrice
+            SellingPrice = model.SellingPrice,
+            OversupplyAction = model.OversupplyAction
         });
 
         if (!result.Success)

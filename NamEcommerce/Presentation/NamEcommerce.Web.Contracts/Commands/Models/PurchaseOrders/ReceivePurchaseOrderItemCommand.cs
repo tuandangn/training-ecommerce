@@ -11,4 +11,5 @@ public sealed class ReceivePurchaseOrderItemCommand : IRequest<ReceivePurchaseOr
     public required Guid? WarehouseId { get; set; }
     public required decimal ReceivedQuantity { get; set; }
     public decimal? SellingPrice { get; set; }
+    public string? OversupplyAction { get; set; }
 }

@@ -79,19 +79,19 @@
 
 ### Phase D7 — UI SO Details + DN Details + Cancel flow
 
-- [ ] **D7.1** — SO Details: tab "Direct-ship status" list allocation + status + link DN.
-- [ ] **D7.2** — DN Details: banner highlight nếu `IsDirectShip = true` + link PO + GR nguồn.
-- [ ] **D7.3** — Button Confirm/Reject trên DN Details nếu PendingConfirmation.
-- [ ] **D7.4** — Cancel SO flow: detect allocation `FullyReceived` → modal cảnh báo chuyển kho.
-- [ ] **D7.5** — Submit cancel SO → trigger `SoCancelledWithDirectShipReceivedEvent`.
+- [x] **D7.1** — SO Details: tab "Direct-ship status" list allocation + status + link DN. ✅ 2026-05-17
+- [x] **D7.2** — DN Details: banner highlight nếu `IsDirectShip = true`. ✅ 2026-05-17
+- [x] **D7.3** — Button Confirm/Reject trên DN Details nếu PendingConfirmation. ✅ 2026-05-17
+- [x] **D7.4** — Cancel SO flow: detect allocation `FullyReceived` → modal cảnh báo chuyển kho. ✅ 2026-05-17
+- [x] **D7.5** — Submit cancel SO → trigger `SoCancelledWithDirectShipReceivedEvent`. ✅ 2026-05-17
 
 ### Phase D8 — UI edit địa chỉ + popup giao thừa
 
-- [ ] **D8.1** — PO Details allocation list: button "Sửa địa chỉ giao" + modal edit (Address/Contact/Phone).
-- [ ] **D8.2** — Save edit → ghi `DirectShipAddressChangeLog` + raise event `DirectShipAddressUpdatedEvent`.
-- [ ] **D8.3** — Banner cảnh báo "PO đã có phiếu cũ — gửi lại phiếu mới cho NCC" sau khi edit.
-- [ ] **D8.4** — GR Confirm screen: detect `receivedQty > orderedQty` → modal 3 lựa chọn (Nhập kho chính / Từ chối / Hủy GR).
-- [ ] **D8.5** — Backend xử lý "Nhập kho chính" cho phần thừa: stock-in kho chính + tăng công nợ NCC giá PO.
+- [x] **D8.1** — PO Details allocation list: button "Sửa địa chỉ giao" + modal edit (Address/Contact/Phone). ✅ 2026-05-17
+- [x] **D8.2** — Save edit → ghi `DirectShipAddressChangeLog` + raise event `DirectShipAddressUpdatedEvent`. ✅ 2026-05-17
+- [x] **D8.3** — Banner cảnh báo "PO đã có phiếu cũ — gửi lại phiếu mới cho NCC" sau khi edit. ✅ 2026-05-17
+- [x] **D8.4** — GR Confirm screen: detect `receivedQty > orderedQty` → modal 3 lựa chọn (Nhập kho chính / Từ chối / Hủy GR). ✅ 2026-05-17
+- [x] **D8.5** — Backend xử lý "Nhập kho chính" cho phần thừa: stock-in kho chính + tăng công nợ NCC giá PO. ✅ 2026-05-17
 
 ### Phase D9 — Báo cáo direct-ship
 

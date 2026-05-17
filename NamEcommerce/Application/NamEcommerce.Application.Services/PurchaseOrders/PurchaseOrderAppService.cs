@@ -369,8 +369,24 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         if (purchaseOrderItem is null)
             return CommonActionResultDto.CreateError("Error.PurchaseOrderItemIsNotFound");
 
-        if (purchaseOrderItem.QuantityReceived + dto.ReceivedQuantity > purchaseOrderItem.QuantityOrdered)
-            return CommonActionResultDto.CreateError("Error.PurchaseOrderReceiveQuantityExceedsOrdered");
+        var originalReceivedQuantity = dto.ReceivedQuantity;
+        var maxReceivable = purchaseOrderItem.QuantityOrdered - purchaseOrderItem.QuantityReceived;
+
+        if (originalReceivedQuantity > maxReceivable)
+        {
+            if (dto.OversupplyAction == "RejectOversupply")
+            {
+                dto = dto with { ReceivedQuantity = maxReceivable };
+            }
+            else if (dto.OversupplyAction == "AcceptToMainWarehouse")
+            {
+                dto = dto with { ReceivedQuantity = maxReceivable };
+            }
+            else
+            {
+                return CommonActionResultDto.CreateError("Error.PurchaseOrderReceiveQuantityExceedsOrdered");
+            }
+        }
 
         var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
         if (product is null)
@@ -402,6 +418,15 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             WarehouseId = warehouseId,
             SellingPrice = dto.SellingPrice
         });
+
+        if (originalReceivedQuantity > maxReceivable && dto.OversupplyAction == "AcceptToMainWarehouse")
+        {
+            var oversupplyQty = originalReceivedQuantity - maxReceivable;
+            await _purchaseOrderManager.AcceptOversupplyToMainWarehouseAsync(
+                dto.PurchaseOrderId, dto.PurchaseOrderItemId, oversupplyQty, warehouseId!.Value)
+                .ConfigureAwait(false);
+        }
+
         return CommonActionResultDto.CreateSuccess();
     }
 

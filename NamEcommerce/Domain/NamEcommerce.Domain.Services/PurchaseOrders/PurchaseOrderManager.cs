@@ -853,4 +853,18 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             return purchaseOrder.ToDto();
         });
     }
+
+    public async Task AcceptOversupplyToMainWarehouseAsync(
+        Guid purchaseOrderId, Guid purchaseOrderItemId, decimal oversupplyQuantity, Guid warehouseId,
+        CancellationToken ct = default)
+    {
+        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false)
+            ?? throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
+
+        var item = purchaseOrder.Items.FirstOrDefault(i => i.Id == purchaseOrderItemId)
+            ?? throw new PurchaseOrderItemIsNotFoundException(purchaseOrderItemId);
+
+        purchaseOrder.MarkOversupplyAccepted(item.Id, warehouseId, oversupplyQuantity, item.UnitCost);
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+    }
 }

@@ -42,4 +42,11 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task<bool> CanChangeStatusToAsync(Guid purchaseOrderId, PurchaseOrderStatus status);
     Task<bool> CanAddPurchaseOrderItemsAsync(Guid purchaseOrderId);
     Task<bool> CanReceiveGoodsAsync(Guid purchaseOrderId);
+
+    Task AcceptOversupplyToMainWarehouseAsync(
+        Guid purchaseOrderId,
+        Guid purchaseOrderItemId,
+        decimal oversupplyQuantity,
+        Guid warehouseId,
+        CancellationToken ct = default);
 }

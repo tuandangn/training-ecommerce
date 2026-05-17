@@ -280,6 +280,9 @@ public sealed record PurchaseOrder : AppAggregateEntity
         RaiseDomainEvent(new PurchaseOrderBulkReceived(Id));
     }
 
+    internal void MarkOversupplyAccepted(Guid purchaseOrderItemId, Guid warehouseId, decimal oversupplyQuantity, decimal unitCost)
+        => RaiseDomainEvent(new VendorOversupplyAccepted(purchaseOrderItemId, warehouseId, oversupplyQuantity, unitCost));
+
     #endregion
 
     #region Builder

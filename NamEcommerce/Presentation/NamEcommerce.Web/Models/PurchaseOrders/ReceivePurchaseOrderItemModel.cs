@@ -38,4 +38,7 @@ public sealed class ReceivePurchaseOrderItemModel
     /// </summary>
     [ValidateNever]
     public decimal UnitCost { get; set; }
+
+    [ValidateNever]
+    public string? OversupplyAction { get; set; }
 }
