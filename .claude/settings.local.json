@@ -12,7 +12,9 @@
       "Skill(superpowers:subagent-driven-development)",
       "Skill(superpowers:writing-plans)",
       "Bash(cd /d \"D:\\\\Learning\\\\NamTraining\\\\training-ecommerce\\\\.claude\\\\worktrees\\\\shortage-supplier-selection\")",
-      "Bash(findstr /r \"ConfirmReceiptAsync\\\\|ReceiveAsync\" NamEcommerce\\\\Application\\\\NamEcommerce.Application.Services\\\\PurchaseOrders\\\\*.cs)"
+      "Bash(findstr /r \"ConfirmReceiptAsync\\\\|ReceiveAsync\" NamEcommerce\\\\Application\\\\NamEcommerce.Application.Services\\\\PurchaseOrders\\\\*.cs)",
+      "Bash(powershell -command \"Select-String -Path 'NamEcommerce/Presentation/NamEcommerce.Web/Resources/SharedResource.vi-VN.resx' -Pattern 'Enums\\\\.' | Select-Object -First 10\")",
+      "Bash(powershell -command \"Get-Content 'NamEcommerce/Presentation/NamEcommerce.Web/Resources/SharedResource.resx' | Select-Object -Last 15\")"
     ]
   }
 }

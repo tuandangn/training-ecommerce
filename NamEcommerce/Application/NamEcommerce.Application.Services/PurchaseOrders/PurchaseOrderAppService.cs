@@ -144,7 +144,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         {
             createPurchaseOrderDto.Items.Add(new PurchaseOrderItemDto(Guid.NewGuid())
             {
-                PurchaseOrderId = Guid.Empty, // Will be set by manager
+                PurchaseOrderId = Guid.Empty,
                 ProductId = item.ProductId ?? Guid.Empty,
                 QuantityOrdered = item.Quantity,
                 UnitCost = item.UnitCost
