@@ -84,7 +84,10 @@ public sealed record UpdateOrderResultDto
 public sealed record DeleteOrderDto(Guid OrderId) : BaseOrderDto;
 
 [Serializable]
-public sealed record CancelOrderDto(Guid OrderId) : BaseOrderDto;
+public sealed record CancelOrderDto(Guid OrderId) : BaseOrderDto
+{
+    public IReadOnlyList<Guid> FullyReceivedAllocationIds { get; init; } = [];
+}
 
 [Serializable]
 public sealed record UpdateShippingDto

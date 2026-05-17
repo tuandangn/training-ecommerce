@@ -93,7 +93,11 @@
 - [ ] **D7.5** — Modal Reject: reason bắt buộc + cảnh báo hàng chuyển về kho chính.
 - [ ] **D7.6** — Auto refresh sau action.
 
-### Phase D8 — UI SO Details + DN Details + Cancel flow
+- [x] **D7.1** — SO Details: tab "Direct-ship status" list allocation + status + link DN. ✅ 2026-05-17
+- [x] **D7.2** — DN Details: banner highlight nếu `IsDirectShip = true`. ✅ 2026-05-17
+- [x] **D7.3** — Button Confirm/Reject trên DN Details nếu PendingConfirmation. ✅ 2026-05-17
+- [x] **D7.4** — Cancel SO flow: detect allocation `FullyReceived` → modal cảnh báo chuyển kho. ✅ 2026-05-17
+- [x] **D7.5** — Submit cancel SO → trigger `SoCancelledWithDirectShipReceivedEvent`. ✅ 2026-05-17
 
 - [ ] **D8.1** — SO Details: tab "Direct-ship status" list allocation + derived receipt status + DN status + link DN.
 - [ ] **D8.2** — DN Details: banner highlight nếu `SourceType = DirectShipToCustomer` + link PO/GR nguồn.
@@ -101,7 +105,11 @@
 - [ ] **D8.4** — Cancel SO flow: detect received direct-ship allocation → modal cảnh báo chuyển kho.
 - [ ] **D8.5** — Submit cancel SO sau user confirm → transfer kho ảo → kho chính + cancel DN nếu cần.
 
-### Phase D9 — UI edit địa chỉ + popup giao thừa
+- [x] **D8.1** — PO Details allocation list: button "Sửa địa chỉ giao" + modal edit (Address/Contact/Phone). ✅ 2026-05-17
+- [x] **D8.2** — Save edit → ghi `DirectShipAddressChangeLog` + raise event `DirectShipAddressUpdatedEvent`. ✅ 2026-05-17
+- [x] **D8.3** — Banner cảnh báo "PO đã có phiếu cũ — gửi lại phiếu mới cho NCC" sau khi edit. ✅ 2026-05-17
+- [x] **D8.4** — GR Confirm screen: detect `receivedQty > orderedQty` → modal 3 lựa chọn (Nhập kho chính / Từ chối / Hủy GR). ✅ 2026-05-17
+- [x] **D8.5** — Backend xử lý "Nhập kho chính" cho phần thừa: stock-in kho chính + tăng công nợ NCC giá PO. ✅ 2026-05-17
 
 - [ ] **D9.1** — PO Details allocation list: button "Sửa địa chỉ giao" + modal edit (Address/Contact/Phone/Reason).
 - [ ] **D9.2** — Save edit → ghi `DirectShipAddressChangeLog` + raise `AllocationDirectShipInfoUpdatedEvent`.

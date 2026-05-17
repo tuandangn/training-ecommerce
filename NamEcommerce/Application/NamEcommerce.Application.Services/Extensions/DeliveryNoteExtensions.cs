@@ -22,6 +22,8 @@ public static class DeliveryNoteExtensions
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,
             Status = (int)deliveryNote.Status,
+            IsDirectShip = deliveryNote.IsDirectShip,
+            DeliveryConfirmationStatus = (int)deliveryNote.DeliveryConfirmationStatus,
             DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
             DeliveryProofPictureId = deliveryNote.DeliveryProofPictureId,
             DeliveryReceiverName = deliveryNote.DeliveryReceiverName,

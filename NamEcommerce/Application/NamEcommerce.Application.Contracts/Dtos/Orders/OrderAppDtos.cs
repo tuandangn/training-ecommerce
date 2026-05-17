@@ -163,3 +163,17 @@ public sealed record MarkOrderItemDeliveredResultAppDto
     public string? ErrorMessage { get; set; }
     public bool OrderAutoLocked { get; set; }
 }
+
+[Serializable]
+public sealed record CancelOrderAppDto
+{
+    public required Guid OrderId { get; init; }
+    public IReadOnlyList<Guid> OrderItemIds { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CancelOrderResultAppDto
+{
+    public bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+}

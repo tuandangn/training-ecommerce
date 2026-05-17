@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -17,12 +19,14 @@ public sealed class OrderModelFactory : IOrderModelFactory
     private readonly AppConfig _appConfig;
     private readonly IMediator _mediator;
     private readonly IDeliveryNoteAppService _deliveryNoteAppService;
+    private readonly IDirectShipAppService _directShipAppService;
 
-    public OrderModelFactory(AppConfig appConfig, IMediator mediator, IDeliveryNoteAppService deliveryNoteAppService)
+    public OrderModelFactory(AppConfig appConfig, IMediator mediator, IDeliveryNoteAppService deliveryNoteAppService, IDirectShipAppService directShipAppService)
     {
         _appConfig = appConfig;
         _mediator = mediator;
         _deliveryNoteAppService = deliveryNoteAppService;
+        _directShipAppService = directShipAppService;
     }
 
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? model = null)
@@ -141,6 +145,35 @@ public sealed class OrderModelFactory : IOrderModelFactory
         {
             OrderId = orderId
         }).ConfigureAwait(false);
+
+        var orderItemIds = order.Items.Select(i => i.Id).ToList();
+        if (orderItemIds.Count > 0)
+        {
+            var dsAllocations = await _directShipAppService
+                .GetDirectShipAllocationsForOrderAsync(orderItemIds)
+                .ConfigureAwait(false);
+
+            foreach (var alloc in dsAllocations)
+            {
+                var orderItem = order.Items.FirstOrDefault(i => i.Id == alloc.OrderItemId);
+                var dn = deliveryNotes.FirstOrDefault(d =>
+                    d.Items.Any(item => item.OrderItemId == alloc.OrderItemId));
+
+                model.DirectShipAllocations.Add(new OrderDetailsModel.DirectShipAllocationModel
+                {
+                    AllocationId = alloc.AllocationId,
+                    ProductName = orderItem?.ProductName ?? string.Empty,
+                    Status = alloc.Status,
+                    AllocatedQuantity = alloc.AllocatedQuantity,
+                    DeliveryNoteId = dn?.Id,
+                    DeliveryNoteCode = dn?.Code
+                });
+            }
+        }
+
+        model.CanCancelOrder = order.Status != (int)OrderStatus.Locked
+            && order.Status != (int)OrderStatus.Cancelled;
+        model.FullyReceivedDirectShipCount = model.DirectShipAllocations.Count(a => a.Status == 2);
 
         return model;
     }

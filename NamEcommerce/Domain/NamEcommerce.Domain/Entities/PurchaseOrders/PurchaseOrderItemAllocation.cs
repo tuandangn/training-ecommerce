@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Events.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 
 namespace NamEcommerce.Domain.Entities.PurchaseOrders;
@@ -81,14 +82,16 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
         DirectShipPriority = 0;
     }
 
-    internal void UpdateDirectShipInfo(string address, string? contactName, string? contactPhone)
+    internal void UpdateDirectShipInfo(string address, string? contactName, string? contactPhone, Guid editedByUserId)
     {
         if (string.IsNullOrWhiteSpace(address))
             throw new PurchaseOrderItemDataIsInvalidException("Error.DirectShipAddressRequired");
 
+        var oldAddress = DirectShipAddress ?? string.Empty;
         DirectShipAddress = address;
         DirectShipContactName = contactName;
         DirectShipContactPhone = contactPhone;
+        RaiseDomainEvent(new DirectShipAddressUpdated(Id, oldAddress, address, editedByUserId));
     }
 
     internal void SetStatus(AllocationStatus newStatus) => Status = newStatus;

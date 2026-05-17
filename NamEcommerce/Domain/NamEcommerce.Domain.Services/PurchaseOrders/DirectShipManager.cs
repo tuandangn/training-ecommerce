@@ -116,7 +116,7 @@ public sealed class DirectShipManager(
             editedByUserId,
             reason);
 
-        allocation.UpdateDirectShipInfo(newAddress, newContactName, newContactPhone);
+        allocation.UpdateDirectShipInfo(newAddress, newContactName, newContactPhone, editedByUserId);
 
         await allocationRepository.UpdateAsync(allocation, ct).ConfigureAwait(false);
         await changeLogRepository.InsertAsync(changeLog, ct).ConfigureAwait(false);
@@ -181,5 +181,40 @@ public sealed class DirectShipManager(
         }).ToList();
 
         return Task.FromResult(dtos);
+    }
+
+    public Task<IList<DirectShipAllocationStatusDto>> GetDirectShipAllocationsForOrderItemsAsync(
+        IReadOnlyList<Guid> orderItemIds, CancellationToken ct = default)
+    {
+        IList<DirectShipAllocationStatusDto> results = allocationReader.DataSource
+            .Where(a => a.IsDirectShip && orderItemIds.Contains(a.OrderItemId))
+            .Select(a => new DirectShipAllocationStatusDto
+            {
+                AllocationId = a.Id,
+                OrderItemId = a.OrderItemId,
+                Status = (int)a.Status,
+                AllocatedQuantity = a.AllocatedQuantity
+            })
+            .ToList();
+        return Task.FromResult(results);
+    }
+
+    public Task<IList<DirectShipAllocationForPoItemDto>> GetDirectShipAllocationsForPoItemsAsync(
+        IReadOnlyList<Guid> purchaseOrderItemIds, CancellationToken ct = default)
+    {
+        IList<DirectShipAllocationForPoItemDto> results = allocationReader.DataSource
+            .Where(a => a.IsDirectShip && purchaseOrderItemIds.Contains(a.PurchaseOrderItemId))
+            .Select(a => new DirectShipAllocationForPoItemDto
+            {
+                AllocationId = a.Id,
+                PurchaseOrderItemId = a.PurchaseOrderItemId,
+                DirectShipAddress = a.DirectShipAddress ?? string.Empty,
+                DirectShipContactName = a.DirectShipContactName,
+                DirectShipContactPhone = a.DirectShipContactPhone,
+                AllocatedQuantity = a.AllocatedQuantity,
+                Status = (int)a.Status
+            })
+            .ToList();
+        return Task.FromResult(results);
     }
 }

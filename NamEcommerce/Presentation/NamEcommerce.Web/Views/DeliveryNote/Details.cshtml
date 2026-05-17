@@ -15,6 +15,26 @@
 
 @Html.AntiForgeryToken()
 
+@if (Model.IsDirectShip)
+{
+    <div class="alert alert-info d-flex align-items-center gap-2 mb-3" role="alert">
+        <i class="bi bi-truck-flatbed fs-5"></i>
+        <div>
+            <strong>Phiếu giao thẳng tới khách</strong>
+            @{
+                var dsStatusText = Model.DeliveryConfirmationStatus switch
+                {
+                    1 => " · Chờ khách xác nhận",
+                    2 => " · Khách đã xác nhận",
+                    3 => " · Khách từ chối nhận",
+                    _ => ""
+                };
+            }
+            @dsStatusText
+        </div>
+    </div>
+}
+
 <div class="page-header">
     <div>
         <h1 class="page-header-title d-flex align-items-center gap-2">
@@ -48,6 +68,17 @@
         {
             <button type="button" class="btn btn-outline-danger btn-cancel" data-id="@Model.Id">
                 <i class="bi bi-x-circle me-1"></i> Hủy phiếu
+            </button>
+        }
+
+        @if (Model.IsDirectShip && Model.DeliveryConfirmationStatus == 1)
+        {
+            <div class="vr mx-1"></div>
+            <button type="button" class="btn btn-success btn-ds-confirm" data-id="@Model.Id">
+                <i class="bi bi-check-circle me-1"></i> Khách đã nhận
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-ds-reject" data-id="@Model.Id">
+                <i class="bi bi-x-circle me-1"></i> Khách từ chối
             </button>
         }
 
@@ -595,6 +626,41 @@
                     '</div>').join('');
                 new bootstrap.Modal(document.getElementById('shortageModal')).show();
             }
+
+            document.querySelectorAll('.btn-ds-confirm').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!confirm('Xác nhận khách đã nhận hàng?')) return;
+                    const id = btn.dataset.id;
+                    try {
+                        const res = await fetch('/DirectShipDelivery/ConfirmDelivery', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
+                            body: JSON.stringify({ deliveryNoteId: id, confirmedDate: null, note: null })
+                        });
+                        const data = await res.json();
+                        if (data.success) location.reload();
+                        else alert(data.message || 'Không thể xác nhận.');
+                    } catch { alert('Lỗi kết nối, vui lòng thử lại.'); }
+                });
+            });
+
+            document.querySelectorAll('.btn-ds-reject').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const reason = prompt('Lý do từ chối:');
+                    if (!reason) return;
+                    const id = btn.dataset.id;
+                    try {
+                        const res = await fetch('/DirectShipDelivery/RejectDelivery', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
+                            body: JSON.stringify({ deliveryNoteId: id, reason })
+                        });
+                        const data = await res.json();
+                        if (data.success) location.reload();
+                        else alert(data.message || 'Không thể từ chối.');
+                    } catch { alert('Lỗi kết nối, vui lòng thử lại.'); }
+                });
+            });
 
             (function loadCustomerReturns() {
                 const card = document.getElementById('customerReturnsCard');

@@ -135,6 +135,22 @@ public sealed class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    public async Task<IActionResult> CancelOrder([FromBody] CancelOrderModel model)
+    {
+        var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
+        if (order is null)
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
+
+        var orderItemIds = order.Items.Select(i => i.Id).ToList();
+        var result = await _mediator.Send(new CancelOrderCommand(model.OrderId, orderItemIds));
+
+        if (!result.Success)
+            return Json(new { success = false, message = result.ErrorMessage });
+
+        return Json(new { success = true, redirectUrl = Url.Action(nameof(List), "Order") });
+    }
+
+    [HttpPost]
     public async Task<IActionResult> AddOrderItem(AddOrderItemModel model)
     {
         if (!ModelState.IsValid)

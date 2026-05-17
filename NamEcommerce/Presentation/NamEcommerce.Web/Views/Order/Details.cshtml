@@ -41,6 +41,98 @@
     };
     @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
 }
+@if (Model.AllocatedPurchaseOrders?.HasItems ?? false)
+{
+    var totalPendingQuantity = Model.AllocatedPurchaseOrders.Items.Sum(po => po.PendingQuantity);
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <button type="button" class="btn btn-outline-primary btn-sm"
+                onclick="openCoworkOffcanvas({ title: 'Đơn nhập đã phân bổ', url: '/Order/AllocatedPurchaseOrders/@Model.Id', size: 'lg' })">
+            <i class="bi bi-truck me-1"></i>
+            Xem đơn nhập đã phân bổ
+            <span class="badge bg-primary ms-1">@Model.AllocatedPurchaseOrders?.Items.Count</span>
+        </button>
+        @if (totalPendingQuantity > 0)
+        {
+            <span class="text-muted small">Còn chờ @totalPendingQuantity.DisplayQuantity()</span>
+        }
+        else
+        {
+            <span class="text-success small"><i class="bi bi-check-circle"></i> Đã nhận đủ</span>
+        }
+    </div>
+}
+@if (Model.DirectShipAllocations.Count > 0)
+{
+    <div class="content-card mb-3">
+        <div class="content-card-header">
+            <h5><i class="bi bi-truck-flatbed me-2"></i>Giao thẳng tới khách</h5>
+        </div>
+        <div class="content-card-body p-0">
+            <table class="table data-table mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Hàng hóa</th>
+                        <th class="text-center" style="width:12%">SL</th>
+                        <th style="width:20%">Trạng thái</th>
+                        <th style="width:20%">Phiếu xuất</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var alloc in Model.DirectShipAllocations)
+                    {
+                        var (statusBadge, statusText) = alloc.Status switch
+                        {
+                            0 => ("secondary", "Chờ nhận"),
+                            1 => ("warning", "Nhận một phần"),
+                            2 => ("info text-white", "Đã nhận — chờ giao"),
+                            3 => ("primary", "Đang giao"),
+                            4 => ("success", "Đã giao"),
+                            5 => ("danger", "Đã hủy"),
+                            _ => ("secondary", "Không rõ")
+                        };
+                        <tr>
+                            <td class="ps-3">@alloc.ProductName</td>
+                            <td class="text-center">@alloc.AllocatedQuantity.DisplayQuantity()</td>
+                            <td><span class="status-badge @statusBadge">@statusText</span></td>
+                            <td>
+                                @if (alloc.DeliveryNoteId.HasValue)
+                                {
+                                    <a asp-controller="DeliveryNote" asp-action="Details"
+                                       asp-route-id="@alloc.DeliveryNoteId">
+                                        @alloc.DeliveryNoteCode
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+<div class="content-card mb-3 position-relative">
+    <div class="content-card-body-flush">
+        <div class="row g-3">
+            <div class="col-lg-8 order-1">
+                <div class="mb-3">
+                    <div class="content-card-header">
+                        <h5>Danh sách hàng hóa</h5>
+                        @if (Model.CanUpdateOrderItems)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                                <i class="bi bi-plus-lg me-1"></i>
+                                <span class="d-none d-lg-inline">Thêm hàng hóa</span>
+                                <span class="d-lg-none">Thêm</span>
+                            </button>
+                        }
+                    </div>
+                    <div class="content-card-body-flush">
+                        <div class="table-responsive">
+                            <table class="table data-table mb-0">
 <div class="content-card mb-3 position-relative">
     <div class="content-card-body-flush">
         <div class="row g-3">
@@ -660,6 +752,58 @@
     </div>
 }
 
+@if (Model.CanCancelOrder)
+{
+    @if (Model.FullyReceivedDirectShipCount > 0)
+    {
+        <div class="modal fade" id="cancelOrderWarningModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold text-danger">Cảnh báo — Hủy đơn hàng</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-3">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Có <strong>@Model.FullyReceivedDirectShipCount</strong> mặt hàng đang ở kho ảo Direct-Ship Transit (đã giao thẳng từ NCC, chờ khách xác nhận). Hủy đơn sẽ chuyển hàng về kho chính.
+                        </div>
+                        <p>Xác nhận hủy đơn hàng <strong>@Model.Code</strong>?</p>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 pb-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Giữ nguyên</button>
+                        <button type="button" class="btn btn-danger" id="btnConfirmCancelWithDs">
+                            <i class="bi bi-x-circle me-1"></i> Hủy đơn và chuyển kho
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="modal fade" id="cancelOrderModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold text-danger">Xác nhận hủy đơn hàng</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-3">
+                        <p>Xác nhận hủy đơn hàng <strong>@Model.Code</strong>? Thao tác này không thể hoàn tác.</p>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 pb-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Giữ nguyên</button>
+                        <button type="button" class="btn btn-danger" id="btnConfirmCancel">
+                            <i class="bi bi-x-circle me-1"></i> Xác nhận hủy
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
 @if (Model.Status != (int)OrderStatus.Locked)
 {
     <div class="modal fade" id="createDeliveryNoteModal" tabindex="-1" aria-hidden="true">
@@ -750,4 +894,47 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/modules/OrderDetails.js" type="module"></script>
+    @if (Model.CanCancelOrder)
+    {
+        <script>
+        (function() {
+            const cancelBtn = document.getElementById('btnCancelOrder');
+            if (!cancelBtn) return;
+
+            @if (Model.FullyReceivedDirectShipCount > 0)
+            {
+                <text>
+            const modal = new bootstrap.Modal(document.getElementById('cancelOrderWarningModal'));
+            cancelBtn.addEventListener('click', () => modal.show());
+            document.getElementById('btnConfirmCancelWithDs')?.addEventListener('click', submitCancel);
+                </text>
+            }
+            else
+            {
+                <text>
+            const modal = new bootstrap.Modal(document.getElementById('cancelOrderModal'));
+            cancelBtn.addEventListener('click', () => modal.show());
+            document.getElementById('btnConfirmCancel')?.addEventListener('click', submitCancel);
+                </text>
+            }
+
+            async function submitCancel() {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+                try {
+                    const res = await fetch('/Order/CancelOrder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
+                        body: JSON.stringify({ orderId: '@Model.Id' })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        window.location.href = data.redirectUrl || '/Order/List';
+                    } else {
+                        alert(data.message || 'Không thể hủy đơn.');
+                    }
+                } catch { alert('Lỗi kết nối, vui lòng thử lại.'); }
+            }
+        })();
+        </script>
+    }
 }

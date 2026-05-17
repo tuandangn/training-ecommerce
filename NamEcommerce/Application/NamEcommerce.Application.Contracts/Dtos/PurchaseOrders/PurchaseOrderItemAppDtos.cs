@@ -44,6 +44,7 @@ public sealed record ReceivedGoodsForItemAppDto(Guid PurchaseOrderId, Guid Purch
     /// Giá bán mới cho sản phẩm (tùy chọn). Nếu null thì giữ nguyên UnitPrice hiện tại của Product.
     /// </summary>
     public decimal? SellingPrice { get; set; }
+    public string? OversupplyAction { get; set; }
 
     public (bool valid, string? errorMessage) Validate()
     {

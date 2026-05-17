@@ -63,4 +63,12 @@ public interface IDirectShipManager
         DateTime? fromDateUtc,
         DateTime? toDateUtc,
         CancellationToken ct = default);
+
+    Task<IList<DirectShipAllocationStatusDto>> GetDirectShipAllocationsForOrderItemsAsync(
+        IReadOnlyList<Guid> orderItemIds,
+        CancellationToken ct = default);
+
+    Task<IList<DirectShipAllocationForPoItemDto>> GetDirectShipAllocationsForPoItemsAsync(
+        IReadOnlyList<Guid> purchaseOrderItemIds,
+        CancellationToken ct = default);
 }
