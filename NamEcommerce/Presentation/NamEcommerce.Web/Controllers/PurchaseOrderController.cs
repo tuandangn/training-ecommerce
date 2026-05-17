@@ -251,10 +251,26 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         });
 
         if (!result.Success)
+        {
             NotifyError(result.ErrorMessage!);
-        else
-            NotifySuccess("Msg.SaveSuccess");
+            return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+        }
 
+        if (model.DirectShipOrderItemId.HasValue && model.DirectShipOrderItemId != Guid.Empty
+            && !string.IsNullOrWhiteSpace(model.DirectShipAddress))
+        {
+            await _purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
+            {
+                PurchaseOrderItemId = model.PurchaseOrderItemId,
+                OrderItemId = model.DirectShipOrderItemId.Value,
+                Quantity = model.ReceivedQuantity,
+                DirectShipAddress = model.DirectShipAddress,
+                DirectShipContactName = model.DirectShipContactName,
+                DirectShipContactPhone = model.DirectShipContactPhone
+            }).ConfigureAwait(false);
+        }
+
+        NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
     }
 

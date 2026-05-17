@@ -711,20 +711,8 @@
 
 @if (Model.Info.CanReceiveGoods)
 {
-    <script type="application/json" id="receiveItemDsData">
-        @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-            Model.DirectShipAllocationsPerItem.ToDictionary(
-                kvp => kvp.Key.ToString(),
-                kvp => new {
-                    count = kvp.Value.Count,
-                    totalQty = kvp.Value.Sum(a => a.AllocatedQuantity)
-                }
-            )
-        ))
-    </script>
-
     <div class="modal fade" id="receiveItemModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">Nhập hàng</h5>
@@ -735,6 +723,7 @@
                         <input type="hidden" name="PurchaseOrderId" value="@Model.Info.Id" />
                         <input type="hidden" name="PurchaseOrderItemId" id="modalItemId" />
                         <input type="hidden" name="OversupplyAction" id="modalOversupplyAction" value="" />
+                        <input type="hidden" name="DirectShipOrderItemId" id="modalDsOrderItemId" value="" />
 
                         <div class="alert alert-info border-0 mb-4">
                             <div class="small fw-bold">
@@ -745,11 +734,6 @@
                                 Còn lại cần nhập:
                                 <span id="modalItemRemaining" class="fw-bold">0</span>
                             </div>
-                        </div>
-
-                        <div id="receiveItemDsPanel" class="alert alert-primary border-0 small mb-3 d-none">
-                            <i class="bi bi-send me-1"></i>
-                            <span id="receiveItemDsText"></span>
                         </div>
 
                         <div class="mb-3">
@@ -810,6 +794,46 @@
                             <div id="modalSellingPriceWarning" class="alert alert-warning mt-2 py-2 small d-none" role="alert">
                                 <i class="bi bi-exclamation-triangle-fill me-1"></i>
                                 <span>Cảnh báo: giá bán nhỏ hơn hoặc bằng giá vốn — bán sẽ bị lỗ.</span>
+                            </div>
+                        </div>
+
+                        <hr class="my-3" />
+                        <div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="modalDsToggle" />
+                                <label class="form-check-label fw-semibold small" for="modalDsToggle">
+                                    <i class="bi bi-send me-1"></i> Giao thẳng cho khách hàng
+                                </label>
+                            </div>
+                            <div id="modalDsSection" class="d-none">
+                                <div id="modalDsLoading" class="text-muted small py-2 d-none">
+                                    <span class="spinner-border spinner-border-sm me-1"></span> Đang tải đơn hàng...
+                                </div>
+                                <div id="modalDsEmpty" class="alert alert-warning py-2 small d-none">
+                                    <i class="bi bi-exclamation-circle me-1"></i> Không có đơn hàng phù hợp cho sản phẩm này.
+                                </div>
+                                <div id="modalDsOrderList" class="d-none mb-3">
+                                    <label class="form-label small fw-semibold text-muted text-uppercase">Chọn đơn hàng</label>
+                                    <div id="modalDsOrderItems" class="list-group list-group-flush border rounded" style="max-height:180px;overflow-y:auto"></div>
+                                </div>
+                                <div id="modalDsFields" class="d-none">
+                                    <div class="alert alert-primary py-2 small mb-2" id="modalDsSelectedOrder"></div>
+                                    <div class="mb-2">
+                                        <input type="text" name="DirectShipAddress" id="modalDsAddressInput"
+                                               class="form-control form-control-sm" placeholder="Địa chỉ giao hàng *" />
+                                    </div>
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <input type="text" name="DirectShipContactName" id="modalDsContactName"
+                                                   class="form-control form-control-sm" placeholder="Tên người nhận" />
+                                        </div>
+                                        <div class="col-6">
+                                            <input type="text" name="DirectShipContactPhone" id="modalDsContactPhone"
+                                                   class="form-control form-control-sm" placeholder="Số điện thoại" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="alert alert-danger py-2 small d-none" id="modalDsError"></div>
                             </div>
                         </div>
                     </div>
@@ -1133,7 +1157,7 @@
                 });
 
                 document.getElementById('btnSaveDirectShipAddress')?.addEventListener('click', async function() {
-                    const allocationId = document.getElementById('editDsAllocationId').value;
+                    const allocationId = document.getElementById('editDsAllocationId')?.value;
                     const newAddress = document.getElementById('editDsAddress').value.trim();
                     const successBanner = document.getElementById('editDsSuccessBanner');
                     const errorBanner = document.getElementById('editDsErrorBanner');
@@ -1202,9 +1226,7 @@
 
                 // Initialize Receive Item Modal
                 let itemRemainingQty = 0;
-                const receiveItemDsMap = (() => {
-                    try { return JSON.parse(document.getElementById('receiveItemDsData')?.textContent ?? '{}'); } catch { return {}; }
-                })();
+                let currentReceivePoItemId = null;
                 const receiveItemModal = document.getElementById('receiveItemModal');
                 if (receiveItemModal) {
                 receiveItemModal.addEventListener('show.bs.modal', function(event) {
@@ -1216,6 +1238,7 @@
                 const unitCostRaw = parseFloat(button.getAttribute('data-item-unit-cost')) || 0;
                 const unitPriceRaw = parseFloat(button.getAttribute('data-item-unit-price')) || 0;
 
+                currentReceivePoItemId = itemId;
                 document.getElementById('modalItemId').value = itemId;
                 document.getElementById('modalItemName').innerText = itemName;
                 document.getElementById('modalItemRemaining').innerText = remaining;
@@ -1226,16 +1249,17 @@
                 document.getElementById('modalOversupplyAction').value = '';
                 document.getElementById('oversupplyCancel').checked = true;
 
-                const dsPanel = document.getElementById('receiveItemDsPanel');
-                const dsText = document.getElementById('receiveItemDsText');
-                const dsInfo = receiveItemDsMap[itemId];
-                if (dsInfo && dsInfo.totalQty > 0) {
-                    const qtyFmt = window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(dsInfo.totalQty) : dsInfo.totalQty;
-                    dsText.textContent = `${dsInfo.count} phân bổ giao thẳng (${qtyFmt} đv) — hệ thống tự phân phối sau khi nhận.`;
-                    dsPanel.classList.remove('d-none');
-                } else {
-                    dsPanel.classList.add('d-none');
-                }
+                // Reset DS section
+                document.getElementById('modalDsToggle').checked = false;
+                document.getElementById('modalDsSection').classList.add('d-none');
+                document.getElementById('modalDsOrderItemId').value = '';
+                document.getElementById('modalDsAddressInput').value = '';
+                document.getElementById('modalDsContactName').value = '';
+                document.getElementById('modalDsContactPhone').value = '';
+                document.getElementById('modalDsOrderList').classList.add('d-none');
+                document.getElementById('modalDsFields').classList.add('d-none');
+                document.getElementById('modalDsEmpty').classList.add('d-none');
+                document.getElementById('modalDsError').classList.add('d-none');
 
                 // Pre-fill selling price with current UnitPrice; display unit cost for reference
                 const sellingPriceInput = document.getElementById('modalSellingPrice');
@@ -1246,11 +1270,76 @@
                 updateSellingPriceWarning();
                 });
 
+                // DS toggle
+                document.getElementById('modalDsToggle')?.addEventListener('change', function () {
+                const section = document.getElementById('modalDsSection');
+                if (this.checked) {
+                    section.classList.remove('d-none');
+                    if (!document.getElementById('modalDsOrderItems').children.length) {
+                        loadReceiveDsItems(currentReceivePoItemId);
+                    }
+                } else {
+                    section.classList.add('d-none');
+                    document.getElementById('modalDsOrderItemId').value = '';
+                }
+                });
+
                 // Warning when selling price <= unit cost (lỗ)
                 const sellingPriceInput = document.getElementById('modalSellingPrice');
                 if (sellingPriceInput) {
                 sellingPriceInput.addEventListener('input', updateSellingPriceWarning);
                 sellingPriceInput.addEventListener('change', updateSellingPriceWarning);
+                }
+                }
+
+                async function loadReceiveDsItems(poItemId) {
+                const loading = document.getElementById('modalDsLoading');
+                const empty = document.getElementById('modalDsEmpty');
+                const list = document.getElementById('modalDsOrderList');
+                const items = document.getElementById('modalDsOrderItems');
+                const fields = document.getElementById('modalDsFields');
+                const errorBox = document.getElementById('modalDsError');
+                loading.classList.remove('d-none');
+                empty.classList.add('d-none');
+                list.classList.add('d-none');
+                fields.classList.add('d-none');
+                errorBox.classList.add('d-none');
+                try {
+                const resp = await fetch(`/PurchaseOrders/EligibleOrderItems?purchaseOrderItemId=${poItemId}`);
+                if (!resp.ok) throw new Error('Lỗi tải dữ liệu');
+                const data = await resp.json();
+                loading.classList.add('d-none');
+                if (!data || !data.length) {
+                    empty.classList.remove('d-none');
+                    return;
+                }
+                items.innerHTML = '';
+                data.forEach(function(order) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'list-group-item list-group-item-action py-2 px-3';
+                    btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="fw-semibold">${order.orderCode}</span>
+                            <span class="text-muted ms-2 small">${order.customerName}</span>
+                        </div>
+                        <span class="badge bg-secondary ms-2">Còn ${order.availableToAllocate}</span>
+                    </div>`;
+                    btn.addEventListener('click', function() {
+                        document.querySelectorAll('#modalDsOrderItems .list-group-item').forEach(el => el.classList.remove('active'));
+                        btn.classList.add('active');
+                        document.getElementById('modalDsOrderItemId').value = order.orderItemId;
+                        document.getElementById('modalDsSelectedOrder').textContent =
+                            `Đơn hàng: ${order.orderCode} · Khách: ${order.customerName} · Có thể nhận: ${order.availableToAllocate}`;
+                        fields.classList.remove('d-none');
+                    });
+                    items.appendChild(btn);
+                });
+                list.classList.remove('d-none');
+                } catch (err) {
+                loading.classList.add('d-none');
+                errorBox.textContent = err.message || 'Không thể tải danh sách đơn hàng.';
+                errorBox.classList.remove('d-none');
                 }
                 }
 
@@ -1284,6 +1373,24 @@
                 return;
                 }
                 document.getElementById('modalOversupplyAction').value = choice;
+                }
+                const dsToggle = document.getElementById('modalDsToggle');
+                if (dsToggle && dsToggle.checked) {
+                const dsOrderItemId = document.getElementById('modalDsOrderItemId').value;
+                const dsAddress = document.getElementById('modalDsAddressInput').value.trim();
+                const errorBox = document.getElementById('modalDsError');
+                if (!dsOrderItemId) {
+                    e.preventDefault();
+                    errorBox.textContent = 'Vui lòng chọn đơn hàng để giao thẳng.';
+                    errorBox.classList.remove('d-none');
+                    return;
+                }
+                if (!dsAddress) {
+                    e.preventDefault();
+                    errorBox.textContent = 'Vui lòng nhập địa chỉ giao hàng.';
+                    errorBox.classList.remove('d-none');
+                    return;
+                }
                 }
                 });
                 }
@@ -1633,7 +1740,7 @@
                     });
 
                     function loadEligibleItems(poItemId) {
-                        fetch('/PurchaseOrders/EligibleOrderItems?purchaseOrderItemId=' + poItemId)
+                        fetch('/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=' + poItemId)
                             .then(r => r.json())
                             .then(items => {
                                 document.getElementById('allocateOrderItemsLoading').classList.add('d-none');
