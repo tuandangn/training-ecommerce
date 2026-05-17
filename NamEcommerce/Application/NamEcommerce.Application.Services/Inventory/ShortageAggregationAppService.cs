@@ -17,6 +17,7 @@ public sealed class ShortageAggregationAppService(
     ISupplierSuggestionService supplierSuggestionService,
     IPurchaseOrderManager purchaseOrderManager,
     IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
+    IDirectShipManager directShipManager,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<Product> productReader,
     IEntityDataReader<UnitMeasurement> unitMeasurementReader) : IShortageAggregationAppService
@@ -299,9 +300,15 @@ public sealed class ShortageAggregationAppService(
                             if (!action.PurchaseOrderItemId.HasValue || !action.PurchaseOrderId.HasValue)
                                 throw new InvalidOperationException("Error.PurchaseOrderItemIsNotFound");
 
-                            await purchaseOrderAllocationManager
+                            var allocationDto = await purchaseOrderAllocationManager
                                 .AllocateFromExistingPurchaseOrderItemAsync(action.PurchaseOrderItemId.Value, item.OrderItemId, action.Quantity)
                                 .ConfigureAwait(false);
+
+                            if (item.DirectShipInfo is { } ds && !string.IsNullOrWhiteSpace(ds.Address))
+                                await directShipManager
+                                    .MarkAllocationAsDirectShipAsync(allocationDto.Id, ds.Address, ds.ContactName, ds.ContactPhone, ds.Priority)
+                                    .ConfigureAwait(false);
+
                             await AddExistingPurchaseOrderResultAsync(results, action.PurchaseOrderId.Value, false).ConfigureAwait(false);
                             continue;
                         }
