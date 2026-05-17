@@ -44,6 +44,7 @@ public sealed record ReceivedGoodsForItemAppDto(Guid PurchaseOrderId, Guid Purch
     /// Giá bán mới cho sản phẩm (tùy chọn). Nếu null thì giữ nguyên UnitPrice hiện tại của Product.
     /// </summary>
     public decimal? SellingPrice { get; set; }
+    public decimal? ActualUnitCost { get; set; }
     public string? OversupplyAction { get; set; }
 
     public (bool valid, string? errorMessage) Validate()
@@ -52,6 +53,8 @@ public sealed record ReceivedGoodsForItemAppDto(Guid PurchaseOrderId, Guid Purch
             return (false, "Error.PurchaseOrderQuantityMustBePositive");
         if (SellingPrice.HasValue && SellingPrice.Value < 0)
             return (false, "Error.ProductUnitPriceCannotBeNegative");
+        if (ActualUnitCost.HasValue && ActualUnitCost.Value < 0)
+            return (false, "Error.PurchaseOrderItemUnitCostCannotBeNegative");
 
         return (true, string.Empty);
     }

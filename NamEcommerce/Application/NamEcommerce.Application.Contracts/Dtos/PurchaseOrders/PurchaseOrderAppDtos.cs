@@ -95,4 +95,5 @@ public sealed record CreatePurchaseOrderItemAppDto
     public required Guid? ProductId { get; init; }
     public required decimal Quantity { get; init; }
     public decimal UnitCost { get; set; }
+    public string? Note { get; init; }
 }

@@ -147,7 +147,8 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 PurchaseOrderId = Guid.Empty,
                 ProductId = item.ProductId ?? Guid.Empty,
                 QuantityOrdered = item.Quantity,
-                UnitCost = item.UnitCost
+                UnitCost = item.UnitCost,
+                Note = item.Note
             });
         }
         var result = await _purchaseOrderManager.CreatePurchaseOrderAsync(createPurchaseOrderDto).ConfigureAwait(false);
@@ -401,7 +402,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return CommonActionResultDto.CreateError("Error.UserIsNotFound");
         }
 
-        Guid? warehouseId = purchaseOrder.WarehouseId ?? dto.WarehouseId ?? null;
+        Guid? warehouseId = dto.WarehouseId ?? purchaseOrder.WarehouseId;
         if (!warehouseId.HasValue)
             return CommonActionResultDto.CreateError("Error.WarehouseRequired");
 
@@ -420,7 +421,8 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 ReceivedByUserId = dto.ReceivedByUserId,
                 ReceivedQuantity = dto.ReceivedQuantity,
                 WarehouseId = warehouseId,
-                SellingPrice = dto.SellingPrice
+                SellingPrice = dto.SellingPrice,
+                ActualUnitCost = dto.ActualUnitCost
             });
         }
         catch (NamEcommerceDomainException ex)
@@ -503,7 +505,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             });
         }
 
-        // Bước 3: manager group-by-warehouse → mỗi kho = 1 GoodsReceipt, 1 lần UpdateAsync PO.
+        // Bước 3: manager bulk gọi single receive chuẩn cho từng line.
         var bulkResult = await _purchaseOrderManager.BulkReceiveItemsAsync(new BulkReceiveGoodsForPurchaseOrderDto(dto.PurchaseOrderId)
         {
             Lines = lines,

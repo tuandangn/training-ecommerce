@@ -49,6 +49,7 @@ public sealed record ReceivedGoodsForItemDto(Guid PurchaseOrderId, Guid Purchase
     /// Giá bán mới cho sản phẩm (tùy chọn). Nếu null thì giữ nguyên UnitPrice hiện tại của Product.
     /// </summary>
     public decimal? SellingPrice { get; set; }
+    public decimal? ActualUnitCost { get; set; }
 
     public void Verify()
     {
@@ -56,12 +57,15 @@ public sealed record ReceivedGoodsForItemDto(Guid PurchaseOrderId, Guid Purchase
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderReceiveQuantityMustBePositive");
         if (SellingPrice.HasValue && SellingPrice.Value < 0)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderSellingPriceCannotBeNegative");
+        if (ActualUnitCost.HasValue && ActualUnitCost.Value < 0)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemUnitCostCannotBeNegative");
     }
 }
 [Serializable]
 public sealed record ReceivedGoodsForItemResultDto(Guid PurchaseOrderId, Guid PurchaseOrderItemId)
 {
     public required decimal ReceivedQuantity { get; init; }
+    public Guid? CreatedGoodsReceiptId { get; init; }
 }
 
 [Serializable]
