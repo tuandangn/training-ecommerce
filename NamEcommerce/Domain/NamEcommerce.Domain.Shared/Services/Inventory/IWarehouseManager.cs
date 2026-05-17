@@ -15,4 +15,6 @@ public interface IWarehouseManager : INameExistCheckingService, ICodeExistChecki
     Task<UpdateWarehouseResultDto> UpdateWarehouseAsync(UpdateWarehouseDto dto);
 
     Task DeleteWarehouseAsync(Guid id);
+
+    Task<bool> DirectShipTransitExistsAsync();
 }
