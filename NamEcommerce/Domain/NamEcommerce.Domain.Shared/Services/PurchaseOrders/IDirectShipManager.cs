@@ -28,6 +28,14 @@ public interface IDirectShipManager
         CancellationToken ct = default);
 
     /// <summary>
+    /// Kiểm tra xem có allocation direct-ship nào còn khả năng nhận hàng (chưa nhận đủ, chưa cancel).
+    /// Dùng để fail-fast trước khi phân bổ và lưu DB.
+    /// </summary>
+    Task<bool> HasReceivableDirectShipAllocationsAsync(
+        Guid purchaseOrderItemId,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Khách xác nhận đã nhận hàng — chuyển DN sang Confirmed, raise event để sinh Invoice/Debt.
     /// Stock movement (kho ảo → out) do handler downstream thực hiện.
     /// </summary>

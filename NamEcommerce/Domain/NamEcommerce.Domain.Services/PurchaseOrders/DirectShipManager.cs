@@ -30,6 +30,17 @@ public sealed class DirectShipManager(
         await allocationRepository.UpdateAsync(allocation, ct).ConfigureAwait(false);
     }
 
+    public Task<bool> HasReceivableDirectShipAllocationsAsync(
+        Guid purchaseOrderItemId, CancellationToken ct = default)
+    {
+        var result = allocationReader.DataSource
+            .Any(a => a.PurchaseOrderItemId == purchaseOrderItemId
+                   && a.IsDirectShip
+                   && a.Status != AllocationStatus.Cancelled
+                   && a.ReceivedQuantity < a.AllocatedQuantity);
+        return Task.FromResult(result);
+    }
+
     public async Task<DistributeReceivedQuantityResultDto> DistributeReceivedQuantityAsync(
         Guid purchaseOrderItemId, decimal receivedQty, CancellationToken ct = default)
     {

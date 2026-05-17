@@ -536,15 +536,20 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             UnitCost = purchaseOrderItem.UnitCost
         }).ConfigureAwait(false);
 
-        // Direct-ship distribution: phân bổ hàng nhận vào allocations (ưu tiên direct-ship trước).
-        var distributeResult = await _directShipManager.DistributeReceivedQuantityAsync(
-            purchaseOrderItem.Id, dto.ReceivedQuantity).ConfigureAwait(false);
+        // Fail fast: if there are receivable direct-ship allocations, the transit warehouse must exist
+        // BEFORE we persist any allocation status changes (DistributeReceivedQuantityAsync saves to DB).
+        var hasReceivableDirectShip = await _directShipManager
+            .HasReceivableDirectShipAllocationsAsync(purchaseOrderItem.Id).ConfigureAwait(false);
 
         var transitWarehouse = _warehouseOrderDataReader.DataSource
             .FirstOrDefault(w => w.WarehouseType == WarehouseType.DirectShipTransit);
 
-        if (distributeResult.DirectShipReceipts.Count > 0 && transitWarehouse == null)
+        if (hasReceivableDirectShip && transitWarehouse == null)
             throw new DirectShipTransitWarehouseNotConfiguredException();
+
+        // Direct-ship distribution: phân bổ hàng nhận vào allocations (ưu tiên direct-ship trước).
+        var distributeResult = await _directShipManager.DistributeReceivedQuantityAsync(
+            purchaseOrderItem.Id, dto.ReceivedQuantity).ConfigureAwait(false);
 
         foreach (var receipt in distributeResult.DirectShipReceipts)
         {
