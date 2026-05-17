@@ -71,6 +71,7 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
         DirectShipContactName = contactName;
         DirectShipContactPhone = contactPhone;
         DirectShipPriority = priority;
+        RaiseDomainEvent(new AllocationMarkedAsDirectShip(Id, PurchaseOrderItemId, address, contactName, contactPhone));
     }
 
     internal void ClearDirectShip()
