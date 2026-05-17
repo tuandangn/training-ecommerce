@@ -565,20 +565,20 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             var transitWarehouse = _warehouseOrderDataReader.DataSource
                 .FirstOrDefault(w => w.WarehouseType == WarehouseType.DirectShipTransit);
 
-            if (transitWarehouse != null)
+            if (distributeResult.DirectShipReceipts.Count > 0 && transitWarehouse == null)
+                throw new DirectShipTransitWarehouseNotConfiguredException();
+
+            foreach (var receipt in distributeResult.DirectShipReceipts)
             {
-                foreach (var receipt in distributeResult.DirectShipReceipts)
-                {
-                    await _deliveryNoteManager.CreateForDirectShipAsync(
-                        new CreateDeliveryNoteForDirectShipDto
-                        {
-                            GoodsReceiptId = grResult.CreatedId,
-                            OrderItemId = receipt.OrderItemId,
-                            Quantity = receipt.Quantity,
-                            DirectShipWarehouseId = transitWarehouse.Id,
-                            ShippingAddress = receipt.DirectShipAddress ?? string.Empty
-                        }).ConfigureAwait(false);
-                }
+                await _deliveryNoteManager.CreateForDirectShipAsync(
+                    new CreateDeliveryNoteForDirectShipDto
+                    {
+                        GoodsReceiptId = grResult.CreatedId,
+                        OrderItemId = receipt.OrderItemId,
+                        Quantity = receipt.Quantity,
+                        DirectShipWarehouseId = transitWarehouse!.Id,
+                        ShippingAddress = receipt.DirectShipAddress ?? string.Empty
+                    }).ConfigureAwait(false);
             }
         }
 

@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Users;
@@ -411,13 +412,21 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return CommonActionResultDto.CreateError("Error.WarehouseIsNotFound");
         }
 
-        var result = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
+        ReceivedGoodsForItemResultDto result;
+        try
         {
-            ReceivedByUserId = dto.ReceivedByUserId,
-            ReceivedQuantity = dto.ReceivedQuantity,
-            WarehouseId = warehouseId,
-            SellingPrice = dto.SellingPrice
-        });
+            result = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
+            {
+                ReceivedByUserId = dto.ReceivedByUserId,
+                ReceivedQuantity = dto.ReceivedQuantity,
+                WarehouseId = warehouseId,
+                SellingPrice = dto.SellingPrice
+            });
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
+        }
 
         if (originalReceivedQuantity > maxReceivable && dto.OversupplyAction == "AcceptToMainWarehouse")
         {
