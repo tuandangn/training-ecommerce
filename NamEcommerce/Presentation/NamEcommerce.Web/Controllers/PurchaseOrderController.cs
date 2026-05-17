@@ -259,7 +259,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (model.DirectShipOrderItemId.HasValue && model.DirectShipOrderItemId != Guid.Empty
             && !string.IsNullOrWhiteSpace(model.DirectShipAddress))
         {
-            await _purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
+            var dsResult = await _purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
             {
                 PurchaseOrderItemId = model.PurchaseOrderItemId,
                 OrderItemId = model.DirectShipOrderItemId.Value,
@@ -268,6 +268,9 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 DirectShipContactName = model.DirectShipContactName,
                 DirectShipContactPhone = model.DirectShipContactPhone
             }).ConfigureAwait(false);
+
+            if (!dsResult.Success)
+                NotifyWarning(dsResult.ErrorMessage!);
         }
 
         NotifySuccess("Msg.SaveSuccess");
@@ -325,20 +328,24 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             else
                 NotifySuccess("Msg.SaveSuccess");
 
+            var receivedItemIds = lines.Select(l => l.ItemId).ToHashSet();
             foreach (var line in model.Items ?? [])
             {
-                if (line.DirectShipOrderItemId.HasValue && !string.IsNullOrWhiteSpace(line.DirectShipAddress))
+                if (!receivedItemIds.Contains(line.ItemId)) continue;
+                if (!line.DirectShipOrderItemId.HasValue || string.IsNullOrWhiteSpace(line.DirectShipAddress)) continue;
+
+                var dsResult = await _purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
                 {
-                    await _purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
-                    {
-                        PurchaseOrderItemId = line.ItemId,
-                        OrderItemId = line.DirectShipOrderItemId.Value,
-                        Quantity = line.Quantity,
-                        DirectShipAddress = line.DirectShipAddress,
-                        DirectShipContactName = line.DirectShipContactName,
-                        DirectShipContactPhone = line.DirectShipContactPhone
-                    });
-                }
+                    PurchaseOrderItemId = line.ItemId,
+                    OrderItemId = line.DirectShipOrderItemId.Value,
+                    Quantity = line.Quantity,
+                    DirectShipAddress = line.DirectShipAddress,
+                    DirectShipContactName = line.DirectShipContactName,
+                    DirectShipContactPhone = line.DirectShipContactPhone
+                });
+
+                if (!dsResult.Success)
+                    NotifyWarning(dsResult.ErrorMessage!);
             }
         }
 
@@ -497,6 +504,8 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             orderId = item.OrderId,
             orderCode = item.OrderCode,
             customerName = item.CustomerName,
+            customerPhone = item.CustomerPhone,
+            shippingAddress = item.ShippingAddress,
             productName = item.ProductName,
             totalQuantity = item.TotalQuantity,
             allocatedOutstanding = item.AllocatedOutstanding,

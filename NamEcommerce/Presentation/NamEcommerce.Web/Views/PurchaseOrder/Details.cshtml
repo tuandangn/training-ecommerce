@@ -771,7 +771,7 @@
                             </div>
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3" id="modalWarehouseSection">
                             <label class="form-label small fw-bold text-muted text-uppercase">Kho nhập hàng</label>
                             <select name="WarehouseId" class="form-select" required>
                                 @foreach (var option in Model.AvailableWarehouses.Options)
@@ -1250,8 +1250,11 @@
                 document.getElementById('oversupplyCancel').checked = true;
 
                 // Reset DS section
+                receiveDsLoadedForItemId = '';
+                receiveOriginalPhone = '';
                 document.getElementById('modalDsToggle').checked = false;
                 document.getElementById('modalDsSection').classList.add('d-none');
+                document.getElementById('modalWarehouseSection')?.classList.remove('d-none');
                 document.getElementById('modalDsOrderItemId').value = '';
                 document.getElementById('modalDsAddressInput').value = '';
                 document.getElementById('modalDsContactName').value = '';
@@ -1271,16 +1274,23 @@
                 });
 
                 // DS toggle
+                let receiveDsLoadedForItemId = '';
+                let receiveOriginalPhone = '';
                 document.getElementById('modalDsToggle')?.addEventListener('change', function () {
                 const section = document.getElementById('modalDsSection');
+                const warehouseSection = document.getElementById('modalWarehouseSection');
                 if (this.checked) {
                     section.classList.remove('d-none');
-                    if (!document.getElementById('modalDsOrderItems').children.length) {
+                    warehouseSection?.classList.add('d-none');
+                    if (receiveDsLoadedForItemId !== currentReceivePoItemId) {
                         loadReceiveDsItems(currentReceivePoItemId);
+                        receiveDsLoadedForItemId = currentReceivePoItemId;
                     }
                 } else {
                     section.classList.add('d-none');
+                    warehouseSection?.classList.remove('d-none');
                     document.getElementById('modalDsOrderItemId').value = '';
+                    receiveOriginalPhone = '';
                 }
                 });
 
@@ -1305,7 +1315,7 @@
                 fields.classList.add('d-none');
                 errorBox.classList.add('d-none');
                 try {
-                const resp = await fetch(`/PurchaseOrders/EligibleOrderItems?purchaseOrderItemId=${poItemId}`);
+                const resp = await fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${poItemId}`);
                 if (!resp.ok) throw new Error('Lỗi tải dữ liệu');
                 const data = await resp.json();
                 loading.classList.add('d-none');
@@ -1325,12 +1335,19 @@
                         </div>
                         <span class="badge bg-secondary ms-2">Còn ${order.availableToAllocate}</span>
                     </div>`;
+                    btn.dataset.shippingAddress = order.shippingAddress || '';
+                    btn.dataset.customerPhone = order.customerPhone || '';
+                    btn.dataset.customerName = order.customerName || '';
                     btn.addEventListener('click', function() {
                         document.querySelectorAll('#modalDsOrderItems .list-group-item').forEach(el => el.classList.remove('active'));
                         btn.classList.add('active');
                         document.getElementById('modalDsOrderItemId').value = order.orderItemId;
                         document.getElementById('modalDsSelectedOrder').textContent =
                             `Đơn hàng: ${order.orderCode} · Khách: ${order.customerName} · Có thể nhận: ${order.availableToAllocate}`;
+                        document.getElementById('modalDsAddressInput').value = btn.dataset.shippingAddress;
+                        document.getElementById('modalDsContactName').value = btn.dataset.customerName;
+                        document.getElementById('modalDsContactPhone').value = btn.dataset.customerPhone;
+                        receiveOriginalPhone = btn.dataset.customerPhone;
                         fields.classList.remove('d-none');
                     });
                     items.appendChild(btn);
@@ -1390,6 +1407,13 @@
                     errorBox.textContent = 'Vui lòng nhập địa chỉ giao hàng.';
                     errorBox.classList.remove('d-none');
                     return;
+                }
+                const currentPhone = document.getElementById('modalDsContactPhone').value.trim();
+                if (receiveOriginalPhone && currentPhone !== receiveOriginalPhone) {
+                    if (!confirm(`Số điện thoại liên lạc đã thay đổi từ "${receiveOriginalPhone}" thành "${currentPhone}". Xác nhận tiếp tục?`)) {
+                        e.preventDefault();
+                        return;
+                    }
                 }
                 }
                 });
@@ -1846,7 +1870,7 @@
                         btn.disabled = true;
                         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang xử lý...';
 
-                        fetch('/PurchaseOrders/AllocateToOrder', {
+                        fetch('/PurchaseOrder/AllocateToOrder', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
                             body: JSON.stringify({

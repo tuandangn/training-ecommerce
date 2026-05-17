@@ -105,7 +105,14 @@ export default class BulkReceiveController {
                 dsTr.querySelector('.bulk-ds-order-item-id').value = dsOrderItemBtn.dataset.orderItemId;
                 const label = dsTr.querySelector('.bulk-ds-selected-label');
                 if (label) label.textContent = `${dsOrderItemBtn.dataset.orderCode} · ${dsOrderItemBtn.dataset.customerName} · Còn: ${dsOrderItemBtn.dataset.availableToAllocate}`;
-                dsTr.querySelector('.bulk-ds-fields').classList.remove('d-none');
+                const fields = dsTr.querySelector('.bulk-ds-fields');
+                fields?.classList.remove('d-none');
+                const addrInput = dsTr.querySelector('.bulk-ds-address-input');
+                if (addrInput && !addrInput.value) addrInput.value = dsOrderItemBtn.dataset.shippingAddress || '';
+                const phoneInput = dsTr.querySelector('.bulk-ds-contact-phone');
+                if (phoneInput && !phoneInput.value) phoneInput.value = dsOrderItemBtn.dataset.customerPhone || '';
+                const nameInput = dsTr.querySelector('.bulk-ds-contact-name');
+                if (nameInput && !nameInput.value) nameInput.value = dsOrderItemBtn.dataset.customerName || '';
                 return;
             }
         });
@@ -236,10 +243,10 @@ export default class BulkReceiveController {
                         </div>
                         <div class="row g-2">
                             <div class="col-6">
-                                <input type="text" name="Items[${idx}].DirectShipContactName" class="form-control form-control-sm" placeholder="Tên người nhận" />
+                                <input type="text" name="Items[${idx}].DirectShipContactName" class="form-control form-control-sm bulk-ds-contact-name" placeholder="Tên người nhận" />
                             </div>
                             <div class="col-6">
-                                <input type="text" name="Items[${idx}].DirectShipContactPhone" class="form-control form-control-sm" placeholder="Số điện thoại" />
+                                <input type="text" name="Items[${idx}].DirectShipContactPhone" class="form-control form-control-sm bulk-ds-contact-phone" placeholder="Số điện thoại" />
                             </div>
                         </div>
                     </div>
@@ -256,11 +263,12 @@ export default class BulkReceiveController {
         if (!dsTr) return;
         const icon = tr.querySelector('.bulk-row-ds-toggle i');
 
+        const warehouseCell = tr.querySelector('.bulk-row-warehouse');
         if (dsTr.classList.contains('d-none')) {
             dsTr.classList.remove('d-none');
             icon?.classList.replace('text-secondary', 'text-primary');
+            warehouseCell?.closest('td')?.classList.add('d-none');
             const itemId = tr.querySelector('.bulk-row-item')?.value;
-            // Load if not yet loaded for this item
             if (!itemId || dsTr.dataset.dsLoadedFor !== itemId) {
                 this.#loadDsItems(tr, dsTr);
             }
@@ -268,6 +276,7 @@ export default class BulkReceiveController {
             dsTr.classList.add('d-none');
             dsTr.querySelector('.bulk-ds-order-item-id').value = '';
             icon?.classList.replace('text-primary', 'text-secondary');
+            warehouseCell?.closest('td')?.classList.remove('d-none');
         }
     }
 
@@ -294,7 +303,7 @@ export default class BulkReceiveController {
         }
 
         try {
-            const resp = await fetch(`/PurchaseOrders/EligibleOrderItems?purchaseOrderItemId=${itemId}`);
+            const resp = await fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${itemId}`);
             if (!resp.ok) throw new Error('Lỗi tải dữ liệu');
             const data = await resp.json();
             loading.classList.add('d-none');
@@ -314,6 +323,8 @@ export default class BulkReceiveController {
                 btn.dataset.orderCode = order.orderCode;
                 btn.dataset.customerName = order.customerName;
                 btn.dataset.availableToAllocate = order.availableToAllocate;
+                btn.dataset.shippingAddress = order.shippingAddress || '';
+                btn.dataset.customerPhone = order.customerPhone || '';
                 btn.innerHTML = `<div class="d-flex justify-content-between align-items-center">
                     <span><strong>${escapeHtml(order.orderCode)}</strong> <span class="text-muted small">${escapeHtml(order.customerName)}</span></span>
                     <span class="badge bg-secondary ms-2">Còn ${order.availableToAllocate}</span>

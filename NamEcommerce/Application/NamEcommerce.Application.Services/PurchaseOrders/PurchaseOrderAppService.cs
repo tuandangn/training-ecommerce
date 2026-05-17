@@ -692,9 +692,13 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
             return CommonActionResultDto.CreateSuccess();
         }
-        catch (Exception ex)
+        catch (NamEcommerceDomainException ex)
         {
-            return CommonActionResultDto.CreateError(ex.Message);
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
+        }
+        catch (Exception)
+        {
+            return CommonActionResultDto.CreateError("Error.UnexpectedError");
         }
     }
 
