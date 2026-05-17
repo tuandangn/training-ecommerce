@@ -353,12 +353,18 @@ export default class BulkReceiveController {
         if (!select || !hint) return;
         const item = this.#itemsById.get(select.value);
         if (!item) {
-            hint.textContent = '';
+            hint.innerHTML = '';
             return;
         }
         const remaining = this.#formatQty(item.remaining);
         const unitCost = this.#formatCurrency(item.unitCost);
-        hint.textContent = `Còn lại: ${remaining} • Giá vốn: ${unitCost}`;
+        const dsRem = item.dsRemaining ?? 0;
+        let hintHtml = `Còn lại: ${remaining} • Giá vốn: ${unitCost}`;
+        if (dsRem > 0) {
+            const dsQtyFmt = this.#formatQty(String(dsRem));
+            hintHtml += ` · <span class="text-primary"><i class="bi bi-send me-1"></i>${dsQtyFmt} giao thẳng tự động</span>`;
+        }
+        hint.innerHTML = hintHtml;
     }
 
     #parseQty(value) {

@@ -739,6 +739,10 @@
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase">Số lượng nhận</label>
                             <input name="ReceivedQuantity" id="modalReceivedQty" class="form-control no-additional-element no-hint" data-decimal="quantity" value="0" required />
+                            <div id="modalDistributionPreview" class="d-none mt-2 p-2 rounded border-start border-3 border-primary bg-light small">
+                                <div class="fw-semibold text-muted mb-1 text-uppercase" style="font-size:0.7rem">Phân phối hàng nhận</div>
+                                <div id="modalDistributionDetails" class="d-flex flex-column gap-1"></div>
+                            </div>
                         </div>
 
                         <div id="oversupplyWarningPanel" class="alert alert-warning border-0 mt-0 mb-3 d-none">
@@ -848,6 +852,23 @@
         </div>
     </div>
 
+    @{
+        var dsPerItem = new System.Collections.Generic.Dictionary<string, object>();
+        foreach (var kvp in Model.DirectShipAllocationsPerItem)
+        {
+            var activeDs = kvp.Value
+                .Where(a => a.Status != 5 && (a.AllocatedQuantity - a.ReceivedQuantity) > 0m)
+                .Select(a => new {
+                    remaining = a.AllocatedQuantity - a.ReceivedQuantity,
+                    label = !string.IsNullOrEmpty(a.DirectShipContactName) ? a.DirectShipContactName : a.DirectShipAddress
+                })
+                .ToList();
+            if (activeDs.Count > 0)
+                dsPerItem[kvp.Key.ToString()] = activeDs;
+        }
+    }
+    <script type="application/json" id="receiveItemDsData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(dsPerItem))</script>
+
     var remainingItems = Model.Info.Items.Where(i => i.RemainingQuantity > 0).ToList();
     var warehouseOptions = Model.AvailableWarehouses.Options.ToList();
 
@@ -871,11 +892,15 @@
                                                 @for (var idx = 0; idx < remainingItems.Count; idx++)
                                                 {
                                                             var item = remainingItems[idx];
+                                                            var itemDsRemaining = Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var itemDsAllocs)
+                                                                ? itemDsAllocs.Where(a => a.Status != 5 && (a.AllocatedQuantity - a.ReceivedQuantity) > 0m).Sum(a => a.AllocatedQuantity - a.ReceivedQuantity)
+                                                                : 0m;
                                                             <text>{
                                                                         "id": "@item.Id",
                                                                         "name": @Json.Serialize(item.ProductName),
                                                                         "remaining": @item.RemainingQuantity.ToString("#"),
-                                                                        "unitCost": @item.UnitCost.ToString("#")
+                                                                        "unitCost": @item.UnitCost.ToString("#"),
+                                                                        "dsRemaining": @itemDsRemaining.ToString(System.Globalization.CultureInfo.InvariantCulture)
                                                                     }@(idx < remainingItems.Count - 1 ? "," : "")</text>
                                                         }
                                                     ],
@@ -1228,145 +1253,186 @@
                 let itemRemainingQty = 0;
                 let currentReceivePoItemId = null;
                 const receiveItemModal = document.getElementById('receiveItemModal');
-                if (receiveItemModal) {
-                receiveItemModal.addEventListener('show.bs.modal', function(event) {
-                const button = event.relatedTarget;
-                const itemId = button.getAttribute('data-item-id');
-                const itemName = button.getAttribute('data-item-name');
-                const remainingRaw = button.getAttribute('data-item-remaining');
-                const remaining = DecimalFields.formatQuantity(remainingRaw);
-                const unitCostRaw = parseFloat(button.getAttribute('data-item-unit-cost')) || 0;
-                const unitPriceRaw = parseFloat(button.getAttribute('data-item-unit-price')) || 0;
-
-                currentReceivePoItemId = itemId;
-                document.getElementById('modalItemId').value = itemId;
-                document.getElementById('modalItemName').innerText = itemName;
-                document.getElementById('modalItemRemaining').innerText = remaining;
-                document.getElementById('modalReceivedQty').value = remaining;
-                document.getElementById('modalReceivedQty').max = remainingRaw;
-                itemRemainingQty = parseFloat(remainingRaw) || 0;
-                document.getElementById('oversupplyWarningPanel').classList.add('d-none');
-                document.getElementById('modalOversupplyAction').value = '';
-                document.getElementById('oversupplyCancel').checked = true;
-
-                // Reset DS section
-                receiveDsLoadedForItemId = '';
-                receiveOriginalPhone = '';
-                document.getElementById('modalDsToggle').checked = false;
-                document.getElementById('modalDsSection').classList.add('d-none');
-                document.getElementById('modalWarehouseSection')?.classList.remove('d-none');
-                document.getElementById('modalSellingPriceSection')?.classList.remove('d-none');
-                document.getElementById('modalDsOrderItemId').value = '';
-                document.getElementById('modalDsAddressInput').value = '';
-                document.getElementById('modalDsContactName').value = '';
-                document.getElementById('modalDsContactPhone').value = '';
-                document.getElementById('modalDsOrderList').classList.add('d-none');
-                document.getElementById('modalDsFields').classList.add('d-none');
-                document.getElementById('modalDsEmpty').classList.add('d-none');
-                document.getElementById('modalDsError').classList.add('d-none');
-
-                // Pre-fill selling price with current UnitPrice; display unit cost for reference
-                const sellingPriceInput = document.getElementById('modalSellingPrice');
-                const unitCostDisplay = document.getElementById('modalItemUnitCost');
-                sellingPriceInput.value = DecimalFields.formatCurrency(String(Math.trunc(unitPriceRaw)));
-                sellingPriceInput.setAttribute('data-unit-cost', unitCostRaw);
-                unitCostDisplay.innerText = DecimalFields.formatCurrency(String(Math.trunc(unitCostRaw)));
-                updateSellingPriceWarning();
-                });
-
-                // DS toggle
-                let receiveDsLoadedForItemId = '';
-                let receiveOriginalPhone = '';
                 let receiveDsAbortController = null;
-                document.getElementById('modalDsToggle')?.addEventListener('change', function () {
-                const section = document.getElementById('modalDsSection');
-                const warehouseSection = document.getElementById('modalWarehouseSection');
-                const sellingPriceSection = document.getElementById('modalSellingPriceSection');
-                if (this.checked) {
-                    section.classList.remove('d-none');
-                    warehouseSection?.classList.add('d-none');
-                    sellingPriceSection?.classList.add('d-none');
-                    if (receiveDsLoadedForItemId !== currentReceivePoItemId) {
-                        loadReceiveDsItems(currentReceivePoItemId);
-                        receiveDsLoadedForItemId = currentReceivePoItemId;
-                    }
-                } else {
-                    section.classList.add('d-none');
-                    warehouseSection?.classList.remove('d-none');
-                    sellingPriceSection?.classList.remove('d-none');
-                    document.getElementById('modalDsOrderItemId').value = '';
-                    receiveOriginalPhone = '';
-                }
-                });
+                    let receiveOriginalPhone = '';
 
-                // Warning when selling price <= unit cost (lỗ)
-                const sellingPriceInput = document.getElementById('modalSellingPrice');
-                if (sellingPriceInput) {
-                sellingPriceInput.addEventListener('input', updateSellingPriceWarning);
-                sellingPriceInput.addEventListener('change', updateSellingPriceWarning);
+                const _receiveItemDsData = (() => {
+                    try { return JSON.parse(document.getElementById('receiveItemDsData')?.textContent || '{}'); }
+                    catch { return {}; }
+                })();
+                function _escReceive(s) {
+                    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
                 }
+                function _parseReceiveQty() {
+                    const v = document.getElementById('modalReceivedQty')?.value || '0';
+                    return (window.DecimalFields?.stripFormatting)
+                        ? parseFloat(DecimalFields.stripFormatting(v, true)) || 0
+                        : parseFloat(v.replace(/[^0-9.]/g, '')) || 0;
+                }
+                function updateDistributionPreview() {
+                    const preview = document.getElementById('modalDistributionPreview');
+                    const details = document.getElementById('modalDistributionDetails');
+                    if (!preview || !details) return;
+                    const dsAllocs = _receiveItemDsData[currentReceivePoItemId] || [];
+                    const qty = _parseReceiveQty();
+                    if (dsAllocs.length === 0 || qty <= 0) { preview.classList.add('d-none'); return; }
+                    let rem = qty;
+                    const rows = [];
+                    for (const a of dsAllocs) {
+                        const dsQty = Math.min(rem, a.remaining);
+                        if (dsQty <= 0) break;
+                        const fmt = window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(String(dsQty)) : dsQty;
+                        rows.push(`<div class="d-flex align-items-center gap-2"><span class="badge bg-primary">${fmt}</span><span class="text-muted"><i class="bi bi-send me-1"></i>Giao thẳng · ${_escReceive(a.label)}</span></div>`);
+                        rem -= dsQty;
+                        if (rem <= 0) break;
+                    }
+                    if (rem > 0) {
+                        const fmt = window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(String(rem)) : rem;
+                        rows.push(`<div class="d-flex align-items-center gap-2"><span class="badge bg-secondary">${fmt}</span><span class="text-muted"><i class="bi bi-building me-1"></i>Nhập kho</span></div>`);
+                    }
+                    details.innerHTML = rows.join('');
+                    preview.classList.remove('d-none');
+                }
+
+                if (receiveItemModal) {
+                    receiveItemModal.addEventListener('show.bs.modal', function(event) {
+                        const button = event.relatedTarget;
+                        const itemId = button.getAttribute('data-item-id');
+                        const itemName = button.getAttribute('data-item-name');
+                        const remainingRaw = button.getAttribute('data-item-remaining');
+                        const remaining = DecimalFields.formatQuantity(remainingRaw);
+                        const unitCostRaw = parseFloat(button.getAttribute('data-item-unit-cost')) || 0;
+                        const unitPriceRaw = parseFloat(button.getAttribute('data-item-unit-price')) || 0;
+
+                        currentReceivePoItemId = itemId;
+                        document.getElementById('modalItemId').value = itemId;
+                        document.getElementById('modalItemName').innerText = itemName;
+                        document.getElementById('modalItemRemaining').innerText = remaining;
+                        document.getElementById('modalReceivedQty').value = remaining;
+                        document.getElementById('modalReceivedQty').max = remainingRaw;
+                        itemRemainingQty = parseFloat(remainingRaw) || 0;
+                        document.getElementById('oversupplyWarningPanel').classList.add('d-none');
+                        document.getElementById('modalOversupplyAction').value = '';
+                        document.getElementById('oversupplyCancel').checked = true;
+
+                        // Reset DS section and distribution preview
+                        document.getElementById('modalDistributionPreview')?.classList.add('d-none');
+                        receiveDsLoadedForItemId = '';
+                        receiveOriginalPhone = '';
+                        document.getElementById('modalDsToggle').checked = false;
+                        document.getElementById('modalDsSection').classList.add('d-none');
+                        document.getElementById('modalWarehouseSection')?.classList.remove('d-none');
+                        document.getElementById('modalSellingPriceSection')?.classList.remove('d-none');
+                        document.getElementById('modalDsOrderItemId').value = '';
+                        document.getElementById('modalDsAddressInput').value = '';
+                        document.getElementById('modalDsContactName').value = '';
+                        document.getElementById('modalDsContactPhone').value = '';
+                        document.getElementById('modalDsOrderList').classList.add('d-none');
+                        document.getElementById('modalDsFields').classList.add('d-none');
+                        document.getElementById('modalDsEmpty').classList.add('d-none');
+                        document.getElementById('modalDsError').classList.add('d-none');
+
+                        // Pre-fill selling price with current UnitPrice; display unit cost for reference
+                        const sellingPriceInput = document.getElementById('modalSellingPrice');
+                        const unitCostDisplay = document.getElementById('modalItemUnitCost');
+                        sellingPriceInput.value = DecimalFields.formatCurrency(String(Math.trunc(unitPriceRaw)));
+                        sellingPriceInput.setAttribute('data-unit-cost', unitCostRaw);
+                        unitCostDisplay.innerText = DecimalFields.formatCurrency(String(Math.trunc(unitCostRaw)));
+                        updateSellingPriceWarning();
+                        updateDistributionPreview();
+                    });
+
+                    // DS toggle
+                    let receiveDsLoadedForItemId = '';
+                    document.getElementById('modalDsToggle')?.addEventListener('change', function () {
+                        const section = document.getElementById('modalDsSection');
+                        const warehouseSection = document.getElementById('modalWarehouseSection');
+                        const sellingPriceSection = document.getElementById('modalSellingPriceSection');
+                        if (this.checked) {
+                            section.classList.remove('d-none');
+                            warehouseSection?.classList.add('d-none');
+                            sellingPriceSection?.classList.add('d-none');
+                            if (receiveDsLoadedForItemId !== currentReceivePoItemId) {
+                                loadReceiveDsItems(currentReceivePoItemId);
+                                receiveDsLoadedForItemId = currentReceivePoItemId;
+                            }
+                        } else {
+                            section.classList.add('d-none');
+                            warehouseSection?.classList.remove('d-none');
+                            sellingPriceSection?.classList.remove('d-none');
+                            document.getElementById('modalDsOrderItemId').value = '';
+                            receiveOriginalPhone = '';
+                        }
+                    });
+
+                    // Warning when selling price <= unit cost (lỗ)
+                    const sellingPriceInput = document.getElementById('modalSellingPrice');
+                    if (sellingPriceInput) {
+                        sellingPriceInput.addEventListener('input', updateSellingPriceWarning);
+                        sellingPriceInput.addEventListener('change', updateSellingPriceWarning);
+                    }
                 }
 
                 async function loadReceiveDsItems(poItemId) {
-                receiveDsAbortController?.abort();
-                receiveDsAbortController = new AbortController();
-                const signal = receiveDsAbortController.signal;
-                const loading = document.getElementById('modalDsLoading');
-                const empty = document.getElementById('modalDsEmpty');
-                const list = document.getElementById('modalDsOrderList');
-                const items = document.getElementById('modalDsOrderItems');
-                const fields = document.getElementById('modalDsFields');
-                const errorBox = document.getElementById('modalDsError');
-                loading.classList.remove('d-none');
-                empty.classList.add('d-none');
-                list.classList.add('d-none');
-                fields.classList.add('d-none');
-                errorBox.classList.add('d-none');
-                try {
-                const resp = await fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${poItemId}`, { signal });
-                if (!resp.ok) throw new Error('Lỗi tải dữ liệu');
-                const data = await resp.json();
-                loading.classList.add('d-none');
-                if (!data || !data.length) {
-                    empty.classList.remove('d-none');
-                    return;
-                }
-                items.innerHTML = '';
-                data.forEach(function(order) {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'list-group-item list-group-item-action py-2 px-3';
-                    btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <span class="fw-semibold">${order.orderCode}</span>
-                            <span class="text-muted ms-2 small">${order.customerName}</span>
-                        </div>
-                        <span class="badge bg-secondary ms-2">Còn ${order.availableToAllocate}</span>
-                    </div>`;
-                    btn.dataset.shippingAddress = order.shippingAddress || '';
-                    btn.dataset.customerPhone = order.customerPhone || '';
-                    btn.dataset.customerName = order.customerName || '';
-                    btn.addEventListener('click', function() {
-                        document.querySelectorAll('#modalDsOrderItems .list-group-item').forEach(el => el.classList.remove('active'));
-                        btn.classList.add('active');
-                        document.getElementById('modalDsOrderItemId').value = order.orderItemId;
-                        document.getElementById('modalDsSelectedOrder').textContent =
-                            `Đơn hàng: ${order.orderCode} · Khách: ${order.customerName} · Có thể nhận: ${order.availableToAllocate}`;
-                        document.getElementById('modalDsAddressInput').value = btn.dataset.shippingAddress;
-                        document.getElementById('modalDsContactName').value = btn.dataset.customerName;
-                        document.getElementById('modalDsContactPhone').value = btn.dataset.customerPhone;
-                        receiveOriginalPhone = btn.dataset.customerPhone;
-                        fields.classList.remove('d-none');
-                    });
-                    items.appendChild(btn);
-                });
-                list.classList.remove('d-none');
-                } catch (err) {
-                if (err.name === 'AbortError') return;
-                loading.classList.add('d-none');
-                errorBox.textContent = err.message || 'Không thể tải danh sách đơn hàng.';
-                errorBox.classList.remove('d-none');
-                }
+                    receiveDsAbortController?.abort();
+                    receiveDsAbortController = new AbortController();
+                    const signal = receiveDsAbortController.signal;
+                    const loading = document.getElementById('modalDsLoading');
+                    const empty = document.getElementById('modalDsEmpty');
+                    const list = document.getElementById('modalDsOrderList');
+                    const items = document.getElementById('modalDsOrderItems');
+                    const fields = document.getElementById('modalDsFields');
+                    const errorBox = document.getElementById('modalDsError');
+                    loading.classList.remove('d-none');
+                    empty.classList.add('d-none');
+                    list.classList.add('d-none');
+                    fields.classList.add('d-none');
+                    errorBox.classList.add('d-none');
+                    try {
+                        const resp = await fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${poItemId}`, { signal });
+                        if (!resp.ok) throw new Error('Lỗi tải dữ liệu');
+                        const data = await resp.json();
+                        loading.classList.add('d-none');
+                        if (!data || !data.length) {
+                            empty.classList.remove('d-none');
+                            return;
+                        }
+                        items.innerHTML = '';
+                        data.forEach(function(order) {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'list-group-item list-group-item-action py-2 px-3';
+                            btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <span class="fw-semibold">${order.orderCode}</span>
+                                    <span class="text-muted ms-2 small">${order.customerName}</span>
+                                </div>
+                                <span class="badge bg-secondary ms-2">Còn ${order.availableToAllocate}</span>
+                            </div>`;
+                            btn.dataset.shippingAddress = order.shippingAddress || '';
+                            btn.dataset.customerPhone = order.customerPhone || '';
+                            btn.dataset.customerName = order.customerName || '';
+                            btn.addEventListener('click', function() {
+                                document.querySelectorAll('#modalDsOrderItems .list-group-item').forEach(el => el.classList.remove('active'));
+                                btn.classList.add('active');
+                                document.getElementById('modalDsOrderItemId').value = order.orderItemId;
+                                document.getElementById('modalDsSelectedOrder').textContent =
+                                    `Đơn hàng: ${order.orderCode} · Khách: ${order.customerName} · Có thể nhận: ${order.availableToAllocate}`;
+                                document.getElementById('modalDsAddressInput').value = btn.dataset.shippingAddress;
+                                document.getElementById('modalDsContactName').value = btn.dataset.customerName;
+                                document.getElementById('modalDsContactPhone').value = btn.dataset.customerPhone;
+                                receiveOriginalPhone = btn.dataset.customerPhone;
+                                fields.classList.remove('d-none');
+                            });
+                            items.appendChild(btn);
+                        });
+                        list.classList.remove('d-none');
+                    } catch (err) {
+                        if (err.name === 'AbortError') return;
+                        loading.classList.add('d-none');
+                        errorBox.textContent = err.message || 'Không thể tải danh sách đơn hàng.';
+                        errorBox.classList.remove('d-none');
+                    }
                 }
 
                 const modalQtyInput = document.getElementById('modalReceivedQty');
@@ -1382,6 +1448,7 @@
                 panel.classList.add('d-none');
                 document.getElementById('modalOversupplyAction').value = '';
                 }
+                updateDistributionPreview();
                 });
                 }
 
