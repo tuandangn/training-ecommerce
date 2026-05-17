@@ -41,26 +41,6 @@
     };
     @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
 }
-@if (Model.AllocatedPurchaseOrders?.HasItems ?? false)
-{
-    var totalPendingQuantity = Model.AllocatedPurchaseOrders.Items.Sum(po => po.PendingQuantity);
-    <div class="d-flex align-items-center gap-2 mb-3">
-        <button type="button" class="btn btn-outline-primary btn-sm"
-                onclick="openCoworkOffcanvas({ title: 'Đơn nhập đã phân bổ', url: '/Order/AllocatedPurchaseOrders/@Model.Id', size: 'lg' })">
-            <i class="bi bi-truck me-1"></i>
-            Xem đơn nhập đã phân bổ
-            <span class="badge bg-primary ms-1">@Model.AllocatedPurchaseOrders?.Items.Count</span>
-        </button>
-        @if (totalPendingQuantity > 0)
-        {
-            <span class="text-muted small">Còn chờ @totalPendingQuantity.DisplayQuantity()</span>
-        }
-        else
-        {
-            <span class="text-success small"><i class="bi bi-check-circle"></i> Đã nhận đủ</span>
-        }
-    </div>
-}
 @if (Model.DirectShipAllocations.Count > 0)
 {
     <div class="content-card mb-3">
@@ -121,32 +101,11 @@
                 <div class="mb-3">
                     <div class="content-card-header">
                         <h5>Danh sách hàng hóa</h5>
-                        @if (Model.CanUpdateOrderItems)
-                        {
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                                <i class="bi bi-plus-lg me-1"></i>
-                                <span class="d-none d-lg-inline">Thêm hàng hóa</span>
-                                <span class="d-lg-none">Thêm</span>
-                            </button>
-                        }
-                    </div>
-                    <div class="content-card-body-flush">
-                        <div class="table-responsive">
-                            <table class="table data-table mb-0">
-<div class="content-card mb-3 position-relative">
-    <div class="content-card-body-flush">
-        <div class="row g-3">
-            <div class="col-lg-8 order-1">
-                <div class="mb-3">
-                    <div class="content-card-header">
-                        <h5>Danh sách hàng hóa</h5>
                     </div>
                     <div class="content-card-body-flush">
                         <div class="table-responsive">
                             <table class="table data-table caption-top mb-0">
-                                @if (Model.CanUpdateOrderItems
-                                    || Model.ShortageInfo.HasShortage
-                                    || Model.AllocatedPurchaseOrders!.HasItems)
+                                @if (Model.CanUpdateInfo && (Model.CanUpdateOrderItems || Model.ShortageInfo.HasShortage || Model.AllocatedPurchaseOrders!.HasItems))
                                 {
                                     <caption>
                                         <div class="d-flex align-items-center justify-content-between px-2">

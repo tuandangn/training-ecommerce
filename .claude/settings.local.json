@@ -8,7 +8,11 @@
       "Bash(rtk wc *)",
       "Bash(rtk grep *)",
       "Bash(rtk find *)",
-      "Bash(python *)"
+      "Bash(python *)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Skill(superpowers:writing-plans)",
+      "Bash(cd /d \"D:\\\\Learning\\\\NamTraining\\\\training-ecommerce\\\\.claude\\\\worktrees\\\\shortage-supplier-selection\")",
+      "Bash(findstr /r \"ConfirmReceiptAsync\\\\|ReceiveAsync\" NamEcommerce\\\\Application\\\\NamEcommerce.Application.Services\\\\PurchaseOrders\\\\*.cs)"
     ]
   }
 }
