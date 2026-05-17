@@ -781,7 +781,7 @@
                             </select>
                         </div>
 
-                        <div class="mb-2">
+                        <div class="mb-2" id="modalSellingPriceSection">
                             <label class="form-label small fw-bold text-muted text-uppercase">
                                 Giá bán
                                 <span class="text-body-tertiary text-lowercase fw-normal">(có thể bỏ trống để giữ nguyên giá hiện tại)</span>
@@ -1255,6 +1255,7 @@
                 document.getElementById('modalDsToggle').checked = false;
                 document.getElementById('modalDsSection').classList.add('d-none');
                 document.getElementById('modalWarehouseSection')?.classList.remove('d-none');
+                document.getElementById('modalSellingPriceSection')?.classList.remove('d-none');
                 document.getElementById('modalDsOrderItemId').value = '';
                 document.getElementById('modalDsAddressInput').value = '';
                 document.getElementById('modalDsContactName').value = '';
@@ -1279,9 +1280,11 @@
                 document.getElementById('modalDsToggle')?.addEventListener('change', function () {
                 const section = document.getElementById('modalDsSection');
                 const warehouseSection = document.getElementById('modalWarehouseSection');
+                const sellingPriceSection = document.getElementById('modalSellingPriceSection');
                 if (this.checked) {
                     section.classList.remove('d-none');
                     warehouseSection?.classList.add('d-none');
+                    sellingPriceSection?.classList.add('d-none');
                     if (receiveDsLoadedForItemId !== currentReceivePoItemId) {
                         loadReceiveDsItems(currentReceivePoItemId);
                         receiveDsLoadedForItemId = currentReceivePoItemId;
@@ -1289,6 +1292,7 @@
                 } else {
                     section.classList.add('d-none');
                     warehouseSection?.classList.remove('d-none');
+                    sellingPriceSection?.classList.remove('d-none');
                     document.getElementById('modalDsOrderItemId').value = '';
                     receiveOriginalPhone = '';
                 }
