@@ -816,4 +816,13 @@
   <data name="Error.PurchaseOrder.ProductsAreNotFound" xml:space="preserve">
     <value>Hàng hóa không tồn tại</value>
   </data>
+  <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.Physical" xml:space="preserve">
+    <value>Kho vật lý</value>
+  </data>
+  <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.DirectShipTransit" xml:space="preserve">
+    <value>Kho ảo giao thẳng (Direct-Ship)</value>
+  </data>
+  <data name="Error.DirectShip.TransitWarehouseNotConfigured" xml:space="preserve">
+    <value>Chưa có kho ảo giao thẳng (Direct-Ship Transit). Vui lòng tạo kho loại "Kho ảo giao thẳng" trước khi nhận hàng.</value>
+  </data>
 </root>
