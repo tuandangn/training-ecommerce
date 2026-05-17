@@ -324,6 +324,22 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 NotifySuccess("Msg.BulkReceive.CreatedMultiple", count);
             else
                 NotifySuccess("Msg.SaveSuccess");
+
+            foreach (var line in model.Items ?? [])
+            {
+                if (line.DirectShipOrderItemId.HasValue && !string.IsNullOrWhiteSpace(line.DirectShipAddress))
+                {
+                    await _purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
+                    {
+                        PurchaseOrderItemId = line.ItemId,
+                        OrderItemId = line.DirectShipOrderItemId.Value,
+                        Quantity = line.Quantity,
+                        DirectShipAddress = line.DirectShipAddress,
+                        DirectShipContactName = line.DirectShipContactName,
+                        DirectShipContactPhone = line.DirectShipContactPhone
+                    });
+                }
+            }
         }
 
         return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });

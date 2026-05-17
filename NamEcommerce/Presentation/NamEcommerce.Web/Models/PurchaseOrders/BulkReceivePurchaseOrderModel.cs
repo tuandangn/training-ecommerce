@@ -30,4 +30,9 @@ public sealed class BulkReceiveLineModel
 
     [Display(Name = "Giá vốn thực tế")]
     public decimal? ActualUnitCost { get; set; }
+
+    public Guid? DirectShipOrderItemId { get; set; }
+    public string? DirectShipAddress { get; set; }
+    public string? DirectShipContactName { get; set; }
+    public string? DirectShipContactPhone { get; set; }
 }
