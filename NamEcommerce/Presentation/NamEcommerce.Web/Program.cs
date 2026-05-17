@@ -192,6 +192,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerAppService, CustomerAppService>();
     services.AddScoped<IDashboardAppService, DashboardAppService>();
     services.AddScoped<IFinancialReportAppService, FinancialReportAppService>();
+    services.AddScoped<IDirectShipReportAppService, DirectShipReportAppService>();
     services.AddScoped<IExpenseAppService, ExpenseAppService>();
     services.AddScoped<IDeliveryNoteAppService, DeliveryNoteAppService>();
     services.AddScoped<IPreparationAppService, PreparationAppService>();

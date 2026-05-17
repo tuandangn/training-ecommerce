@@ -7,10 +7,12 @@ namespace NamEcommerce.Web.Controllers;
 public sealed class ReportController : BaseAuthorizedController
 {
     private readonly IFinancialReportAppService _reportAppService;
+    private readonly IDirectShipReportAppService _directShipReportAppService;
 
-    public ReportController(IFinancialReportAppService reportAppService)
+    public ReportController(IFinancialReportAppService reportAppService, IDirectShipReportAppService directShipReportAppService)
     {
         _reportAppService = reportAppService;
+        _directShipReportAppService = directShipReportAppService;
     }
 
     [HttpGet]
@@ -25,6 +27,20 @@ public sealed class ReportController : BaseAuthorizedController
         ViewData["FromDate"] = fromDate.Value.ToString("yyyy-MM-dd");
         ViewData["ToDate"] = toDate.Value.ToString("yyyy-MM-dd");
         
+        return View(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> DirectShip(DateTime? fromDate, DateTime? toDate)
+    {
+        if (!fromDate.HasValue) fromDate = DateTime.Today.AddDays(-30);
+        if (!toDate.HasValue) toDate = DateTime.Today;
+
+        var model = await _directShipReportAppService.GetReportAsync(fromDate, toDate);
+
+        ViewData["FromDate"] = fromDate.Value.ToString("yyyy-MM-dd");
+        ViewData["ToDate"] = toDate.Value.ToString("yyyy-MM-dd");
+
         return View(model);
     }
 

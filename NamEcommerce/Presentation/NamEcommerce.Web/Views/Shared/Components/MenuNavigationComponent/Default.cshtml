@@ -98,7 +98,12 @@
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerRefund") ? "active" : "")" asp-controller="CustomerRefund" asp-action="List">Hoàn tiền khách</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Report") ? "active" : "")" asp-controller="Report" asp-action="Financial">Báo cáo Mua Bán</a>
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Report", "Financial") ? "active" : "")" asp-controller="Report" asp-action="Financial">Báo cáo Mua Bán</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Report", "DirectShip") ? "active" : "")" asp-controller="Report" asp-action="DirectShip">
+                        <i class="bi bi-truck-fast me-1 text-primary"></i>Báo cáo Direct-Ship
+                    </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("Expense") ? "active" : "")" asp-controller="Expense" asp-action="Index">Quản lý Chi phí</a>
