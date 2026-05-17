@@ -655,19 +655,4 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             .ToList();
     }
 
-    public async Task<CommonActionResultDto> UpdateAllocationDirectShipInfoAsync(
-        Guid allocationId, string address, string? contactName, string? contactPhone, int priority)
-    {
-        try
-        {
-            await _directShipManager.MarkAllocationAsDirectShipAsync(
-                allocationId, address, contactName, contactPhone, priority)
-                .ConfigureAwait(false);
-            return CommonActionResultDto.CreateSuccess();
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return CommonActionResultDto.CreateError(ex.ErrorCode);
-        }
-    }
 }
