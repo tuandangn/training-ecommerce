@@ -115,6 +115,8 @@ public sealed record EligibleOrderItemForAllocationAppDto
     public required decimal TotalQuantity { get; init; }
     public required decimal AllocatedOutstanding { get; init; }
     public required decimal AvailableToAllocate { get; init; }
+    public string? ShippingAddress { get; init; }
+    public string? CustomerPhone { get; init; }
 }
 
 [Serializable]

@@ -667,7 +667,9 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             ProductName = d.ProductName,
             TotalQuantity = d.TotalQuantity,
             AllocatedOutstanding = d.AllocatedOutstanding,
-            AvailableToAllocate = d.AvailableToAllocate
+            AvailableToAllocate = d.AvailableToAllocate,
+            ShippingAddress = d.ShippingAddress,
+            CustomerPhone = d.CustomerPhone
         }).ToList();
     }
 

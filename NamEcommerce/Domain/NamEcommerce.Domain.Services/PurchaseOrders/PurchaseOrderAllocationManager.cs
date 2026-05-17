@@ -333,7 +333,9 @@ public sealed class PurchaseOrderAllocationManager(
                     ProductName = ctx.Item.ProductName ?? string.Empty,
                     TotalQuantity = ctx.Item.Quantity,
                     AllocatedOutstanding = outstanding,
-                    AvailableToAllocate = Math.Max(0m, ctx.Item.Quantity - outstanding)
+                    AvailableToAllocate = Math.Max(0m, ctx.Item.Quantity - outstanding),
+                    ShippingAddress = ctx.Order.ShippingAddress,
+                    CustomerPhone = ctx.Order.CustomerPhone
                 };
             })
             .Where(dto => dto.AvailableToAllocate > 0)

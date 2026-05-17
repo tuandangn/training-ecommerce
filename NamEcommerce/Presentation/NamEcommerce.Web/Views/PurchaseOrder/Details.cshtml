@@ -1701,6 +1701,7 @@
 
                     let currentPoItemId = null;
                     let selectedRow = null;
+                    let originalPhone = '';
 
                     function fmtQty(n) {
                         return window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(n) : String(n);
@@ -1731,12 +1732,19 @@
                         document.getElementById('allocateDsAddress').value = '';
                         document.getElementById('allocateDsContact').value = '';
                         document.getElementById('allocateDsPhone').value = '';
+                        originalPhone = '';
                         new bootstrap.Modal(modal).show();
                         loadEligibleItems(currentPoItemId);
                     });
 
                     document.getElementById('allocateIsDirectShip')?.addEventListener('change', function () {
                         document.getElementById('allocateDirectShipFields').classList.toggle('d-none', !this.checked);
+                        if (this.checked && selectedRow) {
+                            prefillDsFromRow(selectedRow);
+                        }
+                        if (!this.checked) {
+                            originalPhone = '';
+                        }
                     });
 
                     function loadEligibleItems(poItemId) {
@@ -1755,6 +1763,9 @@
                                     tr.style.cursor = 'pointer';
                                     tr.dataset.orderItemId = item.orderItemId;
                                     tr.dataset.available = item.availableToAllocate;
+                                    tr.dataset.shippingAddress = item.shippingAddress || '';
+                                    tr.dataset.customerPhone = item.customerPhone || '';
+                                    tr.dataset.customerName = item.customerName || '';
                                     tr.innerHTML = `
                                         <td><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
                                         <td class="text-muted small">${escHtml(item.customerName)}</td>
@@ -1784,11 +1795,21 @@
                             });
                     }
 
+                    function prefillDsFromRow(tr) {
+                        document.getElementById('allocateDsAddress').value = tr.dataset.shippingAddress || '';
+                        document.getElementById('allocateDsContact').value = tr.dataset.customerName || '';
+                        document.getElementById('allocateDsPhone').value = tr.dataset.customerPhone || '';
+                        originalPhone = tr.dataset.customerPhone || '';
+                    }
+
                     function selectRow(tr) {
                         if (selectedRow) selectedRow.classList.remove('table-primary');
                         selectedRow = tr;
                         tr.classList.add('table-primary');
                         document.getElementById('btnAllocateToOrder').classList.remove('d-none');
+                        if (document.getElementById('allocateIsDirectShip').checked) {
+                            prefillDsFromRow(tr);
+                        }
                     }
 
                     document.getElementById('btnAllocateToOrder')?.addEventListener('click', function () {
@@ -1812,6 +1833,13 @@
                             errEl.textContent = 'Vui lòng nhập địa chỉ giao hàng.';
                             errEl.classList.remove('d-none');
                             return;
+                        }
+
+                        const currentPhone = document.getElementById('allocateDsPhone').value.trim();
+                        if (isDs && originalPhone && currentPhone !== originalPhone) {
+                            if (!confirm(`Số điện thoại liên lạc đã thay đổi từ "${originalPhone}" thành "${currentPhone}". Xác nhận tiếp tục?`)) {
+                                return;
+                            }
                         }
 
                         const btn = this;
