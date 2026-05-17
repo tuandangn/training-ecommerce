@@ -352,24 +352,24 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         return CommonActionResultDto.CreateSuccess();
     }
 
-    public async Task<CommonActionResultDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto)
+    public async Task<ReceiveItemResultAppDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
-            return CommonActionResultDto.CreateError(errorMessage);
+            return ReceiveItemResultAppDto.CreateError(errorMessage);
 
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
-            return CommonActionResultDto.CreateError("Error.PurchaseOrderIsNotFound");
+            return ReceiveItemResultAppDto.CreateError("Error.PurchaseOrderIsNotFound");
 
         if (!await _purchaseOrderManager.CanReceiveGoodsAsync(dto.PurchaseOrderId).ConfigureAwait(false))
-            return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotReceiveGoods");
+            return ReceiveItemResultAppDto.CreateError("Error.PurchaseOrderCannotReceiveGoods");
 
         var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == dto.PurchaseOrderItemId);
         if (purchaseOrderItem is null)
-            return CommonActionResultDto.CreateError("Error.PurchaseOrderItemIsNotFound");
+            return ReceiveItemResultAppDto.CreateError("Error.PurchaseOrderItemIsNotFound");
 
         var originalReceivedQuantity = dto.ReceivedQuantity;
         var maxReceivable = purchaseOrderItem.QuantityOrdered - purchaseOrderItem.QuantityReceived;
@@ -386,31 +386,31 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             }
             else
             {
-                return CommonActionResultDto.CreateError("Error.PurchaseOrderReceiveQuantityExceedsOrdered");
+                return ReceiveItemResultAppDto.CreateError("Error.PurchaseOrderReceiveQuantityExceedsOrdered");
             }
         }
 
         var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
         if (product is null)
-            return CommonActionResultDto.CreateError("Error.ProductIsNotFound");
+            return ReceiveItemResultAppDto.CreateError("Error.ProductIsNotFound");
 
 
         if (dto.ReceivedByUserId.HasValue)
         {
             var user = await _userDataReader.GetByIdAsync(dto.ReceivedByUserId.Value).ConfigureAwait(false);
             if (user is null)
-                return CommonActionResultDto.CreateError("Error.UserIsNotFound");
+                return ReceiveItemResultAppDto.CreateError("Error.UserIsNotFound");
         }
 
         Guid? warehouseId = dto.WarehouseId ?? purchaseOrder.WarehouseId;
         if (!warehouseId.HasValue)
-            return CommonActionResultDto.CreateError("Error.WarehouseRequired");
+            return ReceiveItemResultAppDto.CreateError("Error.WarehouseRequired");
 
         else
         {
             var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
             if (warehouse is null)
-                return CommonActionResultDto.CreateError("Error.WarehouseIsNotFound");
+                return ReceiveItemResultAppDto.CreateError("Error.WarehouseIsNotFound");
         }
 
         ReceivedGoodsForItemResultDto result;
@@ -427,7 +427,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         }
         catch (NamEcommerceDomainException ex)
         {
-            return CommonActionResultDto.CreateError(ex.ErrorCode);
+            return ReceiveItemResultAppDto.CreateError(ex.ErrorCode);
         }
 
         if (originalReceivedQuantity > maxReceivable && dto.OversupplyAction == "AcceptToMainWarehouse")
@@ -438,7 +438,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 .ConfigureAwait(false);
         }
 
-        return CommonActionResultDto.CreateSuccess();
+        return ReceiveItemResultAppDto.CreateSuccess(dto.ReceivedQuantity);
     }
 
     public async Task<BulkReceiveGoodsResultAppDto> BulkReceiveAsync(BulkReceiveGoodsAppDto dto)

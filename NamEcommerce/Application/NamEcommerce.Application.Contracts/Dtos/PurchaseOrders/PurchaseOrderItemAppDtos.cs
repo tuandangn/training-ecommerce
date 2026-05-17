@@ -133,6 +133,19 @@ public sealed record AllocatePoItemToOrderAppDto
     public string? DirectShipContactPhone { get; init; }
 }
 
+/// <summary>Kết quả single receive — trả về số lượng thực nhận sau khi áp dụng oversupply cap.</summary>
+[Serializable]
+public sealed record ReceiveItemResultAppDto : CommonActionResultDto
+{
+    public decimal ActualReceivedQuantity { get; init; }
+
+    public static ReceiveItemResultAppDto CreateSuccess(decimal actualQty)
+        => new() { Success = true, ActualReceivedQuantity = actualQty };
+
+    public static new ReceiveItemResultAppDto CreateError(string? errorMessage)
+        => new() { Success = false, ErrorMessage = errorMessage };
+}
+
 /// <summary>Kết quả bulk receive — kèm danh sách GoodsReceipt IDs đã tạo để UI có thể link/show.</summary>
 [Serializable]
 public sealed record BulkReceiveGoodsResultAppDto : CommonActionResultDto

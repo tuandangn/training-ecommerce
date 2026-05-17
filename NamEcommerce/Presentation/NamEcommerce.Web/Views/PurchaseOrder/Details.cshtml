@@ -1277,6 +1277,7 @@
                 // DS toggle
                 let receiveDsLoadedForItemId = '';
                 let receiveOriginalPhone = '';
+                let receiveDsAbortController = null;
                 document.getElementById('modalDsToggle')?.addEventListener('change', function () {
                 const section = document.getElementById('modalDsSection');
                 const warehouseSection = document.getElementById('modalWarehouseSection');
@@ -1307,6 +1308,9 @@
                 }
 
                 async function loadReceiveDsItems(poItemId) {
+                receiveDsAbortController?.abort();
+                receiveDsAbortController = new AbortController();
+                const signal = receiveDsAbortController.signal;
                 const loading = document.getElementById('modalDsLoading');
                 const empty = document.getElementById('modalDsEmpty');
                 const list = document.getElementById('modalDsOrderList');
@@ -1319,7 +1323,7 @@
                 fields.classList.add('d-none');
                 errorBox.classList.add('d-none');
                 try {
-                const resp = await fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${poItemId}`);
+                const resp = await fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${poItemId}`, { signal });
                 if (!resp.ok) throw new Error('Lỗi tải dữ liệu');
                 const data = await resp.json();
                 loading.classList.add('d-none');
@@ -1358,6 +1362,7 @@
                 });
                 list.classList.remove('d-none');
                 } catch (err) {
+                if (err.name === 'AbortError') return;
                 loading.classList.add('d-none');
                 errorBox.textContent = err.message || 'Không thể tải danh sách đơn hàng.';
                 errorBox.classList.remove('d-none');

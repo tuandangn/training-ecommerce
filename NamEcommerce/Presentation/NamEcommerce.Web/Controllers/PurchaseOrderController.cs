@@ -7,7 +7,6 @@ using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
-using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -38,28 +37,24 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         return View(model);
     }
 
-    [HttpGet("/PurchaseOrders/ShortageAggregation")]
     public async Task<IActionResult> ShortageAggregation([FromQuery] GetShortageAggregationQuery query)
     {
         var model = await _mediator.Send(query).ConfigureAwait(false);
         return View(model);
     }
 
-    [HttpPost("/PurchaseOrders/CheckExistingDrafts")]
     public async Task<IActionResult> CheckExistingDrafts([FromBody] CheckExistingDraftsCommand command)
     {
         var result = await _mediator.Send(command).ConfigureAwait(false);
         return Json(result);
     }
 
-    [HttpPost("/PurchaseOrders/CheckRelatedPurchaseOrders")]
     public async Task<IActionResult> CheckRelatedPurchaseOrders([FromBody] CheckRelatedPurchaseOrdersCommand command)
     {
         var result = await _mediator.Send(command).ConfigureAwait(false);
         return Json(result);
     }
 
-    [HttpPost("/PurchaseOrders/CreateFromShortage")]
     public async Task<IActionResult> CreateFromShortage([FromBody] CreatePurchaseOrdersFromShortageCommand command)
     {
         var result = await _mediator.Send(command).ConfigureAwait(false);
@@ -263,7 +258,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             {
                 PurchaseOrderItemId = model.PurchaseOrderItemId,
                 OrderItemId = model.DirectShipOrderItemId.Value,
-                Quantity = model.ReceivedQuantity,
+                Quantity = result.ActualReceivedQuantity,
                 DirectShipAddress = model.DirectShipAddress,
                 DirectShipContactName = model.DirectShipContactName,
                 DirectShipContactPhone = model.DirectShipContactPhone
@@ -514,7 +509,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> AllocateToOrder([FromBody] AllocateToOrderRequest request)
+    public async Task<IActionResult> AllocateToOrder([FromBody] AllocateToOrderRequestModel request)
     {
         if (request is null || request.PurchaseOrderItemId == Guid.Empty || request.OrderItemId == Guid.Empty || request.Quantity <= 0)
             return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
@@ -534,14 +529,4 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
         return Json(new { success = true });
     }
-}
-
-public sealed class AllocateToOrderRequest
-{
-    public Guid PurchaseOrderItemId { get; set; }
-    public Guid OrderItemId { get; set; }
-    public decimal Quantity { get; set; }
-    public string? DirectShipAddress { get; set; }
-    public string? DirectShipContactName { get; set; }
-    public string? DirectShipContactPhone { get; set; }
 }

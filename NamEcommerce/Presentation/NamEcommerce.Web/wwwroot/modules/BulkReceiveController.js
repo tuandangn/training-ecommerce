@@ -33,6 +33,7 @@ export default class BulkReceiveController {
     #defaultWarehouseId = '';
     #rowSeq = 0;
     #taxMode = 'amount';
+    #dsAbortControllers = new Map();
 
     init(modalEl) {
         if (!modalEl) return;
@@ -281,6 +282,11 @@ export default class BulkReceiveController {
     }
 
     async #loadDsItems(tr, dsTr) {
+        const rowIdx = dsTr.dataset.dsRowFor;
+        this.#dsAbortControllers.get(rowIdx)?.abort();
+        const controller = new AbortController();
+        this.#dsAbortControllers.set(rowIdx, controller);
+
         const itemId = tr.querySelector('.bulk-row-item')?.value;
         const loading = dsTr.querySelector('.bulk-ds-loading');
         const empty = dsTr.querySelector('.bulk-ds-empty');
@@ -303,7 +309,7 @@ export default class BulkReceiveController {
         }
 
         try {
-            const resp = await fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${itemId}`);
+            const resp = await fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${itemId}`, { signal: controller.signal });
             if (!resp.ok) throw new Error('Lỗi tải dữ liệu');
             const data = await resp.json();
             loading.classList.add('d-none');
@@ -333,6 +339,7 @@ export default class BulkReceiveController {
             });
             orderList.classList.remove('d-none');
         } catch (err) {
+            if (err.name === 'AbortError') return;
             loading.classList.add('d-none');
             errorBox.textContent = err.message || 'Không thể tải danh sách đơn hàng.';
             errorBox.classList.remove('d-none');

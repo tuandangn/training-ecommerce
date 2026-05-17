@@ -33,7 +33,8 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
         return new ReceivePurchaseOrderItemResultModel
         {
             Success = result.Success,
-            ErrorMessage = result.ErrorMessage
+            ErrorMessage = result.ErrorMessage,
+            ActualReceivedQuantity = result.ActualReceivedQuantity
         };
     }
 }

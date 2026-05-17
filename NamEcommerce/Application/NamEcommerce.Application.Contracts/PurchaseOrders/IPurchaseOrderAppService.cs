@@ -23,7 +23,7 @@ public interface IPurchaseOrderAppService
 
     Task<CommonActionResultDto> DeletePurchaseOrderItemAsync(DeletePurchaseOrderItemAppDto dto);
 
-    Task<CommonActionResultDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto);
+    Task<ReceiveItemResultAppDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto);
 
     Task<BulkReceiveGoodsResultAppDto> BulkReceiveAsync(BulkReceiveGoodsAppDto dto);
 
