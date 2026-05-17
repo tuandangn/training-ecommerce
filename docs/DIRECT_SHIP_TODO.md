@@ -129,7 +129,7 @@
 
 ### Phase D11 — Manual smoke checklist + build verify
 
-- [ ] **D11.1** — Tạo/ cập nhật `docs/DIRECT_SHIP_SMOKE_CHECKLIST.md` theo phụ lục D của plan, KHÔNG viết test code trong project `*.Test`.
+- [x] **D11.1** — Tạo `docs/DIRECT_SHIP_SMOKE_CHECKLIST.md` theo phụ lục D của plan. ✅ 2026-05-17
 - [ ] **D11.2** — Scenario happy path: SO 30 + PO 100 direct-ship → GR 100 vào kho chính → Transfer 30 sang DirectShipTransit → DN Confirmed → Confirm → DN Delivered → `CustomerDebt`.
 - [ ] **D11.3** — Scenario giao thiếu: NCC giao 80/100 → direct-ship đủ 30 trước, 50 về kho chính.
 - [ ] **D11.4** — Scenario giao thừa: NCC giao 110 → modal → chọn "Nhập kho chính" → PO received tối đa 100, GR free stock 10 + `VendorDebt`.
@@ -137,4 +137,4 @@
 - [ ] **D11.6** — Scenario Cancel SO sau GR: modal cảnh báo → confirm → hàng kho ảo về kho chính → SO Cancelled.
 - [ ] **D11.7** — Scenario edit địa chỉ: audit log + banner gửi lại phiếu NCC.
 - [ ] **D11.8** — Scenario N-N allocation: 1 SO chia 2 PO, direct-ship + thường, SO Details hiển thị đủ DN.
-- [ ] **D11.9** — Build verify sau khi hoàn tất implementation.
+- [x] **D11.9** — Build verify sau khi hoàn tất implementation. ✅ 2026-05-17
