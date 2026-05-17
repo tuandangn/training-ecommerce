@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Users;
@@ -19,7 +20,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 {
     private readonly IPurchaseOrderManager _purchaseOrderManager;
     private readonly IPurchaseOrderAllocationManager _purchaseOrderAllocationManager;
-    private readonly IDirectShipManager? _directShipManager;
+    private readonly IDirectShipManager _directShipManager;
     private readonly IEntityDataReader<Vendor> _vendorDataReader;
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
     private readonly IEntityDataReader<User> _userDataReader;
@@ -30,7 +31,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
         IEntityDataReader<PurchaseOrder> purchaseOrderDataReader, IEntityDataReader<Vendor> vendorDataReader,
         IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader,
-        IDirectShipManager? directShipManager = null)
+        IDirectShipManager directShipManager)
     {
         _purchaseOrderManager = purchaseOrderManager;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
@@ -411,13 +412,21 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return CommonActionResultDto.CreateError("Error.WarehouseIsNotFound");
         }
 
-        var result = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
+        ReceivedGoodsForItemResultDto result;
+        try
         {
-            ReceivedByUserId = dto.ReceivedByUserId,
-            ReceivedQuantity = dto.ReceivedQuantity,
-            WarehouseId = warehouseId,
-            SellingPrice = dto.SellingPrice
-        });
+            result = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
+            {
+                ReceivedByUserId = dto.ReceivedByUserId,
+                ReceivedQuantity = dto.ReceivedQuantity,
+                WarehouseId = warehouseId,
+                SellingPrice = dto.SellingPrice
+            });
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
+        }
 
         if (originalReceivedQuantity > maxReceivable && dto.OversupplyAction == "AcceptToMainWarehouse")
         {
@@ -649,8 +658,6 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     public async Task<CommonActionResultDto> UpdateAllocationDirectShipInfoAsync(
         Guid allocationId, string address, string? contactName, string? contactPhone, int priority)
     {
-        if (_directShipManager == null)
-            return CommonActionResultDto.CreateError("Error.DirectShipNotConfigured");
         try
         {
             await _directShipManager.MarkAllocationAsDirectShipAsync(
@@ -658,9 +665,9 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 .ConfigureAwait(false);
             return CommonActionResultDto.CreateSuccess();
         }
-        catch (Exception ex)
+        catch (NamEcommerceDomainException ex)
         {
-            return CommonActionResultDto.CreateError(ex.Message);
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
         }
     }
 }
