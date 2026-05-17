@@ -324,11 +324,15 @@ public sealed class PurchaseOrderAllocationManager(
         if (orderItem.ProductId != purchaseOrderItemProductId)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemAllocationProductMismatch");
 
-        var allocatedQuantity = allocationReader.DataSource
+        // Use net outstanding (AllocatedQty - ReceivedQty) so fully/partially received allocations
+        // don't permanently block re-allocation when received stock is consumed by other orders.
+        // This mirrors ShortageQueryService.allocatedIncoming to keep shortage page and this check consistent.
+        var allocatedOutstanding = allocationReader.DataSource
             .Where(allocation => allocation.OrderItemId == orderItem.Id
                 && allocation.Status != AllocationStatus.Cancelled)
-            .Sum(allocation => allocation.AllocatedQuantity);
-        var availableQuantity = orderItem.Quantity - allocatedQuantity;
+            .ToList()
+            .Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
+        var availableQuantity = orderItem.Quantity - allocatedOutstanding;
         if (quantity > availableQuantity)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemAllocationQuantityExceedsAvailable");
     }
