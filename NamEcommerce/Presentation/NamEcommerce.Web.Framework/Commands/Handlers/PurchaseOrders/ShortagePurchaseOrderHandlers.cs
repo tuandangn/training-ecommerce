@@ -118,6 +118,7 @@ public sealed class CreatePurchaseOrdersFromShortageHandler(IShortageAggregation
                     OrderItemId = item.OrderItemId,
                     ProductId = item.ProductId,
                     Quantity = item.Quantity,
+                    AllocationQuantity = item.AllocationQuantity,
                     UnitCost = item.UnitCost,
                     Note = item.Note,
                     DirectShipInfo = item.DirectShipInfo is { } ds && !string.IsNullOrWhiteSpace(ds.Address)

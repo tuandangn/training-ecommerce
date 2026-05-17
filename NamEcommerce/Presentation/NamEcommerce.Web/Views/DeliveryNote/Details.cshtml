@@ -11,22 +11,23 @@
         50 => ("danger", "Đã hủy", "bi-x-circle"),
         _ => ("secondary", "Không rõ", "bi-question-circle")
     };
+    var isDirectShip = Model.SourceType == (int)DeliveryNoteSourceType.DirectShipToCustomer;
 }
 
 @Html.AntiForgeryToken()
 
-@if (Model.IsDirectShip)
+@if (isDirectShip)
 {
     <div class="alert alert-info d-flex align-items-center gap-2 mb-3" role="alert">
         <i class="bi bi-truck-flatbed fs-5"></i>
         <div>
             <strong>Phiếu giao thẳng tới khách</strong>
             @{
-                var dsStatusText = Model.DeliveryConfirmationStatus switch
+                var dsStatusText = ((DeliveryNoteStatus)Model.Status) switch
                 {
-                    1 => " · Chờ khách xác nhận",
-                    2 => " · Khách đã xác nhận",
-                    3 => " · Khách từ chối nhận",
+                    DeliveryNoteStatus.Confirmed => " · Chờ khách xác nhận",
+                    DeliveryNoteStatus.Delivered => " · Khách đã nhận",
+                    DeliveryNoteStatus.Cancelled => " · Khách từ chối/hủy",
                     _ => ""
                 };
             }
@@ -46,32 +47,32 @@
         </p>
     </div>
     <div class="d-flex gap-2">
-        @if (Model.Status == 10)
+        @if (!isDirectShip && Model.Status == 10)
         {
             <button type="button" class="btn btn-outline-primary btn-confirm" data-id="@Model.Id">
                 <i class="bi bi-check-all me-1"></i> Xác nhận xuất
             </button>
         }
-        @if (Model.Status == 20)
+        @if (!isDirectShip && Model.Status == 20)
         {
             <button type="button" class="btn btn-outline-warning btn-delivering" data-id="@Model.Id">
                 <i class="bi bi-truck me-1"></i> Bắt đầu đi giao
             </button>
         }
-        @if (Model.Status == 30 || Model.Status == 20)
+        @if (!isDirectShip && (Model.Status == 30 || Model.Status == 20))
         {
             <button type="button" class="btn btn-outline-success btn-delivered" data-id="@Model.Id">
                 <i class="bi bi-check-circle-fill me-1"></i> Xác nhận Đã giao
             </button>
         }
-        @if (Model.Status != 40 && Model.Status != 50)
+        @if (!isDirectShip && Model.Status != 40 && Model.Status != 50)
         {
             <button type="button" class="btn btn-outline-danger btn-cancel" data-id="@Model.Id">
                 <i class="bi bi-x-circle me-1"></i> Hủy phiếu
             </button>
         }
 
-        @if (Model.IsDirectShip && Model.DeliveryConfirmationStatus == 1)
+        @if (isDirectShip && Model.Status == (int)DeliveryNoteStatus.Confirmed)
         {
             <div class="vr mx-1"></div>
             <button type="button" class="btn btn-success btn-ds-confirm" data-id="@Model.Id">

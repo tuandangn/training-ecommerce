@@ -7,7 +7,7 @@ public interface IPurchaseOrderAllocationManager
     Task<PurchaseOrderItemAllocationDto> AllocateAsync(Guid purchaseOrderItemId, Guid orderItemId, decimal quantity);
     Task<PurchaseOrderItemAllocationDto> AllocateFromExistingPurchaseOrderItemAsync(Guid purchaseOrderItemId, Guid orderItemId, decimal quantity);
     Task IncreaseReceivedAsync(Guid allocationId, decimal receivedQty);
-    Task SyncReceivedForPurchaseOrderItemAsync(Guid purchaseOrderItemId, decimal purchaseOrderItemReceivedQuantity);
+    Task<DistributeReceivedQuantityResultDto> SyncReceivedForPurchaseOrderItemAsync(Guid purchaseOrderItemId, decimal purchaseOrderItemReceivedQuantity);
     Task<IList<PurchaseOrderItemAllocationDto>> GetAllocationsForOrderItemAsync(Guid orderItemId);
     Task<IList<PurchaseOrderItemAllocationDto>> GetAllocationsForPurchaseOrderItemAsync(Guid purchaseOrderItemId);
     Task ReleaseAllocationsForOrderItemAsync(Guid orderItemId);

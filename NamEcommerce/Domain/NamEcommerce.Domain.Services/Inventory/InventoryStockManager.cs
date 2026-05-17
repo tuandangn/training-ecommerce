@@ -383,6 +383,90 @@ public sealed class InventoryStockManager : IInventoryStockManager
         };
     }
 
+    public async Task<(StockMovementLogDto? OutLog, StockMovementLogDto? InLog)> TransferStockAsync(
+        Guid productId,
+        Guid fromWarehouseId,
+        Guid toWarehouseId,
+        decimal quantity,
+        decimal unitCost,
+        Guid? referenceId,
+        Guid userId,
+        string? note = null)
+    {
+        if (quantity <= 0)
+            throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");
+        if (unitCost < 0)
+            throw new InvalidStockOperationException("Error.StockAverageCostCannotBeNegative");
+        if (fromWarehouseId == toWarehouseId)
+            return (null, null);
+
+        var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+        if (product is null)
+            throw new ProductIsNotFoundException(productId);
+
+        var fromWarehouse = await _warehouseDataReader.GetByIdAsync(fromWarehouseId).ConfigureAwait(false);
+        if (fromWarehouse is null)
+            throw new WarehouseIsNotFoundException(fromWarehouseId);
+
+        var toWarehouse = await _warehouseDataReader.GetByIdAsync(toWarehouseId).ConfigureAwait(false);
+        if (toWarehouse is null)
+            throw new WarehouseIsNotFoundException(toWarehouseId);
+
+        var fromStock = await GetInventoryStockForProductAsync(productId, fromWarehouseId).ConfigureAwait(false);
+        if (fromStock is null)
+            throw new StockNotFoundException("Error.StockNotFound", productId, fromWarehouseId);
+        if (fromStock.QuantityAvailable < quantity)
+            throw new InsufficientStockException(productId, fromWarehouseId, quantity, fromStock.QuantityAvailable);
+
+        var toStock = await GetInventoryStockForProductAsync(productId, toWarehouseId).ConfigureAwait(false);
+        if (toStock is null)
+            toStock = await InitializeStockAsync(productId, toWarehouseId, product.UnitMeasurementId ?? Guid.Empty).ConfigureAwait(false);
+
+        var fromBefore = fromStock.QuantityOnHand;
+        var toBefore = toStock.QuantityOnHand;
+
+        fromStock.QuantityOnHand -= quantity;
+        fromStock.UpdatedOnUtc = DateTime.UtcNow;
+
+        toStock.QuantityOnHand += quantity;
+        if (toStock.QuantityOnHand > 0)
+            toStock.AverageCost = ((toBefore * toStock.AverageCost) + (quantity * unitCost)) / toStock.QuantityOnHand;
+        toStock.UpdatedOnUtc = DateTime.UtcNow;
+
+        await _inventoryStockRepository.UpdateAsync(fromStock).ConfigureAwait(false);
+        await _inventoryStockRepository.UpdateAsync(toStock).ConfigureAwait(false);
+
+        var outLog = new StockMovementLog(
+            Guid.NewGuid(),
+            productId,
+            fromWarehouseId,
+            StockMovementType.Transfer,
+            quantity,
+            fromBefore,
+            fromStock.QuantityOnHand,
+            StockReferenceType.StockTransfer,
+            referenceId,
+            note,
+            userId);
+        var inLog = new StockMovementLog(
+            Guid.NewGuid(),
+            productId,
+            toWarehouseId,
+            StockMovementType.Transfer,
+            quantity,
+            toBefore,
+            toStock.QuantityOnHand,
+            StockReferenceType.StockTransfer,
+            referenceId,
+            note,
+            userId);
+
+        await _stockMovementRepository.InsertAsync(outLog).ConfigureAwait(false);
+        await _stockMovementRepository.InsertAsync(inLog).ConfigureAwait(false);
+
+        return (ToDto(outLog, product.Name), ToDto(inLog, product.Name));
+    }
+
     public async Task<(int Total, List<StockMovementLogDto> Items)> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize)
     {
         var stockMovementLogQuery = _stockMovementDataReader.DataSource;
@@ -507,6 +591,19 @@ public sealed class InventoryStockManager : IInventoryStockManager
                                where inventoryStock.ProductId == productId && inventoryStock.WarehouseId == warehouseId
                                select inventoryStock).SingleOrDefault());
     }
+
+    private static StockMovementLogDto ToDto(StockMovementLog log, string productName)
+        => new(log.Id)
+        {
+            ProductId = log.ProductId,
+            ProductName = productName,
+            MovementType = (int)log.MovementType,
+            Quantity = log.Quantity,
+            QuantityBefore = log.QuantityBefore,
+            QuantityAfter = log.QuantityAfter,
+            CreatedOnUtc = log.CreatedOnUtc,
+            Note = log.Note
+        };
 
     public async Task SetStockLevelsAsync(SetStockLevelsDto dto)
     {

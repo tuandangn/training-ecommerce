@@ -16,5 +16,8 @@ public enum DeliveryNoteSourceType
     ToVendorReturn = 1,
 
     /// <summary>Xuất do điều chỉnh / kiểm kê / hư hao. Phase C — chưa dùng.</summary>
-    ToAdjustment = 2
+    ToAdjustment = 2,
+
+    /// <summary>Xuất giao thẳng từ nhà cung cấp tới khách hàng.</summary>
+    DirectShipToCustomer = 3
 }

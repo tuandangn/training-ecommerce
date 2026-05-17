@@ -156,24 +156,26 @@ public sealed class OrderModelFactory : IOrderModelFactory
             foreach (var alloc in dsAllocations)
             {
                 var orderItem = order.Items.FirstOrDefault(i => i.Id == alloc.OrderItemId);
-                var dn = deliveryNotes.FirstOrDefault(d =>
-                    d.Items.Any(item => item.OrderItemId == alloc.OrderItemId));
 
                 model.DirectShipAllocations.Add(new OrderDetailsModel.DirectShipAllocationModel
                 {
                     AllocationId = alloc.AllocationId,
                     ProductName = orderItem?.ProductName ?? string.Empty,
                     Status = alloc.Status,
+                    DeliveryStatus = alloc.DeliveryStatus,
                     AllocatedQuantity = alloc.AllocatedQuantity,
-                    DeliveryNoteId = dn?.Id,
-                    DeliveryNoteCode = dn?.Code
+                    ReceivedQuantity = alloc.ReceivedQuantity,
+                    DeliveryNoteId = alloc.DeliveryNoteId,
+                    DeliveryNoteCode = alloc.DeliveryNoteCode
                 });
             }
         }
 
         model.CanCancelOrder = order.Status != (int)OrderStatus.Locked
             && order.Status != (int)OrderStatus.Cancelled;
-        model.FullyReceivedDirectShipCount = model.DirectShipAllocations.Count(a => a.Status == 2);
+        model.FullyReceivedDirectShipCount = model.DirectShipAllocations.Count(a =>
+            a.ReceivedQuantity > 0 &&
+            (!a.DeliveryStatus.HasValue || a.DeliveryStatus == (int)DeliveryNoteStatus.Confirmed));
 
         return model;
     }

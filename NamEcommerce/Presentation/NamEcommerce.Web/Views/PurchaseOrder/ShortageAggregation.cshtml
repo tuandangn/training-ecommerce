@@ -215,6 +215,7 @@
                              data-product-id="@item.ProductId"
                              data-product-name="@item.ProductName"
                              data-unit-name="@unitName"
+                             data-shortage-quantity='@item.ShortageQuantity.ToString("0.####", CultureInfo.InvariantCulture)'
                              data-is-primary="@(item.IsFromPrimaryOrder ? "true" : "false")"
                              data-customer-name="@(item.CustomerName ?? "")"
                              data-customer-phone="@(item.CustomerPhone ?? "")"
@@ -669,7 +670,10 @@
                         const dsCheck = row.querySelector('.direct-ship-check');
                         const isDirectShip = dsCheck?.checked || false;
                         const dsForm = row.querySelector('.shortage-direct-ship-form');
-                        const directShip = isDirectShip && dsForm ? {
+                        const quantity = readDecimal(row.querySelector('.quantity-to-order'));
+                        const shortageQuantity = parseDecimal(row.dataset.shortageQuantity);
+                        const allocationQuantity = Math.min(quantity, shortageQuantity > 0 ? shortageQuantity : quantity);
+                        const directShip = isDirectShip && allocationQuantity > 0 && dsForm ? {
                             address: dsForm.querySelector('.ds-address')?.value || '',
                             contactName: dsForm.querySelector('.ds-contact-name')?.value || null,
                             contactPhone: dsForm.querySelector('.ds-contact-phone')?.value || null,
@@ -686,7 +690,8 @@
                             productId: row.dataset.productId,
                             productName: row.dataset.productName || '',
                             unitName: row.dataset.unitName || 'sp',
-                            quantity: readDecimal(row.querySelector('.quantity-to-order')),
+                            quantity,
+                            allocationQuantity,
                             unitCost: readDecimal(row.querySelector('.unit-cost')),
                             expectedDeliveryDate: group.querySelector('.expected-date')?.value || null,
                             note: group.querySelector('.group-note')?.value || null,
@@ -720,6 +725,7 @@
                         orderItemId: line.orderItemId,
                         productId: line.productId,
                         quantity: line.quantity,
+                        allocationQuantity: Math.min(line.allocationQuantity ?? line.quantity, line.quantity),
                         unitCost: line.unitCost,
                         directShipInfo: line.directShip,
                         actions
@@ -898,15 +904,18 @@
                             unitCost: line.unitCost,
                             unitName: line.unitName,
                             quantity: 0,
+                            allocationQuantity: 0,
                             underlying: []
                         });
                     }
                     const groupLine = map.get(key);
                     groupLine.quantity += line.quantity;
+                    groupLine.allocationQuantity += line.allocationQuantity;
                     groupLine.underlying.push({
                         orderItemId: line.orderItemId,
                         orderCode: line.orderCode || '',
                         quantity: line.quantity,
+                        allocationQuantity: line.allocationQuantity,
                         original: line
                     });
                 });

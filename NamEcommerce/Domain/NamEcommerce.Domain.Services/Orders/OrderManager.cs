@@ -300,7 +300,11 @@ public sealed class OrderManager(
             throw new InvalidOperationException("Order cannot delete.");
 
         var activeDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
-                                  where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                  where deliveryNote.OrderId == order.Id
+                                     && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                     && (deliveryNote.SourceType != DeliveryNoteSourceType.DirectShipToCustomer
+                                        || deliveryNote.Status != DeliveryNoteStatus.Confirmed
+                                        || dto.FullyReceivedAllocationIds.Count == 0)
                                   select deliveryNote;
         if (activeDeliveryNotes.Any())
             throw new InvalidOperationException("Order cannot deleted because it is processing.");

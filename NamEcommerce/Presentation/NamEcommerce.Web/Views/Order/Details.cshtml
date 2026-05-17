@@ -60,19 +60,27 @@
                 <tbody>
                     @foreach (var alloc in Model.DirectShipAllocations)
                     {
-                        var (statusBadge, statusText) = alloc.Status switch
+                        var deliveryStatus = alloc.DeliveryStatus.HasValue
+                            ? (DeliveryNoteStatus)alloc.DeliveryStatus.Value
+                            : (DeliveryNoteStatus?)null;
+                        var (statusBadge, statusText) = deliveryStatus switch
                         {
-                            0 => ("secondary", "Chờ nhận"),
-                            1 => ("warning", "Nhận một phần"),
-                            2 => ("info text-white", "Đã nhận — chờ giao"),
-                            3 => ("primary", "Đang giao"),
-                            4 => ("success", "Đã giao"),
-                            5 => ("danger", "Đã hủy"),
-                            _ => ("secondary", "Không rõ")
+                            DeliveryNoteStatus.Confirmed => ("info text-white", "Chờ khách xác nhận"),
+                            DeliveryNoteStatus.Delivered => ("success", "Khách đã nhận"),
+                            DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy/từ chối"),
+                            _ => alloc.Status switch
+                            {
+                                0 => ("secondary", "Chờ nhận"),
+                                1 => ("warning", "Nhận một phần"),
+                                2 => ("info text-white", "Đã nhận"),
+                                _ => ("secondary", "Không rõ")
+                            }
                         };
                         <tr>
                             <td class="ps-3">@alloc.ProductName</td>
-                            <td class="text-center">@alloc.AllocatedQuantity.DisplayQuantity()</td>
+                            <td class="text-center">
+                                @alloc.ReceivedQuantity.DisplayQuantity() / @alloc.AllocatedQuantity.DisplayQuantity()
+                            </td>
                             <td><span class="status-badge @statusBadge">@statusText</span></td>
                             <td>
                                 @if (alloc.DeliveryNoteId.HasValue)

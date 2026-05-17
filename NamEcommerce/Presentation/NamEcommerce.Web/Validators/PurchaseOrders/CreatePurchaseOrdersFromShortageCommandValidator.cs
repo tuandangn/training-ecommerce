@@ -17,6 +17,9 @@ public sealed class CreatePurchaseOrdersFromShortageCommandValidator : AbstractV
                 line.RuleFor(item => item.OrderItemId).NotEmpty();
                 line.RuleFor(item => item.ProductId).NotEmpty();
                 line.RuleFor(item => item.Quantity).GreaterThan(0);
+                line.RuleFor(item => item.AllocationQuantity)
+                    .Must((item, allocationQuantity) => !allocationQuantity.HasValue
+                        || (allocationQuantity.Value >= 0 && allocationQuantity.Value <= item.Quantity));
                 line.RuleFor(item => item.UnitCost).GreaterThanOrEqualTo(0);
                 line.RuleForEach(item => item.Actions).ChildRules(action =>
                 {

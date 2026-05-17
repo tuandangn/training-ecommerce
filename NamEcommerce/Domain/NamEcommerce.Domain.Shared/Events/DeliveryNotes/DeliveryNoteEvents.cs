@@ -40,7 +40,7 @@ public sealed record DeliveryNoteCancelled(
 // ── Direct-Ship Events ──────────────────────────────────────────────────────
 
 /// <summary>
-/// Khách đã xác nhận nhận hàng giao thẳng — Invoice/Debt module subscribe để sinh phải thu.
+/// Legacy direct-ship event. Flow hiện tại dùng <see cref="DeliveryNoteDelivered"/>.
 /// </summary>
 public sealed record DirectShipDeliveryConfirmed(
     Guid DeliveryNoteId,
@@ -49,8 +49,7 @@ public sealed record DirectShipDeliveryConfirmed(
     decimal TotalAmount) : DomainEvent;
 
 /// <summary>
-/// Khách từ chối / hàng giao thất bại — Inventory module subscribe để chuyển stock kho ảo → kho chính.
-/// Giá vốn = giá PO của allocation (không phải bình quân).
+/// Legacy direct-ship event. Flow hiện tại xử lý reject trong DirectShipManager rồi raise <see cref="DeliveryNoteCancelled"/>.
 /// </summary>
 public sealed record DirectShipDeliveryRejected(
     Guid DeliveryNoteId,

@@ -25,6 +25,7 @@ public sealed record DeliveryNoteAppDto
     public string? Note { get; init; }
     
     public int Status { get; init; }
+    public int SourceType { get; init; }
     public bool IsDirectShip { get; init; }
     public int DeliveryConfirmationStatus { get; init; }
 

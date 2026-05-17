@@ -32,14 +32,13 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private readonly IGoodsReceiptManager _goodsReceiptManager;
     private readonly IPurchaseOrderAllocationManager _purchaseOrderAllocationManager;
     private readonly IDirectShipManager _directShipManager;
-    private readonly IDeliveryNoteManager _deliveryNoteManager;
     private readonly ICurrentUserAccessor _currentUserAccessor;
 
     public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
         IEntityDataReader<Product> productDataReader,
         IGoodsReceiptManager goodsReceiptManager, IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
-        IDirectShipManager directShipManager, IDeliveryNoteManager deliveryNoteManager,
+        IDirectShipManager directShipManager,
         ICurrentUserAccessor currentUserAccessor)
     {
         _purchaseOrderRepository = poRepository;
@@ -50,7 +49,6 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         _goodsReceiptManager = goodsReceiptManager;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
         _directShipManager = directShipManager;
-        _deliveryNoteManager = deliveryNoteManager;
         _currentUserAccessor = currentUserAccessor;
     }
 
@@ -96,7 +94,11 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     {
         foreach (var (purchaseOrderItem, source, _) in allocationSources)
         {
-            var allocation = await _purchaseOrderAllocationManager.AllocateAsync(purchaseOrderItem.Id, source.OrderItemId, source.Quantity).ConfigureAwait(false);
+            var allocationQuantity = source.AllocationQuantity ?? source.Quantity;
+            if (allocationQuantity <= 0)
+                continue;
+
+            var allocation = await _purchaseOrderAllocationManager.AllocateAsync(purchaseOrderItem.Id, source.OrderItemId, allocationQuantity).ConfigureAwait(false);
             if (source.DirectShipInfo is { } ds)
             {
                 await _directShipManager.MarkAllocationAsDirectShipAsync(
@@ -512,6 +514,11 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 throw new WarehouseIsNotFoundException(warehouseId.Value);
         }
 
+        var hasReceivableDirectShip = await _directShipManager
+            .HasReceivableDirectShipAllocationsAsync(purchaseOrderItem.Id).ConfigureAwait(false);
+        if (hasReceivableDirectShip)
+            EnsureDirectShipTransitWarehouseConfigured();
+
         purchaseOrderItem.AddQuantityReceived(dto.ReceivedQuantity);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
 
@@ -536,33 +543,13 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             UnitCost = purchaseOrderItem.UnitCost
         }).ConfigureAwait(false);
 
-        // Fail fast: if there are receivable direct-ship allocations, the transit warehouse must exist
-        // BEFORE we persist any allocation status changes (DistributeReceivedQuantityAsync saves to DB).
-        var hasReceivableDirectShip = await _directShipManager
-            .HasReceivableDirectShipAllocationsAsync(purchaseOrderItem.Id).ConfigureAwait(false);
-
-        var transitWarehouse = _warehouseOrderDataReader.DataSource
-            .FirstOrDefault(w => w.WarehouseType == WarehouseType.DirectShipTransit);
-
-        if (hasReceivableDirectShip && transitWarehouse == null)
-            throw new DirectShipTransitWarehouseNotConfiguredException();
-
-        // Direct-ship distribution: phân bổ hàng nhận vào allocations (ưu tiên direct-ship trước).
-        var distributeResult = await _directShipManager.DistributeReceivedQuantityAsync(
-            purchaseOrderItem.Id, dto.ReceivedQuantity).ConfigureAwait(false);
-
-        foreach (var receipt in distributeResult.DirectShipReceipts)
-        {
-            await _deliveryNoteManager.CreateForDirectShipAsync(
-                new CreateDeliveryNoteForDirectShipDto
-                {
-                    GoodsReceiptId = grResult.CreatedId,
-                    OrderItemId = receipt.OrderItemId,
-                    Quantity = receipt.Quantity,
-                    DirectShipWarehouseId = transitWarehouse!.Id,
-                    ShippingAddress = receipt.DirectShipAddress ?? string.Empty
-                }).ConfigureAwait(false);
-        }
+        var distributeResult = await _purchaseOrderAllocationManager
+            .SyncReceivedForPurchaseOrderItemAsync(purchaseOrderItem.Id, purchaseOrderItem.QuantityReceived)
+            .ConfigureAwait(false);
+        await ProcessDirectShipReceiptsAsync(
+            distributeResult.DirectShipReceipts,
+            grResult.CreatedId,
+            warehouseId.Value).ConfigureAwait(false);
 
         return new ReceivedGoodsForItemResultDto(purchaseOrder.Id, purchaseOrderItem.Id)
         {
@@ -581,6 +568,23 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         if (!purchaseOrder.CanReceiveGoods())
             throw new PurchaseOrderCannotReceiveGoodsException();
+
+        var receivingPurchaseOrderItemIds = dto.Lines
+            .Select(line => line.PurchaseOrderItemId)
+            .Distinct()
+            .ToList();
+        var hasReceivableDirectShip = false;
+        foreach (var itemId in receivingPurchaseOrderItemIds)
+        {
+            hasReceivableDirectShip = await _directShipManager
+                .HasReceivableDirectShipAllocationsAsync(itemId)
+                .ConfigureAwait(false);
+            if (hasReceivableDirectShip)
+                break;
+        }
+
+        if (hasReceivableDirectShip)
+            EnsureDirectShipTransitWarehouseConfigured();
 
         // Aggregate-validate qty theo PO item (cùng item nhiều kho phải cộng dồn trước khi check).
         var groupedByItem = dto.Lines.GroupBy(line => line.PurchaseOrderItemId);
@@ -624,6 +628,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         var linesByWarehouse = dto.Lines.GroupBy(line => line.WarehouseId).ToList();
         var batchId = linesByWarehouse.Count > 1 ? (Guid?)Guid.NewGuid() : null;
         var createdReceiptIds = new List<Guid>();
+        var receiptIdsByLine = new Dictionary<BulkReceiveGoodsForPurchaseOrderLineDto, Guid>();
         foreach (var warehouseGroup in linesByWarehouse)
         {
             var bulkItems = warehouseGroup.Select(line =>
@@ -648,6 +653,21 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             }).ConfigureAwait(false);
 
             createdReceiptIds.Add(result.CreatedId);
+            foreach (var line in warehouseGroup)
+                receiptIdsByLine[line] = result.CreatedId;
+        }
+
+        foreach (var itemGroup in dto.Lines.GroupBy(line => line.PurchaseOrderItemId))
+        {
+            var poItem = purchaseOrder.Items.First(i => i.Id == itemGroup.Key);
+            var distributeResult = await _purchaseOrderAllocationManager
+                .SyncReceivedForPurchaseOrderItemAsync(itemGroup.Key, poItem.QuantityReceived)
+                .ConfigureAwait(false);
+
+            await ProcessBulkDirectShipReceiptsAsync(
+                distributeResult.DirectShipReceipts,
+                itemGroup.ToList(),
+                receiptIdsByLine).ConfigureAwait(false);
         }
 
         return new BulkReceiveGoodsForPurchaseOrderResultDto
@@ -655,6 +675,62 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             PurchaseOrderId = purchaseOrder.Id,
             CreatedGoodsReceiptIds = createdReceiptIds
         };
+    }
+
+    private void EnsureDirectShipTransitWarehouseConfigured()
+    {
+        var transitWarehouse = _warehouseOrderDataReader.DataSource
+            .FirstOrDefault(w => w.WarehouseType == WarehouseType.DirectShipTransit);
+
+        if (transitWarehouse is null)
+            throw new DirectShipTransitWarehouseNotConfiguredException();
+    }
+
+    private async Task ProcessDirectShipReceiptsAsync(
+        IReadOnlyList<AllocationReceiptDto> receipts,
+        Guid sourceGoodsReceiptId,
+        Guid receivedWarehouseId)
+    {
+        foreach (var receipt in receipts.Where(receipt => receipt.IsDirectShip))
+        {
+            await _directShipManager.OnAllocationReceivedAsync(
+                receipt.AllocationId,
+                receipt.Quantity,
+                sourceGoodsReceiptId,
+                receivedWarehouseId).ConfigureAwait(false);
+        }
+    }
+
+    private async Task ProcessBulkDirectShipReceiptsAsync(
+        IReadOnlyList<AllocationReceiptDto> receipts,
+        IList<BulkReceiveGoodsForPurchaseOrderLineDto> lines,
+        IReadOnlyDictionary<BulkReceiveGoodsForPurchaseOrderLineDto, Guid> receiptIdsByLine)
+    {
+        var sourceLines = lines
+            .Select(line => (Line: line, Remaining: line.ReceivedQuantity))
+            .ToList();
+
+        foreach (var receipt in receipts.Where(receipt => receipt.IsDirectShip))
+        {
+            var remaining = receipt.Quantity;
+            for (var i = 0; i < sourceLines.Count && remaining > 0; i++)
+            {
+                var source = sourceLines[i];
+                if (source.Remaining <= 0)
+                    continue;
+
+                var quantity = Math.Min(remaining, source.Remaining);
+                await _directShipManager.OnAllocationReceivedAsync(
+                    receipt.AllocationId,
+                    quantity,
+                    receiptIdsByLine[source.Line],
+                    source.Line.WarehouseId).ConfigureAwait(false);
+
+                source.Remaining -= quantity;
+                sourceLines[i] = source;
+                remaining -= quantity;
+            }
+        }
     }
 
     public async Task VerifyStatusAsync(Guid purchaseOrderId)

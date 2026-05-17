@@ -292,28 +292,34 @@ public sealed class ShortageAggregationAppService(
                 foreach (var item in group.Items.Where(item => item.Actions.Count > 0))
                 {
                     ValidateActionQuantity(item);
+                    var remainingAllocationQuantity = item.AllocationQuantity ?? item.Quantity;
                     foreach (var action in item.Actions.Where(action => action.Quantity > 0))
                     {
+                        var actionAllocationQuantity = Math.Min(remainingAllocationQuantity, action.Quantity);
+                        remainingAllocationQuantity -= actionAllocationQuantity;
                         var actionType = NormalizeActionType(action.ActionType);
                         if (actionType == "allocate")
                         {
                             if (!action.PurchaseOrderItemId.HasValue || !action.PurchaseOrderId.HasValue)
                                 throw new InvalidOperationException("Error.PurchaseOrderItemIsNotFound");
 
-                            var allocationDto = await purchaseOrderAllocationManager
-                                .AllocateFromExistingPurchaseOrderItemAsync(action.PurchaseOrderItemId.Value, item.OrderItemId, action.Quantity)
-                                .ConfigureAwait(false);
-
-                            if (item.DirectShipInfo is { } ds && !string.IsNullOrWhiteSpace(ds.Address))
-                                await directShipManager
-                                    .MarkAllocationAsDirectShipAsync(allocationDto.Id, ds.Address, ds.ContactName, ds.ContactPhone, ds.Priority)
+                            if (actionAllocationQuantity > 0)
+                            {
+                                var allocationDto = await purchaseOrderAllocationManager
+                                    .AllocateFromExistingPurchaseOrderItemAsync(action.PurchaseOrderItemId.Value, item.OrderItemId, actionAllocationQuantity)
                                     .ConfigureAwait(false);
+
+                                if (item.DirectShipInfo is { } ds && !string.IsNullOrWhiteSpace(ds.Address))
+                                    await directShipManager
+                                        .MarkAllocationAsDirectShipAsync(allocationDto.Id, ds.Address, ds.ContactName, ds.ContactPhone, ds.Priority)
+                                        .ConfigureAwait(false);
+                            }
 
                             await AddExistingPurchaseOrderResultAsync(results, action.PurchaseOrderId.Value, false).ConfigureAwait(false);
                             continue;
                         }
 
-                        var domainItem = ToDomainShortageItem(item, action.Quantity, action.UnitCost);
+                        var domainItem = ToDomainShortageItem(item, action.Quantity, action.UnitCost, actionAllocationQuantity);
                         if (actionType == "merge")
                         {
                             if (!action.PurchaseOrderId.HasValue)
@@ -392,23 +398,34 @@ public sealed class ShortageAggregationAppService(
     private static CreatePoFromShortageItemDto ToDomainShortageItem(
         CreatePoFromShortageItemAppDto item,
         decimal? quantity = null,
-        decimal? unitCost = null)
-        => new()
+        decimal? unitCost = null,
+        decimal? allocationQuantity = null)
+    {
+        var finalQuantity = quantity ?? item.Quantity;
+        var finalAllocationQuantity = allocationQuantity ?? item.AllocationQuantity ?? finalQuantity;
+
+        return new()
         {
             OrderItemId = item.OrderItemId,
             ProductId = item.ProductId,
-            Quantity = quantity ?? item.Quantity,
+            Quantity = finalQuantity,
+            AllocationQuantity = finalAllocationQuantity,
             UnitCost = unitCost ?? item.UnitCost,
             Note = item.Note,
-            DirectShipInfo = item.DirectShipInfo is { } ds
+            DirectShipInfo = finalAllocationQuantity > 0 && item.DirectShipInfo is { } ds
                 ? new DirectShipInfoDto { Address = ds.Address, ContactName = ds.ContactName, ContactPhone = ds.ContactPhone, Priority = ds.Priority }
                 : null
         };
+    }
 
     private static void ValidateActionQuantity(CreatePoFromShortageItemAppDto item)
     {
         var totalActionQuantity = item.Actions.Sum(action => action.Quantity);
         if (item.Quantity <= 0 || Math.Abs(totalActionQuantity - item.Quantity) > 0.0001m)
+            throw new InvalidOperationException("Error.PurchaseOrderShortageActionQuantityInvalid");
+
+        var allocationQuantity = item.AllocationQuantity ?? item.Quantity;
+        if (allocationQuantity < 0 || allocationQuantity > item.Quantity)
             throw new InvalidOperationException("Error.PurchaseOrderShortageActionQuantityInvalid");
     }
 

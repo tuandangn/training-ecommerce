@@ -136,9 +136,8 @@ public sealed record CreateDeliveryNoteFromVendorReturnItemDto
 }
 
 /// <summary>
-/// DTO để tạo DeliveryNote tự động (Status=Draft, DeliveryConfirmationStatus=PendingConfirmation)
-/// khi GoodsReceipt phân bổ hàng cho một allocation direct-ship.
-/// DeliveryNoteManager sẽ tự tìm Order/Customer từ OrderItemId.
+/// DTO để tạo DeliveryNote direct-ship tự động ở trạng thái Confirmed khi GoodsReceipt
+/// phân bổ hàng cho một allocation direct-ship. DeliveryNoteManager tự tìm Order/Customer từ OrderItemId.
 /// </summary>
 [Serializable]
 public sealed record CreateDeliveryNoteForDirectShipDto

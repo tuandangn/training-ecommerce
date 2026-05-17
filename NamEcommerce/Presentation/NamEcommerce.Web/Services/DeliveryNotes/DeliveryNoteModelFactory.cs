@@ -171,6 +171,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,
             Status = deliveryNote.Status,
+            SourceType = deliveryNote.SourceType,
             IsDirectShip = deliveryNote.IsDirectShip,
             DeliveryConfirmationStatus = deliveryNote.DeliveryConfirmationStatus,
             StatusName = GetStatusName((DeliveryNoteStatus)deliveryNote.Status),

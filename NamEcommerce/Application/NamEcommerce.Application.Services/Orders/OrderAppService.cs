@@ -10,10 +10,10 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
-using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
+using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.Orders;
 
@@ -21,8 +21,8 @@ public sealed class OrderAppService(IOrderManager orderManager,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
-    IEntityDataReader<PurchaseOrderItemAllocation> allocationDataReader,
-    IInventoryStockManager inventoryStockManager) : IOrderAppService
+    IInventoryStockManager inventoryStockManager,
+    IDirectShipManager directShipManager) : IOrderAppService
 {
     public async Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto)
     {
@@ -605,16 +605,29 @@ public sealed class OrderAppService(IOrderManager orderManager,
     {
         try
         {
-            var fullyReceivedIds = allocationDataReader.DataSource
-                .Where(a => a.IsDirectShip
-                         && a.Status == AllocationStatus.FullyReceived
-                         && dto.OrderItemIds.Contains(a.OrderItemId))
-                .Select(a => a.Id)
-                .ToList();
+            var hasBlockingDeliveryNotes = deliveryNoteDataReader.DataSource
+                .Any(d => d.OrderId == dto.OrderId
+                    && d.Status != DeliveryNoteStatus.Cancelled
+                    && (d.SourceType != DeliveryNoteSourceType.DirectShipToCustomer
+                        || d.Status != DeliveryNoteStatus.Confirmed));
+            if (hasBlockingDeliveryNotes)
+                return new CancelOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.OrderCannotCancel_Processing"
+                };
+
+            if (await directShipManager.HasReceivedDirectShipAllocationsAsync(dto.OrderId).ConfigureAwait(false))
+            {
+                await directShipManager.HandleSoCancelledForReceivedDirectShipAsync(
+                    dto.OrderId,
+                    Guid.Empty,
+                    $"Đơn bán {dto.OrderId} bị hủy — chuyển hàng giao thẳng về kho chính").ConfigureAwait(false);
+            }
 
             await orderManager.CancelOrderAsync(new CancelOrderDto(dto.OrderId)
             {
-                FullyReceivedAllocationIds = fullyReceivedIds
+                FullyReceivedAllocationIds = []
             }).ConfigureAwait(false);
 
             return new CancelOrderResultAppDto { Success = true };

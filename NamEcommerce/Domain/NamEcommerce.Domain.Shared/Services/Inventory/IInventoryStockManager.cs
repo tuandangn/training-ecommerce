@@ -26,6 +26,15 @@ public interface IInventoryStockManager
     Task<bool> ReserveStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, int? reservationDaysValid = null);
     Task<bool> ReleaseReservedStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null);
     Task<StockMovementLogDto?> DispatchStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, bool releaseReservedStock = false);
+    Task<(StockMovementLogDto? OutLog, StockMovementLogDto? InLog)> TransferStockAsync(
+        Guid productId,
+        Guid fromWarehouseId,
+        Guid toWarehouseId,
+        decimal quantity,
+        decimal unitCost,
+        Guid? referenceId,
+        Guid userId,
+        string? note = null);
 
     Task<(int Total, List<InventoryStockDto> Items)> GetInventoryStocksAsync(string? keywords, Guid? warehouseId, int pageIndex, int pageSize);
     //*TODO* remove warehouse id

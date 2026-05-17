@@ -43,7 +43,9 @@ public sealed record OrderDetailsModel
         public Guid AllocationId { get; init; }
         public string ProductName { get; init; } = string.Empty;
         public int Status { get; init; }
+        public int? DeliveryStatus { get; init; }
         public decimal AllocatedQuantity { get; init; }
+        public decimal ReceivedQuantity { get; init; }
         public Guid? DeliveryNoteId { get; init; }
         public string? DeliveryNoteCode { get; init; }
     }
@@ -122,4 +124,3 @@ public sealed record OrderDetailsModel
         public required decimal Quantity { get; init; }
     }
 }
-

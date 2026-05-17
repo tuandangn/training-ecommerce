@@ -86,7 +86,8 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             .ToDictionary(p => p.Id, p => p.Name);
 
         // ── 4. Load direct-ship delivery notes (with date filter) ────────────────
-        var dnQuery = _deliveryNoteReader.DataSource.Where(dn => dn.IsDirectShip);
+        var dnQuery = _deliveryNoteReader.DataSource
+            .Where(dn => dn.SourceType == DeliveryNoteSourceType.DirectShipToCustomer);
         if (fromUtc.HasValue) dnQuery = dnQuery.Where(dn => dn.CreatedOnUtc >= fromUtc.Value);
         if (toUtc.HasValue) dnQuery = dnQuery.Where(dn => dn.CreatedOnUtc <= toUtc.Value);
         var dns = dnQuery
@@ -96,7 +97,7 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
                 dn.CustomerName,
                 dn.TotalAmount,
                 dn.CreatedOnUtc,
-                dn.DeliveryConfirmationStatus,
+                dn.Status,
                 dn.ConfirmedNote
             })
             .ToList();
@@ -143,8 +144,8 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
         // ── D9.4 — Pending > 7 days (always current snapshot, no date filter) ───
         var cutoff = DateTime.UtcNow.AddDays(-7);
         var pendingAlerts = _deliveryNoteReader.DataSource
-            .Where(dn => dn.IsDirectShip
-                      && dn.DeliveryConfirmationStatus == DeliveryConfirmationStatus.PendingConfirmation
+            .Where(dn => dn.SourceType == DeliveryNoteSourceType.DirectShipToCustomer
+                      && dn.Status == DeliveryNoteStatus.Confirmed
                       && dn.CreatedOnUtc < cutoff)
             .Select(dn => new { dn.Code, dn.CustomerName, dn.TotalAmount, dn.CreatedOnUtc })
             .ToList()
@@ -162,11 +163,11 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
         var rejectRate = new DirectShipRejectRateAppDto
         {
             TotalDeliveries = dns.Count,
-            TotalConfirmed = dns.Count(dn => dn.DeliveryConfirmationStatus == DeliveryConfirmationStatus.Confirmed),
-            TotalRejected = dns.Count(dn => dn.DeliveryConfirmationStatus == DeliveryConfirmationStatus.Rejected),
-            TotalPending = dns.Count(dn => dn.DeliveryConfirmationStatus == DeliveryConfirmationStatus.PendingConfirmation),
+            TotalConfirmed = dns.Count(dn => dn.Status == DeliveryNoteStatus.Delivered),
+            TotalRejected = dns.Count(dn => dn.Status == DeliveryNoteStatus.Cancelled),
+            TotalPending = dns.Count(dn => dn.Status == DeliveryNoteStatus.Confirmed),
             RejectReasons = dns
-                .Where(dn => dn.DeliveryConfirmationStatus == DeliveryConfirmationStatus.Rejected
+                .Where(dn => dn.Status == DeliveryNoteStatus.Cancelled
                           && !string.IsNullOrEmpty(dn.ConfirmedNote))
                 .GroupBy(dn => dn.ConfirmedNote!)
                 .Select(g => new DirectShipRejectReasonAppDto { Reason = g.Key, Count = g.Count() })

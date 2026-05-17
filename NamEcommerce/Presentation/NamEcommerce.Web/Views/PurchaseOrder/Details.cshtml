@@ -211,6 +211,22 @@
                                             {
                                                 foreach (var alloc in dsAllocations)
                                                 {
+                                                    var deliveryStatus = alloc.DeliveryStatus.HasValue
+                                                        ? (DeliveryNoteStatus)alloc.DeliveryStatus.Value
+                                                        : (DeliveryNoteStatus?)null;
+                                                    var (dsStatusBadge, dsStatusText) = deliveryStatus switch
+                                                    {
+                                                        DeliveryNoteStatus.Confirmed => ("info text-white", "Chờ khách xác nhận"),
+                                                        DeliveryNoteStatus.Delivered => ("success", "Khách đã nhận"),
+                                                        DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy/từ chối"),
+                                                        _ => alloc.Status switch
+                                                        {
+                                                            0 => ("secondary", "Chờ nhận"),
+                                                            1 => ("warning", "Nhận một phần"),
+                                                            2 => ("info text-white", "Đã nhận"),
+                                                            _ => ("secondary", "Không rõ")
+                                                        }
+                                                    };
                                                     <tr class="table-light">
                                                         <td colspan="3" class="ps-5 py-1 small">
                                                             <i class="bi bi-send me-1 text-primary"></i>
@@ -220,9 +236,17 @@
                                                             { <span class="text-muted ms-2">— @alloc.DirectShipContactName</span> }
                                                             @if (!string.IsNullOrEmpty(alloc.DirectShipContactPhone))
                                                             { <span class="text-muted ms-1">(@alloc.DirectShipContactPhone)</span> }
+                                                            @if (alloc.DeliveryNoteId.HasValue)
+                                                            {
+                                                                <a asp-controller="DeliveryNote" asp-action="Details"
+                                                                   asp-route-id="@alloc.DeliveryNoteId"
+                                                                   class="ms-2 text-decoration-none">@alloc.DeliveryNoteCode</a>
+                                                            }
                                                         </td>
-                                                        <td class="py-1 text-end small text-muted">@alloc.AllocatedQuantity.DisplayQuantity()</td>
-                                                        <td class="py-1"></td>
+                                                        <td class="py-1 text-end small text-muted">
+                                                            @alloc.ReceivedQuantity.DisplayQuantity() / @alloc.AllocatedQuantity.DisplayQuantity()
+                                                        </td>
+                                                        <td class="py-1"><span class="status-badge @dsStatusBadge">@dsStatusText</span></td>
                                                         <td class="py-1 text-center d-none d-md-table-cell"></td>
                                                         <td class="py-1 text-center">
                                                             <button class="btn btn-sm btn-outline-secondary py-0 px-2 btnEditDirectShipAddress"

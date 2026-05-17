@@ -86,17 +86,14 @@ public sealed record DeliveryNote : AppAggregateEntity
     public DeliveryNoteStatus Status { get; private set; }
 
     /// <summary>
-    /// Nguồn gốc phiếu xuất. Mặc định <see cref="DeliveryNoteSourceType.ToCustomer"/> (xuất bán cho khách).
-    /// Phase B sẽ thêm <see cref="DeliveryNoteSourceType.ToVendorReturn"/> khi VendorReturn.Confirmed
-    /// auto-sinh phiếu xuất loại này. Handler downstream phân nhánh theo property này (ví dụ:
-    /// <c>DeliveryNoteDeliveredEventHandler</c> skip sinh <c>CustomerDebt</c> khi không phải <c>ToCustomer</c>).
+    /// Nguồn gốc phiếu xuất. Handler downstream phân nhánh theo property này.
     /// </summary>
     public DeliveryNoteSourceType SourceType { get; internal set; } = DeliveryNoteSourceType.ToCustomer;
 
     // Direct-ship fields
     /// <summary>True khi phiếu này được sinh tự động từ workflow direct-ship.</summary>
     public bool IsDirectShip { get; private set; }
-    /// <summary>Trạng thái xác nhận giao thẳng. NotApplicable cho DN thường.</summary>
+    /// <summary>Legacy flag cho dữ liệu direct-ship cũ; source of truth hiện tại là Status + SourceType.</summary>
     public DeliveryConfirmationStatus DeliveryConfirmationStatus { get; private set; } = DeliveryConfirmationStatus.NotApplicable;
     public DateTime? ConfirmedAtUtc { get; private set; }
     public string? ConfirmedNote { get; private set; }
@@ -210,42 +207,45 @@ public sealed record DeliveryNote : AppAggregateEntity
     internal void SetAsDirectShip(Guid sourceGoodsReceiptId)
     {
         IsDirectShip = true;
+        SourceType = DeliveryNoteSourceType.DirectShipToCustomer;
         SourceGoodsReceiptId = sourceGoodsReceiptId;
         DeliveryConfirmationStatus = DeliveryConfirmationStatus.PendingConfirmation;
     }
 
     /// <summary>
-    /// Khách xác nhận đã nhận hàng giao thẳng — raise DirectShipDeliveryConfirmedEvent để trigger Invoice/Debt.
+    /// Khách xác nhận đã nhận hàng giao thẳng — dùng lifecycle Delivered để các handler DN thường chạy tiếp.
     /// </summary>
     internal void ConfirmDirectShipDelivery(DateTime confirmedAtUtc, string? note)
     {
-        if (!IsDirectShip)
+        if (!IsDirectShip || SourceType != DeliveryNoteSourceType.DirectShipToCustomer)
             throw new DeliveryNoteCannotChangeStatusException(Status, Status);
-        if (DeliveryConfirmationStatus != DeliveryConfirmationStatus.PendingConfirmation)
-            throw new DeliveryNoteCannotChangeStatusException(Status, Status);
+        if (Status != DeliveryNoteStatus.Confirmed)
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
 
         DeliveryConfirmationStatus = DeliveryConfirmationStatus.Confirmed;
         ConfirmedAtUtc = confirmedAtUtc;
         ConfirmedNote = note;
+        Status = DeliveryNoteStatus.Delivered;
+        DeliveredOnUtc = confirmedAtUtc;
         UpdatedOnUtc = DateTime.UtcNow;
 
-        RaiseDomainEvent(new DirectShipDeliveryConfirmed(Id, OrderId, CustomerId, TotalAmount));
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
     }
 
     /// <summary>
-    /// Reject — hàng sẽ chuyển về kho chính (handler DirectShipDeliveryRejectedEvent xử lý stock movement).
+    /// Reject — hàng direct-ship quay về kho chính trước khi DN bị hủy ở manager.
     /// </summary>
     internal void RejectDirectShipDelivery(string reason)
     {
-        if (!IsDirectShip)
+        if (!IsDirectShip || SourceType != DeliveryNoteSourceType.DirectShipToCustomer)
             throw new DeliveryNoteCannotChangeStatusException(Status, Status);
-        if (DeliveryConfirmationStatus != DeliveryConfirmationStatus.PendingConfirmation)
-            throw new DeliveryNoteCannotChangeStatusException(Status, Status);
+        if (Status != DeliveryNoteStatus.Confirmed)
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Cancelled);
 
         DeliveryConfirmationStatus = DeliveryConfirmationStatus.Rejected;
         ConfirmedNote = reason;
         UpdatedOnUtc = DateTime.UtcNow;
 
-        RaiseDomainEvent(new DirectShipDeliveryRejected(Id, OrderId, SourceGoodsReceiptId));
+        Cancel();
     }
 }

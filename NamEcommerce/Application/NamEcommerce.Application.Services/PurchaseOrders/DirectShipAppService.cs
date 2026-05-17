@@ -109,7 +109,11 @@ public sealed class DirectShipAppService(
             AllocationId = a.AllocationId,
             OrderItemId = a.OrderItemId,
             Status = a.Status,
-            AllocatedQuantity = a.AllocatedQuantity
+            DeliveryStatus = a.DeliveryStatus,
+            DeliveryNoteId = a.DeliveryNoteId,
+            DeliveryNoteCode = a.DeliveryNoteCode,
+            AllocatedQuantity = a.AllocatedQuantity,
+            ReceivedQuantity = a.ReceivedQuantity
         }).ToList();
     }
 
@@ -126,7 +130,11 @@ public sealed class DirectShipAppService(
             DirectShipContactName = a.DirectShipContactName,
             DirectShipContactPhone = a.DirectShipContactPhone,
             AllocatedQuantity = a.AllocatedQuantity,
-            Status = a.Status
+            ReceivedQuantity = a.ReceivedQuantity,
+            Status = a.Status,
+            DeliveryStatus = a.DeliveryStatus,
+            DeliveryNoteId = a.DeliveryNoteId,
+            DeliveryNoteCode = a.DeliveryNoteCode
         }).ToList();
     }
 }

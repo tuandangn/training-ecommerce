@@ -56,6 +56,7 @@ public sealed record CreatePoFromShortageItemDto
     public required Guid OrderItemId { get; init; }
     public required Guid ProductId { get; init; }
     public required decimal Quantity { get; init; }
+    public decimal? AllocationQuantity { get; init; }
     public decimal UnitCost { get; init; }
     public string? Note { get; init; }
     public DirectShipInfoDto? DirectShipInfo { get; init; }
@@ -68,6 +69,10 @@ public sealed record CreatePoFromShortageItemDto
             throw new PurchaseOrderItemDataIsInvalidException("Error.ProductIsNotFound");
         if (Quantity <= 0)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemQuantityMustBePositive");
+        if (AllocationQuantity < 0)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.AllocatedQuantityMustBePositive");
+        if (AllocationQuantity > Quantity)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemAllocationQuantityExceedsAvailable");
         if (UnitCost < 0)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemUnitCostCannotBeNegative");
     }

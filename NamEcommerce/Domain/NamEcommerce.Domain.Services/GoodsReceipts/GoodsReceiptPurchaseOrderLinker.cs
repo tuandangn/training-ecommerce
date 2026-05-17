@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
@@ -15,7 +16,8 @@ public sealed class GoodsReceiptPurchaseOrderLinker(
     IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
     IRepository<PurchaseOrder> purchaseOrderRepository,
     IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
-    IPurchaseOrderAllocationManager purchaseOrderAllocationManager) : IGoodsReceiptPurchaseOrderLinker
+    IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
+    IDirectShipManager directShipManager) : IGoodsReceiptPurchaseOrderLinker
 {
     public async Task LinkAsync(SetGoodsReceiptToPurchaseOrderDto dto)
     {
@@ -62,9 +64,24 @@ public sealed class GoodsReceiptPurchaseOrderLinker(
         foreach (var itemId in resolvePoItems.Select(item => item.itemId).Distinct())
         {
             var purchaseOrderItem = purchaseOrder.Items.First(item => item.Id == itemId);
-            await purchaseOrderAllocationManager
+            var distributeResult = await purchaseOrderAllocationManager
                 .SyncReceivedForPurchaseOrderItemAsync(itemId, purchaseOrderItem.QuantityReceived)
                 .ConfigureAwait(false);
+
+            var sourceWarehouseId = goodsReceipt.Items
+                .FirstOrDefault(item => item.ProductId == purchaseOrderItem.ProductId && item.WarehouseId.HasValue)
+                ?.WarehouseId;
+            if (!sourceWarehouseId.HasValue && distributeResult.DirectShipReceipts.Count > 0)
+                throw new WarehouseIsRequiredException();
+
+            foreach (var receipt in distributeResult.DirectShipReceipts)
+            {
+                await directShipManager.OnAllocationReceivedAsync(
+                    receipt.AllocationId,
+                    receipt.Quantity,
+                    goodsReceipt.Id,
+                    sourceWarehouseId!.Value).ConfigureAwait(false);
+            }
         }
     }
 

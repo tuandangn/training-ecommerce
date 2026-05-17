@@ -314,6 +314,7 @@ public sealed class DeliveryNoteManager(
 
         deliveryNote.SetAsDirectShip(dto.GoodsReceiptId);
         deliveryNote.MarkCreated();
+        deliveryNote.Confirm();
 
         var inserted = await deliveryNoteRepository.InsertAsync(deliveryNote, ct).ConfigureAwait(false);
 

@@ -18,21 +18,22 @@ public interface IDirectShipManager
         CancellationToken ct = default);
 
     /// <summary>
-    /// Phân bổ hàng nhận được từ NCC cho các allocation theo thứ tự ưu tiên
-    /// (IsDirectShip desc → DirectShipPriority desc → CreatedAt asc).
-    /// Trả về kết quả phân bổ để caller tạo stock movement và DN.
-    /// </summary>
-    Task<DistributeReceivedQuantityResultDto> DistributeReceivedQuantityAsync(
-        Guid purchaseOrderItemId,
-        decimal receivedQty,
-        CancellationToken ct = default);
-
-    /// <summary>
     /// Kiểm tra xem có allocation direct-ship nào còn khả năng nhận hàng (chưa nhận đủ, chưa cancel).
     /// Dùng để fail-fast trước khi phân bổ và lưu DB.
     /// </summary>
     Task<bool> HasReceivableDirectShipAllocationsAsync(
         Guid purchaseOrderItemId,
+        CancellationToken ct = default);
+
+    Task<bool> HasReceivedDirectShipAllocationsAsync(
+        Guid orderId,
+        CancellationToken ct = default);
+
+    Task OnAllocationReceivedAsync(
+        Guid allocationId,
+        decimal receivedDelta,
+        Guid sourceGoodsReceiptId,
+        Guid receivedWarehouseId,
         CancellationToken ct = default);
 
     /// <summary>
@@ -51,6 +52,12 @@ public interface IDirectShipManager
     Task RejectDeliveryAsync(
         Guid deliveryNoteId,
         string reason,
+        CancellationToken ct = default);
+
+    Task HandleSoCancelledForReceivedDirectShipAsync(
+        Guid orderId,
+        Guid userId,
+        string? reason,
         CancellationToken ct = default);
 
     /// <summary>

@@ -59,7 +59,7 @@ public sealed class PurchaseOrderManagerTests
     [Fact]
     public async Task CreatePurchaseOrderAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, null!, null!, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => purchaseOrderManager.CreatePurchaseOrderAsync(null!));
     }
@@ -76,7 +76,7 @@ public sealed class PurchaseOrderManagerTests
         };
         var vendorDataReaderMock = VendorDataReader.NotFound(notFoundVendorId);
         var purchaseOrderDataReaderStub = PurchaseOrderDataReader.Empty();
-        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, vendorDataReaderMock.Object, null!, null!, null!, null!);
+        var purchaseOrderManager = new PurchaseOrderManager(null!, purchaseOrderDataReaderStub.Object, vendorDataReaderMock.Object, null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<VendorIsNotFoundException>(() => purchaseOrderManager.CreatePurchaseOrderAsync(dto));
         vendorDataReaderMock.Verify();

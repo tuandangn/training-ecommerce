@@ -1,4 +1,5 @@
 using MediatR;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Inventory;
@@ -20,6 +21,9 @@ public sealed class DeliveryNoteDeliveredStockHandler(
         var deliveryNote = await deliveryNoteManager.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null) return;
 
+        var releaseReservedStock = deliveryNote.OrderId != Guid.Empty
+            && deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer;
+
         foreach (var item in deliveryNote.Items)
         {
             await stockManager.DispatchStockAsync(
@@ -29,7 +33,7 @@ public sealed class DeliveryNoteDeliveredStockHandler(
                 deliveryNote.Id,
                 Guid.Empty,
                 $"Xuất hàng cho phiếu xuất {deliveryNote.Code}",
-                releaseReservedStock: deliveryNote.OrderId != Guid.Empty).ConfigureAwait(false);
+                releaseReservedStock: releaseReservedStock).ConfigureAwait(false);
         }
     }
 }

@@ -48,6 +48,7 @@ public sealed class CreatePurchaseOrderFromShortageItemCommand
     public Guid OrderItemId { get; init; }
     public Guid ProductId { get; init; }
     public decimal Quantity { get; init; }
+    public decimal? AllocationQuantity { get; init; }
     public decimal UnitCost { get; init; }
     public string? Note { get; init; }
     public DirectShipInfoCommand? DirectShipInfo { get; init; }

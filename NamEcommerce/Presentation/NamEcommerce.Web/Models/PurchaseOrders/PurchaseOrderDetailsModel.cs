@@ -40,6 +40,10 @@ public sealed class PurchaseOrderDetailsModel
         public string? DirectShipContactName { get; init; }
         public string? DirectShipContactPhone { get; init; }
         public decimal AllocatedQuantity { get; init; }
+        public decimal ReceivedQuantity { get; init; }
         public int Status { get; init; }
+        public int? DeliveryStatus { get; init; }
+        public Guid? DeliveryNoteId { get; init; }
+        public string? DeliveryNoteCode { get; init; }
     }
 }

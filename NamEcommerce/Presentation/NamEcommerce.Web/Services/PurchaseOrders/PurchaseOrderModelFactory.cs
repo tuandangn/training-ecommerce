@@ -185,7 +185,11 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                     DirectShipContactName = alloc.DirectShipContactName,
                     DirectShipContactPhone = alloc.DirectShipContactPhone,
                     AllocatedQuantity = alloc.AllocatedQuantity,
-                    Status = alloc.Status
+                    ReceivedQuantity = alloc.ReceivedQuantity,
+                    Status = alloc.Status,
+                    DeliveryStatus = alloc.DeliveryStatus,
+                    DeliveryNoteId = alloc.DeliveryNoteId,
+                    DeliveryNoteCode = alloc.DeliveryNoteCode
                 });
             }
         }

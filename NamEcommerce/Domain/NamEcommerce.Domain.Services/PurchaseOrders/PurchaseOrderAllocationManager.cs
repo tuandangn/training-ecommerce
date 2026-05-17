@@ -26,8 +26,9 @@ public sealed class PurchaseOrderAllocationManager(
         if (quantity <= 0)
             throw new PurchaseOrderItemDataIsInvalidException("Error.AllocatedQuantityMustBePositive");
 
-        EnsurePurchaseOrderItemExists(purchaseOrderItemId);
-        EnsureOrderItemExists(orderItemId);
+        var purchaseOrderItem = EnsurePurchaseOrderItemExists(purchaseOrderItemId);
+        var orderItem = EnsureOrderItemExists(orderItemId);
+        EnsureOrderItemCanAllocate(orderItem, purchaseOrderItem.ProductId, quantity);
 
         var allocation = new PurchaseOrderItemAllocation(purchaseOrderItemId, orderItemId, quantity);
         var inserted = await allocationRepository.InsertAsync(allocation).ConfigureAwait(false);
@@ -59,6 +60,7 @@ public sealed class PurchaseOrderAllocationManager(
             throw new OrderItemIsNotFoundException(orderItemId);
         if (orderItem.ProductId != purchaseOrderItemContext.Item.ProductId)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemAllocationProductMismatch");
+        EnsureOrderItemCanAllocate(orderItem, purchaseOrderItemContext.Item.ProductId, quantity);
 
         var allocatedQuantity = allocationReader.DataSource
             .Where(allocation => allocation.PurchaseOrderItemId == purchaseOrderItemId)
@@ -82,26 +84,32 @@ public sealed class PurchaseOrderAllocationManager(
         await allocationRepository.UpdateAsync(allocation).ConfigureAwait(false);
     }
 
-    public async Task SyncReceivedForPurchaseOrderItemAsync(Guid purchaseOrderItemId, decimal purchaseOrderItemReceivedQuantity)
+    public async Task<DistributeReceivedQuantityResultDto> SyncReceivedForPurchaseOrderItemAsync(Guid purchaseOrderItemId, decimal purchaseOrderItemReceivedQuantity)
     {
         if (purchaseOrderItemId == Guid.Empty)
             throw new PurchaseOrderItemIsNotFoundException(purchaseOrderItemId);
         if (purchaseOrderItemReceivedQuantity <= 0)
-            return;
+            return EmptyDistributeResult();
 
         var allocations = allocationReader.DataSource
-            .Where(allocation => allocation.PurchaseOrderItemId == purchaseOrderItemId)
-            .OrderBy(allocation => allocation.CreatedOnUtc)
+            .Where(allocation => allocation.PurchaseOrderItemId == purchaseOrderItemId
+                && allocation.Status != AllocationStatus.Cancelled)
+            .OrderByDescending(allocation => allocation.IsDirectShip)
+            .ThenByDescending(allocation => allocation.DirectShipPriority)
+            .ThenBy(allocation => allocation.CreatedOnUtc)
             .ToList();
         if (allocations.Count == 0)
-            return;
+            return EmptyDistributeResult();
 
         var totalAllocated = allocations.Sum(allocation => allocation.AllocatedQuantity);
         var currentReceived = allocations.Sum(allocation => allocation.ReceivedQuantity);
         var targetReceived = Math.Min(purchaseOrderItemReceivedQuantity, totalAllocated);
         var quantityToDistribute = targetReceived - currentReceived;
         if (quantityToDistribute <= 0)
-            return;
+            return EmptyDistributeResult();
+
+        var directShipReceipts = new List<AllocationReceiptDto>();
+        var warehouseReceipts = new List<AllocationReceiptDto>();
 
         foreach (var allocation in allocations)
         {
@@ -110,7 +118,21 @@ public sealed class PurchaseOrderAllocationManager(
                 continue;
 
             var receivedForAllocation = Math.Min(remainingAllocation, quantityToDistribute);
-            await IncreaseReceivedAsync(allocation.Id, receivedForAllocation).ConfigureAwait(false);
+            allocation.IncreaseReceived(receivedForAllocation);
+            await allocationRepository.UpdateAsync(allocation).ConfigureAwait(false);
+
+            var receipt = new AllocationReceiptDto
+            {
+                AllocationId = allocation.Id,
+                OrderItemId = allocation.OrderItemId,
+                Quantity = receivedForAllocation,
+                IsDirectShip = allocation.IsDirectShip,
+                DirectShipAddress = allocation.DirectShipAddress
+            };
+            if (allocation.IsDirectShip)
+                directShipReceipts.Add(receipt);
+            else
+                warehouseReceipts.Add(receipt);
 
             quantityToDistribute -= receivedForAllocation;
             if (quantityToDistribute <= 0)
@@ -122,6 +144,12 @@ public sealed class PurchaseOrderAllocationManager(
             System.Diagnostics.Trace.TraceWarning(
                 $"PurchaseOrderItem {purchaseOrderItemId} received {purchaseOrderItemReceivedQuantity} but only {totalAllocated} was allocated; extra stock remains free.");
         }
+
+        return new DistributeReceivedQuantityResultDto
+        {
+            DirectShipReceipts = directShipReceipts,
+            WarehouseReceipts = warehouseReceipts
+        };
     }
 
     public Task<IList<PurchaseOrderItemAllocationDto>> GetAllocationsForOrderItemAsync(Guid orderItemId)
@@ -269,17 +297,46 @@ public sealed class PurchaseOrderAllocationManager(
         return Task.FromResult<IList<OrderAllocatedPurchaseOrderDto>>(result);
     }
 
-    private void EnsurePurchaseOrderItemExists(Guid purchaseOrderItemId)
+    private PurchaseOrderItem EnsurePurchaseOrderItemExists(Guid purchaseOrderItemId)
     {
-        var exists = purchaseOrderReader.DataSource.Any(purchaseOrder => purchaseOrder.Items.Any(item => item.Id == purchaseOrderItemId));
-        if (!exists)
+        var purchaseOrderItem = purchaseOrderReader.DataSource
+            .SelectMany(purchaseOrder => purchaseOrder.Items)
+            .FirstOrDefault(item => item.Id == purchaseOrderItemId);
+        if (purchaseOrderItem is null)
             throw new PurchaseOrderItemIsNotFoundException(purchaseOrderItemId);
+
+        return purchaseOrderItem;
     }
 
-    private void EnsureOrderItemExists(Guid orderItemId)
+    private OrderItem EnsureOrderItemExists(Guid orderItemId)
     {
-        var exists = orderReader.DataSource.Any(order => order.OrderItems.Any(item => item.Id == orderItemId));
-        if (!exists)
+        var orderItem = orderReader.DataSource
+            .SelectMany(order => order.OrderItems)
+            .FirstOrDefault(item => item.Id == orderItemId);
+        if (orderItem is null)
             throw new OrderItemIsNotFoundException(orderItemId);
+
+        return orderItem;
     }
+
+    private void EnsureOrderItemCanAllocate(OrderItem orderItem, Guid purchaseOrderItemProductId, decimal quantity)
+    {
+        if (orderItem.ProductId != purchaseOrderItemProductId)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemAllocationProductMismatch");
+
+        var allocatedQuantity = allocationReader.DataSource
+            .Where(allocation => allocation.OrderItemId == orderItem.Id
+                && allocation.Status != AllocationStatus.Cancelled)
+            .Sum(allocation => allocation.AllocatedQuantity);
+        var availableQuantity = orderItem.Quantity - allocatedQuantity;
+        if (quantity > availableQuantity)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemAllocationQuantityExceedsAvailable");
+    }
+
+    private static DistributeReceivedQuantityResultDto EmptyDistributeResult()
+        => new()
+        {
+            DirectShipReceipts = [],
+            WarehouseReceipts = []
+        };
 }

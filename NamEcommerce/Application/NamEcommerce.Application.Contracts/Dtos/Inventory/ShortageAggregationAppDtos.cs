@@ -132,6 +132,7 @@ public sealed record CreatePoFromShortageItemAppDto
     public required Guid OrderItemId { get; init; }
     public required Guid ProductId { get; init; }
     public required decimal Quantity { get; init; }
+    public decimal? AllocationQuantity { get; init; }
     public decimal UnitCost { get; init; }
     public string? Note { get; init; }
     public DirectShipInfoAppDto? DirectShipInfo { get; init; }

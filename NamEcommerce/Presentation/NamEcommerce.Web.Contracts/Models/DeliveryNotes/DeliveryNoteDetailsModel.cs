@@ -22,6 +22,7 @@ public sealed class DeliveryNoteDetailsModel
     public string? Note { get; set; }
     
     public int Status { get; set; }
+    public int SourceType { get; set; }
     public bool IsDirectShip { get; set; }
     public int DeliveryConfirmationStatus { get; set; }
     public string StatusName { get; set; } = string.Empty;
