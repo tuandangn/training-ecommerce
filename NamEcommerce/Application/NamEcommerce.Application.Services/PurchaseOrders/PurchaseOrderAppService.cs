@@ -20,7 +20,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 {
     private readonly IPurchaseOrderManager _purchaseOrderManager;
     private readonly IPurchaseOrderAllocationManager _purchaseOrderAllocationManager;
-    private readonly IDirectShipManager? _directShipManager;
+    private readonly IDirectShipManager _directShipManager;
     private readonly IEntityDataReader<Vendor> _vendorDataReader;
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
     private readonly IEntityDataReader<User> _userDataReader;
@@ -31,7 +31,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
         IEntityDataReader<PurchaseOrder> purchaseOrderDataReader, IEntityDataReader<Vendor> vendorDataReader,
         IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader,
-        IDirectShipManager? directShipManager = null)
+        IDirectShipManager directShipManager)
     {
         _purchaseOrderManager = purchaseOrderManager;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
@@ -658,8 +658,6 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     public async Task<CommonActionResultDto> UpdateAllocationDirectShipInfoAsync(
         Guid allocationId, string address, string? contactName, string? contactPhone, int priority)
     {
-        if (_directShipManager == null)
-            return CommonActionResultDto.CreateError("Error.DirectShipNotConfigured");
         try
         {
             await _directShipManager.MarkAllocationAsDirectShipAsync(
@@ -667,9 +665,9 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 .ConfigureAwait(false);
             return CommonActionResultDto.CreateSuccess();
         }
-        catch (Exception ex)
+        catch (NamEcommerceDomainException ex)
         {
-            return CommonActionResultDto.CreateError(ex.Message);
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
         }
     }
 }
