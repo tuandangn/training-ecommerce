@@ -837,15 +837,11 @@
                                                 @for (var idx = 0; idx < remainingItems.Count; idx++)
                                                 {
                                                             var item = remainingItems[idx];
-                                                            var itemDsQty = Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var itemDsAllocs)
-                                                                ? itemDsAllocs.Sum(a => a.AllocatedQuantity)
-                                                                : 0m;
                                                             <text>{
                                                                         "id": "@item.Id",
                                                                         "name": @Json.Serialize(item.ProductName),
                                                                         "remaining": @item.RemainingQuantity.ToString("#"),
-                                                                        "unitCost": @item.UnitCost.ToString("#"),
-                                                                        "directShipQty": @itemDsQty.ToString("#")
+                                                                        "unitCost": @item.UnitCost.ToString("#")
                                                                     }@(idx < remainingItems.Count - 1 ? "," : "")</text>
                                                         }
                                                     ],
@@ -1051,7 +1047,7 @@
                         document.getElementById('editDsContactPhone').value = this.dataset.contactPhone || '';
                         document.getElementById('editDsSuccessBanner').classList.add('d-none');
                         document.getElementById('editDsErrorBanner').classList.add('d-none');
-                        bootstrap.Modal.getOrCreate(document.getElementById('editDirectShipAddressModal')).show();
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('editDirectShipAddressModal')).show();
                     });
                 });
 
