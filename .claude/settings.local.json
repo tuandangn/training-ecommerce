@@ -16,7 +16,13 @@
       "Bash(powershell -command \"Select-String -Path 'NamEcommerce/Presentation/NamEcommerce.Web/Resources/SharedResource.vi-VN.resx' -Pattern 'Enums\\\\.' | Select-Object -First 10\")",
       "Bash(powershell -command \"Get-Content 'NamEcommerce/Presentation/NamEcommerce.Web/Resources/SharedResource.resx' | Select-Object -Last 15\")",
       "Bash(git merge *)",
-      "Skill(agent-skills:spec)"
+      "Skill(agent-skills:spec)",
+      "Skill(agent-skills:incremental-implementation)",
+      "Bash(rtk read *)",
+      "Skill(agent-skills:debugging-and-error-recovery)",
+      "Bash(findstr /I \"error\")",
+      "Bash(findstr /V \"warning\")",
+      "Skill(agent-skills:using-agent-skills)"
     ]
   }
 }
