@@ -1,0 +1,369 @@
+@model NamEcommerce.Application.Contracts.Dtos.Report.DirectShipReportAppDto
+@using NamEcommerce.Domain.Shared.Common;
+
+@{
+    ViewData[ViewConstants.PageTitle] = "Báo cáo Direct-Ship";
+}
+
+@section Styles {
+    <style>
+        .ds-header {
+            background: linear-gradient(135deg, #0f4c75 0%, #1b6ca8 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .table-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+        }
+        .nav-tabs .nav-link { color: #6c757d; font-weight: 500; }
+        .nav-tabs .nav-link.active { color: #0f4c75; border-bottom: 3px solid #0f4c75; font-weight: 700; }
+        .alert-pending { animation: pulse 2s infinite; }
+        @@keyframes pulse { 0%, 100% { opacity:1; } 50% { opacity:0.7; } }
+    </style>
+}
+
+<div class="container-fluid py-4">
+    <div class="ds-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h1 class="mb-1 text-white fw-bold"><i class="bi bi-truck-fast me-2"></i>Báo cáo Direct-Ship</h1>
+            <p class="mb-0 opacity-75">Phân tích giao hàng trực tiếp từ nhà cung cấp theo kỳ lọc.</p>
+        </div>
+        <form method="get" class="d-flex gap-2 bg-white bg-opacity-25 p-2 rounded-3 align-items-center" id="filterForm">
+            <input type="date" name="fromDate" id="fromDate" class="form-control form-control-sm border-0" value="@ViewData["FromDate"]" />
+            <span class="text-white align-self-center">-</span>
+            <input type="date" name="toDate" id="toDate" class="form-control form-control-sm border-0" value="@ViewData["ToDate"]" />
+            <button type="submit" class="btn btn-light btn-sm fw-bold"><i class="bi bi-funnel"></i> Lọc</button>
+        </form>
+    </div>
+
+    @* Summary stat cards *@
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card border-top border-4 border-primary">
+                <p class="text-muted mb-1 fw-semibold text-uppercase" style="font-size:0.75rem;">Tổng phiếu giao</p>
+                <h4 class="fw-bold mb-0">@Model.RejectRate.TotalDeliveries</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-top border-4 border-success">
+                <p class="text-muted mb-1 fw-semibold text-uppercase" style="font-size:0.75rem;">Đã xác nhận</p>
+                <h4 class="fw-bold mb-0 text-success">@Model.RejectRate.TotalConfirmed</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-top border-4 border-warning">
+                <p class="text-muted mb-1 fw-semibold text-uppercase" style="font-size:0.75rem;">Đang chờ xác nhận</p>
+                <h4 class="fw-bold mb-0 text-warning">@Model.RejectRate.TotalPending</h4>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card border-top border-4 border-danger">
+                <p class="text-muted mb-1 fw-semibold text-uppercase" style="font-size:0.75rem;">Tỷ lệ Reject</p>
+                <h4 class="fw-bold mb-0 text-danger">@Model.RejectRate.RejectRatePercent%</h4>
+            </div>
+        </div>
+    </div>
+
+    @* Pending alert banner *@
+    @if (Model.PendingAlerts.Count > 0)
+    {
+        <div class="alert alert-warning alert-dismissible fade show alert-pending mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Cảnh báo!</strong> Có <strong>@Model.PendingAlerts.Count</strong> phiếu giao thẳng chờ xác nhận quá 7 ngày. Xem tab <em>Chờ quá hạn</em> để biết chi tiết.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @* Tabs *@
+    <ul class="nav nav-tabs mb-4" id="dsReportTabs">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#tabVendor">
+                <i class="bi bi-building me-1"></i> Theo NCC
+                <span class="badge bg-secondary ms-1">@Model.ByVendor.Count</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabCustomer">
+                <i class="bi bi-people me-1"></i> Top Khách hàng
+                <span class="badge bg-secondary ms-1">@Model.ByCustomer.Count</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabProduct">
+                <i class="bi bi-box me-1"></i> Theo Sản phẩm
+                <span class="badge bg-secondary ms-1">@Model.ByProduct.Count</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(Model.PendingAlerts.Count > 0 ? "text-warning" : "")" data-bs-toggle="tab" href="#tabPending">
+                <i class="bi bi-clock-history me-1"></i> Chờ quá hạn
+                @if (Model.PendingAlerts.Count > 0)
+                {
+                    <span class="badge bg-warning text-dark ms-1">@Model.PendingAlerts.Count</span>
+                }
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#tabReject">
+                <i class="bi bi-x-circle me-1"></i> Tỷ lệ Reject
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        @* D9.1 — By Vendor *@
+        <div class="tab-pane fade show active" id="tabVendor">
+            <div class="table-card">
+                <h5 class="fw-bold mb-3 text-secondary">Báo cáo Direct-Ship theo Nhà cung cấp</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Nhà cung cấp</th>
+                                <th class="text-end">Số lần giao thẳng</th>
+                                <th class="text-end">Tổng SL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{int vIdx = 1;}
+                            @foreach (var row in Model.ByVendor)
+                            {
+                                <tr>
+                                    <td class="text-muted">@(vIdx++)</td>
+                                    <td class="fw-semibold">@row.VendorName</td>
+                                    <td class="text-end"><span class="badge bg-primary rounded-pill">@row.AllocationCount</span></td>
+                                    <td class="text-end fw-bold">@row.TotalQuantity.ToString("N0")</td>
+                                </tr>
+                            }
+                            @if (!Model.ByVendor.Any())
+                            {
+                                <tr><td colspan="4" class="text-center text-muted py-4">Không có dữ liệu trong kỳ lọc.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        @* D9.2 — By Customer *@
+        <div class="tab-pane fade" id="tabCustomer">
+            <div class="table-card">
+                <h5 class="fw-bold mb-3 text-secondary">Top 10 Khách hàng nhận giao thẳng</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Khách hàng</th>
+                                <th class="text-end">Số phiếu</th>
+                                <th class="text-end">Tổng giá trị</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{int cIdx = 1;}
+                            @foreach (var row in Model.ByCustomer)
+                            {
+                                <tr>
+                                    <td class="text-muted">@(cIdx++)</td>
+                                    <td class="fw-semibold">@row.CustomerName</td>
+                                    <td class="text-end"><span class="badge bg-info text-dark rounded-pill">@row.DeliveryCount</span></td>
+                                    <td class="text-end fw-bold">@row.TotalAmount.ToString("N0") ₫</td>
+                                </tr>
+                            }
+                            @if (!Model.ByCustomer.Any())
+                            {
+                                <tr><td colspan="4" class="text-center text-muted py-4">Không có dữ liệu trong kỳ lọc.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        @* D9.3 — By Product *@
+        <div class="tab-pane fade" id="tabProduct">
+            <div class="table-card">
+                <h5 class="fw-bold mb-3 text-secondary">Báo cáo Direct-Ship theo Sản phẩm</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Sản phẩm</th>
+                                <th class="text-end">Số lần</th>
+                                <th class="text-end">Tổng SL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{int pIdx = 1;}
+                            @foreach (var row in Model.ByProduct)
+                            {
+                                <tr>
+                                    <td class="text-muted">@(pIdx++)</td>
+                                    <td class="fw-semibold">@row.ProductName</td>
+                                    <td class="text-end"><span class="badge bg-secondary rounded-pill">@row.AllocationCount</span></td>
+                                    <td class="text-end fw-bold">@row.TotalQuantity.ToString("N0")</td>
+                                </tr>
+                            }
+                            @if (!Model.ByProduct.Any())
+                            {
+                                <tr><td colspan="4" class="text-center text-muted py-4">Không có dữ liệu trong kỳ lọc.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        @* D9.4 — Pending > 7 days *@
+        <div class="tab-pane fade" id="tabPending">
+            <div class="table-card">
+                <h5 class="fw-bold mb-3 text-secondary">
+                    Phiếu giao thẳng chờ xác nhận quá 7 ngày
+                    <small class="text-muted fw-normal fs-6 ms-2">(không phụ thuộc bộ lọc ngày)</small>
+                </h5>
+                @if (Model.PendingAlerts.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mã phiếu</th>
+                                    <th>Khách hàng</th>
+                                    <th class="text-end">Giá trị</th>
+                                    <th class="text-end">Số ngày chờ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in Model.PendingAlerts)
+                                {
+                                    <tr class="@(row.DaysPending > 14 ? "table-danger" : "table-warning")">
+                                        <td class="fw-semibold">@row.DeliveryNoteCode</td>
+                                        <td>@row.CustomerName</td>
+                                        <td class="text-end">@row.TotalAmount.ToString("N0") ₫</td>
+                                        <td class="text-end">
+                                            <span class="badge @(row.DaysPending > 14 ? "bg-danger" : "bg-warning text-dark") rounded-pill">
+                                                @row.DaysPending ngày
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-check-circle text-success" style="font-size:2rem;"></i>
+                        <p class="mt-2 mb-0">Không có phiếu nào chờ quá 7 ngày.</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @* D9.5 — Reject rate *@
+        <div class="tab-pane fade" id="tabReject">
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="table-card">
+                        <h5 class="fw-bold mb-4 text-secondary">Tỷ lệ Reject Delivery</h5>
+                        <canvas id="rejectChart" height="200"></canvas>
+                        <div class="mt-3 d-flex justify-content-around text-center">
+                            <div>
+                                <div class="fw-bold text-success fs-4">@Model.RejectRate.TotalConfirmed</div>
+                                <small class="text-muted">Xác nhận</small>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-warning fs-4">@Model.RejectRate.TotalPending</div>
+                                <small class="text-muted">Chờ</small>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-danger fs-4">@Model.RejectRate.TotalRejected</div>
+                                <small class="text-muted">Từ chối</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="table-card">
+                        <h5 class="fw-bold mb-3 text-secondary">Lý do từ chối</h5>
+                        @if (Model.RejectRate.RejectReasons.Any())
+                        {
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Lý do</th>
+                                            <th class="text-end">Số lần</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var r in Model.RejectRate.RejectReasons)
+                                        {
+                                            <tr>
+                                                <td>@r.Reason</td>
+                                                <td class="text-end"><span class="badge bg-danger rounded-pill">@r.Count</span></td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted py-4 text-center">Không có phiếu bị từ chối trong kỳ.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const rejectCtx = document.getElementById('rejectChart').getContext('2d');
+        new Chart(rejectCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Xác nhận', 'Chờ xác nhận', 'Từ chối'],
+                datasets: [{
+                    data: [@Model.RejectRate.TotalConfirmed, @Model.RejectRate.TotalPending, @Model.RejectRate.TotalRejected],
+                    backgroundColor: ['#198754', '#ffc107', '#dc3545'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                const pct = total === 0 ? 0 : Math.round(ctx.parsed / total * 1000) / 10;
+                                return `${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+}
