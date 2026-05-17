@@ -825,4 +825,7 @@
   <data name="Error.DirectShip.TransitWarehouseNotConfigured" xml:space="preserve">
     <value>No Direct-Ship Transit warehouse configured. Please create a warehouse of type DirectShipTransit first.</value>
   </data>
+  <data name="Error.DirectShip.TransitWarehouseAlreadyExists" xml:space="preserve">
+    <value>A Direct-Ship Transit warehouse already exists. Only one is allowed.</value>
+  </data>
 </root>
