@@ -242,30 +242,17 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             ReceivedQuantity = model.ReceivedQuantity,
             WarehouseId = model.WarehouseId,
             SellingPrice = model.SellingPrice,
-            OversupplyAction = model.OversupplyAction
+            OversupplyAction = model.OversupplyAction,
+            DirectShipOrderItemId = model.DirectShipOrderItemId,
+            DirectShipAddress = model.DirectShipAddress,
+            DirectShipContactName = model.DirectShipContactName,
+            DirectShipContactPhone = model.DirectShipContactPhone
         });
 
         if (!result.Success)
         {
             NotifyError(result.ErrorMessage!);
             return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
-        }
-
-        if (model.DirectShipOrderItemId.HasValue && model.DirectShipOrderItemId != Guid.Empty
-            && !string.IsNullOrWhiteSpace(model.DirectShipAddress))
-        {
-            var dsResult = await _mediator.Send(new AllocatePoItemToOrderCommand
-            {
-                PurchaseOrderItemId = model.PurchaseOrderItemId,
-                OrderItemId = model.DirectShipOrderItemId.Value,
-                Quantity = result.ActualReceivedQuantity,
-                DirectShipAddress = model.DirectShipAddress,
-                DirectShipContactName = model.DirectShipContactName,
-                DirectShipContactPhone = model.DirectShipContactPhone
-            }).ConfigureAwait(false);
-
-            if (!dsResult.Success)
-                NotifyWarning(dsResult.ErrorMessage!);
         }
 
         NotifySuccess("Msg.SaveSuccess");
@@ -295,7 +282,11 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 ItemId = line.ItemId,
                 Quantity = line.Quantity,
                 WarehouseId = line.WarehouseId,
-                ActualUnitCost = line.ActualUnitCost
+                ActualUnitCost = line.ActualUnitCost,
+                DirectShipOrderItemId = line.DirectShipOrderItemId,
+                DirectShipAddress = line.DirectShipAddress,
+                DirectShipContactName = line.DirectShipContactName,
+                DirectShipContactPhone = line.DirectShipContactPhone
             })
             .ToList();
 
@@ -322,26 +313,6 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 NotifySuccess("Msg.BulkReceive.CreatedMultiple", count);
             else
                 NotifySuccess("Msg.SaveSuccess");
-
-            var receivedItemIds = lines.Select(l => l.ItemId).ToHashSet();
-            foreach (var line in model.Items ?? [])
-            {
-                if (!receivedItemIds.Contains(line.ItemId)) continue;
-                if (!line.DirectShipOrderItemId.HasValue || string.IsNullOrWhiteSpace(line.DirectShipAddress)) continue;
-
-                var dsResult = await _mediator.Send(new AllocatePoItemToOrderCommand
-                {
-                    PurchaseOrderItemId = line.ItemId,
-                    OrderItemId = line.DirectShipOrderItemId.Value,
-                    Quantity = line.Quantity,
-                    DirectShipAddress = line.DirectShipAddress,
-                    DirectShipContactName = line.DirectShipContactName,
-                    DirectShipContactPhone = line.DirectShipContactPhone
-                });
-
-                if (!dsResult.Success)
-                    NotifyWarning(dsResult.ErrorMessage!);
-            }
         }
 
         return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });

@@ -8,27 +8,27 @@ using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
-using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.GoodsReceipts;
 
 public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
 {
     private readonly IGoodsReceiptManager _goodsReceiptManager;
-    private readonly IPurchaseOrderManager _purchaseOrderManager;
+    private readonly IPurchaseOrderAppService _purchaseOrderAppService;
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
     private readonly IEntityDataReader<Picture> _pictureDataReader;
 
     public GoodsReceiptAppService(
         IGoodsReceiptManager goodsReceiptManager,
-        IPurchaseOrderManager purchaseOrderManager,
+        IPurchaseOrderAppService purchaseOrderAppService,
         IEntityDataReader<Product> productDataReader,
         IEntityDataReader<Warehouse> warehouseDataReader,
         IEntityDataReader<Picture> pictureDataReader)
     {
         _goodsReceiptManager = goodsReceiptManager;
-        _purchaseOrderManager = purchaseOrderManager;
+        _purchaseOrderAppService = purchaseOrderAppService;
         _productDataReader = productDataReader;
         _warehouseDataReader = warehouseDataReader;
         _pictureDataReader = pictureDataReader;
@@ -270,9 +270,8 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
     {
         try
         {
-            await _purchaseOrderManager.SetGoodsReceiptToPurchaseOrderAsync(
-                new SetGoodsReceiptToPurchaseOrderDto(dto.Id, dto.PurchaseOrderId)).ConfigureAwait(false);
-            return CommonActionResultDto.CreateSuccess();
+            return await _purchaseOrderAppService.SetGoodsReceiptToPurchaseOrderAsync(dto)
+                .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -284,9 +283,8 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
     {
         try
         {
-            await _purchaseOrderManager.RemoveGoodsReceiptFromPurchaseOrderAsync(
-                new RemoveGoodsReceiptFromPurchaseOrderDto(dto.Id)).ConfigureAwait(false);
-            return CommonActionResultDto.CreateSuccess();
+            return await _purchaseOrderAppService.RemoveGoodsReceiptFromPurchaseOrderAsync(dto)
+                .ConfigureAwait(false);
         }
         catch (Exception ex)
         {

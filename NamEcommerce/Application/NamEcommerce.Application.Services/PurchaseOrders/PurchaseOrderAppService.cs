@@ -1,4 +1,5 @@
 using NamEcommerce.Application.Contracts.Dtos.Common;
+using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
@@ -7,6 +8,7 @@ using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions;
@@ -438,7 +440,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 .ConfigureAwait(false);
         }
 
-        return ReceiveItemResultAppDto.CreateSuccess(dto.ReceivedQuantity);
+        return ReceiveItemResultAppDto.CreateSuccess(dto.ReceivedQuantity, result.CreatedGoodsReceiptId);
     }
 
     public async Task<BulkReceiveGoodsResultAppDto> BulkReceiveAsync(BulkReceiveGoodsAppDto dto)
@@ -505,21 +507,34 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             });
         }
 
-        // Bước 3: manager bulk gọi single receive chuẩn cho từng line.
-        var bulkResult = await _purchaseOrderManager.BulkReceiveItemsAsync(new BulkReceiveGoodsForPurchaseOrderDto(dto.PurchaseOrderId)
+        var createdGoodsReceiptIds = new List<Guid>();
+        foreach (var line in lines)
         {
-            Lines = lines,
-            ReceivedByUserId = dto.ReceivedByUserId
-        }).ConfigureAwait(false);
+            var receiveResult = await ReceiveItemAsync(new ReceivedGoodsForItemAppDto(dto.PurchaseOrderId, line.PurchaseOrderItemId)
+            {
+                ReceivedByUserId = dto.ReceivedByUserId,
+                ReceivedQuantity = line.ReceivedQuantity,
+                WarehouseId = line.WarehouseId,
+                ActualUnitCost = line.ActualUnitCost
+            }).ConfigureAwait(false);
 
-        // Cộng dồn phí vận chuyển và thuế vào đơn (nếu có)
-        if (dto.AdditionalShipping > 0 || dto.AdditionalTax > 0)
-        {
-            await _purchaseOrderManager.AddReceiptFeesAsync(dto.PurchaseOrderId, dto.AdditionalShipping, dto.AdditionalTax)
-                .ConfigureAwait(false);
+            if (!receiveResult.Success)
+                return BulkReceiveGoodsResultAppDto.CreateError(receiveResult.ErrorMessage);
+
+            if (receiveResult.CreatedGoodsReceiptId.HasValue)
+                createdGoodsReceiptIds.Add(receiveResult.CreatedGoodsReceiptId.Value);
         }
 
-        return BulkReceiveGoodsResultAppDto.CreateSuccess(bulkResult.CreatedGoodsReceiptIds);
+        if (dto.AdditionalShipping > 0 || dto.AdditionalTax > 0)
+        {
+            var feeResult = await AddReceiptFeesAsync(dto.PurchaseOrderId, dto.AdditionalShipping, dto.AdditionalTax)
+                .ConfigureAwait(false);
+
+            if (!feeResult.Success)
+                return BulkReceiveGoodsResultAppDto.CreateError(feeResult.ErrorMessage);
+        }
+
+        return BulkReceiveGoodsResultAppDto.CreateSuccess(createdGoodsReceiptIds);
     }
 
     public async Task<string> NextPurchaseOrderCodeAsync()
@@ -536,6 +551,56 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         while (await _purchaseOrderManager.DoesCodeExistAsync(code).ConfigureAwait(false));
 
         return code;
+    }
+
+    public async Task<CommonActionResultDto> AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping, decimal additionalTax)
+    {
+        try
+        {
+            await _purchaseOrderManager.AddReceiptFeesAsync(purchaseOrderId, additionalShipping, additionalTax)
+                .ConfigureAwait(false);
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
+        }
+    }
+
+    public async Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderAppDto dto)
+    {
+        try
+        {
+            await _purchaseOrderManager.SetGoodsReceiptToPurchaseOrderAsync(
+                new SetGoodsReceiptToPurchaseOrderDto(dto.Id, dto.PurchaseOrderId)).ConfigureAwait(false);
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
+        }
+        catch (Exception ex)
+        {
+            return CommonActionResultDto.CreateError(ex.Message);
+        }
+    }
+
+    public async Task<CommonActionResultDto> RemoveGoodsReceiptFromPurchaseOrderAsync(RemoveGoodsReceiptFromPurchaseOrderAppDto dto)
+    {
+        try
+        {
+            await _purchaseOrderManager.RemoveGoodsReceiptFromPurchaseOrderAsync(
+                new RemoveGoodsReceiptFromPurchaseOrderDto(dto.Id)).ConfigureAwait(false);
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
+        }
+        catch (Exception ex)
+        {
+            return CommonActionResultDto.CreateError(ex.Message);
+        }
     }
 
     public async Task<CommonActionResultDto> SubmitsPurchaseOrderAsync(Guid id)

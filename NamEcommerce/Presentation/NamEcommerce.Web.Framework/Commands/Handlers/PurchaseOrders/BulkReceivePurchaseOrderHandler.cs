@@ -1,48 +1,75 @@
 using MediatR;
-using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
-using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.PurchaseOrders;
 
 public sealed class BulkReceivePurchaseOrderHandler : IRequestHandler<BulkReceivePurchaseOrderCommand, BulkReceivePurchaseOrderResultModel>
 {
     private readonly IPurchaseOrderAppService _purchaseOrderAppService;
-    private readonly ICurrentUserService _currentUserService;
+    private readonly ISender _sender;
 
-    public BulkReceivePurchaseOrderHandler(IPurchaseOrderAppService appService, ICurrentUserService currentUserService)
+    public BulkReceivePurchaseOrderHandler(IPurchaseOrderAppService appService, ISender sender)
     {
         _purchaseOrderAppService = appService;
-        _currentUserService = currentUserService;
+        _sender = sender;
     }
 
     public async Task<BulkReceivePurchaseOrderResultModel> Handle(BulkReceivePurchaseOrderCommand request, CancellationToken cancellationToken)
     {
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
-
-        var dto = new BulkReceiveGoodsAppDto(request.PurchaseOrderId)
+        var createdGoodsReceiptIds = new List<Guid>();
+        foreach (var item in request.Items)
         {
-            ReceivedByUserId = currentUser?.Id,
-            AdditionalShipping = request.AdditionalShipping,
-            AdditionalTax = request.AdditionalTax,
-            Items = request.Items.Select(i => new BulkReceiveItemAppDto
+            var receiveResult = await _sender.Send(new ReceivePurchaseOrderItemCommand
             {
-                ItemId = i.ItemId,
-                Quantity = i.Quantity,
-                WarehouseId = i.WarehouseId,
-                ActualUnitCost = i.ActualUnitCost
-            }).ToList()
-        };
+                PurchaseOrderId = request.PurchaseOrderId,
+                PurchaseOrderItemId = item.ItemId,
+                ReceivedQuantity = item.Quantity,
+                WarehouseId = item.WarehouseId,
+                ActualUnitCost = item.ActualUnitCost,
+                DirectShipOrderItemId = item.DirectShipOrderItemId,
+                DirectShipAddress = item.DirectShipAddress,
+                DirectShipContactName = item.DirectShipContactName,
+                DirectShipContactPhone = item.DirectShipContactPhone
+            }, cancellationToken).ConfigureAwait(false);
 
-        var result = await _purchaseOrderAppService.BulkReceiveAsync(dto).ConfigureAwait(false);
+            if (!receiveResult.Success)
+            {
+                return new BulkReceivePurchaseOrderResultModel
+                {
+                    Success = false,
+                    ErrorMessage = receiveResult.ErrorMessage,
+                    CreatedGoodsReceiptIds = createdGoodsReceiptIds
+                };
+            }
+
+            if (receiveResult.CreatedGoodsReceiptId.HasValue)
+                createdGoodsReceiptIds.Add(receiveResult.CreatedGoodsReceiptId.Value);
+        }
+
+        if (request.AdditionalShipping > 0 || request.AdditionalTax > 0)
+        {
+            var feeResult = await _purchaseOrderAppService.AddReceiptFeesAsync(
+                request.PurchaseOrderId,
+                request.AdditionalShipping,
+                request.AdditionalTax).ConfigureAwait(false);
+
+            if (!feeResult.Success)
+            {
+                return new BulkReceivePurchaseOrderResultModel
+                {
+                    Success = false,
+                    ErrorMessage = feeResult.ErrorMessage,
+                    CreatedGoodsReceiptIds = createdGoodsReceiptIds
+                };
+            }
+        }
 
         return new BulkReceivePurchaseOrderResultModel
         {
-            Success = result.Success,
-            ErrorMessage = result.ErrorMessage,
-            CreatedGoodsReceiptIds = result.CreatedGoodsReceiptIds
+            Success = true,
+            CreatedGoodsReceiptIds = createdGoodsReceiptIds
         };
     }
 }
