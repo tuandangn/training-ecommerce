@@ -852,20 +852,18 @@
         </div>
     </div>
 
-    @{
-        var dsPerItem = new System.Collections.Generic.Dictionary<string, object>();
-        foreach (var kvp in Model.DirectShipAllocationsPerItem)
-        {
-            var activeDs = kvp.Value
-                .Where(a => a.Status != 5 && (a.AllocatedQuantity - a.ReceivedQuantity) > 0m)
-                .Select(a => new {
-                    remaining = a.AllocatedQuantity - a.ReceivedQuantity,
-                    label = !string.IsNullOrEmpty(a.DirectShipContactName) ? a.DirectShipContactName : a.DirectShipAddress
-                })
-                .ToList();
-            if (activeDs.Count > 0)
-                dsPerItem[kvp.Key.ToString()] = activeDs;
-        }
+    var dsPerItem = new System.Collections.Generic.Dictionary<string, object>();
+    foreach (var kvp in Model.DirectShipAllocationsPerItem)
+    {
+        var activeDs = kvp.Value
+            .Where(a => a.Status != 5 && (a.AllocatedQuantity - a.ReceivedQuantity) > 0m)
+            .Select(a => new {
+                remaining = a.AllocatedQuantity - a.ReceivedQuantity,
+                label = !string.IsNullOrEmpty(a.DirectShipContactName) ? a.DirectShipContactName : a.DirectShipAddress
+            })
+            .ToList();
+        if (activeDs.Count > 0)
+            dsPerItem[kvp.Key.ToString()] = activeDs;
     }
     <script type="application/json" id="receiveItemDsData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(dsPerItem))</script>
 

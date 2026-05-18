@@ -96,6 +96,11 @@ using NamEcommerce.Application.Services.StockAdjustment;
 using NamEcommerce.Application.Contracts.StockAdjustment;
 using NamEcommerce.Domain.Shared.Services.StockAdjustment;
 using NamEcommerce.Domain.Services.StockAdjustment;
+using NamEcommerce.Web.Services.StockTransfer;
+using NamEcommerce.Application.Services.StockTransfer;
+using NamEcommerce.Application.Contracts.StockTransfer;
+using NamEcommerce.Domain.Shared.Services.StockTransfer;
+using NamEcommerce.Domain.Services.StockTransfer;
 using NamEcommerce.Web.Services.Debts;
 
 //services
@@ -170,6 +175,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IVendorReturnManager, VendorReturnManager>();
     services.AddScoped<ICustomerRefundManager, CustomerRefundManager>();
     services.AddScoped<IStockAdjustmentNoteManager, StockAdjustmentNoteManager>();
+    services.AddScoped<IStockTransferNoteManager, StockTransferNoteManager>();
 
     services.AddScoped<ISecurityService, SecurityService>();
     services.AddScoped<ICurrentUserAccessor, CurrentUserAccessor>();
@@ -204,6 +210,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IVendorReturnAppService, VendorReturnAppService>();
     services.AddScoped<ICustomerRefundAppService, CustomerRefundAppService>();
     services.AddScoped<IStockAdjustmentNoteAppService, StockAdjustmentNoteAppService>();
+    services.AddScoped<IStockTransferNoteAppService, StockTransferNoteAppService>();
 
     builder.Services.AddHttpClient<IN8nAppService, N8nAppService>(client =>
     {
@@ -229,6 +236,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IVendorReturnModelFactory, VendorReturnModelFactory>();
     services.AddScoped<ICustomerRefundModelFactory, CustomerRefundModelFactory>();
     services.AddScoped<IStockAdjustmentNoteModelFactory, StockAdjustmentNoteModelFactory>();
+    services.AddScoped<IStockTransferNoteModelFactory, StockTransferNoteModelFactory>();
 
     services.AddMediatR(config =>
     {
