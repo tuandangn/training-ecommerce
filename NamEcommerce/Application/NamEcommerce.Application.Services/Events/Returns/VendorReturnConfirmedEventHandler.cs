@@ -1,7 +1,7 @@
 using MediatR;
-using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
+using NamEcommerce.Application.Contracts.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.Returns;
-using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Returns;
 
 namespace NamEcommerce.Application.Services.Events.Returns;
@@ -18,10 +18,10 @@ namespace NamEcommerce.Application.Services.Events.Returns;
 /// </summary>
 public sealed class VendorReturnConfirmedEventHandler(
     IVendorReturnManager vendorReturnManager,
-    IDeliveryNoteManager deliveryNoteManager) : INotificationHandler<VendorReturnConfirmed>
+    IDeliveryNoteAppService deliveryNoteAppService) : INotificationHandler<VendorReturnConfirmed>
 {
     private readonly IVendorReturnManager _vendorReturnManager = vendorReturnManager;
-    private readonly IDeliveryNoteManager _deliveryNoteManager = deliveryNoteManager;
+    private readonly IDeliveryNoteAppService _deliveryNoteAppService = deliveryNoteAppService;
 
     public async Task Handle(VendorReturnConfirmed notification, CancellationToken cancellationToken)
     {
@@ -34,12 +34,12 @@ public sealed class VendorReturnConfirmedEventHandler(
         if (vendorReturn.GeneratedDeliveryNoteId.HasValue) return;
 
         // 1. Tạo DeliveryNote xuất kho (SourceType=ToVendorReturn, Status=Delivered, trừ tồn inline)
-        var deliveryNoteId = await _deliveryNoteManager.CreateAsDeliveredAsync(
-            new CreateDeliveryNoteFromVendorReturnDto
+        var deliveryNoteId = await _deliveryNoteAppService.CreateAsDeliveredFromVendorReturnAsync(
+            new CreateDeliveryNoteFromVendorReturnAppDto
             {
                 VendorReturnId = notification.VendorReturnId,
                 WarehouseId = notification.WarehouseId,
-                Items = vendorReturn.Items.Select(i => new CreateDeliveryNoteFromVendorReturnItemDto
+                Items = vendorReturn.Items.Select(i => new CreateDeliveryNoteFromVendorReturnItemAppDto
                 {
                     ProductId = i.ProductId,
                     ProductName = i.ProductName,
