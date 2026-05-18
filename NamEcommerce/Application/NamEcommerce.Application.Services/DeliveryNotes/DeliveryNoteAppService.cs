@@ -48,6 +48,24 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
         return result.ToDto();
     }
 
+    public async Task<Guid> CreateAsDeliveredFromVendorReturnAsync(CreateDeliveryNoteFromVendorReturnAppDto dto)
+    {
+        var domainDto = new CreateDeliveryNoteFromVendorReturnDto
+        {
+            VendorReturnId = dto.VendorReturnId,
+            WarehouseId = dto.WarehouseId,
+            Items = dto.Items.Select(i => new CreateDeliveryNoteFromVendorReturnItemDto
+            {
+                ProductId = i.ProductId,
+                ProductName = i.ProductName,
+                Quantity = i.Quantity,
+                UnitCost = i.UnitCost
+            })
+        };
+
+        return await _deliveryNoteManager.CreateAsDeliveredAsync(domainDto).ConfigureAwait(false);
+    }
+
     public async Task CancelAsync(Guid id)
     {
         await _deliveryNoteManager.CancelAsync(id).ConfigureAwait(false);

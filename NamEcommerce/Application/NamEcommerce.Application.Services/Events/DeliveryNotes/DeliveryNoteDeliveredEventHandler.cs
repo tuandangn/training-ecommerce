@@ -1,9 +1,9 @@
 using MediatR;
+using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Debts;
-using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 
 namespace NamEcommerce.Application.Services.Events.DeliveryNotes;
 
@@ -12,19 +12,19 @@ namespace NamEcommerce.Application.Services.Events.DeliveryNotes;
 /// </summary>
 public sealed class DeliveryNoteDeliveredEventHandler(
     ICustomerDebtManager debtManager,
-    IDeliveryNoteManager deliveryNoteManager) : INotificationHandler<DeliveryNoteDelivered>
+    IDeliveryNoteAppService deliveryNoteAppService) : INotificationHandler<DeliveryNoteDelivered>
 {
     private readonly ICustomerDebtManager _debtManager = debtManager;
-    private readonly IDeliveryNoteManager _deliveryNoteManager = deliveryNoteManager;
+    private readonly IDeliveryNoteAppService _deliveryNoteAppService = deliveryNoteAppService;
 
     public async Task Handle(DeliveryNoteDelivered notification, CancellationToken cancellationToken)
     {
         // Event đã carry đủ thông tin, vẫn fetch lại để đảm bảo phiếu vẫn ở trạng thái Delivered.
-        var deliveryNote = await _deliveryNoteManager.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
-        if (deliveryNote == null) return;
+        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null) return;
 
         // Guard: phiếu xuất do trả NCC không sinh công nợ khách hàng.
-        if (deliveryNote.SourceType == DeliveryNoteSourceType.ToVendorReturn) return;
+        if (deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn) return;
 
         var createDebtDto = new CreateCustomerDebtDto
         {

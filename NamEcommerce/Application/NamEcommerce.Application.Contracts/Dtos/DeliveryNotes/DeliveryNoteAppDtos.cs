@@ -113,3 +113,20 @@ public sealed record MarkDeliveryNoteDeliveredResultAppDto
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
 }
+
+[Serializable]
+public sealed record CreateDeliveryNoteFromVendorReturnAppDto
+{
+    public required Guid VendorReturnId { get; init; }
+    public required Guid WarehouseId { get; init; }
+    public required IEnumerable<CreateDeliveryNoteFromVendorReturnItemAppDto> Items { get; init; }
+}
+
+[Serializable]
+public sealed record CreateDeliveryNoteFromVendorReturnItemAppDto
+{
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public required decimal Quantity { get; init; }
+    public required decimal UnitCost { get; init; }
+}

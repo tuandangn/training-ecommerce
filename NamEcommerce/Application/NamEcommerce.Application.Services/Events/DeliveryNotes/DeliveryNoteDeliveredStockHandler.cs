@@ -1,7 +1,7 @@
 using MediatR;
+using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
-using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Application.Services.Events.DeliveryNotes;
@@ -13,16 +13,16 @@ namespace NamEcommerce.Application.Services.Events.DeliveryNotes;
 /// (xem <see cref="DeliveryNoteDeliveredEventHandler"/>).
 /// </summary>
 public sealed class DeliveryNoteDeliveredStockHandler(
-    IDeliveryNoteManager deliveryNoteManager,
+    IDeliveryNoteAppService deliveryNoteAppService,
     IInventoryStockManager stockManager) : INotificationHandler<DeliveryNoteDelivered>
 {
     public async Task Handle(DeliveryNoteDelivered notification, CancellationToken cancellationToken)
     {
-        var deliveryNote = await deliveryNoteManager.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
+        var deliveryNote = await deliveryNoteAppService.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null) return;
 
         var releaseReservedStock = deliveryNote.OrderId != Guid.Empty
-            && deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer;
+            && deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToCustomer;
 
         foreach (var item in deliveryNote.Items)
         {
