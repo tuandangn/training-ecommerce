@@ -720,15 +720,13 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         foreach (var line in dto.Lines)
         {
-            var result = await ReceiveSingleItemAsync(
-                purchaseOrder,
-                new ReceivedGoodsForItemDto(purchaseOrder.Id, line.PurchaseOrderItemId)
-                {
-                    ReceivedByUserId = dto.ReceivedByUserId,
-                    ReceivedQuantity = line.ReceivedQuantity,
-                    WarehouseId = line.WarehouseId,
-                    ActualUnitCost = line.ActualUnitCost
-                }).ConfigureAwait(false);
+            var result = await ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, line.PurchaseOrderItemId)
+            {
+                ReceivedByUserId = dto.ReceivedByUserId,
+                ReceivedQuantity = line.ReceivedQuantity,
+                WarehouseId = line.WarehouseId,
+                ActualUnitCost = line.ActualUnitCost
+            }).ConfigureAwait(false);
 
             if (result.CreatedGoodsReceiptId.HasValue)
                 createdReceiptIds.Add(result.CreatedGoodsReceiptId.Value);

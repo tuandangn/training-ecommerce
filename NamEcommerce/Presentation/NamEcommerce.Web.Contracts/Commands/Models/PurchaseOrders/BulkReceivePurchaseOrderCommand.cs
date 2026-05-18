@@ -23,4 +23,8 @@ public sealed class BulkReceiveLineCommand
     public required decimal Quantity { get; init; }
     public required Guid? WarehouseId { get; init; }
     public decimal? ActualUnitCost { get; init; }
+    public Guid? DirectShipOrderItemId { get; init; }
+    public string? DirectShipAddress { get; init; }
+    public string? DirectShipContactName { get; init; }
+    public string? DirectShipContactPhone { get; init; }
 }

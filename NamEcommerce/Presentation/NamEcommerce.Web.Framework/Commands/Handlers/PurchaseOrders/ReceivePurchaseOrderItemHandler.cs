@@ -11,11 +11,13 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
 {
     private readonly IPurchaseOrderAppService _purchaseOrderAppService;
     private readonly ICurrentUserService _currentUserService;
+    private readonly ISender _sender;
 
-    public ReceivePurchaseOrderItemHandler(IPurchaseOrderAppService appService, ICurrentUserService currentUserService)
+    public ReceivePurchaseOrderItemHandler(IPurchaseOrderAppService appService, ICurrentUserService currentUserService, ISender sender)
     {
         _purchaseOrderAppService = appService;
         _currentUserService = currentUserService;
+        _sender = sender;
     }
 
     public async Task<ReceivePurchaseOrderItemResultModel> Handle(ReceivePurchaseOrderItemCommand request, CancellationToken cancellationToken)
@@ -27,14 +29,43 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
             WarehouseId = request.WarehouseId,
             ReceivedByUserId = currentUser?.Id,
             SellingPrice = request.SellingPrice,
+            ActualUnitCost = request.ActualUnitCost,
             OversupplyAction = request.OversupplyAction
         }).ConfigureAwait(false);
+
+        if (result.Success
+            && request.DirectShipOrderItemId.HasValue
+            && request.DirectShipOrderItemId.Value != Guid.Empty
+            && !string.IsNullOrWhiteSpace(request.DirectShipAddress))
+        {
+            var allocationResult = await _sender.Send(new AllocatePoItemToOrderCommand
+            {
+                PurchaseOrderItemId = request.PurchaseOrderItemId,
+                OrderItemId = request.DirectShipOrderItemId.Value,
+                Quantity = result.ActualReceivedQuantity,
+                DirectShipAddress = request.DirectShipAddress,
+                DirectShipContactName = request.DirectShipContactName,
+                DirectShipContactPhone = request.DirectShipContactPhone
+            }, cancellationToken).ConfigureAwait(false);
+
+            if (!allocationResult.Success)
+            {
+                return new ReceivePurchaseOrderItemResultModel
+                {
+                    Success = false,
+                    ErrorMessage = allocationResult.ErrorMessage,
+                    ActualReceivedQuantity = result.ActualReceivedQuantity,
+                    CreatedGoodsReceiptId = result.CreatedGoodsReceiptId
+                };
+            }
+        }
 
         return new ReceivePurchaseOrderItemResultModel
         {
             Success = result.Success,
             ErrorMessage = result.ErrorMessage,
-            ActualReceivedQuantity = result.ActualReceivedQuantity
+            ActualReceivedQuantity = result.ActualReceivedQuantity,
+            CreatedGoodsReceiptId = result.CreatedGoodsReceiptId
         };
     }
 }

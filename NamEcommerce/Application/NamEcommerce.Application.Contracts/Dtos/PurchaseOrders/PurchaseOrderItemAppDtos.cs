@@ -138,9 +138,10 @@ public sealed record AllocatePoItemToOrderAppDto
 public sealed record ReceiveItemResultAppDto : CommonActionResultDto
 {
     public decimal ActualReceivedQuantity { get; init; }
+    public Guid? CreatedGoodsReceiptId { get; init; }
 
-    public static ReceiveItemResultAppDto CreateSuccess(decimal actualQty)
-        => new() { Success = true, ActualReceivedQuantity = actualQty };
+    public static ReceiveItemResultAppDto CreateSuccess(decimal actualQty, Guid? createdGoodsReceiptId)
+        => new() { Success = true, ActualReceivedQuantity = actualQty, CreatedGoodsReceiptId = createdGoodsReceiptId };
 
     public static new ReceiveItemResultAppDto CreateError(string? errorMessage)
         => new() { Success = false, ErrorMessage = errorMessage };

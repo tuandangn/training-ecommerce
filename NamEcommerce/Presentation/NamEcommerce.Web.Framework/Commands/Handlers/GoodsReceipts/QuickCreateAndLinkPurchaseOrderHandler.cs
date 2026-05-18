@@ -138,10 +138,9 @@ public sealed class QuickCreateAndLinkPurchaseOrderHandler
             };
         }
 
-        var linkResult = await _goodsReceiptAppService
-            .SetGoodsReceiptToPurchaseOrder(
-                new SetGoodsReceiptToPurchaseOrderAppDto(request.GoodsReceiptId, purchaseOrderId))
-            .ConfigureAwait(false);
+        var linkResult = await _sender.Send(
+            new SetGoodsReceiptToPurchaseOrderCommand(request.GoodsReceiptId, purchaseOrderId),
+            cancellationToken).ConfigureAwait(false);
 
         return new QuickCreateAndLinkPurchaseOrderResultModel
         {
