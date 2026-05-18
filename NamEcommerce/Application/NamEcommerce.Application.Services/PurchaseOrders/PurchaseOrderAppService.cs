@@ -14,7 +14,6 @@ using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
-using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
 
