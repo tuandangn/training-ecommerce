@@ -1,0 +1,107 @@
+@using NamEcommerce.Domain.Shared.Enums.StockTransfer
+@model NamEcommerce.Web.Contracts.Models.StockTransfer.StockTransferNoteListModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Phiếu chuyển kho";
+}
+@section TitleSection {
+    <h1 class="topbar-page-title">Phiếu chuyển kho</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Phiếu chuyển kho</li>
+            </ol>
+        </nav>
+    </div>
+}
+<div class="content-card">
+    <div class="action-toolbar">
+        <div class="d-flex gap-2 align-items-center flex-wrap"></div>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Tạo phiếu chuyển kho
+        </a>
+    </div>
+    <div class="content-card-body-flush">
+        <div class="table-responsive">
+            <table class="table data-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width:160px">Mã phiếu</th>
+                        <th>Kho nguồn</th>
+                        <th>Kho đích</th>
+                        <th class="text-center" style="width:100px">Số mặt hàng</th>
+                        <th class="text-center" style="width:130px">Trạng thái</th>
+                        <th class="text-center" style="width:120px">Ngày tạo</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.TotalCount > 0)
+                    {
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr class="align-middle">
+                                <td class="ps-4">
+                                    <a asp-action="Details" asp-route-id="@item.Id"
+                                       class="fw-semibold text-decoration-none">
+                                        @item.Code
+                                    </a>
+                                </td>
+                                <td class="text-muted small">@item.FromWarehouseName</td>
+                                <td class="text-muted small">@item.ToWarehouseName</td>
+                                <td class="text-center text-muted">@item.ItemCount</td>
+                                <td class="text-center">
+                                    @{
+                                        var (badgeClass, badgeText) = (StockTransferStatus)item.Status switch
+                                        {
+                                            StockTransferStatus.Draft => ("bg-secondary", "Bản nháp"),
+                                            StockTransferStatus.Approved => ("bg-success", "Đã duyệt"),
+                                            StockTransferStatus.Cancelled => ("bg-danger", "Đã huỷ"),
+                                            _ => ("bg-secondary", "—")
+                                        };
+                                    }
+                                    <span class="badge @badgeClass">@badgeText</span>
+                                </td>
+                                <td class="text-center text-muted small">@item.CreatedOnUtc.ToString(ViewConstants.DefaultDateFormat)</td>
+                                <td class="text-end pe-3">
+                                    <a class="btn btn-sm btn-light text-primary"
+                                       asp-action="Details" asp-route-id="@item.Id">Xem</a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <span class="text-muted">Chưa có phiếu chuyển kho nào</span>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (Model.TotalCount > Model.PageSize)
+        {
+            <div class="d-flex justify-content-center py-3">
+                @if (Model.PageNumber > 1)
+                {
+                    <a asp-action="List" asp-route-pageNumber="@(Model.PageNumber - 1)"
+                       class="btn btn-sm btn-outline-secondary me-2">
+                        <i class="bi bi-chevron-left"></i> Trước
+                    </a>
+                }
+                <span class="btn btn-sm btn-light disabled">Trang @Model.PageNumber</span>
+                @if (Model.PageNumber * Model.PageSize < Model.TotalCount)
+                {
+                    <a asp-action="List" asp-route-pageNumber="@(Model.PageNumber + 1)"
+                       class="btn btn-sm btn-outline-secondary ms-2">
+                        Sau <i class="bi bi-chevron-right"></i>
+                    </a>
+                }
+            </div>
+        }
+    </div>
+</div>
