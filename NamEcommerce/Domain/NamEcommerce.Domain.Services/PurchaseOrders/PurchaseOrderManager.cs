@@ -1,7 +1,10 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.Debts;
+using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
+using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
@@ -10,10 +13,14 @@ using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Helpers;
+using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Users;
@@ -28,15 +35,26 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private readonly IEntityDataReader<Warehouse> _warehouseOrderDataReader;
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IGoodsReceiptManager _goodsReceiptManager;
+    private readonly IRepository<GoodsReceipt> _goodsReceiptRepository;
+    private readonly IEntityDataReader<GoodsReceipt> _goodsReceiptDataReader;
+    private readonly IEntityDataReader<VendorReturn> _vendorReturnReader;
+    private readonly IEntityDataReader<VendorDebt> _vendorDebtReader;
     private readonly IPurchaseOrderAllocationManager _purchaseOrderAllocationManager;
     private readonly IDirectShipManager _directShipManager;
+    private readonly IVendorDebtManager _vendorDebtManager;
     private readonly ICurrentUserAccessor _currentUserAccessor;
 
     public PurchaseOrderManager(IRepository<PurchaseOrder> poRepository, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IEntityDataReader<Vendor> vendorOrderDataReader, IEntityDataReader<Warehouse> warehouseOrderDataReader,
         IEntityDataReader<Product> productDataReader,
-        IGoodsReceiptManager goodsReceiptManager, IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
+        IGoodsReceiptManager goodsReceiptManager,
+        IRepository<GoodsReceipt> goodsReceiptRepository,
+        IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
+        IEntityDataReader<VendorReturn> vendorReturnReader,
+        IEntityDataReader<VendorDebt> vendorDebtReader,
+        IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
         IDirectShipManager directShipManager,
+        IVendorDebtManager vendorDebtManager,
         ICurrentUserAccessor currentUserAccessor)
     {
         _purchaseOrderRepository = poRepository;
@@ -45,8 +63,13 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         _warehouseOrderDataReader = warehouseOrderDataReader;
         _productDataReader = productDataReader;
         _goodsReceiptManager = goodsReceiptManager;
+        _goodsReceiptRepository = goodsReceiptRepository;
+        _goodsReceiptDataReader = goodsReceiptDataReader;
+        _vendorReturnReader = vendorReturnReader;
+        _vendorDebtReader = vendorDebtReader;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
         _directShipManager = directShipManager;
+        _vendorDebtManager = vendorDebtManager;
         _currentUserAccessor = currentUserAccessor;
     }
 
@@ -139,6 +162,26 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         public required PurchaseOrderItem PurchaseOrderItem { get; init; }
         public required Guid ProductId { get; init; }
         public required decimal UnitCost { get; init; }
+        public decimal RemainingQuantity { get; set; }
+    }
+
+    private sealed record GoodsReceiptBucket(Guid ProductId, decimal? UnitCost, IList<GoodsReceiptReceivedItem> ReceivedItems)
+    {
+        public decimal TotalReceivedQuantity { get; set; }
+    }
+
+    private sealed record GoodsReceiptReceivedItem(Guid ItemId)
+    {
+        public decimal ReceivedQuantity { get; set; }
+    }
+
+    private sealed record PurchaseOrderBucket(Guid ProductId, decimal UnitCost, IList<PurchaseOrderItemRemainder> Participants)
+    {
+        public decimal TotalRemainingQuantity { get; set; }
+    }
+
+    private sealed record PurchaseOrderItemRemainder(Guid ItemId)
+    {
         public decimal RemainingQuantity { get; set; }
     }
 
@@ -698,6 +741,131 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         };
     }
 
+    public async Task SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false)
+            ?? throw new GoodsReceiptIsNotFoundException(dto.Id);
+
+        if (goodsReceipt.PurchaseOrderId.HasValue)
+            throw new GoodsReceiptCannotSetToPurchaseOrderException();
+
+        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
+            ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
+
+        if (!purchaseOrder.CanReceiveGoods())
+            throw new PurchaseOrderCannotReceiveGoodsException();
+
+        var grBuckets = BuildGoodsReceiptBuckets(goodsReceipt);
+        var poBuckets = BuildPurchaseOrderBuckets(purchaseOrder);
+        var resolvePoItems = new List<(Guid itemId, decimal qty)>();
+        var needUpdateUnitCostItems = new List<(Guid grItemId, decimal qty, decimal unitCost)>();
+
+        ResolveCostedItems(grBuckets, poBuckets, resolvePoItems);
+        ResolveUncostedItems(grBuckets, poBuckets, resolvePoItems, needUpdateUnitCostItems);
+        ApplyCostAssignmentsAndSplit(goodsReceipt, purchaseOrder.Id, needUpdateUnitCostItems);
+
+        goodsReceipt.SetToPurchaseOrder(purchaseOrder.Id, purchaseOrder.Code);
+        await _goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
+
+        foreach (var (itemId, qty) in resolvePoItems)
+        {
+            var purchaseOrderItem = purchaseOrder.Items.First(item => item.Id == itemId);
+            purchaseOrderItem.AddQuantityReceived(qty);
+        }
+
+        purchaseOrder.VerifyStatus();
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+
+        foreach (var itemId in resolvePoItems.Select(item => item.itemId).Distinct())
+        {
+            var purchaseOrderItem = purchaseOrder.Items.First(item => item.Id == itemId);
+            var distributeResult = await _purchaseOrderAllocationManager
+                .SyncReceivedForPurchaseOrderItemAsync(itemId, purchaseOrderItem.QuantityReceived)
+                .ConfigureAwait(false);
+
+            var sourceWarehouseId = goodsReceipt.Items
+                .FirstOrDefault(item => item.ProductId == purchaseOrderItem.ProductId && item.WarehouseId.HasValue)
+                ?.WarehouseId;
+            if (!sourceWarehouseId.HasValue && distributeResult.DirectShipReceipts.Count > 0)
+                throw new WarehouseIsRequiredException();
+
+            foreach (var receipt in distributeResult.DirectShipReceipts)
+            {
+                await _directShipManager.OnAllocationReceivedAsync(
+                    receipt.AllocationId,
+                    receipt.Quantity,
+                    goodsReceipt.Id,
+                    sourceWarehouseId!.Value).ConfigureAwait(false);
+            }
+        }
+    }
+
+    public async Task RemoveGoodsReceiptFromPurchaseOrderAsync(RemoveGoodsReceiptFromPurchaseOrderDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
+        if (goodsReceipt is null)
+            throw new GoodsReceiptIsNotFoundException(dto.Id);
+
+        if (!goodsReceipt.PurchaseOrderId.HasValue)
+            return;
+
+        var purchaseOrderId = goodsReceipt.PurchaseOrderId.Value;
+        var hasConfirmedReturns = _vendorReturnReader.DataSource
+            .Any(r => r.GoodsReceiptId == dto.Id && r.Status == VendorReturnStatus.Confirmed);
+        if (hasConfirmedReturns)
+            throw new GoodsReceiptHasConfirmedReturnsException(dto.Id);
+
+        var linkedDebt = _vendorDebtReader.DataSource
+            .FirstOrDefault(d => d.GoodsReceiptId == dto.Id);
+        if (linkedDebt is not null && (linkedDebt.PaidAmount > 0 || linkedDebt.RemainingAmount != linkedDebt.TotalAmount))
+            throw new GoodsReceiptCannotDeleteDueToTouchedDebtException(dto.Id);
+
+        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
+
+        if (purchaseOrder.Status != PurchaseOrderStatus.Approved && purchaseOrder.Status != PurchaseOrderStatus.Receiving)
+            throw new PurchaseOrderCannotReceiveGoodsException();
+
+        var revertByProductCost = goodsReceipt.Items
+            .GroupBy(i => (i.ProductId, i.UnitCost))
+            .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
+
+        foreach (var ((productId, unitCost), totalQty) in revertByProductCost)
+        {
+            var remaining = totalQty;
+            var candidatePoItems = purchaseOrder.Items
+                .Where(po => po.ProductId == productId
+                    && (!unitCost.HasValue || po.UnitCost == unitCost.Value)
+                    && po.QuantityReceived > 0)
+                .OrderByDescending(po => po.QuantityReceived)
+                .ToList();
+
+            foreach (var poItem in candidatePoItems)
+            {
+                if (remaining <= 0) break;
+                var revertQty = Math.Min(poItem.QuantityReceived, remaining);
+                poItem.RevertQuantityReceived(revertQty);
+                remaining -= revertQty;
+            }
+        }
+
+        if (linkedDebt is not null)
+            await _vendorDebtManager.DeleteDebtFromGoodsReceiptAsync(dto.Id).ConfigureAwait(false);
+
+        goodsReceipt.RemoveFromPurchaseOrder();
+        await _goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
+
+        purchaseOrder.RevertReceivingIfEmpty();
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+    }
+
     private void EnsureDirectShipTransitWarehouseConfigured()
     {
         var transitWarehouse = _warehouseOrderDataReader.DataSource
@@ -786,6 +954,128 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             return null;
 
         return purchaseOrder.ToDto();
+    }
+
+    private static List<GoodsReceiptBucket> BuildGoodsReceiptBuckets(GoodsReceipt goodsReceipt)
+        => goodsReceipt.Items
+            .GroupBy(
+                item => (item.ProductId, item.UnitCost),
+                item => (receivingQuantity: item.Quantity, item.Id),
+                (key, infos) => new GoodsReceiptBucket(
+                    key.ProductId, key.UnitCost,
+                    infos.Select(info => new GoodsReceiptReceivedItem(info.Id) { ReceivedQuantity = info.receivingQuantity }).ToList())
+                {
+                    TotalReceivedQuantity = infos.Sum(info => info.receivingQuantity)
+                })
+            .ToList();
+
+    private static List<PurchaseOrderBucket> BuildPurchaseOrderBuckets(PurchaseOrder purchaseOrder)
+        => purchaseOrder.Items
+            .Where(item => item.QuantityOrdered > item.QuantityReceived)
+            .GroupBy(
+                item => (item.ProductId, item.UnitCost),
+                item => (remainQuantity: item.QuantityOrdered - item.QuantityReceived, item.Id),
+                (key, infos) => new PurchaseOrderBucket(key.ProductId, key.UnitCost,
+                    infos.Select(info => new PurchaseOrderItemRemainder(info.Id) { RemainingQuantity = info.remainQuantity }).ToList())
+                {
+                    TotalRemainingQuantity = infos.Sum(info => info.remainQuantity)
+                })
+            .ToList();
+
+    private static void ResolveCostedItems(
+        List<GoodsReceiptBucket> grBuckets,
+        List<PurchaseOrderBucket> poBuckets,
+        List<(Guid itemId, decimal qty)> resolvePoItems)
+    {
+        foreach (var grBucket in grBuckets.Where(gr => gr.UnitCost.HasValue))
+        {
+            var poBucket = poBuckets.FirstOrDefault(po =>
+                po.ProductId == grBucket.ProductId && po.UnitCost == grBucket.UnitCost);
+
+            if (poBucket is null || poBucket.TotalRemainingQuantity < grBucket.TotalReceivedQuantity)
+                throw new GoodsReceiptItemCannotResolvedWhenSetToPurchaseOrderException(grBucket.ProductId, grBucket.TotalReceivedQuantity);
+
+            foreach (var participant in poBucket.Participants.Where(p => p.RemainingQuantity > 0))
+            {
+                if (grBucket.TotalReceivedQuantity <= 0) break;
+
+                var resolvedQty = Math.Min(participant.RemainingQuantity, grBucket.TotalReceivedQuantity);
+
+                participant.RemainingQuantity -= resolvedQty;
+                poBucket.TotalRemainingQuantity -= resolvedQty;
+                grBucket.TotalReceivedQuantity -= resolvedQty;
+
+                resolvePoItems.Add((participant.ItemId, resolvedQty));
+            }
+        }
+    }
+
+    private static void ResolveUncostedItems(
+        List<GoodsReceiptBucket> grBuckets,
+        List<PurchaseOrderBucket> poBuckets,
+        List<(Guid itemId, decimal qty)> resolvePoItems,
+        List<(Guid grItemId, decimal qty, decimal unitCost)> needUpdateUnitCostItems)
+    {
+        foreach (var grBucket in grBuckets.Where(gr => !gr.UnitCost.HasValue))
+        {
+            foreach (var receivedItem in grBucket.ReceivedItems.Where(ri => ri.ReceivedQuantity > 0))
+            {
+                var compatiblePos = poBuckets.Where(po => po.ProductId == grBucket.ProductId && po.TotalRemainingQuantity > 0);
+
+                foreach (var poBucket in compatiblePos)
+                {
+                    if (receivedItem.ReceivedQuantity <= 0) break;
+
+                    foreach (var participant in poBucket.Participants.Where(p => p.RemainingQuantity > 0))
+                    {
+                        if (receivedItem.ReceivedQuantity <= 0) break;
+
+                        var resolvedQty = Math.Min(participant.RemainingQuantity, receivedItem.ReceivedQuantity);
+
+                        receivedItem.ReceivedQuantity -= resolvedQty;
+                        participant.RemainingQuantity -= resolvedQty;
+                        poBucket.TotalRemainingQuantity -= resolvedQty;
+                        grBucket.TotalReceivedQuantity -= resolvedQty;
+
+                        needUpdateUnitCostItems.Add((receivedItem.ItemId, resolvedQty, poBucket.UnitCost));
+                        resolvePoItems.Add((participant.ItemId, resolvedQty));
+                    }
+                }
+            }
+
+            if (grBucket.TotalReceivedQuantity > 0)
+                throw new GoodsReceiptItemCannotResolvedWhenSetToPurchaseOrderException(grBucket.ProductId, grBucket.TotalReceivedQuantity);
+        }
+    }
+
+    private static void ApplyCostAssignmentsAndSplit(
+        GoodsReceipt goodsReceipt,
+        Guid purchaseOrderId,
+        List<(Guid grItemId, decimal qty, decimal unitCost)> assignments)
+    {
+        foreach (var group in assignments.GroupBy(i => i.grItemId))
+        {
+            var assignmentList = group.ToList();
+            var goodsReceiptItem = goodsReceipt.Items.First(item => item.Id == group.Key);
+
+            for (var i = 0; i < assignmentList.Count; i++)
+            {
+                var (originalItemId, qty, unitCost) = assignmentList[i];
+                var isLast = i == assignmentList.Count - 1;
+                if (isLast)
+                {
+                    goodsReceiptItem.SetUnitCost(unitCost);
+                }
+                else
+                {
+                    goodsReceipt.SplitToNewItemWithQuantity(originalItemId, qty);
+                    var newItem = goodsReceipt.Items.Last();
+                    newItem.SetUnitCost(unitCost);
+                    goodsReceipt.RaiseItemSplitOnLinking(
+                        purchaseOrderId, originalItemId, newItem.ProductId, qty, unitCost);
+                }
+            }
+        }
     }
 
     public async Task<bool> CanReceiveGoodsAsync(Guid purchaseOrderId)

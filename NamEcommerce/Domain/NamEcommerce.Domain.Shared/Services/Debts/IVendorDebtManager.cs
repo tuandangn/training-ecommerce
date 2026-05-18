@@ -48,6 +48,10 @@ public interface IVendorDebtManager
 
     Task DeleteDebtFromGoodsReceiptAsync(Guid goodsReceiptId);
 
+    Task ApplyReturnFromVendorReturnAsync(Guid returnId, Guid? goodsReceiptId, Guid? purchaseOrderId, decimal amount);
+
+    Task ReverseReturnFromVendorReturnAsync(Guid? goodsReceiptId, Guid? purchaseOrderId, decimal amount);
+
     Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId);
 
     Task<VendorDebtSummaryDto?> GetVendorDebtSummaryAsync(Guid vendorId);

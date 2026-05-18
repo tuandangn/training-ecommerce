@@ -1,15 +1,19 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Dtos.Finance;
 using NamEcommerce.Application.Contracts.Finance;
+using NamEcommerce.Web.Contracts.Commands.Models.Finance;
 
 namespace NamEcommerce.Web.Controllers;
 
 public class ExpenseController : BaseAuthorizedController
 {
+    private readonly IMediator _mediator;
     private readonly IExpenseAppService _expenseAppService;
 
-    public ExpenseController(IExpenseAppService expenseAppService)
+    public ExpenseController(IMediator mediator, IExpenseAppService expenseAppService)
     {
+        _mediator = mediator;
         _expenseAppService = expenseAppService;
     }
 
@@ -56,7 +60,14 @@ public class ExpenseController : BaseAuthorizedController
             return View(dto);
         }
 
-        var result = await _expenseAppService.CreateExpenseAsync(dto);
+        var result = await _mediator.Send(new CreateExpenseCommand
+        {
+            Title = dto.Title,
+            Description = dto.Description,
+            Amount = dto.Amount,
+            ExpenseType = dto.ExpenseType,
+            IncurredDate = dto.IncurredDate
+        }).ConfigureAwait(false);
         if (result.Success)
             return RedirectToAction(nameof(List));
 
@@ -98,7 +109,15 @@ public class ExpenseController : BaseAuthorizedController
             return View(dto);
         }
 
-        var result = await _expenseAppService.UpdateExpenseAsync(dto);
+        var result = await _mediator.Send(new UpdateExpenseCommand
+        {
+            Id = dto.Id,
+            Title = dto.Title,
+            Description = dto.Description,
+            Amount = dto.Amount,
+            ExpenseType = dto.ExpenseType,
+            IncurredDate = dto.IncurredDate
+        }).ConfigureAwait(false);
         if (result.Success)
             return RedirectToAction(nameof(List));
 
@@ -110,7 +129,7 @@ public class ExpenseController : BaseAuthorizedController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id)
     {
-        await _expenseAppService.DeleteExpenseAsync(id);
+        await _mediator.Send(new DeleteExpenseCommand(id)).ConfigureAwait(false);
         return RedirectToAction(nameof(List));
     }
 }

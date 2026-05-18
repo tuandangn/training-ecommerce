@@ -34,8 +34,6 @@ public interface IGoodsReceiptManager
     Task SetGoodsReceiptItemUnitCostAsync(SetGoodsReceiptItemUnitCostDto dto);
     Task<SetGoodsReceiptVendorResultDto> SetGoodsReceiptVendorAsync(SetGoodsReceiptVendorDto dto);
 
-    Task RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderDto dto);
-    Task SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderDto dto);
     Task<IList<SuggestedPurchaseOrderForGoodsReceiptDto>> GetSuggestedPurchaseOrdersAsync(Guid goodsReceiptId);
 
     Task<GoodsReceiptDto?> GetGoodsReceiptByIdAsync(Guid id);

@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 
@@ -25,6 +26,10 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task<ReceivedGoodsForItemResultDto> ReceiveItemsAsync(ReceivedGoodsForItemDto dto);
 
     Task<BulkReceiveGoodsForPurchaseOrderResultDto> BulkReceiveItemsAsync(BulkReceiveGoodsForPurchaseOrderDto dto);
+
+    Task SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderDto dto);
+
+    Task RemoveGoodsReceiptFromPurchaseOrderAsync(RemoveGoodsReceiptFromPurchaseOrderDto dto);
 
     Task AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping, decimal additionalTax);
 

@@ -369,6 +369,84 @@ public sealed class VendorDebtManager(
         await debtRepository.DeleteAsync(debt).ConfigureAwait(false);
     }
 
+    public async Task ApplyReturnFromVendorReturnAsync(Guid returnId, Guid? goodsReceiptId, Guid? purchaseOrderId, decimal amount)
+    {
+        if (amount <= 0) return;
+
+        var debtsQuery = debtReader.DataSource.AsQueryable();
+        if (goodsReceiptId.HasValue)
+            debtsQuery = debtsQuery.Where(d => d.GoodsReceiptId == goodsReceiptId.Value);
+        else if (purchaseOrderId.HasValue)
+            debtsQuery = debtsQuery.Where(d => d.PurchaseOrderId == purchaseOrderId.Value);
+        else
+            return;
+
+        var orderedDebts = debtsQuery.OrderBy(d => d.CreatedOnUtc).ToList();
+        if (!orderedDebts.Any()) return;
+
+        var touchedDebts = new List<VendorDebt>();
+        var remaining = amount;
+
+        foreach (var debt in orderedDebts)
+        {
+            if (remaining <= 0) break;
+            if (debt.RemainingAmount <= 0) continue;
+
+            var toApply = Math.Min(remaining, debt.RemainingAmount);
+            debt.ApplyReturn(toApply, returnId);
+            touchedDebts.Add(debt);
+            remaining -= toApply;
+        }
+
+        if (remaining > 0)
+        {
+            var first = orderedDebts[0];
+            first.ApplyReturn(remaining, returnId);
+            if (!touchedDebts.Contains(first))
+                touchedDebts.Add(first);
+        }
+
+        foreach (var debt in touchedDebts)
+            await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+    }
+
+    public async Task ReverseReturnFromVendorReturnAsync(Guid? goodsReceiptId, Guid? purchaseOrderId, decimal amount)
+    {
+        if (amount <= 0) return;
+
+        var debtsQuery = debtReader.DataSource.AsQueryable();
+        if (goodsReceiptId.HasValue)
+            debtsQuery = debtsQuery.Where(d => d.GoodsReceiptId == goodsReceiptId.Value);
+        else if (purchaseOrderId.HasValue)
+            debtsQuery = debtsQuery.Where(d => d.PurchaseOrderId == purchaseOrderId.Value);
+        else
+            return;
+
+        var orderedDebts = debtsQuery.OrderByDescending(d => d.CreatedOnUtc).ToList();
+        if (!orderedDebts.Any()) return;
+
+        var remaining = amount;
+        foreach (var debt in orderedDebts)
+        {
+            if (remaining <= 0) break;
+
+            var alreadyReturned = debt.TotalAmount - debt.PaidAmount - debt.RemainingAmount;
+            var toReverse = Math.Min(remaining, Math.Max(0, alreadyReturned));
+            if (toReverse <= 0) continue;
+
+            debt.ReverseReturn(toReverse);
+            remaining -= toReverse;
+            await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+        }
+
+        if (remaining > 0)
+        {
+            var first = orderedDebts[0];
+            first.ReverseReturn(remaining);
+            await debtRepository.UpdateAsync(first).ConfigureAwait(false);
+        }
+    }
+
     public async Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId)
     {
         var payment = await paymentReader.GetByIdAsync(paymentId).ConfigureAwait(false);
