@@ -6,6 +6,7 @@ using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Returns;
@@ -16,6 +17,7 @@ using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Services.Returns;
 
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
@@ -25,7 +27,7 @@ public sealed class DeliveryNoteManager(
     IRepository<DeliveryNote> deliveryNoteRepository,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<Order> orderReader,
-    IRepository<Order> orderRepository,
+    IOrderManager orderManager,
     IInventoryStockManager stockManager,
     IProductReservationManager productReservationManager,
     IEntityDataReader<CustomerReturn> customerReturnReader,
@@ -210,7 +212,7 @@ public sealed class DeliveryNoteManager(
             await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
 
             // 2. Mark related OrderItems as Delivered only when the full ordered quantity has been delivered.
-            var order = await orderRepository.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+            var order = await orderReader.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
             if (order is not null)
             {
                 var deliveredQuantitiesByOrderItem = deliveryNoteReader.DataSource
@@ -226,13 +228,14 @@ public sealed class DeliveryNoteManager(
                     var deliveredQuantity = deliveredQuantitiesByOrderItem.GetValueOrDefault(noteItem.OrderItemId);
                     if (orderItem != null && !orderItem.IsDelivered && deliveredQuantity >= orderItem.Quantity)
                     {
-                        order.MarkOrderItemDelivered(orderItem.Id, dto.PictureId);
+                        await orderManager.MarkOrderItemDeliveredAsync(new MarkOrderItemDeliveredDto
+                        {
+                            OrderId = order.Id,
+                            OrderItemId = orderItem.Id,
+                            PictureId = dto.PictureId
+                        }).ConfigureAwait(false);
                     }
                 }
-
-                // 3. Try to Auto Lock
-                order.TryAutoLock();
-                await orderRepository.UpdateAsync(order).ConfigureAwait(false);
             }
         }).ConfigureAwait(false);
     }
@@ -319,6 +322,33 @@ public sealed class DeliveryNoteManager(
         var inserted = await deliveryNoteRepository.InsertAsync(deliveryNote, ct).ConfigureAwait(false);
 
         return inserted.Id;
+    }
+
+    public async Task ConfirmDirectShipDeliveryAsync(
+        Guid id, DateTime confirmedAtUtc, string? note, CancellationToken ct = default)
+    {
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id, ct).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(id);
+
+        foreach (var item in deliveryNote.Items)
+        {
+            item.CostAtDispatch = await stockManager.GetAverageCostAsync(
+                item.ProductId, deliveryNote.WarehouseId).ConfigureAwait(false);
+        }
+
+        deliveryNote.ConfirmDirectShipDelivery(confirmedAtUtc, note);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote, ct).ConfigureAwait(false);
+    }
+
+    public async Task RejectDirectShipDeliveryAsync(Guid id, string reason, CancellationToken ct = default)
+    {
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id, ct).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(id);
+
+        deliveryNote.RejectDirectShipDelivery(reason);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote, ct).ConfigureAwait(false);
     }
 
     public async Task CancelAsync(Guid id)

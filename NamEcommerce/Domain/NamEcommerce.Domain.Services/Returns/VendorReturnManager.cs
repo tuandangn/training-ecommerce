@@ -14,6 +14,7 @@ using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Entities.Finance;
+using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Users;
 
@@ -27,12 +28,10 @@ public sealed class VendorReturnManager(
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Vendor> vendorDataReader,
     IEntityDataReader<Warehouse> warehouseDataReader,
-    IEntityDataReader<VendorDebt> vendorDebtDataReader,
-    IRepository<VendorDebt> vendorDebtRepository,
     IEntityDataReader<Expense> expenseDataReader,
-    IRepository<Expense> expenseRepository,
     IInventoryStockManager inventoryStockManager,
     IExpenseManager expenseManager,
+    IVendorDebtManager vendorDebtManager,
     ICurrentUserAccessor currentUserAccessor) : IVendorReturnManager
 {
     public async Task<VendorReturnDto> CreateAsync(CreateVendorReturnDto dto)
@@ -171,41 +170,15 @@ public sealed class VendorReturnManager(
         var totalReturnAmount = Math.Max(0,
             vendorReturn.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitCost) - vendorReturn.AdditionalCost);
         if (totalReturnAmount > 0)
-        {
-            var debtsQuery = vendorDebtDataReader.DataSource.AsQueryable();
-            if (vendorReturn.GoodsReceiptId.HasValue)
-                debtsQuery = debtsQuery.Where(d => d.GoodsReceiptId == vendorReturn.GoodsReceiptId.Value);
-            else if (vendorReturn.PurchaseOrderId.HasValue)
-                debtsQuery = debtsQuery.Where(d => d.PurchaseOrderId == vendorReturn.PurchaseOrderId.Value);
-
-            var orderedDebts = debtsQuery.OrderByDescending(d => d.CreatedOnUtc).ToList();
-            if (orderedDebts.Any())
-            {
-                var remaining = totalReturnAmount;
-                foreach (var debt in orderedDebts)
-                {
-                    if (remaining <= 0) break;
-                    var alreadyReturned = debt.TotalAmount - debt.PaidAmount - debt.RemainingAmount;
-                    var toReverse = Math.Min(remaining, Math.Max(0, alreadyReturned));
-                    if (toReverse <= 0) continue;
-
-                    debt.ReverseReturn(toReverse);
-                    remaining -= toReverse;
-                    await vendorDebtRepository.UpdateAsync(debt).ConfigureAwait(false);
-                }
-                if (remaining > 0 && orderedDebts.Count > 0)
-                {
-                    var first = orderedDebts[0];
-                    first.ReverseReturn(remaining);
-                    await vendorDebtRepository.UpdateAsync(first).ConfigureAwait(false);
-                }
-            }
-        }
+            await vendorDebtManager.ReverseReturnFromVendorReturnAsync(
+                vendorReturn.GoodsReceiptId,
+                vendorReturn.PurchaseOrderId,
+                totalReturnAmount).ConfigureAwait(false);
 
         var linkedExpense = expenseDataReader.DataSource
             .FirstOrDefault(e => e.SourceVendorReturnId == vendorReturn.Id);
         if (linkedExpense is not null)
-            await expenseRepository.DeleteAsync(linkedExpense).ConfigureAwait(false);
+            await expenseManager.DeleteExpenseAsync(linkedExpense.Id).ConfigureAwait(false);
 
         vendorReturn.MarkReversed(reason);
         await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
@@ -291,43 +264,11 @@ public sealed class VendorReturnManager(
 
         if (totalReturnAmount <= 0) return;
 
-        // Tìm VendorDebts liên quan theo GoodsReceiptId hoặc PurchaseOrderId, FIFO
-        var debtsQuery = vendorDebtDataReader.DataSource.AsQueryable();
-        if (vendorReturn.GoodsReceiptId.HasValue)
-            debtsQuery = debtsQuery.Where(d => d.GoodsReceiptId == vendorReturn.GoodsReceiptId.Value);
-        else if (vendorReturn.PurchaseOrderId.HasValue)
-            debtsQuery = debtsQuery.Where(d => d.PurchaseOrderId == vendorReturn.PurchaseOrderId.Value);
-        else
-            return;
-
-        var orderedDebts = debtsQuery.OrderBy(d => d.CreatedOnUtc).ToList();
-        if (!orderedDebts.Any()) return;
-
-        var touchedDebts = new List<VendorDebt>();
-        var remaining = totalReturnAmount;
-
-        foreach (var debt in orderedDebts)
-        {
-            if (remaining <= 0) break;
-            if (debt.RemainingAmount <= 0) continue;
-
-            var toApply = Math.Min(remaining, debt.RemainingAmount);
-            debt.ApplyReturn(toApply, returnId);
-            touchedDebts.Add(debt);
-            remaining -= toApply;
-        }
-
-        // Tổng trả > tổng nợ → áp phần thừa vào debt cũ nhất (cho phép âm)
-        if (remaining > 0)
-        {
-            var first = orderedDebts[0];
-            first.ApplyReturn(remaining, returnId);
-            if (!touchedDebts.Contains(first))
-                touchedDebts.Add(first);
-        }
-
-        foreach (var debt in touchedDebts)
-            await vendorDebtRepository.UpdateAsync(debt).ConfigureAwait(false);
+        await vendorDebtManager.ApplyReturnFromVendorReturnAsync(
+            returnId,
+            vendorReturn.GoodsReceiptId,
+            vendorReturn.PurchaseOrderId,
+            totalReturnAmount).ConfigureAwait(false);
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────

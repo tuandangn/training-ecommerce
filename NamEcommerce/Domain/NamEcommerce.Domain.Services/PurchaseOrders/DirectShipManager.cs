@@ -25,7 +25,6 @@ public sealed class DirectShipManager(
     IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
     IRepository<DirectShipAddressChangeLog> changeLogRepository,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
-    IRepository<DeliveryNote> deliveryNoteRepository,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
     IEntityDataReader<Order> orderReader,
     IEntityDataReader<GoodsReceipt> goodsReceiptReader,
@@ -119,29 +118,22 @@ public sealed class DirectShipManager(
     public async Task ConfirmDeliveryAsync(
         Guid deliveryNoteId, DateTime confirmedAtUtc, string? note, CancellationToken ct = default)
     {
-        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(deliveryNoteId)
-            ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
-
-        foreach (var item in deliveryNote.Items)
-        {
-            item.CostAtDispatch = await stockManager.GetAverageCostAsync(
-                item.ProductId, deliveryNote.WarehouseId).ConfigureAwait(false);
-        }
-
-        deliveryNote.ConfirmDirectShipDelivery(confirmedAtUtc, note);
-        await deliveryNoteRepository.UpdateAsync(deliveryNote, ct).ConfigureAwait(false);
+        await deliveryNoteManager.ConfirmDirectShipDeliveryAsync(
+            deliveryNoteId,
+            confirmedAtUtc,
+            note,
+            ct).ConfigureAwait(false);
     }
 
     public async Task RejectDeliveryAsync(
         Guid deliveryNoteId, string reason, CancellationToken ct = default)
     {
-        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(deliveryNoteId)
+        var deliveryNote = await deliveryNoteReader.GetByIdAsync(deliveryNoteId)
             ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
 
         await ReturnDirectShipStockAsync(deliveryNote, reason).ConfigureAwait(false);
-
-        deliveryNote.RejectDirectShipDelivery(reason);
-        await deliveryNoteRepository.UpdateAsync(deliveryNote, ct).ConfigureAwait(false);
+        await deliveryNoteManager.RejectDirectShipDeliveryAsync(deliveryNoteId, reason, ct)
+            .ConfigureAwait(false);
     }
 
     public async Task HandleSoCancelledForReceivedDirectShipAsync(
@@ -159,16 +151,15 @@ public sealed class DirectShipManager(
 
         foreach (var deliveryNoteId in deliveryNoteIds)
         {
-            var deliveryNote = await deliveryNoteRepository.GetByIdAsync(deliveryNoteId)
+            var deliveryNote = await deliveryNoteReader.GetByIdAsync(deliveryNoteId)
                 ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
 
             var note = string.IsNullOrWhiteSpace(reason)
                 ? $"Đơn bán {orderId} bị hủy — chuyển hàng giao thẳng về kho chính"
                 : reason;
             await ReturnDirectShipStockAsync(deliveryNote, note, userId).ConfigureAwait(false);
-
-            deliveryNote.RejectDirectShipDelivery(note);
-            await deliveryNoteRepository.UpdateAsync(deliveryNote, ct).ConfigureAwait(false);
+            await deliveryNoteManager.RejectDirectShipDeliveryAsync(deliveryNoteId, note, ct)
+                .ConfigureAwait(false);
         }
     }
 

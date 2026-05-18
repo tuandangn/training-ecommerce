@@ -254,7 +254,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (model.DirectShipOrderItemId.HasValue && model.DirectShipOrderItemId != Guid.Empty
             && !string.IsNullOrWhiteSpace(model.DirectShipAddress))
         {
-            var dsResult = await _purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
+            var dsResult = await _mediator.Send(new AllocatePoItemToOrderCommand
             {
                 PurchaseOrderItemId = model.PurchaseOrderItemId,
                 OrderItemId = model.DirectShipOrderItemId.Value,
@@ -329,7 +329,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 if (!receivedItemIds.Contains(line.ItemId)) continue;
                 if (!line.DirectShipOrderItemId.HasValue || string.IsNullOrWhiteSpace(line.DirectShipAddress)) continue;
 
-                var dsResult = await _purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
+                var dsResult = await _mediator.Send(new AllocatePoItemToOrderCommand
                 {
                     PurchaseOrderItemId = line.ItemId,
                     OrderItemId = line.DirectShipOrderItemId.Value,
@@ -514,7 +514,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (request is null || request.PurchaseOrderItemId == Guid.Empty || request.OrderItemId == Guid.Empty || request.Quantity <= 0)
             return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
 
-        var result = await _purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
+        var result = await _mediator.Send(new AllocatePoItemToOrderCommand
         {
             PurchaseOrderItemId = request.PurchaseOrderItemId,
             OrderItemId = request.OrderItemId,

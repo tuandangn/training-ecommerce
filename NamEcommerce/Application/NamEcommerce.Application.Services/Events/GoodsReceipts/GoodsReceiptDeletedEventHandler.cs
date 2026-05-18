@@ -1,10 +1,10 @@
 using MediatR;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
-using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Events.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.Media;
 
 namespace NamEcommerce.Application.Services.Events.GoodsReceipts;
 
@@ -23,19 +23,16 @@ namespace NamEcommerce.Application.Services.Events.GoodsReceipts;
 /// </summary>
 public sealed class GoodsReceiptDeletedEventHandler : INotificationHandler<GoodsReceiptDeleted>
 {
-    private readonly IRepository<Picture> _pictureRepository;
-    private readonly IEntityDataReader<Picture> _pictureDataReader;
+    private readonly IPictureManager _pictureManager;
     private readonly IEntityDataReader<GoodsReceipt> _goodsReceiptDataReader;
     private readonly IInventoryStockManager _inventoryStockManager;
 
     public GoodsReceiptDeletedEventHandler(
-        IRepository<Picture> pictureRepository,
-        IEntityDataReader<Picture> pictureDataReader,
+        IPictureManager pictureManager,
         IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
         IInventoryStockManager inventoryStockManager)
     {
-        _pictureRepository = pictureRepository;
-        _pictureDataReader = pictureDataReader;
+        _pictureManager = pictureManager;
         _goodsReceiptDataReader = goodsReceiptDataReader;
         _inventoryStockManager = inventoryStockManager;
     }
@@ -68,11 +65,11 @@ public sealed class GoodsReceiptDeletedEventHandler : INotificationHandler<Goods
 
         foreach (var pictureId in notification.PictureIds)
         {
-            var picture = await _pictureDataReader.GetByIdAsync(pictureId).ConfigureAwait(false);
+            var picture = await _pictureManager.GetPictureByIdAsync(pictureId).ConfigureAwait(false);
             if (picture is null)
                 continue;
 
-            await _pictureRepository.DeleteAsync(picture).ConfigureAwait(false);
+            await _pictureManager.DeletePictureAsync(pictureId).ConfigureAwait(false);
         }
     }
 }

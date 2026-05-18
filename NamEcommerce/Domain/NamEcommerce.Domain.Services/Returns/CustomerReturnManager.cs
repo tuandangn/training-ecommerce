@@ -13,6 +13,7 @@ using NamEcommerce.Domain.Shared.Enums.Finance;
 using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
+using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Users;
@@ -25,8 +26,7 @@ public sealed class CustomerReturnManager(
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Warehouse> warehouseDataReader,
-    IEntityDataReader<CustomerDebt> customerDebtDataReader,
-    IRepository<CustomerDebt> customerDebtRepository,
+    ICustomerDebtManager customerDebtManager,
     IExpenseManager expenseManager,
     ICurrentUserAccessor currentUserAccessor) : ICustomerReturnManager
 {
@@ -215,42 +215,16 @@ public sealed class CustomerReturnManager(
 
         if (netRefundAmount <= 0) return;
 
-        var orderedDebts = customerDebtDataReader.DataSource
-            .Where(d => d.CustomerId == customerReturn.CustomerId)
-            .OrderBy(d => d.CreatedOnUtc)
-            .ToList();
+        var (overRefundAmount, debtId) = await customerDebtManager.ApplyReturnFromCustomerReturnAsync(
+            customerReturn.CustomerId,
+            returnId,
+            netRefundAmount).ConfigureAwait(false);
 
-        if (!orderedDebts.Any()) return;
-
-        var touchedDebts = new List<CustomerDebt>();
-        var remaining = netRefundAmount;
-
-        foreach (var debt in orderedDebts)
+        if (overRefundAmount > 0 && debtId.HasValue)
         {
-            if (remaining <= 0) break;
-            if (debt.RemainingAmount <= 0) continue;
-
-            var toApply = Math.Min(remaining, debt.RemainingAmount);
-            debt.ApplyReturn(toApply, returnId);
-            touchedDebts.Add(debt);
-            remaining -= toApply;
-        }
-
-        // Tổng trả > tổng nợ → áp phần thừa vào debt cũ nhất (cho phép âm) + raise OverRefunded event
-        if (remaining > 0)
-        {
-            var first = orderedDebts[0];
-            first.ApplyReturn(remaining, returnId);
-            if (!touchedDebts.Contains(first))
-                touchedDebts.Add(first);
-
-            // Raise event để handler tạo CustomerRefund cho khoản hoàn tiền
-            customerReturn.MarkOverRefunded(remaining, first.Id);
+            customerReturn.MarkOverRefunded(overRefundAmount, debtId.Value);
             await customerReturnRepository.UpdateAsync(customerReturn).ConfigureAwait(false);
         }
-
-        foreach (var debt in touchedDebts)
-            await customerDebtRepository.UpdateAsync(debt).ConfigureAwait(false);
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────

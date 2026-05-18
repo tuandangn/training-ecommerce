@@ -38,14 +38,12 @@ public sealed class GoodsReceiptManager(
     IEntityDataReader<Picture> pictureDataReader,
     IEntityDataReader<Vendor> vendorDataReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
-    IRepository<PurchaseOrder> purchaseOrderRepository,
     IInventoryStockManager inventoryStockManager,
     IEntityDataReader<VendorReturn> vendorReturnReader,
     IEntityDataReader<CustomerReturn> customerReturnReader,
     IVendorReturnManager vendorReturnManager,
     IVendorDebtManager vendorDebtManager,
-    IEntityDataReader<VendorDebt> vendorDebtReader,
-    IGoodsReceiptPurchaseOrderLinker goodsReceiptPurchaseOrderLinker) : IGoodsReceiptManager
+    IEntityDataReader<VendorDebt> vendorDebtReader) : IGoodsReceiptManager
 {
     private Task<string> GenerateCodeAsync()
     {
@@ -414,70 +412,6 @@ public sealed class GoodsReceiptManager(
         return inserted.Id;
     }
 
-    public async Task RemoveGoodsReceiptFromPurchaseOrder(RemoveGoodsReceiptFromPurchaseOrderDto dto)
-    {
-        ArgumentNullException.ThrowIfNull(dto);
-
-        var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
-        if (goodsReceipt is null)
-            throw new GoodsReceiptIsNotFoundException(dto.Id);
-
-        if (!goodsReceipt.PurchaseOrderId.HasValue)
-            return;
-
-        var purchaseOrderId = goodsReceipt.PurchaseOrderId.Value;
-
-        var hasConfirmedReturns = vendorReturnReader.DataSource
-            .Any(r => r.GoodsReceiptId == dto.Id && r.Status == VendorReturnStatus.Confirmed);
-        if (hasConfirmedReturns)
-            throw new GoodsReceiptHasConfirmedReturnsException(dto.Id);
-
-        var linkedDebt = vendorDebtReader.DataSource
-            .FirstOrDefault(d => d.GoodsReceiptId == dto.Id);
-        if (linkedDebt is not null && (linkedDebt.PaidAmount > 0 || linkedDebt.RemainingAmount != linkedDebt.TotalAmount))
-            throw new GoodsReceiptCannotDeleteDueToTouchedDebtException(dto.Id);
-
-        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(purchaseOrderId).ConfigureAwait(false);
-        if (purchaseOrder is null)
-            throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
-
-        if (purchaseOrder.Status != PurchaseOrderStatus.Approved && purchaseOrder.Status != PurchaseOrderStatus.Receiving)
-            throw new PurchaseOrderCannotReceiveGoodsException();
-
-        var revertByProductCost = goodsReceipt.Items
-            .GroupBy(i => (i.ProductId, i.UnitCost))
-            .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
-
-        foreach (var ((productId, unitCost), totalQty) in revertByProductCost)
-        {
-            var remaining = totalQty;
-            var candidatePoItems = purchaseOrder.Items
-                .Where(po => po.ProductId == productId
-                    && (!unitCost.HasValue || po.UnitCost == unitCost.Value)
-                    && po.QuantityReceived > 0)
-                .OrderByDescending(po => po.QuantityReceived)
-                .ToList();
-
-            foreach (var poItem in candidatePoItems)
-            {
-                if (remaining <= 0) break;
-                var revertQty = Math.Min(poItem.QuantityReceived, remaining);
-                poItem.RevertQuantityReceived(revertQty);
-                remaining -= revertQty;
-            }
-        }
-
-        if (linkedDebt is not null)
-            await vendorDebtManager.DeleteDebtFromGoodsReceiptAsync(dto.Id).ConfigureAwait(false);
-
-        goodsReceipt.RemoveFromPurchaseOrder();
-        await goodsReceiptRepository.UpdateAsync(goodsReceipt).ConfigureAwait(false);
-
-        purchaseOrder.RevertReceivingIfEmpty();
-        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
-        await purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
-    }
-
     public async Task<IList<SuggestedPurchaseOrderForGoodsReceiptDto>> GetSuggestedPurchaseOrdersAsync(Guid goodsReceiptId)
     {
         var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(goodsReceiptId).ConfigureAwait(false);
@@ -570,10 +504,4 @@ public sealed class GoodsReceiptManager(
             .ToList();
     }
 
-    #region SetGoodsReceiptToPurchaseOrder
-
-    public Task SetGoodsReceiptToPurchaseOrder(SetGoodsReceiptToPurchaseOrderDto dto)
-        => goodsReceiptPurchaseOrderLinker.LinkAsync(dto);
-
-    #endregion
 }

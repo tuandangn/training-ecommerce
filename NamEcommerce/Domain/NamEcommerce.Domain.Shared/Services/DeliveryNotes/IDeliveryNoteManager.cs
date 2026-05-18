@@ -28,6 +28,10 @@ public interface IDeliveryNoteManager
     /// </summary>
     Task<Guid> CreateForDirectShipAsync(CreateDeliveryNoteForDirectShipDto dto, CancellationToken ct = default);
 
+    Task ConfirmDirectShipDeliveryAsync(Guid id, DateTime confirmedAtUtc, string? note, CancellationToken ct = default);
+
+    Task RejectDirectShipDeliveryAsync(Guid id, string reason, CancellationToken ct = default);
+
     Task<DeliveryNoteDto?> GetByIdAsync(Guid id);
     
     Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize, string? keywords = null, Guid? orderId = null, IEnumerable<DeliveryNoteStatus>? status = null);

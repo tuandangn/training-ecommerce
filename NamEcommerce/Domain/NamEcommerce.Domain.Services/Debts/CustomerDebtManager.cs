@@ -289,6 +289,50 @@ public sealed class CustomerDebtManager(
         return results;
     }
 
+    public async Task<(decimal OverRefundAmount, Guid? DebtId)> ApplyReturnFromCustomerReturnAsync(Guid customerId, Guid returnId, decimal amount)
+    {
+        if (amount <= 0) return (0, null);
+
+        var orderedDebts = debtReader.DataSource
+            .Where(d => d.CustomerId == customerId)
+            .OrderBy(d => d.CreatedOnUtc)
+            .ToList();
+
+        if (!orderedDebts.Any()) return (0, null);
+
+        var touchedDebts = new List<CustomerDebt>();
+        var remaining = amount;
+
+        foreach (var debt in orderedDebts)
+        {
+            if (remaining <= 0) break;
+            if (debt.RemainingAmount <= 0) continue;
+
+            var toApply = Math.Min(remaining, debt.RemainingAmount);
+            debt.ApplyReturn(toApply, returnId);
+            touchedDebts.Add(debt);
+            remaining -= toApply;
+        }
+
+        decimal overRefundAmount = 0;
+        Guid? overRefundDebtId = null;
+        if (remaining > 0)
+        {
+            var first = orderedDebts[0];
+            first.ApplyReturn(remaining, returnId);
+            if (!touchedDebts.Contains(first))
+                touchedDebts.Add(first);
+
+            overRefundAmount = remaining;
+            overRefundDebtId = first.Id;
+        }
+
+        foreach (var debt in touchedDebts)
+            await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+
+        return (overRefundAmount, overRefundDebtId);
+    }
+
     public async Task<IPagedDataDto<CustomerDebtSummaryDto>> GetCustomersWithDebtsAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
     {
         // Load tất cả debts vào memory rồi group (phù hợp với quy mô cửa hàng)

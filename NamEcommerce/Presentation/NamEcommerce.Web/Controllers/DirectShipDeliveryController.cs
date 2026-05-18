@@ -1,11 +1,15 @@
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Models.DirectShipDelivery;
 
 namespace NamEcommerce.Web.Controllers;
 
-public sealed class DirectShipDeliveryController(IDirectShipAppService directShipAppService) : BaseAuthorizedController
+public sealed class DirectShipDeliveryController(
+    IMediator mediator,
+    IDirectShipAppService directShipAppService) : BaseAuthorizedController
 {
     public IActionResult Index() => RedirectToAction(nameof(Pending));
 
@@ -53,7 +57,7 @@ public sealed class DirectShipDeliveryController(IDirectShipAppService directShi
             ? request.ConfirmedDate.Value.ToUniversalTime()
             : DateTime.UtcNow;
 
-        var result = await directShipAppService.ConfirmDeliveryAsync(new ConfirmDirectShipDeliveryAppDto
+        var result = await mediator.Send(new ConfirmDirectShipDeliveryCommand
         {
             DeliveryNoteId = request.DeliveryNoteId,
             ConfirmedAtUtc = confirmedAt,
@@ -75,7 +79,7 @@ public sealed class DirectShipDeliveryController(IDirectShipAppService directShi
         if (string.IsNullOrWhiteSpace(request.Reason))
             return Json(new { success = false, message = "Lý do từ chối là bắt buộc." });
 
-        var result = await directShipAppService.RejectDeliveryAsync(new RejectDirectShipDeliveryAppDto
+        var result = await mediator.Send(new RejectDirectShipDeliveryCommand
         {
             DeliveryNoteId = request.DeliveryNoteId,
             Reason = request.Reason
@@ -93,7 +97,7 @@ public sealed class DirectShipDeliveryController(IDirectShipAppService directShi
         if (request.AllocationId == Guid.Empty || string.IsNullOrWhiteSpace(request.NewAddress))
             return Json(new { success = false, message = "Dữ liệu không hợp lệ." });
 
-        var result = await directShipAppService.UpdateDirectShipAddressAsync(new UpdateDirectShipAddressAppDto
+        var result = await mediator.Send(new UpdateDirectShipAddressCommand
         {
             AllocationId = request.AllocationId,
             NewAddress = request.NewAddress,
