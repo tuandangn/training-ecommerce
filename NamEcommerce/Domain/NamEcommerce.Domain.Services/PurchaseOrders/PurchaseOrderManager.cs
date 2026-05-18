@@ -6,7 +6,6 @@ using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
-using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
@@ -15,7 +14,6 @@ using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Helpers;
-using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.Users;
@@ -60,13 +58,8 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     }
 
     private async Task<PurchaseOrder> CreatePurchaseOrderAggregateAsync(
-        Guid vendorId,
-        Guid? warehouseId,
-        DateTime placedOnUtc,
-        DateTime? expectedDeliveryDateUtc,
-        string? note,
-        decimal taxAmount,
-        decimal shippingAmount)
+        Guid vendorId, Guid? warehouseId, DateTime placedOnUtc,
+        DateTime? expectedDeliveryDateUtc, string? note, decimal taxAmount, decimal shippingAmount)
     {
         var vendor = await _vendorOrderDataReader.GetByIdAsync(vendorId).ConfigureAwait(false);
         if (vendor is null)
@@ -95,8 +88,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     }
 
     private async Task<List<(PurchaseOrderItem PurchaseOrderItem, CreatePoFromShortageItemDto Source, bool IsNew)>> AddOrMergeShortageItemsAsync(
-        PurchaseOrder purchaseOrder,
-        IList<CreatePoFromShortageItemDto> items)
+        PurchaseOrder purchaseOrder, IList<CreatePoFromShortageItemDto> items)
     {
         var allocationSources = new List<(PurchaseOrderItem PurchaseOrderItem, CreatePoFromShortageItemDto Source, bool IsNew)>();
         foreach (var item in items)

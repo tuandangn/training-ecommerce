@@ -3,7 +3,7 @@
     var modalId = ViewData["ShortageModalId"] as string ?? "shortageDetailsModal";
     var modalTitleId = $"{modalId}Title";
     var message = ViewData["ShortageMessage"] as string ?? "Đơn hàng đang có mặt hàng chưa đủ tồn kho. Cần nhập thêm hàng từ nhà cung cấp trước khi giao đủ cho khách.";
-    var actionUrl = ViewData["ShortageActionUrl"] as string ?? "/PurchaseOrders/ShortageAggregation";
+    var actionUrl = ViewData["ShortageActionUrl"] as string ?? "/PurchaseOrder/ShortageAggregation";
     var actionText = ViewData["ShortageActionText"] as string ?? "Nhập hàng thiếu";
     var primaryQuantityLabel = ViewData["ShortagePrimaryQuantityLabel"] as string ?? "Cần";
     var secondaryQuantityLabel = ViewData["ShortageSecondaryQuantityLabel"] as string ?? "Tồn khả dụng";

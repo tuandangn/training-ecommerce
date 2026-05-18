@@ -22,7 +22,10 @@
       "Skill(agent-skills:debugging-and-error-recovery)",
       "Bash(findstr /I \"error\")",
       "Bash(findstr /V \"warning\")",
-      "Skill(agent-skills:using-agent-skills)"
+      "Skill(agent-skills:using-agent-skills)",
+      "Bash(xargs cat)",
+      "Bash(xargs grep -l \"IEntityDataReader\")",
+      "Skill(agent-skills:planning-and-task-breakdown)"
     ]
   }
 }

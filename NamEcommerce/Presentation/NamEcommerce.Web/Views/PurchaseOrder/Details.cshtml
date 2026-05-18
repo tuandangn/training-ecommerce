@@ -852,7 +852,7 @@
         </div>
     </div>
 
-    @{
+    
         var dsPerItem = new System.Collections.Generic.Dictionary<string, object>();
         foreach (var kvp in Model.DirectShipAllocationsPerItem)
         {
@@ -866,7 +866,7 @@
             if (activeDs.Count > 0)
                 dsPerItem[kvp.Key.ToString()] = activeDs;
         }
-    }
+
     <script type="application/json" id="receiveItemDsData">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(dsPerItem))</script>
 
     var remainingItems = Model.Info.Items.Where(i => i.RemainingQuantity > 0).ToList();
@@ -1251,6 +1251,7 @@
 
                 // Initialize Receive Item Modal
                 let itemRemainingQty = 0;
+                let currentDsAvailableQty = 0;
                 let currentReceivePoItemId = null;
                 const receiveItemModal = document.getElementById('receiveItemModal');
                 let receiveDsAbortController = null;
@@ -1266,9 +1267,36 @@
                 function _parseReceiveQty() {
                     const v = document.getElementById('modalReceivedQty')?.value || '0';
                     return (window.DecimalFields?.stripFormatting)
-                        ? parseFloat(DecimalFields.stripFormatting(v, true)) || 0
+                        ? parseFloat(DecimalFields.stripFormatting(v, 2)) || 0
                         : parseFloat(v.replace(/[^0-9.]/g, '')) || 0;
                 }
+                function syncWarehouseVisibility() {
+                    const warehouseSection = document.getElementById('modalWarehouseSection');
+                    const sellingPriceSection = document.getElementById('modalSellingPriceSection');
+                    if (!warehouseSection) return;
+                    const qty = _parseReceiveQty();
+                    if (itemRemainingQty > 0 && qty > itemRemainingQty) {
+                        warehouseSection.classList.remove('d-none');
+                        sellingPriceSection?.classList.remove('d-none');
+                        return;
+                    }
+                    const dsAllocs = _receiveItemDsData[currentReceivePoItemId] || [];
+                    const totalDsRem = dsAllocs.reduce((sum, a) => sum + a.remaining, 0);
+                    const dsToggle = document.getElementById('modalDsToggle');
+                    let hide;
+                    if (totalDsRem > 0) {
+                        // Auto-DS: hide chỉ khi qty nằm gọn trong DS remaining
+                        hide = qty <= totalDsRem;
+                    } else if (dsToggle?.checked) {
+                        // Manual DS: hide chỉ khi qty nằm gọn trong available của SO item đã chọn
+                        hide = currentDsAvailableQty > 0 ? qty <= currentDsAvailableQty : true;
+                    } else {
+                        hide = false;
+                    }
+                    warehouseSection.classList.toggle('d-none', hide);
+                    sellingPriceSection?.classList.toggle('d-none', hide);
+                }
+
                 function updateDistributionPreview() {
                     const preview = document.getElementById('modalDistributionPreview');
                     const details = document.getElementById('modalDistributionDetails');
@@ -1317,6 +1345,7 @@
 
                         // Reset DS section and distribution preview
                         document.getElementById('modalDistributionPreview')?.classList.add('d-none');
+                        currentDsAvailableQty = 0;
                         receiveDsLoadedForItemId = '';
                         receiveOriginalPhone = '';
                         document.getElementById('modalDsToggle').checked = false;
@@ -1340,26 +1369,24 @@
                         unitCostDisplay.innerText = DecimalFields.formatCurrency(String(Math.trunc(unitCostRaw)));
                         updateSellingPriceWarning();
                         updateDistributionPreview();
+                        syncWarehouseVisibility();
                     });
 
                     // DS toggle
                     let receiveDsLoadedForItemId = '';
                     document.getElementById('modalDsToggle')?.addEventListener('change', function () {
                         const section = document.getElementById('modalDsSection');
-                        const warehouseSection = document.getElementById('modalWarehouseSection');
-                        const sellingPriceSection = document.getElementById('modalSellingPriceSection');
                         if (this.checked) {
                             section.classList.remove('d-none');
-                            warehouseSection?.classList.add('d-none');
-                            sellingPriceSection?.classList.add('d-none');
+                            syncWarehouseVisibility();
                             if (receiveDsLoadedForItemId !== currentReceivePoItemId) {
                                 loadReceiveDsItems(currentReceivePoItemId);
                                 receiveDsLoadedForItemId = currentReceivePoItemId;
                             }
                         } else {
                             section.classList.add('d-none');
-                            warehouseSection?.classList.remove('d-none');
-                            sellingPriceSection?.classList.remove('d-none');
+                            currentDsAvailableQty = 0;
+                            syncWarehouseVisibility();
                             document.getElementById('modalDsOrderItemId').value = '';
                             receiveOriginalPhone = '';
                         }
@@ -1423,6 +1450,8 @@
                                 document.getElementById('modalDsContactPhone').value = btn.dataset.customerPhone;
                                 receiveOriginalPhone = btn.dataset.customerPhone;
                                 fields.classList.remove('d-none');
+                                currentDsAvailableQty = parseFloat(order.availableToAllocate) || 0;
+                                syncWarehouseVisibility();
                             });
                             items.appendChild(btn);
                         });
@@ -1449,6 +1478,7 @@
                 document.getElementById('modalOversupplyAction').value = '';
                 }
                 updateDistributionPreview();
+                syncWarehouseVisibility();
                 });
                 }
 

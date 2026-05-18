@@ -51,7 +51,9 @@ public sealed class PurchaseOrderAllocationManager(
 
         var canAllocate = purchaseOrderItemContext.PurchaseOrder.Status is PurchaseOrderStatus.Draft
             or PurchaseOrderStatus.Submitted
-            or PurchaseOrderStatus.Approved;
+            or PurchaseOrderStatus.Approved
+            or PurchaseOrderStatus.Receiving
+            or PurchaseOrderStatus.Completed;
         if (!canAllocate)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemCannotAllocate");
 

@@ -122,6 +122,7 @@ export default class BulkReceiveController {
             if (e.target.matches('.bulk-row-item')) {
                 const tr = e.target.closest('tr');
                 this.#refreshRowHint(tr);
+                this.#syncRowWarehouse(tr);
                 // Reload DS items if DS panel is open
                 const idx = tr.dataset.rowIndex;
                 const dsTr = this.#tbody?.querySelector(`[data-ds-row-for="${idx}"]`);
@@ -133,6 +134,10 @@ export default class BulkReceiveController {
         });
         this.#tbody?.addEventListener('input', (e) => {
             if (e.target.matches('.bulk-row-qty') || e.target.matches('.bulk-row-cost')) this.#recompute();
+            if (e.target.matches('.bulk-row-qty')) this.#syncRowWarehouse(e.target.closest('tr'));
+        });
+        this.#tbody?.addEventListener('change', (e) => {
+            if (e.target.matches('.bulk-row-qty')) this.#syncRowWarehouse(e.target.closest('tr'));
         });
 
         this.#shippingInput?.addEventListener('input', () => this.#recompute());
@@ -218,6 +223,7 @@ export default class BulkReceiveController {
         this.#tbody.appendChild(tr);
         window.DecimalFields?.autoWrap?.(tr);
         this.#refreshRowHint(tr);
+        this.#syncRowWarehouse(tr);
 
         // DS sub-row (hidden by default)
         const dsTr = document.createElement('tr');
@@ -264,11 +270,10 @@ export default class BulkReceiveController {
         if (!dsTr) return;
         const icon = tr.querySelector('.bulk-row-ds-toggle i');
 
-        const warehouseCell = tr.querySelector('.bulk-row-warehouse');
         if (dsTr.classList.contains('d-none')) {
             dsTr.classList.remove('d-none');
             icon?.classList.replace('text-secondary', 'text-primary');
-            warehouseCell?.closest('td')?.classList.add('d-none');
+            this.#syncRowWarehouse(tr);
             const itemId = tr.querySelector('.bulk-row-item')?.value;
             if (!itemId || dsTr.dataset.dsLoadedFor !== itemId) {
                 this.#loadDsItems(tr, dsTr);
@@ -277,7 +282,7 @@ export default class BulkReceiveController {
             dsTr.classList.add('d-none');
             dsTr.querySelector('.bulk-ds-order-item-id').value = '';
             icon?.classList.replace('text-primary', 'text-secondary');
-            warehouseCell?.closest('td')?.classList.remove('d-none');
+            this.#syncRowWarehouse(tr);
         }
     }
 
@@ -344,6 +349,22 @@ export default class BulkReceiveController {
             errorBox.textContent = err.message || 'Không thể tải danh sách đơn hàng.';
             errorBox.classList.remove('d-none');
         }
+    }
+
+    #syncRowWarehouse(tr) {
+        if (!tr) return;
+        const idx = tr.dataset.rowIndex;
+        const dsTr = this.#tbody?.querySelector(`[data-ds-row-for="${idx}"]`);
+        const warehouseTd = tr.querySelector('.bulk-row-warehouse')?.closest('td');
+        if (!warehouseTd) return;
+        const select = tr.querySelector('.bulk-row-item');
+        const item = this.#itemsById.get(select?.value);
+        const dsRem = item?.dsRemaining ?? 0;
+        const qtyInput = tr.querySelector('.bulk-row-qty');
+        const qty = this.#parseQty(qtyInput?.value || '0');
+        const isDsPanelOpen = dsTr && !dsTr.classList.contains('d-none');
+        const hide = dsRem > 0 ? qty <= dsRem : isDsPanelOpen;
+        warehouseTd.classList.toggle('d-none', hide);
     }
 
     #refreshRowHint(tr) {

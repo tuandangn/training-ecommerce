@@ -104,7 +104,7 @@
     {
         ["ShortageModalId"] = "deliveryNoteShortageModal",
         ["ShortageMessage"] = $"Phiếu xuất có {Model.ShortageInfo.Items.Count} mặt hàng chưa đủ tồn kho. Cần nhập thêm hàng từ nhà cung cấp trước khi xác nhận xuất.",
-        ["ShortageActionUrl"] = $"/PurchaseOrders/ShortageAggregation?deliveryNoteId={Model.Id}",
+        ["ShortageActionUrl"] = $"/PurchaseOrder/ShortageAggregation?deliveryNoteId={Model.Id}",
         ["ShortageActionText"] = "Nhập hàng thiếu",
         ["ShortagePrimaryQuantityLabel"] = "Cần xuất",
         ["ShortageSecondaryQuantityLabel"] = "Tồn khả dụng",
@@ -482,7 +482,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
-                <a class="btn shortage-action-btn" id="shortageAggregationLink" href="/PurchaseOrders/ShortageAggregation?deliveryNoteId=@Model.Id">
+                <a class="btn shortage-action-btn" id="shortageAggregationLink" href="/PurchaseOrder/ShortageAggregation?deliveryNoteId=@Model.Id">
                     <i class="bi bi-truck"></i>Nhập hàng thiếu
                 </a>
             </div>

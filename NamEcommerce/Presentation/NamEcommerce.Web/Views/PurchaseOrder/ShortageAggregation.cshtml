@@ -46,14 +46,14 @@
             @if (relatedOrders.Count >= 1)
             {
                 var primaryOrderCode = allItems.FirstOrDefault(item => item.IsFromPrimaryOrder)?.OrderCode;
-                <a class="shortage-filter-chip" href="/PurchaseOrders/ShortageAggregation">
+                <a class="shortage-filter-chip" href="/PurchaseOrder/ShortageAggregation">
                     Lọc theo đơn: @(primaryOrderCode ?? relatedOrders[0])
                     <i class="bi bi-x"></i>
                 </a>
             }
             else if (Model.ProductId.HasValue)
             {
-                <a class="shortage-filter-chip" href="/PurchaseOrders/ShortageAggregation">
+                <a class="shortage-filter-chip" href="/PurchaseOrder/ShortageAggregation">
                     Đang lọc mặt hàng
                     <i class="bi bi-x"></i>
                 </a>
@@ -74,7 +74,7 @@
 
     @if (Model.DeliveryNoteId.HasValue)
     {
-        <form method="get" action="/PurchaseOrders/ShortageAggregation" class="shortage-scope-form">
+        <form method="get" action="/PurchaseOrder/ShortageAggregation" class="shortage-scope-form">
             <input type="hidden" name="deliveryNoteId" value="@Model.DeliveryNoteId" />
             <input type="hidden" name="productId" value="@Model.ProductId" />
             <select name="includeSalesOrderScope" class="form-select shortage-page-select" onchange="this.form.submit()">
@@ -750,7 +750,7 @@
                 if (payload.groups.length === 0) return;
 
                 createButtons.forEach(button => button.disabled = true);
-                const result = await postJson('/PurchaseOrders/CreateFromShortage', payload);
+                const result = await postJson('/PurchaseOrder/CreateFromShortage', payload);
                 createButtons.forEach(button => button.disabled = false);
                 refreshTotals();
 
@@ -1023,7 +1023,7 @@
 
                 createButtons.forEach(button => button.disabled = true);
                 try {
-                    const related = await postJson('/PurchaseOrders/CheckRelatedPurchaseOrders', { vendorIds, productIds });
+                    const related = await postJson('/PurchaseOrder/CheckRelatedPurchaseOrders', { vendorIds, productIds });
                     const relatedItems = related.items || [];
                     if (relatedItems.length === 0) {
                         await createPurchaseOrders(buildPayloadForLines(lines));
