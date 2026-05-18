@@ -9,8 +9,10 @@ public sealed class CreateStockTransferNoteModel
     public Guid? ToWarehouseId { get; set; }
     public string? Note { get; set; }
     public List<StockTransferNoteItemInputModel> Items { get; set; } = [];
-
     public List<TransferWarehouseSelectItem> AvailableWarehouses { get; set; } = [];
+
+    // Used only by the ProductPicker EditorTemplate in the add-item modal; not submitted with Items.
+    public Guid? ModalProductId { get; set; }
 }
 
 public sealed class TransferWarehouseSelectItem

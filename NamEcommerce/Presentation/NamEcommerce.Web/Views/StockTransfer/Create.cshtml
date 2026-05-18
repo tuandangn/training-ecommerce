@@ -26,13 +26,14 @@
                 <div class="content-card mb-3">
                     <div class="content-card-header">
                         <h5>Danh sách hàng hóa chuyển kho</h5>
-                        <button type="button" class="btn btn-sm bg-light text-primary" id="btnAddItem">
+                        <button type="button" class="btn btn-sm bg-light text-primary"
+                                data-bs-toggle="modal" data-bs-target="#addItemModal">
                             <i class="bi bi-plus-lg me-1"></i> Thêm hàng hóa
                         </button>
                     </div>
                     <div class="content-card-body-flush">
                         <div class="table-responsive">
-                            <table class="table data-table mb-0" id="transferItemsTable">
+                            <table class="table data-table mb-0">
                                 <thead>
                                     <tr>
                                         <th class="ps-3">Hàng hóa</th>
@@ -44,7 +45,7 @@
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
-                                        <tr id="item-row-@i">
+                                        <tr>
                                             <td class="ps-3">
                                                 <div class="fw-medium">@item.ProductName</div>
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
@@ -86,7 +87,6 @@
                         <h5>Thông tin chuyển kho</h5>
                     </div>
                     <div class="content-card-body">
-                        <!-- Kho nguồn -->
                         <div class="mb-3">
                             <label asp-for="FromWarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block">
                                 Kho nguồn <span class="text-danger">*</span>
@@ -103,12 +103,11 @@
                             <span asp-validation-for="FromWarehouseId" class="small text-danger"></span>
                         </div>
 
-                        <!-- Kho đích -->
                         <div class="mb-3">
                             <label asp-for="ToWarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block">
                                 Kho đích <span class="text-danger">*</span>
                             </label>
-                            <select asp-for="ToWarehouseId" class="form-select" id="toWarehouseSelect">
+                            <select asp-for="ToWarehouseId" class="form-select">
                                 <option value="">(Chọn kho đích)</option>
                                 @foreach (var warehouse in Model.AvailableWarehouses)
                                 {
@@ -120,7 +119,6 @@
                             <span asp-validation-for="ToWarehouseId" class="small text-danger"></span>
                         </div>
 
-                        <!-- Ghi chú -->
                         <div class="mb-3">
                             <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block">
                                 Lý do / Ghi chú
@@ -140,31 +138,34 @@
     </form>
 </div>
 
-<!-- Modal: Thêm hàng hóa -->
+<!-- Modal outside form — ModalProductId is not submitted with the main form -->
 <div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pb-0">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0">
                 <h5 class="modal-title fw-bold">Thêm hàng hóa chuyển kho</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body py-3">
+            <div class="modal-body pt-0">
                 <div class="mb-3">
-                    <label class="form-label small fw-medium text-muted">Tên hàng hóa</label>
-                    <input type="text" id="modalProductName" class="form-control"
-                           placeholder="Nhập tên hàng hóa..." />
+                    <label class="form-label small fw-medium text-muted">
+                        Hàng hóa <span class="text-danger">*</span>
+                    </label>
+                    @Html.EditorFor(m => m.ModalProductId, "ProductPicker", new { warehouseSelector = "#fromWarehouseSelect", placeholder = "Tìm hàng hóa theo tên..." })
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-medium text-muted">Số lượng chuyển</label>
+                <div>
+                    <label for="modalQty" class="form-label small fw-medium text-muted">
+                        Số lượng chuyển <span class="text-danger">*</span>
+                    </label>
                     <input type="number" id="modalQty" class="form-control text-end"
                            value="1" min="0.001" step="0.001" />
                 </div>
                 <div id="addItemError" class="alert alert-danger d-none mt-3 py-2 mb-0"></div>
             </div>
-            <div class="modal-footer border-0 pt-0 pb-3">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" id="btnConfirmAddItem" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i>Thêm hàng
+            <div class="modal-footer border-0 pb-3">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnConfirmAddItem" class="btn btn-primary rounded-pill px-4" disabled>
+                    <i class="bi bi-plus-lg me-1"></i>Thêm vào phiếu
                 </button>
             </div>
         </div>
@@ -174,24 +175,28 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script type="module">
+        let pickedProduct = null;
         let rowIndex = @Model.Items.Count;
         const tbody = document.getElementById('itemsTableBody');
         const noMsg = document.getElementById('noItemsMessage');
         const addItemModal = new bootstrap.Modal(document.getElementById('addItemModal'));
+        const btnConfirm = document.getElementById('btnConfirmAddItem');
+        const qtyInput = document.getElementById('modalQty');
+        const errEl = document.getElementById('addItemError');
+        const pickerSource = document.getElementById('ModalProductId');
 
         function updateEmptyState() {
             noMsg.style.display = tbody.rows.length === 0 ? 'block' : 'none';
         }
 
-        function addItemRow(productName, qty) {
+        function addRow(productId, productName, qty) {
             const i = rowIndex++;
             const tr = document.createElement('tr');
-            tr.id = `item-row-${i}`;
             tr.innerHTML = `
                 <td class="ps-3">
-                    <div class="fw-medium">${productName}</div>
-                    <input type="hidden" name="Items[${i}].ProductId" value="${crypto.randomUUID()}" />
-                    <input type="hidden" name="Items[${i}].ProductName" value="${productName}" />
+                    <div class="fw-medium">${escHtml(productName)}</div>
+                    <input type="hidden" name="Items[${i}].ProductId" value="${escAttr(productId)}" />
+                    <input type="hidden" name="Items[${i}].ProductName" value="${escAttr(productName)}" />
                 </td>
                 <td class="text-end">
                     <input name="Items[${i}].Quantity" value="${qty}"
@@ -215,31 +220,48 @@
             }
         });
 
-        document.getElementById('btnAddItem').addEventListener('click', () => {
-            document.getElementById('modalProductName').value = '';
-            document.getElementById('modalQty').value = '1';
-            document.getElementById('addItemError').classList.add('d-none');
-            addItemModal.show();
+        document.getElementById('addItemModal').addEventListener('show.bs.modal', () => {
+            document.querySelector('#ModalProductId_productPicker .product-picker-clear')?.click();
+            qtyInput.value = '1';
+            errEl.classList.add('d-none');
+            pickedProduct = null;
+            btnConfirm.disabled = true;
         });
 
-        document.getElementById('btnConfirmAddItem').addEventListener('click', () => {
-            const name = document.getElementById('modalProductName').value.trim();
-            const qty = parseFloat(document.getElementById('modalQty').value);
-            const errEl = document.getElementById('addItemError');
-
-            if (!name) {
-                errEl.textContent = 'Vui lòng nhập tên hàng hóa.';
-                errEl.classList.remove('d-none');
+        pickerSource.addEventListener('change', async () => {
+            const id = pickerSource.value;
+            if (!id) {
+                pickedProduct = null;
+                btnConfirm.disabled = true;
                 return;
             }
+            try {
+                const url = new URL('/Product/PickItem', window.location.origin);
+                url.searchParams.set('id', id);
+                const res = await fetch(url);
+                if (!res.ok) throw new Error();
+                const product = await res.json();
+                pickedProduct = { id: product.id, name: product.name };
+                btnConfirm.disabled = false;
+                errEl.classList.add('d-none');
+            } catch {
+                pickedProduct = null;
+                btnConfirm.disabled = true;
+            }
+        });
+
+        btnConfirm.addEventListener('click', () => {
+            const qty = parseFloat(qtyInput.value);
             if (!qty || qty <= 0) {
                 errEl.textContent = 'Số lượng phải lớn hơn 0.';
                 errEl.classList.remove('d-none');
                 return;
             }
-
-            addItemRow(name, qty);
+            addRow(pickedProduct.id, pickedProduct.name, qty);
             addItemModal.hide();
         });
+
+        function escHtml(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'); }
+        function escAttr(v) { return escHtml(v).replaceAll('"', '&quot;'); }
     </script>
 }
