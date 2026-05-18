@@ -23,6 +23,27 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
     public async Task<ReceivePurchaseOrderItemResultModel> Handle(ReceivePurchaseOrderItemCommand request, CancellationToken cancellationToken)
     {
         var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
+
+        // DS allocation must be created BEFORE receiving so SyncReceivedForPurchaseOrderItem
+        // finds it and transfers stock to DirectShipTransit in the same receive transaction.
+        if (request.DirectShipOrderItemId.HasValue
+            && request.DirectShipOrderItemId.Value != Guid.Empty
+            && !string.IsNullOrWhiteSpace(request.DirectShipAddress))
+        {
+            var allocationResult = await _sender.Send(new AllocatePoItemToOrderCommand
+            {
+                PurchaseOrderItemId = request.PurchaseOrderItemId,
+                OrderItemId = request.DirectShipOrderItemId.Value,
+                Quantity = request.ReceivedQuantity,
+                DirectShipAddress = request.DirectShipAddress,
+                DirectShipContactName = request.DirectShipContactName,
+                DirectShipContactPhone = request.DirectShipContactPhone
+            }, cancellationToken).ConfigureAwait(false);
+
+            if (!allocationResult.Success)
+                return new ReceivePurchaseOrderItemResultModel { Success = false, ErrorMessage = allocationResult.ErrorMessage };
+        }
+
         var result = await _purchaseOrderAppService.ReceiveItemAsync(new ReceivedGoodsForItemAppDto(request.PurchaseOrderId, request.PurchaseOrderItemId)
         {
             ReceivedQuantity = request.ReceivedQuantity,
@@ -32,33 +53,6 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
             ActualUnitCost = request.ActualUnitCost,
             OversupplyAction = request.OversupplyAction
         }).ConfigureAwait(false);
-
-        if (result.Success
-            && request.DirectShipOrderItemId.HasValue
-            && request.DirectShipOrderItemId.Value != Guid.Empty
-            && !string.IsNullOrWhiteSpace(request.DirectShipAddress))
-        {
-            var allocationResult = await _sender.Send(new AllocatePoItemToOrderCommand
-            {
-                PurchaseOrderItemId = request.PurchaseOrderItemId,
-                OrderItemId = request.DirectShipOrderItemId.Value,
-                Quantity = result.ActualReceivedQuantity,
-                DirectShipAddress = request.DirectShipAddress,
-                DirectShipContactName = request.DirectShipContactName,
-                DirectShipContactPhone = request.DirectShipContactPhone
-            }, cancellationToken).ConfigureAwait(false);
-
-            if (!allocationResult.Success)
-            {
-                return new ReceivePurchaseOrderItemResultModel
-                {
-                    Success = false,
-                    ErrorMessage = allocationResult.ErrorMessage,
-                    ActualReceivedQuantity = result.ActualReceivedQuantity,
-                    CreatedGoodsReceiptId = result.CreatedGoodsReceiptId
-                };
-            }
-        }
 
         return new ReceivePurchaseOrderItemResultModel
         {
