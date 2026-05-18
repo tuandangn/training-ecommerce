@@ -21,8 +21,6 @@ public sealed class CreatePurchaseOrderModel
 
     [Display(Name = "Kho nhập hàng")]
     public Guid? WarehouseId { get; set; }
-    [ValidateNever]
-    public EntityOptionListModel? AvailableWarehouses { get; set; }
 
     [Display(Name = "Ngày giao dự kiến")]
     public DateTime? ExpectedDeliveryDate { get; set; }

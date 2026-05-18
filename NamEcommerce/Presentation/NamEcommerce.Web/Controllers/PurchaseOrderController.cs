@@ -123,12 +123,12 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             WarehouseId = model.WarehouseId,
             Note = model.Note,
             ExpectedDeliveryDate = model.ExpectedDeliveryDate,
-            Items = model.Items?.Where(i => i.ProductId.HasValue && (i.Quantity ?? 0) > 0).Select(i => new CreatePurchaseOrderItemCommand
+            Items = model.Items.Select(i => new CreatePurchaseOrderItemCommand
             {
                 ProductId = i.ProductId,
                 Quantity = i.Quantity ?? 0,
                 UnitCost = i.UnitCost ?? 0
-            }).ToList() ?? []
+            }).ToList()
         });
 
         if (!result.Success)
@@ -137,17 +137,6 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             model = await _purchaseOrderModelFactory.PrepareCreatePurchaseOrderModel(model);
             return View(model);
         }
-
-        //await _mediator.Send(new SubmitsPurchaseOrderCommand
-        //{
-        //    PurchaseOrderId = result.CreatedId!.Value
-        //});
-
-        //await _mediator.Send(new ChangePurchaseOrderStatusCommand
-        //{
-        //    PurchaseOrderId = result.CreatedId!.Value,
-        //    Status = (int)PurchaseOrderStatus.Approved
-        //});
 
         NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });

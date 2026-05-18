@@ -59,6 +59,8 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
         if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
             return (false, "Error.ExpectedShippingDateInvalid");
 
+        if (Items.Count == 0)
+            return (false, "Error.OrderItemRequired");
         foreach (var item in Items)
         {
             var validateResult = item.Validate();

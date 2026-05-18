@@ -18,7 +18,6 @@ public sealed class CreatePurchaseOrderValidator : AbstractValidator<CreatePurch
 
         RuleFor(p => p.Items)
             .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Items"]]);
-
         RuleForEach(p => p.Items).SetValidator(new CreatePurchaseOrderItemValidator(localizer));
     }
 }
@@ -30,9 +29,10 @@ public sealed class CreatePurchaseOrderItemValidator : AbstractValidator<CreateP
             .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Product"]]);
 
         RuleFor(m => m.UnitCost)
-            .GreaterThan(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.UnitCost"]]);
-
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.UnitCost"]])
+            .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.UnitCost"]]);
         RuleFor(m => m.Quantity)
+            .NotEmpty().WithMessage(p => localizer["Error.Required", localizer["Label.Quantity"]])
             .GreaterThan(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.Quantity"]]);
     }
 }

@@ -579,9 +579,6 @@
   <data name="Error.PurchaseOrderQuantityMustBePositive" xml:space="preserve">
     <value>Quantity must be greater than 0.</value>
   </data>
-  <data name="Error.PurchaseOrderUnitCostCannotBeNegative" xml:space="preserve">
-    <value>Unit cost cannot be negative.</value>
-  </data>
   <data name="Msg.DeleteConfirmTitle" xml:space="preserve">
     <value>Confirm Delete</value>
   </data>

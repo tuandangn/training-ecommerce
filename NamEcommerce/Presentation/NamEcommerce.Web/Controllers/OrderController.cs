@@ -1,13 +1,10 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Domain.Shared.Enums.Orders;
-using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
-using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.Orders;
 using NamEcommerce.Web.Services.Orders;
 
@@ -33,9 +30,9 @@ public sealed class OrderController : BaseAuthorizedController
         return View(model);
     }
 
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
-        var model = new CreateOrderModel();
+        var model = await _orderModelFactory.PrepareCreateOrderModel();
         return View(model);
     }
 
@@ -48,15 +45,7 @@ public sealed class OrderController : BaseAuthorizedController
             return View(model);
         }
 
-        if (model.Items.Count == 0)
-        {
-            AddLocalizedModelError("Error.OrderItemRequired");
-            model = await _orderModelFactory.PrepareCreateOrderModel(model);
-            return View(model);
-        }
-
-        var orderSubTotal = model.Items.Sum(item => item.ItemSubTotal);
-        if ((model.OrderDiscount ?? 0) > orderSubTotal)
+        if ((model.OrderDiscount ?? 0) > model.OrderSubTotal)
         {
             ModelState.AddModelError(nameof(model.OrderDiscount), LocalizeError("Error.OrderDiscountExceedsTotal"));
             model = await _orderModelFactory.PrepareCreateOrderModel(model);

@@ -6,6 +6,6 @@ namespace NamEcommerce.Web.Services.Orders;
 public interface IOrderModelFactory
 {
     Task<OrderListModel> PrepareOrderListModel(OrderListSearchModel searchModel);
-    Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? model = null);
+    Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null);
     Task<OrderDetailsModel?> PrepareOrderDetailsModel(Guid orderId);
 }

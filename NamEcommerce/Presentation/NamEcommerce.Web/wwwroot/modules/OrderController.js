@@ -221,8 +221,8 @@ export default class OrderController {
             </td>
             <td class="text-center">
                 <input name="Items[${index}].Quantity" value="${quantity}"
-                    class="form-control form-control-sm text-end row-qty no-additional-element"
-                    data-decimal="quantity" min="0.00000001" data-val="true"
+                    class="form-control row-qty"
+                    data-decimal="quantity" data-val="true"
                     data-val-required="Vui lòng nhập số lượng."
                     data-val-range="Số lượng phải lớn hơn 0."
                     data-val-range-min="0.001"
@@ -233,12 +233,10 @@ export default class OrderController {
             </td>
             <td class="text-end">
                 <input name="Items[${index}].UnitPrice" value="${unitPrice}"
-                    class="form-control form-control-sm text-end row-price no-additional-element no-hint"
-                    min="0" data-decimal="currency" data-val="true"
-                    data-val-required="Vui lòng nhập đơn giá."
-                    data-val-range="Đơn giá phải lớn hơn hoặc bằng 0."
-                    data-val-range-min="0"
-                    data-val-number="Đơn giá không đúng." />
+                    class="form-control row-price" data-decimal="currency"
+                    data-val="true" data-val-required="Vui lòng nhập đơn giá"
+                    data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
+                    data-val-number="Đơn giá phải là số"  />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="Items[${index}].UnitPrice"
                     data-valmsg-replace="true"></span>

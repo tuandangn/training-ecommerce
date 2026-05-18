@@ -16,7 +16,7 @@ public abstract record BasePurchaseOrderItemAppDto
         if (QuantityOrdered <= 0)
             return (false, "Error.PurchaseOrderQuantityMustBePositive");
         if (UnitCost < 0)
-            return (false, "Error.PurchaseOrderUnitCostCannotBeNegative");
+            return (false, "Error.PurchaseOrderItemUnitCostCannotBeNegative");
 
         return (true, string.Empty);
     }
@@ -31,6 +31,26 @@ public sealed record PurchaseOrderItemAppDto(Guid Id) : BasePurchaseOrderItemApp
 }
 
 [Serializable]
+public sealed record CreatePurchaseOrderItemAppDto
+{
+    public required Guid? ProductId { get; init; }
+    public required decimal Quantity { get; init; }
+    public decimal UnitCost { get; set; }
+    public string? Note { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (Quantity <= 0)
+            return (false, "Error.QuantityMustBePositive");
+
+        if (UnitCost < 0)
+            return (false, "Error.");
+
+        return (true, string.Empty);
+    }
+}
+
+[Serializable]
 public sealed record AddPurchaseOrderItemAppDto() : BasePurchaseOrderItemAppDto;
 
 [Serializable]
@@ -40,9 +60,6 @@ public sealed record ReceivedGoodsForItemAppDto(Guid PurchaseOrderId, Guid Purch
     public required Guid? WarehouseId { get; init; }
     public Guid? ReceivedByUserId { get; set; }
 
-    /// <summary>
-    /// Giá bán mới cho sản phẩm (tùy chọn). Nếu null thì giữ nguyên UnitPrice hiện tại của Product.
-    /// </summary>
     public decimal? SellingPrice { get; set; }
     public decimal? ActualUnitCost { get; set; }
     public string? OversupplyAction { get; set; }
@@ -63,7 +80,6 @@ public sealed record ReceivedGoodsForItemAppDto(Guid PurchaseOrderId, Guid Purch
 [Serializable]
 public sealed record DeletePurchaseOrderItemAppDto(Guid PurchaseOrderId, Guid ItemId);
 
-/// <summary>DTO cho một dòng item trong batch nhận hàng.</summary>
 [Serializable]
 public sealed record BulkReceiveItemAppDto
 {
@@ -73,18 +89,12 @@ public sealed record BulkReceiveItemAppDto
     public decimal? ActualUnitCost { get; set; }
 }
 
-/// <summary>DTO cho thao tác nhận nhiều hàng hóa cùng lúc (bulk receive).</summary>
 [Serializable]
 public sealed record BulkReceiveGoodsAppDto(Guid PurchaseOrderId)
 {
     public IList<BulkReceiveItemAppDto> Items { get; init; } = [];
-
-    /// <summary>Phí vận chuyển cộng thêm vào đơn (tùy chọn).</summary>
     public decimal AdditionalShipping { get; set; }
-
-    /// <summary>Tiền thuế cộng thêm vào đơn, đã được tính từ % rate (tùy chọn).</summary>
     public decimal AdditionalTax { get; set; }
-
     public Guid? ReceivedByUserId { get; set; }
 
     public (bool valid, string? errorMessage) Validate()
@@ -133,7 +143,6 @@ public sealed record AllocatePoItemToOrderAppDto
     public string? DirectShipContactPhone { get; init; }
 }
 
-/// <summary>Kết quả single receive — trả về số lượng thực nhận sau khi áp dụng oversupply cap.</summary>
 [Serializable]
 public sealed record ReceiveItemResultAppDto : CommonActionResultDto
 {
@@ -147,7 +156,6 @@ public sealed record ReceiveItemResultAppDto : CommonActionResultDto
         => new() { Success = false, ErrorMessage = errorMessage };
 }
 
-/// <summary>Kết quả bulk receive — kèm danh sách GoodsReceipt IDs đã tạo để UI có thể link/show.</summary>
 [Serializable]
 public sealed record BulkReceiveGoodsResultAppDto : CommonActionResultDto
 {

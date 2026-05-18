@@ -29,9 +29,9 @@ public sealed class OrderModelFactory : IOrderModelFactory
         _directShipAppService = directShipAppService;
     }
 
-    public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? model = null)
+    public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
     {
-        model = model ?? new CreateOrderModel();
+        var model = oldModel ?? new CreateOrderModel();
 
         if (model.CustomerId.HasValue)
         {
@@ -65,6 +65,10 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     item.ProductDisplayQty = product.QuantityAvailable;
                     item.ProductDisplayPicture = product.PictureUrl;
                 }
+            }
+            else
+            {
+                model.Items.Clear();
             }
         }
 

@@ -59,6 +59,13 @@ public sealed record CreatePurchaseOrderAppDto : BasePurchaseOrderAppDto
     {
         if (Items.Count == 0)
             return (false, "Error.PurchaseOrderItemRequired");
+        foreach (var item in Items)
+        {
+            var itemValidate = item.Validate();
+            if (!itemValidate.valid)
+                return itemValidate;
+        }
+
         if (TaxAmount < 0)
             return (false, "Error.TaxAmountCannotBeNegative");
         if (ShippingAmount < 0)
@@ -87,13 +94,4 @@ public sealed record UpdatePurchaseOrderResultAppDto
     public required bool Success { get; init; }
     public Guid? UpdatedId { get; set; }
     public string? ErrorMessage { get; set; }
-}
-
-[Serializable]
-public sealed record CreatePurchaseOrderItemAppDto
-{
-    public required Guid? ProductId { get; init; }
-    public required decimal Quantity { get; init; }
-    public decimal UnitCost { get; set; }
-    public string? Note { get; init; }
 }

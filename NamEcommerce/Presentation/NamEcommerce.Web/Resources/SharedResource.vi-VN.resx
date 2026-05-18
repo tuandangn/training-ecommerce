@@ -579,9 +579,6 @@
   <data name="Error.PurchaseOrderQuantityMustBePositive" xml:space="preserve">
     <value>Số lượng phải lớn hơn 0.</value>
   </data>
-  <data name="Error.PurchaseOrderUnitCostCannotBeNegative" xml:space="preserve">
-    <value>Giá nhập không được âm.</value>
-  </data>
   <data name="Msg.DeleteConfirmTitle" xml:space="preserve">
     <value>Xác nhận xóa</value>
   </data>

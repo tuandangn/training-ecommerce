@@ -47,7 +47,6 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         {
             PlacedOn = DateTime.Now
         };
-        model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
         if (model.VendorId.HasValue)
         {
