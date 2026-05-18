@@ -52,7 +52,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
     private Task<string> GenerateCodeAsync()
     {
-        var monthPrefix = $"DN-{DateTime.UtcNow:yyMM}";
+        var monthPrefix = $"{PurchaseOrder.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
         var count = ((EntityDataReader<PurchaseOrder>)_purchaseOrderDataReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
         return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
     }

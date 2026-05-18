@@ -17,7 +17,7 @@ namespace NamEcommerce.Domain.Entities.GoodsReceipts;
 [Serializable]
 public sealed record GoodsReceipt : AppAggregateEntity
 {
-    public const string GoodsReceiptCodePrefix = "PN";
+    public const string CODE_PREFIX = "PN";
 
     private GoodsReceipt() : base(Guid.Empty) { Code = string.Empty; }
 

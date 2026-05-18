@@ -49,7 +49,7 @@ public sealed class GoodsReceiptManager(
 {
     private Task<string> GenerateCodeAsync()
     {
-        var monthPrefix = $"PNK-{DateTime.UtcNow:yyMM}";
+        var monthPrefix = $"{GoodsReceipt.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
         var count = ((EntityDataReader<GoodsReceipt>)goodsReceiptDataReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
         return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
     }

@@ -8,6 +8,8 @@ namespace NamEcommerce.Domain.Entities.DeliveryNotes;
 [Serializable]
 public sealed record DeliveryNote : AppAggregateEntity
 {
+    public const string CODE_PREFIX = "PX";
+
     public DeliveryNote(Guid id) : base(id)
     {
         Code = string.Empty;

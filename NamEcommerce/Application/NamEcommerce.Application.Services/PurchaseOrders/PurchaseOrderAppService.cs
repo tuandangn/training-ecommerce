@@ -531,7 +531,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         var monthOrderCount = await Task.Run(() => _purchaseOrderDataReader.DataSource.Where(o => o.CreatedOnUtc >= monthDateStart && o.CreatedOnUtc <= monthDateEnd).Count()).ConfigureAwait(false);
         do
         {
-            code = $"{PurchaseOrder.PurchaseOrderCodePrefix}{now:MMyy}{++monthOrderCount:D3}";
+            code = $"{PurchaseOrder.CODE_PREFIX}{now:MMyy}{++monthOrderCount:D3}";
         }
         while (await _purchaseOrderManager.DoesCodeExistAsync(code).ConfigureAwait(false));
 

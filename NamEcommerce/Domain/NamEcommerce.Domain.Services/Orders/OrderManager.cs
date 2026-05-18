@@ -32,7 +32,7 @@ public sealed class OrderManager(
 {
     private Task<string> GenerateCodeAsync()
     {
-        var monthPrefix = $"DB-{DateTime.UtcNow:yyMM}";
+        var monthPrefix = $"{Order.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
         var count = ((EntityDataReader<Order>)orderDataReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
         return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
     }

@@ -16,7 +16,7 @@ namespace NamEcommerce.Domain.Entities.Orders;
 [Serializable]
 public sealed record Order : AppAggregateEntity
 {
-    public const string OrderCodePrefix = "DB";
+    public const string CODE_PREFIX = "DB";
 
     internal Order(string code) : this(code, null)
     {

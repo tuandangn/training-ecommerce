@@ -25,7 +25,10 @@
       "Skill(agent-skills:using-agent-skills)",
       "Bash(xargs cat)",
       "Bash(xargs grep -l \"IEntityDataReader\")",
-      "Skill(agent-skills:planning-and-task-breakdown)"
+      "Skill(agent-skills:planning-and-task-breakdown)",
+      "Bash(Select-String -Pattern \"error|Error|warning\")",
+      "Bash(Select-Object -First 40)",
+      "PowerShell(dotnet build *)"
     ]
   }
 }

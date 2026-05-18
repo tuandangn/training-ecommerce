@@ -34,7 +34,7 @@ public sealed class DeliveryNoteManager(
 {
     private Task<string> GenerateCodeAsync()
     {
-        var monthPrefix = $"PXK-{DateTime.UtcNow:yyMM}";
+        var monthPrefix = $"{DeliveryNote.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
         var count = ((EntityDataReader<DeliveryNote>)deliveryNoteReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
         return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
     }

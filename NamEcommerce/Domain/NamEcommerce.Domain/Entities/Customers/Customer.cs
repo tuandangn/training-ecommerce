@@ -7,8 +7,7 @@ namespace NamEcommerce.Domain.Entities.Customers;
 [Serializable]
 public sealed record Customer : AppAggregateEntity
 {
-    internal Customer(Guid id, string fullName, string phoneNumber, string address)
-        : base(id)
+    internal Customer(Guid id, string fullName, string phoneNumber, string address): base(id)
     {
         FullName = fullName;
         PhoneNumber = phoneNumber;
@@ -45,21 +44,12 @@ public sealed record Customer : AppAggregateEntity
     public string? Note { get; internal set; }
     public DateTime CreatedOnUtc { get; init; }
 
-    /// <summary>
-    /// Đánh dấu khách hàng vừa được khởi tạo — Manager gọi trước <c>InsertAsync</c>.
-    /// </summary>
     internal void MarkCreated()
         => RaiseDomainEvent(new CustomerCreated(Id, FullName, PhoneNumber));
 
-    /// <summary>
-    /// Đánh dấu khách hàng vừa được cập nhật — raise <see cref="CustomerUpdated"/>.
-    /// </summary>
     internal void MarkUpdated()
         => RaiseDomainEvent(new CustomerUpdated(Id));
 
-    /// <summary>
-    /// Đánh dấu khách hàng bị xoá — Manager gọi trước <c>DeleteAsync</c> để raise <see cref="CustomerDeleted"/>.
-    /// </summary>
     internal void MarkDeleted()
         => RaiseDomainEvent(new CustomerDeleted(Id, FullName));
 }
