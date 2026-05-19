@@ -14,7 +14,7 @@ public sealed class StockTransferNoteModelFactory(IMediator mediator, IWarehouse
         var warehouses = await warehouseAppService.GetWarehousesAsync().ConfigureAwait(false);
 
         var transferable = warehouses.Items
-            .Where(w => w.WarehouseType != (int)WarehouseType.DirectShipTransit)
+            .Where(w => w.WarehouseType != (int)WarehouseType.DirectTransit)
             .Select(w => new TransferWarehouseSelectItem { Id = w.Id, Name = w.Name })
             .ToList();
 

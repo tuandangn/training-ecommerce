@@ -28,6 +28,7 @@ public sealed class BulkReceivePurchaseOrderHandler : IRequestHandler<BulkReceiv
                 ReceivedQuantity = item.Quantity,
                 WarehouseId = item.WarehouseId,
                 ActualUnitCost = item.ActualUnitCost,
+                DirectShipOrderId = item.DirectShipOrderId,
                 DirectShipOrderItemId = item.DirectShipOrderItemId,
                 DirectShipAddress = item.DirectShipAddress,
                 DirectShipContactName = item.DirectShipContactName,

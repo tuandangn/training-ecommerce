@@ -36,6 +36,7 @@ public sealed record OrderDetailsModel
     public OrderAllocatedPurchaseOrderListModel? AllocatedPurchaseOrders { get; set; }
     public ShortageInfoModel ShortageInfo { get; set; } = new();
     public IList<DirectShipAllocationModel> DirectShipAllocations { get; set; } = [];
+    public IList<ReturnWarehouseOptionModel> ReturnWarehouseOptions { get; set; } = [];
 
     [Serializable]
     public sealed record DirectShipAllocationModel
@@ -51,6 +52,13 @@ public sealed record OrderDetailsModel
     }
 
     public DateTime CreatedOn { get; set; }
+
+    [Serializable]
+    public sealed record ReturnWarehouseOptionModel
+    {
+        public required Guid Id { get; init; }
+        public required string Name { get; init; }
+    }
 
     /// <summary>
     /// Checks if all order items have been fully covered by delivery notes

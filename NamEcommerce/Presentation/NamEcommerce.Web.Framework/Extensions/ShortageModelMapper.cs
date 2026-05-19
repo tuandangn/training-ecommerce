@@ -46,6 +46,7 @@ public static class ShortageModelMapper
         return new ShortageAggregationItemModel
         {
             OrderCode = dto.OrderCode,
+            OrderId = dto.OrderId,
             OrderItemId = dto.OrderItemId,
             ProductId = dto.ProductId,
             ProductName = dto.ProductName,

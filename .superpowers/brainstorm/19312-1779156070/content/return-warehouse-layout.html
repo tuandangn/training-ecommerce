@@ -1,0 +1,83 @@
+<h2>Chọn UI cho kho nhận hàng trả về</h2>
+<p class="subtitle">Tình huống: DeliveryNote giao thẳng từ NCC bị khách từ chối, hoặc đơn bán bị hủy khi hàng đang ở kho ảo Direct-Ship Transit.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;font-family:Inter,Segoe UI,sans-serif;color:#1e293b">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="width:34px;height:34px;border-radius:999px;background:#fee2e2;color:#ef4444;display:flex;align-items:center;justify-content:center;font-weight:700">!</div>
+          <div>
+            <div style="font-weight:700">Từ chối giao hàng</div>
+            <div style="font-size:12px;color:#64748b">DN-000124 - Khách không nhận hàng</div>
+          </div>
+        </div>
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:13px;color:#9a3412">
+          Hàng đang ở kho ảo Direct-Ship Transit. Chọn kho thật để nhập hàng về.
+        </div>
+        <label style="font-size:12px;font-weight:700;color:#475569">Kho nhận hàng trả về *</label>
+        <div style="margin-top:6px;border:1px solid #cbd5e1;border-radius:8px;background:white;padding:10px 12px;display:flex;justify-content:space-between">
+          <span>Kho chính Tuấn Khôi</span><span style="color:#94a3b8">v</span>
+        </div>
+        <label style="display:block;margin-top:12px;font-size:12px;font-weight:700;color:#475569">Lý do từ chối *</label>
+        <div style="margin-top:6px;border:1px solid #e2e8f0;border-radius:8px;background:white;height:58px;padding:10px;color:#94a3b8;font-size:13px">Khách hủy, sai địa chỉ, hàng không đúng...</div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px">
+          <button style="border:1px solid #e2e8f0;background:white;border-radius:8px;padding:8px 12px">Giữ nguyên</button>
+          <button style="border:0;background:#ef4444;color:white;border-radius:8px;padding:8px 12px;font-weight:700">Từ chối & nhập về kho</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Chọn kho ngay trong modal</h3>
+      <p>Trường kho là bắt buộc và nằm trước lý do. Rõ nhất, ít thao tác, phù hợp cả Reject DN và Cancel SO.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;font-family:Inter,Segoe UI,sans-serif;color:#1e293b">
+        <div style="font-weight:700;margin-bottom:8px">Bước 1: Từ chối giao hàng</div>
+        <div style="border:1px solid #e2e8f0;background:white;border-radius:8px;height:58px;padding:10px;color:#94a3b8;font-size:13px">Nhập lý do...</div>
+        <div style="height:1px;background:#e2e8f0;margin:16px 0"></div>
+        <div style="font-weight:700;margin-bottom:8px">Bước 2: Điều chuyển hàng về kho</div>
+        <div style="border:1px solid #cbd5e1;border-radius:8px;background:white;padding:10px 12px;display:flex;justify-content:space-between">
+          <span>Chọn kho nhận hàng</span><span style="color:#94a3b8">v</span>
+        </div>
+        <button style="margin-top:16px;width:100%;border:0;background:#5346e0;color:white;border-radius:8px;padding:9px 12px;font-weight:700">Tiếp tục</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Wizard 2 bước</h3>
+      <p>Rất rõ về nghiệp vụ nhưng chậm hơn. Hơi nặng cho thao tác thường ngày trong màn quản trị.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;font-family:Inter,Segoe UI,sans-serif;color:#1e293b">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="width:34px;height:34px;border-radius:999px;background:#fee2e2;color:#ef4444;display:flex;align-items:center;justify-content:center;font-weight:700">!</div>
+          <div>
+            <div style="font-weight:700">Từ chối giao hàng</div>
+            <div style="font-size:12px;color:#64748b">Mặc định trả về kho nhập ban đầu</div>
+          </div>
+        </div>
+        <div style="background:white;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:13px">
+          Kho nhận: <strong>Kho chính Tuấn Khôi</strong>
+          <span style="float:right;color:#5346e0;font-weight:700">Đổi kho</span>
+        </div>
+        <div style="border:1px solid #e2e8f0;border-radius:8px;background:white;height:70px;padding:10px;color:#94a3b8;font-size:13px">Lý do từ chối...</div>
+        <button style="margin-top:16px;width:100%;border:0;background:#ef4444;color:white;border-radius:8px;padding:9px 12px;font-weight:700">Từ chối</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Mặc định kho cũ, cho đổi</h3>
+      <p>Nhanh nhất nhưng dễ bị bỏ qua. Không đủ rõ khi yêu cầu mới là phải chủ động chọn warehouse.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Khuyến nghị của mình</h3>
+  <p>Chọn A: cùng một modal cho Reject DN và Cancel SO, dùng dropdown kho vật lý đang active, không hiển thị Direct-Ship Transit. Nội dung nút xác nhận nói rõ “nhập về kho” để người dùng hiểu tác động tồn kho.</p>
+</div>

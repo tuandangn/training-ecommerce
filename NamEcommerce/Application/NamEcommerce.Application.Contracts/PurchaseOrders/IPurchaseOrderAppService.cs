@@ -39,6 +39,7 @@ public interface IPurchaseOrderAppService
     Task<IList<OrderAllocatedPurchaseOrderAppDto>> GetAllocatedPurchaseOrdersForOrderAsync(Guid orderId);
 
     Task<IList<EligibleOrderItemForAllocationAppDto>> GetEligibleOrderItemsForPoItemAsync(Guid purchaseOrderItemId);
+    Task<decimal> GetMaxAllocationQuantityForOrderItemAsync(Guid orderId, Guid orderItemId);
 
     Task<CommonActionResultDto> AllocatePoItemToOrderAsync(AllocatePoItemToOrderAppDto dto);
 

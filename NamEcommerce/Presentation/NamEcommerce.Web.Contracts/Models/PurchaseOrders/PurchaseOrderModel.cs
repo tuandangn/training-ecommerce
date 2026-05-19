@@ -43,6 +43,8 @@ public sealed class PurchaseOrderModel
         public string ProductName { get; set; } = "";
         public string? ProductPicture { get; set; }
 
+        public string? UnitMeasurement { get; set; }
+
         public decimal QuantityOrdered { get; set; }
         public decimal UnitCost { get; set; }
         public decimal QuantityReceived { get; set; }

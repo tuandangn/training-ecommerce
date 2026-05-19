@@ -31,4 +31,11 @@ public sealed class PendingDirectShipDeliveryListModel
 {
     public required DirectShipDeliveryFilterModel Filter { get; init; }
     public required IList<PendingDirectShipDeliveryModel> Items { get; init; }
+    public IList<DirectShipReturnWarehouseOptionModel> ReturnWarehouseOptions { get; init; } = [];
+}
+
+public sealed class DirectShipReturnWarehouseOptionModel
+{
+    public required Guid Id { get; init; }
+    public required string Name { get; init; }
 }

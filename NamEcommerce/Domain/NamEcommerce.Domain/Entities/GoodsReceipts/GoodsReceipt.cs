@@ -192,7 +192,7 @@ public sealed record GoodsReceipt : AppAggregateEntity
         _pictureIds.Add(pictureId);
     }
 
-    internal static async Task<GoodsReceipt> CreateAsync(Guid id, IGetByIdService<GoodsReceipt> byIdGetter, ICurrentUserAccessor currentUserAccessor)
+    internal static async Task<GoodsReceipt> CreateAsync(Guid id, ICurrentUserAccessor currentUserAccessor, IGetByIdService<GoodsReceipt> byIdGetter)
     {
         ArgumentNullException.ThrowIfNull(byIdGetter);
         ArgumentNullException.ThrowIfNull(currentUserAccessor);
@@ -202,12 +202,9 @@ public sealed record GoodsReceipt : AppAggregateEntity
             throw new GoodsReceiptIdIsExistingException(id);
 
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
-        var goodsReceipt = new GoodsReceipt(id, currentUser);
-
-        return goodsReceipt;
+        return await CreateAsync(id, currentUser, byIdGetter).ConfigureAwait(false);
     }
-
-    internal static async Task<GoodsReceipt> CreateFromSourceAsync(Guid id, IGetByIdService<GoodsReceipt> byIdGetter, Guid? createdByUserId, string? createdByUsername = null)
+    internal static async Task<GoodsReceipt> CreateAsync(Guid id, CurrentUserInfoDto? createdByUser, IGetByIdService<GoodsReceipt> byIdGetter)
     {
         ArgumentNullException.ThrowIfNull(byIdGetter);
 
@@ -215,7 +212,9 @@ public sealed record GoodsReceipt : AppAggregateEntity
         if (sameIdGoodsReceipt is not null)
             throw new GoodsReceiptIdIsExistingException(id);
 
-        return new GoodsReceipt(id, createdByUserId, createdByUsername);
+        var goodsReceipt = new GoodsReceipt(id, createdByUser);
+
+        return goodsReceipt;
     }
 
     #endregion

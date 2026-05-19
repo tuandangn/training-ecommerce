@@ -62,5 +62,6 @@ public sealed record ConfirmDirectShipDeliveryAppDto
 public sealed record RejectDirectShipDeliveryAppDto
 {
     public required Guid DeliveryNoteId { get; init; }
+    public required Guid ReturnWarehouseId { get; init; }
     public required string Reason { get; init; }
 }

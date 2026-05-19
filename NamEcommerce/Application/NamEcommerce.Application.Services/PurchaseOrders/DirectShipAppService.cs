@@ -64,7 +64,10 @@ public sealed class DirectShipAppService(
     {
         try
         {
-            await directShipManager.RejectDeliveryAsync(dto.DeliveryNoteId, dto.Reason)
+            if (dto.ReturnWarehouseId == Guid.Empty)
+                return CommonActionResultDto.CreateError("Vui lòng chọn kho nhận hàng trả về.");
+
+            await directShipManager.RejectDeliveryAsync(dto.DeliveryNoteId, dto.ReturnWarehouseId, dto.Reason)
                 .ConfigureAwait(false);
             return CommonActionResultDto.CreateSuccess();
         }

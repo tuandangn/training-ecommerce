@@ -44,10 +44,6 @@ public sealed record ReceivedGoodsForItemDto(Guid PurchaseOrderId, Guid Purchase
     public required decimal ReceivedQuantity { get; init; }
     public required Guid? WarehouseId { get; init; }
     public Guid? ReceivedByUserId { get; set; }
-
-    /// <summary>
-    /// Giá bán mới cho sản phẩm (tùy chọn). Nếu null thì giữ nguyên UnitPrice hiện tại của Product.
-    /// </summary>
     public decimal? SellingPrice { get; set; }
     public decimal? ActualUnitCost { get; set; }
 

@@ -13,6 +13,7 @@ public sealed record PurchaseOrderShortageAllocationDto
 [Serializable]
 public sealed record OrderItemShortageDto
 {
+    public required Guid OrderId { get; init; }
     public required string OrderCode { get; init; }
     public required Guid OrderItemId { get; init; }
     public required Guid ProductId { get; init; }
@@ -30,6 +31,7 @@ public sealed record OrderItemShortageDto
 [Serializable]
 public sealed record DeliveryNoteItemShortageDto
 {
+    public required Guid OrderId { get; init; }
     public required string OrderCode { get; init; }
     public required Guid DeliveryNoteItemId { get; init; }
     public required Guid OrderItemId { get; init; }

@@ -17,7 +17,8 @@ public static class WarehouseExtensions
             PhoneNumber = warehouse.PhoneNumber,
             Address = warehouse.Address,
             ManagerUserId = warehouse.ManagerUserId,
-            IsActive = warehouse.IsActive
+            IsActive = warehouse.IsActive,
+            IsPhysical = warehouse.WarehouseType == WarehouseType.Physical
         };
 
     public static WarehouseAppDto ToDto(this WarehouseDto dto)
@@ -30,6 +31,7 @@ public static class WarehouseExtensions
             PhoneNumber = dto.PhoneNumber,
             Address = dto.Address,
             ManagerUserId = dto.ManagerUserId,
-            IsActive = dto.IsActive
+            IsActive = dto.IsActive,
+            IsPhysical = dto.WarehouseType == (int) WarehouseType.Physical
         };
 }

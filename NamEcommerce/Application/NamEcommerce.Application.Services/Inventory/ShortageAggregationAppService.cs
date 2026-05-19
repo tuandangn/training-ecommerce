@@ -68,6 +68,7 @@ public sealed class ShortageAggregationAppService(
             var item = new ShortageAggregationItemAppDto
             {
                 OrderCode = shortage.OrderCode,
+                OrderId = shortage.OrderId,
                 OrderItemId = shortage.OrderItemId,
                 ProductId = shortage.ProductId,
                 ProductName = shortage.ProductName,
@@ -402,7 +403,7 @@ public sealed class ShortageAggregationAppService(
                             if (actionAllocationQuantity > 0)
                             {
                                 var allocationDto = await purchaseOrderAllocationManager
-                                    .AllocateFromExistingPurchaseOrderItemAsync(action.PurchaseOrderItemId.Value, item.OrderItemId, actionAllocationQuantity)
+                                    .AllocateFromExistingPurchaseOrderItemAsync(action.PurchaseOrderItemId.Value, default, item.OrderItemId, actionAllocationQuantity)
                                     .ConfigureAwait(false);
 
                                 if (item.DirectShipInfo is { } ds && !string.IsNullOrWhiteSpace(ds.Address))
@@ -571,6 +572,7 @@ public sealed class ShortageAggregationAppService(
             return deliveryNoteShortages
                 .Where(shortage => !filter.ProductId.HasValue || shortage.ProductId == filter.ProductId.Value)
                 .Select(shortage => new ShortageLine(
+                    shortage.OrderId,
                     shortage.OrderItemId,
                     shortage.OrderCode,
                     shortage.ProductId,
@@ -598,6 +600,7 @@ public sealed class ShortageAggregationAppService(
         var shortages = await shortageQueryService.GetGlobalShortagesAsync(domainFilter).ConfigureAwait(false);
         return shortages
             .Select(shortage => new ShortageLine(
+                shortage.OrderId,
                 shortage.OrderItemId,
                 shortage.OrderCode,
                 shortage.ProductId,
@@ -614,6 +617,7 @@ public sealed class ShortageAggregationAppService(
     }
 
     private sealed record ShortageLine(
+        Guid OrderId,
         Guid OrderItemId,
         string OrderCode,
         Guid ProductId,

@@ -5,14 +5,17 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
+using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
+using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.PurchaseOrders;
@@ -27,12 +30,14 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     private readonly IEntityDataReader<User> _userDataReader;
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<PurchaseOrder> _purchaseOrderDataReader;
+    private readonly IEntityDataReader<PurchaseOrderItemAllocation> _purchaseOrderItemAllocationDataReader;
+    private readonly IEntityDataReader<Order> _orderDataReader;
 
     public PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
         IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
-        IEntityDataReader<PurchaseOrder> purchaseOrderDataReader, IEntityDataReader<Vendor> vendorDataReader,
-        IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader, IEntityDataReader<Product> productDataReader,
-        IDirectShipManager directShipManager)
+        IEntityDataReader<PurchaseOrderItemAllocation> purchaseOrderItemAllocationDataReader, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
+        IEntityDataReader<Vendor> vendorDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader,
+        IEntityDataReader<Product> productDataReader, IDirectShipManager directShipManager, IEntityDataReader<Order> orderDataReader)
     {
         _purchaseOrderManager = purchaseOrderManager;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
@@ -42,6 +47,8 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         _userDataReader = userDataReader;
         _productDataReader = productDataReader;
         _directShipManager = directShipManager;
+        _purchaseOrderItemAllocationDataReader = purchaseOrderItemAllocationDataReader;
+        _orderDataReader = orderDataReader;
     }
 
     public async Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status)
@@ -395,7 +402,6 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         if (product is null)
             return ReceiveItemResultAppDto.CreateError("Error.ProductIsNotFound");
 
-
         if (dto.ReceivedByUserId.HasValue)
         {
             var user = await _userDataReader.GetByIdAsync(dto.ReceivedByUserId.Value).ConfigureAwait(false);
@@ -403,28 +409,55 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 return ReceiveItemResultAppDto.CreateError("Error.UserIsNotFound");
         }
 
-        Guid? warehouseId = dto.WarehouseId ?? purchaseOrder.WarehouseId;
-        if (!warehouseId.HasValue)
-            return ReceiveItemResultAppDto.CreateError("Error.WarehouseRequired");
+        var directShipAllocations = await _directShipManager.GetDirectShipAllocationsForPoItemsAsync([purchaseOrderItem.Id]).ConfigureAwait(false);
+        var remainingAllocatedDirectShipQty = directShipAllocations.Sum(allocation => Math.Max(0, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
+        var physicalWarehouseRequired = dto.ReceivedQuantity > remainingAllocatedDirectShipQty;
 
-        else
+        var warehouseId = dto.WarehouseId ?? purchaseOrder.WarehouseId;
+        if (!warehouseId.HasValue && physicalWarehouseRequired)
+            return ReceiveItemResultAppDto.CreateError("Error.WarehouseRequired");
+        if (warehouseId.HasValue)
         {
             var warehouse = await _warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
             if (warehouse is null)
                 return ReceiveItemResultAppDto.CreateError("Error.WarehouseIsNotFound");
+            if (physicalWarehouseRequired && warehouse.WarehouseType != WarehouseType.Physical)
+                return ReceiveItemResultAppDto.CreateError("Error.PhysicalWarehouseRequired");
         }
 
-        ReceivedGoodsForItemResultDto result;
+        Guid? createdGoodsReceiptId = null;
         try
         {
-            result = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
+            var receiveDirectShipQty = Math.Min(remainingAllocatedDirectShipQty, dto.ReceivedQuantity);
+            if (receiveDirectShipQty > 0)
             {
-                ReceivedByUserId = dto.ReceivedByUserId,
-                ReceivedQuantity = dto.ReceivedQuantity,
-                WarehouseId = warehouseId,
-                SellingPrice = dto.SellingPrice,
-                ActualUnitCost = dto.ActualUnitCost
-            });
+                var directTransitWarehouseId = await _directShipManager.GetTransitWarehouseIdAsync().ConfigureAwait(false);
+                var directShipReceiveResult = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
+                {
+                    ReceivedByUserId = dto.ReceivedByUserId,
+                    ReceivedQuantity = receiveDirectShipQty,
+                    WarehouseId = directTransitWarehouseId,
+                    SellingPrice = null,
+                    ActualUnitCost = dto.ActualUnitCost
+                });
+
+                if (!physicalWarehouseRequired) createdGoodsReceiptId = directShipReceiveResult.CreatedGoodsReceiptId;
+            }
+
+            var receiveWarehouseQty = Math.Max(0, dto.ReceivedQuantity - receiveDirectShipQty);
+            if (receiveWarehouseQty > 0)
+            {
+                var warehouseReceiveResult = await _purchaseOrderManager.ReceiveItemsAsync(new ReceivedGoodsForItemDto(purchaseOrder.Id, purchaseOrderItem.Id)
+                {
+                    ReceivedByUserId = dto.ReceivedByUserId,
+                    ReceivedQuantity = receiveWarehouseQty,
+                    WarehouseId = warehouseId,
+                    SellingPrice = dto.SellingPrice,
+                    ActualUnitCost = dto.ActualUnitCost
+                });
+
+                createdGoodsReceiptId = warehouseReceiveResult.CreatedGoodsReceiptId;
+            }
         }
         catch (NamEcommerceDomainException ex)
         {
@@ -434,12 +467,16 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         if (originalReceivedQuantity > maxReceivable && dto.OversupplyAction == "AcceptToMainWarehouse")
         {
             var oversupplyQty = originalReceivedQuantity - maxReceivable;
+            if (!physicalWarehouseRequired)
+                warehouseId = _warehouseDataReader.DataSource.Where(warehouse => warehouse.WarehouseType == WarehouseType.Physical).FirstOrDefault()?.Id;
+            if (!warehouseId.HasValue)
+                throw new OversupplyQuantityCannotHandledException();
             await _purchaseOrderManager.AcceptOversupplyToMainWarehouseAsync(
                 dto.PurchaseOrderId, dto.PurchaseOrderItemId, oversupplyQty, warehouseId!.Value)
                 .ConfigureAwait(false);
         }
 
-        return ReceiveItemResultAppDto.CreateSuccess(dto.ReceivedQuantity, result.CreatedGoodsReceiptId);
+        return ReceiveItemResultAppDto.CreateSuccess(dto.ReceivedQuantity, createdGoodsReceiptId);
     }
 
     public async Task<BulkReceiveGoodsResultAppDto> BulkReceiveAsync(BulkReceiveGoodsAppDto dto)
@@ -674,7 +711,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             return CommonActionResultDto.CreateError("Error.PurchaseOrderItemIsNotFound");
 
         // Can only delete items from Draft status
-        if (purchaseOrder.Status != PurchaseOrderStatus.Draft)
+        if (!purchaseOrder.CanAddItems)
             return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotDeleteItems");
 
         await _purchaseOrderManager.DeleteOrderItemAsync(dto.PurchaseOrderId, dto.ItemId).ConfigureAwait(false);
@@ -744,7 +781,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         try
         {
             var allocation = await _purchaseOrderAllocationManager
-                .AllocateFromExistingPurchaseOrderItemAsync(dto.PurchaseOrderItemId, dto.OrderItemId, dto.Quantity)
+                .AllocateFromExistingPurchaseOrderItemAsync(dto.PurchaseOrderItemId, dto.OrderId, dto.OrderItemId, dto.Quantity)
                 .ConfigureAwait(false);
 
             if (!string.IsNullOrWhiteSpace(dto.DirectShipAddress))
@@ -766,4 +803,21 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         }
     }
 
+    public async Task<decimal> GetMaxAllocationQuantityForOrderItemAsync(Guid orderId, Guid orderItemId)
+    {
+        var order = await _orderDataReader.GetByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(orderId);
+
+        var orderItem = order.OrderItems.FirstOrDefault(item => item.Id == orderItemId);
+        if (orderItem is null)
+            throw new OrderItemIsNotFoundException(orderId);
+
+        var allocatedOutstanding = _purchaseOrderItemAllocationDataReader.DataSource
+            .Where(allocation => allocation.OrderItemId == orderItemId && allocation.Status != AllocationStatus.Cancelled)
+            .ToList()
+            .Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
+
+        return orderItem.Quantity - allocatedOutstanding;
+    }
 }

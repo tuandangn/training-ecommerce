@@ -11,6 +11,8 @@ public sealed record EditWarehouseModel
 
     [Display(Name = "Mã kho")]
     public string? Code { get; set; }
+    [ValidateNever]
+    public string CodePrefix { get; set; } = "";
 
     [Display(Name = "Tên kho")]
     public string? Name { get; set; }
@@ -23,9 +25,4 @@ public sealed record EditWarehouseModel
 
     [Display(Name = "Đang hoạt động")]
     public bool IsActive { get; set; }
-
-    [Display(Name = "Loại kho")]
-    public int WarehouseType { get; set; }
-    [ValidateNever]
-    public required CommonOptionListModel AvailableWarehouseTypes { get; set; }
 }

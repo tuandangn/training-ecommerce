@@ -435,6 +435,9 @@
   <data name="Error.WarehouseRequired" xml:space="preserve">
     <value>Warehouse is required.</value>
   </data>
+  <data name="Error.PhysicalWarehouseRequired" xml:space="preserve">
+    <value>Physical warehouse is required.</value>
+  </data>
   <data name="Error.PurchaseOrderCodeExists" xml:space="preserve">
     <value>Purchase order code already exists.</value>
   </data>
@@ -814,15 +817,24 @@
     <value>Products are not found</value>
   </data>
   <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.Physical" xml:space="preserve">
-    <value>Physical Warehouse</value>
+    <value>Physical warehouse</value>
   </data>
-  <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.DirectShipTransit" xml:space="preserve">
-    <value>Direct-Ship Transit Warehouse</value>
+  <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.Virtual" xml:space="preserve">
+    <value>Virtual warehouse</value>
+  </data>
+  <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.DirectTransit" xml:space="preserve">
+    <value>Direct transit warehouse</value>
   </data>
   <data name="Error.DirectShip.TransitWarehouseNotConfigured" xml:space="preserve">
     <value>No Direct-Ship Transit warehouse configured. Please create a warehouse of type DirectShipTransit first.</value>
   </data>
   <data name="Error.DirectShip.TransitWarehouseAlreadyExists" xml:space="preserve">
     <value>A Direct-Ship Transit warehouse already exists. Only one is allowed.</value>
+  </data>
+  <data name="Error.VirtualWarehouseCannotDelete" xml:space="preserve">
+    <value>Virtual warehouse cannot delete</value>
+  </data>
+  <data name="Error.WarehouseIsNotSuitableException" xml:space="preserve">
+    <value>Warehouse is not suitable.</value>
   </data>
 </root>

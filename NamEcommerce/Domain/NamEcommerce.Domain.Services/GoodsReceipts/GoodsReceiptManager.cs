@@ -11,6 +11,7 @@ using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Returns;
@@ -58,7 +59,7 @@ public sealed class GoodsReceiptManager(
 
         dto.Verify();
 
-        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), goodsReceiptDataReader, currentUserAccessor);
+        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), currentUserAccessor, goodsReceiptDataReader);
         goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(dto.ReceivedOnUtc);
         goodsReceipt.TruckDriverName = dto.TruckDriverName;
@@ -286,8 +287,12 @@ public sealed class GoodsReceiptManager(
         var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
             ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
-        var goodsReceipt = await GoodsReceipt.CreateFromSourceAsync(
-            Guid.NewGuid(), goodsReceiptDataReader, purchaseOrder.CreatedByUserId).ConfigureAwait(false);
+        //*TODO*
+        var createdByUser = purchaseOrder.CreatedByUserId.HasValue
+                ? new CurrentUserInfoDto(purchaseOrder.CreatedByUserId.Value, string.Empty, string.Empty)
+                : null;
+        var goodsReceipt = await GoodsReceipt.CreateAsync(
+            Guid.NewGuid(), createdByUser, goodsReceiptDataReader).ConfigureAwait(false);
         goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SetToPurchaseOrder(dto.PurchaseOrderId, dto.PurchaseOrderCode);
@@ -329,8 +334,10 @@ public sealed class GoodsReceiptManager(
         var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
             ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
-        var goodsReceipt = await GoodsReceipt.CreateFromSourceAsync(
-            Guid.NewGuid(), goodsReceiptDataReader, purchaseOrder.CreatedByUserId).ConfigureAwait(false);
+        var createdByUser = purchaseOrder.CreatedByUserId.HasValue
+                ? new CurrentUserInfoDto(purchaseOrder.CreatedByUserId.Value, string.Empty, string.Empty)
+                : null;
+        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptDataReader).ConfigureAwait(false);
         goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SetToPurchaseOrder(dto.PurchaseOrderId, dto.PurchaseOrderCode);
@@ -376,8 +383,10 @@ public sealed class GoodsReceiptManager(
         var customerReturn = await customerReturnReader.GetByIdAsync(dto.CustomerReturnId).ConfigureAwait(false)
             ?? throw new CustomerReturnNotFoundException(dto.CustomerReturnId);
 
-        var goodsReceipt = await GoodsReceipt.CreateFromSourceAsync(
-            Guid.NewGuid(), goodsReceiptDataReader, customerReturn.CreatedByUserId).ConfigureAwait(false);
+        var createdByUser = customerReturn.CreatedByUserId.HasValue
+                ? new CurrentUserInfoDto(customerReturn.CreatedByUserId.Value, string.Empty, string.Empty)
+                : null;
+        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptDataReader).ConfigureAwait(false);
         goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SourceType = GoodsReceiptSourceType.FromCustomerReturn;

@@ -178,11 +178,22 @@
                 <div class="alert alert-warning d-flex align-items-start gap-2 mb-3">
                     <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
                     <div>
-                        Hàng sẽ được chuyển về <strong>kho chính</strong> với giá vốn theo đơn nhập.
+                        Hàng sẽ được chuyển từ kho ảo Direct-Ship Transit về <strong>kho bạn chọn</strong> với giá vốn theo đơn nhập.
                         Thao tác này không thể hoàn tác.
                     </div>
                 </div>
                 <div id="rejectDnCode" class="mb-3 text-muted small"></div>
+                <div class="mb-3">
+                    <label class="form-label">Kho nhận hàng trả về <span class="text-danger">*</span></label>
+                    <select id="rejectReturnWarehouseId" class="form-select">
+                        <option value="">-- Chọn kho nhận hàng --</option>
+                        @foreach (var warehouse in Model.ReturnWarehouseOptions)
+                        {
+                            <option value="@warehouse.Id">@warehouse.Name</option>
+                        }
+                    </select>
+                    <div id="rejectReturnWarehouseError" class="invalid-feedback">Vui lòng chọn kho nhận hàng trả về.</div>
+                </div>
                 <div class="mb-0">
                     <label class="form-label">Lý do từ chối <span class="text-danger">*</span></label>
                     <textarea id="rejectReason" class="form-control" rows="3"
@@ -221,6 +232,8 @@
         btn.addEventListener('click', () => {
             pendingId = btn.dataset.id;
             document.getElementById('rejectDnCode').textContent = 'Phiếu: ' + btn.dataset.code;
+            document.getElementById('rejectReturnWarehouseId').value = '';
+            document.getElementById('rejectReturnWarehouseId').classList.remove('is-invalid');
             document.getElementById('rejectReason').value = '';
             document.getElementById('rejectReason').classList.remove('is-invalid');
             modalReject.show();
@@ -262,7 +275,14 @@
     document.getElementById('btnRejectSubmit').addEventListener('click', async () => {
         if (!pendingId) return;
 
+        const returnWarehouseId = document.getElementById('rejectReturnWarehouseId').value;
         const reason = document.getElementById('rejectReason').value.trim();
+        if (!returnWarehouseId) {
+            document.getElementById('rejectReturnWarehouseId').classList.add('is-invalid');
+            return;
+        }
+        document.getElementById('rejectReturnWarehouseId').classList.remove('is-invalid');
+
         if (!reason) {
             document.getElementById('rejectReason').classList.add('is-invalid');
             return;
@@ -275,7 +295,7 @@
             const res = await fetch('@Url.Action("RejectDelivery")', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deliveryNoteId: pendingId, reason })
+                body: JSON.stringify({ deliveryNoteId: pendingId, returnWarehouseId, reason })
             });
             const data = await res.json();
             modalReject.hide();

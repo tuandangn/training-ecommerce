@@ -211,6 +211,7 @@
 
                         <div class="shortage-order-item @(item.IsFromPrimaryOrder ? "" : "shortage-item-secondary")"
                              data-order-item-id="@item.OrderItemId"
+                             data-order-id="@item.OrderId"
                              data-order-code="@item.OrderCode"
                              data-product-id="@item.ProductId"
                              data-product-name="@item.ProductName"
@@ -685,6 +686,7 @@
                             row,
                             vendorId: group.dataset.vendorId,
                             vendorName: group.dataset.vendorName || '',
+                            orderId: row.dataset.orderId,
                             orderItemId: row.dataset.orderItemId,
                             orderCode: row.dataset.orderCode || '',
                             productId: row.dataset.productId,
@@ -722,6 +724,7 @@
                         }];
 
                     groupMap.get(line.vendorId).items.push({
+                        orderItem: line.orderId,
                         orderItemId: line.orderItemId,
                         productId: line.productId,
                         quantity: line.quantity,
@@ -912,6 +915,7 @@
                     groupLine.quantity += line.quantity;
                     groupLine.allocationQuantity += line.allocationQuantity;
                     groupLine.underlying.push({
+                        orderId: line.orderId,
                         orderItemId: line.orderItemId,
                         orderCode: line.orderCode || '',
                         quantity: line.quantity,

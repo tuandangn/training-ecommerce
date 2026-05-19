@@ -733,7 +733,18 @@
                     <div class="modal-body py-3">
                         <div class="alert alert-warning">
                             <i class="bi bi-exclamation-triangle me-2"></i>
-                            Có <strong>@Model.FullyReceivedDirectShipCount</strong> mặt hàng đang ở kho ảo Direct-Ship Transit (đã giao thẳng từ NCC, chờ khách xác nhận). Hủy đơn sẽ chuyển hàng về kho chính.
+                            Có <strong>@Model.FullyReceivedDirectShipCount</strong> mặt hàng đang ở kho ảo Direct-Ship Transit (đã giao thẳng từ NCC, chờ khách xác nhận). Chọn kho thật để nhập hàng về khi hủy đơn.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Kho nhận hàng trả về <span class="text-danger">*</span></label>
+                            <select id="cancelReturnWarehouseId" class="form-select">
+                                <option value="">-- Chọn kho nhận hàng --</option>
+                                @foreach (var warehouse in Model.ReturnWarehouseOptions)
+                                {
+                                    <option value="@warehouse.Id">@warehouse.Name</option>
+                                }
+                            </select>
+                            <div id="cancelReturnWarehouseError" class="invalid-feedback">Vui lòng chọn kho nhận hàng trả về.</div>
                         </div>
                         <p>Xác nhận hủy đơn hàng <strong>@Model.Code</strong>?</p>
                     </div>
@@ -872,7 +883,10 @@
             {
                 <text>
             const modal = new bootstrap.Modal(document.getElementById('cancelOrderWarningModal'));
-            cancelBtn.addEventListener('click', () => modal.show());
+            cancelBtn.addEventListener('click', () => {
+                document.getElementById('cancelReturnWarehouseId')?.classList.remove('is-invalid');
+                modal.show();
+            });
             document.getElementById('btnConfirmCancelWithDs')?.addEventListener('click', submitCancel);
                 </text>
             }
@@ -887,11 +901,24 @@
 
             async function submitCancel() {
                 const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+                let returnWarehouseId = null;
+                @if (Model.FullyReceivedDirectShipCount > 0)
+                {
+                    <text>
+                const warehouseSelect = document.getElementById('cancelReturnWarehouseId');
+                returnWarehouseId = warehouseSelect?.value || null;
+                if (!returnWarehouseId) {
+                    warehouseSelect?.classList.add('is-invalid');
+                    return;
+                }
+                warehouseSelect?.classList.remove('is-invalid');
+                    </text>
+                }
                 try {
                     const res = await fetch('/Order/CancelOrder', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token },
-                        body: JSON.stringify({ orderId: '@Model.Id' })
+                        body: JSON.stringify({ orderId: '@Model.Id', returnWarehouseId })
                     });
                     const data = await res.json();
                     if (data.success) {

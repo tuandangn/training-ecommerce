@@ -184,7 +184,7 @@
                                                                     <li>
                                                                         <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#receiveItemModal"
                                                                                 data-item-id="@item.Id" data-item-name="@item.ProductName" data-item-remaining="@item.RemainingQuantity"
-                                                                                data-item-unit-cost="@item.UnitCost" data-item-unit-price="@item.CurrentUnitPrice">
+                                                                                data-item-unit-cost="@item.UnitCost" data-item-unit-price="@item.CurrentUnitPrice" data-unit="@item.UnitMeasurement">
                                                                             <i class="bi bi-truck"></i>
                                                                             Nhận hàng
                                                                         </button>
@@ -723,6 +723,7 @@
                         <input type="hidden" name="PurchaseOrderId" value="@Model.Info.Id" />
                         <input type="hidden" name="PurchaseOrderItemId" id="modalItemId" />
                         <input type="hidden" name="OversupplyAction" id="modalOversupplyAction" value="" />
+                        <input type="hidden" name="DirectShipOrderId" id="modalDsOrderId" value="" />
                         <input type="hidden" name="DirectShipOrderItemId" id="modalDsOrderItemId" value="" />
 
                         <div class="alert alert-info border-0 mb-4">
@@ -738,7 +739,7 @@
 
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase">Số lượng nhận</label>
-                            <input name="ReceivedQuantity" id="modalReceivedQty" class="form-control no-additional-element no-hint" data-decimal="quantity" value="0" required />
+                            <input name="ReceivedQuantity" id="modalReceivedQty" class="form-control" data-decimal="quantity" value="0" required />
                             <div id="modalDistributionPreview" class="d-none mt-2 p-2 rounded border-start border-3 border-primary bg-light small">
                                 <div class="fw-semibold text-muted mb-1 text-uppercase" style="font-size:0.7rem">Phân phối hàng nhận</div>
                                 <div id="modalDistributionDetails" class="d-flex flex-column gap-1"></div>
@@ -783,6 +784,7 @@
                                     <option value="@option.Id" selected="@(Model.Info.WarehouseId == option.Id)">@option.Name</option>
                                 }
                             </select>
+                            <span id="remainingWarehouseReceivedQuantity"></span>
                         </div>
 
                         <div class="mb-2" id="modalSellingPriceSection">
@@ -1250,10 +1252,12 @@
                 // Initialize Receive Item Modal
                 let itemRemainingQty = 0;
                 let currentDsAvailableQty = 0;
+                let currentDsCustomerName = null;
                 let currentReceivePoItemId = null;
                 const receiveItemModal = document.getElementById('receiveItemModal');
                 let receiveDsAbortController = null;
-                    let receiveOriginalPhone = '';
+				let receiveOriginalPhone = '';
+                let currentUnitMeasurement = '';
 
                 const _receiveItemDsData = (() => {
                     try { return JSON.parse(document.getElementById('receiveItemDsData')?.textContent || '{}'); }
@@ -1273,26 +1277,36 @@
                     const sellingPriceSection = document.getElementById('modalSellingPriceSection');
                     if (!warehouseSection) return;
                     const qty = _parseReceiveQty();
-                    if (itemRemainingQty > 0 && qty > itemRemainingQty) {
-                        warehouseSection.classList.remove('d-none');
-                        sellingPriceSection?.classList.remove('d-none');
-                        return;
-                    }
                     const dsAllocs = _receiveItemDsData[currentReceivePoItemId] || [];
-                    const totalDsRem = dsAllocs.reduce((sum, a) => sum + a.remaining, 0);
+                    let totalDsRem = dsAllocs.reduce((sum, a) => sum + a.remaining, 0);
+
                     const dsToggle = document.getElementById('modalDsToggle');
+                    totalDsRem += dsToggle?.checked ? currentDsAvailableQty : 0;
+
                     let hide;
                     if (totalDsRem > 0) {
-                        // Auto-DS: hide chỉ khi qty nằm gọn trong DS remaining
                         hide = qty <= totalDsRem;
-                    } else if (dsToggle?.checked) {
-                        // Manual DS: hide chỉ khi qty nằm gọn trong available của SO item đã chọn
-                        hide = currentDsAvailableQty > 0 ? qty <= currentDsAvailableQty : true;
-                    } else {
+                    }  else {
                         hide = false;
                     }
                     warehouseSection.classList.toggle('d-none', hide);
                     sellingPriceSection?.classList.toggle('d-none', hide);
+                }
+                function toggleDirectShipCheckbox(){
+                    const qty = _parseReceiveQty();
+                    const dsAllocs = _receiveItemDsData[currentReceivePoItemId] || [];
+                    const totalDsRem = dsAllocs.reduce((sum, a) => sum + a.remaining, 0);
+                    const disabled = qty <= totalDsRem;
+                    const dsToggle = document.getElementById('modalDsToggle');
+                    if (disabled && dsToggle.checked){
+                        dsToggle.checked = false;
+                        dsToggle.dispatchEvent(new CustomEvent('change'));
+                    }
+                    dsToggle.disabled = disabled;
+                    if (disabled){
+                        currentDsAvailableQty = 0;
+                        currentDsCustomerName = '';
+                    }
                 }
 
                 function updateDistributionPreview() {
@@ -1301,20 +1315,27 @@
                     if (!preview || !details) return;
                     const dsAllocs = _receiveItemDsData[currentReceivePoItemId] || [];
                     const qty = _parseReceiveQty();
-                    if (dsAllocs.length === 0 || qty <= 0) { preview.classList.add('d-none'); return; }
+                    if ((dsAllocs.length === 0 && currentDsAvailableQty == 0) || qty <= 0) { preview.classList.add('d-none'); return; }
                     let rem = qty;
                     const rows = [];
                     for (const a of dsAllocs) {
                         const dsQty = Math.min(rem, a.remaining);
                         if (dsQty <= 0) break;
                         const fmt = window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(String(dsQty)) : dsQty;
-                        rows.push(`<div class="d-flex align-items-center gap-2"><span class="badge bg-primary">${fmt}</span><span class="text-muted"><i class="bi bi-send me-1"></i>Giao thẳng · ${_escReceive(a.label)}</span></div>`);
+                        rows.push(`<div class="d-flex align-items-center gap-2"><span class="badge bg-primary">${DecimalFields.formatQuantity(fmt) + currentUnitMeasurement}</span><span class="text-muted"><i class="bi bi-send me-1"></i>Giao thẳng · ${_escReceive(a.label)}</span></div>`);
                         rem -= dsQty;
                         if (rem <= 0) break;
                     }
+                    if (currentDsAvailableQty > 0) {
+                        const currentDsQty = Math.min(rem, currentDsAvailableQty);
+                        if (currentDsQty > 0) {
+							rows.push(`<div class="d-flex align-items-center gap-2"><span class="badge bg-primary">${DecimalFields.formatQuantity(currentDsQty) + currentUnitMeasurement}</span><span class="text-muted"><i class="bi bi-send me-1"></i>Giao thẳng · ${_escReceive(currentDsCustomerName)}</span></div>`);
+							rem -= currentDsQty;
+                        }
+                    }
                     if (rem > 0) {
                         const fmt = window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(String(rem)) : rem;
-                        rows.push(`<div class="d-flex align-items-center gap-2"><span class="badge bg-secondary">${fmt}</span><span class="text-muted"><i class="bi bi-building me-1"></i>Nhập kho</span></div>`);
+                        rows.push(`<div class="d-flex align-items-center gap-2"><span class="badge bg-secondary">${DecimalFields.formatQuantity(fmt) + currentUnitMeasurement}</span><span class="text-muted"><i class="bi bi-building me-1"></i>Nhập kho</span></div>`);
                     }
                     details.innerHTML = rows.join('');
                     preview.classList.remove('d-none');
@@ -1329,28 +1350,31 @@
                         const remaining = DecimalFields.formatQuantity(remainingRaw);
                         const unitCostRaw = parseFloat(button.getAttribute('data-item-unit-cost')) || 0;
                         const unitPriceRaw = parseFloat(button.getAttribute('data-item-unit-price')) || 0;
+                        currentUnitMeasurement = button.getAttribute('data-unit') ? ' ' + button.getAttribute('data-unit') : '';
 
                         currentReceivePoItemId = itemId;
                         document.getElementById('modalItemId').value = itemId;
                         document.getElementById('modalItemName').innerText = itemName;
-                        document.getElementById('modalItemRemaining').innerText = remaining;
+                        document.getElementById('modalItemRemaining').innerText = remaining + currentUnitMeasurement;
                         document.getElementById('modalReceivedQty').value = remaining;
                         document.getElementById('modalReceivedQty').max = remainingRaw;
                         itemRemainingQty = parseFloat(remainingRaw) || 0;
                         document.getElementById('oversupplyWarningPanel').classList.add('d-none');
                         document.getElementById('modalOversupplyAction').value = '';
                         document.getElementById('oversupplyCancel').checked = true;
+                        document.getElementById('remainingWarehouseReceivedQuantity').textContent = '';
 
                         // Reset DS section and distribution preview
                         document.getElementById('modalDistributionPreview')?.classList.add('d-none');
                         currentDsAvailableQty = 0;
-                        receiveDsLoadedForItemId = '';
+                        currentDsCustomerName = null;
                         receiveOriginalPhone = '';
                         document.getElementById('modalDsToggle').checked = false;
                         document.getElementById('modalDsSection').classList.add('d-none');
                         document.getElementById('modalWarehouseSection')?.classList.remove('d-none');
                         document.getElementById('modalSellingPriceSection')?.classList.remove('d-none');
                         document.getElementById('modalDsOrderItemId').value = '';
+                        document.getElementById('modalDsOrderId').value = '';
                         document.getElementById('modalDsAddressInput').value = '';
                         document.getElementById('modalDsContactName').value = '';
                         document.getElementById('modalDsContactPhone').value = '';
@@ -1364,30 +1388,30 @@
                         const unitCostDisplay = document.getElementById('modalItemUnitCost');
                         sellingPriceInput.value = DecimalFields.formatCurrency(String(Math.trunc(unitPriceRaw)));
                         sellingPriceInput.setAttribute('data-unit-cost', unitCostRaw);
-                        unitCostDisplay.innerText = DecimalFields.formatCurrency(String(Math.trunc(unitCostRaw)));
+                        unitCostDisplay.innerText = DecimalFields.formatCurrencyWithSymbol(String(Math.trunc(unitCostRaw)));
                         updateSellingPriceWarning();
+                        toggleDirectShipCheckbox();
                         updateDistributionPreview();
                         syncWarehouseVisibility();
                     });
 
                     // DS toggle
-                    let receiveDsLoadedForItemId = '';
                     document.getElementById('modalDsToggle')?.addEventListener('change', function () {
                         const section = document.getElementById('modalDsSection');
                         if (this.checked) {
                             section.classList.remove('d-none');
-                            syncWarehouseVisibility();
-                            if (receiveDsLoadedForItemId !== currentReceivePoItemId) {
-                                loadReceiveDsItems(currentReceivePoItemId);
-                                receiveDsLoadedForItemId = currentReceivePoItemId;
-                            }
+							loadReceiveDsItems(currentReceivePoItemId);
                         } else {
                             section.classList.add('d-none');
                             currentDsAvailableQty = 0;
-                            syncWarehouseVisibility();
+                            currentDsCustomerName = null;
                             document.getElementById('modalDsOrderItemId').value = '';
+                            document.getElementById('modalDsOrderId').value = '';
                             receiveOriginalPhone = '';
                         }
+						syncWarehouseVisibility();
+						toggleDirectShipCheckbox();
+						updateDistributionPreview();
                     });
 
                     // Warning when selling price <= unit cost (lỗ)
@@ -1432,7 +1456,7 @@
                                     <span class="fw-semibold">${order.orderCode}</span>
                                     <span class="text-muted ms-2 small">${order.customerName}</span>
                                 </div>
-                                <span class="badge bg-secondary ms-2">Còn ${order.availableToAllocate}</span>
+                                <span class="badge bg-secondary ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate) + currentUnitMeasurement}</span>
                             </div>`;
                             btn.dataset.shippingAddress = order.shippingAddress || '';
                             btn.dataset.customerPhone = order.customerPhone || '';
@@ -1440,6 +1464,7 @@
                             btn.addEventListener('click', function() {
                                 document.querySelectorAll('#modalDsOrderItems .list-group-item').forEach(el => el.classList.remove('active'));
                                 btn.classList.add('active');
+                                document.getElementById('modalDsOrderId').value = order.orderId;
                                 document.getElementById('modalDsOrderItemId').value = order.orderItemId;
                                 document.getElementById('modalDsSelectedOrder').textContent =
                                     `Đơn hàng: ${order.orderCode} · Khách: ${order.customerName} · Có thể nhận: ${order.availableToAllocate}`;
@@ -1448,8 +1473,11 @@
                                 document.getElementById('modalDsContactPhone').value = btn.dataset.customerPhone;
                                 receiveOriginalPhone = btn.dataset.customerPhone;
                                 fields.classList.remove('d-none');
-                                currentDsAvailableQty = parseFloat(order.availableToAllocate) || 0;
+                                currentDsAvailableQty = parseFloat(DecimalFields.stripFormatting(String(order.availableToAllocate), 2)) || 0;
+                                currentDsCustomerName = btn.dataset.customerName || order.orderCode;
                                 syncWarehouseVisibility();
+                                toggleDirectShipCheckbox();
+                                updateDistributionPreview();
                             });
                             items.appendChild(btn);
                         });
@@ -1464,20 +1492,21 @@
 
                 const modalQtyInput = document.getElementById('modalReceivedQty');
                 if (modalQtyInput) {
-                modalQtyInput.addEventListener('input', function () {
-                const val = (window.DecimalFields && typeof DecimalFields.stripFormatting === 'function')
-                    ? parseFloat(DecimalFields.stripFormatting(this.value, true)) || 0
-                    : parseFloat((this.value || '').replace(/[^0-9.]/g, '')) || 0;
-                const panel = document.getElementById('oversupplyWarningPanel');
-                if (val > itemRemainingQty && itemRemainingQty > 0) {
-                panel.classList.remove('d-none');
-                } else {
-                panel.classList.add('d-none');
-                document.getElementById('modalOversupplyAction').value = '';
-                }
-                updateDistributionPreview();
-                syncWarehouseVisibility();
-                });
+					modalQtyInput.addEventListener('change', function () {
+						const val = (window.DecimalFields && typeof DecimalFields.stripFormatting === 'function')
+							? parseFloat(DecimalFields.stripFormatting(this.value, true)) || 0
+							: parseFloat((this.value || '').replace(/[^0-9.]/g, '')) || 0;
+						const panel = document.getElementById('oversupplyWarningPanel');
+						if (val > itemRemainingQty && itemRemainingQty > 0) {
+							panel.classList.remove('d-none');
+						} else {
+							panel.classList.add('d-none');
+							document.getElementById('modalOversupplyAction').value = '';
+						}
+                        toggleDirectShipCheckbox();
+						updateDistributionPreview();
+						syncWarehouseVisibility();
+					});
                 }
 
                 const receiveItemForm = receiveItemModal?.querySelector('form');
@@ -1890,6 +1919,7 @@
                                     const tr = document.createElement('tr');
                                     tr.style.cursor = 'pointer';
                                     tr.dataset.orderItemId = item.orderItemId;
+                                    tr.dataset.orderId = item.orderId;
                                     tr.dataset.available = item.availableToAllocate;
                                     tr.dataset.shippingAddress = item.shippingAddress || '';
                                     tr.dataset.customerPhone = item.customerPhone || '';
@@ -1942,6 +1972,7 @@
 
                     document.getElementById('btnAllocateToOrder')?.addEventListener('click', function () {
                         if (!selectedRow || !currentPoItemId) return;
+                        const orderId = selectedRow.dataset.orderId;
                         const orderItemId = selectedRow.dataset.orderItemId;
                         const available = parseFloat(selectedRow.dataset.available) || 0;
                         const qtyInput = selectedRow.querySelector('.allocate-qty-input');
@@ -1980,6 +2011,7 @@
                             body: JSON.stringify({
                                 purchaseOrderItemId: currentPoItemId,
                                 orderItemId: orderItemId,
+                                orderId: orderId,
                                 quantity: qty,
                                 directShipAddress: isDs ? address : null,
                                 directShipContactName: isDs ? document.getElementById('allocateDsContact').value.trim() || null : null,

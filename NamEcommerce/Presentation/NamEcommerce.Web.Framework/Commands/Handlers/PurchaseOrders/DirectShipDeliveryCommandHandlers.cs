@@ -30,6 +30,7 @@ public sealed class RejectDirectShipDeliveryHandler(IDirectShipAppService direct
         var result = await directShipAppService.RejectDeliveryAsync(new RejectDirectShipDeliveryAppDto
         {
             DeliveryNoteId = request.DeliveryNoteId,
+            ReturnWarehouseId = request.ReturnWarehouseId,
             Reason = request.Reason
         }).ConfigureAwait(false);
 

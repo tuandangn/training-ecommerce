@@ -13,6 +13,7 @@ public sealed class ReceivePurchaseOrderItemCommand : IRequest<ReceivePurchaseOr
     public decimal? SellingPrice { get; set; }
     public decimal? ActualUnitCost { get; set; }
     public string? OversupplyAction { get; set; }
+    public Guid? DirectShipOrderId { get; set; }
     public Guid? DirectShipOrderItemId { get; set; }
     public string? DirectShipAddress { get; set; }
     public string? DirectShipContactName { get; set; }

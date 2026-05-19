@@ -34,6 +34,7 @@ public sealed record SupplierSuggestionAppDto
 public sealed record ShortageAggregationItemAppDto
 {
     public required string OrderCode { get; init; }
+    public required Guid OrderId { get; init; }
     public required Guid OrderItemId { get; init; }
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
@@ -129,6 +130,7 @@ public sealed record DirectShipInfoAppDto
 [Serializable]
 public sealed record CreatePoFromShortageItemAppDto
 {
+    public required Guid OrderId { get; set; }
     public required Guid OrderItemId { get; init; }
     public required Guid ProductId { get; init; }
     public required decimal Quantity { get; init; }

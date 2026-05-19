@@ -77,6 +77,7 @@ public sealed class ShortageQueryService(
 
                 result.Add(new DeliveryNoteItemShortageDto
                 {
+                    OrderId = order.Id,
                     OrderCode = order.Code,
                     DeliveryNoteItemId = item.Id,
                     OrderItemId = item.OrderItemId,
@@ -168,6 +169,7 @@ public sealed class ShortageQueryService(
 
                 result.Add(new OrderItemShortageDto
                 {
+                    OrderId = order.Id,
                     OrderCode = order.Code,
                     OrderItemId = item.Id,
                     ProductId = item.ProductId,

@@ -1,7 +1,9 @@
 ﻿using MediatR;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Orders;
@@ -20,13 +22,20 @@ public sealed class OrderModelFactory : IOrderModelFactory
     private readonly IMediator _mediator;
     private readonly IDeliveryNoteAppService _deliveryNoteAppService;
     private readonly IDirectShipAppService _directShipAppService;
+    private readonly IWarehouseAppService _warehouseAppService;
 
-    public OrderModelFactory(AppConfig appConfig, IMediator mediator, IDeliveryNoteAppService deliveryNoteAppService, IDirectShipAppService directShipAppService)
+    public OrderModelFactory(
+        AppConfig appConfig,
+        IMediator mediator,
+        IDeliveryNoteAppService deliveryNoteAppService,
+        IDirectShipAppService directShipAppService,
+        IWarehouseAppService warehouseAppService)
     {
         _appConfig = appConfig;
         _mediator = mediator;
         _deliveryNoteAppService = deliveryNoteAppService;
         _directShipAppService = directShipAppService;
+        _warehouseAppService = warehouseAppService;
     }
 
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
@@ -180,6 +189,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
         model.FullyReceivedDirectShipCount = model.DirectShipAllocations.Count(a =>
             a.ReceivedQuantity > 0 &&
             (!a.DeliveryStatus.HasValue || a.DeliveryStatus == (int)DeliveryNoteStatus.Confirmed));
+        model.ReturnWarehouseOptions = await GetReturnWarehouseOptionsAsync().ConfigureAwait(false);
 
         return model;
     }
@@ -201,5 +211,19 @@ public sealed class OrderModelFactory : IOrderModelFactory
         });
 
         return model;
+    }
+
+    private async Task<IList<OrderDetailsModel.ReturnWarehouseOptionModel>> GetReturnWarehouseOptionsAsync()
+    {
+        var warehouses = await _warehouseAppService.GetWarehousesAsync().ConfigureAwait(false);
+        return warehouses
+            .Where(w => w.IsActive && w.WarehouseType == (int)WarehouseType.Physical)
+            .OrderBy(w => w.Name)
+            .Select(w => new OrderDetailsModel.ReturnWarehouseOptionModel
+            {
+                Id = w.Id,
+                Name = w.Name
+            })
+            .ToList();
     }
 }

@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Models.DirectShipDelivery;
 
@@ -9,7 +11,8 @@ namespace NamEcommerce.Web.Controllers;
 
 public sealed class DirectShipDeliveryController(
     IMediator mediator,
-    IDirectShipAppService directShipAppService) : BaseAuthorizedController
+    IDirectShipAppService directShipAppService,
+    IWarehouseAppService warehouseAppService) : BaseAuthorizedController
 {
     public IActionResult Index() => RedirectToAction(nameof(Pending));
 
@@ -41,7 +44,8 @@ public sealed class DirectShipDeliveryController(
                     Quantity = i.Quantity,
                     UnitPrice = i.UnitPrice
                 }).ToList()
-            }).ToList()
+            }).ToList(),
+            ReturnWarehouseOptions = await GetReturnWarehouseOptionsAsync().ConfigureAwait(false)
         };
 
         return View(model);
@@ -79,9 +83,13 @@ public sealed class DirectShipDeliveryController(
         if (string.IsNullOrWhiteSpace(request.Reason))
             return Json(new { success = false, message = "Lý do từ chối là bắt buộc." });
 
+        if (request.ReturnWarehouseId == Guid.Empty)
+            return Json(new { success = false, message = "Vui lòng chọn kho nhận hàng trả về." });
+
         var result = await mediator.Send(new RejectDirectShipDeliveryCommand
         {
             DeliveryNoteId = request.DeliveryNoteId,
+            ReturnWarehouseId = request.ReturnWarehouseId,
             Reason = request.Reason
         }).ConfigureAwait(false);
 
@@ -111,6 +119,20 @@ public sealed class DirectShipDeliveryController(
 
         return Json(new { success = false, message = result.ErrorMessage });
     }
+
+    private async Task<IList<DirectShipReturnWarehouseOptionModel>> GetReturnWarehouseOptionsAsync()
+    {
+        var warehouses = await warehouseAppService.GetWarehousesAsync().ConfigureAwait(false);
+        return warehouses
+            .Where(w => w.IsActive && w.WarehouseType == (int)WarehouseType.Physical)
+            .OrderBy(w => w.Name)
+            .Select(w => new DirectShipReturnWarehouseOptionModel
+            {
+                Id = w.Id,
+                Name = w.Name
+            })
+            .ToList();
+    }
 }
 
 public sealed class ConfirmDirectShipDeliveryRequest
@@ -123,6 +145,7 @@ public sealed class ConfirmDirectShipDeliveryRequest
 public sealed class RejectDirectShipDeliveryRequest
 {
     public Guid DeliveryNoteId { get; set; }
+    public Guid ReturnWarehouseId { get; set; }
     public required string Reason { get; set; }
 }
 

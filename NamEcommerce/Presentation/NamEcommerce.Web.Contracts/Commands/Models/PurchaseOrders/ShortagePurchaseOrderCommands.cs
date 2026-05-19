@@ -45,6 +45,7 @@ public sealed class DirectShipInfoCommand
 [Serializable]
 public sealed class CreatePurchaseOrderFromShortageItemCommand
 {
+    public Guid OrderId { get; set; }
     public Guid OrderItemId { get; init; }
     public Guid ProductId { get; init; }
     public decimal Quantity { get; init; }

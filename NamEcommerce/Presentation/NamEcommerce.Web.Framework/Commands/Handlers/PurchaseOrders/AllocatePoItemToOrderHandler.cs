@@ -14,6 +14,7 @@ public sealed class AllocatePoItemToOrderHandler(IPurchaseOrderAppService purcha
         var result = await purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
         {
             PurchaseOrderItemId = request.PurchaseOrderItemId,
+            OrderId = request.OrderId,
             OrderItemId = request.OrderItemId,
             Quantity = request.Quantity,
             DirectShipAddress = request.DirectShipAddress,

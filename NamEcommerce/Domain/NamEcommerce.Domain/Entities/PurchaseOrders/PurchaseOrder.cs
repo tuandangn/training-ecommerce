@@ -143,7 +143,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
     }
     internal void RemoveOrderItem(Guid itemId)
     {
-        if (!CanUpdatePurchaseOrderItems())
+        if (!CanUpdateItems())
             throw new PurchaseOrderCannotUpdateOrderItemsException();
 
         var orderItem = _items.FirstOrDefault(i => i.Id == itemId);
@@ -153,7 +153,7 @@ public sealed record PurchaseOrder : AppAggregateEntity
         _items.Remove(orderItem);
     }
 
-    public bool CanUpdatePurchaseOrderItems()
+    public bool CanUpdateItems()
         => Status == PurchaseOrderStatus.Draft
            || Status == PurchaseOrderStatus.Submitted
            || (Status == PurchaseOrderStatus.Approved && !_items.Any(item => item.QuantityReceived > 0));

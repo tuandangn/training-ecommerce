@@ -38,7 +38,7 @@ public sealed class PurchaseOrderAllocationManager(
         return inserted.ToDto();
     }
 
-    public async Task<PurchaseOrderItemAllocationDto> AllocateFromExistingPurchaseOrderItemAsync(Guid purchaseOrderItemId, Guid orderItemId, decimal quantity)
+    public async Task<PurchaseOrderItemAllocationDto> AllocateFromExistingPurchaseOrderItemAsync(Guid purchaseOrderItemId, Guid orderId, Guid orderItemId, decimal quantity)
     {
         if (quantity <= 0)
             throw new PurchaseOrderItemDataIsInvalidException("Error.AllocatedQuantityMustBePositive");
@@ -58,7 +58,9 @@ public sealed class PurchaseOrderAllocationManager(
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemCannotAllocate");
 
         var orderItem = orderReader.DataSource
-            .SelectMany(order => order.OrderItems)
+            .Where(order => order.Id == orderId)
+            .FirstOrDefault()
+            ?.OrderItems
             .FirstOrDefault(item => item.Id == orderItemId);
         if (orderItem is null)
             throw new OrderItemIsNotFoundException(orderItemId);

@@ -17,7 +17,7 @@ public sealed class NamEcommerceEfRepository<TEntity> : IRepository<TEntity> whe
         return _dbContext.RemoveAsync(entity, cancellationToken);
     }
 
-    public Task<IEnumerable<TEntity>> GetAllAsync() 
+    public Task<IEnumerable<TEntity>> GetAllAsync()
         => _dbContext.GetDataAsync<TEntity>();
 
     public Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
@@ -36,6 +36,18 @@ public sealed class NamEcommerceEfRepository<TEntity> : IRepository<TEntity> whe
         if (entity is null)
             throw new ArgumentNullException(nameof(entity));
 
+        TryDetachEntity(entity);
+
         return _dbContext.UpdateAsync(entity, cancellationToken);
+    }
+
+    private void TryDetachEntity(TEntity entity)
+    {
+        var existing = ((NamEcommerceEfDbContext)_dbContext).ChangeTracker
+            .Entries<PurchaseOrderItemAllocation>()
+            .FirstOrDefault(e => e.Entity.Id == entity.Id);
+
+        if (existing != null)
+            existing.State = EntityState.Detached;
     }
 }

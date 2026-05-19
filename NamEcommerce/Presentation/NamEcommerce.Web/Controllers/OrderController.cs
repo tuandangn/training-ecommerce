@@ -131,7 +131,10 @@ public sealed class OrderController : BaseAuthorizedController
             return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
 
         var orderItemIds = order.Items.Select(i => i.Id).ToList();
-        var result = await _mediator.Send(new CancelOrderCommand(model.OrderId, orderItemIds));
+        var result = await _mediator.Send(new CancelOrderCommand(
+            model.OrderId,
+            orderItemIds,
+            model.ReturnWarehouseId));
 
         if (!result.Success)
             return Json(new { success = false, message = result.ErrorMessage });

@@ -506,7 +506,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (product is null)
             throw new ProductIsNotFoundException(dto.ProductId);
 
-        if (!purchaseOrder.CanUpdatePurchaseOrderItems())
+        if (!purchaseOrder.CanUpdateItems())
             throw new PurchaseOrderCannotAddItemException();
 
         var purchaseOrderItem = new PurchaseOrderItem(dto.PurchaseOrderId, dto.ProductId, dto.QuantityOrdered, dto.UnitCost)
@@ -573,7 +573,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
-        return purchaseOrder.CanUpdatePurchaseOrderItems();
+        return purchaseOrder.CanUpdateItems();
     }
 
     public Task<bool> DoesCodeExistAsync(string code, Guid? comparesWithCurrentId = null)
@@ -681,8 +681,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         var hasReceivableDirectShip = false;
         foreach (var itemId in receivingPurchaseOrderItemIds)
         {
-            hasReceivableDirectShip = await _directShipManager
-                .HasReceivableDirectShipAllocationsAsync(itemId)
+            hasReceivableDirectShip = await _directShipManager.HasReceivableDirectShipAllocationsAsync(itemId)
                 .ConfigureAwait(false);
             if (hasReceivableDirectShip)
                 break;
@@ -867,7 +866,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private void EnsureDirectShipTransitWarehouseConfigured()
     {
         var transitWarehouse = _warehouseOrderDataReader.DataSource
-            .FirstOrDefault(w => w.WarehouseType == WarehouseType.DirectShipTransit);
+            .FirstOrDefault(w => w.WarehouseType == WarehouseType.DirectTransit);
 
         if (transitWarehouse is null)
             throw new DirectShipTransitWarehouseNotConfiguredException();
@@ -1091,7 +1090,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
-        if (!purchaseOrder.CanUpdatePurchaseOrderItems())
+        if (!purchaseOrder.CanUpdateItems())
             throw new PurchaseOrderCannotUpdateOrderItemsException();
 
         purchaseOrder.RemoveOrderItem(itemId);

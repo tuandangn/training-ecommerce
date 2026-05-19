@@ -8,7 +8,7 @@ public interface IWarehouseManager : INameExistCheckingService, ICodeExistChecki
 {
     Task<WarehouseDto?> GetWarehouseByIdAsync(Guid id);
 
-    Task<IPagedDataDto<WarehouseDto>> GetWarehousesAsync(string? keywords, int pageIndex, int pageSize);
+    Task<IPagedDataDto<WarehouseDto>> GetWarehousesAsync(int pageIndex, int pageSize, string? keywords);
 
     Task<CreateWarehouseResultDto> CreateWarehouseAsync(CreateWarehouseDto dto);
 

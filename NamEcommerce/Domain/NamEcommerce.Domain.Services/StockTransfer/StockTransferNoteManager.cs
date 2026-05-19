@@ -40,14 +40,14 @@ public sealed class StockTransferNoteManager(
         if (fromWarehouse is null)
             throw new NamEcommerceDomainException("Error.StockTransfer.FromWarehouseNotFound");
 
-        if (fromWarehouse.WarehouseType == WarehouseType.DirectShipTransit)
+        if (fromWarehouse.WarehouseType == WarehouseType.DirectTransit)
             throw new NamEcommerceDomainException("Error.StockTransfer.CannotTransferFromDirectShipTransit");
 
         var toWarehouse = await warehouseDataReader.GetByIdAsync(dto.ToWarehouseId).ConfigureAwait(false);
         if (toWarehouse is null)
             throw new NamEcommerceDomainException("Error.StockTransfer.ToWarehouseNotFound");
 
-        if (toWarehouse.WarehouseType == WarehouseType.DirectShipTransit)
+        if (toWarehouse.WarehouseType == WarehouseType.DirectTransit)
             throw new NamEcommerceDomainException("Error.StockTransfer.CannotTransferToDirectShipTransit");
 
         var code = GenerateCode();

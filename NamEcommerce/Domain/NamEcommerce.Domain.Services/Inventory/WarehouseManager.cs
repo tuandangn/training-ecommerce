@@ -28,7 +28,7 @@ public sealed class WarehouseManager : IWarehouseManager
 
         dto.Verify();
 
-        if (dto.WarehouseType == WarehouseType.DirectShipTransit && await DirectShipTransitExistsAsync().ConfigureAwait(false))
+        if (dto.WarehouseType == WarehouseType.DirectTransit && await DirectShipTransitExistsAsync().ConfigureAwait(false))
             throw new DirectShipTransitWarehouseAlreadyExistsException();
         if (await DoesCodeExistAsync(dto.Code).ConfigureAwait(false))
             throw new WarehouseCodeExistsException(dto.Code);
@@ -96,7 +96,7 @@ public sealed class WarehouseManager : IWarehouseManager
         return warehouse.ToDto();
     }
 
-    public Task<IPagedDataDto<WarehouseDto>> GetWarehousesAsync(string? keywords, int pageIndex, int pageSize)
+    public Task<IPagedDataDto<WarehouseDto>> GetWarehousesAsync(int pageIndex, int pageSize, string? keywords)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
@@ -128,7 +128,7 @@ public sealed class WarehouseManager : IWarehouseManager
     public Task<bool> DirectShipTransitExistsAsync()
     {
         var exists = _warehouseDataReader.DataSource
-            .Any(w => w.WarehouseType == WarehouseType.DirectShipTransit);
+            .Any(w => w.WarehouseType == WarehouseType.DirectTransit);
         return Task.FromResult(exists);
     }
 
@@ -142,7 +142,7 @@ public sealed class WarehouseManager : IWarehouseManager
         if (warehouse is null)
             throw new ArgumentException("Warehouse is not found", nameof(dto));
 
-        if (dto.WarehouseType == WarehouseType.DirectShipTransit && warehouse.WarehouseType != WarehouseType.DirectShipTransit
+        if (dto.WarehouseType == WarehouseType.DirectTransit && warehouse.WarehouseType != WarehouseType.DirectTransit
             && await DirectShipTransitExistsAsync().ConfigureAwait(false))
             throw new DirectShipTransitWarehouseAlreadyExistsException();
 

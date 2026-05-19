@@ -51,11 +51,13 @@ public interface IDirectShipManager
     /// </summary>
     Task RejectDeliveryAsync(
         Guid deliveryNoteId,
+        Guid returnWarehouseId,
         string reason,
         CancellationToken ct = default);
 
     Task HandleSoCancelledForReceivedDirectShipAsync(
         Guid orderId,
+        Guid returnWarehouseId,
         Guid userId,
         string? reason,
         CancellationToken ct = default);
@@ -86,4 +88,6 @@ public interface IDirectShipManager
     Task<IList<DirectShipAllocationForPoItemDto>> GetDirectShipAllocationsForPoItemsAsync(
         IReadOnlyList<Guid> purchaseOrderItemIds,
         CancellationToken ct = default);
+
+    Task<Guid> GetTransitWarehouseIdAsync();
 }

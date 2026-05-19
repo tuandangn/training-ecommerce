@@ -31,6 +31,7 @@ public abstract record BaseWarehouseAppDto
 public sealed record WarehouseAppDto(Guid Id) : BaseWarehouseAppDto
 {
     public string? WarehouseNameKey { get; set; }
+    public bool IsPhysical { get; set; }
 }
 
 [Serializable]

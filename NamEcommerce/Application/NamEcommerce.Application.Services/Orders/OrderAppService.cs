@@ -617,12 +617,23 @@ public sealed class OrderAppService(IOrderManager orderManager,
                     ErrorMessage = "Error.OrderCannotCancel_Processing"
                 };
 
-            if (await directShipManager.HasReceivedDirectShipAllocationsAsync(dto.OrderId).ConfigureAwait(false))
+            var hasReceivedDirectShipAllocations = await directShipManager
+                .HasReceivedDirectShipAllocationsAsync(dto.OrderId)
+                .ConfigureAwait(false);
+            if (hasReceivedDirectShipAllocations)
             {
+                if (!dto.ReturnWarehouseId.HasValue || dto.ReturnWarehouseId == Guid.Empty)
+                    return new CancelOrderResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Vui lòng chọn kho nhận hàng trả về."
+                    };
+
                 await directShipManager.HandleSoCancelledForReceivedDirectShipAsync(
                     dto.OrderId,
+                    dto.ReturnWarehouseId.Value,
                     Guid.Empty,
-                    $"Đơn bán {dto.OrderId} bị hủy — chuyển hàng giao thẳng về kho chính").ConfigureAwait(false);
+                    $"Đơn bán {dto.OrderId} bị hủy — chuyển hàng giao thẳng về kho đã chọn").ConfigureAwait(false);
             }
 
             await orderManager.CancelOrderAsync(new CancelOrderDto(dto.OrderId)

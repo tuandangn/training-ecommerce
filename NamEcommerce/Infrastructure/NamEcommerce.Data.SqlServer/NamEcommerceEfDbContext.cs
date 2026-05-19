@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace NamEcommerce.Data.SqlServer;
@@ -7,6 +8,8 @@ public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
     public NamEcommerceEfDbContext(DbContextOptions<NamEcommerceEfDbContext> opts) : base(opts)
     {
     }
+
+    internal new ChangeTracker ChangeTracker => base.ChangeTracker;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

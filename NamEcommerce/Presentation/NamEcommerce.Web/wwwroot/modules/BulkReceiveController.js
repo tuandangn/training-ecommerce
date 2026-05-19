@@ -104,6 +104,7 @@ export default class BulkReceiveController {
                 dsTr.querySelectorAll('.bulk-ds-order-item-btn').forEach(b => b.classList.remove('active'));
                 dsOrderItemBtn.classList.add('active');
                 dsTr.querySelector('.bulk-ds-order-item-id').value = dsOrderItemBtn.dataset.orderItemId;
+                dsTr.querySelector('.bulk-ds-order-id').value = dsOrderItemBtn.dataset.orderId;
                 const label = dsTr.querySelector('.bulk-ds-selected-label');
                 if (label) label.textContent = `${dsOrderItemBtn.dataset.orderCode} · ${dsOrderItemBtn.dataset.customerName} · Còn: ${dsOrderItemBtn.dataset.availableToAllocate}`;
                 const fields = dsTr.querySelector('.bulk-ds-fields');
@@ -233,6 +234,7 @@ export default class BulkReceiveController {
             <td colspan="5" class="border-top-0 pt-0 pb-2 px-2">
                 <div class="p-2 bg-light rounded-2 border">
                     <input type="hidden" name="Items[${idx}].DirectShipOrderItemId" class="bulk-ds-order-item-id" value="" />
+                    <input type="hidden" name="Items[${idx}].DirectShipOrderId" class="bulk-ds-order-id" value="" />
                     <div class="bulk-ds-loading d-none text-muted small py-1">
                         <span class="spinner-border spinner-border-sm me-1"></span> Đang tải đơn hàng...
                     </div>
@@ -281,6 +283,7 @@ export default class BulkReceiveController {
         } else {
             dsTr.classList.add('d-none');
             dsTr.querySelector('.bulk-ds-order-item-id').value = '';
+            dsTr.querySelector('.bulk-ds-order-id').value = '';
             icon?.classList.replace('text-primary', 'text-secondary');
             this.#syncRowWarehouse(tr);
         }
@@ -306,6 +309,7 @@ export default class BulkReceiveController {
         fields.classList.add('d-none');
         errorBox.classList.add('d-none');
         dsTr.querySelector('.bulk-ds-order-item-id').value = '';
+        dsTr.querySelector('.bulk-ds-order-id').value = '';
 
         if (!itemId) {
             loading.classList.add('d-none');
@@ -331,6 +335,7 @@ export default class BulkReceiveController {
                 btn.type = 'button';
                 btn.className = 'list-group-item list-group-item-action py-2 px-3 bulk-ds-order-item-btn';
                 btn.dataset.orderItemId = order.orderItemId;
+                btn.dataset.orderId = order.orderId;
                 btn.dataset.orderCode = order.orderCode;
                 btn.dataset.customerName = order.customerName;
                 btn.dataset.availableToAllocate = order.availableToAllocate;

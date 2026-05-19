@@ -56,6 +56,7 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
         };
 
         var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = purchaseOrder.Items.Select(item => item.ProductId).Distinct() }, cancellationToken).ConfigureAwait(false);
+
         foreach (var item in purchaseOrder.Items)
         {
             var product = products.FirstOrDefault(p => p.Id == item.ProductId);
@@ -64,6 +65,10 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             var itemModel = new PurchaseOrderModel.ItemModel(item.Id)
             {
                 ProductId = item.ProductId,
+                ProductName = product.Name,
+                CurrentUnitPrice = product.CurrentUnitPrice,
+                ProductPicture = product.PictureUrl,
+                UnitMeasurement = product.UnitMeasurement,
                 Note = item.Note,
                 QuantityOrdered = item.QuantityOrdered,
                 QuantityReceived = item.QuantityReceived,
@@ -71,9 +76,6 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
                 UnitCost = item.UnitCost,
                 TotalCost = item.TotalCost
             };
-            itemModel.ProductName = product.Name;
-            itemModel.CurrentUnitPrice = product.CurrentUnitPrice;
-            itemModel.ProductPicture = product.PictureUrl;
 
             model.Items.Add(itemModel);
         }

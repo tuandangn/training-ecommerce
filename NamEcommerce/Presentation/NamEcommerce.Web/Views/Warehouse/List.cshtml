@@ -28,6 +28,7 @@
                     <th class="ps-4">Kho hàng</th>
                     <th><i class="bi bi-phone me-1"></i>Điện thoại</th>
                     <th class="d-none d-md-table-cell"><i class="bi bi-map me-1"></i>Địa chỉ</th>
+                    <th>Loại kho</th>
                     <th class="text-center" style="width: 110px;">Trạng thái</th>
                     <th style="width: 100px;"></th>
                 </tr>
@@ -45,7 +46,7 @@
                             <td>
                                 @if (!string.IsNullOrEmpty(item.PhoneNumber))
                                 {
-                                    <a href="tel:@item.PhoneNumber" class="text-decoration-none text-muted">
+                                    <a href="tel:@item.PhoneNumber" class="text-decoration-none">
                                         <i class="bi bi-telephone me-1"></i>@item.PhoneNumber
                                     </a>
                                 }
@@ -55,10 +56,13 @@
                                 {
                                     var encodedAddress = MyUrlEncoder.Encode(item.Address);
                                     <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank"
-                                       class="text-decoration-none text-muted small">
+                                       class="text-decoration-none">
                                         <i class="bi bi-geo-alt me-1"></i>@HighlighHelper.Highlight(item.Address, query)
                                     </a>
                                 }
+                            </td>
+                            <td>
+                                <span class="text-muted">@L[item.WarehouseType!]</span>
                             </td>
                             <td class="text-center">
                                 @if (item.IsActive)
@@ -73,10 +77,11 @@
                             <td class="text-end pe-3">
                                 <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
                                     <i class="bi bi-pencil"></i>
+                                    <span class="visually-hidden">Chỉnh sửa</span>
                                 </a>
-                                <button type="button" class="btn-table-action danger btnDelete"
-                                        data-id="@item.Id" data-name="@item.Name" title="Xóa">
+                                <button type="button" class="btn-table-action danger btnDelete" data-id="@item.Id" data-name="@item.Name" title="Xóa">
                                     <i class="bi bi-trash"></i>
+                                    <span class="visually-hidden">Xóa bỏ</span>
                                 </button>
                             </td>
                         </tr>

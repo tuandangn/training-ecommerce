@@ -94,15 +94,18 @@ public sealed class DirectShipManager(
         var purchaseOrderItem = ResolvePurchaseOrderItem(allocation.PurchaseOrderItemId);
         var transitWarehouse = GetTransitWarehouse();
 
-        await stockManager.TransferStockAsync(
-            purchaseOrderItem.ProductId,
-            receivedWarehouseId,
-            transitWarehouse.Id,
-            receivedDelta,
-            purchaseOrderItem.UnitCost,
-            sourceGoodsReceiptId,
-            Guid.Empty,
-            $"Chuyển hàng giao thẳng từ phiếu nhập {sourceGoodsReceiptId}").ConfigureAwait(false);
+        if (transitWarehouse.Id != receivedWarehouseId)
+        {
+            await stockManager.TransferStockAsync(
+                purchaseOrderItem.ProductId,
+                receivedWarehouseId,
+                transitWarehouse.Id,
+                receivedDelta,
+                purchaseOrderItem.UnitCost,
+                sourceGoodsReceiptId,
+                Guid.Empty,
+                $"Chuyển hàng giao thẳng từ phiếu nhập {sourceGoodsReceiptId}").ConfigureAwait(false);
+        }
 
         await deliveryNoteManager.CreateForDirectShipAsync(
             new CreateDeliveryNoteForDirectShipDto
@@ -126,18 +129,19 @@ public sealed class DirectShipManager(
     }
 
     public async Task RejectDeliveryAsync(
-        Guid deliveryNoteId, string reason, CancellationToken ct = default)
+        Guid deliveryNoteId, Guid returnWarehouseId, string reason, CancellationToken ct = default)
     {
         var deliveryNote = await deliveryNoteReader.GetByIdAsync(deliveryNoteId)
             ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
 
-        await ReturnDirectShipStockAsync(deliveryNote, reason).ConfigureAwait(false);
+        await ReturnDirectShipStockAsync(deliveryNote, returnWarehouseId, reason).ConfigureAwait(false);
         await deliveryNoteManager.RejectDirectShipDeliveryAsync(deliveryNoteId, reason, ct)
             .ConfigureAwait(false);
     }
 
     public async Task HandleSoCancelledForReceivedDirectShipAsync(
         Guid orderId,
+        Guid returnWarehouseId,
         Guid userId,
         string? reason,
         CancellationToken ct = default)
@@ -155,9 +159,9 @@ public sealed class DirectShipManager(
                 ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
 
             var note = string.IsNullOrWhiteSpace(reason)
-                ? $"Đơn bán {orderId} bị hủy — chuyển hàng giao thẳng về kho chính"
+                ? $"Đơn bán {orderId} bị hủy — chuyển hàng giao thẳng về kho đã chọn"
                 : reason;
-            await ReturnDirectShipStockAsync(deliveryNote, note, userId).ConfigureAwait(false);
+            await ReturnDirectShipStockAsync(deliveryNote, returnWarehouseId, note, userId).ConfigureAwait(false);
             await deliveryNoteManager.RejectDirectShipDeliveryAsync(deliveryNoteId, note, ct)
                 .ConfigureAwait(false);
         }
@@ -293,7 +297,7 @@ public sealed class DirectShipManager(
     private Warehouse GetTransitWarehouse()
     {
         var transitWarehouse = warehouseReader.DataSource
-            .FirstOrDefault(w => w.WarehouseType == WarehouseType.DirectShipTransit);
+            .FirstOrDefault(w => w.WarehouseType == WarehouseType.DirectTransit);
 
         if (transitWarehouse is null)
             throw new DirectShipTransitWarehouseNotConfiguredException();
@@ -301,17 +305,25 @@ public sealed class DirectShipManager(
         return transitWarehouse;
     }
 
-    private async Task ReturnDirectShipStockAsync(DeliveryNote deliveryNote, string reason, Guid userId = default)
+    public Task<Guid> GetTransitWarehouseIdAsync() => Task.FromResult(GetTransitWarehouse().Id);
+
+    private async Task ReturnDirectShipStockAsync(
+        DeliveryNote deliveryNote,
+        Guid returnWarehouseId,
+        string reason,
+        Guid userId = default)
     {
+        var returnWarehouse = await ResolveReturnWarehouseAsync(returnWarehouseId).ConfigureAwait(false);
+
         foreach (var item in deliveryNote.Items)
         {
-            var (warehouseId, unitCost) = await ResolveReturnTargetAsync(deliveryNote, item.ProductId)
+            var unitCost = await ResolveReturnUnitCostAsync(deliveryNote, item.ProductId)
                 .ConfigureAwait(false);
 
             await stockManager.TransferStockAsync(
                 item.ProductId,
                 deliveryNote.WarehouseId,
-                warehouseId,
+                returnWarehouse.Id,
                 item.Quantity,
                 unitCost,
                 deliveryNote.Id,
@@ -320,7 +332,18 @@ public sealed class DirectShipManager(
         }
     }
 
-    private async Task<(Guid WarehouseId, decimal UnitCost)> ResolveReturnTargetAsync(
+    private async Task<Warehouse> ResolveReturnWarehouseAsync(Guid returnWarehouseId)
+    {
+        var warehouse = await warehouseReader.GetByIdAsync(returnWarehouseId)
+            ?? throw new WarehouseIsNotFoundException(returnWarehouseId);
+
+        if (!warehouse.IsActive || warehouse.WarehouseType != WarehouseType.Physical)
+            throw new WarehouseIsNotSuitableException(returnWarehouseId);
+
+        return warehouse;
+    }
+
+    private async Task<decimal> ResolveReturnUnitCostAsync(
         DeliveryNote deliveryNote,
         Guid productId)
     {
@@ -331,10 +354,10 @@ public sealed class DirectShipManager(
             ?? throw new GoodsReceiptIsNotFoundException(deliveryNote.SourceGoodsReceiptId.Value);
 
         var sourceItem = goodsReceipt.Items.FirstOrDefault(i => i.ProductId == productId && i.WarehouseId.HasValue);
-        if (sourceItem?.WarehouseId is not Guid warehouseId)
+        if (sourceItem?.WarehouseId is null)
             throw new WarehouseIsNotFoundException(Guid.Empty);
 
-        return (warehouseId, sourceItem.UnitCost ?? 0m);
+        return sourceItem.UnitCost ?? 0m;
     }
 
     private Dictionary<Guid, DeliveryNote> GetDirectShipDeliveryNotesByOrderItem(IReadOnlyCollection<Guid> orderItemIds)

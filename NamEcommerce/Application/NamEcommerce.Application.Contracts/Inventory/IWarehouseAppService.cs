@@ -5,7 +5,7 @@ namespace NamEcommerce.Application.Contracts.Inventory;
 
 public interface IWarehouseAppService
 {
-    Task<IPagedDataAppDto<WarehouseAppDto>> GetWarehousesAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue);
+    Task<IPagedDataAppDto<WarehouseAppDto>> GetWarehousesAsync(int pageIndex = 0, int pageSize = int.MaxValue, string? keywords = null);
 
     Task<WarehouseAppDto?> GetWarehouseByIdAsync(Guid id);
 

@@ -18,7 +18,7 @@ public sealed class EditWarehouseValidator : AbstractValidator<EditWarehouseMode
             .MaximumLength(200).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Name"], 200]);
 
         RuleFor(m => m.PhoneNumber)
-            .Matches(@"\s*|(0\d{9,10})").WithMessage(m => localizer["Error.PhoneNumberInvalid"]);
+            .Matches(@"^\s*$|^(0\d{9,10})$").WithMessage(m => localizer["Error.PhoneNumberInvalid"]);
 
         RuleFor(m => m.Address)
             .MaximumLength(800).WithMessage(m => localizer["Error.MaxLength", localizer["Label.Address"], 800]);

@@ -13,6 +13,7 @@ public sealed class ConfirmDirectShipDeliveryCommand : IRequest<CommonActionResu
 public sealed class RejectDirectShipDeliveryCommand : IRequest<CommonActionResultModel>
 {
     public required Guid DeliveryNoteId { get; init; }
+    public required Guid ReturnWarehouseId { get; init; }
     public required string Reason { get; init; }
 }
 

@@ -26,7 +26,7 @@ public static class PurchaseOrderExtensions
             Note = purchaseOrder.Note,
             CreatedOnUtc = purchaseOrder.CreatedOnUtc,
             TotalAmount = purchaseOrder.TotalAmount,
-            CanAddItems = purchaseOrder.CanUpdatePurchaseOrderItems(),
+            CanAddItems = purchaseOrder.CanUpdateItems(),
             CanReceiveGoods = purchaseOrder.CanReceiveGoods()
         };
 

@@ -115,6 +115,7 @@ public sealed class CreatePurchaseOrdersFromShortageHandler(IShortageAggregation
                 Note = group.Note,
                 Items = group.Items.Select(item => new CreatePoFromShortageItemAppDto
                 {
+                    OrderId = item.OrderId,
                     OrderItemId = item.OrderItemId,
                     ProductId = item.ProductId,
                     Quantity = item.Quantity,

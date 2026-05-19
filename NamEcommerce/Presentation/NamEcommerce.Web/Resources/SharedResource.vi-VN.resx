@@ -435,6 +435,9 @@
   <data name="Error.WarehouseRequired" xml:space="preserve">
     <value>Kho hàng không được để trống.</value>
   </data>
+  <data name="Error.PhysicalWarehouseRequired" xml:space="preserve">
+    <value>Kho hàng phải là kho vật lý.</value>
+  </data>
   <data name="Error.PurchaseOrderCodeExists" xml:space="preserve">
     <value>Mã đơn nhập hàng đã tồn tại.</value>
   </data>
@@ -816,13 +819,22 @@
   <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.Physical" xml:space="preserve">
     <value>Kho vật lý</value>
   </data>
-  <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.DirectShipTransit" xml:space="preserve">
-    <value>Kho ảo giao thẳng (Direct-Ship)</value>
+  <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.Virtual" xml:space="preserve">
+    <value>Kho ảo</value>
+  </data>
+  <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.DirectTransit" xml:space="preserve">
+    <value>Kho giao thẳng</value>
   </data>
   <data name="Error.DirectShip.TransitWarehouseNotConfigured" xml:space="preserve">
     <value>Chưa có kho ảo giao thẳng (Direct-Ship Transit). Vui lòng tạo kho loại "Kho ảo giao thẳng" trước khi nhận hàng.</value>
   </data>
   <data name="Error.DirectShip.TransitWarehouseAlreadyExists" xml:space="preserve">
     <value>Kho ảo giao thẳng (Direct-Ship) đã tồn tại. Hệ thống chỉ cho phép một kho loại này.</value>
+  </data>
+  <data name="Error.VirtualWarehouseCannotDelete" xml:space="preserve">
+    <value>Kho hàng ảo không thể xóa</value>
+  </data>
+  <data name="Error.WarehouseIsNotSuitableException" xml:space="preserve">
+    <value>Kho hàng không thích hợp.</value>
   </data>
 </root>

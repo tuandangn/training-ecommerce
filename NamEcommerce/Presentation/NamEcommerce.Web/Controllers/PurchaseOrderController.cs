@@ -7,6 +7,7 @@ using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Application.Contracts.Orders;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -15,12 +16,16 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     private readonly IMediator _mediator;
     private readonly IPurchaseOrderModelFactory _purchaseOrderModelFactory;
     private readonly IPurchaseOrderAppService _purchaseOrderAppService;
+    private readonly IOrderAppService _orderAppService;
 
-    public PurchaseOrderController(IMediator mediator, IPurchaseOrderModelFactory purchaseOrderModelFactory, IPurchaseOrderAppService purchaseOrderAppService)
+    public PurchaseOrderController(IMediator mediator,
+        IPurchaseOrderModelFactory purchaseOrderModelFactory, IPurchaseOrderAppService purchaseOrderAppService,
+        IOrderAppService orderAppService)
     {
         _mediator = mediator;
         _purchaseOrderModelFactory = purchaseOrderModelFactory;
         _purchaseOrderAppService = purchaseOrderAppService;
+        _orderAppService = orderAppService;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
@@ -224,6 +229,22 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return RedirectToAction(nameof(List));
         }
 
+        if (model.DirectShipOrderId.HasValue)
+        {
+            var order = await _orderAppService.GetOrderByIdAsync(model.DirectShipOrderId.Value);
+            if (order == null)
+            {
+                NotifyError("Error.OrderIsNotFound");
+                return RedirectToAction(nameof(List));
+            }
+            var orderItem = order.Items.Where(item => item.Id == model.DirectShipOrderItemId).FirstOrDefault();
+            if (order == null)
+            {
+                NotifyError("Error.OrderItemIsNotFound");
+                return RedirectToAction(nameof(List));
+            }
+        }
+
         var result = await _mediator.Send(new ReceivePurchaseOrderItemCommand
         {
             PurchaseOrderId = model.PurchaseOrderId,
@@ -232,6 +253,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             WarehouseId = model.WarehouseId,
             SellingPrice = model.SellingPrice,
             OversupplyAction = model.OversupplyAction,
+            DirectShipOrderId = model.DirectShipOrderId,
             DirectShipOrderItemId = model.DirectShipOrderItemId,
             DirectShipAddress = model.DirectShipAddress,
             DirectShipContactName = model.DirectShipContactName,
@@ -272,6 +294,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 Quantity = line.Quantity,
                 WarehouseId = line.WarehouseId,
                 ActualUnitCost = line.ActualUnitCost,
+                DirectShipOrderId = line.DirectShipOrderId,
                 DirectShipOrderItemId = line.DirectShipOrderItemId,
                 DirectShipAddress = line.DirectShipAddress,
                 DirectShipContactName = line.DirectShipContactName,
@@ -477,6 +500,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         var result = await _mediator.Send(new AllocatePoItemToOrderCommand
         {
             PurchaseOrderItemId = request.PurchaseOrderItemId,
+            OrderId = request.OrderId,
             OrderItemId = request.OrderItemId,
             Quantity = request.Quantity,
             DirectShipAddress = request.DirectShipAddress,

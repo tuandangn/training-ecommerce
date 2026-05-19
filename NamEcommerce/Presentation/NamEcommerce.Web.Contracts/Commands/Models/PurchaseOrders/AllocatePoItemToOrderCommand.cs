@@ -6,6 +6,7 @@ namespace NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 public sealed class AllocatePoItemToOrderCommand : IRequest<CommonActionResultModel>
 {
     public required Guid PurchaseOrderItemId { get; init; }
+    public required Guid OrderId { get; set; }
     public required Guid OrderItemId { get; init; }
     public required decimal Quantity { get; init; }
     public string? DirectShipAddress { get; init; }

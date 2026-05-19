@@ -1,4 +1,5 @@
 using MediatR;
+using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Events.PurchaseOrders;
@@ -16,9 +17,9 @@ public sealed class AllocationMarkedAsDirectShipEventHandler(
 
         await warehouseManager.CreateWarehouseAsync(new CreateWarehouseDto
         {
-            Code = "TRANSIT-DS",
-            Name = "Kho ảo giao thẳng",
-            WarehouseType = WarehouseType.DirectShipTransit,
+            Code = $"{Warehouse.CODE_PREFIX}GIAOTHANG",
+            Name = "Kho giao thẳng",
+            WarehouseType = WarehouseType.DirectTransit,
             IsActive = true
         }).ConfigureAwait(false);
     }
