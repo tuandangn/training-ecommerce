@@ -20,16 +20,17 @@ public static class OrderExtensions
             TotalAmount = order.TotalAmount,
             OrderDiscount = order.OrderDiscount ?? 0,
             Status = (int)order.Status,
-            IsFinished = order.Status == OrderStatus.Locked,
+            IsFinished = order.Status == OrderStatus.Completed,
             Note = order.Note,
             ShippingAddress = order.ShippingAddress,
-            LockOrderReason = order.LockOrderReason,
+            CompletedOnUtc = order.CompletedOnUtc,
             CreatedByUserId = order.CreatedByUserId,
             CreatedByUsername = order.CreatedByUsername,
             CreatedOnUtc = order.CreatedOnUtc,
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
-            CanCancelOrder = order.CanLockOrder
+            CanCancelOrder = order.CanCompleteOrder,
+            CanCompleteOrder = order.CanCompleteOrder
         };
         foreach (var orderItem in order.Items)
         {

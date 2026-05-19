@@ -16,6 +16,20 @@ async function submitFormAsync(form) {
 }
 
 (function () {
+    document.querySelectorAll('[data-workflow-target]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const target = button.dataset.workflowTarget;
+            document.querySelectorAll('[data-workflow-target]').forEach((step) => {
+                const isActive = step === button;
+                step.classList.toggle('active', isActive);
+                step.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+            document.querySelectorAll('[data-workflow-panel]').forEach((panel) => {
+                panel.classList.toggle('active', panel.dataset.workflowPanel === target);
+            });
+        });
+    });
+
     const addProductModalEl = document.getElementById('addProductModal');
     if (addProductModalEl) {
         const productPickerEl = document.getElementById('productPicker');
@@ -167,31 +181,51 @@ async function submitFormAsync(form) {
         }
     });
 
-    // ─── Lock ─────────────────────────────────────────────────────────────────
-
-    $('#lockForm').on('submit', async function (e) {
-        e.preventDefault();
-
-        if (!$(this).valid())
-            return;
+    document.getElementById('btnCompleteOrder')?.addEventListener('click', async (event) => {
+        const orderId = event.currentTarget.dataset.orderId;
+        const confirmed = await confirm('Hoàn thành đơn', 'Xác nhận đã kiểm tra giao hàng, công nợ và chi phí?');
+        if (!confirmed) return;
 
         showPageLoading();
-        const lockModal = new PromiseModal('#lockModal');
-        lockModal.hide();
-
         try {
-            const result = await submitFormAsync(this);
+            const formData = new FormData();
+            formData.append('OrderId', orderId);
+            const result = await apiPost('/Order/CompleteOrder', formData);
             if (result.success) {
                 location.reload();
             } else {
                 hidePageLoading();
-                toast('Lỗi', result.message || 'Không thể khóa đơn hàng.', 'error');
+                toast('Lỗi', result.message || 'Không thể hoàn thành đơn.', 'error');
             }
         } catch (err) {
             hidePageLoading();
             toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
         }
     });
+
+    const orderExpenseForm = document.getElementById('orderExpenseForm');
+    if (orderExpenseForm) {
+        $('#orderExpenseForm').on('submit', async function (e) {
+            e.preventDefault();
+
+            showPageLoading();
+            const expenseModal = new PromiseModal('#orderExpenseModal');
+            expenseModal.hide();
+
+            try {
+                const result = await submitFormAsync(this);
+                if (result.success) {
+                    location.reload();
+                } else {
+                    hidePageLoading();
+                    toast('Lỗi', result.message || 'Không thể thêm chi phí phát sinh.', 'error');
+                }
+            } catch (err) {
+                hidePageLoading();
+                toast('Lỗi', 'Có lỗi xảy ra khi gửi yêu cầu.', 'error');
+            }
+        });
+    }
 
     const editDiscountModalElement = document.getElementById('editDiscountModal');
     if (editDiscountModalElement) {

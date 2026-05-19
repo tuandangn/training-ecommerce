@@ -10,6 +10,7 @@ public sealed class CreateExpenseCommand : IRequest<CommonActionResultModel>
     public required decimal Amount { get; init; }
     public required int ExpenseType { get; init; }
     public required DateTime IncurredDate { get; init; }
+    public Guid? SourceOrderId { get; init; }
 }
 
 public sealed class UpdateExpenseCommand : IRequest<CommonActionResultModel>

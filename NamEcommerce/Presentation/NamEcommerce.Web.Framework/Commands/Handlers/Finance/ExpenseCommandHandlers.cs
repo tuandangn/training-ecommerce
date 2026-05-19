@@ -17,7 +17,8 @@ public sealed class CreateExpenseHandler(IExpenseAppService expenseAppService)
             Description = request.Description,
             Amount = request.Amount,
             ExpenseType = request.ExpenseType,
-            IncurredDate = request.IncurredDate
+            IncurredDate = request.IncurredDate,
+            SourceOrderId = request.SourceOrderId
         }).ConfigureAwait(false);
 
         return new CommonActionResultModel { Success = result.Success, ErrorMessage = result.ErrorMessage };

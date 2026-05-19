@@ -9,7 +9,7 @@ public enum ProductReservationReason
     OrderItemRemoved = 5,
     OrderCancelled = 6,
     OrderDeleted = 7,
-    OrderLocked = 8,
+    OrderCompleted = 8,
     DeliveryNoteConfirmed = 9,
     DeliveryNoteCancelled = 10,
     MigrationBackfill = 99

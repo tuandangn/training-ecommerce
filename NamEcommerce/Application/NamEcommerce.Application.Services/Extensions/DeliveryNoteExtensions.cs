@@ -44,7 +44,8 @@ public static class DeliveryNoteExtensions
                 ProductName = i.ProductName,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,
-                SubTotal = i.SubTotal
+                SubTotal = i.SubTotal,
+                CostAtDispatch = i.CostAtDispatch
             }).ToList()
         };
     }

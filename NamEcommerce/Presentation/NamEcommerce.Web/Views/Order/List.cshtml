@@ -73,7 +73,7 @@
                         <th class="d-none d-lg-table-cell">Hàng hóa / Giao</th>
                         <th class="text-end">Tổng đơn</th>
                         <th class="text-center">Ngày dự kiến</th>
-                        <th class="text-center" style="width:100px;">Khóa</th>
+                        <th class="text-center" style="width:120px;">Kết sổ</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -164,11 +164,11 @@
                                 <td class="text-center">
                                     @if (order.IsFinished)
                                     {
-                                        <i class="bi bi-check-circle-fill text-success ms-1" data-bs-toggle="tooltip" title="Đã khóa"></i>
+                                        <i class="bi bi-check-circle-fill text-success ms-1" data-bs-toggle="tooltip" title="Hoàn thành"></i>
                                     }
                                     else
                                     {
-                                        <i class="bi bi-x-circle-fill text-info ms-1" data-bs-toggle="tooltip" title="Chưa khóa"></i>
+                                        <i class="bi bi-x-circle-fill text-info ms-1" data-bs-toggle="tooltip" title="Chưa hoàn thành"></i>
                                     }
                                 </td>
                                 <td class="text-end pe-3">

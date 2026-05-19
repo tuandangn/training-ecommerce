@@ -17,7 +17,7 @@ public sealed class PreparationAppService(
     public async Task<IPagedDataAppDto<PreparationItemAppDto>> GetPreparationListAsync(int pageIndex, int pageSize, string? keywords = null)
     {
         var status = Enum.GetValues<OrderStatus>()
-            .Where(status => status != OrderStatus.Locked && status != OrderStatus.Cancelled)
+            .Where(status => status != OrderStatus.Completed && status != OrderStatus.Cancelled)
             .ToArray();
         var orders = await orderManager.GetOrdersAsync(0, int.MaxValue, null, status).ConfigureAwait(false);
 
@@ -65,7 +65,7 @@ public sealed class PreparationAppService(
     public async Task<IPagedDataAppDto<PreparationGroupedItemAppDto>> GetPreparationGroupedListAsync(int pageIndex, int pageSize, string? keywords = null)
     {
         var status = Enum.GetValues<OrderStatus>()
-            .Where(status => status != OrderStatus.Locked && status != OrderStatus.Cancelled)
+            .Where(status => status != OrderStatus.Completed && status != OrderStatus.Cancelled)
             .ToArray();
         var orders = await orderManager.GetOrdersAsync(0, int.MaxValue, null, status).ConfigureAwait(false);
 

@@ -22,11 +22,13 @@ public sealed class ExpenseMapping : IEntityTypeConfiguration<Expense>
 
         builder.Property(x => x.SourceVendorReturnId);
         builder.Property(x => x.SourceCustomerReturnId);
+        builder.Property(x => x.SourceOrderId).IsRequired(false);
         builder.HasIndex(x => x.SourceVendorReturnId)
             .IsUnique()
             .HasFilter("[SourceVendorReturnId] IS NOT NULL");
         builder.HasIndex(x => x.SourceCustomerReturnId)
             .IsUnique()
             .HasFilter("[SourceCustomerReturnId] IS NOT NULL");
+        builder.HasIndex(x => x.SourceOrderId);
     }
 }

@@ -14,17 +14,17 @@ public static class OrderStatusExtensions
     {
         public string GetDisplayText() => status switch
         {
-            OrderStatus.Pending => "Chưa khóa",
-            OrderStatus.Locked => "Đã khóa",
+            OrderStatus.Pending => "Đang xử lý",
+            OrderStatus.Completed => "Hoàn thành",
             OrderStatus.Cancelled => "Đã hủy",
             _ => throw new InvalidDataException(nameof(status)),
         };
 
         public string GetDisplayColor() => status switch
         {
-            OrderStatus.Pending => "bg-light text-dark",
-            OrderStatus.Locked => "bg-success text-light",
-            OrderStatus.Cancelled => "bg-danger text-light",
+            OrderStatus.Pending => "secondary",
+            OrderStatus.Completed => "success",
+            OrderStatus.Cancelled => "danger",
             _ => throw new InvalidDataException(nameof(status)),
         };
     }

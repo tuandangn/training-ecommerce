@@ -46,7 +46,7 @@ public sealed record Order : AppAggregateEntity
     public decimal OrderTotal { get; private set; }
     public decimal OrderDiscount { get; private set; }
     public OrderStatus OrderStatus { get; private set; }
-    public string? LockOrderReason { get; private set; }
+    public DateTime? CompletedOnUtc { get; private set; }
     public string? Note { get; internal set; }
 
     public Guid CustomerId { get; private set; }
@@ -196,7 +196,7 @@ public sealed record Order : AppAggregateEntity
         OrderTotal = OrderSubTotal - OrderDiscount;
     }
 
-    internal bool CanUpdateInfo() => OrderStatus != OrderStatus.Locked && OrderStatus != OrderStatus.Cancelled;
+    internal bool CanUpdateInfo() => OrderStatus != OrderStatus.Completed && OrderStatus != OrderStatus.Cancelled;
     internal bool CanChangeStatusTo(OrderStatus toStatus)
     {
         if (!CanUpdateInfo())
@@ -211,13 +211,7 @@ public sealed record Order : AppAggregateEntity
 
         return true;
     }
-    internal bool CanLockOrder()
-    {
-        if (!CanUpdateInfo())
-            return false;
-
-        return true;
-    }
+    internal bool CanCompleteOrder() => OrderStatus == OrderStatus.Pending;
 
     internal void ChangeStatus(OrderStatus status)
     {
@@ -227,15 +221,15 @@ public sealed record Order : AppAggregateEntity
         OrderStatus = status;
     }
 
-    internal void LockOrder(string? reason)
+    internal void Complete()
     {
-        if (OrderStatus == OrderStatus.Locked)
-            throw new OrderLockedException();
+        if (!CanCompleteOrder())
+            throw new OrderCannotChangeStatusException();
 
-        ChangeStatus(OrderStatus.Locked);
-        LockOrderReason = reason;
+        ChangeStatus(OrderStatus.Completed);
+        CompletedOnUtc = DateTime.UtcNow;
 
-        RaiseDomainEvent(new OrderLocked(Id, reason));
+        RaiseDomainEvent(new OrderCompleted(Id));
     }
 
     internal void Cancel()
@@ -257,19 +251,6 @@ public sealed record Order : AppAggregateEntity
 
         RaiseDomainEvent(new OrderItemDelivered(Id, orderItemId, pictureId));
     }
-    internal bool TryAutoLock()
-    {
-        if (OrderStatus == OrderStatus.Locked)
-            return false;
-
-        if (!AreAllItemsDelivered())
-            return false;
-
-        LockOrder("Tất cả hàng hóa đã được giao.");
-        return true;
-    }
-    private bool AreAllItemsDelivered() => _orderItems.Count > 0 && _orderItems.All(i => i.IsDelivered);
-
     private IReadOnlyCollection<OrderReservationItem> GetReservationItems()
         => _orderItems
             .GroupBy(i => i.ProductId)

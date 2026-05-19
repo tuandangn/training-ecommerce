@@ -7,6 +7,22 @@ namespace NamEcommerce.Web.Models.Orders;
 [Serializable]
 public sealed record OrderDetailsModel
 {
+    public enum WorkflowStage
+    {
+        Order = 1,
+        Preparation = 2,
+        Delivery = 3,
+        Settlement = 4
+    }
+
+    public enum OrderDeliverySummaryStatus
+    {
+        Pending = 0,
+        Shipping = 1,
+        PartialDelivered = 2,
+        Delivered = 3
+    }
+
     public required Guid Id { get; init; }
     public required string Code { get; init; }
     public required decimal OrderSubTotal { get; init; }
@@ -19,7 +35,7 @@ public sealed record OrderDetailsModel
 
     public decimal OrderDiscount { get; set; }
     public int Status { get; set; }
-    public string? LockOrderReason { get; set; }
+    public DateTime? CompletedOn { get; set; }
 
     public string? Note { get; set; }
 
@@ -27,7 +43,7 @@ public sealed record OrderDetailsModel
     public string? ShippingAddress { get; set; }
 
     public bool CanUpdateInfo { get; init; }
-    public bool CanLockOrder { get; init; }
+    public bool CanCompleteOrder { get; set; }
     public bool CanCancelOrder { get; set; }
     public bool CanDeleteOrder { get; set; }
     public bool CanUpdateOrderItems { get; init; }
@@ -39,11 +55,17 @@ public sealed record OrderDetailsModel
     public ShortageInfoModel ShortageInfo { get; set; } = new();
     public IList<DirectShipAllocationModel> DirectShipAllocations { get; set; } = [];
     public IList<ReturnWarehouseOptionModel> ReturnWarehouseOptions { get; set; } = [];
+    public WorkflowModel Workflow { get; set; } = new();
+    public PreparationModel Preparation { get; set; } = new();
+    public DeliveryWorkflowModel DeliveryWorkflow { get; set; } = new();
+    public SettlementModel Settlement { get; set; } = new();
+    public IList<TimelineEventModel> Timeline { get; set; } = [];
 
     [Serializable]
     public sealed record DirectShipAllocationModel
     {
         public Guid AllocationId { get; init; }
+        public Guid OrderItemId { get; init; }
         public string ProductName { get; init; } = string.Empty;
         public int Status { get; init; }
         public int? DeliveryStatus { get; init; }
@@ -153,5 +175,163 @@ public sealed record OrderDetailsModel
         public required Guid OrderItemId { get; init; }
         public string ProductName { get; init; } = string.Empty;
         public required decimal Quantity { get; init; }
+        public required decimal UnitPrice { get; init; }
+        public required decimal SubTotal { get; init; }
+        public decimal? CostAtDispatch { get; init; }
+        public decimal? TotalCost => CostAtDispatch.HasValue ? CostAtDispatch.Value * Quantity : null;
+    }
+
+    [Serializable]
+    public sealed record WorkflowModel
+    {
+        public WorkflowStage ActiveStage { get; set; } = WorkflowStage.Order;
+        public OrderDeliverySummaryStatus DeliveryStatus { get; set; } = OrderDeliverySummaryStatus.Pending;
+        public string DeliveryStatusText { get; set; } = string.Empty;
+        public string DeliveryStatusClass { get; set; } = "secondary";
+        public IList<WorkflowStepModel> Steps { get; set; } = [];
+    }
+
+    [Serializable]
+    public sealed record WorkflowStepModel
+    {
+        public required WorkflowStage Stage { get; init; }
+        public required string Key { get; init; }
+        public required string Title { get; init; }
+        public required string Icon { get; init; }
+        public required string Summary { get; init; }
+        public bool IsActive { get; init; }
+        public bool IsComplete { get; init; }
+    }
+
+    [Serializable]
+    public sealed record PreparationModel
+    {
+        public IList<PreparationItemModel> Items { get; set; } = [];
+        public IList<PreparationPurchaseOrderModel> PurchaseOrders { get; set; } = [];
+        public bool HasShortage { get; set; }
+        public decimal TotalShortageQuantity { get; set; }
+    }
+
+    [Serializable]
+    public sealed record PreparationItemModel
+    {
+        public required Guid OrderItemId { get; init; }
+        public required string ProductName { get; init; }
+        public decimal OrderedQuantity { get; init; }
+        public decimal AvailableQuantity { get; init; }
+        public decimal ShortageQuantity { get; init; }
+        public decimal IssuedQuantity { get; init; }
+        public decimal DeliveredQuantity { get; init; }
+        public decimal DirectShipQuantity { get; init; }
+        public decimal DirectShipReceivedQuantity { get; init; }
+        public string DirectShipStatusText { get; init; } = string.Empty;
+        public decimal? UnitCost { get; init; }
+        public IList<PreparationPurchaseOrderModel> RelatedPurchaseOrders { get; set; } = [];
+    }
+
+    [Serializable]
+    public sealed record PreparationPurchaseOrderModel
+    {
+        public required Guid PurchaseOrderId { get; init; }
+        public required string PurchaseOrderCode { get; init; }
+        public required string VendorName { get; init; }
+        public required string ProductName { get; init; }
+        public required string StatusText { get; init; }
+        public required string StatusClass { get; init; }
+        public DateTime PlacedOn { get; init; }
+        public DateTime? ExpectedDeliveryDate { get; init; }
+        public decimal AllocatedQuantity { get; init; }
+        public decimal ReceivedQuantity { get; init; }
+        public decimal PendingQuantity => Math.Max(0, AllocatedQuantity - ReceivedQuantity);
+        public bool IsFullyReceived => AllocatedQuantity > 0 && PendingQuantity == 0;
+    }
+
+    [Serializable]
+    public sealed record DeliveryWorkflowModel
+    {
+        public OrderDeliverySummaryStatus Status { get; set; } = OrderDeliverySummaryStatus.Pending;
+        public string StatusText { get; set; } = string.Empty;
+        public string StatusClass { get; set; } = "secondary";
+        public IList<DeliveryProgressModel> Notes { get; set; } = [];
+    }
+
+    [Serializable]
+    public sealed record DeliveryProgressModel
+    {
+        public required Guid DeliveryNoteId { get; init; }
+        public required string Code { get; init; }
+        public required string StatusText { get; init; }
+        public required string StatusClass { get; init; }
+        public required bool IsDirectShip { get; init; }
+        public string? WarehouseName { get; init; }
+        public DateTime CreatedOn { get; init; }
+        public DateTime? DeliveredOn { get; init; }
+        public decimal TotalQuantity { get; init; }
+        public decimal TotalAmount { get; init; }
+    }
+
+    [Serializable]
+    public sealed record SettlementModel
+    {
+        public decimal Revenue { get; set; }
+        public decimal TotalCost { get; set; }
+        public decimal TotalExpenses { get; set; }
+        public decimal Profit { get; set; }
+        public bool IsProfitFinal { get; set; }
+        public IList<SettlementDebtModel> Debts { get; set; } = [];
+        public IList<SettlementExpenseModel> Expenses { get; set; } = [];
+        public IList<SettlementCostModel> Costs { get; set; } = [];
+        public decimal TotalDebtAmount => Debts.Sum(item => item.TotalAmount);
+        public decimal TotalPaidAmount => Debts.Sum(item => item.PaidAmount);
+        public decimal TotalRemainingAmount => Debts.Sum(item => item.RemainingAmount);
+    }
+
+    [Serializable]
+    public sealed record SettlementDebtModel
+    {
+        public required Guid Id { get; init; }
+        public required string Code { get; init; }
+        public required string DeliveryNoteCode { get; init; }
+        public decimal TotalAmount { get; init; }
+        public decimal PaidAmount { get; init; }
+        public decimal RemainingAmount { get; init; }
+        public string StatusText { get; init; } = string.Empty;
+        public DateTime? DueDate { get; init; }
+        public DateTime CreatedOn { get; init; }
+    }
+
+    [Serializable]
+    public sealed record SettlementExpenseModel
+    {
+        public required Guid Id { get; init; }
+        public required string Title { get; init; }
+        public string? Description { get; init; }
+        public string ExpenseTypeText { get; init; } = string.Empty;
+        public decimal Amount { get; init; }
+        public DateTime IncurredDate { get; init; }
+    }
+
+    [Serializable]
+    public sealed record SettlementCostModel
+    {
+        public required Guid DeliveryNoteId { get; init; }
+        public required string DeliveryNoteCode { get; init; }
+        public required string ProductName { get; init; }
+        public decimal Quantity { get; init; }
+        public decimal? UnitCost { get; init; }
+        public decimal? TotalCost { get; init; }
+        public DateTime DispatchedOn { get; init; }
+        public bool IsDirectShip { get; init; }
+    }
+
+    [Serializable]
+    public sealed record TimelineEventModel
+    {
+        public required DateTime OccurredOn { get; init; }
+        public required string Title { get; init; }
+        public string? Description { get; init; }
+        public required string Icon { get; init; }
+        public required string Tone { get; init; }
+        public WorkflowStage Stage { get; init; }
     }
 }

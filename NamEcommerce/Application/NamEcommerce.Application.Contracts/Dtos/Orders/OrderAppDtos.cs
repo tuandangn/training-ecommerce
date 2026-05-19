@@ -34,12 +34,13 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
     public required decimal TotalAmount { get; init; }
     public required int Status { get; init; }
     public bool IsFinished { get; set; }
-    public string? LockOrderReason { get; set; }
+    public DateTime? CompletedOnUtc { get; set; }
 
     public string? ShippingAddress { get; set; }
 
     public bool CanUpdateInfo { get; init; }
     public bool CanCancelOrder { get; init; }
+    public bool CanCompleteOrder { get; init; }
     public bool CanUpdateOrderItems { get; init; }
 
     public DateTime CreatedOnUtc { get; set; }
@@ -139,13 +140,12 @@ public sealed record UpdateOrderShippingResultAppDto
 }
 
 [Serializable]
-public sealed record LockOrderAppDto
+public sealed record CompleteOrderAppDto
 {
     public required Guid OrderId { get; init; }
-    public required string? Reason { get; init; }
 }
 [Serializable]
-public sealed record LockOrderResultAppDto
+public sealed record CompleteOrderResultAppDto
 {
     public required bool Success { get; init; }
     public string? ErrorMessage { get; set; }
@@ -163,7 +163,6 @@ public sealed record MarkOrderItemDeliveredResultAppDto
 {
     public required bool Success { get; init; }
     public string? ErrorMessage { get; set; }
-    public bool OrderAutoLocked { get; set; }
 }
 
 [Serializable]

@@ -6,6 +6,7 @@ namespace NamEcommerce.Application.Contracts.Finance;
 public interface IExpenseAppService
 {
     Task<IPagedDataAppDto<ExpenseAppDto>> GetExpensesAsync(string? keywords = null, DateTime? fromDate = null, DateTime? toDate = null, int? expenseType = null, int pageIndex = 0, int pageSize = int.MaxValue);
+    Task<IList<ExpenseAppDto>> GetExpensesByOrderIdAsync(Guid orderId);
     Task<ExpenseAppDto?> GetExpenseByIdAsync(Guid id);
     Task<CreateExpenseResultAppDto> CreateExpenseAsync(CreateExpenseAppDto dto);
     Task<UpdateExpenseResultAppDto> UpdateExpenseAsync(UpdateExpenseAppDto dto);
