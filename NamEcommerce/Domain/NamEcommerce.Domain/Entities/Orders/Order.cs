@@ -71,7 +71,15 @@ public sealed record Order : AppAggregateEntity
 
     internal void MarkShippingUpdated() => RaiseDomainEvent(new OrderShippingUpdated(Id));
 
-    internal void MarkDeleted() => RaiseDomainEvent(new OrderDeleted(Id, Code, GetReservationItems()));
+    internal void MarkDeleted()
+    {
+        // Cancelled orders already released reservation when the order was cancelled.
+        IReadOnlyCollection<OrderReservationItem> reservationItems = OrderStatus == OrderStatus.Cancelled
+            ? []
+            : GetReservationItems();
+
+        RaiseDomainEvent(new OrderDeleted(Id, Code, reservationItems));
+    }
 
     internal void RaiseSoCancelledWithDirectShipReceived(IReadOnlyList<Guid> allocationIds)
         => RaiseDomainEvent(new SoCancelledWithDirectShipReceived(Id, allocationIds));

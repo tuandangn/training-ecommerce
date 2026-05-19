@@ -409,6 +409,20 @@
                     <i class="bi bi-printer me-1"></i>
                     In đơn
                 </button>
+                @if (Model.CanCancelOrder)
+                {
+                    <button type="button" class="btn btn-outline-danger" id="btnCancelOrder">
+                        <i class="bi bi-x-circle me-1"></i>
+                        Hủy đơn
+                    </button>
+                }
+                @if (Model.CanDeleteOrder)
+                {
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteOrderModal">
+                        <i class="bi bi-trash me-1"></i>
+                        Xóa đơn
+                    </button>
+                }
                 @if (Model.CanLockOrder)
                 {
                     <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#lockModal">
@@ -749,6 +763,32 @@
             </div>
         </div>
     }
+}
+
+@if (Model.CanDeleteOrder)
+{
+    <div class="modal fade" id="deleteOrderModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-danger">Xác nhận xóa đơn hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body py-3">
+                    <p>Xác nhận xóa đơn hàng <strong>@Model.Code</strong>? Thao tác này không thể hoàn tác.</p>
+                </div>
+                <form method="post" asp-action="Delete" asp-route-id="@Model.Id">
+                    <div class="modal-footer border-0 pt-0 pb-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Giữ nguyên</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i>
+                            Xóa đơn
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 }
 
 @if (Model.Status != (int)OrderStatus.Locked)

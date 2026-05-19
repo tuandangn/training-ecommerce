@@ -193,6 +193,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
 
         model.CanCancelOrder = order.Status != (int)OrderStatus.Locked
             && order.Status != (int)OrderStatus.Cancelled;
+        model.CanDeleteOrder = order.Status is (int)OrderStatus.Pending or (int)OrderStatus.Cancelled;
         model.FullyReceivedDirectShipCount = model.DirectShipAllocations.Count(a =>
             a.ReceivedQuantity > 0 &&
             (!a.DeliveryStatus.HasValue || a.DeliveryStatus == (int)DeliveryNoteStatus.Confirmed));

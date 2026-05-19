@@ -296,7 +296,8 @@ public sealed class OrderManager(
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
-        if (!order.CanUpdateInfo())
+        var canDeleteOrder = order.OrderStatus is OrderStatus.Pending or OrderStatus.Cancelled;
+        if (!canDeleteOrder)
             throw new InvalidOperationException("Order cannot delete.");
 
         var activeDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource

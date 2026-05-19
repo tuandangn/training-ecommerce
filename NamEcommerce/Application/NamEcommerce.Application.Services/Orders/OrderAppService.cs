@@ -572,7 +572,8 @@ public sealed class OrderAppService(IOrderManager orderManager,
             };
         }
 
-        if (!order.CanUpdateInfo)
+        var canDeleteOrder = order.Status is OrderStatus.Pending or OrderStatus.Cancelled;
+        if (!canDeleteOrder)
         {
             return new DeleteOrderResultAppDto
             {
