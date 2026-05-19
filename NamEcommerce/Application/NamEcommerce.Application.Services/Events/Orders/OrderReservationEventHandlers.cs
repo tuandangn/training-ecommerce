@@ -80,12 +80,12 @@ public sealed class OrderCancelledEventHandler(
     }
 }
 
-public sealed class OrderLockedEventHandler(
+public sealed class OrderCompletedEventHandler(
     IProductReservationManager productReservationManager,
     IEntityDataReader<Order> orderReader,
-    IEntityDataReader<DeliveryNote> deliveryNoteReader) : INotificationHandler<OrderLocked>
+    IEntityDataReader<DeliveryNote> deliveryNoteReader) : INotificationHandler<OrderCompleted>
 {
-    public async Task Handle(OrderLocked notification, CancellationToken cancellationToken)
+    public async Task Handle(OrderCompleted notification, CancellationToken cancellationToken)
     {
         var order = await orderReader.GetByIdAsync(notification.OrderId).ConfigureAwait(false);
         if (order is null) return;
@@ -113,7 +113,7 @@ public sealed class OrderLockedEventHandler(
                 item.ProductId,
                 item.Quantity,
                 order.Id,
-                ProductReservationReason.OrderLocked,
+                ProductReservationReason.OrderCompleted,
                 order.Id).ConfigureAwait(false);
     }
 }

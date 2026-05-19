@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Web.Contracts.Commands.Models.Finance;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -109,7 +110,7 @@ public sealed class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> LockOrder(LockOrderModel model)
+    public async Task<IActionResult> CompleteOrder(CompleteOrderModel model)
     {
         if (!ModelState.IsValid)
             return Json(new { success = false, message = GetErrorMessage() });
@@ -121,10 +122,10 @@ public sealed class OrderController : BaseAuthorizedController
         if (order is null)
             return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
 
-        if (!order.CanLockOrder)
-            return Json(new { success = false, message = LocalizeError("Error.OrderCannotLock") });
+        if (!order.CanCompleteOrder)
+            return Json(new { success = false, message = LocalizeError("Error.OrderCannotComplete") });
 
-        var result = await _mediator.Send(new LockOrderCommand(model.OrderId, model.Reason!));
+        var result = await _mediator.Send(new CompleteOrderCommand(model.OrderId));
 
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
@@ -308,6 +309,23 @@ public sealed class OrderController : BaseAuthorizedController
 
         var result = await _mediator.Send(new UpdateOrderShippingCommand(model.OrderId, model.ExpectedShippingDate, model.Address));
 
+        if (!result.Success)
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+
+        return Json(new { success = true, message = string.Empty });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddExpense(CreateExpenseCommand command)
+    {
+        if (!command.SourceOrderId.HasValue || command.SourceOrderId == Guid.Empty)
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
+
+        var order = await _mediator.Send(new GetOrderByIdQuery { Id = command.SourceOrderId.Value });
+        if (order is null)
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
+
+        var result = await _mediator.Send(command);
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 

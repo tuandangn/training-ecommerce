@@ -37,7 +37,8 @@ public class ExpenseManager : IExpenseManager
         var expense = new Expense(Guid.NewGuid(), dto.Title, dto.Amount, dto.ExpenseType, dto.IncurredDate, dto.RecordedByUserId)
         {
             SourceVendorReturnId = dto.SourceVendorReturnId,
-            SourceCustomerReturnId = dto.SourceCustomerReturnId
+            SourceCustomerReturnId = dto.SourceCustomerReturnId,
+            SourceOrderId = dto.SourceOrderId
         };
         if (!string.IsNullOrWhiteSpace(dto.Description))
         {

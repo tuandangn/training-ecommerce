@@ -56,6 +56,7 @@ public sealed record DeliveryNoteItemAppDto
     public required decimal Quantity { get; init; }
     public required decimal UnitPrice { get; init; }
     public required decimal SubTotal { get; init; }
+    public decimal? CostAtDispatch { get; init; }
 }
 
 [Serializable]

@@ -30,6 +30,7 @@ public record Expense : AppAggregateEntity
 
     public Guid? SourceVendorReturnId { get; internal set; }
     public Guid? SourceCustomerReturnId { get; internal set; }
+    public Guid? SourceOrderId { get; internal set; }
 
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? ModifiedOnUtc { get; private set; }

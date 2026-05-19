@@ -50,10 +50,10 @@ public sealed record OrderItemRemoved(
     decimal Quantity) : DomainEvent;
 
 /// <summary>
-/// Đơn bị khoá (manual hoặc auto-lock khi tất cả item đã giao).
+/// Đơn đã được kết sổ và hoàn thành.
 /// Handler hiện tại release phần global reservation còn lại của đơn.
 /// </summary>
-public sealed record OrderLocked(Guid OrderId, string? Reason) : DomainEvent;
+public sealed record OrderCompleted(Guid OrderId) : DomainEvent;
 
 /// <summary>
 /// Thông tin giao hàng (shipping address / expected shipping date) được cập nhật.

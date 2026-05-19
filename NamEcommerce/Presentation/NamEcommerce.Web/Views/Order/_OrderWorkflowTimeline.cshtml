@@ -1,0 +1,38 @@
+@model OrderDetailsModel
+
+<div class="content-card">
+    <div class="content-card-header">
+        <h5>Timeline</h5>
+        <span class="status-badge @Model.Workflow.DeliveryStatusClass">@Model.Workflow.DeliveryStatusText</span>
+    </div>
+    <div class="content-card-body">
+        @if (Model.Timeline.Count == 0)
+        {
+            <div class="empty-state">
+                <div class="empty-icon"><i class="bi bi-clock-history"></i></div>
+                <h5>Chưa có hoạt động</h5>
+            </div>
+        }
+        else
+        {
+            <ol class="workflow-timeline-list">
+                @foreach (var item in Model.Timeline)
+                {
+                    <li class="workflow-timeline-item @item.Tone">
+                        <div class="workflow-timeline-icon">
+                            <i class="bi @item.Icon"></i>
+                        </div>
+                        <div class="workflow-timeline-content">
+                            <time>@item.OccurredOn.ToString($"{ViewConstants.DefaultDateFormat} HH:mm")</time>
+                            <strong>@item.Title</strong>
+                            @if (!string.IsNullOrWhiteSpace(item.Description))
+                            {
+                                <span>@item.Description</span>
+                            }
+                        </div>
+                    </li>
+                }
+            </ol>
+        }
+    </div>
+</div>

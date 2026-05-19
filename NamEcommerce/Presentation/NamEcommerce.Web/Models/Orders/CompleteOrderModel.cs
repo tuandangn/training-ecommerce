@@ -1,8 +1,7 @@
 ﻿namespace NamEcommerce.Web.Models.Orders;
 
 [Serializable]
-public sealed class LockOrderModel
+public sealed class CompleteOrderModel
 {
     public Guid OrderId { get; set; }
-    public string? Reason { get; set; }
 }

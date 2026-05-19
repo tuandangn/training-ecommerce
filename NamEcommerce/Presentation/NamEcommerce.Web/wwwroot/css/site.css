@@ -1605,6 +1605,318 @@ body {
         max-height: unset;
     }
 
+/* ============================================================
+   Order workflow
+   ============================================================ */
+.order-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.order-workflow-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 1rem;
+    align-items: start;
+}
+
+.order-workflow-main {
+    min-width: 0;
+}
+
+.order-workflow-timeline {
+    position: sticky;
+    top: 88px;
+    align-self: start;
+}
+
+.order-workflow-steps {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    overflow: hidden;
+}
+
+.workflow-step {
+    display: grid;
+    grid-template-columns: 2.2rem minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: center;
+    min-height: 4.6rem;
+    padding: 0.85rem 1rem;
+    border: 0;
+    border-right: 1px solid var(--gray-200);
+    background: #fff;
+    color: var(--gray-700);
+    text-align: left;
+    transition: var(--transition);
+}
+
+.workflow-step:last-child {
+    border-right: 0;
+}
+
+.workflow-step:hover,
+.workflow-step:focus {
+    background: var(--gray-50);
+}
+
+.workflow-step.active {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    box-shadow: inset 0 -3px 0 var(--primary);
+}
+
+.workflow-step.complete .workflow-step-index {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.workflow-step.active .workflow-step-index {
+    background: var(--primary);
+    color: #fff;
+}
+
+.workflow-step-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 8px;
+    background: var(--gray-100);
+    color: var(--gray-500);
+    flex: 0 0 auto;
+}
+
+.workflow-step-copy {
+    min-width: 0;
+}
+
+.workflow-step-title,
+.workflow-step-summary {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.workflow-step-title {
+    color: var(--gray-900);
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.workflow-step-summary {
+    margin-top: 0.15rem;
+    color: var(--gray-500);
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.workflow-panel {
+    display: none;
+}
+
+.workflow-panel.active {
+    display: block;
+}
+
+.workflow-panel + .workflow-panel {
+    margin-top: 1rem;
+}
+
+.order-workflow-info-grid,
+.workflow-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
+}
+
+.order-workflow-info-grid > div,
+.workflow-metric {
+    padding: 0.85rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: var(--gray-50);
+    min-width: 0;
+}
+
+.workflow-info-label,
+.workflow-metric span,
+.workflow-section-title {
+    color: var(--gray-500);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.workflow-metric strong {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--gray-900);
+    font-size: 1.05rem;
+    line-height: 1.2;
+}
+
+.workflow-metric.profit-positive strong {
+    color: var(--success);
+}
+
+.workflow-metric.profit-negative strong {
+    color: var(--danger);
+}
+
+.workflow-section-title {
+    margin: 1rem 0 0.5rem;
+}
+
+.workflow-soft-empty {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.8rem 0.9rem;
+    border: 1px dashed var(--gray-300);
+    border-radius: 8px;
+    color: var(--gray-500);
+    background: var(--gray-50);
+    font-weight: 500;
+}
+
+.workflow-timeline-list {
+    position: relative;
+    display: grid;
+    gap: 0.9rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.workflow-timeline-list::before {
+    content: "";
+    position: absolute;
+    top: 0.35rem;
+    bottom: 0.35rem;
+    left: 0.9rem;
+    width: 1px;
+    background: var(--gray-200);
+}
+
+.workflow-timeline-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1.8rem minmax(0, 1fr);
+    gap: 0.65rem;
+}
+
+.workflow-timeline-icon {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 8px;
+    background: var(--gray-100);
+    color: var(--gray-500);
+}
+
+.workflow-timeline-item.primary .workflow-timeline-icon {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.workflow-timeline-item.success .workflow-timeline-icon {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.workflow-timeline-item.warning .workflow-timeline-icon {
+    background: var(--warning-light);
+    color: var(--warning);
+}
+
+.workflow-timeline-item.danger .workflow-timeline-icon {
+    background: var(--danger-light);
+    color: var(--danger);
+}
+
+.workflow-timeline-item.info .workflow-timeline-icon {
+    background: var(--info-light);
+    color: var(--info);
+}
+
+.workflow-timeline-content {
+    min-width: 0;
+    padding-bottom: 0.15rem;
+}
+
+.workflow-timeline-content time,
+.workflow-timeline-content span,
+.workflow-timeline-content strong {
+    display: block;
+}
+
+.workflow-timeline-content time {
+    color: var(--gray-400);
+    font-size: 0.76rem;
+    font-weight: 600;
+}
+
+.workflow-timeline-content strong {
+    color: var(--gray-900);
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.workflow-timeline-content span {
+    color: var(--gray-500);
+    font-size: 0.84rem;
+    line-height: 1.35;
+}
+
+@media (max-width: 991.98px) {
+    .order-workflow-layout,
+    .order-workflow-info-grid,
+    .workflow-metric-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .order-workflow-timeline {
+        position: static;
+    }
+
+    .order-workflow-steps {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .workflow-step {
+        border-bottom: 1px solid var(--gray-200);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .order-detail-actions {
+        justify-content: stretch;
+    }
+
+    .order-detail-actions .btn {
+        flex: 1 1 auto;
+    }
+
+    .order-workflow-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .workflow-step {
+        min-height: 4rem;
+        border-right: 0;
+    }
+}
+
 
 
 /* ============================================================

@@ -377,39 +377,49 @@ public sealed class OrderAppService(IOrderManager orderManager,
         };
     }
 
-    public async Task<LockOrderResultAppDto> LockOrderAsync(LockOrderAppDto dto)
+    public async Task<CompleteOrderResultAppDto> CompleteOrderAsync(CompleteOrderAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
         var order = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
         {
-            return new LockOrderResultAppDto
+            return new CompleteOrderResultAppDto
             {
                 Success = false,
                 ErrorMessage = "Error.OrderIsNotFound"
             };
         }
 
-        if (!order.CanUpdateInfo)
+        if (!order.CanCompleteOrder)
         {
-            return new LockOrderResultAppDto
+            return new CompleteOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Error.OrderCannotUpdateShipping"
+                ErrorMessage = "Error.OrderCannotComplete"
             };
         }
 
-        await orderManager.LockOrderAsync(new LockOrderDto
+        try
         {
-            OrderId = dto.OrderId,
-            Reason = dto.Reason
-        }).ConfigureAwait(false);
+            await orderManager.CompleteOrderAsync(new CompleteOrderDto
+            {
+                OrderId = dto.OrderId
+            }).ConfigureAwait(false);
 
-        return new LockOrderResultAppDto
+            return new CompleteOrderResultAppDto
+            {
+                Success = true
+            };
+        }
+        catch (Exception ex)
         {
-            Success = true
-        };
+            return new CompleteOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
     }
 
     public async Task<OrderAppDto?> GetOrderByIdAsync(Guid id)
@@ -548,13 +558,9 @@ public sealed class OrderAppService(IOrderManager orderManager,
             PictureId = dto.PictureId
         }).ConfigureAwait(false);
 
-        // Re-fetch to check if order was auto-locked
-        var updatedOrder = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
-
         return new MarkOrderItemDeliveredResultAppDto
         {
-            Success = true,
-            OrderAutoLocked = updatedOrder?.Status == OrderStatus.Locked
+            Success = true
         };
     }
 

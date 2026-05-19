@@ -21,13 +21,13 @@ public static class OrderExtensions
             CreatedByUserId = order.CreatedByUserId,
             CreatedByUsername = order.CreatedByUsername,
             Note = order.Note,
-            LockOrderReason = order.LockOrderReason,
+            CompletedOnUtc = order.CompletedOnUtc,
             ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
             ShippingAddress = order.ShippingAddress,
             CreatedOnUtc = order.CreatedOnUtc,
             CanUpdateOrderItems = order.CanUpdateOrderItems(),
             CanUpdateInfo = order.CanUpdateInfo(),
-            CanLockOrder = order.CanLockOrder()
+            CanCompleteOrder = order.CanCompleteOrder()
         };
 
         foreach (var orderItem in order.OrderItems)

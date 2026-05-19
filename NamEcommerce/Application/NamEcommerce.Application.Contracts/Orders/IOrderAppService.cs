@@ -12,7 +12,7 @@ public interface IOrderAppService
     Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto);
     Task<DeleteOrderResultAppDto> DeleteOrderAsync(DeleteOrderAppDto dto);
 
-    Task<LockOrderResultAppDto> LockOrderAsync(LockOrderAppDto dto);
+    Task<CompleteOrderResultAppDto> CompleteOrderAsync(CompleteOrderAppDto dto);
     Task<UpdateOrderShippingResultAppDto> UpdateShippingAsync(UpdateOrderShippingAppDto dto);
 
     Task<AddOrderItemResultAppDto> AddOrderItemAsync(AddOrderItemAppDto dto);

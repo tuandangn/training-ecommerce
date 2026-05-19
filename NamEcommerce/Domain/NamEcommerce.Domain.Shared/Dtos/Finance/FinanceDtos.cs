@@ -13,6 +13,7 @@ public class CreateExpenseDto
 
     public Guid? SourceVendorReturnId { get; set; }
     public Guid? SourceCustomerReturnId { get; set; }
+    public Guid? SourceOrderId { get; set; }
 }
 
 public class UpdateExpenseDto : CreateExpenseDto

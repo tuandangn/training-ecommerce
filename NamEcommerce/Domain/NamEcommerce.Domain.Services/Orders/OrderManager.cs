@@ -176,7 +176,7 @@ public sealed class OrderManager(
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
-    public async Task LockOrderAsync(LockOrderDto dto)
+    public async Task CompleteOrderAsync(CompleteOrderDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
@@ -184,7 +184,20 @@ public sealed class OrderManager(
         if (order is null)
             throw new OrderIsNotFoundException(dto.OrderId);
 
-        order.LockOrder(dto.Reason);
+        var activeDeliveryNotes = deliveryNoteDataReader.DataSource
+            .Where(deliveryNote => deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled)
+            .ToList();
+        var allItemsDelivered = order.OrderItems.Count() > 0
+            && order.OrderItems.All(orderItem =>
+                activeDeliveryNotes
+                    .Where(deliveryNote => deliveryNote.Status == DeliveryNoteStatus.Delivered)
+                    .SelectMany(deliveryNote => deliveryNote.Items)
+                    .Where(item => item.OrderItemId == orderItem.Id)
+                    .Sum(item => item.Quantity) >= orderItem.Quantity);
+        if (!allItemsDelivered)
+            throw new OrderCannotChangeStatusException();
+
+        order.Complete();
         order.UpdatedOnUtc = DateTime.UtcNow;
 
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
@@ -283,7 +296,6 @@ public sealed class OrderManager(
             throw new OrderIsNotFoundException(dto.OrderId);
 
         order.MarkOrderItemDelivered(dto.OrderItemId, dto.PictureId);
-        order.TryAutoLock();
         order.UpdatedOnUtc = DateTime.UtcNow;
 
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);

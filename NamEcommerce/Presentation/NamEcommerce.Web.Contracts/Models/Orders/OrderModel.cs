@@ -17,14 +17,14 @@ public sealed record OrderModel
 
     public decimal OrderDiscount { get; set; }
     public int Status { get; set; }
-    public string? LockOrderReason { get; set; }
+    public DateTime? CompletedOn { get; set; }
 
     public string? Note { get; set; }
 
     public string? ShippingAddress { get; set; }
 
     public bool CanUpdateInfo { get; init; }
-    public bool CanLockOrder { get; init; }
+    public bool CanCompleteOrder { get; init; }
     public bool CanUpdateOrderItems { get; init; }
 
     public IList<OrderItemModel> Items { get; init; } = [];
