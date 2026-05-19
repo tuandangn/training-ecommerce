@@ -133,7 +133,13 @@ public sealed class OrderModelFactory : IOrderModelFactory
             var dnModel = new OrderDetailsModel.DeliveryNoteBasicModel
             {
                 Id = dn.Id,
-                Code = dn.Code
+                Code = dn.Code,
+                Status = dn.Status,
+                SourceType = dn.SourceType,
+                IsDirectShip = dn.IsDirectShip,
+                WarehouseName = dn.WarehouseName,
+                CreatedOn = dn.CreatedOnUtc.ToLocalTime(),
+                DeliveredOn = dn.DeliveredOnUtc?.ToLocalTime()
             };
 
             // Add delivery note items for coverage calculation
@@ -142,6 +148,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 dnModel.Items.Add(new OrderDetailsModel.DeliveryNoteItemModel
                 {
                     OrderItemId = item.OrderItemId,
+                    ProductName = item.ProductName,
                     Quantity = item.Quantity
                 });
             }

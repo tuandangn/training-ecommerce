@@ -23,5 +23,19 @@ public sealed class OrderListModel
         public DateTime? ExpectedShippingDate { get; set; }
         public DateTime CreatedOn { get; set; }
         public bool CanUpdateInfo { get; set; }
+        public IList<OrderItemSummaryModel> Items { get; init; } = [];
+        public decimal TotalOrdered => Items.Sum(item => item.QuantityOrdered);
+        public decimal TotalDeliveryNoteQuantity => Items.Sum(item => item.QuantityInDeliveryNotes);
+        public decimal TotalDelivered => Items.Sum(item => item.QuantityDelivered);
+    }
+
+    [Serializable]
+    public sealed record OrderItemSummaryModel
+    {
+        public required Guid OrderItemId { get; init; }
+        public required string ProductName { get; init; }
+        public required decimal QuantityOrdered { get; init; }
+        public decimal QuantityInDeliveryNotes { get; init; }
+        public decimal QuantityDelivered { get; init; }
     }
 }

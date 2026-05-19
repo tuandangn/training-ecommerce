@@ -1,5 +1,6 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Customers;
+using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.Orders;
@@ -9,13 +10,20 @@ namespace NamEcommerce.Web.Framework.Queries.Handlers.Orders;
 
 public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, OrderListModel>
 {
+    private const int CancelledDeliveryNoteStatus = 50;
+    private const int DeliveredDeliveryNoteStatus = 40;
     private readonly IOrderAppService _orderAppService;
     private readonly ICustomerAppService _customerAppService;
+    private readonly IDeliveryNoteAppService _deliveryNoteAppService;
 
-    public GetOrderListHandler(IOrderAppService orderAppService, ICustomerAppService customerAppService)
+    public GetOrderListHandler(
+        IOrderAppService orderAppService,
+        ICustomerAppService customerAppService,
+        IDeliveryNoteAppService deliveryNoteAppService)
     {
         _orderAppService = orderAppService;
         _customerAppService = customerAppService;
+        _deliveryNoteAppService = deliveryNoteAppService;
     }
 
     public async Task<OrderListModel> Handle(GetOrderListQuery request, CancellationToken cancellationToken)
@@ -23,10 +31,23 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
         var pagedData = await _orderAppService.GetOrdersAsync(request.PageIndex, request.PageSize, request.Keywords, request.Status).ConfigureAwait(false);
 
         var customers = await _customerAppService.GetCustomersByIdsAsync(pagedData.Select(o => o.CustomerId)).ConfigureAwait(false);
+        var deliveryNoteTasks = pagedData.Items.ToDictionary(
+            order => order.Id,
+            order => _deliveryNoteAppService.GetByOrderIdAsync(order.Id));
+        await Task.WhenAll(deliveryNoteTasks.Values).ConfigureAwait(false);
+
         var orderItemModels = new List<OrderListModel.OrderModel>();
         foreach (var order in pagedData.Items)
         {
             var customer = customers.FirstOrDefault(cust => cust.Id == order.CustomerId);
+            var deliveryNotes = deliveryNoteTasks[order.Id].Result;
+            var activeDeliveryNotes = deliveryNotes
+                .Where(deliveryNote => deliveryNote.Status != CancelledDeliveryNoteStatus)
+                .ToList();
+            var deliveredNotes = deliveryNotes
+                .Where(deliveryNote => deliveryNote.Status == DeliveredDeliveryNoteStatus)
+                .ToList();
+
             orderItemModels.Add(new OrderListModel.OrderModel
             {
                 Id = order.Id,
@@ -39,7 +60,21 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
                 IsFinished = order.IsFinished,
                 ExpectedShippingDate = order.ExpectedShippingDateUtc?.ToLocalTime(),
                 CreatedOn = order.CreatedOnUtc.ToLocalTime(),
-                CanUpdateInfo = order.CanUpdateInfo
+                CanUpdateInfo = order.CanUpdateInfo,
+                Items = order.Items.Select(item => new OrderListModel.OrderItemSummaryModel
+                {
+                    OrderItemId = item.Id,
+                    ProductName = item.ProductName ?? string.Empty,
+                    QuantityOrdered = item.Quantity,
+                    QuantityInDeliveryNotes = activeDeliveryNotes
+                        .SelectMany(deliveryNote => deliveryNote.Items)
+                        .Where(deliveryNoteItem => deliveryNoteItem.OrderItemId == item.Id)
+                        .Sum(deliveryNoteItem => deliveryNoteItem.Quantity),
+                    QuantityDelivered = deliveredNotes
+                        .SelectMany(deliveryNote => deliveryNote.Items)
+                        .Where(deliveryNoteItem => deliveryNoteItem.OrderItemId == item.Id)
+                        .Sum(deliveryNoteItem => deliveryNoteItem.Quantity)
+                }).ToList()
             });
         }
 

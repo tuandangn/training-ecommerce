@@ -99,6 +99,15 @@ public sealed class OrderController : BaseAuthorizedController
         return PartialView("_AllocatedPurchaseOrdersOffcanvasBody", listModel);
     }
 
+    public async Task<IActionResult> DeliveryNotes(Guid id)
+    {
+        var model = await _orderModelFactory.PrepareOrderDetailsModel(id);
+        if (model is null)
+            return NotFound();
+
+        return PartialView("_DeliveryNotesOffcanvasBody", model);
+    }
+
     [HttpPost]
     public async Task<IActionResult> LockOrder(LockOrderModel model)
     {

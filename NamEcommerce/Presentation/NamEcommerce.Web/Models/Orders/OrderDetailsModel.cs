@@ -1,3 +1,4 @@
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 
@@ -115,6 +116,20 @@ public sealed record OrderDetailsModel
             var delivered = GetDeliveredQuantity(deliveryNotes);
             return Quantity - delivered;
         }
+
+        public int GetDeliveryNoteCount(IList<DeliveryNoteBasicModel> deliveryNotes)
+        {
+            return deliveryNotes.Count(dn => dn.Items.Any(dni => dni.OrderItemId == Id));
+        }
+
+        public decimal GetDeliveredToCustomerQuantity(IList<DeliveryNoteBasicModel> deliveryNotes)
+        {
+            return deliveryNotes
+                .Where(dn => dn.Status == (int)DeliveryNoteStatus.Delivered)
+                .SelectMany(dn => dn.Items)
+                .Where(dni => dni.OrderItemId == Id)
+                .Sum(dni => dni.Quantity);
+        }
     }
 
     [Serializable]
@@ -122,6 +137,12 @@ public sealed record OrderDetailsModel
     {
         public required Guid Id { get; init; }
         public required string Code { get; init; }
+        public int Status { get; init; }
+        public int SourceType { get; init; }
+        public bool IsDirectShip { get; init; }
+        public string? WarehouseName { get; init; }
+        public DateTime CreatedOn { get; init; }
+        public DateTime? DeliveredOn { get; init; }
         public IList<DeliveryNoteItemModel> Items { get; init; } = [];
     }
 
@@ -129,6 +150,7 @@ public sealed record OrderDetailsModel
     public sealed record DeliveryNoteItemModel
     {
         public required Guid OrderItemId { get; init; }
+        public string ProductName { get; init; } = string.Empty;
         public required decimal Quantity { get; init; }
     }
 }

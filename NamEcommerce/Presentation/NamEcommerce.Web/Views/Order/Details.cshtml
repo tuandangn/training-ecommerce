@@ -41,67 +41,6 @@
     };
     @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
 }
-@if (Model.DirectShipAllocations.Count > 0)
-{
-    <div class="content-card mb-3">
-        <div class="content-card-header">
-            <h5><i class="bi bi-truck-flatbed me-2"></i>Giao thẳng tới khách</h5>
-        </div>
-        <div class="content-card-body p-0">
-            <table class="table data-table mb-0">
-                <thead>
-                    <tr>
-                        <th class="ps-3">Hàng hóa</th>
-                        <th class="text-center" style="width:12%">SL</th>
-                        <th style="width:20%">Trạng thái</th>
-                        <th style="width:20%">Phiếu xuất</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var alloc in Model.DirectShipAllocations)
-                    {
-                        var deliveryStatus = alloc.DeliveryStatus.HasValue
-                            ? (DeliveryNoteStatus)alloc.DeliveryStatus.Value
-                            : (DeliveryNoteStatus?)null;
-                        var (statusBadge, statusText) = deliveryStatus switch
-                        {
-                            DeliveryNoteStatus.Confirmed => ("info text-white", "Chờ khách xác nhận"),
-                            DeliveryNoteStatus.Delivered => ("success", "Khách đã nhận"),
-                            DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy/từ chối"),
-                            _ => alloc.Status switch
-                            {
-                                0 => ("secondary", "Chờ nhận"),
-                                1 => ("warning", "Nhận một phần"),
-                                2 => ("info text-white", "Đã nhận"),
-                                _ => ("secondary", "Không rõ")
-                            }
-                        };
-                        <tr>
-                            <td class="ps-3">@alloc.ProductName</td>
-                            <td class="text-center">
-                                @alloc.ReceivedQuantity.DisplayQuantity() / @alloc.AllocatedQuantity.DisplayQuantity()
-                            </td>
-                            <td><span class="status-badge @statusBadge">@statusText</span></td>
-                            <td>
-                                @if (alloc.DeliveryNoteId.HasValue)
-                                {
-                                    <a asp-controller="DeliveryNote" asp-action="Details"
-                                       asp-route-id="@alloc.DeliveryNoteId">
-                                        @alloc.DeliveryNoteCode
-                                    </a>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">—</span>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-}
 <div class="content-card mb-3 position-relative">
     <div class="content-card-body-flush">
         <div class="row g-3">
@@ -160,6 +99,7 @@
                                     <tr>
                                         <th class="ps-3">Hàng hóa</th>
                                         <th class="text-center" style="width: 12%">SL</th>
+                                        <th class="text-center" style="width: 18%">Giao</th>
                                         <th class="text-end" style="width: 18%">Đơn giá</th>
                                         <th class="text-end d-none d-md-table-cell @(Model.CanUpdateOrderItems ? "" : "pe-3")"
                                             style="width: 18%">Thành tiền</th>
@@ -172,6 +112,13 @@
                                 <tbody id="itemsTableBody">
                                     @foreach (var item in Model.Items)
                                     {
+                                        var deliveryNoteQuantity = item.GetDeliveredQuantity(Model.DeliveryNotes);
+                                        var deliveredToCustomerQuantity = item.GetDeliveredToCustomerQuantity(Model.DeliveryNotes);
+                                        var deliveryNoteCount = item.GetDeliveryNoteCount(Model.DeliveryNotes);
+                                        var deliveryPct = item.Quantity > 0 ? Math.Min(100, (int)Math.Round(deliveryNoteQuantity * 100 / item.Quantity)) : 0;
+                                        var isFullyDelivered = item.Quantity > 0 && deliveredToCustomerQuantity >= item.Quantity;
+                                        var hasDeliveryNote = deliveryNoteQuantity > 0;
+                                        var progressClass = isFullyDelivered ? "bg-success" : (hasDeliveryNote ? "bg-warning" : "bg-secondary");
                                         <tr data-item-id="@item.Id">
                                             <td class="ps-4">
                                                 <div class="d-flex align-items-center gap-2">
@@ -192,6 +139,28 @@
                                             </td>
                                             <td class="text-center fw-600">
                                                 <span class="quantity-text">@item.Quantity.DisplayQuantity()</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="fw-600 text-nowrap">
+                                                    @deliveryNoteQuantity.DisplayQuantity() / @item.Quantity.DisplayQuantity()
+                                                </div>
+                                                <div class="progress mx-auto mt-1" style="height: 4px; width: 92px;" role="progressbar" aria-valuenow="@deliveryPct" aria-valuemin="0" aria-valuemax="100">
+                                                    <div class="progress-bar @progressClass" style="width: @(deliveryPct)%"></div>
+                                                </div>
+                                                <div class="small text-muted mt-1">
+                                                    @if (deliveryNoteCount > 0)
+                                                    {
+                                                        <span>@deliveryNoteCount phiếu</span>
+                                                        @if (deliveredToCustomerQuantity > 0)
+                                                        {
+                                                            <span> · Đã giao @deliveredToCustomerQuantity.DisplayQuantity()</span>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>Chưa lập phiếu</span>
+                                                    }
+                                                </div>
                                             </td>
                                             <td class="text-end text-muted">
                                                 <span class="unit-price-text">
@@ -404,15 +373,15 @@
     <div class="content-card-footer">
         <div class="d-flex align-items-center justify-content-between gap-1">
             <div class="d-flex flex-row-reverse align-items-center gap-1">
+                @if (Model.DeliveryNotes.Count > 0 || Model.DirectShipAllocations.Count > 0)
+                {
+                    <button type="button" class="btn btn-secondary" onclick="openCoworkOffcanvas({ title: 'Phiếu giao', url: '/Order/DeliveryNotes/@Model.Id', size: 'lg' })">
+                        <i class="bi bi-card-list me-1"></i>
+                        Phiếu giao
+                    </button>
+                }
                 @if (Model.Status != (int)OrderStatus.Locked)
                 {
-                    @if (Model.DeliveryNotes.Count > 0)
-                    {
-                        <a asp-controller="DeliveryNote" asp-action="List" asp-route-keywords="@Model.Code" class="btn btn-secondary">
-                            <i class="bi bi-card-list me-1"></i>
-                            Phiếu xuất
-                        </a>
-                    }
                     @if (!Model.AreAllItemsFullyCovered)
                     {
                         <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@Model.Id" class="btn btn-success">
