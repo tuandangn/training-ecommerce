@@ -92,15 +92,16 @@ public sealed class CustomerManager : ICustomerManager
         if (!string.IsNullOrWhiteSpace(keywords))
         {
             var normalizedKeywords = TextHelper.Normalize(keywords);
+            var uppercaseKeywords = keywords.Trim().ToUpper();
             query = query.Where(c =>
-                c.FullName.Contains(keywords) || c.FullName.Contains(normalizedKeywords) || c.NormalizedFullName.Contains(normalizedKeywords)
-                || c.Address.Contains(keywords) || c.Address.Contains(normalizedKeywords) || c.NormalizedAddress.Contains(normalizedKeywords)
+                c.FullName.Value.ToUpper().Contains(uppercaseKeywords) || c.FullName.Value.ToUpper().Contains(normalizedKeywords) || c.FullName.NormalizedValue.Contains(normalizedKeywords)
+                || c.Address.Value.ToUpper().Contains(uppercaseKeywords) || c.Address.Value.ToUpper().Contains(normalizedKeywords) || c.Address.NormalizedValue.Contains(normalizedKeywords)
                 || c.PhoneNumber.Contains(keywords));
         }
 
         var total = query.Count();
         var paged = query
-            .OrderBy(c => c.FullName)
+            .OrderBy(c => c.FullName.Value)
             .ThenByDescending(c => c.CreatedOnUtc)
             .Skip(pageIndex * pageSize).Take(pageSize)
             .ToList()

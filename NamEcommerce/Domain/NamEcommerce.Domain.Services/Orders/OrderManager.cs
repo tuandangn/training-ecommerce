@@ -216,10 +216,9 @@ public sealed class OrderManager(
         {
             var normalizedKeywords = TextHelper.Normalize(keywords);
             var uppercaseKeywords = keywords.Trim().ToUpper();
-
             var customerIds = customerDataReader.DataSource
-                .Where(c => c.FullName.ToUpper().Contains(uppercaseKeywords) || c.FullName.ToUpper().Contains(normalizedKeywords) || c.NormalizedFullName.Contains(normalizedKeywords)
-                    || c.Address.ToUpper().Contains(uppercaseKeywords) || c.Address.ToUpper().Contains(normalizedKeywords) || c.NormalizedAddress.Contains(normalizedKeywords)
+                .Where(c => c.FullName.Value.ToUpper().Contains(uppercaseKeywords) || c.FullName.Value.ToUpper().Contains(normalizedKeywords) || c.FullName.NormalizedValue.Contains(normalizedKeywords)
+                    || c.Address.Value.ToUpper().Contains(uppercaseKeywords) || c.Address.Value.ToUpper().Contains(normalizedKeywords) || c.Address.NormalizedValue.Contains(normalizedKeywords)
                     || c.PhoneNumber.Contains(keywords))
                 .Select(v => v.Id)
                 .ToList()
