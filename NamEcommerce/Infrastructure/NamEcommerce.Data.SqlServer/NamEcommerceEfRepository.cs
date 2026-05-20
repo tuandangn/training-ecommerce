@@ -44,7 +44,7 @@ public sealed class NamEcommerceEfRepository<TEntity> : IRepository<TEntity> whe
     private void TryDetachEntity(TEntity entity)
     {
         var existing = ((NamEcommerceEfDbContext)_dbContext).ChangeTracker
-            .Entries<PurchaseOrderItemAllocation>()
+            .Entries<TEntity>()
             .FirstOrDefault(e => e.Entity.Id == entity.Id);
 
         if (existing != null)

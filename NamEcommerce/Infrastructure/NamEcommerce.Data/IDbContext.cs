@@ -21,9 +21,3 @@ public interface IDbContext
 
     Task<IDataTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
 }
-
-public interface IDataTransaction : IAsyncDisposable
-{
-    Task CommitAsync(CancellationToken cancellationToken = default);
-    Task RollbackAsync(CancellationToken cancellationToken = default);
-}

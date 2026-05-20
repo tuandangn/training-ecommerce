@@ -8,7 +8,7 @@
 
 - **Unit test**: KHÔNG viết unit test mới, KHÔNG sửa code trong project `*.Test`.
 - **Migration**: AI KHÔNG tự chạy migration — báo Tuấn tự chạy.
-- **Skills**: using-agent-skills, namcommerce.
+- **Skills**: using-superpowers, using-agent-skills, namcommerce.
 - **Comments**: chỉ viết khi giải thích WHY không hiển nhiên.
 
 ---

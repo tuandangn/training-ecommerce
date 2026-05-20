@@ -458,7 +458,6 @@ public sealed class ShortageAggregationAppService(
                         throw new InvalidOperationException("Error.PurchaseOrderShortageActionInvalid");
                     }
                 }
-
                 foreach (var mergeGroup in mergeItemsByPurchaseOrder)
                 {
                     var result = await purchaseOrderManager
