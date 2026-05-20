@@ -1,0 +1,53 @@
+@using NamEcommerce.Application.Contracts.Dtos.CustomerPortal
+@using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@model IReadOnlyCollection<CustomerPortalSecurityEventAdminAppDto>
+@{
+    ViewData[ViewConstants.PageTitle] = "Sự kiện bảo mật Customer Portal";
+}
+
+<div class="page-header">
+    <div class="d-flex align-items-center">
+        <a asp-action="Index" class="btn btn-icon btn-light me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <div>
+            <h1 class="page-header-title">Sự kiện bảo mật</h1>
+            <p class="page-header-subtitle">Theo dõi OTP, đăng nhập, khóa tài khoản và các thao tác bị chặn</p>
+        </div>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="table data-table align-middle">
+            <thead>
+                <tr>
+                    <th class="ps-4">Thời gian</th>
+                    <th>Khách hàng</th>
+                    <th>Phiếu giao</th>
+                    <th>Sự kiện</th>
+                    <th class="text-center">Kết quả</th>
+                    <th>IP</th>
+                    <th>Metadata</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model)
+            {
+                var outcome = (CustomerPortalSecurityEventOutcome)item.Outcome;
+                <tr>
+                    <td class="ps-4 text-muted small">@item.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</td>
+                    <td>@(item.CustomerName ?? "Ẩn danh")</td>
+                    <td class="text-muted small">@item.DeliveryNoteCode</td>
+                    <td class="fw-medium">@item.EventType</td>
+                    <td class="text-center"><span class="badge @outcome.GetDisplayColor()">@outcome.GetDisplayText()</span></td>
+                    <td class="text-muted small">@item.IpAddress</td>
+                    <td class="text-muted small text-truncate" style="max-width:260px">@item.MetadataJson</td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="7"><div class="empty-state py-5 text-muted">Chưa có sự kiện bảo mật</div></td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

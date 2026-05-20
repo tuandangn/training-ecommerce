@@ -37,6 +37,8 @@ public sealed class DeliveryNoteDetailsModel
     public decimal Surcharge { get; set; }
     public string? SurchargeReason { get; set; }
     public decimal AmountToCollect { get; set; }
+    public string? CustomerPortalUrl { get; set; }
+    public string? CustomerPortalQrCodeSvg { get; set; }
 
     public IList<DeliveryNoteItemModel> Items { get; set; } = [];
     public ShortageInfoModel ShortageInfo { get; set; } = new();

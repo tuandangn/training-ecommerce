@@ -28,8 +28,11 @@ function AppRoutes() {
   const path = window.location.pathname;
   const query = new URLSearchParams(window.location.search);
 
-  if (path.startsWith("/delivery/")) {
-    return <PublicDeliveryPage token={decodeURIComponent(path.replace("/delivery/", ""))} />;
+  if (path.startsWith("/d/") || path.startsWith("/delivery/")) {
+    const token = path.startsWith("/d/")
+      ? path.replace("/d/", "")
+      : path.replace("/delivery/", "");
+    return <PublicDeliveryPage token={decodeURIComponent(token)} />;
   }
 
   if (path === "/verify") {

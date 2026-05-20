@@ -11,6 +11,13 @@ public sealed record CustomerActionResultAppDto
 }
 
 [Serializable]
+public sealed record CustomerPortalDeliveryAccessTokenAppDto
+{
+    public required Guid DeliveryNoteId { get; init; }
+    public required string Token { get; init; }
+}
+
+[Serializable]
 public sealed record PublicDeliveryNoteAppDto
 {
     public required Guid Id { get; init; }
