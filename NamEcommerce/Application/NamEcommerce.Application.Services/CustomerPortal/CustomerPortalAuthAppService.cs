@@ -15,16 +15,9 @@ public sealed class CustomerPortalAuthAppService(
     IDeliveryNoteAppService deliveryNoteAppService,
     IEntityDataReader<Customer> customerReader,
     ISecurityService securityService,
-    IEnumerable<ICustomerOtpSender> otpSenders) : ICustomerPortalAuthAppService
+    IEnumerable<ICustomerOtpSender> otpSenders,
+    CustomerPortalSecurityOptions securityOptions) : ICustomerPortalAuthAppService
 {
-    private const int OtpExpiryMinutes = 5;
-    private const int SessionExpiryHours = 8;
-    private const int OtpCooldownSeconds = 60;
-    private const int MaxOtpRequestsPerCustomerPerHour = 5;
-    private const int MaxOtpRequestsPerIpPerHour = 20;
-    private const int MaxPasswordFailuresPerCustomerPerHour = 5;
-    private const int MaxPasswordFailuresPerIpPerHour = 20;
-
     private const string OtpRequestEvent = "OtpRequest";
     private const string OtpVerifyEvent = "OtpVerify";
     private const string PasswordLoginEvent = "PasswordLogin";
@@ -45,6 +38,12 @@ public sealed class CustomerPortalAuthAppService(
     public async Task<CustomerOtpRequestResultAppDto> RequestOtpAsync(CustomerOtpRequestAppDto dto)
     {
         var nowUtc = DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(dto.DeliveryToken))
+        {
+            await RecordEventAsync(null, null, OtpRequestEvent, CustomerPortalSecurityEventOutcome.Failed, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
+            return GenericOtpFailure;
+        }
+
         var tokenHash = CustomerPortalHashing.Hash(dto.DeliveryToken);
         var token = await securityManager.ResolveDeliveryNoteAccessTokenAsync(tokenHash, nowUtc).ConfigureAwait(false);
         if (token is null)
@@ -61,7 +60,7 @@ public sealed class CustomerPortalAuthAppService(
             return GenericOtpFailure;
         }
 
-        if (await securityManager.HasRecentOtpChallengeAsync(deliveryNote.CustomerId, deliveryNote.Id, TimeSpan.FromSeconds(OtpCooldownSeconds), nowUtc).ConfigureAwait(false) ||
+        if (await securityManager.HasRecentOtpChallengeAsync(deliveryNote.CustomerId, deliveryNote.Id, TimeSpan.FromSeconds(securityOptions.SafeOtpCooldownSeconds), nowUtc).ConfigureAwait(false) ||
             await IsOtpRateLimitedAsync(deliveryNote.CustomerId, dto.RequestedIp, nowUtc).ConfigureAwait(false))
         {
             await RecordEventAsync(deliveryNote.CustomerId, deliveryNote.Id, OtpRequestEvent, CustomerPortalSecurityEventOutcome.Blocked, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
@@ -83,7 +82,7 @@ public sealed class CustomerPortalAuthAppService(
             DeliveryNoteId = deliveryNote.Id,
             Channel = sent.Channel.Value,
             OtpHash = CustomerPortalHashing.Hash(otp),
-            ExpiresOnUtc = nowUtc.AddMinutes(OtpExpiryMinutes),
+            ExpiresOnUtc = nowUtc.AddMinutes(securityOptions.SafeOtpExpiryMinutes),
             RequestedIp = dto.RequestedIp,
             RequestedUserAgent = dto.RequestedUserAgent,
             SentToMasked = sent.MaskedDestination
@@ -105,6 +104,12 @@ public sealed class CustomerPortalAuthAppService(
     public async Task<CustomerPortalLoginResultAppDto> VerifyOtpAsync(CustomerOtpVerifyAppDto dto)
     {
         var nowUtc = DateTime.UtcNow;
+        if (dto.ChallengeId == Guid.Empty || string.IsNullOrWhiteSpace(dto.Otp))
+        {
+            await RecordEventAsync(null, null, OtpVerifyEvent, CustomerPortalSecurityEventOutcome.Failed, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
+            return GenericLoginFailure;
+        }
+
         var result = await securityManager.VerifyOtpChallengeAsync(new VerifyCustomerOtpChallengeDto(dto.ChallengeId)
         {
             OtpHash = CustomerPortalHashing.Hash(dto.Otp),
@@ -124,6 +129,12 @@ public sealed class CustomerPortalAuthAppService(
     public async Task<CustomerPortalLoginResultAppDto> PasswordLoginAsync(CustomerPasswordLoginAppDto dto)
     {
         var nowUtc = DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(dto.Login) || string.IsNullOrWhiteSpace(dto.Password))
+        {
+            await RecordEventAsync(null, null, PasswordLoginEvent, CustomerPortalSecurityEventOutcome.Failed, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
+            return GenericLoginFailure;
+        }
+
         var login = dto.Login.Trim();
         var customer = customerReader.DataSource.FirstOrDefault(customer =>
             customer.PhoneNumber == login ||
@@ -205,7 +216,7 @@ public sealed class CustomerPortalAuthAppService(
         {
             CustomerId = customerId,
             SessionTokenHash = CustomerPortalHashing.Hash(rawToken),
-            ExpiresOnUtc = DateTime.UtcNow.AddHours(SessionExpiryHours),
+            ExpiresOnUtc = DateTime.UtcNow.AddHours(securityOptions.SafeSessionExpiryHours),
             CreatedIp = ip,
             UserAgent = userAgent
         }).ConfigureAwait(false);
@@ -241,13 +252,13 @@ public sealed class CustomerPortalAuthAppService(
     {
         var fromUtc = nowUtc.AddHours(-1);
         var byCustomer = await securityManager.CountSecurityEventsAsync(customerId, null, OtpRequestEvent, null, fromUtc).ConfigureAwait(false);
-        if (byCustomer >= MaxOtpRequestsPerCustomerPerHour)
+        if (byCustomer >= securityOptions.SafeMaxOtpRequestsPerCustomerPerHour)
             return true;
 
         if (!string.IsNullOrWhiteSpace(ipAddress))
         {
             var byIp = await securityManager.CountSecurityEventsAsync(null, ipAddress, OtpRequestEvent, null, fromUtc).ConfigureAwait(false);
-            if (byIp >= MaxOtpRequestsPerIpPerHour)
+            if (byIp >= securityOptions.SafeMaxOtpRequestsPerIpPerHour)
                 return true;
         }
 
@@ -260,14 +271,14 @@ public sealed class CustomerPortalAuthAppService(
         if (customerId.HasValue)
         {
             var byCustomer = await securityManager.CountSecurityEventsAsync(customerId, null, PasswordLoginEvent, CustomerPortalSecurityEventOutcome.Failed, fromUtc).ConfigureAwait(false);
-            if (byCustomer >= MaxPasswordFailuresPerCustomerPerHour)
+            if (byCustomer >= securityOptions.SafeMaxPasswordFailuresPerCustomerPerHour)
                 return true;
         }
 
         if (!string.IsNullOrWhiteSpace(ipAddress))
         {
             var byIp = await securityManager.CountSecurityEventsAsync(null, ipAddress, PasswordLoginEvent, CustomerPortalSecurityEventOutcome.Failed, fromUtc).ConfigureAwait(false);
-            if (byIp >= MaxPasswordFailuresPerIpPerHour)
+            if (byIp >= securityOptions.SafeMaxPasswordFailuresPerIpPerHour)
                 return true;
         }
 

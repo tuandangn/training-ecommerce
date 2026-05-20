@@ -163,6 +163,33 @@ public sealed record DeliveryNote : AppAggregateEntity
         RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
     }
 
+    internal bool MarkReceivedByCustomer(DateTime receivedAtUtc, string? receiverName, string? note)
+    {
+        if (Status == DeliveryNoteStatus.Delivered)
+        {
+            DeliveryConfirmationStatus = DeliveryConfirmationStatus.Confirmed;
+            ConfirmedAtUtc ??= receivedAtUtc;
+            ConfirmedNote = note;
+            DeliveryReceiverName = string.IsNullOrWhiteSpace(receiverName) ? DeliveryReceiverName : receiverName;
+            UpdatedOnUtc = DateTime.UtcNow;
+            return false;
+        }
+
+        if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
+
+        DeliveryConfirmationStatus = DeliveryConfirmationStatus.Confirmed;
+        ConfirmedAtUtc = receivedAtUtc;
+        ConfirmedNote = note;
+        Status = DeliveryNoteStatus.Delivered;
+        DeliveredOnUtc = receivedAtUtc;
+        DeliveryReceiverName = receiverName;
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
+        return true;
+    }
+
     internal void Cancel()
     {
         if (Status == DeliveryNoteStatus.Delivered)

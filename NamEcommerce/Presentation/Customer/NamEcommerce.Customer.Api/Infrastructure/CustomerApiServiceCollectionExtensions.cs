@@ -1,5 +1,7 @@
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using NamEcommerce.Application.Contracts.CustomerPortal;
 using NamEcommerce.Application.Contracts.Debts;
@@ -43,6 +45,13 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddOpenApi();
         services.AddProblemDetails();
         services.AddHttpContextAccessor();
+        services.AddSingleton(BuildCustomerPortalSecurityOptions(configuration));
+        services.AddCustomerPortalDataProtection(configuration);
+        services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            options.ForwardLimit = 1;
+        });
 
         services.AddCors(options =>
         {
@@ -131,6 +140,25 @@ internal static class CustomerApiServiceCollectionExtensions
         {
             config.RegisterServicesFromAssemblyContaining<CustomerPortalCommandHandlers>();
         });
+
+        return services;
+    }
+
+    private static CustomerPortalSecurityOptions BuildCustomerPortalSecurityOptions(IConfiguration configuration)
+    {
+        var options = new CustomerPortalSecurityOptions();
+        configuration.GetSection(CustomerPortalSecurityOptions.SectionName).Bind(options);
+        return options;
+    }
+
+    private static IServiceCollection AddCustomerPortalDataProtection(this IServiceCollection services, IConfiguration configuration)
+    {
+        var builder = services.AddDataProtection()
+            .SetApplicationName(configuration["CustomerPortal:DataProtection:ApplicationName"] ?? "NamEcommerce.CustomerPortal");
+
+        var keysPath = configuration["CustomerPortal:DataProtection:KeysPath"];
+        if (!string.IsNullOrWhiteSpace(keysPath))
+            builder.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
 
         return services;
     }

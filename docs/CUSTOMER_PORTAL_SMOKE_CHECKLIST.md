@@ -9,6 +9,8 @@ Tài liệu này dùng để chạy kiểm tra thủ công sau khi tạo migrati
 - Customer API dùng `NamEcommerce/Presentation/Customer/NamEcommerce.Customer.Api/appsettings.Development.json`.
 - Web admin dùng `NamEcommerce/Presentation/NamEcommerce.Web/appsettings.Development.json`.
 - React client dùng `VITE_CUSTOMER_API_URL=https://localhost:7001` hoặc URL API thật.
+- Khi deploy sau reverse proxy, bật `CustomerPortal:ForwardedHeaders:Enabled` cho Customer API và `ForwardedHeaders:Enabled` cho Web admin.
+- Khi deploy nhiều instance hoặc container, cấu hình `CustomerPortal:DataProtection:KeysPath` cho Customer API và `DataProtection:KeysPath` cho Web admin để persist key.
 
 Các bảng cần có migration:
 
@@ -112,12 +114,26 @@ Kỳ vọng:
 
 ## Kiểm tra chống quấy phá
 
+Các ngưỡng nằm trong `CustomerPortal:Security` ở appsettings:
+
+- `OtpExpiryMinutes`
+- `SessionExpiryHours`
+- `OtpCooldownSeconds`
+- `MaxOtpRequestsPerCustomerPerHour`
+- `MaxOtpRequestsPerIpPerHour`
+- `MaxPasswordFailuresPerCustomerPerHour`
+- `MaxPasswordFailuresPerIpPerHour`
+- `DeliveryAccessTokenExpiryDays`
+- `RevokeExistingDeliveryTokensOnCreate`
+
 - Gửi OTP nhiều lần trong 60 giây cho cùng phiếu giao: bị chặn.
 - Gửi quá 5 OTP/giờ theo customer: bị chặn.
 - Gửi quá 20 OTP/giờ theo IP: bị chặn.
 - Nhập sai OTP 5 lần: challenge bị khóa.
 - Sai mật khẩu quá 5 lần/giờ theo customer hoặc 20 lần/giờ theo IP: bị chặn.
 - Admin khóa customer: OTP, password login và session hiện hữu đều không dùng được nữa.
+- QR token hết hạn sau số ngày cấu hình.
+- Nếu bật `RevokeExistingDeliveryTokensOnCreate`, in lại QR sẽ vô hiệu hóa các token cũ của phiếu giao đó.
 
 ## Build kiểm tra nhanh
 

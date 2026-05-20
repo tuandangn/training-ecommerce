@@ -189,8 +189,7 @@ public sealed class CustomerPortalAppService(
         if (deliveryNote is null)
             return CustomerActionResultAppDto.Fail("Không tìm thấy phiếu giao hàng.");
 
-        if (deliveryNote.IsDirectShip && deliveryNote.DeliveryConfirmationStatus == DeliveryConfirmationStatus.PendingConfirmation)
-            await deliveryNoteManager.ConfirmDirectShipDeliveryAsync(deliveryNote.Id, DateTime.UtcNow, dto.Note).ConfigureAwait(false);
+        await deliveryNoteManager.MarkReceivedByCustomerAsync(deliveryNote.Id, DateTime.UtcNow, dto.ReceiverName, dto.Note).ConfigureAwait(false);
 
         await customerPortalManager.CreateDeliveryFeedbackAsync(new CreateCustomerDeliveryFeedbackDto
         {
@@ -199,7 +198,7 @@ public sealed class CustomerPortalAppService(
             Message = BuildConfirmationMessage(dto)
         }).ConfigureAwait(false);
 
-        return CustomerActionResultAppDto.Ok("Đã ghi nhận xác nhận giao hàng.");
+        return CustomerActionResultAppDto.Ok("Đã ghi nhận khách đã nhận hàng.");
     }
 
     public async Task<CustomerActionResultAppDto> CreateDeliveryFeedbackAsync(Guid customerId, CreateCustomerDeliveryFeedbackAppDto dto)
