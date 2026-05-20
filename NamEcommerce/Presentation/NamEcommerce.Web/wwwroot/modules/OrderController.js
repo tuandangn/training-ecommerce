@@ -72,6 +72,7 @@ export default class OrderController {
         this.#bindProductPicker();
         this.#bindAddItemForm();
         this.#bindShippingAddressEdit();
+        this.#bindQuickCreateForms();
 
         const initialCustomer = this.#bindCustomerPicker();
         const initialDiscount = this.#bindDiscount();
