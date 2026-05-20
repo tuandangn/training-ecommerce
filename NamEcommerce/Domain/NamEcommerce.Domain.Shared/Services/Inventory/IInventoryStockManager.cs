@@ -39,7 +39,7 @@ public interface IInventoryStockManager
     Task<(int Total, List<InventoryStockDto> Items)> GetInventoryStocksAsync(string? keywords, Guid? warehouseId, int pageIndex, int pageSize);
     //*TODO* remove warehouse id
     Task<IEnumerable<InventoryStockDto>> GetInventoryStocksForProductAsync(Guid productId, Guid? warehouseId);
-    Task<decimal> GetGlobalAvailableForProductAsync(Guid productId);
+    Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId);
     Task<(int Total, List<StockMovementLogDto> Items)> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize);
     
     /// <summary>

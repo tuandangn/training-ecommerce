@@ -246,7 +246,13 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return items;
     }
 
-    public Task<decimal> GetGlobalAvailableForProductAsync(Guid productId)
+    public Task<decimal> GetGlobalOnHandQuantityForProductAsync(Guid productId)
+    {
+        var stockQuery = _inventoryStockDataReader.DataSource.Where(x => x.ProductId == productId);
+        return Task.FromResult(stockQuery.Sum(x => x.QuantityOnHand));
+    }
+
+    public Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId)
     {
         var stockQuery = _inventoryStockDataReader.DataSource.Where(x => x.ProductId == productId);
         var quantityOnHand = stockQuery.Sum(x => x.QuantityOnHand);
@@ -258,9 +264,9 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return Task.FromResult(quantityOnHand - quantityReservedByWarehouse - quantityReservedByOrder);
     }
 
-    internal async Task<decimal> ComputeAvailableForOrderAsync(Guid productId, Guid orderId)
+    internal async Task<decimal> ComputeAvailableQuantityForOrderAsync(Guid productId, Guid orderId)
     {
-        var globalAvailable = await GetGlobalAvailableForProductAsync(productId).ConfigureAwait(false);
+        var globalAvailable = await GetGlobalAvailableQuantityForProductAsync(productId).ConfigureAwait(false);
         var reservedForOrder = _productReservationDataReader.DataSource
             .Where(x => x.ProductId == productId && x.OrderId == orderId)
             .Sum(x => x.QuantityDelta);

@@ -1725,7 +1725,7 @@ body {
 }
 
 .workflow-panel + .workflow-panel {
-    margin-top: 1rem;
+    margin-bottom: 1rem;
 }
 
 .order-workflow-info-grid,

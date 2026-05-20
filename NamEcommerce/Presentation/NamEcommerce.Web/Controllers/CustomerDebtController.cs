@@ -10,7 +10,6 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
 {
     private readonly IMediator _mediator = mediator;
 
-    /// <summary>Trang danh sách: hiển thị khách hàng có công nợ (gom nhóm).</summary>
     public async Task<IActionResult> List(string? keywords, int pageIndex = 1)
     {
         var model = await _mediator.Send(new GetCustomerDebtListQuery
@@ -22,10 +21,9 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
         return View(model);
     }
 
-    /// <summary>Trang chi tiết: toàn bộ công nợ + tiền cọc của 1 khách hàng.</summary>
-    public async Task<IActionResult> Details(Guid customerId)
+    public async Task<IActionResult> Details(Guid id)
     {
-        var model = await _mediator.Send(new GetCustomerDebtDetailsQuery { CustomerId = customerId }).ConfigureAwait(false);
+        var model = await _mediator.Send(new GetCustomerDebtDetailsQuery { CustomerId = id }).ConfigureAwait(false);
         if (model == null)
         {
             NotifyError("Error.CustomerIsNotFound");
@@ -34,7 +32,6 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
         return View(model);
     }
 
-    /// <summary>In sao kê toàn bộ công nợ của 1 khách hàng.</summary>
     public async Task<IActionResult> Print(Guid customerId)
     {
         var model = await _mediator.Send(new GetCustomerDebtDetailsQuery { CustomerId = customerId }).ConfigureAwait(false);
@@ -54,7 +51,6 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
             : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
-    /// <summary>Thu tiền linh động — phân bổ FIFO vào các khoản nợ còn lại.</summary>
     [HttpPost]
     public async Task<IActionResult> RecordFlexiblePayment(RecordPaymentModel model)
     {

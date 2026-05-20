@@ -53,15 +53,14 @@ class ProductApi {
 
 class ProductPickerView {
     #options;
-
     #isValidProductFn;
 
     constructor(target, options) {
         this.target = target;
-        this.#options = Object.assign({ purchase: false }, options);
+        this.#options = Object.assign({ purchase: false, allowCreateNew: false }, options);
         this.#isValidProductFn = this.#options.checkProduct;
 
-        target.innerHTML = ProductPickerView.#template();
+        target.innerHTML = ProductPickerView.#template(this.#options.allowCreateNew);
         target.classList.add('position-relative');
 
         this.root = target;
@@ -236,7 +235,7 @@ class ProductPickerView {
         return btn;
     }
 
-    static #template() {
+    static #template(allowCreateNew) {
         return `
         <label class="form-label small text-muted" for="productSearch">Tìm kiếm hàng hóa</label>
         <div class="input-group-container">
@@ -246,8 +245,11 @@ class ProductPickerView {
                     <i class="bi bi-search text-muted searchIcon"></i>
                 </span>
                 <input type="text" class="form-control border-start-0 ps-0 productSearch" id="productSearch"
-                    placeholder="Nhập tên hàng hóa..." autocomplete="off"
-                    aria-label="Tìm kiếm hàng hóa" aria-autocomplete="list" />
+                    placeholder="Nhập tên hàng hóa..." autocomplete="off" aria-label="Tìm kiếm hàng hóa" aria-autocomplete="list" />
+                ${allowCreateNew ? `<button class="btn btn-outline-secondary" type="button" data-open-quick-product data-bs-toggle="tooltip" title="Thêm hàng hóa mới">
+                    <i class="bi bi-plus"></i>
+                    <span class="visually-hidden">Thêm mới</span>
+                </button>` : ''}
             </div>
             <div class="form-text vendor-info d-none">Nhà cung cấp: <strong class="vendor-name"></strong></div>
         </div>
@@ -281,19 +283,22 @@ export default class ProductPicker {
 
     #selected;
     #checkProduct;
+    #options;
 
     constructor(target, options) {
         if (!(target instanceof HTMLElement))
             throw new TypeError('Target phải là HTMLElement hợp lệ');
 
         var opts = Object.assign({
-            purchase: false
+            purchase: false,
+            allowCreateNew: false
         }, options)
         opts.checkProduct ??= () => true;
+        this.#options = opts;
         this.#checkProduct = opts.checkProduct;
 
         this.api = new ProductApi();
-        this.view = new ProductPickerView(target, opts);
+        this.view = new ProductPickerView(target, this.#options);
 
         this.#bindEvents();
     }

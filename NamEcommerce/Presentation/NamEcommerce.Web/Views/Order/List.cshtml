@@ -69,8 +69,8 @@
                 <thead>
                     <tr>
                         <th class="ps-4">Mã đơn</th>
+                        <th class="d-none d-lg-table-cell">Hàng hóa</th>
                         <th>Khách hàng</th>
-                        <th class="d-none d-lg-table-cell">Hàng hóa / Giao</th>
                         <th class="text-end">Tổng đơn</th>
                         <th class="text-center">Ngày dự kiến</th>
                         <th class="text-center" style="width:120px;">Kết sổ</th>
@@ -89,21 +89,6 @@
                                             @HighlighHelper.Highlight(order.Code, Model.Keywords)
                                         </a>
                                         <span class="text-muted small">@order.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="position-relative">
-                                        <a asp-action="Details" asp-controller="CustomerDebt" asp-route-customerid="@order.CustomerId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
-                                            @HighlighHelper.Highlight(order.CustomerName, query)
-                                        </a>
-                                        @if (!string.IsNullOrEmpty(order.CustomerPhone))
-                                        {
-                                            <div>
-                                                <span class="text-muted small">
-                                                    @HighlighHelper.Highlight(order.CustomerPhone, query)
-                                                </span>
-                                            </div>
-                                        }
                                     </div>
                                 </td>
                                 <td class="d-none d-lg-table-cell">
@@ -131,7 +116,7 @@
                                     }
                                     else
                                     {
-                                        <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-start order-items-popover"
+                                        <a asp-action="Details" asp-route-id="@order.Id" type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-start order-items-popover"
                                                 data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
                                                 data-bs-custom-class="order-items-popover-content"
                                                 data-bs-title="@($"Hàng hóa ({itemCount} mặt hàng)")"
@@ -152,8 +137,23 @@
                                                     <i class="bi bi-check-circle-fill text-success ms-1"></i>
                                                 }
                                             </div>
-                                        </button>
+                                        </a>
                                     }
+                                </td>
+                                <td>
+                                    <div class="position-relative">
+                                        <a asp-action="Details" asp-controller="CustomerDebt" asp-route-customerid="@order.CustomerId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
+                                            @HighlighHelper.Highlight(order.CustomerName, query)
+                                        </a>
+                                        @if (!string.IsNullOrEmpty(order.CustomerPhone))
+                                        {
+                                            <div>
+                                                <span class="text-muted small">
+                                                    @HighlighHelper.Highlight(order.CustomerPhone, query)
+                                                </span>
+                                            </div>
+                                        }
+                                    </div>
                                 </td>
                                 <td class="text-end fw-medium text-nowrap">
                                     @order.TotalAmount.DisplayCurrency()

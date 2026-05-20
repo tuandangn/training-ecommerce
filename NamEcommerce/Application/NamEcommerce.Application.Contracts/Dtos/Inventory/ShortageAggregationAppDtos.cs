@@ -8,6 +8,19 @@ public sealed record ShortageAggregationFilterAppDto
     public Guid? ProductId { get; init; }
     public bool IncludeSalesOrderScope { get; init; }
 }
+[Serializable]
+public sealed record DeliveryNoteShortageAggregationFilterAppDto
+{
+    public Guid DeliveryNoteId { get; init; }
+    public Guid? ProductId { get; init; }
+}
+[Serializable]
+public sealed record OrderShortageAggregationFilterAppDto
+{
+    public Guid OrderId { get; init; }
+    public Guid? ProductId { get; init; }
+}
+
 
 [Serializable]
 public sealed record PurchaseOrderShortageAllocationAppDto

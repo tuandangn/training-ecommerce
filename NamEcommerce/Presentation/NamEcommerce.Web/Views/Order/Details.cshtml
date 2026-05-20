@@ -25,30 +25,6 @@
     </div>
 }
 
-@if (Model.ShortageInfo.HasShortage)
-{
-    var shortageNoticeViewData = new ViewDataDictionary(ViewData)
-    {
-        ["ShortageModalId"] = "orderShortageModal",
-        ["ShortageMessage"] = $"Đơn hàng có {Model.ShortageInfo.Items.Count} mặt hàng chưa đủ tồn kho. Cần nhập thêm hàng từ nhà cung cấp trước khi giao đủ cho khách.",
-        ["ShortageActionUrl"] = $"/PurchaseOrder/ShortageAggregation?orderId={Model.Id}",
-        ["ShortageActionText"] = "Nhập hàng thiếu",
-        ["ShortagePrimaryQuantityLabel"] = "Đã đặt",
-        ["ShortageSecondaryQuantityLabel"] = "Đã xuất",
-        ["ShortageUseShippedQuantity"] = true
-    };
-    @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
-}
-
-<div class="order-detail-actions mb-3">
-    <a asp-action="List" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Trở về
-    </a>
-    <button type="button" class="btn btn-info text-white btn-sm" onclick="window.print()">
-        <i class="bi bi-printer me-1"></i>In đơn
-    </button>
-</div>
-
 @await Html.PartialAsync("_OrderWorkflowBar", Model)
 
 <div class="order-workflow-layout">

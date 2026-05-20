@@ -396,7 +396,6 @@ public sealed class CustomerDebtManager(
 
         if (debts.Count == 0) return null;
 
-        // Load payments gắn với từng debt
         var debtDtos = new List<CustomerDebtDto>();
         foreach (var debt in debts)
         {
@@ -407,13 +406,11 @@ public sealed class CustomerDebtManager(
             debtDtos.Add(MapToDto(debt) with { Payments = payments.Select(MapToPaymentDto).ToList() });
         }
 
-        // Tiền cọc chưa áp dụng
         var deposits = paymentReader.DataSource
             .Where(p => p.CustomerId == customerId && p.PaymentType == PaymentType.Deposit && !p.IsApplied)
             .OrderByDescending(p => p.PaidOnUtc)
             .ToList();
 
-        // Lịch sử 20 giao dịch gần nhất
         var recentPayments = paymentReader.DataSource
             .Where(p => p.CustomerId == customerId)
             .OrderByDescending(p => p.PaidOnUtc)

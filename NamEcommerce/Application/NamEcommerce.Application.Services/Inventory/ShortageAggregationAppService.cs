@@ -35,8 +35,19 @@ public sealed class ShortageAggregationAppService(
                 Filter = filter
             };
         }
+        return await PrepareAggregatedShortagesAsync(shortageLines, filter).ConfigureAwait(false);
+    }
+    private async Task<ShortageAggregationAppDto> PrepareAggregatedShortagesAsync(List<ShortageLine> shortageLines, ShortageAggregationFilterAppDto filter)
+    {
+        if (shortageLines.Count == 0)
+        {
+            return new ShortageAggregationAppDto
+            {
+                Filter = filter
+            };
+        }
 
-        var primaryOrderItemIds = await GetPrimaryOrderItemIdsAsync(filter).ConfigureAwait(false);
+        var primaryOrderItemIds = await GetPrimaryShortageOrderItemIdsAsync(filter).ConfigureAwait(false);
 
         var products = (await productReader.GetByIdsAsync(shortageLines.Select(line => line.ProductId).Distinct()).ConfigureAwait(false))
             .ToDictionary(product => product.Id);
@@ -153,7 +164,7 @@ public sealed class ShortageAggregationAppService(
         };
     }
 
-    private async Task<HashSet<Guid>?> GetPrimaryOrderItemIdsAsync(ShortageAggregationFilterAppDto filter)
+    private async Task<HashSet<Guid>?> GetPrimaryShortageOrderItemIdsAsync(ShortageAggregationFilterAppDto filter)
     {
         if (filter.OrderId is Guid orderId)
         {
@@ -169,6 +180,12 @@ public sealed class ShortageAggregationAppService(
 
         return null;
     }
+    private async Task<HashSet<Guid>?> GetShortageOrderItemIdsAsync(Guid orderId)
+    {
+        var primaryShortages = await shortageQueryService.GetOrderItemShortagesAsync(orderId).ConfigureAwait(false);
+        return primaryShortages.Select(shortage => shortage.OrderItemId).ToHashSet();
+    }
+
 
     public async Task<IList<ExistingDraftPurchaseOrderAppDto>> CheckExistingDraftsAsync(IList<Guid> vendorIds)
     {

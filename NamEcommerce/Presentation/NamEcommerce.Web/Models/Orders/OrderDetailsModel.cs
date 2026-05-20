@@ -48,8 +48,29 @@ public sealed record OrderDetailsModel
     public bool CanDeleteOrder { get; set; }
     public bool CanUpdateOrderItems { get; init; }
     public int FullyReceivedDirectShipCount { get; set; }
-
     public IList<OrderItemModel> Items { get; init; } = [];
+    public bool AreAllItemsFullyCovered
+    {
+        get
+        {
+            if (Items.Count == 0)
+                return false;
+
+            foreach (var item in Items)
+            {
+                var totalDeliveredQty = DeliveryNotes
+                    .SelectMany(dn => dn.Items)
+                    .Where(dni => dni.OrderItemId == item.Id)
+                    .Sum(dni => dni.Quantity);
+
+                if (totalDeliveredQty < item.Quantity)
+                    return false;
+            }
+
+            return true;
+        }
+    }
+
     public IList<DeliveryNoteBasicModel> DeliveryNotes { get; init; } = [];
     public OrderAllocatedPurchaseOrderListModel? AllocatedPurchaseOrders { get; set; }
     public ShortageInfoModel ShortageInfo { get; set; } = new();
@@ -77,36 +98,13 @@ public sealed record OrderDetailsModel
 
     public DateTime CreatedOn { get; set; }
 
+    #region Inner classes
+
     [Serializable]
     public sealed record ReturnWarehouseOptionModel
     {
         public required Guid Id { get; init; }
         public required string Name { get; init; }
-    }
-
-    /// <summary>
-    /// Checks if all order items have been fully covered by delivery notes
-    /// </summary>
-    public bool AreAllItemsFullyCovered
-    {
-        get
-        {
-            if (Items.Count == 0)
-                return false;
-
-            foreach (var item in Items)
-            {
-                var totalDeliveredQty = DeliveryNotes
-                    .SelectMany(dn => dn.Items)
-                    .Where(dni => dni.OrderItemId == item.Id)
-                    .Sum(dni => dni.Quantity);
-
-                if (totalDeliveredQty < item.Quantity)
-                    return false;
-            }
-
-            return true;
-        }
     }
 
     [Serializable]
@@ -120,9 +118,6 @@ public sealed record OrderDetailsModel
         public decimal? ProductAvailableQty { get; set; }
         public decimal SubTotal => UnitPrice * Quantity;
 
-        /// <summary>
-        /// Gets the total quantity already delivered for this item across all delivery notes
-        /// </summary>
         public decimal GetDeliveredQuantity(IList<DeliveryNoteBasicModel> deliveryNotes)
         {
             return deliveryNotes
@@ -131,9 +126,6 @@ public sealed record OrderDetailsModel
                 .Sum(dni => dni.Quantity);
         }
 
-        /// <summary>
-        /// Gets the remaining quantity that can be delivered for this item
-        /// </summary>
         public decimal GetRemainingQuantity(IList<DeliveryNoteBasicModel> deliveryNotes)
         {
             var delivered = GetDeliveredQuantity(deliveryNotes);
@@ -201,6 +193,7 @@ public sealed record OrderDetailsModel
         public required string Summary { get; init; }
         public bool IsActive { get; init; }
         public bool IsComplete { get; init; }
+        public bool HasWarnings { get; set; }
     }
 
     [Serializable]
@@ -334,4 +327,6 @@ public sealed record OrderDetailsModel
         public required string Tone { get; init; }
         public WorkflowStage Stage { get; init; }
     }
+
+    #endregion
 }

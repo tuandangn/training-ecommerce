@@ -19,7 +19,8 @@ export default class ProductBrowser {
         categoryUrl: '/Category/Options',
         productSearchUrl: '/Product/Search',
         purchase: false,
-        initialShow: false
+        initialShow: false,
+        allowCreateNew: false
     };
 
     constructor(containerEl, onAdd, options = {}) {
@@ -115,6 +116,10 @@ export default class ProductBrowser {
                                     <span class="spinner-border spinner-border-sm text-secondary d-none pb-spinner" role="status"></span>
                                 </span>
                                 <input type="text" id="pbSearchKeywords" class="form-control border-start-0 ps-0 pb-search-input" value="${this.#state.q}" placeholder="Tìm hàng hóa..." autocomplete="off" />
+                                ${this.#options.allowCreateNew ? `<button class="btn btn-outline-secondary" type="button" data-open-quick-product data-bs-toggle="tooltip" title="Thêm hàng hóa mới">
+                    <i class="bi bi-plus"></i>
+                    <span class="visually-hidden">Thêm mới</span>
+                </button>` : ''}
                             </div>
                         <div>
                     </div>

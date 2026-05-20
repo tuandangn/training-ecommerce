@@ -13,7 +13,13 @@
                     <i class="bi @step.Icon"></i>
                 </span>
                 <span class="workflow-step-copy">
-                    <span class="workflow-step-title">@step.Title</span>
+                    <span class="workflow-step-title">
+                        @step.Title
+                        @if (step.HasWarnings)
+                        {
+                            <i class="bi bi-exclamation-triangle text-danger fw-bold"></i>
+                        }
+                    </span>
                     <span class="workflow-step-summary">@step.Summary</span>
                 </span>
             </button>

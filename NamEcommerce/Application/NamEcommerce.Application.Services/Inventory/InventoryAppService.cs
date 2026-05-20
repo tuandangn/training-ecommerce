@@ -78,7 +78,7 @@ public sealed class InventoryAppService : IInventoryAppService
     }
 
     public Task<decimal> GetGlobalAvailableForProductAsync(Guid productId)
-        => _stockManager.GetGlobalAvailableForProductAsync(productId);
+        => _stockManager.GetGlobalAvailableQuantityForProductAsync(productId);
 
     public async Task<IPagedDataAppDto<StockMovementLogAppDto>> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize)
     {

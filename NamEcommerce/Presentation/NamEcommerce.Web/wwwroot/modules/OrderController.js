@@ -72,7 +72,6 @@ export default class OrderController {
         this.#bindProductPicker();
         this.#bindAddItemForm();
         this.#bindShippingAddressEdit();
-        this.#bindQuickCreateForms();
 
         const initialCustomer = this.#bindCustomerPicker();
         const initialDiscount = this.#bindDiscount();
@@ -84,7 +83,11 @@ export default class OrderController {
             this.#productBrowser = new ProductBrowser(
                 browserEl,
                 (product) => this.#addOrIncrementItem(product),
-                { colClass: browserEl.dataset.colClass, initialShow: true }
+                {
+                    colClass: browserEl.dataset.colClass,
+                    initialShow: true,
+                    allowCreateNew: true
+                }
             );
             this.#productBrowser.init();
         }
@@ -394,7 +397,7 @@ export default class OrderController {
 
     #bindProductPicker() {
         const el = getEl('productPicker');
-        this.#productPicker = new ProductPicker(el, { checkProduct: this.#isValidProduct });
+        this.#productPicker = new ProductPicker(el, { checkProduct: this.#isValidProduct, allowCreateNew: true });
 
         el.addEventListener('select', (e) => {
             this.#addItemController.setProduct(e.detail?.product ? new ProductInfo(e.detail.product) : null);
@@ -530,7 +533,9 @@ export default class OrderController {
                     return;
                 }
 
-                await this.#addOrIncrementItem(result.product);
+                this.#setState({
+                    items: [...this.#state.items, new OrderItem(result.product, 1, result.unitPrice)],
+                });
                 this.#productPicker?.clear();
                 this.#addItemController.reset();
                 form.reset();

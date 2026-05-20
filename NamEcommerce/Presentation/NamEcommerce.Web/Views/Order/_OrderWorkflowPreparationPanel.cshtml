@@ -2,7 +2,6 @@
 @{
     var isActive = Model.Workflow.ActiveStage == OrderDetailsModel.WorkflowStage.Preparation;
 }
-
 <section class="workflow-panel @(isActive ? "active" : "")" data-workflow-panel="preparation" role="tabpanel">
     <div class="content-card">
         <div class="content-card-header">
@@ -11,22 +10,29 @@
                 <div class="text-muted small">Tồn kho, hàng thiếu, giao thẳng và đơn nhập liên quan</div>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                @if (Model.AllocatedPurchaseOrders?.HasItems ?? false)
-                {
-                    <button type="button" class="btn btn-sm btn-outline-primary"
-                            onclick="openCoworkOffcanvas({ title: 'Đơn nhập đã phân bổ', url: '/Order/AllocatedPurchaseOrders/@Model.Id', size: 'lg' })">
-                        <i class="bi bi-box-arrow-in-down me-1"></i>Đơn nhập
-                    </button>
-                }
                 @if (Model.ShortageInfo.HasShortage && Model.CanUpdateInfo)
                 {
-                    <a class="btn btn-sm btn-warning text-white" href="/PurchaseOrder/ShortageAggregation?orderId=@Model.Id">
-                        <i class="bi bi-plus-circle me-1"></i>Tạo đơn nhập
+                    <a class="btn btn-sm btn-link text-dark text-decoration-none" href="/PurchaseOrder/ShortageAggregation?orderId=@Model.Id">
+                        <i class="bi bi-box-arrow-in-down"></i> Nhập hàng
                     </a>
                 }
             </div>
         </div>
         <div class="content-card-body">
+            @if (Model.ShortageInfo.HasShortage)
+            {
+                var shortageNoticeViewData = new ViewDataDictionary(ViewData)
+                {
+                    ["ShortageModalId"] = "orderShortageModal",
+                    ["ShortageMessage"] = $"Đơn hàng có {Model.ShortageInfo.Items.Count} mặt hàng chưa đủ tồn kho. Cần nhập thêm hàng từ nhà cung cấp trước khi giao đủ cho khách.",
+                    ["ShortageActionUrl"] = $"/PurchaseOrder/ShortageAggregation?orderId={Model.Id}",
+                    ["ShortageActionText"] = "Nhập hàng thiếu",
+                    ["ShortagePrimaryQuantityLabel"] = "Đã đặt",
+                    ["ShortageSecondaryQuantityLabel"] = "Đã xuất",
+                    ["ShortageUseShippedQuantity"] = true
+                };
+                @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
+            }
             @if (Model.Preparation.Items.Count == 0)
             {
                 <div class="empty-state">

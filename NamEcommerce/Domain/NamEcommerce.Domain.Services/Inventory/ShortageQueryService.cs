@@ -63,7 +63,7 @@ public sealed class ShortageQueryService(
                      .GroupBy(item => item.ProductId))
         {
             var remainingAvailable = await inventoryStockManager
-                .ComputeAvailableForOrderAsync(productGroup.Key, deliveryNote.OrderId)
+                .ComputeAvailableQuantityForOrderAsync(productGroup.Key, deliveryNote.OrderId)
                 .ConfigureAwait(false);
 
             foreach (var item in productGroup)
@@ -154,7 +154,7 @@ public sealed class ShortageQueryService(
         foreach (var productGroup in orderItems.GroupBy(item => item.ProductId))
         {
             var remainingAvailable = await inventoryStockManager
-                .ComputeAvailableForOrderAsync(productGroup.Key, order.Id)
+                .ComputeAvailableQuantityForOrderAsync(productGroup.Key, order.Id)
                 .ConfigureAwait(false);
 
             foreach (var item in productGroup)

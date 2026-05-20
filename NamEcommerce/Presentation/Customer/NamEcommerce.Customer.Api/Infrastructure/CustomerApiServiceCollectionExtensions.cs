@@ -30,6 +30,8 @@ using NamEcommerce.Domain.Shared.Services.Security;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Customer.Framework.Commands.Handlers;
 using NamEcommerce.Customer.Framework.Services;
+using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Application.Services.Inventory;
 
 namespace NamEcommerce.Customer.Api.Infrastructure;
 
@@ -93,6 +95,7 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddScoped<IExpenseManager, ExpenseManager>();
         services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
         services.AddScoped<ICustomerReturnManager, CustomerReturnManager>();
+        services.AddScoped<IWarehouseManager, WarehouseManager>();
         services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();
         services.AddScoped<ICustomerPortalSecurityManager, CustomerPortalSecurityManager>();
         services.AddScoped<ICustomerPortalManager, CustomerPortalManager>();
@@ -102,6 +105,7 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
         services.AddScoped<ICustomerPortalAuthAppService, CustomerPortalAuthAppService>();
         services.AddScoped<ICustomerPortalAppService, CustomerPortalAppService>();
+        services.AddScoped<IWarehouseAppService, WarehouseAppService>();
         services.AddScoped<ICustomerPortalPaymentAppService, CustomerPortalPaymentAppService>();
         services.AddScoped<ICustomerOtpSender, MockSmsOtpSender>();
         services.AddScoped<ICustomerOtpSender, MockEmailOtpSender>();

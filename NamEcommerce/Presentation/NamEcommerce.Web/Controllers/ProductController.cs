@@ -137,7 +137,8 @@ public sealed class ProductController : BaseAuthorizedController
                 vendorCount = product.AvailableVendors.Count,
                 firstVendorId = product.AvailableVendors.FirstOrDefault()?.Id.ToString(),
                 availableVendors = product.AvailableVendors.Select(v => new { key = v.Id.ToString(), value = v.Name })
-            }
+            },
+            unitPrice = model.UnitPrice
         });
     }
 

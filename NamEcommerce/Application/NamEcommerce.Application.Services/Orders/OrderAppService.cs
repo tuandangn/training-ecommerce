@@ -125,7 +125,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
 
         if (!product.ProductVendors.Any())
         {
-            var availableQuantity = await inventoryStockManager.GetGlobalAvailableForProductAsync(dto.ProductId).ConfigureAwait(false);
+            var availableQuantity = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(dto.ProductId).ConfigureAwait(false);
             if (availableQuantity < dto.Quantity)
             {
                 return new AddOrderItemResultAppDto
@@ -217,7 +217,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
         if (!product.ProductVendors.Any())
         {
             var needCheckQuantity = Math.Max(0, dto.Quantity - orderItem.Quantity);
-            var availableQuantity = await inventoryStockManager.GetGlobalAvailableForProductAsync(orderItem.ProductId).ConfigureAwait(false);
+            var availableQuantity = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(orderItem.ProductId).ConfigureAwait(false);
             if (availableQuantity < dto.Quantity)
             {
                 return new UpdateOrderItemResultAppDto
@@ -480,7 +480,7 @@ public sealed class OrderAppService(IOrderManager orderManager,
                 continue;
 
             var requestedQuantity = itemGroup.Sum(item => item.Quantity);
-            var availableQuantity = await inventoryStockManager.GetGlobalAvailableForProductAsync(itemGroup.Key).ConfigureAwait(false);
+            var availableQuantity = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(itemGroup.Key).ConfigureAwait(false);
             if (availableQuantity < requestedQuantity)
             {
                 return new CreateOrderResultAppDto

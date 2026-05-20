@@ -146,7 +146,6 @@ public sealed class OrderModelFactory : IOrderModelFactory
             });
         }
 
-        // Fetch delivery notes for this order
         var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
         foreach (var dn in deliveryNotes)
         {
@@ -164,13 +163,12 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 DeliveredOn = dn.DeliveredOnUtc?.ToLocalTime()
             };
 
-            // Add delivery note items for coverage calculation
             foreach (var item in dn.Items)
             {
                 dnModel.Items.Add(new OrderDetailsModel.DeliveryNoteItemModel
                 {
-                OrderItemId = item.OrderItemId,
-                ProductName = item.ProductName,
+                    OrderItemId = item.OrderItemId,
+                    ProductName = item.ProductName,
                     Quantity = item.Quantity,
                     UnitPrice = item.UnitPrice,
                     SubTotal = item.SubTotal,
@@ -338,7 +336,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
 
         return hasPreparationWork
             ? OrderDetailsModel.WorkflowStage.Preparation
-            : OrderDetailsModel.WorkflowStage.Order;
+            : OrderDetailsModel.WorkflowStage.Delivery;
     }
 
     private static OrderDetailsModel.WorkflowModel BuildWorkflow(
@@ -379,7 +377,8 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     Icon = "bi-box-seam",
                     Summary = hasOpenPreparation ? "Đang xử lý" : "Đủ hàng",
                     IsActive = activeStage == OrderDetailsModel.WorkflowStage.Preparation,
-                    IsComplete = !hasOpenPreparation
+                    IsComplete = !hasOpenPreparation,
+                    HasWarnings = model.ShortageInfo.HasShortage
                 },
                 new OrderDetailsModel.WorkflowStepModel
                 {
@@ -429,7 +428,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     OrderItemId = item.Id,
                     ProductName = item.ProductName ?? string.Empty,
                     OrderedQuantity = item.Quantity,
-                    AvailableQuantity = item.ProductAvailableQty ?? shortageItem?.AvailableQuantity ?? 0,
+                    AvailableQuantity = Math.Max(0, item.ProductAvailableQty ?? shortageItem?.AvailableQuantity ?? 0),
                     ShortageQuantity = shortageItem?.ShortageQuantity ?? 0,
                     IssuedQuantity = item.GetDeliveredQuantity(validNotes),
                     DeliveredQuantity = item.GetDeliveredToCustomerQuantity(validNotes),
