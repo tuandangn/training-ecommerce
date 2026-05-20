@@ -4,9 +4,11 @@ using Microsoft.AspNetCore.RateLimiting;
 using NamEcommerce.Application.Contracts.CustomerPortal;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Services.CustomerPortal;
 using NamEcommerce.Application.Services.Debts;
 using NamEcommerce.Application.Services.DeliveryNotes;
+using NamEcommerce.Application.Services.Inventory;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Domain.Services.Common;
@@ -46,9 +48,25 @@ internal static class CustomerApiServiceCollectionExtensions
 
         services.AddCors(options =>
         {
+            var configuredOrigins = configuration.GetSection("CustomerPortal:AllowedOrigins")
+                .GetChildren()
+                .Select(origin => origin.Value)
+                .Where(origin => !string.IsNullOrWhiteSpace(origin))
+                .Select(origin => origin!)
+                .ToArray();
+            var allowedOrigins = configuredOrigins.Length > 0
+                ? configuredOrigins
+                : new[]
+                {
+                    "http://localhost:5173",
+                    "https://localhost:5173",
+                    "http://127.0.0.1:5173",
+                    "https://127.0.0.1:5173"
+                };
+
             options.AddPolicy("CustomerClient", builder =>
             {
-                builder.WithOrigins("http://localhost:5173", "https://localhost:5173")
+                builder.WithOrigins(allowedOrigins)
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials();
@@ -88,6 +106,7 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddScoped<ICustomerSessionAccessor, CustomerSessionAccessor>();
 
         services.AddScoped<IStockAuditLogger, StockAuditLogger>();
+        services.AddScoped<IWarehouseManager, WarehouseManager>();
         services.AddScoped<InventoryStockManager>();
         services.AddScoped<IInventoryStockManager>(sp => sp.GetRequiredService<InventoryStockManager>());
         services.AddScoped<IProductReservationManager, ProductReservationManager>();
@@ -102,6 +121,7 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddScoped<ISecurityService, SecurityService>();
 
         services.AddScoped<IDeliveryNoteAppService, DeliveryNoteAppService>();
+        services.AddScoped<IWarehouseAppService, WarehouseAppService>();
         services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
         services.AddScoped<ICustomerPortalAuthAppService, CustomerPortalAuthAppService>();
         services.AddScoped<ICustomerPortalAppService, CustomerPortalAppService>();

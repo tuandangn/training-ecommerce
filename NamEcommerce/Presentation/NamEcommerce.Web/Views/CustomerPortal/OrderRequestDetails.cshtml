@@ -1,0 +1,123 @@
+@using NamEcommerce.Application.Contracts.Dtos.CustomerPortal
+@using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@model CustomerPortalOrderRequestAdminAppDto
+@{
+    ViewData[ViewConstants.PageTitle] = $"Yêu cầu đặt hàng {Model.Code}";
+    var status = (CustomerOrderRequestStatus)Model.Status;
+    var returnUrl = Context.Request.Path.ToString() + Context.Request.QueryString.ToString();
+}
+
+<div class="page-header">
+    <div class="d-flex align-items-center">
+        <a asp-action="OrderRequests" class="btn btn-icon btn-light me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <div>
+            <h1 class="page-header-title">@Model.Code</h1>
+            <p class="page-header-subtitle">@Model.CustomerName · @Model.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</p>
+        </div>
+    </div>
+    <span class="badge @status.GetDisplayColor() fs-6">@status.GetDisplayText()</span>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="content-card">
+            <div class="action-toolbar">
+                <h6 class="mb-0 fw-bold">Hàng khách yêu cầu</h6>
+                <div class="fw-bold text-primary">@Model.TotalAmount.ToString(ViewConstants.CurrencyDisplayFormat)</div>
+            </div>
+            <div class="table-responsive">
+                <table class="table data-table align-middle">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Sản phẩm</th>
+                            <th class="text-end">SL</th>
+                            <th class="text-end">Đơn giá</th>
+                            <th class="text-end pe-4">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-medium">@item.ProductName</td>
+                            <td class="text-end">@item.Quantity</td>
+                            <td class="text-end">@item.UnitPriceSnapshot.ToString(ViewConstants.CurrencyDisplayFormat)</td>
+                            <td class="text-end pe-4 fw-semibold">@item.SubTotal.ToString(ViewConstants.CurrencyDisplayFormat)</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="content-card p-4 mb-4">
+            <h6 class="fw-bold mb-3">Khách hàng</h6>
+            <div class="fw-semibold">@Model.CustomerName</div>
+            <div class="text-muted small mb-3">@Model.CustomerPhone</div>
+            <form asp-action="BlockAccount" method="post">
+                <input type="hidden" name="customerId" value="@Model.CustomerId" />
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-shield-lock me-1"></i>Khóa khách này
+                </button>
+            </form>
+        </div>
+        <div class="content-card p-4 mb-4">
+            <h6 class="fw-bold mb-3">Thông tin yêu cầu</h6>
+            <div class="small text-muted">Địa chỉ giao</div>
+            <div class="mb-3">@(!string.IsNullOrWhiteSpace(Model.ShippingAddress) ? Model.ShippingAddress : "—")</div>
+            <div class="small text-muted">Ngày mong muốn</div>
+            <div class="mb-3">@(Model.ExpectedShippingDateUtc.HasValue ? Model.ExpectedShippingDateUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat) : "—")</div>
+            <div class="small text-muted">Ghi chú khách</div>
+            <div>@(!string.IsNullOrWhiteSpace(Model.Note) ? Model.Note : "—")</div>
+        </div>
+        @if (status == CustomerOrderRequestStatus.PendingApproval)
+        {
+            <div class="content-card p-4">
+                <h6 class="fw-bold mb-3">Duyệt yêu cầu</h6>
+                <form asp-action="ApproveOrderRequest" method="post" class="mb-3">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <textarea name="adminNote" class="form-control mb-2" rows="2" placeholder="Ghi chú nội bộ"></textarea>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2-circle me-1"></i>Duyệt</button>
+                </form>
+                <form asp-action="RejectOrderRequest" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <textarea name="adminNote" class="form-control mb-2" rows="2" placeholder="Lý do từ chối"></textarea>
+                    <button type="submit" class="btn btn-outline-danger w-100">Từ chối</button>
+                </form>
+            </div>
+        }
+        else if (status == CustomerOrderRequestStatus.Approved)
+        {
+            <div class="content-card p-4">
+                <h6 class="fw-bold mb-3">Tạo đơn nội bộ</h6>
+                <div class="alert alert-info border-0 small">
+                    Hệ thống sẽ tạo đơn hàng với đúng sản phẩm, số lượng và đơn giá snapshot từ yêu cầu portal.
+                </div>
+                <form asp-action="ConvertOrderRequest" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-arrow-right-circle me-1"></i>Tạo đơn hàng
+                    </button>
+                </form>
+            </div>
+        }
+        else if (status == CustomerOrderRequestStatus.ConvertedToOrder && Model.ConvertedOrderId.HasValue)
+        {
+            <div class="content-card p-4">
+                <h6 class="fw-bold mb-3">Đơn hàng đã tạo</h6>
+                <a asp-controller="Order" asp-action="Details" asp-route-id="@Model.ConvertedOrderId" class="btn btn-primary w-100">
+                    Xem đơn hàng
+                </a>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.AdminNote))
+        {
+            <div class="content-card p-4">
+                <h6 class="fw-bold mb-2">Ghi chú admin</h6>
+                <div class="text-muted">@Model.AdminNote</div>
+            </div>
+        }
+    </div>
+</div>

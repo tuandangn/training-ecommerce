@@ -1,0 +1,168 @@
+@using NamEcommerce.Application.Contracts.Dtos.CustomerPortal
+@using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@model CustomerPortalAdminOverviewAppDto
+@{
+    ViewData[ViewConstants.PageTitle] = "Customer Portal";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Customer Portal</h1>
+        <p class="page-header-subtitle">Kiểm soát tài khoản, yêu cầu khách tạo và thanh toán online đang chờ xử lý</p>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <a asp-action="Accounts" class="text-decoration-none">
+            <div class="content-card p-3 h-100">
+                <div class="text-muted small text-uppercase fw-bold">Tài khoản portal</div>
+                <div class="fs-4 fw-bold text-dark">@Model.Accounts.Count</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <a asp-action="OrderRequests" asp-route-status="@((int)CustomerOrderRequestStatus.PendingApproval)" class="text-decoration-none">
+            <div class="content-card p-3 h-100">
+                <div class="text-muted small text-uppercase fw-bold">Đơn chờ duyệt</div>
+                <div class="fs-4 fw-bold text-primary">@Model.PendingOrderRequests.Count</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <a asp-action="ReturnRequests" asp-route-status="@((int)CustomerReturnRequestStatus.PendingReview)" class="text-decoration-none">
+            <div class="content-card p-3 h-100">
+                <div class="text-muted small text-uppercase fw-bold">Trả hàng chờ xem</div>
+                <div class="fs-4 fw-bold text-warning">@Model.PendingReturnRequests.Count</div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-lg-3">
+        <a asp-action="PaymentIntents" asp-route-status="@((int)CustomerPaymentIntentStatus.SucceededPendingReconciliation)" class="text-decoration-none">
+            <div class="content-card p-3 h-100">
+                <div class="text-muted small text-uppercase fw-bold">Chờ đối soát</div>
+                <div class="fs-4 fw-bold text-danger">@Model.PendingPaymentIntents.Count</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="content-card">
+            <div class="action-toolbar">
+                <h6 class="mb-0 fw-bold">Yêu cầu đặt hàng mới</h6>
+                <a asp-action="OrderRequests" class="btn btn-sm btn-outline-secondary">Xem tất cả</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table data-table align-middle">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Mã yêu cầu</th>
+                            <th>Khách hàng</th>
+                            <th class="text-end">Giá trị</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in Model.PendingOrderRequests)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-semibold">@item.Code</td>
+                            <td>
+                                <div class="fw-medium">@item.CustomerName</div>
+                                <div class="text-muted small">@item.CustomerPhone</div>
+                            </td>
+                            <td class="text-end fw-semibold">@item.TotalAmount.ToString(ViewConstants.CurrencyDisplayFormat)</td>
+                            <td class="text-end pe-3">
+                                <a asp-action="OrderRequestDetails" asp-route-id="@item.Id" class="btn btn-sm btn-light text-primary">Xem</a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.PendingOrderRequests.Any())
+                    {
+                        <tr><td colspan="4"><div class="empty-state py-4 text-muted">Không có yêu cầu đặt hàng mới</div></td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="content-card">
+            <div class="action-toolbar">
+                <h6 class="mb-0 fw-bold">Thanh toán chờ đối soát</h6>
+                <a asp-action="PaymentIntents" class="btn btn-sm btn-outline-secondary">Xem tất cả</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table data-table align-middle">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Khách hàng</th>
+                            <th>Phiếu nợ</th>
+                            <th class="text-end">Số tiền</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in Model.PendingPaymentIntents)
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-medium">@item.CustomerName</div>
+                                <div class="text-muted small">@item.CustomerPhone</div>
+                            </td>
+                            <td class="text-muted small">@item.CustomerDebtCode</td>
+                            <td class="text-end fw-bold text-danger">@item.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</td>
+                            <td class="text-end pe-3">
+                                <a asp-action="PaymentIntentDetails" asp-route-id="@item.Id" class="btn btn-sm btn-light text-primary">Xem</a>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.PendingPaymentIntents.Any())
+                    {
+                        <tr><td colspan="4"><div class="empty-state py-4 text-muted">Không có thanh toán chờ đối soát</div></td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="content-card mt-4">
+    <div class="action-toolbar">
+        <h6 class="mb-0 fw-bold">Sự kiện bảo mật gần đây</h6>
+        <a asp-action="SecurityEvents" class="btn btn-sm btn-outline-secondary">Xem tất cả</a>
+    </div>
+    <div class="table-responsive">
+        <table class="table data-table align-middle">
+            <thead>
+                <tr>
+                    <th class="ps-4">Thời gian</th>
+                    <th>Khách hàng</th>
+                    <th>Sự kiện</th>
+                    <th class="text-center">Kết quả</th>
+                    <th>IP</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.RecentSecurityEvents)
+            {
+                var outcome = (CustomerPortalSecurityEventOutcome)item.Outcome;
+                <tr>
+                    <td class="ps-4 text-muted small">@item.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</td>
+                    <td>@(item.CustomerName ?? "Ẩn danh")</td>
+                    <td class="fw-medium">@item.EventType</td>
+                    <td class="text-center"><span class="badge @outcome.GetDisplayColor()">@outcome.GetDisplayText()</span></td>
+                    <td class="text-muted small">@item.IpAddress</td>
+                </tr>
+            }
+            @if (!Model.RecentSecurityEvents.Any())
+            {
+                <tr><td colspan="5"><div class="empty-state py-4 text-muted">Chưa có sự kiện bảo mật</div></td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

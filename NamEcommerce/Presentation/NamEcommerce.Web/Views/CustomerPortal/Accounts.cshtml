@@ -1,0 +1,78 @@
+@using NamEcommerce.Application.Contracts.Dtos.CustomerPortal
+@using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@model IReadOnlyCollection<CustomerPortalAccountAdminAppDto>
+@{
+    ViewData[ViewConstants.PageTitle] = "Tài khoản Customer Portal";
+    var returnUrl = Context.Request.Path.ToString() + Context.Request.QueryString.ToString();
+}
+
+<div class="page-header">
+    <div class="d-flex align-items-center">
+        <a asp-action="Index" class="btn btn-icon btn-light me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <div>
+            <h1 class="page-header-title">Tài khoản Customer Portal</h1>
+            <p class="page-header-subtitle">Khóa hoặc mở khóa khách hàng có dấu hiệu quấy phá OTP hay thao tác bất thường</p>
+        </div>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="table data-table align-middle">
+            <thead>
+                <tr>
+                    <th class="ps-4">Khách hàng</th>
+                    <th>Đăng nhập</th>
+                    <th class="text-center">Mật khẩu</th>
+                    <th class="text-center">Trạng thái</th>
+                    <th class="text-center">Lần cuối</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model)
+            {
+                var status = (CustomerPortalAccountStatus)item.Status;
+                <tr>
+                    <td class="ps-4">
+                        <div class="fw-semibold">@item.CustomerName</div>
+                        <div class="text-muted small">@item.CustomerPhone</div>
+                    </td>
+                    <td class="text-muted small">@item.CustomerEmail</td>
+                    <td class="text-center">
+                        <span class="badge @(item.HasPassword ? "bg-success" : "bg-light text-dark border")">
+                            @(item.HasPassword ? "Đã cài" : "Chưa cài")
+                        </span>
+                    </td>
+                    <td class="text-center"><span class="badge @status.GetDisplayColor()">@status.GetDisplayText()</span></td>
+                    <td class="text-center text-muted small">
+                        @(item.LastLoginOnUtc.HasValue ? item.LastLoginOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat) : "—")
+                    </td>
+                    <td class="text-end pe-3">
+                        @if (status == CustomerPortalAccountStatus.Blocked)
+                        {
+                            <form asp-action="UnblockAccount" method="post" class="d-inline">
+                                <input type="hidden" name="customerId" value="@item.CustomerId" />
+                                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                <button type="submit" class="btn btn-sm btn-outline-success">Mở khóa</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <form asp-action="BlockAccount" method="post" class="d-inline">
+                                <input type="hidden" name="customerId" value="@item.CustomerId" />
+                                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Khóa</button>
+                            </form>
+                        }
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="6"><div class="empty-state py-5 text-muted">Chưa có khách hàng nào kích hoạt portal</div></td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>
