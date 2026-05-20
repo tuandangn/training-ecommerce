@@ -1,0 +1,31 @@
+using MediatR;
+using NamEcommerce.Customer.Contracts.Models;
+
+namespace NamEcommerce.Customer.Contracts.Commands;
+
+public sealed record RequestCustomerOtpCommand(string DeliveryToken, string? RequestedIp, string? RequestedUserAgent) : IRequest<CustomerOtpRequestResultModel>;
+public sealed record VerifyCustomerOtpCommand(Guid ChallengeId, string Otp, string? RequestedIp, string? RequestedUserAgent) : IRequest<CustomerLoginResultModel>;
+public sealed record CustomerPasswordLoginCommand(string Login, string Password, string? RequestedIp, string? RequestedUserAgent) : IRequest<CustomerLoginResultModel>;
+public sealed record SetCustomerPasswordCommand(string Password) : IRequest<CustomerActionResultModel>;
+public sealed record LogoutCustomerCommand : IRequest<CustomerActionResultModel>;
+
+public sealed record CreateCustomerOrderRequestCommand(
+    DateTime? ExpectedShippingDate,
+    string? ShippingAddress,
+    string? Note,
+    IList<CreateCustomerOrderRequestItemCommand> Items) : IRequest<CustomerOrderRequestModel>;
+
+public sealed record CreateCustomerOrderRequestItemCommand(Guid ProductId, decimal Quantity);
+
+public sealed record ConfirmCustomerDeliveryNoteCommand(Guid DeliveryNoteId, string? ReceiverName, string? Note) : IRequest<CustomerActionResultModel>;
+public sealed record CreateCustomerDeliveryFeedbackCommand(Guid DeliveryNoteId, int? Rating, string? Message) : IRequest<CustomerActionResultModel>;
+
+public sealed record CreateCustomerReturnRequestCommand(
+    Guid DeliveryNoteId,
+    string? Reason,
+    IList<CreateCustomerReturnRequestItemCommand> Items) : IRequest<CustomerReturnRequestModel>;
+
+public sealed record CreateCustomerReturnRequestItemCommand(Guid DeliveryNoteItemId, decimal RequestedQuantity, string? Reason);
+
+public sealed record CreateCustomerPaymentIntentCommand(Guid? CustomerDebtId, decimal Amount) : IRequest<CustomerPaymentIntentModel?>;
+public sealed record CompleteMockCustomerPaymentCommand(Guid PaymentIntentId, bool Success) : IRequest<CustomerPaymentIntentModel?>;

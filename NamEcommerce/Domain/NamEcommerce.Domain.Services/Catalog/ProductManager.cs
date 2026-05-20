@@ -54,6 +54,7 @@ public sealed class ProductManager : IProductManager
         {
             ShortDesc = dto.ShortDesc
         };
+        product.UpdatePrice(dto.UnitPrice, dto.CostPrice);
         await product.SetUnitMeasurementAsync(dto.UnitMeasurementId, _unitMeasurementDataReader).ConfigureAwait(false);
         foreach (var categoryInfo in dto.Categories)
             await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, _categoryDataReader).ConfigureAwait(false);

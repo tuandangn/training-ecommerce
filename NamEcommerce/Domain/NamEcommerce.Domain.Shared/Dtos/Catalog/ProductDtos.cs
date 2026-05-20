@@ -27,7 +27,21 @@ public sealed record ProductDto(Guid Id) : BaseProductDto
 }
 
 [Serializable]
-public sealed record CreateProductDto : BaseProductDto;
+public sealed record CreateProductDto : BaseProductDto
+{
+    public decimal CostPrice { get; init; }
+    public decimal UnitPrice { get; init; }
+
+    public override void Verify()
+    {
+        base.Verify();
+
+        if (CostPrice < 0)
+            throw new ProductCostPriceCannotBeNegativeException();
+        if (UnitPrice < 0)
+            throw new ProductUnitPriceCannotBeNegativeException();
+    }
+}
 [Serializable]
 public sealed record CreateProductResultDto
 {

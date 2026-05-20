@@ -106,6 +106,43 @@ public sealed class CustomerController : BaseAuthorizedController
         return RedirectToAction(nameof(List));
     }
 
+    [HttpPost]
+    public async Task<IActionResult> QuickCreate(CreateCustomerModel model)
+    {
+        if (!ModelState.IsValid)
+            return Json(new { success = false, message = GetErrorMessage() });
+
+        var result = await _mediator.Send(new CreateCustomerCommand
+        {
+            FullName = model.FullName!,
+            PhoneNumber = model.PhoneNumber!,
+            Email = model.Email,
+            Address = model.Address ?? string.Empty,
+            Note = model.Note,
+            InitialDebt = model.InitialDebt
+        });
+
+        if (!result.Success)
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+
+        var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = result.CreatedId });
+        if (customer is null)
+            return Json(new { success = false, message = LocalizeError("Error.CustomerIsNotFound") });
+
+        return Json(new
+        {
+            success = true,
+            message = LocalizeError("Msg.SaveSuccess"),
+            customer = new
+            {
+                id = customer.Id,
+                name = customer.FullName,
+                phone = customer.PhoneNumber,
+                address = customer.Address
+            }
+        });
+    }
+
     public async Task<IActionResult> Edit(Guid id)
     {
         var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = id });

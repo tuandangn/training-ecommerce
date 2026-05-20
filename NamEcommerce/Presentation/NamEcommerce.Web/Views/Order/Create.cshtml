@@ -31,7 +31,13 @@
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <div class="mb-3">
-                                        <label for="customerSearch" class="form-label small fw-bold text-muted text-uppercase d-block">Khách hàng</label>
+                                        <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                                            <label for="customerSearch" class="form-label small fw-bold text-muted text-uppercase mb-0">Khách hàng</label>
+                                            <button type="button" class="btn btn-sm btn-outline-primary" data-open-quick-customer>
+                                                <i class="bi bi-plus-lg"></i>
+                                                <span class="d-none d-lg-inline ms-1">Tạo nhanh</span>
+                                            </button>
+                                        </div>
                                         <div id="customerPicker" data-id="@Model.CustomerId" data-name="@Model.CustomerDisplayName"
                                              data-phone="@Model.CustomerDisplayPhone" data-address="@Model.CustomerDisplayAddress"></div>
                                         <input type="text" class="visually-hidden" asp-for="CustomerId" />
@@ -81,11 +87,18 @@
                     </div>
                     <div class="content-card-header">
                         <h5>Danh sách hàng hóa</h5>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                            <i class="bi bi-plus-lg me-1"></i>
-                            <span class="d-none d-lg-inline">Thêm hàng hóa</span>
-                            <span class="d-lg-none">Thêm</span>
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-open-quick-product>
+                                <i class="bi bi-plus-lg me-1"></i>
+                                <span class="d-none d-lg-inline">Tạo hàng hóa</span>
+                                <span class="d-lg-none">Tạo</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                                <i class="bi bi-plus-lg me-1"></i>
+                                <span class="d-none d-lg-inline">Thêm hàng hóa</span>
+                                <span class="d-lg-none">Thêm</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="content-card-body-flush">
                         <div class="table-responsive">
@@ -213,6 +226,11 @@
             <div class="col-md-4">
                 <div class="content-card">
                     <div class="content-card-body">
+                        <div class="d-flex justify-content-end mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-open-quick-product>
+                                <i class="bi bi-plus-lg me-1"></i>Tạo hàng hóa
+                            </button>
+                        </div>
                         <div id="productBrowser" data-col-class="col-12"></div>
                     </div>
                 </div>
@@ -229,6 +247,11 @@
             </div>
             <form action="#" method="post" id="addProductForm">
                 <div class="modal-body py-3">
+                    <div class="d-flex justify-content-end mb-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-open-quick-product>
+                            <i class="bi bi-plus-lg me-1"></i>Tạo hàng hóa mới
+                        </button>
+                    </div>
                     <div class="mb-3">
                         <div id="productPicker"></div>
                     </div>
@@ -296,6 +319,130 @@
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" id="addItemToTable" class="btn btn-success d-none noDisabled">
                         <i class="bi bi-plus-lg me-1"></i> Thêm vào
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="quickCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Tạo khách hàng nhanh</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="@Url.Action("QuickCreate", "Customer")" method="post" id="quickCreateCustomerForm">
+                @Html.AntiForgeryToken()
+                <div class="modal-body py-3">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerFullName">Họ tên</label>
+                            <input id="quickCustomerFullName" name="FullName" class="form-control" autocomplete="off" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerPhone">Số điện thoại</label>
+                            <input id="quickCustomerPhone" name="PhoneNumber" class="form-control" autocomplete="off" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerEmail">Email</label>
+                            <input id="quickCustomerEmail" name="Email" class="form-control" autocomplete="off" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerAddress">Địa chỉ</label>
+                            <input id="quickCustomerAddress" name="Address" class="form-control" autocomplete="off" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerNote">Ghi chú</label>
+                            <textarea id="quickCustomerNote" name="Note" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-3">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i>Tạo khách
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="quickProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Tạo hàng hóa nhanh</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="@Url.Action("QuickCreate", "Product")" method="post" id="quickCreateProductForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="DisplayOrder" value="1" />
+                <div class="modal-body py-3">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-7">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductName">Tên hàng hóa</label>
+                            <input id="quickProductName" name="Name" class="form-control" autocomplete="off" />
+                        </div>
+                        <div class="col-12 col-md-5">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductUnitPrice">Giá bán</label>
+                            <input id="quickProductUnitPrice" name="UnitPrice" class="form-control" data-decimal="currency" autocomplete="off" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductUnit">Đơn vị tính</label>
+                            <select id="quickProductUnit" name="UnitMeasurementId" class="form-select">
+                                <option value="">(Không chọn)</option>
+                                @if (Model.AvailableUnitMeasurements is not null)
+                                {
+                                    foreach (var unitMeasurement in Model.AvailableUnitMeasurements)
+                                    {
+                                        <option value="@unitMeasurement.Id">@unitMeasurement.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductCategory">Danh mục</label>
+                            <select id="quickProductCategory" name="CategoryId" class="form-select">
+                                <option value="">(Không chọn)</option>
+                                @if (Model.AvailableCategories is not null)
+                                {
+                                    foreach (var category in Model.AvailableCategories)
+                                    {
+                                        <option value="@category.Id">@category.Name</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-label small fw-bold text-muted text-uppercase">Nhà cung cấp</div>
+                            @if (Model.AvailableVendors?.Options.Any() == true)
+                            {
+                                <div class="d-flex flex-wrap gap-2">
+                                    @foreach (var vendor in Model.AvailableVendors)
+                                    {
+                                        <div class="form-check form-check-inline border rounded px-3 py-2">
+                                            <input class="form-check-input" type="checkbox" name="VendorIds" value="@vendor.Id" id="quick_vendor_@vendor.Id" />
+                                            <label class="form-check-label" for="quick_vendor_@vendor.Id">@vendor.Name</label>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-muted small">Chưa có nhà cung cấp.</div>
+                            }
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickProductShortDesc">Mô tả ngắn</label>
+                            <textarea id="quickProductShortDesc" name="ShortDesc" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-3">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-plus-lg me-1"></i>Tạo và thêm
                     </button>
                 </div>
             </form>

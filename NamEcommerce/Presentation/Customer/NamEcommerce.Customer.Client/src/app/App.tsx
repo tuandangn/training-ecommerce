@@ -1,0 +1,103 @@
+import { AuthProvider } from "../auth/AuthContext";
+import { useAuth } from "../auth/useAuth";
+import { DashboardPage } from "../pages/DashboardPage";
+import { DebtsPage } from "../pages/DebtsPage";
+import { DeliveryNoteDetailsPage } from "../pages/DeliveryNoteDetailsPage";
+import { DeliveryNotesPage } from "../pages/DeliveryNotesPage";
+import { LoginPage } from "../pages/LoginPage";
+import { MockPaymentPage } from "../pages/MockPaymentPage";
+import { NewOrderRequestPage } from "../pages/NewOrderRequestPage";
+import { OrderDetailsPage } from "../pages/OrderDetailsPage";
+import { OrdersPage } from "../pages/OrdersPage";
+import { OtpVerifyPage } from "../pages/OtpVerifyPage";
+import { PublicDeliveryPage } from "../pages/PublicDeliveryPage";
+import { SetPasswordPage } from "../pages/SetPasswordPage";
+import { navigate, useRoute } from "./routes";
+
+export function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
+  );
+}
+
+function AppRoutes() {
+  const route = useRoute();
+  const { session, loading, logout } = useAuth();
+  const path = window.location.pathname;
+  const query = new URLSearchParams(window.location.search);
+
+  if (path.startsWith("/delivery/")) {
+    return <PublicDeliveryPage token={decodeURIComponent(path.replace("/delivery/", ""))} />;
+  }
+
+  if (path === "/verify") {
+    return <OtpVerifyPage challengeId={query.get("challengeId") ?? ""} mockOtp={query.get("mockOtp")} />;
+  }
+
+  if (path === "/login") {
+    return <LoginPage />;
+  }
+
+  if (loading) {
+    return <main className="auth-wrap">Đang tải...</main>;
+  }
+
+  if (!session) {
+    return <LoginPage />;
+  }
+
+  return (
+    <div className="app-shell" data-route={route}>
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark">VK</div>
+          <div>
+            <div>VLXD Tuấn Khôi</div>
+            <div className="page-subtitle">Cổng khách hàng</div>
+          </div>
+        </div>
+        <nav className="nav">
+          <NavLink href="/app" label="Tổng quan" />
+          <NavLink href="/orders" label="Đơn hàng" />
+          <NavLink href="/delivery-notes" label="Phiếu giao" />
+          <NavLink href="/debts" label="Công nợ" />
+          <NavLink href="/set-password" label="Mật khẩu" />
+          <button onClick={logout}>Đăng xuất</button>
+        </nav>
+        <div className="sidebar-user">{session.customerName}</div>
+      </aside>
+      <main className="main">{renderPrivatePage(path)}</main>
+    </div>
+  );
+}
+
+function NavLink({ href, label }: { href: string; label: string }) {
+  const active = window.location.pathname === href;
+  return (
+    <a
+      className={active ? "active" : ""}
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
+        navigate(href);
+      }}
+    >
+      {label}
+    </a>
+  );
+}
+
+function renderPrivatePage(path: string) {
+  if (path === "/app" || path === "/") return <DashboardPage />;
+  if (path === "/orders") return <OrdersPage />;
+  if (path === "/orders/new") return <NewOrderRequestPage />;
+  if (path.startsWith("/orders/")) return <OrderDetailsPage id={path.replace("/orders/", "")} />;
+  if (path === "/delivery-notes") return <DeliveryNotesPage />;
+  if (path.startsWith("/delivery-notes/")) return <DeliveryNoteDetailsPage id={path.replace("/delivery-notes/", "")} />;
+  if (path === "/debts") return <DebtsPage />;
+  if (path === "/payments") return <MockPaymentPage />;
+  if (path === "/set-password") return <SetPasswordPage />;
+  return <DashboardPage />;
+}

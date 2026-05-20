@@ -89,6 +89,58 @@ public sealed class ProductController : BaseAuthorizedController
         return RedirectToAction(nameof(List));
     }
 
+    [HttpPost]
+    public async Task<IActionResult> QuickCreate(CreateProductModel model)
+    {
+        if (model.VendorIds.Count == 0)
+            ModelState.AddModelError(nameof(model.VendorIds), "Vui lòng chọn nhà cung cấp để thêm hàng hóa vào đơn.");
+
+        if (!ModelState.IsValid)
+            return Json(new { success = false, message = GetErrorMessage() });
+
+        var createProductResult = await _mediator.Send(new CreateProductCommand
+        {
+            Name = model.Name!,
+            ShortDesc = model.ShortDesc,
+            CategoryId = model.CategoryId,
+            VendorIds = model.VendorIds,
+            UnitMeasurementId = model.UnitMeasurementId,
+            DisplayOrder = model.DisplayOrder <= 0 ? 1 : model.DisplayOrder,
+            UnitPrice = model.UnitPrice
+        });
+
+        if (!createProductResult.Success)
+            return Json(new { success = false, message = LocalizeError(createProductResult.ErrorMessage!) });
+
+        var createdProducts = await _mediator.Send(new GetProductsByIdsForOrderQuery
+        {
+            Ids = [createProductResult.CreatedId]
+        });
+        var product = createdProducts.FirstOrDefault();
+        if (product is null)
+            return Json(new { success = false, message = LocalizeError("Error.ProductIsNotFound") });
+
+        return Json(new
+        {
+            success = true,
+            message = LocalizeError("Msg.SaveSuccess"),
+            product = new
+            {
+                id = product.Id,
+                name = product.Name,
+                unitMeasurement = product.UnitMeasurement,
+                picture = product.PictureUrl,
+                unitPrice = product.CurrentUnitPrice,
+                availableQty = product.QuantityAvailable,
+                categoryName = product.CategoryName,
+                availableWarehouses = product.AvailableWarehouses,
+                vendorCount = product.AvailableVendors.Count,
+                firstVendorId = product.AvailableVendors.FirstOrDefault()?.Id.ToString(),
+                availableVendors = product.AvailableVendors.Select(v => new { key = v.Id.ToString(), value = v.Name })
+            }
+        });
+    }
+
     public async Task<IActionResult> Edit(Guid id)
     {
         var model = await _productModelFactory.PrepareEditProductModel(id);

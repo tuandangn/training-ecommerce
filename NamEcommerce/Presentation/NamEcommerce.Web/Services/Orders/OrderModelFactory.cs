@@ -60,6 +60,9 @@ public sealed class OrderModelFactory : IOrderModelFactory
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
     {
         var model = oldModel ?? new CreateOrderModel();
+        model.AvailableCategories = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
+        model.AvailableUnitMeasurements = await _mediator.Send(new GetUnitMeasurementOptionListQuery()).ConfigureAwait(false);
+        model.AvailableVendors = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
 
         if (model.CustomerId.HasValue)
         {
