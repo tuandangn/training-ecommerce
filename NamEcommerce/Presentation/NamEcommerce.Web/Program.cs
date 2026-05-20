@@ -2,6 +2,8 @@ using System.Globalization;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -137,6 +139,12 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.Configure<WarehouseSettings>(options => builder.Configuration.Bind(AppConstants.WarehouseSettingSectionName, options));
     services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<WarehouseSettings>>().Value);
+
+    var customerPortalSecurityOptions = new CustomerPortalSecurityOptions();
+    configuration.GetSection(CustomerPortalSecurityOptions.SectionName).Bind(customerPortalSecurityOptions);
+    services.AddSingleton(customerPortalSecurityOptions);
+    ConfigureDataProtection(services, configuration);
+    ConfigureForwardedHeaders(services);
 
     services.AddScoped<DomainEventDispatchInterceptor>();
     services.AddDbContext<NamEcommerceEfDbContext>((sp, opts) =>
@@ -283,8 +291,30 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     }
 }
 
+void ConfigureDataProtection(IServiceCollection services, ConfigurationManager configuration)
+{
+    var dataProtectionBuilder = services.AddDataProtection()
+        .SetApplicationName(configuration["DataProtection:ApplicationName"] ?? "NamEcommerce.Web");
+
+    var keysPath = configuration["DataProtection:KeysPath"];
+    if (!string.IsNullOrWhiteSpace(keysPath))
+        dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+}
+
+void ConfigureForwardedHeaders(IServiceCollection services)
+{
+    services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.ForwardLimit = 1;
+    });
+}
+
 void Configure(WebApplication app)
 {
+    if (app.Configuration.GetValue<bool>("ForwardedHeaders:Enabled"))
+        app.UseForwardedHeaders();
+
     if (!app.Environment.IsDevelopment())
     {
         app.UseExceptionHandler("/Home/Error");
@@ -308,6 +338,7 @@ void Configure(WebApplication app)
 
     app.UseRouting();
 
+    app.UseAuthentication();
     app.UseAuthorization();
     app.UseSession();
 

@@ -23,6 +23,7 @@ public interface ICustomerPortalSecurityManager
     Task RevokeSessionAsync(Guid sessionId, DateTime nowUtc);
 
     Task<DeliveryNoteAccessTokenDto> CreateDeliveryNoteAccessTokenAsync(CreateDeliveryNoteAccessTokenDto dto);
+    Task RevokeActiveDeliveryNoteAccessTokensAsync(Guid deliveryNoteId, DateTime nowUtc);
     Task<DeliveryNoteAccessTokenDto?> ResolveDeliveryNoteAccessTokenAsync(string tokenHash, DateTime nowUtc);
     Task MarkDeliveryNoteAccessTokenViewedAsync(Guid tokenId, DateTime nowUtc);
 

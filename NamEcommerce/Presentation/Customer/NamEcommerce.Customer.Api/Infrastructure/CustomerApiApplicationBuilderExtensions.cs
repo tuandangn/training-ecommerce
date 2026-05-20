@@ -7,6 +7,9 @@ internal static class CustomerApiApplicationBuilderExtensions
         if (app.Environment.IsDevelopment())
             app.MapOpenApi();
 
+        if (app.Configuration.GetValue<bool>("CustomerPortal:ForwardedHeaders:Enabled"))
+            app.UseForwardedHeaders();
+
         app.UseHttpsRedirection();
         app.UseCors("CustomerClient");
         app.UseRateLimiter();

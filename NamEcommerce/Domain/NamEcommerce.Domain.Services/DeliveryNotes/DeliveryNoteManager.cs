@@ -240,6 +240,31 @@ public sealed class DeliveryNoteManager(
         }).ConfigureAwait(false);
     }
 
+    public async Task MarkReceivedByCustomerAsync(Guid id, DateTime receivedAtUtc, string? receiverName, string? note)
+    {
+        await ExecuteInTransactionAsync(async () =>
+        {
+            var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
+            if (deliveryNote is null)
+                throw new DeliveryNoteNotFoundException(id);
+
+            if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
+            {
+                foreach (var item in deliveryNote.Items)
+                {
+                    item.CostAtDispatch = await stockManager.GetAverageCostAsync(
+                        item.ProductId, deliveryNote.WarehouseId).ConfigureAwait(false);
+                }
+            }
+
+            var transitionedToDelivered = deliveryNote.MarkReceivedByCustomer(receivedAtUtc, receiverName, note);
+            await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+
+            if (transitionedToDelivered)
+                await MarkRelatedOrderItemsReceivedByCustomerAsync(deliveryNote).ConfigureAwait(false);
+        }).ConfigureAwait(false);
+    }
+
     public async Task<Guid> CreateAsDeliveredAsync(CreateDeliveryNoteFromVendorReturnDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -514,6 +539,34 @@ public sealed class DeliveryNoteManager(
         }
 
         return Task.FromResult<IDictionary<Guid, List<DeliveryNoteLinkDto>>>(links);
+    }
+
+    private async Task MarkRelatedOrderItemsReceivedByCustomerAsync(DeliveryNote deliveryNote)
+    {
+        var order = await orderReader.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+        if (order is null)
+            return;
+
+        var deliveredQuantitiesByOrderItem = deliveryNoteReader.DataSource
+            .Where(note => note.OrderId == order.Id && note.Status == DeliveryNoteStatus.Delivered)
+            .SelectMany(note => note.Items)
+            .Where(item => item.OrderItemId != Guid.Empty)
+            .GroupBy(item => item.OrderItemId)
+            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+
+        foreach (var noteItem in deliveryNote.Items.Where(item => item.OrderItemId != Guid.Empty))
+        {
+            var orderItem = order.OrderItems.FirstOrDefault(i => i.Id == noteItem.OrderItemId);
+            var deliveredQuantity = deliveredQuantitiesByOrderItem.GetValueOrDefault(noteItem.OrderItemId);
+            if (orderItem != null && !orderItem.IsDelivered && deliveredQuantity >= orderItem.Quantity)
+            {
+                await orderManager.MarkOrderItemReceivedByCustomerAsync(new MarkOrderItemReceivedByCustomerDto
+                {
+                    OrderId = order.Id,
+                    OrderItemId = orderItem.Id
+                }).ConfigureAwait(false);
+            }
+        }
     }
 
     private static DeliveryNoteDto MapToDto(DeliveryNote deliveryNote)

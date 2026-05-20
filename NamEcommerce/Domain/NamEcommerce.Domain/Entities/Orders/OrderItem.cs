@@ -52,4 +52,13 @@ public sealed record OrderItem : AppEntity
         DeliveredOnUtc = DateTime.UtcNow;
         DeliveryProofPictureId = pictureId;
     }
+
+    internal void MarkReceivedByCustomer()
+    {
+        if (IsDelivered)
+            throw new OrderItemDataIsInvalidException("Order item is already delivered.");
+
+        IsDelivered = true;
+        DeliveredOnUtc = DateTime.UtcNow;
+    }
 }

@@ -251,6 +251,17 @@ public sealed record Order : AppAggregateEntity
 
         RaiseDomainEvent(new OrderItemDelivered(Id, orderItemId, pictureId));
     }
+
+    internal void MarkOrderItemReceivedByCustomer(Guid orderItemId)
+    {
+        var orderItem = _orderItems.FirstOrDefault(i => i.Id == orderItemId);
+        if (orderItem is null)
+            throw new OrderItemIsNotFoundException(orderItemId);
+
+        orderItem.MarkReceivedByCustomer();
+
+        RaiseDomainEvent(new OrderItemDelivered(Id, orderItemId, Guid.Empty));
+    }
     private IReadOnlyCollection<OrderReservationItem> GetReservationItems()
         => _orderItems
             .GroupBy(i => i.ProductId)

@@ -245,6 +245,22 @@ public sealed class CustomerPortalSecurityManager(
         return MapToDto(inserted);
     }
 
+    public async Task RevokeActiveDeliveryNoteAccessTokensAsync(Guid deliveryNoteId, DateTime nowUtc)
+    {
+        if (deliveryNoteId == Guid.Empty)
+            return;
+
+        var tokens = accessTokenReader.DataSource
+            .Where(token => token.DeliveryNoteId == deliveryNoteId && token.RevokedOnUtc == null)
+            .ToList();
+
+        foreach (var token in tokens)
+        {
+            token.Revoke(nowUtc);
+            await accessTokenRepository.UpdateAsync(token).ConfigureAwait(false);
+        }
+    }
+
     public Task<DeliveryNoteAccessTokenDto?> ResolveDeliveryNoteAccessTokenAsync(string tokenHash, DateTime nowUtc)
     {
         if (string.IsNullOrWhiteSpace(tokenHash))

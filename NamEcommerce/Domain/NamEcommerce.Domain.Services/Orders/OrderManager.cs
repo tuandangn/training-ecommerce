@@ -301,6 +301,20 @@ public sealed class OrderManager(
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
 
+    public async Task MarkOrderItemReceivedByCustomerAsync(MarkOrderItemReceivedByCustomerDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        order.MarkOrderItemReceivedByCustomer(dto.OrderItemId);
+        order.UpdatedOnUtc = DateTime.UtcNow;
+
+        await orderRepository.UpdateAsync(order).ConfigureAwait(false);
+    }
+
     public async Task DeleteOrderAsync(DeleteOrderDto dto)
     {
         var order = await orderDataReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);

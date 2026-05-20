@@ -8,7 +8,8 @@ namespace NamEcommerce.Application.Services.CustomerPortal;
 
 public sealed class CustomerPortalDeliveryTokenAppService(
     ICustomerPortalSecurityManager securityManager,
-    IDeliveryNoteAppService deliveryNoteAppService) : ICustomerPortalDeliveryTokenAppService
+    IDeliveryNoteAppService deliveryNoteAppService,
+    CustomerPortalSecurityOptions securityOptions) : ICustomerPortalDeliveryTokenAppService
 {
     public async Task<CustomerPortalDeliveryAccessTokenAppDto?> CreateDeliveryAccessTokenAsync(Guid deliveryNoteId)
     {
@@ -19,11 +20,16 @@ public sealed class CustomerPortalDeliveryTokenAppService(
         if (deliveryNote is null)
             return null;
 
+        var nowUtc = DateTime.UtcNow;
         var token = CustomerPortalHashing.CreateSecureToken();
+        if (securityOptions.RevokeExistingDeliveryTokensOnCreate)
+            await securityManager.RevokeActiveDeliveryNoteAccessTokensAsync(deliveryNoteId, nowUtc).ConfigureAwait(false);
+
         await securityManager.CreateDeliveryNoteAccessTokenAsync(new CreateDeliveryNoteAccessTokenDto
         {
             DeliveryNoteId = deliveryNoteId,
-            TokenHash = CustomerPortalHashing.Hash(token)
+            TokenHash = CustomerPortalHashing.Hash(token),
+            ExpiresOnUtc = nowUtc.AddDays(securityOptions.SafeDeliveryAccessTokenExpiryDays)
         }).ConfigureAwait(false);
 
         return new CustomerPortalDeliveryAccessTokenAppDto
