@@ -1,23 +1,3 @@
-/**
- * ProductBrowser — reusable product-browsing widget.
- *
- * Usage:
- *   import ProductBrowser from '/modules/ProductBrowser.js';
- *
- *   const browser = new ProductBrowser(
- *       document.getElementById('productBrowser'),
- *       (product) => console.log('add', product),
- *       {
- *           colClass: 'col-12 col-sm-6',        // optional
- *           categoryUrl: '/Category/Options',   // optional
- *           productSearchUrl: '/Product/Search' // optional
- *       }
- *   );
- *   await browser.init();
- *
- * The `product` object passed to `onAdd`:
- *   { id, name, picture, availableQty, categoryName }
- */
 export default class ProductBrowser {
     #container;
     #onAdd;
@@ -42,11 +22,6 @@ export default class ProductBrowser {
         initialShow: false
     };
 
-    /**
-     * @param {HTMLElement} containerEl  – the element to render into
-     * @param {Function}    onAdd        – called with the product when "+" is clicked
-     * @param {object}      [options]    – optional overrides (colClass, categoryUrl, productSearchUrl)
-     */
     constructor(containerEl, onAdd, options = {}) {
         if (!(containerEl instanceof HTMLElement))
             throw new TypeError('ProductBrowser: containerEl must be an HTMLElement');
@@ -78,6 +53,9 @@ export default class ProductBrowser {
 
     setVendor(vid) {
         this.#setState({ vid });
+    }
+    reload() {
+        this.#setState({});
     }
 
     #bindEvents() {
@@ -272,14 +250,14 @@ export default class ProductBrowser {
                 : '';
 
             col.innerHTML = `
-                <div class="pb-product-card ${isDisabled ? 'bg-light' : ''}">
+                <div class="pb-product-card ${isDisabled ? 'bg-light' : ''} position-relative">
                     <div class="pb-product-thumb">${picHtml}</div>
                     <div class="pb-product-info">
                         <div class="pb-product-name fw-medium text-truncate ${isDisabled ? 'text-muted' : ''}" title="${_esc(p.name)}">${_esc(p.name)}</div>
                         ${catHtml}
                         ${this.#options.purchase ? vendorInfoHtml : qtyHtml}
                     </div>
-                    <button type="button" class="pb-add-btn btn btn-sm btn-outline-primary ${isDisabled ? 'd-none' : ''}" title="Thêm vào phiếu">
+                    <button type="button" class="stretched-link pb-add-btn btn btn-sm btn-outline-primary ${isDisabled ? 'd-none' : ''}" data-bs-toggle="tooltip" title="Thêm vào phiếu">
                         <i class="bi bi-plus-lg"></i>
                     </button>
                 </div>`;

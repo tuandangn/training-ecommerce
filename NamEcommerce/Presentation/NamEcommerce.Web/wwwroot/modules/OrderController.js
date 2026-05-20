@@ -1,5 +1,5 @@
 import { toast } from "/modules/modals.js";
-import { apiGet } from "/modules/ajax-helper.js";
+import { apiGet, apiPost } from "/modules/ajax-helper.js";
 import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
@@ -88,6 +88,7 @@ export default class OrderController {
             this.#productBrowser.init();
         }
 
+        this.#bindQuickCreateForms();
         this.#bindEvents();
 
         this.#state = new OrderState();
@@ -370,7 +371,9 @@ export default class OrderController {
 
     #bindCustomerPicker() {
         const el = getEl('customerPicker');
-        this.#customerPicker = new CustomerPicker(el);
+        this.#customerPicker = new CustomerPicker(el, {
+            allowCreateNew: true
+        });
 
         el.addEventListener('select', (e) => {
             this.#setState({ customer: e.detail?.customer ? new Customer(e.detail.customer) : null });
@@ -458,6 +461,86 @@ export default class OrderController {
             addr.classList.remove('border-end-0');
             addr.focus();
             this.remove();
+        });
+    }
+
+    #bindQuickCreateForms() {
+        const quickCustomerModalEl = document.getElementById('quickCustomerModal');
+        const quickProductModalEl = document.getElementById('quickProductModal');
+        const quickCustomerModal = quickCustomerModalEl ? bootstrap.Modal.getOrCreateInstance(quickCustomerModalEl) : null;
+        const quickProductModal = quickProductModalEl ? bootstrap.Modal.getOrCreateInstance(quickProductModalEl) : null;
+
+        document.querySelectorAll('[data-open-quick-customer]').forEach(button => {
+            button.addEventListener('click', () => quickCustomerModal?.show());
+        });
+
+        document.querySelectorAll('[data-open-quick-product]').forEach(button => {
+            button.addEventListener('click', () => {
+                const addProductModalEl = document.getElementById('addProductModal');
+                if (addProductModalEl?.classList.contains('show')) {
+                    bootstrap.Modal.getOrCreateInstance(addProductModalEl).hide();
+                }
+                quickProductModal?.show();
+            });
+        });
+
+        document.getElementById('quickCreateCustomerForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+
+            if (!$(form).valid())
+                return;
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                const result = await apiPost(form.action, new FormData(form));
+                if (!result.success) {
+                    toast('Lỗi', result.message || 'Không thể tạo khách hàng.', 'error');
+                    return;
+                }
+
+                this.#customerPicker.selectCustomer(new Customer(result.customer));
+                form.reset();
+                quickCustomerModal?.hide();
+                toast('Thành công', result.message || 'Đã tạo khách hàng.', 'success');
+            } catch {
+                toast('Lỗi', 'Có lỗi xảy ra khi tạo khách hàng.', 'error');
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+
+        document.getElementById('quickCreateProductForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+
+            if (!$(form).valid())
+                return;
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                const result = await apiPost(form.action, new FormData(form));
+                if (!result.success) {
+                    toast('Lỗi', result.message || 'Không thể tạo hàng hóa.', 'error');
+                    return;
+                }
+
+                await this.#addOrIncrementItem(result.product);
+                this.#productPicker?.clear();
+                this.#addItemController.reset();
+                form.reset();
+                quickProductModal?.hide();
+                this.#productBrowser.reload();
+                toast('Thành công', result.message || 'Đã tạo hàng hóa.', 'success');
+            } catch {
+                toast('Lỗi', 'Có lỗi xảy ra khi tạo hàng hóa.', 'error');
+            } finally {
+                submitButton.disabled = false;
+            }
         });
     }
 

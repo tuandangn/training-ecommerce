@@ -28,6 +28,9 @@ public sealed class CreateProductModel
     [ValidateNever]
     public EntityOptionListModel? AvailableVendors { get; set; }
 
+    [Display(Name = "Giá bán")]
+    public decimal? UnitPrice { get; set; }
+
     [Display(Name = "Thứ tự hiển thị")]
     public int DisplayOrder { get; set; }
 

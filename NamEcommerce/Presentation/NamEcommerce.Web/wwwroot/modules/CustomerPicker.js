@@ -13,15 +13,20 @@ export default class CustomerPicker {
     #debounceTimer = null;
     #abortController = null;
 
+    #options;
+
     static #DEBOUNCE_DELAY = 500;
     static #MIN_QUERY_LENGTH = 0;
 
-    constructor(target) {
+    constructor(target, opts) {
         if (!(target instanceof HTMLElement)) {
             throw new TypeError('Target phải là một HTMLElement hợp lệ');
         }
 
         this.target = target;
+        this.#options = Object.assign({
+            allowCreateNew: false
+        }, opts);
         this.#init();
     }
 
@@ -218,9 +223,14 @@ export default class CustomerPicker {
     #template() {
         return `
         <div class="input-group-container">
-            <input type="text" class="form-control customerSearch" id="customerSearch"
-                placeholder="Nhập tên, số điện thoại..." autocomplete="off"
-                aria-label="Tìm kiếm khách hàng" aria-autocomplete="list" />
+            <div class="input-group">
+                <input type="text" class="form-control customerSearch" id="customerSearch" placeholder="Nhập tên, số điện thoại..."
+                    autocomplete="off" aria-label="Tìm kiếm khách hàng" aria-autocomplete="list" />
+                ${this.#options.allowCreateNew ? `<button class="btn btn-outline-secondary" type="button" data-open-quick-customer data-bs-toggle="tooltip" title="Thêm khách hàng mới">
+                    <i class="bi bi-plus"></i>
+                    <span class="visually-hidden">Thêm mới</span>
+                </button>` : ''}
+            </div>
         </div>
         <div class="list-group list-group-flush position-absolute w-100 shadow-lg mt-1 customerSuggestion" style="z-index: 1050; display: none; max-height: 300px; overflow-y: auto;" role="listbox"></div>
         <div class="alert alert-primary d-none border-0 rounded-3 d-flex align-items-center mb-0 selectedCustomerInfo" role="status">

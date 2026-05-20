@@ -21,6 +21,7 @@ public sealed class CreateProductHandler(
             Name = request.Name,
             ShortDesc = request.ShortDesc,
             UnitMeasurementId = request.UnitMeasurementId,
+            UnitPrice = request.UnitPrice ?? 0,
             Categories = request.CategoryId.HasValue
                 ? [new ProductCategoryAppDto(request.CategoryId.Value, request.DisplayOrder)]
                 : [],
@@ -80,7 +81,8 @@ public sealed class CreateProductHandler(
         return new CreateProductResultModel
         {
             Success = true,
-            ErrorMessage = null
+            ErrorMessage = null,
+            CreatedId = result.CreatedId ?? Guid.Empty
         };
     }
 }

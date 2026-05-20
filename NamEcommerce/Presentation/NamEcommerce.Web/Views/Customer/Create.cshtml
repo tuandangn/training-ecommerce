@@ -24,7 +24,10 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label asp-for="FullName" class="form-label"></label>
-                    <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên đầy đủ" autofocus />
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person text-muted"></i></span>
+                        <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên đầy đủ" autofocus />
+                    </div>
                     <span asp-validation-for="FullName" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
@@ -37,7 +40,10 @@
                 </div>
                 <div class="col-12">
                     <label asp-for="Address" class="form-label"></label>
-                    <textarea asp-for="Address" class="form-control" rows="2" placeholder="Địa chỉ thường trú"></textarea>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-geo-alt text-muted"></i></span>
+                        <input asp-for="Address" class="form-control" placeholder="Địa chỉ thường trú"/>
+                    </div>
                     <span asp-validation-for="Address" class="text-danger small"></span>
                 </div>
                 <div class="col-12">

@@ -81,6 +81,8 @@ public sealed class ProductAppService : IProductAppService
             Name = dto.Name,
             ShortDesc = dto.ShortDesc,
             UnitMeasurementId = dto.UnitMeasurementId,
+            CostPrice = dto.CostPrice,
+            UnitPrice = dto.UnitPrice,
             Categories = dto.Categories.Select(item => new ProductCategoryDto(item.CategoryId, item.DisplayOrder)),
             Vendors = dto.Vendors.Select(item => new ProductVendorDto(item.VendorId, item.DisplayOrder)),
             Pictures = pictureId.HasValue ? [pictureId.Value] : []

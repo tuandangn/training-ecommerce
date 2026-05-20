@@ -32,9 +32,16 @@ public sealed record ProductAppDto(Guid Id) : BaseProductAppDto
 public sealed record CreateProductAppDto : BaseProductAppDto
 {
     public FileInfoAppDto? ImageFile { get; set; }
+    public decimal CostPrice { get; set; }
+    public decimal UnitPrice { get; set; }
 
     public override (bool valid, string? errorMessage) Validate()
     {
+        if (CostPrice < 0)
+            return (false, "Error.ProductCostPriceCannotBeNegative");
+        if (UnitPrice < 0)
+            return (false, "Error.ProductUnitPriceCannotBeNegative");
+
         return base.Validate();
     }
 }

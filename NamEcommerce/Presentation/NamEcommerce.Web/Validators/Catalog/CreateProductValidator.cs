@@ -15,5 +15,9 @@ public sealed class CreateProductValidator : AbstractValidator<CreateProductMode
 
         RuleFor(m => m.ShortDesc)
             .MaximumLength(800).WithMessage(m => localizer["Error.MaxLength", localizer["Label.ShortDesc"], 800]);
+
+        RuleFor(m => m.UnitPrice)
+            .GreaterThanOrEqualTo(0).When(m => m.UnitPrice.HasValue)
+            .WithMessage(m => localizer["Error.ProductUnitPriceCannotBeNegative"]);
     }
 }
