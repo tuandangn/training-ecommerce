@@ -1,9 +1,11 @@
+using System.Text.Json;
 using NamEcommerce.Application.Contracts.CustomerPortal;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.Dtos.CustomerPortal;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Dtos.Returns;
+using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.Returns;
 using NamEcommerce.Domain.Entities.CustomerPortal;
@@ -24,12 +26,15 @@ public sealed class CustomerPortalAdminAppService(
     ICustomerPortalManager customerPortalManager,
     ICustomerDebtAppService customerDebtAppService,
     IOrderAppService orderAppService,
+    IEnumerable<ICustomerPortalNotificationSender> notificationSenders,
+    IPictureAppService pictureAppService,
     ICustomerReturnAppService customerReturnAppService,
     ICurrentUserAccessor currentUserAccessor,
     IEntityDataReader<CustomerPortalAccount> accountReader,
     IEntityDataReader<CustomerSecurityEvent> securityEventReader,
     IEntityDataReader<CustomerOrderRequest> orderRequestReader,
     IEntityDataReader<CustomerReturnRequest> returnRequestReader,
+    IEntityDataReader<CustomerReturnRequestItemPicture> returnRequestItemPictureReader,
     IEntityDataReader<CustomerPaymentIntent> paymentIntentReader,
     IEntityDataReader<Customer> customerReader,
     IEntityDataReader<DeliveryNote> deliveryNoteReader) : ICustomerPortalAdminAppService
@@ -147,14 +152,25 @@ public sealed class CustomerPortalAdminAppService(
         return MapOrderRequest(request, customer);
     }
 
-    public async Task<CustomerActionResultAppDto> ApproveOrderRequestAsync(Guid id, string? adminNote)
+    public async Task<CustomerActionResultAppDto> ApproveOrderRequestAsync(Guid id, IReadOnlyDictionary<Guid, decimal> itemPrices, string? adminNote)
     {
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
         if (currentUser is null)
             return CustomerActionResultAppDto.Fail("Không xác định được người duyệt.");
 
-        await customerPortalManager.ApproveOrderRequestAsync(id, currentUser.Id, adminNote, DateTime.UtcNow).ConfigureAwait(false);
-        return CustomerActionResultAppDto.Ok("Đã duyệt yêu cầu đặt hàng.");
+        var request = await customerPortalManager.GetOrderRequestByIdAsync(id).ConfigureAwait(false);
+        if (request is null)
+            return CustomerActionResultAppDto.Fail("Không tìm thấy yêu cầu đặt hàng.");
+        if (request.Status is not CustomerOrderRequestStatus.PendingApproval)
+            return CustomerActionResultAppDto.Fail("Chỉ duyệt được yêu cầu đang chờ duyệt.");
+        if (request.Items.Any(item => !itemPrices.TryGetValue(item.Id, out var unitPrice) || unitPrice <= 0))
+            return CustomerActionResultAppDto.Fail("Vui lòng nhập đơn giá lớn hơn 0 cho tất cả hàng hóa trước khi duyệt.");
+
+        await customerPortalManager.ApproveOrderRequestAsync(id, currentUser.Id, itemPrices, adminNote, DateTime.UtcNow).ConfigureAwait(false);
+        var approvedRequest = await customerPortalManager.GetOrderRequestByIdAsync(id).ConfigureAwait(false);
+        await NotifyOrderRequestApprovedAsync(approvedRequest ?? request).ConfigureAwait(false);
+
+        return CustomerActionResultAppDto.Ok("Đã duyệt và mock thông báo cho khách hàng.");
     }
 
     public async Task<CustomerActionResultAppDto> RejectOrderRequestAsync(Guid id, string? adminNote)
@@ -175,6 +191,8 @@ public sealed class CustomerPortalAdminAppService(
 
         if (request.Status is not CustomerOrderRequestStatus.Approved)
             return CustomerPortalConversionResultAppDto.Fail("Chỉ chuyển được yêu cầu đã duyệt.");
+        if (request.Items.Any(item => item.UnitPriceSnapshot <= 0))
+            return CustomerPortalConversionResultAppDto.Fail("Yêu cầu đặt hàng chưa được báo giá đầy đủ.");
 
         var createDto = new CreateOrderAppDto
         {
@@ -228,7 +246,9 @@ public sealed class CustomerPortalAdminAppService(
 
         var customer = await customerReader.GetByIdAsync(request.CustomerId).ConfigureAwait(false);
         var deliveryNote = await deliveryNoteReader.GetByIdAsync(request.DeliveryNoteId).ConfigureAwait(false);
-        return MapReturnRequest(request, customer, deliveryNote);
+        var mapped = MapReturnRequest(request, customer, deliveryNote);
+        await PopulateReturnEvidencePicturesAsync(mapped).ConfigureAwait(false);
+        return mapped;
     }
 
     public async Task<CustomerActionResultAppDto> AcceptReturnRequestAsync(Guid id, string? adminNote)
@@ -441,9 +461,11 @@ public sealed class CustomerPortalAdminAppService(
                 ProductName = item.ProductName,
                 Quantity = item.Quantity,
                 UnitPriceSnapshot = item.UnitPriceSnapshot,
-                SubTotal = item.SubTotal
+                SubTotal = item.SubTotal,
+                RequiresPricing = item.UnitPriceSnapshot <= 0
             }).ToList(),
-            TotalAmount = request.Items.Sum(item => item.SubTotal)
+            TotalAmount = request.Items.Sum(item => item.SubTotal),
+            RequiresPricing = request.Items.Any(item => item.UnitPriceSnapshot <= 0)
         };
 
     private static CustomerPortalReturnRequestAdminAppDto MapReturnRequest(CustomerReturnRequest request, Customer? customer, DeliveryNote? deliveryNote)
@@ -471,6 +493,37 @@ public sealed class CustomerPortalAdminAppService(
                 Reason = item.Reason
             }).ToList()
         };
+
+    private async Task PopulateReturnEvidencePicturesAsync(CustomerPortalReturnRequestAdminAppDto request)
+    {
+        var itemIds = request.Items.Select(item => item.Id).ToList();
+        if (itemIds.Count == 0)
+            return;
+
+        var pictures = returnRequestItemPictureReader.DataSource
+            .Where(picture => itemIds.Contains(picture.CustomerReturnRequestItemId))
+            .OrderBy(picture => picture.CreatedOnUtc)
+            .ToList()
+            .GroupBy(picture => picture.CustomerReturnRequestItemId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+
+        foreach (var item in request.Items)
+        {
+            if (!pictures.TryGetValue(item.Id, out var itemPictures))
+                continue;
+
+            foreach (var itemPicture in itemPictures)
+            {
+                var picture = await pictureAppService.GetBase64PictureByIdAsync(itemPicture.PictureId).ConfigureAwait(false);
+                item.EvidencePictures.Add(new CustomerPortalReturnRequestEvidencePictureAdminAppDto
+                {
+                    PictureId = itemPicture.PictureId,
+                    PictureUrl = picture?.Base64Value,
+                    FileName = picture?.FileName
+                });
+            }
+        }
+    }
 
     private async Task<CustomerPortalPaymentIntentAdminAppDto> MapPaymentIntentAsync(CustomerPaymentIntent intent, Customer? customer)
     {
@@ -520,6 +573,51 @@ public sealed class CustomerPortalAdminAppService(
             note += $" Ghi chú duyệt: {request.AdminNote}";
 
         return note;
+    }
+
+    private async Task NotifyOrderRequestApprovedAsync(CustomerOrderRequestDto request)
+    {
+        var customer = await customerReader.GetByIdAsync(request.CustomerId).ConfigureAwait(false);
+        if (customer is null)
+            return;
+
+        var subject = $"Yêu cầu đặt hàng {request.Code} đã được duyệt";
+        var message = $"Yêu cầu đặt hàng {request.Code} đã được duyệt. Vui lòng vào Customer Portal để xem giá và xác nhận tạo đơn.";
+        var smsSent = await SendNotificationAsync(CustomerOtpChannel.Sms, customer.PhoneNumber, null, message).ConfigureAwait(false);
+        var emailSent = await SendNotificationAsync(CustomerOtpChannel.Email, customer.Email, subject, message).ConfigureAwait(false);
+
+        await securityManager.RecordSecurityEventAsync(new CreateCustomerSecurityEventDto
+        {
+            CustomerId = request.CustomerId,
+            EventType = "OrderRequestApprovedNotification",
+            Outcome = smsSent || emailSent ? CustomerPortalSecurityEventOutcome.Succeeded : CustomerPortalSecurityEventOutcome.Failed,
+            MetadataJson = JsonSerializer.Serialize(new
+            {
+                orderRequestId = request.Id,
+                request.Code,
+                smsSent,
+                emailSent
+            })
+        }).ConfigureAwait(false);
+    }
+
+    private async Task<bool> SendNotificationAsync(CustomerOtpChannel channel, string? destination, string? subject, string message)
+    {
+        if (string.IsNullOrWhiteSpace(destination))
+            return false;
+
+        var sender = notificationSenders.FirstOrDefault(sender => sender.Channel == (int)channel);
+        if (sender is null)
+            return false;
+
+        var result = await sender.SendAsync(new CustomerPortalNotificationSendAppDto
+        {
+            Channel = (int)channel,
+            Destination = destination,
+            Subject = subject,
+            Message = message
+        }).ConfigureAwait(false);
+        return result.Success;
     }
 
     private static string BuildConvertedReturnNote(CustomerReturnRequestDto request, string? adminNote)

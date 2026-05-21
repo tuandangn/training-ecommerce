@@ -30,12 +30,22 @@ public sealed record CustomerReturnRequest : AppAggregateEntity
     public Guid? ConvertedCustomerReturnId { get; private set; }
     public IReadOnlyCollection<CustomerReturnRequestItem> Items => _items.AsReadOnly();
 
-    internal void AddItem(Guid deliveryNoteItemId, Guid productId, string productName, decimal requestedQuantity, string? reason)
+    internal void AddItem(
+        Guid deliveryNoteItemId,
+        Guid productId,
+        string productName,
+        decimal requestedQuantity,
+        string? reason,
+        IEnumerable<Guid>? evidencePictureIds = null)
     {
         if (requestedQuantity <= 0)
             throw new ArgumentOutOfRangeException(nameof(requestedQuantity));
 
-        _items.Add(new CustomerReturnRequestItem(Id, deliveryNoteItemId, productId, productName, requestedQuantity, reason));
+        var item = new CustomerReturnRequestItem(Id, deliveryNoteItemId, productId, productName, requestedQuantity, reason);
+        foreach (var pictureId in evidencePictureIds ?? [])
+            item.AddEvidencePicture(pictureId);
+
+        _items.Add(item);
     }
 
     internal void Accept(Guid reviewedByUserId, string? adminNote, DateTime nowUtc)

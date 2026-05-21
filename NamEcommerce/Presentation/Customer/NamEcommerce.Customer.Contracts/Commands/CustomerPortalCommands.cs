@@ -18,6 +18,8 @@ public sealed record CreateCustomerOrderRequestCommand(
 
 public sealed record CreateCustomerOrderRequestItemCommand(Guid ProductId, decimal Quantity);
 
+public sealed record ConfirmCustomerOrderRequestCommand(Guid OrderRequestId) : IRequest<CustomerPortalConversionResultModel>;
+
 public sealed record ConfirmCustomerDeliveryNoteCommand(Guid DeliveryNoteId, string? ReceiverName, string? Note) : IRequest<CustomerActionResultModel>;
 public sealed record CreateCustomerDeliveryFeedbackCommand(Guid DeliveryNoteId, int? Rating, string? Message) : IRequest<CustomerActionResultModel>;
 
@@ -26,7 +28,13 @@ public sealed record CreateCustomerReturnRequestCommand(
     string? Reason,
     IList<CreateCustomerReturnRequestItemCommand> Items) : IRequest<CustomerReturnRequestModel>;
 
-public sealed record CreateCustomerReturnRequestItemCommand(Guid DeliveryNoteItemId, decimal RequestedQuantity, string? Reason);
+public sealed record CreateCustomerReturnRequestItemCommand(
+    Guid DeliveryNoteItemId,
+    decimal RequestedQuantity,
+    string? Reason,
+    IList<CreateCustomerReturnRequestPictureCommand>? EvidencePictures = null);
+
+public sealed record CreateCustomerReturnRequestPictureCommand(string FileName, string MimeType, string Base64Data);
 
 public sealed record CreateCustomerPaymentIntentCommand(Guid? CustomerDebtId, decimal Amount) : IRequest<CustomerPaymentIntentModel?>;
 public sealed record CompleteMockCustomerPaymentCommand(Guid PaymentIntentId, bool Success) : IRequest<CustomerPaymentIntentModel?>;

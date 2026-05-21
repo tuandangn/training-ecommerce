@@ -87,11 +87,12 @@ public sealed class CustomerPortalManager(
         return Task.FromResult<IReadOnlyCollection<CustomerOrderRequestDto>>(requests);
     }
 
-    public async Task ApproveOrderRequestAsync(Guid id, Guid reviewedByUserId, string? adminNote, DateTime nowUtc)
+    public async Task ApproveOrderRequestAsync(Guid id, Guid reviewedByUserId, IReadOnlyDictionary<Guid, decimal> itemPrices, string? adminNote, DateTime nowUtc)
     {
         var request = await orderRequestRepository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new NamEcommerceDomainException("Error.CustomerPortal.OrderRequestNotFound", id);
 
+        request.UpdateItemPrices(itemPrices);
         request.Approve(reviewedByUserId, adminNote, nowUtc);
         await orderRequestRepository.UpdateAsync(request).ConfigureAwait(false);
     }
@@ -120,7 +121,13 @@ public sealed class CustomerPortalManager(
 
         var request = new CustomerReturnRequest(dto.CustomerId, dto.DeliveryNoteId, dto.Reason);
         foreach (var item in dto.Items)
-            request.AddItem(item.DeliveryNoteItemId, item.ProductId, item.ProductName, item.RequestedQuantity, item.Reason);
+            request.AddItem(
+                item.DeliveryNoteItemId,
+                item.ProductId,
+                item.ProductName,
+                item.RequestedQuantity,
+                item.Reason,
+                item.EvidencePictureIds);
 
         var inserted = await returnRequestRepository.InsertAsync(request).ConfigureAwait(false);
         return MapToDto(inserted);
@@ -331,7 +338,16 @@ public sealed class CustomerPortalManager(
             ProductId = item.ProductId,
             ProductName = item.ProductName,
             RequestedQuantity = item.RequestedQuantity,
-            Reason = item.Reason
+            Reason = item.Reason,
+            EvidencePictures = item.EvidencePictures.Select(MapToDto).ToList()
+        };
+
+    private static CustomerReturnRequestItemPictureDto MapToDto(CustomerReturnRequestItemPicture picture)
+        => new(picture.Id)
+        {
+            CustomerReturnRequestItemId = picture.CustomerReturnRequestItemId,
+            PictureId = picture.PictureId,
+            CreatedOnUtc = picture.CreatedOnUtc
         };
 
     private static CustomerPaymentIntentDto MapToDto(CustomerPaymentIntent intent)

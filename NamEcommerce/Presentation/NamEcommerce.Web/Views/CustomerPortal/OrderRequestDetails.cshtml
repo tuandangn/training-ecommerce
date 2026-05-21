@@ -1,10 +1,12 @@
 @using NamEcommerce.Application.Contracts.Dtos.CustomerPortal
 @using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@using System.Globalization
 @model CustomerPortalOrderRequestAdminAppDto
 @{
     ViewData[ViewConstants.PageTitle] = $"Yêu cầu đặt hàng {Model.Code}";
     var status = (CustomerOrderRequestStatus)Model.Status;
     var returnUrl = Context.Request.Path.ToString() + Context.Request.QueryString.ToString();
+    var approveFormId = "approveOrderRequestForm";
 }
 
 <div class="page-header">
@@ -41,7 +43,28 @@
                         <tr>
                             <td class="ps-4 fw-medium">@item.ProductName</td>
                             <td class="text-end">@item.Quantity</td>
-                            <td class="text-end">@item.UnitPriceSnapshot.ToString(ViewConstants.CurrencyDisplayFormat)</td>
+                            <td class="text-end">
+                                @if (status == CustomerOrderRequestStatus.PendingApproval)
+                                {
+                                    <input type="hidden" name="itemIds" value="@item.Id" form="@approveFormId" />
+                                    <input
+                                        type="number"
+                                        name="unitPrices"
+                                        value="@item.UnitPriceSnapshot.ToString("0.##", CultureInfo.InvariantCulture)"
+                                        min="0.01"
+                                        step="1000"
+                                        class="form-control form-control-sm text-end"
+                                        form="@approveFormId" />
+                                    @if (item.RequiresPricing)
+                                    {
+                                        <div class="small text-danger mt-1">Cần định giá</div>
+                                    }
+                                }
+                                else
+                                {
+                                    @item.UnitPriceSnapshot.ToString(ViewConstants.CurrencyDisplayFormat)
+                                }
+                            </td>
                             <td class="text-end pe-4 fw-semibold">@item.SubTotal.ToString(ViewConstants.CurrencyDisplayFormat)</td>
                         </tr>
                     }
@@ -76,10 +99,16 @@
         {
             <div class="content-card p-4">
                 <h6 class="fw-bold mb-3">Duyệt yêu cầu</h6>
-                <form asp-action="ApproveOrderRequest" method="post" class="mb-3">
+                @if (Model.RequiresPricing)
+                {
+                    <div class="alert alert-warning border-0 small">
+                        Có hàng hóa chưa có giá. Vui lòng nhập đủ đơn giá trước khi duyệt và thông báo khách.
+                    </div>
+                }
+                <form id="@approveFormId" asp-action="ApproveOrderRequest" method="post" class="mb-3">
                     <input type="hidden" name="id" value="@Model.Id" />
                     <textarea name="adminNote" class="form-control mb-2" rows="2" placeholder="Ghi chú nội bộ"></textarea>
-                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2-circle me-1"></i>Duyệt</button>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2-circle me-1"></i>Duyệt và thông báo khách</button>
                 </form>
                 <form asp-action="RejectOrderRequest" method="post">
                     <input type="hidden" name="id" value="@Model.Id" />
@@ -93,7 +122,7 @@
             <div class="content-card p-4">
                 <h6 class="fw-bold mb-3">Tạo đơn nội bộ</h6>
                 <div class="alert alert-info border-0 small">
-                    Hệ thống sẽ tạo đơn hàng với đúng sản phẩm, số lượng và đơn giá snapshot từ yêu cầu portal.
+                    Khách có thể xác nhận báo giá trên portal để tạo đơn. Admin vẫn có thể tạo đơn nội bộ nếu đã xác nhận qua kênh khác.
                 </div>
                 <form asp-action="ConvertOrderRequest" method="post">
                     <input type="hidden" name="id" value="@Model.Id" />

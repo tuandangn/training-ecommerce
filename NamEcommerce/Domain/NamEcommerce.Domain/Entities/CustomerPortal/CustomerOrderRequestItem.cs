@@ -29,4 +29,12 @@ public sealed record CustomerOrderRequestItem : AppAggregateEntity
     public decimal Quantity { get; private set; }
     public decimal UnitPriceSnapshot { get; private set; }
     public decimal SubTotal => Quantity * UnitPriceSnapshot;
+
+    internal void UpdateUnitPriceSnapshot(decimal unitPriceSnapshot)
+    {
+        if (unitPriceSnapshot <= 0)
+            throw new ArgumentOutOfRangeException(nameof(unitPriceSnapshot));
+
+        UnitPriceSnapshot = unitPriceSnapshot;
+    }
 }

@@ -223,6 +223,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
     services.AddScoped<ICustomerPortalAdminAppService, CustomerPortalAdminAppService>();
     services.AddScoped<ICustomerPortalDeliveryTokenAppService, CustomerPortalDeliveryTokenAppService>();
+    services.AddScoped<ICustomerPortalNotificationSender, MockSmsCustomerPortalNotificationSender>();
+    services.AddScoped<ICustomerPortalNotificationSender, MockEmailCustomerPortalNotificationSender>();
     services.AddScoped<IVendorDebtAppService, VendorDebtAppService>();
     services.AddScoped<IGoodsReceiptAppService, GoodsReceiptAppService>();
     services.AddScoped<ICustomerReturnAppService, CustomerReturnAppService>();

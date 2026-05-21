@@ -5,14 +5,24 @@ import type { ActionResult, DeliveryNoteDetails, DeliveryNoteItem } from "../api
 import { deliveryNoteStatusText, money, shortDate } from "../app/format";
 
 type ActiveModal = "received" | "return" | null;
+type ReturnPictureDraft = {
+  fileName: string;
+  mimeType: string;
+  base64Data: string;
+  previewUrl: string;
+};
 
 const DELIVERY_CONFIRMATION_CONFIRMED = 2;
+const MAX_RETURN_PICTURES_PER_ITEM = 3;
+const MAX_RETURN_PICTURE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_RETURN_PICTURE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export function DeliveryNoteDetailsPage({ id }: { id: string }) {
   const [note, setNote] = useState<DeliveryNoteDetails | null>(null);
   const [message, setMessage] = useState("");
   const [returnReason, setReturnReason] = useState("");
   const [returnQuantities, setReturnQuantities] = useState<Record<string, string>>({});
+  const [returnPictures, setReturnPictures] = useState<Record<string, ReturnPictureDraft[]>>({});
   const [returnMessage, setReturnMessage] = useState("");
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -32,6 +42,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
     setReturnReason("");
     setReturnMessage("");
     setReturnQuantities(Object.fromEntries(note.items.map((item) => [item.id, "0"])));
+    setReturnPictures({});
     setActiveModal("return");
   }
 
@@ -64,6 +75,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
         deliveryNoteItemId: item.id,
         requestedQuantity: parseQuantity(returnQuantities[item.id]),
         reason: returnReason,
+        evidencePictures: returnPictures[item.id] ?? [],
         maxQuantity: item.quantity,
       }))
       .filter((item) => item.requestedQuantity > 0);
@@ -87,10 +99,15 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
         body: JSON.stringify({
           deliveryNoteId: note.id,
           reason: returnReason,
-          items: items.map(({ deliveryNoteItemId, requestedQuantity, reason }) => ({
+          items: items.map(({ deliveryNoteItemId, requestedQuantity, reason, evidencePictures }) => ({
             deliveryNoteItemId,
             requestedQuantity,
             reason,
+            evidencePictures: evidencePictures.map((picture) => ({
+              fileName: picture.fileName,
+              mimeType: picture.mimeType,
+              base64Data: picture.base64Data,
+            })),
           })),
         }),
       });
@@ -101,6 +118,37 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function addReturnPictures(itemId: string, files: FileList | null) {
+    if (!files || files.length === 0) return;
+
+    const existing = returnPictures[itemId] ?? [];
+    const selected = Array.from(files);
+    if (existing.length + selected.length > MAX_RETURN_PICTURES_PER_ITEM) {
+      setReturnMessage(`Mỗi dòng hàng chỉ được gửi tối đa ${MAX_RETURN_PICTURES_PER_ITEM} ảnh.`);
+      return;
+    }
+
+    const invalidFile = selected.find((file) => !ALLOWED_RETURN_PICTURE_TYPES.has(file.type) || file.size > MAX_RETURN_PICTURE_BYTES);
+    if (invalidFile) {
+      setReturnMessage("Ảnh hiện trạng chỉ nhận JPG, PNG, WEBP và tối đa 5MB mỗi ảnh.");
+      return;
+    }
+
+    const drafts = await Promise.all(selected.map(readReturnPictureDraft));
+    setReturnPictures((current) => ({
+      ...current,
+      [itemId]: [...(current[itemId] ?? []), ...drafts],
+    }));
+    setReturnMessage("");
+  }
+
+  function removeReturnPicture(itemId: string, index: number) {
+    setReturnPictures((current) => ({
+      ...current,
+      [itemId]: (current[itemId] ?? []).filter((_, pictureIndex) => pictureIndex !== index),
+    }));
   }
 
   if (!note) return <div>Đang tải...</div>;
@@ -187,12 +235,15 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
                     key={item.id}
                     item={item}
                     value={returnQuantities[item.id] ?? "0"}
+                    pictures={returnPictures[item.id] ?? []}
                     onChange={(value) =>
                       setReturnQuantities((current) => ({
                         ...current,
                         [item.id]: value,
                       }))
                     }
+                    onPicturesChange={(files) => void addReturnPictures(item.id, files)}
+                    onRemovePicture={(index) => removeReturnPicture(item.id, index)}
                   />
                 ))}
               </tbody>
@@ -219,29 +270,66 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
 function ReturnItemRow({
   item,
   value,
+  pictures,
   onChange,
+  onPicturesChange,
+  onRemovePicture,
 }: {
   item: DeliveryNoteItem;
   value: string;
+  pictures: ReturnPictureDraft[];
   onChange: (value: string) => void;
+  onPicturesChange: (files: FileList | null) => void;
+  onRemovePicture: (index: number) => void;
 }) {
   return (
-    <tr>
-      <td>{item.productName}</td>
-      <td>{item.quantity}</td>
-      <td>
-        <input
-          className="quantity-input"
-          inputMode="decimal"
-          min="0"
-          max={item.quantity}
-          step="0.01"
-          type="number"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      </td>
-    </tr>
+    <>
+      <tr>
+        <td>{item.productName}</td>
+        <td>{item.quantity}</td>
+        <td>
+          <input
+            className="quantity-input"
+            inputMode="decimal"
+            min="0"
+            max={item.quantity}
+            step="0.01"
+            type="number"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        </td>
+      </tr>
+      <tr>
+        <td colSpan={3}>
+          <div className="return-evidence">
+            <label className="button">
+              Chụp/đính kèm ảnh
+              <input
+                accept="image/jpeg,image/png,image/webp"
+                capture="environment"
+                multiple
+                type="file"
+                onChange={(event) => {
+                  onPicturesChange(event.target.files);
+                  event.currentTarget.value = "";
+                }}
+              />
+            </label>
+            <div className="return-evidence-list">
+              {pictures.map((picture, index) => (
+                <div className="return-evidence-thumb" key={`${picture.fileName}-${index}`}>
+                  <img src={picture.previewUrl} alt={picture.fileName} />
+                  <button className="button" type="button" onClick={() => onRemovePicture(index)}>
+                    Xóa
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </td>
+      </tr>
+    </>
   );
 }
 
@@ -266,4 +354,22 @@ function parseQuantity(value: string | undefined) {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function readReturnPictureDraft(file: File) {
+  return new Promise<ReturnPictureDraft>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const previewUrl = String(reader.result ?? "");
+      const commaIndex = previewUrl.indexOf(",");
+      resolve({
+        fileName: file.name,
+        mimeType: file.type,
+        base64Data: commaIndex >= 0 ? previewUrl.slice(commaIndex + 1) : previewUrl,
+        previewUrl,
+      });
+    };
+    reader.readAsDataURL(file);
+  });
 }

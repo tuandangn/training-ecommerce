@@ -69,6 +69,45 @@ export type OrderItem = {
   subTotal: number;
 };
 
+export type OrderRequestList = {
+  items: OrderRequestSummary[];
+};
+
+export type OrderRequestSummary = {
+  id: string;
+  code: string;
+  status: number;
+  totalAmount?: number | null;
+  createdOn: string;
+  expectedShippingDate?: string | null;
+  reviewedOn?: string | null;
+  convertedOrderId?: string | null;
+  canConfirm: boolean;
+};
+
+export type OrderRequestDetails = OrderRequestSummary & {
+  shippingAddress?: string | null;
+  note?: string | null;
+  adminNote?: string | null;
+  items: OrderRequestItem[];
+};
+
+export type OrderRequestItem = {
+  id: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice?: number | null;
+  subTotal?: number | null;
+  isPriced: boolean;
+};
+
+export type ConversionResult = {
+  success: boolean;
+  message?: string | null;
+  createdId?: string | null;
+};
+
 export type ProductList = {
   items: ProductPickerItem[];
   hasMore: boolean;
@@ -81,7 +120,8 @@ export type ProductPickerItem = {
   categoryId?: string | null;
   categoryName?: string | null;
   pictureUrl?: string | null;
-  unitPrice: number;
+  unitPrice?: number | null;
+  hasPurchased: boolean;
 };
 
 export type ProductCategoryList = {

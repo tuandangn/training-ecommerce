@@ -46,6 +46,9 @@ public sealed record CustomerOrderRequest : AppAggregateEntity
     internal void Approve(Guid reviewedByUserId, string? adminNote, DateTime nowUtc)
     {
         EnsurePending();
+        if (_items.Count == 0 || _items.Any(item => item.UnitPriceSnapshot <= 0))
+            throw new InvalidOperationException("Order request contains unpriced items.");
+
         Status = CustomerOrderRequestStatus.Approved;
         ReviewedByUserId = reviewedByUserId;
         AdminNote = adminNote;
@@ -76,6 +79,21 @@ public sealed record CustomerOrderRequest : AppAggregateEntity
         Status = CustomerOrderRequestStatus.ConvertedToOrder;
         ConvertedOrderId = orderId;
         ReviewedOnUtc = nowUtc;
+    }
+
+    internal void UpdateItemPrices(IReadOnlyDictionary<Guid, decimal> itemPrices)
+    {
+        EnsurePending();
+        if (itemPrices.Count != _items.Count)
+            throw new InvalidOperationException("Order request pricing is incomplete.");
+
+        foreach (var item in _items)
+        {
+            if (!itemPrices.TryGetValue(item.Id, out var unitPrice))
+                throw new InvalidOperationException("Order request pricing is incomplete.");
+
+            item.UpdateUnitPriceSnapshot(unitPrice);
+        }
     }
 
     private void EnsurePending()

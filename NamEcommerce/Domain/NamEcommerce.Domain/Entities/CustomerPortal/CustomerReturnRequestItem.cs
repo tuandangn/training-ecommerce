@@ -5,6 +5,8 @@ namespace NamEcommerce.Domain.Entities.CustomerPortal;
 [Serializable]
 public sealed record CustomerReturnRequestItem : AppAggregateEntity
 {
+    private readonly List<CustomerReturnRequestItemPicture> _evidencePictures = [];
+
     private CustomerReturnRequestItem() : base(Guid.NewGuid()) { }
 
     internal CustomerReturnRequestItem(
@@ -31,4 +33,8 @@ public sealed record CustomerReturnRequestItem : AppAggregateEntity
     public string ProductName { get; private set; } = string.Empty;
     public decimal RequestedQuantity { get; private set; }
     public string? Reason { get; private set; }
+    public IReadOnlyCollection<CustomerReturnRequestItemPicture> EvidencePictures => _evidencePictures.AsReadOnly();
+
+    internal void AddEvidencePicture(Guid pictureId)
+        => _evidencePictures.Add(new CustomerReturnRequestItemPicture(Id, pictureId));
 }

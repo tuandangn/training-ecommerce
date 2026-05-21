@@ -14,7 +14,7 @@ public interface ICustomerPortalAdminAppService
 
     Task<IReadOnlyCollection<CustomerPortalOrderRequestAdminAppDto>> GetOrderRequestsAsync(int? status = null);
     Task<CustomerPortalOrderRequestAdminAppDto?> GetOrderRequestAsync(Guid id);
-    Task<CustomerActionResultAppDto> ApproveOrderRequestAsync(Guid id, string? adminNote);
+    Task<CustomerActionResultAppDto> ApproveOrderRequestAsync(Guid id, IReadOnlyDictionary<Guid, decimal> itemPrices, string? adminNote);
     Task<CustomerActionResultAppDto> RejectOrderRequestAsync(Guid id, string? adminNote);
     Task<CustomerPortalConversionResultAppDto> ConvertOrderRequestAsync(Guid id);
 

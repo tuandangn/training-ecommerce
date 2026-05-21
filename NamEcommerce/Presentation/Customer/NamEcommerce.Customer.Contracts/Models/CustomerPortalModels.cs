@@ -64,10 +64,54 @@ public sealed record CustomerOrderItemModel(Guid Id, Guid ProductId, string Prod
 public sealed record CustomerOrderRequestModel(Guid Id, string Code, int Status, DateTime CreatedOn);
 
 [Serializable]
+public sealed record CustomerOrderRequestListModel(IList<CustomerOrderRequestSummaryModel> Items);
+
+[Serializable]
+public record CustomerOrderRequestSummaryModel(
+    Guid Id,
+    string Code,
+    int Status,
+    decimal? TotalAmount,
+    DateTime CreatedOn,
+    DateTime? ExpectedShippingDate,
+    DateTime? ReviewedOn,
+    Guid? ConvertedOrderId,
+    bool CanConfirm);
+
+[Serializable]
+public sealed record CustomerOrderRequestDetailsModel(
+    Guid Id,
+    string Code,
+    int Status,
+    decimal? TotalAmount,
+    DateTime CreatedOn,
+    DateTime? ExpectedShippingDate,
+    DateTime? ReviewedOn,
+    Guid? ConvertedOrderId,
+    bool CanConfirm,
+    string? ShippingAddress,
+    string? Note,
+    string? AdminNote,
+    IList<CustomerOrderRequestItemModel> Items);
+
+[Serializable]
+public sealed record CustomerOrderRequestItemModel(
+    Guid Id,
+    Guid ProductId,
+    string ProductName,
+    decimal Quantity,
+    decimal? UnitPrice,
+    decimal? SubTotal,
+    bool IsPriced);
+
+[Serializable]
+public sealed record CustomerPortalConversionResultModel(bool Success, string? Message, Guid? CreatedId);
+
+[Serializable]
 public sealed record CustomerProductListModel(IList<CustomerProductModel> Items, bool HasMore, int PageSize);
 
 [Serializable]
-public sealed record CustomerProductModel(Guid Id, string Name, Guid? CategoryId, string? CategoryName, string? PictureUrl, decimal UnitPrice);
+public sealed record CustomerProductModel(Guid Id, string Name, Guid? CategoryId, string? CategoryName, string? PictureUrl, decimal? UnitPrice, bool HasPurchased);
 
 [Serializable]
 public sealed record CustomerProductCategoryListModel(IList<CustomerProductCategoryModel> Items);
