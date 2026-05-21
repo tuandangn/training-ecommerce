@@ -1,49 +1,46 @@
-using NamEcommerce.Application.Contracts.Report;
 using NamEcommerce.Application.Contracts.Dtos.Report;
-using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Application.Contracts.Report;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Finance;
 using NamEcommerce.Domain.Entities.Returns;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Returns;
+using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Application.Services.Report;
 
-/// <summary>
-/// Báo cáo tài chính dựa trên dòng xuất kho thực tế (DeliveryNote) thay vì đơn hàng tạo ra.
-/// <list type="bullet">
-///   <item>Doanh thu = tổng phiếu xuất (SourceType=ToCustomer, Status=Delivered) theo DeliveredOnUtc − trả hàng đã xác nhận.</item>
-///   <item>COGS = tổng CostAtDispatch × Quantity của từng DeliveryNoteItem (giá vốn snapshot tại thời điểm xuất kho).</item>
-/// </list>
-/// </summary>
 public sealed class FinancialReportAppService : IFinancialReportAppService
 {
     private readonly IEntityDataReader<DeliveryNote> _deliveryNoteReader;
     private readonly IEntityDataReader<CustomerReturn> _customerReturnReader;
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<Expense> _expenseDataReader;
+    private readonly IInventoryCostingManager _inventoryCostingManager;
 
     public FinancialReportAppService(
         IEntityDataReader<DeliveryNote> deliveryNoteReader,
         IEntityDataReader<CustomerReturn> customerReturnReader,
         IEntityDataReader<Product> productDataReader,
-        IEntityDataReader<Expense> expenseDataReader)
+        IEntityDataReader<Expense> expenseDataReader,
+        IInventoryCostingManager inventoryCostingManager)
     {
         _deliveryNoteReader = deliveryNoteReader;
         _customerReturnReader = customerReturnReader;
         _productDataReader = productDataReader;
         _expenseDataReader = expenseDataReader;
+        _inventoryCostingManager = inventoryCostingManager;
     }
 
-    public Task<ProfitLossSummaryAppDto> GetProfitLossSummaryAsync(DateTime? fromDate, DateTime? toDate)
+    public async Task<ProfitLossSummaryAppDto> GetProfitLossSummaryAsync(DateTime? fromDate, DateTime? toDate)
     {
         var fromUtc = fromDate?.ToUniversalTime();
         var toUtc = toDate.HasValue
             ? toDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime()
             : (DateTime?)null;
 
-        // ── 1. Phiếu xuất kho cho khách (ToCustomer, Delivered) ────────────────
         var dnQuery = _deliveryNoteReader.DataSource
             .Where(dn => dn.Status == DeliveryNoteStatus.Delivered
                       && dn.SourceType == DeliveryNoteSourceType.ToCustomer
@@ -55,6 +52,7 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
         var deliveredNotes = dnQuery
             .Select(dn => new
             {
+                dn.Id,
                 dn.DeliveredOnUtc,
                 dn.TotalAmount,
                 Items = dn.Items.Select(i => new
@@ -62,13 +60,11 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
                     i.ProductId,
                     i.Quantity,
                     i.UnitPrice,
-                    i.SubTotal,
-                    i.CostAtDispatch
+                    i.SubTotal
                 }).ToList()
             })
             .ToList();
 
-        // ── 2. Trả hàng khách đã xác nhận (CustomerReturn, Confirmed) ──────────
         var crQuery = _customerReturnReader.DataSource
             .Where(cr => cr.Status == CustomerReturnStatus.Confirmed
                       && cr.ConfirmedOnUtc != null);
@@ -84,24 +80,34 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
             })
             .ToList();
 
-        // ── 3. Tra cứu tên sản phẩm ────────────────────────────────────────────
         var productIds = deliveredNotes.SelectMany(dn => dn.Items).Select(i => i.ProductId).Distinct().ToList();
         var products = _productDataReader.DataSource.Where(p => productIds.Contains(p.Id)).ToList();
+        var deliveryNoteIds = deliveredNotes.Select(dn => dn.Id).ToList();
 
-        // ── 4. Tính tổng ────────────────────────────────────────────────────────
+        var cogsSummary = await _inventoryCostingManager
+            .GetCogsForReferencesAsync(InventoryCostReferenceType.SalesOrder, deliveryNoteIds)
+            .ConfigureAwait(false);
+
+        var cogsByDeliveryNote = new Dictionary<Guid, decimal>();
+        foreach (var deliveryNoteId in deliveryNoteIds)
+        {
+            var noteCogs = await _inventoryCostingManager
+                .GetCogsForReferencesAsync(InventoryCostReferenceType.SalesOrder, [deliveryNoteId])
+                .ConfigureAwait(false);
+            cogsByDeliveryNote[deliveryNoteId] = noteCogs.TotalCost;
+        }
+
         decimal grossRevenue = deliveredNotes.Sum(dn => dn.TotalAmount);
         decimal totalReturnAmt = confirmedReturns.Sum(cr => cr.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitPrice));
-        decimal totalCogs = deliveredNotes
-            .SelectMany(dn => dn.Items)
-            .Sum(i => (i.CostAtDispatch ?? 0m) * i.Quantity);
 
         var dto = new ProfitLossSummaryAppDto
         {
             TotalRevenue = grossRevenue - totalReturnAmt,
-            TotalCogs = totalCogs
+            TotalCogs = cogsSummary.TotalCost,
+            HasPendingCogs = cogsSummary.HasPendingCost,
+            HasRevaluedCogs = cogsSummary.HasRevaluedCost
         };
 
-        // ── 5. Xu hướng doanh thu theo ngày ────────────────────────────────────
         var dateDict = new Dictionary<string, RevenueByDateAppDto>();
         var productDict = new Dictionary<Guid, TopSellingProductAppDto>();
 
@@ -114,7 +120,7 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
                 dateDict[dateLabel] = dayStats;
             }
 
-            decimal dnCogs = dn.Items.Sum(i => (i.CostAtDispatch ?? 0m) * i.Quantity);
+            var dnCogs = cogsByDeliveryNote.GetValueOrDefault(dn.Id);
             dayStats.Revenue += dn.TotalAmount;
             dayStats.Profit += dn.TotalAmount - dnCogs;
 
@@ -129,12 +135,12 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
                     };
                     productDict[item.ProductId] = topProd;
                 }
+
                 topProd.QuantitySold += (int)item.Quantity;
                 topProd.Revenue += item.SubTotal;
             }
         }
 
-        // Trừ giá trị trả hàng vào ngày xác nhận (giảm doanh thu + lợi nhuận ngày đó)
         foreach (var cr in confirmedReturns)
         {
             var returnAmt = cr.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitPrice);
@@ -155,7 +161,6 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
             }
         }
 
-        // ── 6. Chi phí vận hành ────────────────────────────────────────────────
         var expensesQuery = _expenseDataReader.DataSource;
         if (fromUtc.HasValue) expensesQuery = expensesQuery.Where(e => e.IncurredDate >= fromUtc.Value);
         if (toUtc.HasValue) expensesQuery = expensesQuery.Where(e => e.IncurredDate <= toUtc.Value);
@@ -167,13 +172,17 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
         {
             var dateLabel = expense.IncurredDate.ToLocalTime().ToString("dd/MM/yyyy");
             if (dateDict.TryGetValue(dateLabel, out var dayStats))
+            {
                 dayStats.Profit -= expense.Amount;
+            }
             else
+            {
                 dateDict[dateLabel] = new RevenueByDateAppDto
                 {
                     DateLabel = dateLabel,
                     Profit = -expense.Amount
                 };
+            }
         }
 
         dto.RevenueTrend = dateDict.Values
@@ -185,6 +194,6 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
             .Take(5)
             .ToList();
 
-        return Task.FromResult(dto);
+        return dto;
     }
 }

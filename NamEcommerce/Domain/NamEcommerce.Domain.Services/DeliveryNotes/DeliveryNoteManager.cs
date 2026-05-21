@@ -28,6 +28,7 @@ public sealed class DeliveryNoteManager(
     IEntityDataReader<Order> orderReader,
     IOrderManager orderManager,
     IInventoryStockManager stockManager,
+    IInventoryCostingManager inventoryCostingManager,
     IProductReservationManager productReservationManager,
     IEntityDataReader<CustomerReturn> customerReturnReader,
     IEntityDataReader<VendorReturn> vendorReturnReader,
@@ -38,6 +39,12 @@ public sealed class DeliveryNoteManager(
         var monthPrefix = $"{DeliveryNote.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
         var count = deliveryNoteReader.SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
         return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
+    }
+
+    private async Task<decimal> GetDisplayCostAsync(Guid productId)
+    {
+        var summary = await inventoryCostingManager.GetCurrentCostSummaryAsync(productId).ConfigureAwait(false);
+        return summary.AverageCost;
     }
 
     public async Task<DeliveryNoteDto> CreateFromOrderAsync(CreateDeliveryNoteDto dto)
@@ -196,18 +203,17 @@ public sealed class DeliveryNoteManager(
             if (deliveryNote is null)
                 throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
 
-            // C3: Snapshot giá vốn bình quân TRƯỚC khi xuất kho (stock vẫn còn nguyên).
+            // Snapshot hiển thị trước khi xuất kho; COGS authoritative được ghi trong cost allocation.
             // Lưu cùng entity — DeliveryNoteDeliveredStockHandler sẽ dispatch stock sau khi event fire.
             foreach (var item in deliveryNote.Items)
             {
-                item.CostAtDispatch = await stockManager.GetAverageCostAsync(
-                    item.ProductId, deliveryNote.WarehouseId).ConfigureAwait(false);
+                item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
             }
 
             // 1. Mark DeliveryNote Delivered — raise DeliveryNoteDelivered event
             deliveryNote.MarkDelivered(dto.PictureId, dto.ReceiverName);
 
-            // Save entity (CostAtDispatch + status) → interceptor fires event → DeliveryNoteDeliveredStockHandler dispatches stock
+            // Save entity (display cost + status) → interceptor fires event → DeliveryNoteDeliveredStockHandler dispatches stock/cost.
             await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
 
             // 2. Mark related OrderItems as Delivered only when the full ordered quantity has been delivered.
@@ -251,8 +257,7 @@ public sealed class DeliveryNoteManager(
             {
                 foreach (var item in deliveryNote.Items)
                 {
-                    item.CostAtDispatch = await stockManager.GetAverageCostAsync(
-                        item.ProductId, deliveryNote.WarehouseId).ConfigureAwait(false);
+                    item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
                 }
             }
 
@@ -284,11 +289,10 @@ public sealed class DeliveryNoteManager(
         foreach (var item in dto.Items)
             deliveryNote.AddItemFromVendorReturn(item.ProductId, item.ProductName, item.Quantity, item.UnitCost);
 
-        // C3: Snapshot giá vốn bình quân TRƯỚC khi xuất kho (stock vẫn còn nguyên).
+        // Snapshot hiển thị trước khi xuất kho; COGS authoritative được ghi trong cost allocation.
         foreach (var item in deliveryNote.Items)
         {
-            item.CostAtDispatch = await stockManager.GetAverageCostAsync(
-                item.ProductId, dto.WarehouseId).ConfigureAwait(false);
+            item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
         }
 
         // Chuyển thẳng sang Delivered và raise DeliveryNoteDelivered event.
@@ -357,8 +361,7 @@ public sealed class DeliveryNoteManager(
 
         foreach (var item in deliveryNote.Items)
         {
-            item.CostAtDispatch = await stockManager.GetAverageCostAsync(
-                item.ProductId, deliveryNote.WarehouseId).ConfigureAwait(false);
+            item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
         }
 
         deliveryNote.ConfirmDirectShipDelivery(confirmedAtUtc, note);

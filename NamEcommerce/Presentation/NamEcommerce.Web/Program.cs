@@ -175,6 +175,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IWarehouseManager, WarehouseManager>();
     services.AddScoped<InventoryStockManager>();
     services.AddScoped<IInventoryStockManager>(services => services.GetRequiredService<InventoryStockManager>());
+    services.AddScoped<IInventoryCostingManager, InventoryCostingManager>();
     services.AddScoped<IProductReservationManager, ProductReservationManager>();
     services.AddScoped<IShortageQueryService, ShortageQueryService>();
     services.AddScoped<IInventoryValidator, InventoryValidator>();
@@ -204,6 +205,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IProductAppService, ProductAppService>();
     services.AddScoped<IPictureAppService, PictureAppService>();
     services.AddScoped<IInventoryAppService, InventoryAppService>();
+    services.AddScoped<IInventoryCostingAppService, InventoryCostingAppService>();
     services.AddScoped<IWarehouseAppService, WarehouseAppService>();
     services.AddScoped<IPurchaseOrderManager, PurchaseOrderManager>();
     services.AddScoped<IPurchaseOrderAllocationManager, PurchaseOrderAllocationManager>();

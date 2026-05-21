@@ -3,7 +3,7 @@ namespace NamEcommerce.Domain.Shared.Events.Returns;
 /// <summary>
 /// Phiếu trả hàng khách vừa được xác nhận (Inspecting → Confirmed). Handler subscribe event này để:
 /// <list type="number">
-///   <item><description>Tạo <c>GoodsReceipt(SourceType=FromCustomerReturn)</c> nhận lại hàng trả; UnitCost = ReturnUnitPrice của từng item.</description></item>
+///   <item><description>Tạo <c>GoodsReceipt(SourceType=FromCustomerReturn)</c> nhận lại hàng trả; inventory cost được phục hồi từ allocation gốc nếu đã có.</description></item>
 ///   <item><description>Giảm <c>CustomerDebt</c> của khách theo FIFO <c>CreatedOnUtc</c> với net amount = Σ(qty × ReturnUnitPrice) − AdditionalCost.</description></item>
 ///   <item><description>Set <c>CustomerReturn.GeneratedGoodsReceiptId</c> sau khi phiếu nhập được sinh.</description></item>
 /// </list>

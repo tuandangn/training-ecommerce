@@ -12,6 +12,7 @@ using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
@@ -43,6 +44,7 @@ public sealed class GoodsReceiptManager(
     IEntityDataReader<CustomerReturn> customerReturnReader,
     IVendorReturnManager vendorReturnManager,
     IVendorDebtManager vendorDebtManager,
+    IEntityDataReader<InventoryCostAllocation> inventoryCostAllocationReader,
     IEntityDataReader<VendorDebt> vendorDebtReader) : IGoodsReceiptManager
 {
     private Task<string> GenerateCodeAsync()
@@ -76,6 +78,9 @@ public sealed class GoodsReceiptManager(
         }
 
         goodsReceipt.MarkCreated();
+        foreach (var itemId in goodsReceipt.Items.Where(i => i.UnitCost.HasValue).Select(i => i.Id))
+            goodsReceipt.MarkItemUnitCostSet(itemId);
+
         var insertedGoodsReceipt = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
 
         return new CreateGoodsReceiptResultDto { CreatedId = insertedGoodsReceipt.Id };
@@ -314,7 +319,7 @@ public sealed class GoodsReceiptManager(
         goodsReceipt.MarkCreated();
 
         // Nếu item đã có UnitCost, cũng fire GoodsReceiptItemUnitCostSet
-        // → GoodsReceiptItemUnitCostSetHandler: cập nhật AverageCost + thử sinh VendorDebt (idempotent)
+        // → GoodsReceiptItemUnitCostSetHandler: chốt inventory cost layer + thử sinh VendorDebt (idempotent)
         if (dto.UnitCost.HasValue)
         {
             var addedItem = goodsReceipt.Items.Last();
@@ -367,7 +372,7 @@ public sealed class GoodsReceiptManager(
         // MarkCreated chạy 1 lần — handler cộng tồn cho TỪNG item + sinh VendorDebt cho cả phiếu.
         goodsReceipt.MarkCreated();
 
-        // Sau khi insert, fire MarkItemUnitCostSet cho các item đã có cost → cập nhật AverageCost.
+        // Sau khi insert, fire MarkItemUnitCostSet cho các item đã có cost để chốt inventory cost layer.
         foreach (var itemId in itemsWithCost)
             goodsReceipt.MarkItemUnitCostSet(itemId);
 
@@ -390,24 +395,11 @@ public sealed class GoodsReceiptManager(
         goodsReceipt.SetReceivedDate(DateTime.UtcNow);
         goodsReceipt.SourceType = GoodsReceiptSourceType.FromCustomerReturn;
 
-        foreach (var item in dto.Items)
+        foreach (var item in customerReturn.Items.Where(i => i.AcceptedQuantity > 0))
         {
-            // Dùng ReturnUnitPrice làm UnitCost (hàng trả về có thể khác giá gốc do hư hỏng).
-            // Fallback AverageCost nếu ReturnUnitPrice = 0 (không cung cấp).
-            decimal? unitCost;
-            if (item.ReturnUnitPrice > 0)
-            {
-                unitCost = item.ReturnUnitPrice;
-            }
-            else
-            {
-                var averageCost = await inventoryStockManager.GetAverageCostAsync(item.ProductId, dto.WarehouseId)
-                    .ConfigureAwait(false);
-                unitCost = averageCost > 0 ? averageCost : null;
-            }
-
+            var unitCost = ResolveCustomerReturnUnitCost(customerReturn.DeliveryNoteId, item);
             await goodsReceipt.AddItemAsync(
-                item.ProductId, dto.WarehouseId, item.Quantity, unitCost,
+                item.ProductId, dto.WarehouseId, item.AcceptedQuantity, unitCost,
                 productDataReader, warehouseSettings, warehouseDataReader
             ).ConfigureAwait(false);
         }
@@ -418,6 +410,25 @@ public sealed class GoodsReceiptManager(
 
         var inserted = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
         return inserted.Id;
+    }
+
+    private decimal? ResolveCustomerReturnUnitCost(Guid deliveryNoteId, CustomerReturnItem item)
+    {
+        if (!item.DeliveryNoteItemId.HasValue)
+            return null;
+
+        var allocation = inventoryCostAllocationReader.DataSource
+            .Where(a => a.OutboundReferenceType == InventoryCostReferenceType.SalesOrder
+                     && a.OutboundReferenceId == deliveryNoteId
+                     && a.OutboundReferenceItemId == item.DeliveryNoteItemId.Value
+                     && a.CostingStatus != InventoryCostingStatus.Superseded)
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .FirstOrDefault();
+
+        if (allocation is null || allocation.CostingStatus == InventoryCostingStatus.Pending)
+            return null;
+
+        return allocation.UnitCost;
     }
 
     public async Task<IList<SuggestedPurchaseOrderForGoodsReceiptDto>> GetSuggestedPurchaseOrdersAsync(Guid goodsReceiptId)

@@ -6,6 +6,7 @@ using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
@@ -27,10 +28,10 @@ public sealed class DirectShipManager(
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
     IEntityDataReader<Order> orderReader,
-    IEntityDataReader<GoodsReceipt> goodsReceiptReader,
     IEntityDataReader<Warehouse> warehouseReader,
     IDeliveryNoteManager deliveryNoteManager,
-    IInventoryStockManager stockManager) : IDirectShipManager
+    IInventoryStockManager stockManager,
+    IInventoryCostingManager inventoryCostingManager) : IDirectShipManager
 {
     public async Task MarkAllocationAsDirectShipAsync(
         Guid allocationId, string address, string? contactName, string? contactPhone, int priority,
@@ -96,13 +97,13 @@ public sealed class DirectShipManager(
 
         if (transitWarehouse.Id != receivedWarehouseId)
         {
-            await stockManager.TransferStockAsync(
+            await TransferStockWithCostAsync(
                 purchaseOrderItem.ProductId,
                 receivedWarehouseId,
                 transitWarehouse.Id,
                 receivedDelta,
-                purchaseOrderItem.UnitCost,
                 sourceGoodsReceiptId,
+                allocation.Id,
                 Guid.Empty,
                 $"Chuyển hàng giao thẳng từ phiếu nhập {sourceGoodsReceiptId}").ConfigureAwait(false);
         }
@@ -317,16 +318,13 @@ public sealed class DirectShipManager(
 
         foreach (var item in deliveryNote.Items)
         {
-            var unitCost = await ResolveReturnUnitCostAsync(deliveryNote, item.ProductId)
-                .ConfigureAwait(false);
-
-            await stockManager.TransferStockAsync(
+            await TransferStockWithCostAsync(
                 item.ProductId,
                 deliveryNote.WarehouseId,
                 returnWarehouse.Id,
                 item.Quantity,
-                unitCost,
                 deliveryNote.Id,
+                item.Id,
                 userId,
                 reason).ConfigureAwait(false);
         }
@@ -343,21 +341,56 @@ public sealed class DirectShipManager(
         return warehouse;
     }
 
-    private async Task<decimal> ResolveReturnUnitCostAsync(
-        DeliveryNote deliveryNote,
-        Guid productId)
+    private async Task TransferStockWithCostAsync(
+        Guid productId,
+        Guid fromWarehouseId,
+        Guid toWarehouseId,
+        decimal quantity,
+        Guid referenceId,
+        Guid referenceItemId,
+        Guid userId,
+        string reason)
     {
-        if (!deliveryNote.SourceGoodsReceiptId.HasValue)
-            throw new GoodsReceiptIsNotFoundException(Guid.Empty);
+        if (fromWarehouseId == toWarehouseId)
+            return;
 
-        var goodsReceipt = await goodsReceiptReader.GetByIdAsync(deliveryNote.SourceGoodsReceiptId.Value)
-            ?? throw new GoodsReceiptIsNotFoundException(deliveryNote.SourceGoodsReceiptId.Value);
+        var costSummary = await inventoryCostingManager.GetCurrentCostSummaryAsync(productId).ConfigureAwait(false);
 
-        var sourceItem = goodsReceipt.Items.FirstOrDefault(i => i.ProductId == productId && i.WarehouseId.HasValue);
-        if (sourceItem?.WarehouseId is null)
-            throw new WarehouseIsNotFoundException(Guid.Empty);
+        await stockManager.TransferStockAsync(
+            productId,
+            fromWarehouseId,
+            toWarehouseId,
+            quantity,
+            costSummary.AverageCost,
+            referenceId,
+            userId,
+            reason).ConfigureAwait(false);
 
-        return sourceItem.UnitCost ?? 0m;
+        var occurredAtUtc = DateTime.UtcNow;
+        var transferOutCost = await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
+        {
+            ProductId = productId,
+            WarehouseId = fromWarehouseId,
+            Quantity = quantity,
+            MovementType = InventoryCostMovementType.TransferOut,
+            ReferenceType = InventoryCostReferenceType.StockTransfer,
+            ReferenceId = referenceId,
+            ReferenceItemId = referenceItemId,
+            OccurredAtUtc = occurredAtUtc
+        }).ConfigureAwait(false);
+
+        await inventoryCostingManager.RegisterTransferInAsync(new RegisterInventoryTransferInCostDto
+        {
+            ProductId = productId,
+            WarehouseId = toWarehouseId,
+            Quantity = quantity,
+            UnitCost = transferOutCost.UnitCost,
+            SourceStatus = transferOutCost.Status,
+            ReferenceType = InventoryCostReferenceType.StockTransfer,
+            ReferenceId = referenceId,
+            ReferenceItemId = referenceItemId,
+            OccurredAtUtc = occurredAtUtc
+        }).ConfigureAwait(false);
     }
 
     private Dictionary<Guid, DeliveryNote> GetDirectShipDeliveryNotesByOrderItem(IReadOnlyCollection<Guid> orderItemIds)

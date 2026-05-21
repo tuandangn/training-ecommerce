@@ -5,6 +5,7 @@ using NamEcommerce.Domain.Entities.StockTransfer;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Dtos.StockTransfer;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.StockTransfer;
@@ -22,6 +23,7 @@ public sealed class StockTransferNoteManager(
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Warehouse> warehouseDataReader,
     IInventoryStockManager stockManager,
+    IInventoryCostingManager inventoryCostingManager,
     ICurrentUserAccessor currentUserAccessor) : IStockTransferNoteManager
 {
     private string GenerateCode()
@@ -78,7 +80,8 @@ public sealed class StockTransferNoteManager(
 
         foreach (var item in note.Items)
         {
-            var unitCost = await stockManager.GetAverageCostAsync(item.ProductId, note.FromWarehouseId).ConfigureAwait(false);
+            var costSummary = await inventoryCostingManager.GetCurrentCostSummaryAsync(item.ProductId).ConfigureAwait(false);
+            var unitCost = costSummary.AverageCost;
 
             var stocks = await stockManager.GetInventoryStocksForProductAsync(item.ProductId, note.FromWarehouseId).ConfigureAwait(false);
             var fromStock = stocks.FirstOrDefault(s => s.WarehouseId == note.FromWarehouseId);
@@ -95,7 +98,33 @@ public sealed class StockTransferNoteManager(
                 userId,
                 $"Phiếu chuyển kho {note.Code}").ConfigureAwait(false);
 
-            item.UnitCost = unitCost;
+            var occurredAtUtc = DateTime.UtcNow;
+            var transferOutCost = await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
+            {
+                ProductId = item.ProductId,
+                WarehouseId = note.FromWarehouseId,
+                Quantity = item.Quantity,
+                MovementType = InventoryCostMovementType.TransferOut,
+                ReferenceType = InventoryCostReferenceType.StockTransfer,
+                ReferenceId = note.Id,
+                ReferenceItemId = item.Id,
+                OccurredAtUtc = occurredAtUtc
+            }).ConfigureAwait(false);
+
+            await inventoryCostingManager.RegisterTransferInAsync(new RegisterInventoryTransferInCostDto
+            {
+                ProductId = item.ProductId,
+                WarehouseId = note.ToWarehouseId,
+                Quantity = item.Quantity,
+                UnitCost = transferOutCost.UnitCost,
+                SourceStatus = transferOutCost.Status,
+                ReferenceType = InventoryCostReferenceType.StockTransfer,
+                ReferenceId = note.Id,
+                ReferenceItemId = item.Id,
+                OccurredAtUtc = occurredAtUtc
+            }).ConfigureAwait(false);
+
+            item.UnitCost = transferOutCost.UnitCost;
         }
 
         note.Approve();

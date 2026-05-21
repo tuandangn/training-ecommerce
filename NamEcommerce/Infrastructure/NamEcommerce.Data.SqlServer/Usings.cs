@@ -10,4 +10,5 @@ global using NamEcommerce.Domain.Entities.Media;
 global using NamEcommerce.Domain.Entities.Orders;
 global using NamEcommerce.Domain.Entities.Inventory;
 global using NamEcommerce.Domain.Entities.PurchaseOrders;
+global using NamEcommerce.Domain.Shared.Enums.Inventory;
 global using static NamEcommerce.Data.SqlServer.NamEcommerceEfDataDefaults;

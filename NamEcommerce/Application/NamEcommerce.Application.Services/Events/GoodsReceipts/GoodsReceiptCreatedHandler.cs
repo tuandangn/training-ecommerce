@@ -4,7 +4,9 @@ using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
+using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Events.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.Inventory;
@@ -30,15 +32,18 @@ namespace NamEcommerce.Application.Services.Events.GoodsReceipts;
 public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsReceiptCreated>
 {
     private readonly IInventoryStockManager _inventoryStockManager;
+    private readonly IInventoryCostingManager _inventoryCostingManager;
     private readonly IVendorDebtManager _vendorDebtManager;
     private readonly IEntityDataReader<GoodsReceipt> _goodsReceiptDataReader;
 
     public GoodsReceiptCreatedHandler(
         IInventoryStockManager inventoryStockManager,
+        IInventoryCostingManager inventoryCostingManager,
         IVendorDebtManager vendorDebtManager,
         IEntityDataReader<GoodsReceipt> goodsReceiptDataReader)
     {
         _inventoryStockManager = inventoryStockManager;
+        _inventoryCostingManager = inventoryCostingManager;
         _vendorDebtManager = vendorDebtManager;
         _goodsReceiptDataReader = goodsReceiptDataReader;
     }
@@ -69,6 +74,21 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
                 referenceType: (int)StockReferenceType.GoodsReceipt,
                 referenceId: goodsReceipt.Id
             ).ConfigureAwait(false);
+
+            await _inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
+            {
+                ProductId = item.ProductId,
+                WarehouseId = item.WarehouseId.Value,
+                Quantity = item.Quantity,
+                UnitCost = item.UnitCost,
+                MovementType = isFromCustomerReturn
+                    ? InventoryCostMovementType.CustomerReturn
+                    : InventoryCostMovementType.GoodsReceipt,
+                ReferenceType = InventoryCostReferenceType.GoodsReceipt,
+                ReferenceId = goodsReceipt.Id,
+                ReferenceItemId = item.Id,
+                OccurredAtUtc = goodsReceipt.CreatedOnUtc
+            }).ConfigureAwait(false);
         }
 
         // 2. Sinh công nợ NCC nếu phiếu được tạo với đủ điều kiện ngay từ đầu.

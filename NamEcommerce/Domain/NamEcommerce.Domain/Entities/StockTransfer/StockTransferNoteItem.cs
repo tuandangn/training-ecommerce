@@ -10,7 +10,7 @@ public sealed record StockTransferNoteItem : AppEntity
     public string ProductName { get; private set; }
     public decimal Quantity { get; private set; }
 
-    /// <summary>AverageCost của kho nguồn tại thời điểm Approve — set bởi StockTransferNoteManager.</summary>
+    /// <summary>Cost hiển thị tại thời điểm Approve — nguồn đúng là InventoryCostLedger/Allocation.</summary>
     public decimal UnitCost { get; internal set; }
 
     public StockTransferNoteItem(Guid id) : base(id)

@@ -182,5 +182,4 @@ public sealed record CreateGoodsReceiptFromCustomerReturnItemDto
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
     public required decimal Quantity { get; init; }
-    public decimal ReturnUnitPrice { get; init; }
 }

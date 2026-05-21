@@ -14,7 +14,7 @@ namespace NamEcommerce.Application.Services.Events.GoodsReceipts;
 /// Idempotent qua <see cref="IVendorDebtManager.CreateDebtFromGoodsReceiptAsync"/>.
 ///
 /// <para>Tách riêng khỏi <see cref="GoodsReceiptItemUnitCostSetHandler"/> vì 2 trigger khác nhau:
-/// SetUnitCost cần tính lại AverageCost rồi mới try debt; SetVendor chỉ cần try debt.</para>
+/// SetUnitCost cần chốt inventory cost layer rồi mới try debt; SetVendor chỉ cần try debt.</para>
 /// </summary>
 public sealed class GoodsReceiptVendorChangedHandler : INotificationHandler<GoodsReceiptVendorChanged>
 {

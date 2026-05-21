@@ -17,8 +17,7 @@ public sealed record GoodsReceiptUpdated(Guid GoodsReceiptId) : DomainEvent;
 /// <summary>
 /// Một dòng hàng vừa được set <c>UnitCost</c> (định giá sau khi nhập). Handler subscribe event này để:
 /// <list type="number">
-///   <item><description>Tính lại <c>InventoryStock.AverageCost</c> cho cặp <c>(ProductId, WarehouseId)</c>
-///     theo Full Recalculation: <c>Σ(qty × cost) / Σ(qty)</c> trên các item đã có UnitCost.</description></item>
+///   <item><description>Gán cost cho inventory cost layer của GoodsReceipt item và revalue các movement sau đó.</description></item>
 ///   <item><description>Thử sinh công nợ NCC nếu phiếu đã đủ điều kiện (toàn bộ items đã định giá và
 ///     đã gắn vendor) — idempotent qua <c>VendorDebtManager.CreateDebtFromGoodsReceiptAsync</c>.</description></item>
 /// </list>

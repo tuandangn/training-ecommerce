@@ -106,7 +106,6 @@ public sealed record Order : AppAggregateEntity
 
         var orderItem = new OrderItem(Id, productId, unitPrice, quantity)
         {
-            CostPrice = product.CostPrice,
             ProductName = product.Name
         };
         _orderItems.Add(orderItem);

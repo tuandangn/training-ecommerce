@@ -64,6 +64,55 @@ public sealed class InventoryController : BaseAuthorizedController
         return View(model);
     }
 
+    public async Task<IActionResult> CostingPolicy()
+    {
+        var settings = await _mediator.Send(new GetInventoryCostingPolicyQuery());
+        return View(InventoryCostingPolicyModel.FromSettings(settings));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CostingPolicy(InventoryCostingPolicyModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var result = await _mediator.Send(new UpdateInventoryCostingPolicyCommand
+        {
+            CostingMethod = (int)model.CostingMethod,
+            ValuationScope = (int)model.ValuationScope,
+            EffectiveFrom = model.EffectiveFrom,
+            Note = model.Note
+        });
+
+        if (!result.Success)
+        {
+            AddLocalizedModelError(result.ErrorMessage);
+            return View(model);
+        }
+
+        NotificationService.Success("Đã lưu cài đặt giá vốn.");
+        return RedirectToAction(nameof(CostingPolicy));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> RebuildCosting(InventoryCostingPolicyModel model)
+    {
+        var result = await _mediator.Send(new RebuildInventoryCostingCommand
+        {
+            CostingMethod = (int)model.CostingMethod,
+            ValuationScope = (int)model.ValuationScope
+        });
+
+        if (!result.Success)
+        {
+            NotificationService.Error(result.ErrorMessage ?? "Không thể tính lại giá vốn.");
+            return RedirectToAction(nameof(CostingPolicy));
+        }
+
+        NotificationService.Success($"Đã tính lại giá vốn. Mã lần tính: {result.RebuildRunId}");
+        return RedirectToAction(nameof(CostingPolicy));
+    }
+
     [HttpPost]
     public async Task<IActionResult> SetStockLevels(SetStockLevelsModel model)
     {

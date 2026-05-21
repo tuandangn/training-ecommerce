@@ -15,9 +15,8 @@ public interface IInventoryStockManager
     Task<StockMovementLogDto?> RevertReceiveAsync(Guid productId, Guid warehouseId, decimal quantity, Guid goodsReceiptId, Guid modifiedByUserId);
 
     /// <summary>
-    /// Cập nhật giá vốn bình quân (AverageCost) cho stock của (productId, warehouseId).
-    /// Được gọi bởi GoodsReceiptItemUnitCostSetHandler sau khi tính lại Full Recalculation
-    /// dựa trên toàn bộ GoodsReceiptItems đã có UnitCost cùng (ProductId, WarehouseId).
+    /// Legacy compatibility: cập nhật AverageCost snapshot trên InventoryStock.
+    /// Giá vốn authoritative hiện nằm trong InventoryCostLedger/Allocation.
     /// </summary>
     /// <exception cref="InvalidStockOperationException">newAverageCost &lt; 0</exception>
     /// <exception cref="StockNotFoundException">không tìm thấy InventoryStock cho cặp (productId, warehouseId)</exception>
@@ -43,9 +42,9 @@ public interface IInventoryStockManager
     Task<(int Total, List<StockMovementLogDto> Items)> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize);
     
     /// <summary>
-    /// Lấy giá vốn bình quân hiện tại của (productId, warehouseId).
+    /// Legacy compatibility: lấy AverageCost snapshot hiện tại của (productId, warehouseId).
     /// Trả về 0 nếu chưa có stock hoặc chưa nhập hàng.
-    /// Dùng bởi CustomerReturnConfirmedEventHandler để đặt UnitCost cho GoodsReceipt tự sinh.
+    /// Không dùng làm nguồn authoritative cho COGS.
     /// </summary>
     Task<decimal> GetAverageCostAsync(Guid productId, Guid warehouseId);
 

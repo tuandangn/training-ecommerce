@@ -126,6 +126,7 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddScoped<IWarehouseManager, WarehouseManager>();
         services.AddScoped<InventoryStockManager>();
         services.AddScoped<IInventoryStockManager>(sp => sp.GetRequiredService<InventoryStockManager>());
+        services.AddScoped<IInventoryCostingManager, InventoryCostingManager>();
         services.AddScoped<IProductReservationManager, ProductReservationManager>();
         services.AddScoped<IOrderManager, OrderManager>();
         services.AddScoped<IDirectShipManager, DirectShipManager>();

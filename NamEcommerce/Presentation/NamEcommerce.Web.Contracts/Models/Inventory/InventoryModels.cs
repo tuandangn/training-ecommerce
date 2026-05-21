@@ -66,3 +66,30 @@ public sealed class ProductReservationLedgerListModel
         public required DateTime CreatedOn { get; init; }
     }
 }
+
+[Serializable]
+public sealed record InventoryCostingPolicySettingsModel
+{
+    public required Guid Id { get; init; }
+    public required int CostingMethod { get; init; }
+    public required int ValuationScope { get; init; }
+    public required DateTime EffectiveFrom { get; init; }
+    public required DateTime CreatedAt { get; init; }
+    public string? Note { get; init; }
+}
+
+[Serializable]
+public sealed record UpdateInventoryCostingPolicyResultModel
+{
+    public required bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+    public Guid? UpdatedId { get; init; }
+}
+
+[Serializable]
+public sealed record RebuildInventoryCostingResultModel
+{
+    public required bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+    public Guid? RebuildRunId { get; init; }
+}

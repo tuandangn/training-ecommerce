@@ -1,17 +1,16 @@
 using MediatR;
+using NamEcommerce.Domain.Shared.Dtos.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Events.StockAdjustment;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.StockAdjustment;
 
 namespace NamEcommerce.Application.Services.Events.StockAdjustment;
 
-/// <summary>
-/// Áp dụng delta tồn kho cho từng item khi StockAdjustmentNote được Approved.
-/// Delta > 0 → tăng tồn; Delta &lt; 0 → giảm tồn; Delta = 0 → bỏ qua.
-/// </summary>
 public sealed class StockAdjustmentNoteApprovedEventHandler(
     IStockAdjustmentNoteManager noteManager,
-    IInventoryStockManager stockManager) : INotificationHandler<StockAdjustmentNoteApproved>
+    IInventoryStockManager stockManager,
+    IInventoryCostingManager inventoryCostingManager) : INotificationHandler<StockAdjustmentNoteApproved>
 {
     public async Task Handle(StockAdjustmentNoteApproved notification, CancellationToken cancellationToken)
     {
@@ -26,6 +25,36 @@ public sealed class StockAdjustmentNoteApprovedEventHandler(
                 item.Delta,
                 note.Id,
                 note.CreatedByUserId).ConfigureAwait(false);
+
+            if (item.Delta > 0)
+            {
+                await inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
+                {
+                    ProductId = item.ProductId,
+                    WarehouseId = note.WarehouseId,
+                    Quantity = item.Delta,
+                    UnitCost = null,
+                    MovementType = InventoryCostMovementType.PositiveAdjustment,
+                    ReferenceType = InventoryCostReferenceType.Adjustment,
+                    ReferenceId = note.Id,
+                    ReferenceItemId = item.Id,
+                    OccurredAtUtc = DateTime.UtcNow
+                }).ConfigureAwait(false);
+            }
+            else
+            {
+                await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
+                {
+                    ProductId = item.ProductId,
+                    WarehouseId = note.WarehouseId,
+                    Quantity = Math.Abs(item.Delta),
+                    MovementType = InventoryCostMovementType.NegativeAdjustment,
+                    ReferenceType = InventoryCostReferenceType.Adjustment,
+                    ReferenceId = note.Id,
+                    ReferenceItemId = item.Id,
+                    OccurredAtUtc = DateTime.UtcNow
+                }).ConfigureAwait(false);
+            }
         }
     }
 }
