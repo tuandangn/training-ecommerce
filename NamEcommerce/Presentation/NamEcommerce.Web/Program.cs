@@ -175,6 +175,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IWarehouseManager, WarehouseManager>();
     services.AddScoped<InventoryStockManager>();
     services.AddScoped<IInventoryStockManager>(services => services.GetRequiredService<InventoryStockManager>());
+    services.AddScoped<IInventoryCostingManager, InventoryCostingManager>();
     services.AddScoped<IProductReservationManager, ProductReservationManager>();
     services.AddScoped<IShortageQueryService, ShortageQueryService>();
     services.AddScoped<IInventoryValidator, InventoryValidator>();
