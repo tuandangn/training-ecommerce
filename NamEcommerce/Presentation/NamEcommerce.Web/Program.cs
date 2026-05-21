@@ -205,6 +205,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IProductAppService, ProductAppService>();
     services.AddScoped<IPictureAppService, PictureAppService>();
     services.AddScoped<IInventoryAppService, InventoryAppService>();
+    services.AddScoped<IInventoryCostingAppService, InventoryCostingAppService>();
     services.AddScoped<IWarehouseAppService, WarehouseAppService>();
     services.AddScoped<IPurchaseOrderManager, PurchaseOrderManager>();
     services.AddScoped<IPurchaseOrderAllocationManager, PurchaseOrderAllocationManager>();

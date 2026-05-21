@@ -47,10 +47,10 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         ArgumentNullException.ThrowIfNull(dto);
         ValidatePositiveQuantity(dto.Quantity);
 
-        var policy = await GetActivePolicyAsync().ConfigureAwait(false);
+        var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
+        var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
         EnsureWeightedAverage(policy);
 
-        var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
         var balance = GetLastProductBalance(dto.ProductId);
         var sequenceNumber = GetNextSequenceNumber();
         var hasPendingCost = !dto.UnitCost.HasValue || HasOpenPendingLayer(dto.ProductId, occurredAtUtc);
@@ -118,10 +118,10 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         ArgumentNullException.ThrowIfNull(dto);
         ValidatePositiveQuantity(dto.Quantity);
 
-        var policy = await GetActivePolicyAsync().ConfigureAwait(false);
+        var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
+        var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
         EnsureWeightedAverage(policy);
 
-        var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
         var balance = GetLastProductBalance(dto.ProductId);
         var sequenceNumber = GetNextSequenceNumber();
         var unitCost = balance.AverageCost;
@@ -194,10 +194,10 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         ArgumentNullException.ThrowIfNull(dto);
         ValidatePositiveQuantity(dto.Quantity);
 
-        var policy = await GetActivePolicyAsync().ConfigureAwait(false);
+        var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
+        var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
         EnsureWeightedAverage(policy);
 
-        var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
         var balance = GetLastProductBalance(dto.ProductId);
         var sequenceNumber = GetNextSequenceNumber();
         var inboundValue = dto.Quantity * dto.UnitCost;
@@ -422,6 +422,8 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
     {
         if (method != InventoryCostingMethod.WeightedAverage)
             throw new UnsupportedInventoryCostingMethodException(method);
+        if (scope != InventoryValuationScope.Product)
+            throw new InvalidInventoryCostingOperationException("Error.InventoryCosting.ProductWarehouseScopeNotSupported");
 
         var run = new InventoryCostRebuildRun(
             Guid.NewGuid(),
@@ -434,8 +436,34 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             requestedByUserId);
 
         await _rebuildRunRepository.InsertAsync(run).ConfigureAwait(false);
-        run.Complete();
-        await _rebuildRunRepository.UpdateAsync(run).ConfigureAwait(false);
+
+        try
+        {
+            var productIds = _ledgerReader.DataSource
+                .Where(l => l.CostingStatus != InventoryCostingStatus.Superseded)
+                .Select(l => l.ProductId)
+                .Distinct()
+                .ToList();
+
+            foreach (var productId in productIds)
+            {
+                await RevalueProductFromAsync(
+                    productId,
+                    DateTime.MinValue,
+                    InventoryCostRebuildTrigger.PolicyRebuild,
+                    requestedByUserId).ConfigureAwait(false);
+            }
+
+            run.Complete();
+            await _rebuildRunRepository.UpdateAsync(run).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            run.Fail(ex.Message);
+            await _rebuildRunRepository.UpdateAsync(run).ConfigureAwait(false);
+            throw;
+        }
+
         return run.Id;
     }
 
@@ -444,6 +472,7 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         var policy = _policyReader.DataSource
             .Where(p => p.IsActive)
             .OrderByDescending(p => p.EffectiveFromUtc)
+            .ThenByDescending(p => p.CreatedAtUtc)
             .FirstOrDefault();
 
         if (policy is not null)
@@ -458,6 +487,17 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             "Default inventory costing policy");
 
         return await _policyRepository.InsertAsync(defaultPolicy).ConfigureAwait(false);
+    }
+
+    private async Task<InventoryCostingPolicy> GetPolicyForAsync(DateTime occurredAtUtc)
+    {
+        var policy = _policyReader.DataSource
+            .Where(p => p.EffectiveFromUtc <= occurredAtUtc)
+            .OrderByDescending(p => p.EffectiveFromUtc)
+            .ThenByDescending(p => p.CreatedAtUtc)
+            .FirstOrDefault();
+
+        return policy ?? await GetActivePolicyAsync().ConfigureAwait(false);
     }
 
     private long GetNextSequenceNumber()
