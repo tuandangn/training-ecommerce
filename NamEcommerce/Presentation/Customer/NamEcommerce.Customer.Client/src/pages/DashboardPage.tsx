@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../api/client";
 import type { Dashboard } from "../api/types";
-import { money, shortDate, statusText } from "../app/format";
+import { money, orderStatusText, shortDate } from "../app/format";
 import { navigate } from "../app/routes";
 
 export function DashboardPage() {
@@ -53,7 +53,7 @@ export function DashboardPage() {
             <tr key={order.id} onClick={() => navigate(`/orders/${order.id}`)}>
               <td>{order.code}</td>
               <td>
-                <span className="badge">{statusText(order.status)}</span>
+                <span className="badge">{orderStatusText(order.status)}</span>
               </td>
               <td>{money(order.totalAmount)}</td>
               <td>{shortDate(order.createdOn)}</td>

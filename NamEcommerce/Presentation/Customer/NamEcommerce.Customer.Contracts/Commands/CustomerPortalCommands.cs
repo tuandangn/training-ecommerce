@@ -7,6 +7,7 @@ public sealed record RequestCustomerOtpCommand(string DeliveryToken, string? Req
 public sealed record VerifyCustomerOtpCommand(Guid ChallengeId, string Otp, string? RequestedIp, string? RequestedUserAgent) : IRequest<CustomerLoginResultModel>;
 public sealed record CustomerPasswordLoginCommand(string Login, string Password, string? RequestedIp, string? RequestedUserAgent) : IRequest<CustomerLoginResultModel>;
 public sealed record SetCustomerPasswordCommand(string Password) : IRequest<CustomerActionResultModel>;
+public sealed record ChangeCustomerPasswordCommand(string CurrentPassword, string NewPassword) : IRequest<CustomerActionResultModel>;
 public sealed record LogoutCustomerCommand : IRequest<CustomerActionResultModel>;
 
 public sealed record CreateCustomerOrderRequestCommand(

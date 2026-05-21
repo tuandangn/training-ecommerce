@@ -25,6 +25,10 @@ public sealed class OrdersController(IMediator mediator) : ControllerBase
 [Route("api/order-requests")]
 public sealed class OrderRequestsController(IMediator mediator) : ControllerBase
 {
+    [HttpGet("defaults")]
+    public async Task<IActionResult> GetDefaults()
+        => Ok(await mediator.Send(new GetCustomerOrderRequestDefaultsQuery()).ConfigureAwait(false));
+
     [HttpPost]
     public async Task<IActionResult> Create(CreateCustomerOrderRequestCommand command)
         => Ok(await mediator.Send(command).ConfigureAwait(false));

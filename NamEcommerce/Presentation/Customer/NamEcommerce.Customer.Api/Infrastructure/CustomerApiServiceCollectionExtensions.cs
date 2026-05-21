@@ -7,10 +7,12 @@ using NamEcommerce.Application.Contracts.CustomerPortal;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Services.CustomerPortal;
 using NamEcommerce.Application.Services.Debts;
 using NamEcommerce.Application.Services.DeliveryNotes;
 using NamEcommerce.Application.Services.Inventory;
+using NamEcommerce.Application.Services.Media;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Domain.Services.Common;
@@ -19,6 +21,7 @@ using NamEcommerce.Domain.Services.Debts;
 using NamEcommerce.Domain.Services.DeliveryNotes;
 using NamEcommerce.Domain.Services.Finance;
 using NamEcommerce.Domain.Services.Inventory;
+using NamEcommerce.Domain.Services.Media;
 using NamEcommerce.Domain.Services.Orders;
 using NamEcommerce.Domain.Services.Returns;
 using NamEcommerce.Domain.Services.Security;
@@ -28,6 +31,7 @@ using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Shared.Services.Media;
 using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Security;
@@ -48,6 +52,7 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddProblemDetails();
         services.AddHttpContextAccessor();
         services.AddSingleton(BuildCustomerPortalSecurityOptions(configuration));
+        services.AddSingleton(BuildCustomerPortalStoreOptions(configuration));
         services.AddCustomerPortalDataProtection(configuration);
         services.Configure<ForwardedHeadersOptions>(options =>
         {
@@ -125,12 +130,14 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddScoped<ICustomerReturnManager, CustomerReturnManager>();
         services.AddScoped<IWarehouseManager, WarehouseManager>();
         services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();
+        services.AddScoped<IPictureManager, PictureManager>();
         services.AddScoped<ICustomerPortalSecurityManager, CustomerPortalSecurityManager>();
         services.AddScoped<ICustomerPortalManager, CustomerPortalManager>();
         services.AddScoped<ISecurityService, SecurityService>();
 
         services.AddScoped<IDeliveryNoteAppService, DeliveryNoteAppService>();
         services.AddScoped<IWarehouseAppService, WarehouseAppService>();
+        services.AddScoped<IPictureAppService, PictureAppService>();
         services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
         services.AddScoped<ICustomerPortalAuthAppService, CustomerPortalAuthAppService>();
         services.AddScoped<ICustomerPortalAppService, CustomerPortalAppService>();
@@ -152,6 +159,13 @@ internal static class CustomerApiServiceCollectionExtensions
     {
         var options = new CustomerPortalSecurityOptions();
         configuration.GetSection(CustomerPortalSecurityOptions.SectionName).Bind(options);
+        return options;
+    }
+
+    private static CustomerPortalStoreOptions BuildCustomerPortalStoreOptions(IConfiguration configuration)
+    {
+        var options = new CustomerPortalStoreOptions();
+        configuration.GetSection(CustomerPortalStoreOptions.SectionName).Bind(options);
         return options;
     }
 

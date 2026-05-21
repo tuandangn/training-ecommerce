@@ -9,6 +9,10 @@ public interface ICustomerPortalAppService
     Task<IReadOnlyCollection<CustomerOrderSummaryAppDto>> GetOrdersAsync(Guid customerId);
     Task<CustomerOrderDetailsAppDto?> GetOrderDetailsAsync(Guid customerId, Guid orderId);
     Task<CustomerOrderRequestAppDto> CreateOrderRequestAsync(Guid customerId, CreateCustomerOrderRequestAppDto dto);
+    Task<CustomerOrderRequestDefaultsAppDto> GetOrderRequestDefaultsAsync(Guid customerId);
+    Task<CustomerProductListAppDto> GetProductsAsync(Guid? categoryId, string? keywords, int pageSize);
+    Task<CustomerProductCategoryListAppDto> GetProductCategoriesAsync();
+    Task<CustomerContactAppDto> GetContactAsync();
     Task<IReadOnlyCollection<CustomerDeliveryNoteSummaryAppDto>> GetDeliveryNotesAsync(Guid customerId);
     Task<CustomerDeliveryNoteDetailsAppDto?> GetDeliveryNoteDetailsAsync(Guid customerId, Guid deliveryNoteId);
     Task<CustomerActionResultAppDto> ConfirmDeliveryNoteAsync(Guid customerId, Guid deliveryNoteId, ConfirmCustomerDeliveryNoteAppDto dto);

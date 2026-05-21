@@ -103,6 +103,13 @@ public sealed record SetCustomerPasswordAppDto
 }
 
 [Serializable]
+public sealed record ChangeCustomerPasswordAppDto
+{
+    public required string CurrentPassword { get; init; }
+    public required string NewPassword { get; init; }
+}
+
+[Serializable]
 public sealed record CustomerDashboardAppDto
 {
     public IList<CustomerOrderSummaryAppDto> RecentOrders { get; init; } = [];
@@ -207,6 +214,46 @@ public sealed record CustomerOrderRequestAppDto
     public required string Code { get; init; }
     public int Status { get; init; }
     public DateTime CreatedOnUtc { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerProductListAppDto
+{
+    public IList<CustomerProductAppDto> Items { get; init; } = [];
+    public bool HasMore { get; init; }
+    public int PageSize { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerProductAppDto
+{
+    public required Guid Id { get; init; }
+    public required string Name { get; init; }
+    public Guid? CategoryId { get; init; }
+    public string? CategoryName { get; init; }
+    public string? PictureUrl { get; init; }
+    public decimal UnitPrice { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerProductCategoryListAppDto
+{
+    public IList<CustomerProductCategoryAppDto> Items { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerProductCategoryAppDto
+{
+    public required Guid Id { get; init; }
+    public required string Name { get; init; }
+    public Guid? ParentId { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerOrderRequestDefaultsAppDto
+{
+    public string? ShippingAddress { get; init; }
+    public string? ShippingAddressSource { get; init; }
 }
 
 [Serializable]
@@ -326,4 +373,31 @@ public sealed record CustomerPaymentIntentAppDto
     public string? FailureReason { get; init; }
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? CompletedOnUtc { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerContactAppDto
+{
+    public required CustomerStoreContactAppDto Store { get; init; }
+    public IList<CustomerWarehouseContactAppDto> Warehouses { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerStoreContactAppDto
+{
+    public required string StoreName { get; init; }
+    public string? PhoneNumber { get; init; }
+    public string? Address { get; init; }
+    public string? Email { get; init; }
+    public string? MapQuery { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerWarehouseContactAppDto
+{
+    public required Guid Id { get; init; }
+    public required string Name { get; init; }
+    public string? PhoneNumber { get; init; }
+    public string? Address { get; init; }
+    public string? MapQuery { get; init; }
 }

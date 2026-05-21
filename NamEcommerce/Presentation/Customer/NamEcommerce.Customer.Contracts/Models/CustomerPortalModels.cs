@@ -64,6 +64,30 @@ public sealed record CustomerOrderItemModel(Guid Id, Guid ProductId, string Prod
 public sealed record CustomerOrderRequestModel(Guid Id, string Code, int Status, DateTime CreatedOn);
 
 [Serializable]
+public sealed record CustomerProductListModel(IList<CustomerProductModel> Items, bool HasMore, int PageSize);
+
+[Serializable]
+public sealed record CustomerProductModel(Guid Id, string Name, Guid? CategoryId, string? CategoryName, string? PictureUrl, decimal UnitPrice);
+
+[Serializable]
+public sealed record CustomerProductCategoryListModel(IList<CustomerProductCategoryModel> Items);
+
+[Serializable]
+public sealed record CustomerProductCategoryModel(Guid Id, string Name, Guid? ParentId);
+
+[Serializable]
+public sealed record CustomerOrderRequestDefaultsModel(string? ShippingAddress, string? ShippingAddressSource);
+
+[Serializable]
+public sealed record CustomerContactModel(CustomerStoreContactModel Store, IList<CustomerWarehouseContactModel> Warehouses);
+
+[Serializable]
+public sealed record CustomerStoreContactModel(string StoreName, string? PhoneNumber, string? Address, string? Email, string? MapQuery);
+
+[Serializable]
+public sealed record CustomerWarehouseContactModel(Guid Id, string Name, string? PhoneNumber, string? Address, string? MapQuery);
+
+[Serializable]
 public sealed record CustomerDeliveryNoteListModel(IList<CustomerDeliveryNoteSummaryModel> Items);
 
 [Serializable]

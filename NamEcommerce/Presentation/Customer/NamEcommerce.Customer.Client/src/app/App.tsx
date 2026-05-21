@@ -1,5 +1,9 @@
+import { useEffect, useState } from "react";
+import { apiFetch } from "../api/client";
+import type { ContactInfo } from "../api/types";
 import { AuthProvider } from "../auth/AuthContext";
 import { useAuth } from "../auth/useAuth";
+import { ContactPage } from "../pages/ContactPage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { DebtsPage } from "../pages/DebtsPage";
 import { DeliveryNoteDetailsPage } from "../pages/DeliveryNoteDetailsPage";
@@ -67,8 +71,10 @@ function AppRoutes() {
           <NavLink href="/delivery-notes" label="Phiếu giao" />
           <NavLink href="/debts" label="Công nợ" />
           <NavLink href="/set-password" label="Mật khẩu" />
+          <NavLink href="/contact" label="Liên hệ" />
           <button onClick={logout}>Đăng xuất</button>
         </nav>
+        <SidebarContact />
         <div className="sidebar-user">{session.customerName}</div>
       </aside>
       <main className="main">{renderPrivatePage(path)}</main>
@@ -102,5 +108,23 @@ function renderPrivatePage(path: string) {
   if (path === "/debts") return <DebtsPage />;
   if (path === "/payments") return <MockPaymentPage />;
   if (path === "/set-password") return <SetPasswordPage />;
+  if (path === "/contact") return <ContactPage />;
   return <DashboardPage />;
+}
+
+function SidebarContact() {
+  const [contact, setContact] = useState<ContactInfo | null>(null);
+
+  useEffect(() => {
+    apiFetch<ContactInfo>("/api/contact").then(setContact).catch(() => setContact(null));
+  }, []);
+
+  if (!contact) return null;
+
+  return (
+    <div className="sidebar-contact">
+      <strong>{contact.store.storeName}</strong>
+      <span>{contact.store.phoneNumber || contact.store.email || contact.store.address || "Thông tin liên hệ"}</span>
+    </div>
+  );
 }

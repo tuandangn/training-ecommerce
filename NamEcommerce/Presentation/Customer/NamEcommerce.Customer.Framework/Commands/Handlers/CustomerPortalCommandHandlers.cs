@@ -16,6 +16,7 @@ public sealed class CustomerPortalCommandHandlers(
     IRequestHandler<VerifyCustomerOtpCommand, CustomerLoginResultModel>,
     IRequestHandler<CustomerPasswordLoginCommand, CustomerLoginResultModel>,
     IRequestHandler<SetCustomerPasswordCommand, CustomerActionResultModel>,
+    IRequestHandler<ChangeCustomerPasswordCommand, CustomerActionResultModel>,
     IRequestHandler<LogoutCustomerCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerOrderRequestCommand, CustomerOrderRequestModel>,
     IRequestHandler<ConfirmCustomerDeliveryNoteCommand, CustomerActionResultModel>,
@@ -65,6 +66,16 @@ public sealed class CustomerPortalCommandHandlers(
     public async Task<CustomerActionResultModel> Handle(SetCustomerPasswordCommand request, CancellationToken cancellationToken)
     {
         var result = await authAppService.SetPasswordAsync(RequireCustomerId(), new SetCustomerPasswordAppDto { Password = request.Password }).ConfigureAwait(false);
+        return new CustomerActionResultModel(result.Success, result.Message);
+    }
+
+    public async Task<CustomerActionResultModel> Handle(ChangeCustomerPasswordCommand request, CancellationToken cancellationToken)
+    {
+        var result = await authAppService.ChangePasswordAsync(RequireCustomerId(), new ChangeCustomerPasswordAppDto
+        {
+            CurrentPassword = request.CurrentPassword,
+            NewPassword = request.NewPassword
+        }).ConfigureAwait(false);
         return new CustomerActionResultModel(result.Success, result.Message);
     }
 

@@ -41,6 +41,8 @@ internal sealed class CustomerSessionMiddleware(RequestDelegate next)
            || path.StartsWithSegments("/api/return-requests", StringComparison.OrdinalIgnoreCase)
            || path.StartsWithSegments("/api/debts", StringComparison.OrdinalIgnoreCase)
            || path.StartsWithSegments("/api/payment-intents", StringComparison.OrdinalIgnoreCase)
+           || path.StartsWithSegments("/api/products", StringComparison.OrdinalIgnoreCase)
            || path.StartsWithSegments("/api/auth/password/set", StringComparison.OrdinalIgnoreCase)
+           || path.StartsWithSegments("/api/auth/password/change", StringComparison.OrdinalIgnoreCase)
            || path.StartsWithSegments("/api/auth/logout", StringComparison.OrdinalIgnoreCase);
 }

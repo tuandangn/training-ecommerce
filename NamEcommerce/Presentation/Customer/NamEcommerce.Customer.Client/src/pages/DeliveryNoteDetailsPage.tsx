@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { apiFetch } from "../api/client";
 import type { ActionResult, DeliveryNoteDetails, DeliveryNoteItem } from "../api/types";
-import { money, shortDate, statusText } from "../app/format";
+import { deliveryNoteStatusText, money, shortDate } from "../app/format";
 
 type ActiveModal = "received" | "return" | null;
 
@@ -10,8 +10,6 @@ const DELIVERY_CONFIRMATION_CONFIRMED = 2;
 
 export function DeliveryNoteDetailsPage({ id }: { id: string }) {
   const [note, setNote] = useState<DeliveryNoteDetails | null>(null);
-  const [receiverName, setReceiverName] = useState("");
-  const [confirmNote, setConfirmNote] = useState("");
   const [message, setMessage] = useState("");
   const [returnReason, setReturnReason] = useState("");
   const [returnQuantities, setReturnQuantities] = useState<Record<string, string>>({});
@@ -45,7 +43,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
     try {
       const result = await apiFetch<ActionResult>(`/api/delivery-notes/${id}/confirm`, {
         method: "POST",
-        body: JSON.stringify({ receiverName, note: confirmNote }),
+        body: JSON.stringify({}),
       });
       setMessage(result.message ?? "Đã ghi nhận khách đã nhận hàng.");
       setActiveModal(null);
@@ -115,7 +113,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
         <div>
           <h1 className="page-title">{note.code}</h1>
           <p className="page-subtitle">
-            {shortDate(note.createdOn)} · {statusText(note.status)}
+            {shortDate(note.createdOn)} · {deliveryNoteStatusText(note.status)}
           </p>
         </div>
         <div className="actions">
@@ -158,15 +156,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
       {activeModal === "received" && (
         <Modal title="Đã nhận hàng" onClose={() => setActiveModal(null)}>
           <form className="stack" onSubmit={confirmReceived}>
-            <p className="page-subtitle">Xác nhận bạn đã nhận hàng của phiếu {note.code}.</p>
-            <div className="field">
-              <label>Tên người nhận</label>
-              <input value={receiverName} onChange={(event) => setReceiverName(event.target.value)} />
-            </div>
-            <div className="field">
-              <label>Ghi chú</label>
-              <textarea value={confirmNote} onChange={(event) => setConfirmNote(event.target.value)} />
-            </div>
+            <p className="page-subtitle">Bạn xác nhận đã nhận đủ hàng của phiếu {note.code}?</p>
             <div className="modal-actions">
               <button className="button" type="button" onClick={() => setActiveModal(null)}>
                 Hủy
