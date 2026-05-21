@@ -337,8 +337,84 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             requestedByUserId);
 
         await _rebuildRunRepository.InsertAsync(run).ConfigureAwait(false);
-        run.Complete();
-        await _rebuildRunRepository.UpdateAsync(run).ConfigureAwait(false);
+
+        try
+        {
+            var affectedEntries = _ledgerReader.DataSource
+                .Where(l => l.ProductId == productId
+                         && l.CostingStatus != InventoryCostingStatus.Superseded
+                         && l.OccurredAtUtc >= fromUtc)
+                .OrderBy(l => l.OccurredAtUtc)
+                .ThenBy(l => l.SequenceNumber)
+                .ToList();
+
+            if (affectedEntries.Count == 0)
+            {
+                run.Complete();
+                await _rebuildRunRepository.UpdateAsync(run).ConfigureAwait(false);
+                return run.Id;
+            }
+
+            var affectedEntryIds = affectedEntries.Select(e => e.Id).ToHashSet();
+            var affectedAllocations = _allocationReader.DataSource
+                .Where(a => affectedEntryIds.Contains(a.OutboundLedgerEntryId)
+                         && a.CostingStatus != InventoryCostingStatus.Superseded)
+                .ToList();
+            var affectedLayers = _layerReader.DataSource
+                .Where(l => l.ProductId == productId
+                         && l.CostingStatus != InventoryCostingStatus.Superseded
+                         && (affectedEntryIds.Contains(l.SourceLedgerEntryId) || l.OpenedAtUtc >= fromUtc))
+                .ToList();
+
+            var sourceLayerCosts = affectedLayers
+                .GroupBy(l => (l.SourceReferenceType, l.SourceReferenceId, l.SourceReferenceItemId))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderByDescending(l => l.OpenedAtUtc).First().UnitCost);
+
+            foreach (var allocation in affectedAllocations)
+            {
+                allocation.MarkSuperseded(run.Id);
+                await _allocationRepository.UpdateAsync(allocation).ConfigureAwait(false);
+            }
+
+            foreach (var layer in affectedLayers)
+            {
+                layer.MarkSuperseded(run.Id);
+                await _layerRepository.UpdateAsync(layer).ConfigureAwait(false);
+            }
+
+            foreach (var entry in affectedEntries)
+            {
+                entry.MarkSuperseded(run.Id);
+                await _ledgerRepository.UpdateAsync(entry).ConfigureAwait(false);
+            }
+
+            var replayState = GetReplayState(productId, fromUtc);
+            foreach (var entry in affectedEntries)
+            {
+                if (entry.QuantityDelta >= 0)
+                {
+                    var key = (entry.ReferenceType, entry.ReferenceId, entry.ReferenceItemId);
+                    var unitCost = entry.UnitCost ?? (sourceLayerCosts.TryGetValue(key, out var layerUnitCost) ? layerUnitCost : null);
+                    await ReplayInboundAsync(entry, unitCost, run.Id, replayState).ConfigureAwait(false);
+                }
+                else
+                {
+                    await ReplayOutboundAsync(entry, run.Id, replayState).ConfigureAwait(false);
+                }
+            }
+
+            run.Complete();
+            await _rebuildRunRepository.UpdateAsync(run).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            run.Fail(ex.Message);
+            await _rebuildRunRepository.UpdateAsync(run).ConfigureAwait(false);
+            throw;
+        }
+
         return run.Id;
     }
 
@@ -413,6 +489,155 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
                                          && l.OpenedAtUtc <= occurredAtUtc
                                          && l.RemainingQuantity > 0);
 
+    private ReplayState GetReplayState(Guid productId, DateTime fromUtc)
+    {
+        var previousEntry = _ledgerReader.DataSource
+            .Where(l => l.ProductId == productId
+                     && l.CostingStatus != InventoryCostingStatus.Superseded
+                     && l.OccurredAtUtc < fromUtc)
+            .OrderByDescending(l => l.OccurredAtUtc)
+            .ThenByDescending(l => l.SequenceNumber)
+            .FirstOrDefault();
+
+        var pendingQuantity = _layerReader.DataSource
+            .Where(l => l.ProductId == productId
+                     && l.CostingStatus == InventoryCostingStatus.Pending
+                     && l.OpenedAtUtc < fromUtc
+                     && l.RemainingQuantity > 0)
+            .Sum(l => l.RemainingQuantity);
+
+        return previousEntry is null
+            ? new ReplayState(0, 0, 0, pendingQuantity)
+            : new ReplayState(previousEntry.QuantityBalanceAfter, previousEntry.ValueBalanceAfter, previousEntry.AverageCostAfter, pendingQuantity);
+    }
+
+    private async Task ReplayInboundAsync(InventoryCostLedgerEntry source, decimal? unitCost, Guid runId, ReplayState state)
+    {
+        var quantity = source.QuantityDelta;
+        var totalCost = unitCost.HasValue ? quantity * unitCost.Value : (decimal?)null;
+
+        state.Quantity += quantity;
+        if (totalCost.HasValue)
+            state.Value += totalCost.Value;
+        else
+            state.PendingQuantity += quantity;
+
+        state.AverageCost = state.Quantity > 0 ? state.Value / state.Quantity : 0;
+        var status = !unitCost.HasValue || source.CostingStatus == InventoryCostingStatus.Pending || state.PendingQuantity > 0
+            ? InventoryCostingStatus.Pending
+            : InventoryCostingStatus.Revalued;
+
+        var ledgerEntry = new InventoryCostLedgerEntry(
+            Guid.NewGuid(),
+            source.ProductId,
+            source.WarehouseId,
+            source.OccurredAtUtc,
+            GetNextSequenceNumber(),
+            source.MovementType,
+            quantity,
+            unitCost,
+            totalCost,
+            state.Quantity,
+            state.Value,
+            state.AverageCost,
+            status,
+            source.CostingMethod,
+            source.ValuationScope,
+            source.ReferenceType,
+            source.ReferenceId,
+            source.ReferenceItemId,
+            runId);
+
+        await _ledgerRepository.InsertAsync(ledgerEntry).ConfigureAwait(false);
+
+        var layer = new InventoryCostLayer(
+            Guid.NewGuid(),
+            source.ProductId,
+            source.WarehouseId,
+            ledgerEntry.Id,
+            source.ReferenceType,
+            source.ReferenceId,
+            source.ReferenceItemId,
+            source.OccurredAtUtc,
+            quantity,
+            quantity,
+            unitCost,
+            totalCost,
+            status,
+            source.CostingMethod,
+            source.ValuationScope,
+            runId);
+
+        await _layerRepository.InsertAsync(layer).ConfigureAwait(false);
+    }
+
+    private async Task ReplayOutboundAsync(InventoryCostLedgerEntry source, Guid runId, ReplayState state)
+    {
+        var quantity = Math.Abs(source.QuantityDelta);
+        var unitCost = state.AverageCost;
+        var totalCost = quantity * unitCost;
+        var status = source.CostingStatus == InventoryCostingStatus.Pending || state.PendingQuantity > 0
+            ? InventoryCostingStatus.Pending
+            : InventoryCostingStatus.Revalued;
+
+        state.Quantity -= quantity;
+        state.Value -= totalCost;
+        state.PendingQuantity = Math.Max(0, state.PendingQuantity - quantity);
+
+        if (state.Quantity <= 0)
+        {
+            state.Quantity = 0;
+            state.Value = 0;
+            state.AverageCost = 0;
+        }
+        else
+        {
+            state.AverageCost = state.Value / state.Quantity;
+        }
+
+        var ledgerEntry = new InventoryCostLedgerEntry(
+            Guid.NewGuid(),
+            source.ProductId,
+            source.WarehouseId,
+            source.OccurredAtUtc,
+            GetNextSequenceNumber(),
+            source.MovementType,
+            -quantity,
+            unitCost,
+            totalCost,
+            state.Quantity,
+            state.Value,
+            state.AverageCost,
+            status,
+            source.CostingMethod,
+            source.ValuationScope,
+            source.ReferenceType,
+            source.ReferenceId,
+            source.ReferenceItemId,
+            runId);
+
+        await _ledgerRepository.InsertAsync(ledgerEntry).ConfigureAwait(false);
+
+        var allocation = new InventoryCostAllocation(
+            Guid.NewGuid(),
+            source.ProductId,
+            source.WarehouseId,
+            ledgerEntry.Id,
+            source.ReferenceType,
+            source.ReferenceId,
+            source.ReferenceItemId,
+            null,
+            quantity,
+            unitCost,
+            totalCost,
+            status,
+            source.CostingMethod,
+            source.ValuationScope,
+            runId);
+
+        await _allocationRepository.InsertAsync(allocation).ConfigureAwait(false);
+    }
+
     private static void ValidatePositiveQuantity(decimal quantity)
     {
         if (quantity <= 0)
@@ -426,4 +651,20 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
     }
 
     private sealed record ProductCostBalance(decimal Quantity, decimal Value, decimal AverageCost, InventoryCostingStatus Status);
+
+    private sealed class ReplayState
+    {
+        public ReplayState(decimal quantity, decimal value, decimal averageCost, decimal pendingQuantity)
+        {
+            Quantity = quantity;
+            Value = value;
+            AverageCost = averageCost;
+            PendingQuantity = pendingQuantity;
+        }
+
+        public decimal Quantity { get; set; }
+        public decimal Value { get; set; }
+        public decimal AverageCost { get; set; }
+        public decimal PendingQuantity { get; set; }
+    }
 }
