@@ -19,6 +19,7 @@ public sealed class CustomerPortalCommandHandlers(
     IRequestHandler<ChangeCustomerPasswordCommand, CustomerActionResultModel>,
     IRequestHandler<LogoutCustomerCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerOrderRequestCommand, CustomerOrderRequestModel>,
+    IRequestHandler<ConfirmCustomerOrderRequestCommand, CustomerPortalConversionResultModel>,
     IRequestHandler<ConfirmCustomerDeliveryNoteCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerDeliveryFeedbackCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerReturnRequestCommand, CustomerReturnRequestModel>,
@@ -106,6 +107,12 @@ public sealed class CustomerPortalCommandHandlers(
         return new CustomerOrderRequestModel(result.Id, result.Code, result.Status, result.CreatedOnUtc);
     }
 
+    public async Task<CustomerPortalConversionResultModel> Handle(ConfirmCustomerOrderRequestCommand request, CancellationToken cancellationToken)
+    {
+        var result = await portalAppService.ConfirmOrderRequestAsync(RequireCustomerId(), request.OrderRequestId).ConfigureAwait(false);
+        return new CustomerPortalConversionResultModel(result.Success, result.Message, result.CreatedId);
+    }
+
     public async Task<CustomerActionResultModel> Handle(ConfirmCustomerDeliveryNoteCommand request, CancellationToken cancellationToken)
     {
         var result = await portalAppService.ConfirmDeliveryNoteAsync(RequireCustomerId(), request.DeliveryNoteId, new ConfirmCustomerDeliveryNoteAppDto
@@ -139,7 +146,15 @@ public sealed class CustomerPortalCommandHandlers(
             {
                 DeliveryNoteItemId = item.DeliveryNoteItemId,
                 RequestedQuantity = item.RequestedQuantity,
-                Reason = item.Reason
+                Reason = item.Reason,
+                EvidencePictures = item.EvidencePictures?
+                    .Select(picture => new CreateCustomerReturnRequestPictureAppDto
+                    {
+                        FileName = picture.FileName,
+                        MimeType = picture.MimeType,
+                        Base64Data = picture.Base64Data
+                    })
+                    .ToList() ?? []
             }).ToList()
         }).ConfigureAwait(false);
 

@@ -217,6 +217,41 @@ public sealed record CustomerOrderRequestAppDto
 }
 
 [Serializable]
+public record CustomerOrderRequestSummaryAppDto
+{
+    public required Guid Id { get; init; }
+    public required string Code { get; init; }
+    public int Status { get; init; }
+    public decimal? TotalAmount { get; init; }
+    public DateTime CreatedOnUtc { get; init; }
+    public DateTime? ExpectedShippingDateUtc { get; init; }
+    public DateTime? ReviewedOnUtc { get; init; }
+    public Guid? ConvertedOrderId { get; init; }
+    public bool CanConfirm { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerOrderRequestDetailsAppDto : CustomerOrderRequestSummaryAppDto
+{
+    public string? ShippingAddress { get; init; }
+    public string? Note { get; init; }
+    public string? AdminNote { get; init; }
+    public IList<CustomerOrderRequestItemAppDto> Items { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerOrderRequestItemAppDto
+{
+    public required Guid Id { get; init; }
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public decimal Quantity { get; init; }
+    public decimal? UnitPrice { get; init; }
+    public decimal? SubTotal { get; init; }
+    public bool IsPriced { get; init; }
+}
+
+[Serializable]
 public sealed record CustomerProductListAppDto
 {
     public IList<CustomerProductAppDto> Items { get; init; } = [];
@@ -232,7 +267,8 @@ public sealed record CustomerProductAppDto
     public Guid? CategoryId { get; init; }
     public string? CategoryName { get; init; }
     public string? PictureUrl { get; init; }
-    public decimal UnitPrice { get; init; }
+    public decimal? UnitPrice { get; init; }
+    public bool HasPurchased { get; init; }
 }
 
 [Serializable]
@@ -270,6 +306,15 @@ public sealed record CreateCustomerReturnRequestItemAppDto
     public required Guid DeliveryNoteItemId { get; init; }
     public required decimal RequestedQuantity { get; init; }
     public string? Reason { get; init; }
+    public IList<CreateCustomerReturnRequestPictureAppDto> EvidencePictures { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CreateCustomerReturnRequestPictureAppDto
+{
+    public required string FileName { get; init; }
+    public required string MimeType { get; init; }
+    public required string Base64Data { get; init; }
 }
 
 [Serializable]
@@ -327,6 +372,22 @@ public sealed record CustomerOtpSendAppDto
 
 [Serializable]
 public sealed record CustomerOtpSendResultAppDto
+{
+    public required bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerPortalNotificationSendAppDto
+{
+    public required int Channel { get; init; }
+    public required string Destination { get; init; }
+    public string? Subject { get; init; }
+    public required string Message { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerPortalNotificationSendResultAppDto
 {
     public required bool Success { get; init; }
     public string? ErrorMessage { get; init; }

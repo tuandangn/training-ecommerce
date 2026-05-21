@@ -42,7 +42,7 @@ public static class CustomerPortalDisplayExtensions
         => status switch
         {
             CustomerOrderRequestStatus.PendingApproval => "Chờ duyệt",
-            CustomerOrderRequestStatus.Approved => "Đã duyệt",
+            CustomerOrderRequestStatus.Approved => "Đã duyệt - chờ khách xác nhận",
             CustomerOrderRequestStatus.Rejected => "Đã từ chối",
             CustomerOrderRequestStatus.ConvertedToOrder => "Đã tạo đơn",
             CustomerOrderRequestStatus.Cancelled => "Đã hủy",

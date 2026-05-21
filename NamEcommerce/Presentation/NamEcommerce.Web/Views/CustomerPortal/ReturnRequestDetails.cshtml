@@ -42,7 +42,23 @@
                         <tr>
                             <td class="ps-4 fw-medium">@item.ProductName</td>
                             <td class="text-end">@item.RequestedQuantity</td>
-                            <td class="text-muted">@item.Reason</td>
+                            <td>
+                                <div class="text-muted">@(!string.IsNullOrWhiteSpace(item.Reason) ? item.Reason : "—")</div>
+                                @if (item.EvidencePictures.Count > 0)
+                                {
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        @foreach (var picture in item.EvidencePictures)
+                                        {
+                                            if (!string.IsNullOrWhiteSpace(picture.PictureUrl))
+                                            {
+                                                <a href="@picture.PictureUrl" target="_blank" rel="noopener" class="d-inline-block border rounded overflow-hidden" title="@picture.FileName">
+                                                    <img src="@picture.PictureUrl" alt="Ảnh hiện trạng @item.ProductName" style="width: 88px; height: 88px; object-fit: cover;" />
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            </td>
                         </tr>
                     }
                     </tbody>

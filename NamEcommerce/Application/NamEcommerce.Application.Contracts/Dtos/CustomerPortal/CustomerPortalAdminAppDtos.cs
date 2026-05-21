@@ -72,6 +72,7 @@ public sealed record CustomerPortalOrderRequestAdminAppDto
     public DateTime? ReviewedOnUtc { get; init; }
     public Guid? ConvertedOrderId { get; init; }
     public decimal TotalAmount { get; init; }
+    public bool RequiresPricing { get; init; }
     public IList<CustomerPortalOrderRequestItemAdminAppDto> Items { get; init; } = [];
 }
 
@@ -84,6 +85,7 @@ public sealed record CustomerPortalOrderRequestItemAdminAppDto
     public decimal Quantity { get; init; }
     public decimal UnitPriceSnapshot { get; init; }
     public decimal SubTotal { get; init; }
+    public bool RequiresPricing { get; init; }
 }
 
 [Serializable]
@@ -113,6 +115,15 @@ public sealed record CustomerPortalReturnRequestItemAdminAppDto
     public required string ProductName { get; init; }
     public decimal RequestedQuantity { get; init; }
     public string? Reason { get; init; }
+    public IList<CustomerPortalReturnRequestEvidencePictureAdminAppDto> EvidencePictures { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerPortalReturnRequestEvidencePictureAdminAppDto
+{
+    public required Guid PictureId { get; init; }
+    public string? PictureUrl { get; init; }
+    public string? FileName { get; init; }
 }
 
 [Serializable]

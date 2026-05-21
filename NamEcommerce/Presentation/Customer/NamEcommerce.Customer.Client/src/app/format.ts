@@ -24,6 +24,23 @@ export function orderStatusText(value: number) {
   }
 }
 
+export function orderRequestStatusText(value: number) {
+  switch (value) {
+    case 0:
+      return "Chờ cửa hàng duyệt";
+    case 1:
+      return "Đã duyệt - chờ xác nhận";
+    case 2:
+      return "Đã từ chối";
+    case 3:
+      return "Đã tạo đơn";
+    case 4:
+      return "Đã hủy";
+    default:
+      return statusText(value);
+  }
+}
+
 export function deliveryNoteStatusText(value: number) {
   switch (value) {
     case 10:

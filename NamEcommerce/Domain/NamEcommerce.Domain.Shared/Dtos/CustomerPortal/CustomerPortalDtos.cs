@@ -278,6 +278,8 @@ public sealed record CreateCustomerReturnRequestDto
             throw new NamEcommerceDomainException("Error.CustomerPortal.ReturnRequestItemInvalid");
         if (Items.Any(item => item.RequestedQuantity <= 0))
             throw new NamEcommerceDomainException("Error.CustomerPortal.QuantityMustBePositive");
+        if (Items.Any(item => item.EvidencePictureIds.Any(pictureId => pictureId == Guid.Empty)))
+            throw new NamEcommerceDomainException("Error.CustomerPortal.ReturnEvidencePictureInvalid");
     }
 }
 
@@ -289,6 +291,7 @@ public sealed record CreateCustomerReturnRequestItemDto
     public required string ProductName { get; init; }
     public required decimal RequestedQuantity { get; init; }
     public string? Reason { get; init; }
+    public IList<Guid> EvidencePictureIds { get; init; } = [];
 }
 
 [Serializable]
@@ -315,6 +318,15 @@ public sealed record CustomerReturnRequestItemDto(Guid Id)
     public required string ProductName { get; init; }
     public required decimal RequestedQuantity { get; init; }
     public string? Reason { get; init; }
+    public IList<CustomerReturnRequestItemPictureDto> EvidencePictures { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerReturnRequestItemPictureDto(Guid Id)
+{
+    public required Guid CustomerReturnRequestItemId { get; init; }
+    public required Guid PictureId { get; init; }
+    public DateTime CreatedOnUtc { get; init; }
 }
 
 [Serializable]

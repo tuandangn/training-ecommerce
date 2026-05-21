@@ -1,5 +1,6 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.CustomerPortal;
+using NamEcommerce.Application.Contracts.Dtos.CustomerPortal;
 using NamEcommerce.Customer.Contracts.Models;
 using NamEcommerce.Customer.Contracts.Queries;
 using NamEcommerce.Customer.Framework.Services;
@@ -14,6 +15,8 @@ public sealed class CustomerPortalQueryHandlers(
     IRequestHandler<GetCustomerDashboardQuery, CustomerDashboardModel>,
     IRequestHandler<GetCustomerOrdersQuery, CustomerOrderListModel>,
     IRequestHandler<GetCustomerOrderDetailsQuery, CustomerOrderDetailsModel?>,
+    IRequestHandler<GetCustomerOrderRequestsQuery, CustomerOrderRequestListModel>,
+    IRequestHandler<GetCustomerOrderRequestDetailsQuery, CustomerOrderRequestDetailsModel?>,
     IRequestHandler<GetCustomerOrderRequestDefaultsQuery, CustomerOrderRequestDefaultsModel>,
     IRequestHandler<GetCustomerProductsQuery, CustomerProductListModel>,
     IRequestHandler<GetCustomerProductCategoriesQuery, CustomerProductCategoryListModel>,
@@ -73,6 +76,18 @@ public sealed class CustomerPortalQueryHandlers(
                 order.Items.Select(item => new CustomerOrderItemModel(item.Id, item.ProductId, item.ProductName, item.Quantity, item.UnitPrice, item.SubTotal)).ToList());
     }
 
+    public async Task<CustomerOrderRequestListModel> Handle(GetCustomerOrderRequestsQuery request, CancellationToken cancellationToken)
+    {
+        var orderRequests = await portalAppService.GetOrderRequestsAsync(RequireCustomerId()).ConfigureAwait(false);
+        return new CustomerOrderRequestListModel(orderRequests.Select(MapOrderRequest).ToList());
+    }
+
+    public async Task<CustomerOrderRequestDetailsModel?> Handle(GetCustomerOrderRequestDetailsQuery request, CancellationToken cancellationToken)
+    {
+        var orderRequest = await portalAppService.GetOrderRequestDetailsAsync(RequireCustomerId(), request.OrderRequestId).ConfigureAwait(false);
+        return orderRequest is null ? null : MapOrderRequestDetails(orderRequest);
+    }
+
     public async Task<CustomerOrderRequestDefaultsModel> Handle(GetCustomerOrderRequestDefaultsQuery request, CancellationToken cancellationToken)
     {
         var defaults = await portalAppService.GetOrderRequestDefaultsAsync(RequireCustomerId()).ConfigureAwait(false);
@@ -81,10 +96,10 @@ public sealed class CustomerPortalQueryHandlers(
 
     public async Task<CustomerProductListModel> Handle(GetCustomerProductsQuery request, CancellationToken cancellationToken)
     {
-        var products = await portalAppService.GetProductsAsync(request.CategoryId, request.Keywords, request.PageSize).ConfigureAwait(false);
+        var products = await portalAppService.GetProductsAsync(RequireCustomerId(), request.CategoryId, request.Keywords, request.PurchasedOnly, request.PageSize).ConfigureAwait(false);
         return new CustomerProductListModel(
             products.Items
-                .Select(product => new CustomerProductModel(product.Id, product.Name, product.CategoryId, product.CategoryName, product.PictureUrl, product.UnitPrice))
+                .Select(product => new CustomerProductModel(product.Id, product.Name, product.CategoryId, product.CategoryName, product.PictureUrl, product.UnitPrice, product.HasPurchased))
                 .ToList(),
             products.HasMore,
             products.PageSize);
@@ -150,6 +165,41 @@ public sealed class CustomerPortalQueryHandlers(
 
     private static CustomerOrderSummaryModel MapOrder(Application.Contracts.Dtos.CustomerPortal.CustomerOrderSummaryAppDto order)
         => new(order.Id, order.Code, order.Status, order.TotalAmount, order.CreatedOnUtc, order.ExpectedShippingDateUtc);
+
+    private static CustomerOrderRequestSummaryModel MapOrderRequest(CustomerOrderRequestSummaryAppDto request)
+        => new(
+            request.Id,
+            request.Code,
+            request.Status,
+            request.TotalAmount,
+            request.CreatedOnUtc,
+            request.ExpectedShippingDateUtc,
+            request.ReviewedOnUtc,
+            request.ConvertedOrderId,
+            request.CanConfirm);
+
+    private static CustomerOrderRequestDetailsModel MapOrderRequestDetails(CustomerOrderRequestDetailsAppDto request)
+        => new(
+            request.Id,
+            request.Code,
+            request.Status,
+            request.TotalAmount,
+            request.CreatedOnUtc,
+            request.ExpectedShippingDateUtc,
+            request.ReviewedOnUtc,
+            request.ConvertedOrderId,
+            request.CanConfirm,
+            request.ShippingAddress,
+            request.Note,
+            request.AdminNote,
+            request.Items.Select(item => new CustomerOrderRequestItemModel(
+                item.Id,
+                item.ProductId,
+                item.ProductName,
+                item.Quantity,
+                item.UnitPrice,
+                item.SubTotal,
+                item.IsPriced)).ToList());
 
     private static CustomerDeliveryNoteSummaryModel MapDeliveryNote(Application.Contracts.Dtos.CustomerPortal.CustomerDeliveryNoteSummaryAppDto note)
         => new(note.Id, note.Code, note.OrderCode, note.Status, note.DeliveryConfirmationStatus, note.CreatedOnUtc, note.DeliveredOnUtc);

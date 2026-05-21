@@ -35,7 +35,7 @@ export function NewOrderRequestPage() {
     const [categoryResult, defaultResult, productResult] = await Promise.allSettled([
       apiFetch<ProductCategoryList>("/api/products/categories"),
       apiFetch<OrderRequestDefaults>("/api/order-requests/defaults"),
-      apiFetch<ProductList>("/api/products?pageSize=40"),
+      apiFetch<ProductList>("/api/products?pageSize=40&purchasedOnly=true"),
     ]);
 
     if (categoryResult.status === "fulfilled") {
@@ -64,6 +64,7 @@ export function NewOrderRequestPage() {
     setProductError("");
     try {
       const query = new URLSearchParams({ pageSize: "40" });
+      query.set("purchasedOnly", categoryId ? "false" : "true");
       if (categoryId) query.set("categoryId", categoryId);
       if (search.trim()) query.set("keywords", search.trim());
       const result = await apiFetch<ProductList>(`/api/products?${query.toString()}`);
@@ -120,7 +121,8 @@ export function NewOrderRequestPage() {
           })),
         }),
       });
-      setMessage("Đã gửi yêu cầu đặt hàng.");
+      setItems([]);
+      setMessage("Đã gửi yêu cầu đặt hàng thành công. Cửa hàng sẽ kiểm tra giá và duyệt trước khi xử lý.");
     } catch {
       setMessage("Không thể gửi yêu cầu đặt hàng.");
     }
@@ -189,7 +191,7 @@ export function NewOrderRequestPage() {
                       onChange={(event) => updateQuantity(item.product.id, Number(event.target.value))}
                     />
                   </td>
-                  <td>{money(item.product.unitPrice)}</td>
+                  <td>{productPriceText(item.product)}</td>
                   <td>
                     <button
                       className="button"
@@ -209,7 +211,7 @@ export function NewOrderRequestPage() {
           <div className="toolbar">
             <div>
               <h2 className="page-title">Hàng hóa</h2>
-              <p className="page-subtitle">Chọn danh mục rồi chọn hàng hóa cần đặt</p>
+              <p className="page-subtitle">Mặc định hiển thị hàng đã mua, chọn danh mục để tìm thêm hàng hóa</p>
             </div>
           </div>
           <div className="category-panel">
@@ -218,7 +220,7 @@ export function NewOrderRequestPage() {
               type="button"
               onClick={() => selectCategory("")}
             >
-              Tất cả
+              Đã mua
             </button>
             {categories.map((category) => (
               <button
@@ -277,11 +279,18 @@ function ProductCard({ product, onPick }: { product: ProductPickerItem; onPick: 
       <div className="product-info">
         <strong>{product.name}</strong>
         <div className="muted-text">{product.categoryName ?? "Chưa phân loại"}</div>
-        <div className="product-price">{money(product.unitPrice)}</div>
+        <div className={product.hasPurchased ? "product-price" : "muted-text"}>{productPriceText(product)}</div>
+        {product.hasPurchased && <div className="muted-text">Giá mua gần nhất</div>}
       </div>
       <button className="button primary" type="button" onClick={onPick}>
         Chọn
       </button>
     </article>
   );
+}
+
+function productPriceText(product: ProductPickerItem) {
+  return product.hasPurchased && product.unitPrice !== null && product.unitPrice !== undefined
+    ? money(product.unitPrice)
+    : "Chờ báo giá";
 }

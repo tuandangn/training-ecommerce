@@ -17,5 +17,8 @@ public sealed class CustomerReturnRequestItemMapping : IEntityTypeConfiguration<
         builder.Property(item => item.Reason).HasMaxLength(1000).IsRequired(false);
 
         builder.HasIndex(item => item.CustomerReturnRequestId);
+
+        builder.Metadata.FindNavigation(nameof(CustomerReturnRequestItem.EvidencePictures))?.SetPropertyAccessMode(PropertyAccessMode.Field);
+        builder.HasMany(item => item.EvidencePictures).WithOne().HasForeignKey(picture => picture.CustomerReturnRequestItemId).OnDelete(DeleteBehavior.Cascade);
     }
 }

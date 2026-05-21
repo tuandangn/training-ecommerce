@@ -12,7 +12,7 @@ public interface ICustomerPortalManager
     Task<CustomerOrderRequestDto?> GetOrderRequestByIdAsync(Guid id);
     Task<IReadOnlyCollection<CustomerOrderRequestDto>> GetOrderRequestsAsync(Guid customerId);
     Task<IReadOnlyCollection<CustomerOrderRequestDto>> GetOrderRequestsByStatusAsync(CustomerOrderRequestStatus status);
-    Task ApproveOrderRequestAsync(Guid id, Guid reviewedByUserId, string? adminNote, DateTime nowUtc);
+    Task ApproveOrderRequestAsync(Guid id, Guid reviewedByUserId, IReadOnlyDictionary<Guid, decimal> itemPrices, string? adminNote, DateTime nowUtc);
     Task RejectOrderRequestAsync(Guid id, Guid reviewedByUserId, string? adminNote, DateTime nowUtc);
     Task MarkOrderRequestConvertedAsync(Guid id, Guid orderId, DateTime nowUtc);
 

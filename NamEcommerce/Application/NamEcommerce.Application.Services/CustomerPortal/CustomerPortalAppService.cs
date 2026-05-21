@@ -2,7 +2,10 @@ using NamEcommerce.Application.Contracts.CustomerPortal;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.CustomerPortal;
+using NamEcommerce.Application.Contracts.Dtos.Media;
+using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Media;
+using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
@@ -10,7 +13,9 @@ using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.CustomerPortal;
+using NamEcommerce.Domain.Shared.Enums.CustomerPortal;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Services.CustomerPortal;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 
@@ -22,6 +27,7 @@ public sealed class CustomerPortalAppService(
     IDeliveryNoteAppService deliveryNoteAppService,
     IDeliveryNoteManager deliveryNoteManager,
     ICustomerDebtAppService customerDebtAppService,
+    IOrderAppService orderAppService,
     IEntityDataReader<Order> orderReader,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<Product> productReader,
@@ -35,6 +41,14 @@ public sealed class CustomerPortalAppService(
     private const int MaxProductPageSize = 40;
     private const int MaxCategoryCount = 80;
     private const int MaxKeywordLength = 80;
+    private const int MaxReturnEvidencePicturesPerItem = 3;
+    private const int MaxReturnEvidencePictureBytes = 5 * 1024 * 1024;
+    private static readonly HashSet<string> AllowedReturnEvidenceMimeTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+    };
 
     public async Task<PublicDeliveryNoteAppDto?> GetPublicDeliveryNoteByTokenAsync(string token)
     {
@@ -127,6 +141,7 @@ public sealed class CustomerPortalAppService(
             .ToDictionary(product => product.Id);
         if (products.Count != productIds.Count)
             throw new InvalidOperationException("Order request contains unknown products.");
+        var latestPrices = GetLatestPurchasedPrices(customerId, productIds);
 
         var domainDto = new CreateCustomerOrderRequestDto
         {
@@ -142,7 +157,7 @@ public sealed class CustomerPortalAppService(
                     ProductId = item.ProductId,
                     ProductName = product?.Name ?? string.Empty,
                     Quantity = item.Quantity,
-                    UnitPriceSnapshot = product?.UnitPrice ?? 0
+                    UnitPriceSnapshot = latestPrices.GetValueOrDefault(item.ProductId)
                 };
             }).ToList()
         };
@@ -155,6 +170,59 @@ public sealed class CustomerPortalAppService(
             Status = (int)created.Status,
             CreatedOnUtc = created.CreatedOnUtc
         };
+    }
+
+    public async Task<IReadOnlyCollection<CustomerOrderRequestSummaryAppDto>> GetOrderRequestsAsync(Guid customerId)
+    {
+        var requests = await customerPortalManager.GetOrderRequestsAsync(customerId).ConfigureAwait(false);
+        return requests.Select(MapOrderRequestSummary).ToList();
+    }
+
+    public async Task<CustomerOrderRequestDetailsAppDto?> GetOrderRequestDetailsAsync(Guid customerId, Guid orderRequestId)
+    {
+        var request = await customerPortalManager.GetOrderRequestByIdAsync(orderRequestId).ConfigureAwait(false);
+        if (request is null || request.CustomerId != customerId)
+            return null;
+
+        return MapOrderRequestDetails(request);
+    }
+
+    public async Task<CustomerPortalConversionResultAppDto> ConfirmOrderRequestAsync(Guid customerId, Guid orderRequestId)
+    {
+        var request = await customerPortalManager.GetOrderRequestByIdAsync(orderRequestId).ConfigureAwait(false);
+        if (request is null || request.CustomerId != customerId)
+            return CustomerPortalConversionResultAppDto.Fail("Không tìm thấy yêu cầu đặt hàng.");
+
+        if (request.Status is not CustomerOrderRequestStatus.Approved)
+            return CustomerPortalConversionResultAppDto.Fail("Yêu cầu đặt hàng chưa được cửa hàng duyệt.");
+
+        if (!IsOrderRequestPriced(request))
+            return CustomerPortalConversionResultAppDto.Fail("Yêu cầu đặt hàng chưa được báo giá đầy đủ.");
+
+        var createDto = new CreateOrderAppDto
+        {
+            CustomerId = request.CustomerId,
+            ExpectedShippingDateUtc = request.ExpectedShippingDateUtc,
+            ShippingAddress = request.ShippingAddress,
+            Note = BuildConvertedOrderNote(request, "Khách đã xác nhận báo giá trên portal.")
+        };
+
+        foreach (var item in request.Items)
+        {
+            createDto.Items.Add(new CreateOrderAppDto.OrderItemAppDto
+            {
+                ProductId = item.ProductId,
+                Quantity = item.Quantity,
+                UnitPrice = item.UnitPriceSnapshot
+            });
+        }
+
+        var result = await orderAppService.CreateOrderAsync(createDto).ConfigureAwait(false);
+        if (!result.Success || !result.CreatedId.HasValue)
+            return CustomerPortalConversionResultAppDto.Fail(result.ErrorMessage ?? "Không tạo được đơn hàng.");
+
+        await customerPortalManager.MarkOrderRequestConvertedAsync(request.Id, result.CreatedId.Value, DateTime.UtcNow).ConfigureAwait(false);
+        return CustomerPortalConversionResultAppDto.Ok(result.CreatedId.Value, "Đã xác nhận báo giá và tạo đơn hàng.");
     }
 
     public Task<CustomerOrderRequestDefaultsAppDto> GetOrderRequestDefaultsAsync(Guid customerId)
@@ -183,10 +251,18 @@ public sealed class CustomerPortalAppService(
         });
     }
 
-    public async Task<CustomerProductListAppDto> GetProductsAsync(Guid? categoryId, string? keywords, int pageSize)
+    public async Task<CustomerProductListAppDto> GetProductsAsync(Guid customerId, Guid? categoryId, string? keywords, bool purchasedOnly, int pageSize)
     {
         var safePageSize = Math.Clamp(pageSize <= 0 ? DefaultProductPageSize : pageSize, 1, MaxProductPageSize);
         var query = productReader.DataSource.Where(product => product.Name != null && product.Name != string.Empty);
+
+        if (purchasedOnly)
+        {
+            query = query.Where(product => orderReader.DataSource.Any(order =>
+                order.CustomerId == customerId &&
+                order.OrderStatus != OrderStatus.Cancelled &&
+                order.OrderItems.Any(item => item.ProductId == product.Id)));
+        }
 
         if (categoryId.HasValue)
         {
@@ -211,7 +287,6 @@ public sealed class CustomerPortalAppService(
             .Select(product => new CustomerPortalProductListItem(
                 product.Id,
                 product.Name,
-                product.UnitPrice,
                 product.ProductCategories
                     .OrderBy(category => category.DisplayOrder)
                     .Select(category => (Guid?)category.CategoryId)
@@ -226,6 +301,23 @@ public sealed class CustomerPortalAppService(
         if (hasMore)
             products = products.Take(safePageSize).ToList();
 
+        var productIds = products.Select(product => product.Id).ToList();
+        var latestPrices = productIds.Count == 0
+            ? new Dictionary<Guid, decimal>()
+            : orderReader.DataSource
+                .Where(order => order.CustomerId == customerId && order.OrderStatus != OrderStatus.Cancelled)
+                .SelectMany(order => order.OrderItems.Select(item => new
+                {
+                    item.ProductId,
+                    item.UnitPrice,
+                    order.CreatedOnUtc
+                }))
+                .Where(item => productIds.Contains(item.ProductId))
+                .OrderByDescending(item => item.CreatedOnUtc)
+                .ToList()
+                .GroupBy(item => item.ProductId)
+                .ToDictionary(group => group.Key, group => group.First().UnitPrice);
+
         var categoryIds = products
             .Select(product => product.CategoryId)
             .Where(categoryId => categoryId.HasValue)
@@ -239,6 +331,7 @@ public sealed class CustomerPortalAppService(
 
         foreach (var product in products)
         {
+            var hasPurchased = latestPrices.TryGetValue(product.Id, out var latestUnitPrice);
             string? pictureUrl = null;
             if (product.PictureId.HasValue)
             {
@@ -253,7 +346,8 @@ public sealed class CustomerPortalAppService(
                 CategoryId = product.CategoryId,
                 CategoryName = product.CategoryId.HasValue ? categories.GetValueOrDefault(product.CategoryId.Value) : null,
                 PictureUrl = pictureUrl,
-                UnitPrice = product.UnitPrice
+                UnitPrice = hasPurchased ? latestUnitPrice : null,
+                HasPurchased = hasPurchased
             });
         }
 
@@ -405,6 +499,13 @@ public sealed class CustomerPortalAppService(
                 throw new InvalidOperationException("Return request item is invalid.");
         }
 
+        var evidencePictureIds = new Dictionary<Guid, IList<Guid>>();
+        foreach (var item in dto.Items)
+        {
+            var pictureIds = await CreateReturnEvidencePicturesAsync(item.EvidencePictures).ConfigureAwait(false);
+            evidencePictureIds[item.DeliveryNoteItemId] = pictureIds;
+        }
+
         var request = new CreateCustomerReturnRequestDto
         {
             CustomerId = customerId,
@@ -419,7 +520,8 @@ public sealed class CustomerPortalAppService(
                     ProductId = deliveryItem?.ProductId ?? Guid.Empty,
                     ProductName = deliveryItem?.ProductName ?? string.Empty,
                     RequestedQuantity = item.RequestedQuantity,
-                    Reason = item.Reason
+                    Reason = item.Reason,
+                    EvidencePictureIds = evidencePictureIds.GetValueOrDefault(item.DeliveryNoteItemId) ?? []
                 };
             }).ToList()
         };
@@ -481,6 +583,56 @@ public sealed class CustomerPortalAppService(
             ExpectedShippingDateUtc = order.ExpectedShippingDateUtc
         };
 
+    private static CustomerOrderRequestSummaryAppDto MapOrderRequestSummary(CustomerOrderRequestDto request)
+    {
+        var exposePrice = ShouldExposeOrderRequestPrice(request);
+        return new CustomerOrderRequestSummaryAppDto
+        {
+            Id = request.Id,
+            Code = request.Code,
+            Status = (int)request.Status,
+            TotalAmount = exposePrice ? request.Items.Sum(item => item.SubTotal) : null,
+            CreatedOnUtc = request.CreatedOnUtc,
+            ExpectedShippingDateUtc = request.ExpectedShippingDateUtc,
+            ReviewedOnUtc = request.ReviewedOnUtc,
+            ConvertedOrderId = request.ConvertedOrderId,
+            CanConfirm = request.Status == CustomerOrderRequestStatus.Approved && IsOrderRequestPriced(request)
+        };
+    }
+
+    private static CustomerOrderRequestDetailsAppDto MapOrderRequestDetails(CustomerOrderRequestDto request)
+    {
+        var exposePrice = ShouldExposeOrderRequestPrice(request);
+        return new CustomerOrderRequestDetailsAppDto
+        {
+            Id = request.Id,
+            Code = request.Code,
+            Status = (int)request.Status,
+            TotalAmount = exposePrice ? request.Items.Sum(item => item.SubTotal) : null,
+            CreatedOnUtc = request.CreatedOnUtc,
+            ExpectedShippingDateUtc = request.ExpectedShippingDateUtc,
+            ReviewedOnUtc = request.ReviewedOnUtc,
+            ConvertedOrderId = request.ConvertedOrderId,
+            CanConfirm = request.Status == CustomerOrderRequestStatus.Approved && IsOrderRequestPriced(request),
+            ShippingAddress = request.ShippingAddress,
+            Note = request.Note,
+            AdminNote = request.AdminNote,
+            Items = request.Items.Select(item => MapOrderRequestItem(item, exposePrice)).ToList()
+        };
+    }
+
+    private static CustomerOrderRequestItemAppDto MapOrderRequestItem(CustomerOrderRequestItemDto item, bool exposePrice)
+        => new()
+        {
+            Id = item.Id,
+            ProductId = item.ProductId,
+            ProductName = item.ProductName,
+            Quantity = item.Quantity,
+            UnitPrice = exposePrice ? item.UnitPriceSnapshot : null,
+            SubTotal = exposePrice ? item.SubTotal : null,
+            IsPriced = item.UnitPriceSnapshot > 0
+        };
+
     private static CustomerDeliveryNoteSummaryAppDto MapDeliveryNoteSummary(DeliveryNote deliveryNote)
         => new()
         {
@@ -503,13 +655,101 @@ public sealed class CustomerPortalAppService(
             : $"Customer confirmed delivery. Receiver: {dto.ReceiverName}. Note: {dto.Note}";
     }
 
+    private async Task<IList<Guid>> CreateReturnEvidencePicturesAsync(ICollection<CreateCustomerReturnRequestPictureAppDto> pictures)
+    {
+        if (pictures.Count > MaxReturnEvidencePicturesPerItem)
+            throw new InvalidOperationException($"Return request can include at most {MaxReturnEvidencePicturesPerItem} pictures per item.");
+
+        var pictureIds = new List<Guid>();
+        foreach (var picture in pictures)
+        {
+            if (!AllowedReturnEvidenceMimeTypes.Contains(picture.MimeType))
+                throw new InvalidOperationException("Return evidence picture type is not supported.");
+
+            var bytes = DecodeBase64Payload(picture.Base64Data);
+            if (bytes.Length == 0 || bytes.Length > MaxReturnEvidencePictureBytes)
+                throw new InvalidOperationException("Return evidence picture size is invalid.");
+
+            pictureIds.Add(await pictureAppService.CreatePictureAsync(new CreatePictureAppDto
+            {
+                Data = bytes,
+                MimeType = picture.MimeType,
+                FileName = string.IsNullOrWhiteSpace(picture.FileName) ? "return-evidence" : picture.FileName.Trim(),
+                Extension = ResolvePictureExtension(picture.FileName, picture.MimeType)
+            }).ConfigureAwait(false));
+        }
+
+        return pictureIds;
+    }
+
+    private static byte[] DecodeBase64Payload(string base64Data)
+    {
+        if (string.IsNullOrWhiteSpace(base64Data))
+            return [];
+
+        var commaIndex = base64Data.IndexOf(',');
+        var payload = commaIndex >= 0 ? base64Data[(commaIndex + 1)..] : base64Data;
+        return Convert.FromBase64String(payload);
+    }
+
+    private static string ResolvePictureExtension(string fileName, string mimeType)
+    {
+        var extension = Path.GetExtension(fileName);
+        if (!string.IsNullOrWhiteSpace(extension))
+            return extension.TrimStart('.').ToLowerInvariant();
+
+        return mimeType.ToLowerInvariant() switch
+        {
+            "image/jpeg" => "jpg",
+            "image/png" => "png",
+            "image/webp" => "webp",
+            _ => "img"
+        };
+    }
+
+    private Dictionary<Guid, decimal> GetLatestPurchasedPrices(Guid customerId, IReadOnlyCollection<Guid> productIds)
+    {
+        if (productIds.Count == 0)
+            return [];
+
+        return orderReader.DataSource
+            .Where(order => order.CustomerId == customerId && order.OrderStatus != OrderStatus.Cancelled)
+            .SelectMany(order => order.OrderItems.Select(item => new
+            {
+                item.ProductId,
+                item.UnitPrice,
+                order.CreatedOnUtc
+            }))
+            .Where(item => productIds.Contains(item.ProductId))
+            .OrderByDescending(item => item.CreatedOnUtc)
+            .ToList()
+            .GroupBy(item => item.ProductId)
+            .ToDictionary(group => group.Key, group => group.First().UnitPrice);
+    }
+
+    private static bool ShouldExposeOrderRequestPrice(CustomerOrderRequestDto request)
+        => request.Status is CustomerOrderRequestStatus.Approved or CustomerOrderRequestStatus.ConvertedToOrder;
+
+    private static bool IsOrderRequestPriced(CustomerOrderRequestDto request)
+        => request.Items.Count > 0 && request.Items.All(item => item.UnitPriceSnapshot > 0);
+
+    private static string BuildConvertedOrderNote(CustomerOrderRequestDto request, string actorNote)
+    {
+        var note = $"Tạo từ yêu cầu Customer Portal {request.Code}. {actorNote}";
+        if (!string.IsNullOrWhiteSpace(request.Note))
+            note += $" Ghi chú khách: {request.Note}";
+        if (!string.IsNullOrWhiteSpace(request.AdminNote))
+            note += $" Ghi chú duyệt: {request.AdminNote}";
+
+        return note;
+    }
+
     private static string? NullIfWhiteSpace(string? value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private sealed record CustomerPortalProductListItem(
         Guid Id,
         string Name,
-        decimal UnitPrice,
         Guid? CategoryId,
         Guid? PictureId);
 }

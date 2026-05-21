@@ -104,9 +104,13 @@ public sealed class CustomerPortalController(
     }
 
     [HttpPost]
-    public async Task<IActionResult> ApproveOrderRequest(Guid id, string? adminNote)
+    public async Task<IActionResult> ApproveOrderRequest(Guid id, Guid[] itemIds, decimal[] unitPrices, string? adminNote)
     {
-        var result = await customerPortalAdminAppService.ApproveOrderRequestAsync(id, adminNote).ConfigureAwait(false);
+        var itemPrices = itemIds
+            .Zip(unitPrices, (itemId, unitPrice) => new { itemId, unitPrice })
+            .GroupBy(item => item.itemId)
+            .ToDictionary(group => group.Key, group => group.Last().unitPrice);
+        var result = await customerPortalAdminAppService.ApproveOrderRequestAsync(id, itemPrices, adminNote).ConfigureAwait(false);
         NotifyResult(result);
         return RedirectToAction(nameof(OrderRequestDetails), new { id });
     }

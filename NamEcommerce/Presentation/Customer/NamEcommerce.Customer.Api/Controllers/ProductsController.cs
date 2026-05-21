@@ -9,8 +9,8 @@ namespace NamEcommerce.Customer.Api.Controllers;
 public sealed class ProductsController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> Get([FromQuery] Guid? categoryId, [FromQuery] string? keywords, [FromQuery] int pageSize = 30)
-        => Ok(await mediator.Send(new GetCustomerProductsQuery(categoryId, keywords, pageSize)).ConfigureAwait(false));
+    public async Task<IActionResult> Get([FromQuery] Guid? categoryId, [FromQuery] string? keywords, [FromQuery] bool purchasedOnly = true, [FromQuery] int pageSize = 30)
+        => Ok(await mediator.Send(new GetCustomerProductsQuery(categoryId, keywords, purchasedOnly, pageSize)).ConfigureAwait(false));
 
     [HttpGet("categories")]
     public async Task<IActionResult> GetCategories()
