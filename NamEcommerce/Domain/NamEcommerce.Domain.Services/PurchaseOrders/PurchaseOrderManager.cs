@@ -1060,12 +1060,14 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 if (isLast)
                 {
                     goodsReceiptItem.SetUnitCost(unitCost);
+                    goodsReceipt.MarkItemUnitCostSet(goodsReceiptItem.Id);
                 }
                 else
                 {
                     goodsReceipt.SplitToNewItemWithQuantity(originalItemId, qty);
                     var newItem = goodsReceipt.Items.Last();
                     newItem.SetUnitCost(unitCost);
+                    goodsReceipt.MarkItemUnitCostSet(newItem.Id);
                     goodsReceipt.RaiseItemSplitOnLinking(
                         purchaseOrderId, originalItemId, newItem.ProductId, qty, unitCost);
                 }
