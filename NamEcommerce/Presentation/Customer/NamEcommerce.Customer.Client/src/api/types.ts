@@ -69,6 +69,57 @@ export type OrderItem = {
   subTotal: number;
 };
 
+export type ProductList = {
+  items: ProductPickerItem[];
+  hasMore: boolean;
+  pageSize: number;
+};
+
+export type ProductPickerItem = {
+  id: string;
+  name: string;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  pictureUrl?: string | null;
+  unitPrice: number;
+};
+
+export type ProductCategoryList = {
+  items: ProductCategory[];
+};
+
+export type ProductCategory = {
+  id: string;
+  name: string;
+  parentId?: string | null;
+};
+
+export type OrderRequestDefaults = {
+  shippingAddress?: string | null;
+  shippingAddressSource?: string | null;
+};
+
+export type ContactInfo = {
+  store: StoreContact;
+  warehouses: WarehouseContact[];
+};
+
+export type StoreContact = {
+  storeName: string;
+  phoneNumber?: string | null;
+  address?: string | null;
+  email?: string | null;
+  mapQuery?: string | null;
+};
+
+export type WarehouseContact = {
+  id: string;
+  name: string;
+  phoneNumber?: string | null;
+  address?: string | null;
+  mapQuery?: string | null;
+};
+
 export type DeliveryNoteSummary = {
   id: string;
   code: string;

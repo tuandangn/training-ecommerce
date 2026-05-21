@@ -10,3 +10,33 @@ export function shortDate(value?: string | null) {
 export function statusText(value: number) {
   return `#${value}`;
 }
+
+export function orderStatusText(value: number) {
+  switch (value) {
+    case 0:
+      return "Đang xử lý";
+    case 1:
+      return "Hoàn thành";
+    case 2:
+      return "Đã hủy";
+    default:
+      return statusText(value);
+  }
+}
+
+export function deliveryNoteStatusText(value: number) {
+  switch (value) {
+    case 10:
+      return "Bản nháp";
+    case 20:
+      return "Đã xác nhận";
+    case 30:
+      return "Đang giao";
+    case 40:
+      return "Đã giao";
+    case 50:
+      return "Đã hủy";
+    default:
+      return statusText(value);
+  }
+}

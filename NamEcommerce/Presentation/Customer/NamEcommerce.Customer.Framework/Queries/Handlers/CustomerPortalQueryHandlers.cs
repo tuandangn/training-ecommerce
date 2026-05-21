@@ -14,6 +14,10 @@ public sealed class CustomerPortalQueryHandlers(
     IRequestHandler<GetCustomerDashboardQuery, CustomerDashboardModel>,
     IRequestHandler<GetCustomerOrdersQuery, CustomerOrderListModel>,
     IRequestHandler<GetCustomerOrderDetailsQuery, CustomerOrderDetailsModel?>,
+    IRequestHandler<GetCustomerOrderRequestDefaultsQuery, CustomerOrderRequestDefaultsModel>,
+    IRequestHandler<GetCustomerProductsQuery, CustomerProductListModel>,
+    IRequestHandler<GetCustomerProductCategoriesQuery, CustomerProductCategoryListModel>,
+    IRequestHandler<GetCustomerContactQuery, CustomerContactModel>,
     IRequestHandler<GetCustomerDeliveryNotesQuery, CustomerDeliveryNoteListModel>,
     IRequestHandler<GetCustomerDeliveryNoteDetailsQuery, CustomerDeliveryNoteDetailsModel?>,
     IRequestHandler<GetCustomerDebtsQuery, CustomerDebtSummaryModel>
@@ -67,6 +71,50 @@ public sealed class CustomerPortalQueryHandlers(
                 order.ShippingAddress,
                 order.Note,
                 order.Items.Select(item => new CustomerOrderItemModel(item.Id, item.ProductId, item.ProductName, item.Quantity, item.UnitPrice, item.SubTotal)).ToList());
+    }
+
+    public async Task<CustomerOrderRequestDefaultsModel> Handle(GetCustomerOrderRequestDefaultsQuery request, CancellationToken cancellationToken)
+    {
+        var defaults = await portalAppService.GetOrderRequestDefaultsAsync(RequireCustomerId()).ConfigureAwait(false);
+        return new CustomerOrderRequestDefaultsModel(defaults.ShippingAddress, defaults.ShippingAddressSource);
+    }
+
+    public async Task<CustomerProductListModel> Handle(GetCustomerProductsQuery request, CancellationToken cancellationToken)
+    {
+        var products = await portalAppService.GetProductsAsync(request.CategoryId, request.Keywords, request.PageSize).ConfigureAwait(false);
+        return new CustomerProductListModel(
+            products.Items
+                .Select(product => new CustomerProductModel(product.Id, product.Name, product.CategoryId, product.CategoryName, product.PictureUrl, product.UnitPrice))
+                .ToList(),
+            products.HasMore,
+            products.PageSize);
+    }
+
+    public async Task<CustomerProductCategoryListModel> Handle(GetCustomerProductCategoriesQuery request, CancellationToken cancellationToken)
+    {
+        var categories = await portalAppService.GetProductCategoriesAsync().ConfigureAwait(false);
+        return new CustomerProductCategoryListModel(categories.Items
+            .Select(category => new CustomerProductCategoryModel(category.Id, category.Name, category.ParentId))
+            .ToList());
+    }
+
+    public async Task<CustomerContactModel> Handle(GetCustomerContactQuery request, CancellationToken cancellationToken)
+    {
+        var contact = await portalAppService.GetContactAsync().ConfigureAwait(false);
+        return new CustomerContactModel(
+            new CustomerStoreContactModel(
+                contact.Store.StoreName,
+                contact.Store.PhoneNumber,
+                contact.Store.Address,
+                contact.Store.Email,
+                contact.Store.MapQuery),
+            contact.Warehouses.Select(warehouse => new CustomerWarehouseContactModel(
+                    warehouse.Id,
+                    warehouse.Name,
+                    warehouse.PhoneNumber,
+                    warehouse.Address,
+                    warehouse.MapQuery))
+                .ToList());
     }
 
     public async Task<CustomerDeliveryNoteListModel> Handle(GetCustomerDeliveryNotesQuery request, CancellationToken cancellationToken)

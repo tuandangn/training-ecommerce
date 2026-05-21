@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../api/client";
 import type { OrderDetails } from "../api/types";
-import { money, shortDate, statusText } from "../app/format";
+import { money, orderStatusText, shortDate } from "../app/format";
 
 export function OrderDetailsPage({ id }: { id: string }) {
   const [order, setOrder] = useState<OrderDetails | null>(null);
@@ -17,7 +17,7 @@ export function OrderDetailsPage({ id }: { id: string }) {
       <div>
         <h1 className="page-title">{order.code}</h1>
         <p className="page-subtitle">
-          {shortDate(order.createdOn)} · {statusText(order.status)}
+          {shortDate(order.createdOn)} · {orderStatusText(order.status)}
         </p>
       </div>
       <div className="grid cols-3">
@@ -31,7 +31,7 @@ export function OrderDetailsPage({ id }: { id: string }) {
         </div>
         <div className="card">
           <div className="metric-label">Trạng thái</div>
-          <div className="metric-value">{statusText(order.status)}</div>
+          <div className="metric-value">{orderStatusText(order.status)}</div>
         </div>
       </div>
       <table className="table">

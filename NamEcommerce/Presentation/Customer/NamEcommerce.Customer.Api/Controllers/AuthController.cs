@@ -49,6 +49,13 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
+    [HttpPost("password/change")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+    {
+        var result = await mediator.Send(new ChangeCustomerPasswordCommand(request.CurrentPassword, request.NewPassword)).ConfigureAwait(false);
+        return result.Success ? Ok(result) : BadRequest(result);
+    }
+
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
@@ -79,4 +86,5 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
     public sealed record VerifyOtpRequest(Guid ChallengeId, string Otp);
     public sealed record PasswordLoginRequest(string Login, string Password);
     public sealed record SetPasswordRequest(string Password);
+    public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 }

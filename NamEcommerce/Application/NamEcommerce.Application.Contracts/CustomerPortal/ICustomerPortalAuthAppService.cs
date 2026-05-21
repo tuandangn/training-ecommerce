@@ -8,6 +8,7 @@ public interface ICustomerPortalAuthAppService
     Task<CustomerPortalLoginResultAppDto> VerifyOtpAsync(CustomerOtpVerifyAppDto dto);
     Task<CustomerPortalLoginResultAppDto> PasswordLoginAsync(CustomerPasswordLoginAppDto dto);
     Task<CustomerActionResultAppDto> SetPasswordAsync(Guid customerId, SetCustomerPasswordAppDto dto);
+    Task<CustomerActionResultAppDto> ChangePasswordAsync(Guid customerId, ChangeCustomerPasswordAppDto dto);
     Task<CustomerSessionAppDto?> GetSessionAsync(string sessionToken, DateTime nowUtc);
     Task<CustomerActionResultAppDto> LogoutAsync(Guid sessionId);
 }

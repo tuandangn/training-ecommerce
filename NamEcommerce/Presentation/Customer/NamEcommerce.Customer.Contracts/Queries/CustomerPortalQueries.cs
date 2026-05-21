@@ -8,6 +8,10 @@ public sealed record GetCurrentCustomerSessionQuery : IRequest<CustomerSessionMo
 public sealed record GetCustomerDashboardQuery : IRequest<CustomerDashboardModel>;
 public sealed record GetCustomerOrdersQuery : IRequest<CustomerOrderListModel>;
 public sealed record GetCustomerOrderDetailsQuery(Guid OrderId) : IRequest<CustomerOrderDetailsModel?>;
+public sealed record GetCustomerOrderRequestDefaultsQuery : IRequest<CustomerOrderRequestDefaultsModel>;
+public sealed record GetCustomerProductsQuery(Guid? CategoryId, string? Keywords, int PageSize = 30) : IRequest<CustomerProductListModel>;
+public sealed record GetCustomerProductCategoriesQuery : IRequest<CustomerProductCategoryListModel>;
+public sealed record GetCustomerContactQuery : IRequest<CustomerContactModel>;
 public sealed record GetCustomerDeliveryNotesQuery : IRequest<CustomerDeliveryNoteListModel>;
 public sealed record GetCustomerDeliveryNoteDetailsQuery(Guid DeliveryNoteId) : IRequest<CustomerDeliveryNoteDetailsModel?>;
 public sealed record GetCustomerDebtsQuery : IRequest<CustomerDebtSummaryModel>;

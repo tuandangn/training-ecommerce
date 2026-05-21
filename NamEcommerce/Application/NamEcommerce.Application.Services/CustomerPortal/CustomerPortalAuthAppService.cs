@@ -22,6 +22,7 @@ public sealed class CustomerPortalAuthAppService(
     private const string OtpVerifyEvent = "OtpVerify";
     private const string PasswordLoginEvent = "PasswordLogin";
     private const string SetPasswordEvent = "SetPassword";
+    private const string ChangePasswordEvent = "ChangePassword";
 
     private static readonly CustomerOtpRequestResultAppDto GenericOtpFailure = new()
     {
@@ -184,6 +185,33 @@ public sealed class CustomerPortalAuthAppService(
         await securityManager.SetPasswordAsync(customerId, hash.PasswordHash, hash.PasswordSalt).ConfigureAwait(false);
         await RecordEventAsync(customerId, null, SetPasswordEvent, CustomerPortalSecurityEventOutcome.Succeeded, null, null).ConfigureAwait(false);
         return CustomerActionResultAppDto.Ok("Đã thiết lập mật khẩu.");
+    }
+
+    public async Task<CustomerActionResultAppDto> ChangePasswordAsync(Guid customerId, ChangeCustomerPasswordAppDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.CurrentPassword))
+            return CustomerActionResultAppDto.Fail("Vui lòng nhập mật khẩu hiện tại.");
+        if (string.IsNullOrWhiteSpace(dto.NewPassword) || dto.NewPassword.Length < 8)
+            return CustomerActionResultAppDto.Fail("Mật khẩu mới cần tối thiểu 8 ký tự.");
+
+        var account = await securityManager.GetAccountByCustomerIdAsync(customerId).ConfigureAwait(false);
+        if (account is null || string.IsNullOrWhiteSpace(account.PasswordHash) || string.IsNullOrWhiteSpace(account.PasswordSalt))
+            return CustomerActionResultAppDto.Fail("Tài khoản chưa thiết lập mật khẩu.");
+
+        if (account.Status == CustomerPortalAccountStatus.Blocked)
+            return CustomerActionResultAppDto.Fail("Tài khoản đã bị khóa.");
+
+        var currentPasswordValid = await securityService.VerifyPasswordAsync(dto.CurrentPassword, account.PasswordHash, account.PasswordSalt).ConfigureAwait(false);
+        if (!currentPasswordValid)
+        {
+            await RecordEventAsync(customerId, null, ChangePasswordEvent, CustomerPortalSecurityEventOutcome.Failed, null, null).ConfigureAwait(false);
+            return CustomerActionResultAppDto.Fail("Mật khẩu hiện tại không đúng.");
+        }
+
+        var hash = await securityService.HashPasswordAsync(dto.NewPassword).ConfigureAwait(false);
+        await securityManager.SetPasswordAsync(customerId, hash.PasswordHash, hash.PasswordSalt).ConfigureAwait(false);
+        await RecordEventAsync(customerId, null, ChangePasswordEvent, CustomerPortalSecurityEventOutcome.Succeeded, null, null).ConfigureAwait(false);
+        return CustomerActionResultAppDto.Ok("Đã đổi mật khẩu.");
     }
 
     public async Task<CustomerSessionAppDto?> GetSessionAsync(string sessionToken, DateTime nowUtc)

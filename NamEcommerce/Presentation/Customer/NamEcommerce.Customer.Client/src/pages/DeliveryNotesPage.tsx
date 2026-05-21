@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../api/client";
 import type { DeliveryNoteSummary } from "../api/types";
-import { shortDate, statusText } from "../app/format";
+import { deliveryNoteStatusText, shortDate } from "../app/format";
 import { navigate } from "../app/routes";
 
 export function DeliveryNotesPage() {
@@ -30,7 +30,7 @@ export function DeliveryNotesPage() {
               <td>{note.code}</td>
               <td>{note.orderCode ?? "-"}</td>
               <td>
-                <span className="badge">{statusText(note.status)}</span>
+                <span className="badge">{deliveryNoteStatusText(note.status)}</span>
               </td>
               <td>{shortDate(note.createdOn)}</td>
             </tr>
