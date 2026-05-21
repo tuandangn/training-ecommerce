@@ -1,7 +1,9 @@
+using NamEcommerce.Domain.Metadata;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
+using NamEcommerce.Domain.Values;
 
 namespace NamEcommerce.Domain.Entities.DeliveryNotes;
 
@@ -13,7 +15,7 @@ public sealed record DeliveryNote : AppAggregateEntity
     public DeliveryNote(Guid id) : base(id)
     {
         Code = string.Empty;
-        CustomerName = string.Empty;
+        CustomerInfo = new CustomerInfo(string.Empty, string.Empty, string.Empty);
         ShippingAddress = string.Empty;
         _items = [];
     }
@@ -26,16 +28,15 @@ public sealed record DeliveryNote : AppAggregateEntity
         CreatedByUserId = createdByUserId;
         Status = DeliveryNoteStatus.Draft;
         CreatedOnUtc = DateTime.UtcNow;
-        // Sentinel values — không liên quan đến Order hay Customer
         OrderId = Guid.Empty;
         CustomerId = Guid.Empty;
-        CustomerName = string.Empty;
+        CustomerInfo = new CustomerInfo(string.Empty, string.Empty, string.Empty);
         ShippingAddress = string.Empty;
         _items = [];
     }
 
     internal DeliveryNote(string code, Guid orderId,
-        Guid customerId, string customerName, string? customerPhone, string? customerAddress,
+        Guid customerId, string customerName, string customerPhone, string? customerAddress,
         string shippingAddress, Guid warehouseId, bool showPrice, string? note,
         decimal surcharge, decimal amountToCollect, string? surchargeReason,
         Guid? createdByUserId) : base(Guid.NewGuid())
@@ -43,9 +44,7 @@ public sealed record DeliveryNote : AppAggregateEntity
         Code = code;
         OrderId = orderId;
         CustomerId = customerId;
-        CustomerName = customerName;
-        CustomerPhone = customerPhone;
-        CustomerAddress = customerAddress;
+        CustomerInfo = new CustomerInfo(customerName, customerPhone, customerAddress);
         ShippingAddress = shippingAddress;
         ShowPrice = showPrice;
         Note = note;
@@ -72,10 +71,8 @@ public sealed record DeliveryNote : AppAggregateEntity
     public string? WarehouseName { get; internal set; }
 
     public Guid CustomerId { get; private set; }
-    public string CustomerName { get; private set; }
-    public string? CustomerPhone { get; private set; }
-    public string? CustomerAddress { get; private set; }
-    public string ShippingAddress { get; private set; }
+    public CustomerInfo CustomerInfo { get; private set; }
+    public NormalizableString ShippingAddress { get; internal set; }
     
     public decimal Surcharge { get; internal set; }
     public string? SurchargeReason { get; internal set; }

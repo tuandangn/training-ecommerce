@@ -1,5 +1,7 @@
 using NamEcommerce.Domain.Entities.GoodsReceipts;
+using NamEcommerce.Domain.Metadata;
 using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
+using NamEcommerce.Domain.Values;
 
 namespace NamEcommerce.Data.SqlServer.Mappings;
 
@@ -15,8 +17,6 @@ public sealed class GoodsReceiptMapping : IEntityTypeConfiguration<GoodsReceipt>
 
         builder.Property(g => g.ReceivedOnUtc).IsRequired();
 
-        // Phase A1: SourceType phân biệt nguồn (NCC vs trả từ KH vs điều chỉnh).
-        // Default = FromVendor để dữ liệu hiện có (chưa có cột) sau migration tự map đúng.
         builder.Property(g => g.SourceType)
             .IsRequired()
             .HasDefaultValue(GoodsReceiptSourceType.FromVendor)
@@ -25,15 +25,33 @@ public sealed class GoodsReceiptMapping : IEntityTypeConfiguration<GoodsReceipt>
         builder.Property(g => g.BulkReceiveBatchId);
         builder.HasIndex(g => g.BulkReceiveBatchId);
 
-        builder.Property(g => g.TruckDriverName).HasMaxLength(500);
-        builder.Property(g => g.TruckDriverNameNormalized).HasMaxLength(500);
+        builder.ComplexProperty(g => g.TruckDriverName, driverNameBuilder =>
+        {
+            driverNameBuilder.Property(g => g.Value).HasColumnName(nameof(GoodsReceipt.TruckDriverName)).HasMaxLength(500).IsRequired(false);
+            driverNameBuilder.Property(g => g.NormalizedValue).HasColumnName($"{nameof(GoodsReceipt.TruckDriverName)}Normalized").HasMaxLength(500).IsRequired(false);
+        });
         builder.Property(g => g.TruckNumberSerial).HasMaxLength(100);
         builder.Property(g => g.Note).HasMaxLength(2000);
 
         builder.Property(g => g.VendorId);
-        builder.Property(g => g.VendorName).HasMaxLength(500);
-        builder.Property(g => g.VendorPhone).HasMaxLength(50);
-        builder.Property(g => g.VendorAddress).HasMaxLength(1000);
+        builder.ComplexProperty(g => g.VendorInfo, vendorInfoBuilder =>
+        {
+            vendorInfoBuilder.Property(info => info.Name)
+                .HasColumnName($"Vendor{nameof(VendorInfo.Name)}")
+                .HasMaxLength(500)
+                .HasConversion(
+                    info => info.Value,
+                    value => new NormalizableString(value)
+                );
+            vendorInfoBuilder.Property(info => info.Address)
+                .HasColumnName($"Vendor{nameof(VendorInfo.Address)}")
+                .HasMaxLength(1000)
+                .HasConversion(
+                    info => info.Value,
+                    value => new NormalizableString(value)
+                );
+            vendorInfoBuilder.Property(g => g.Phone).HasColumnName($"Vendor{nameof(VendorInfo.Phone)}").HasMaxLength(50);
+        });
 
         builder.Property(g => g.CreatedByUserId);
         builder.Property(g => g.CreatedByUsername).HasMaxLength(500);

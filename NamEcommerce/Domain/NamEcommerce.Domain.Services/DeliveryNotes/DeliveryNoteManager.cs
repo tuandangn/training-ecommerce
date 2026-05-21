@@ -84,9 +84,9 @@ public sealed class DeliveryNoteManager(
             code: code,
             orderId: order.Id,
             customerId: order.CustomerId,
-            customerName: order.CustomerName ?? string.Empty,
-            customerPhone: order.CustomerPhone,
-            customerAddress: order.CustomerAddress,
+            customerName: order.CustomerInfo.FullName,
+            customerPhone: order.CustomerInfo.PhoneNumber,
+            customerAddress: order.CustomerInfo.Address,
             shippingAddress: dto.ShippingAddress,
             warehouseId: dto.WarehouseId,
             showPrice: dto.ShowPrice,
@@ -318,9 +318,9 @@ public sealed class DeliveryNoteManager(
             code: code,
             orderId: order.Id,
             customerId: order.CustomerId,
-            customerName: order.CustomerName ?? string.Empty,
-            customerPhone: order.CustomerPhone,
-            customerAddress: order.CustomerAddress,
+            customerName: order.CustomerInfo.FullName,
+            customerPhone: order.CustomerInfo.PhoneNumber,
+            customerAddress: order.CustomerInfo.Address,
             shippingAddress: dto.ShippingAddress,
             warehouseId: dto.DirectShipWarehouseId,
             showPrice: false,
@@ -460,8 +460,8 @@ public sealed class DeliveryNoteManager(
             query = query.Where(deliveryNote =>
                 deliveryNote.Code.Contains(keywords) ||
                 (deliveryNote.OrderCode != null && deliveryNote.OrderCode.Contains(keywords)) ||
-                deliveryNote.CustomerName.ToUpper().Contains(uppercaseKeywords) ||
-                (deliveryNote.CustomerPhone != null && deliveryNote.CustomerPhone.Contains(keywords))
+                deliveryNote.CustomerInfo.FullName.Value.ToUpper().Contains(uppercaseKeywords) ||
+                (deliveryNote.CustomerInfo.PhoneNumber != null && deliveryNote.CustomerInfo.PhoneNumber.Contains(keywords))
             );
         }
         if (orderId.HasValue)
@@ -579,9 +579,9 @@ public sealed class DeliveryNoteManager(
             WarehouseId = deliveryNote.WarehouseId,
             OrderCode = deliveryNote.OrderCode,
             CustomerId = deliveryNote.CustomerId,
-            CustomerName = deliveryNote.CustomerName ?? string.Empty,
-            CustomerPhone = deliveryNote.CustomerPhone,
-            CustomerAddress = deliveryNote.CustomerAddress,
+            CustomerName = deliveryNote.CustomerInfo.FullName,
+            CustomerPhone = deliveryNote.CustomerInfo.PhoneNumber,
+            CustomerAddress = deliveryNote.CustomerInfo.Address,
             ShippingAddress = deliveryNote.ShippingAddress,
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,

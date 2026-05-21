@@ -25,9 +25,9 @@ public static class GoodsReceiptExtensions
             TruckDriverName = goodsReceipt.TruckDriverName,
             TruckNumberSerial = goodsReceipt.TruckNumberSerial,
             VendorId = goodsReceipt.VendorId,
-            VendorName = goodsReceipt.VendorName,
-            VendorPhone = goodsReceipt.VendorPhone,
-            VendorAddress = goodsReceipt.VendorAddress,
+            VendorName = goodsReceipt.VendorInfo?.Name,
+            VendorPhone = goodsReceipt.VendorInfo?.Phone,
+            VendorAddress = goodsReceipt.VendorInfo?.Address,
             PurchaseOrderId = goodsReceipt.PurchaseOrderId,
             PurchaseOrderCode = goodsReceipt.PurchaseOrderCode,
             BulkReceiveBatchId = goodsReceipt.BulkReceiveBatchId

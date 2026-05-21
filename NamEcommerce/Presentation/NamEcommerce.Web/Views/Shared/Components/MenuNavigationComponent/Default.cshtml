@@ -35,35 +35,6 @@
         </div>
     </li>
 
-    <!-- Cổng khách hàng -->
-    <li class="nav-item">
-        <a class="nav-link @(WebHelper.IsHasController("CustomerPortal") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseCustomerPortal" aria-expanded="@(WebHelper.IsHasController("CustomerPortal") ? "true" : "false")">
-            <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Cổng khách hàng
-        </a>
-        <div class="collapse @(WebHelper.IsHasController("CustomerPortal") ? "show" : "")" id="collapseCustomerPortal">
-            <ul class="nav flex-column sub-menu">
-                <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "Index") ? "active" : "")" asp-controller="CustomerPortal" asp-action="Index">Tổng quan</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "Accounts") ? "active" : "")" asp-controller="CustomerPortal" asp-action="Accounts">Tài khoản khách</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "OrderRequests") || WebHelper.IsMatchRouteInfo("CustomerPortal", "OrderRequestDetails") ? "active" : "")" asp-controller="CustomerPortal" asp-action="OrderRequests">Đơn khách tạo</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "ReturnRequests") || WebHelper.IsMatchRouteInfo("CustomerPortal", "ReturnRequestDetails") ? "active" : "")" asp-controller="CustomerPortal" asp-action="ReturnRequests">Yêu cầu trả hàng</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "PaymentIntents") || WebHelper.IsMatchRouteInfo("CustomerPortal", "PaymentIntentDetails") ? "active" : "")" asp-controller="CustomerPortal" asp-action="PaymentIntents">Thanh toán online</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "SecurityEvents") ? "active" : "")" asp-controller="CustomerPortal" asp-action="SecurityEvents">Sự kiện bảo mật</a>
-                </li>
-            </ul>
-        </div>
-    </li>
-
     <!-- Mua hàng -->
     <li class="nav-item">
         <a class="nav-link @(WebHelper.IsHasController("PurchaseOrder", "Vendor", "VendorReturn") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapsePurchases" aria-expanded="@(WebHelper.IsHasController("PurchaseOrder", "Vendor", "VendorReturn") ? "true" : "false")">
@@ -163,5 +134,35 @@
             </ul>
         </div>
     </li>
+
+    <!-- Cổng khách hàng -->
+    <li class="nav-item">
+        <a class="nav-link @(WebHelper.IsHasController("CustomerPortal") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseCustomerPortal" aria-expanded="@(WebHelper.IsHasController("CustomerPortal") ? "true" : "false")">
+            <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Cổng khách hàng
+        </a>
+        <div class="collapse @(WebHelper.IsHasController("CustomerPortal") ? "show" : "")" id="collapseCustomerPortal">
+            <ul class="nav flex-column sub-menu">
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "Index") ? "active" : "")" asp-controller="CustomerPortal" asp-action="Index">Tổng quan</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "Accounts") ? "active" : "")" asp-controller="CustomerPortal" asp-action="Accounts">Tài khoản khách</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "OrderRequests") || WebHelper.IsMatchRouteInfo("CustomerPortal", "OrderRequestDetails") ? "active" : "")" asp-controller="CustomerPortal" asp-action="OrderRequests">Đơn khách tạo</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "ReturnRequests") || WebHelper.IsMatchRouteInfo("CustomerPortal", "ReturnRequestDetails") ? "active" : "")" asp-controller="CustomerPortal" asp-action="ReturnRequests">Yêu cầu trả hàng</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "PaymentIntents") || WebHelper.IsMatchRouteInfo("CustomerPortal", "PaymentIntentDetails") ? "active" : "")" asp-controller="CustomerPortal" asp-action="PaymentIntents">Thanh toán online</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerPortal", "SecurityEvents") ? "active" : "")" asp-controller="CustomerPortal" asp-action="SecurityEvents">Sự kiện bảo mật</a>
+                </li>
+            </ul>
+        </div>
+    </li>
+
 
 </ul>

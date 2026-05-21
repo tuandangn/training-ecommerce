@@ -240,7 +240,7 @@ public sealed class OrderManager(
             IList<Guid?> userIds = [];
 
             query = query.Where(order => order.Code.Contains(keywords) || order.Code.Contains(normalizedKeywords)
-                || (order.ShippingAddress != null && (order.ShippingAddress.ToUpper().Contains(uppercaseKeywords) || order.ShippingAddress.ToUpper().Contains(normalizedKeywords) || order.NormalizedShippingAddress.Contains(normalizedKeywords)))
+                || (order.ShippingAddress.Value != null && (order.ShippingAddress.Value.ToUpper().Contains(uppercaseKeywords) || order.ShippingAddress.Value.ToUpper().Contains(normalizedKeywords) || order.ShippingAddress.NormalizedValue.Contains(normalizedKeywords)))
                 || customerIds.Contains(order.CustomerId)
                 || userIds.Contains(order.CreatedByUserId));
         }

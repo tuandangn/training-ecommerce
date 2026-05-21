@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NamEcommerce.Data.SqlServer;
 
@@ -12,9 +13,11 @@ using NamEcommerce.Data.SqlServer;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     [DbContext(typeof(NamEcommerceEfDbContext))]
-    partial class NamEcommerceEfDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260520230718_UpdateToValueObject1")]
+    partial class UpdateToValueObject1
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1646,11 +1649,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                             b1.IsRequired();
 
                             b1.Property<string>("NormalizedValue")
+                                .IsRequired()
                                 .HasMaxLength(500)
                                 .HasColumnType("nvarchar(500)")
                                 .HasColumnName("TruckDriverNameNormalized");
 
                             b1.Property<string>("Value")
+                                .IsRequired()
                                 .HasMaxLength(500)
                                 .HasColumnType("nvarchar(500)")
                                 .HasColumnName("TruckDriverName");

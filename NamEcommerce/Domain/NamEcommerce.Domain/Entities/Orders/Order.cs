@@ -9,7 +9,8 @@ using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Orders;
 using NamEcommerce.Domain.Shared.Dtos.Users;
-using NamEcommerce.Domain.Shared.Helpers;
+using NamEcommerce.Domain.Values;
+using NamEcommerce.Domain.Metadata;
 
 namespace NamEcommerce.Domain.Entities.Orders;
 
@@ -27,21 +28,13 @@ public sealed record Order : AppAggregateEntity
         Code = code;
         CreatedByUserId = createdByUser?.Id;
         CreatedByUsername = createdByUser?.Username;
+        CustomerInfo = new CustomerInfo(string.Empty, string.Empty, string.Empty);
         CreatedOnUtc = DateTime.UtcNow;
     }
 
     public string Code { get; }
     public DateTime? ExpectedShippingDateUtc { get; internal set; }
-    public string? ShippingAddress
-    {
-        get;
-        internal set
-        {
-            field = value;
-            NormalizedShippingAddress = TextHelper.Normalize(ShippingAddress);
-        }
-    }
-    internal string NormalizedShippingAddress { get; private set; } = "";
+    public NormalizableString ShippingAddress { get; internal set;  }
     public decimal OrderSubTotal { get; private set; }
     public decimal OrderTotal { get; private set; }
     public decimal OrderDiscount { get; private set; }
@@ -50,9 +43,7 @@ public sealed record Order : AppAggregateEntity
     public string? Note { get; internal set; }
 
     public Guid CustomerId { get; private set; }
-    internal string? CustomerName { get; private set; }
-    internal string? CustomerPhone { get; private set; }
-    internal string? CustomerAddress { get; private set; }
+    internal CustomerInfo CustomerInfo { get; private set; }
 
     private readonly List<OrderItem> _orderItems = [];
     public IEnumerable<OrderItem> OrderItems => _orderItems.AsReadOnly();
@@ -97,9 +88,7 @@ public sealed record Order : AppAggregateEntity
             throw new CustomerIsNotFoundException(customerId);
 
         CustomerId = customerId;
-        CustomerName = customer.FullName;
-        CustomerPhone = customer.PhoneNumber;
-        CustomerAddress = customer.Address;
+        CustomerInfo = new CustomerInfo(customer.FullName, customer.PhoneNumber, customer.Address);
         if (string.IsNullOrEmpty(ShippingAddress))
             ShippingAddress = customer.Address;
     }

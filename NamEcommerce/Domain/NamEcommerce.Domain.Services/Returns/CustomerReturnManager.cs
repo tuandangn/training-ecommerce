@@ -44,7 +44,7 @@ public sealed class CustomerReturnManager(
             throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
 
         var customerId = deliveryNote.CustomerId;
-        var customerName = deliveryNote.CustomerName ?? string.Empty;
+        var customerName = deliveryNote.CustomerInfo.FullName;
 
         var code = GenerateCode();
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);

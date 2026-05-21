@@ -1,5 +1,7 @@
 using NamEcommerce.Domain.Entities.DeliveryNotes;
+using NamEcommerce.Domain.Metadata;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Values;
 
 namespace NamEcommerce.Data.SqlServer.Mappings;
 
@@ -18,20 +20,45 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.Property(d => d.WarehouseId).IsRequired();
         builder.Property(d => d.OrderCode);
 
-        // Phase A1: SourceType phân biệt nguồn (KH vs trả NCC vs điều chỉnh).
-        // Default = ToCustomer để dữ liệu hiện có (chưa có cột) sau migration tự map đúng.
         builder.Property(d => d.SourceType)
             .IsRequired()
             .HasDefaultValue(DeliveryNoteSourceType.ToCustomer)
             .HasConversion<int>();
 
         builder.Property(d => d.CustomerId).IsRequired();
-        builder.Property(d => d.CustomerName).HasMaxLength(255).IsRequired();
-        builder.Property(d => d.CustomerPhone).HasMaxLength(50).IsRequired(false);
-        builder.Property(d => d.CustomerAddress).HasMaxLength(1000).IsRequired(false);
-        
-        builder.Property(d => d.ShippingAddress).HasMaxLength(1000).IsRequired();
-        
+        builder.ComplexProperty(o => o.CustomerInfo, customerInfoBuilder =>
+        {
+            customerInfoBuilder.Property(info => info.FullName)
+                .HasColumnName($"CustomerName")
+                .HasMaxLength(200)
+                .HasConversion(
+                    info => info.Value,
+                    value => new NormalizableString(value)
+                );
+            customerInfoBuilder.Property(info => info.Address)
+                .HasColumnName($"Customer{nameof(CustomerInfo.Address)}")
+                .HasMaxLength(500)
+                .HasConversion(
+                    info => info.Value,
+                    value => new NormalizableString(value)
+                );
+            customerInfoBuilder.Property(c => c.PhoneNumber)
+                .HasColumnName("CustomerPhone")
+                .HasMaxLength(50)
+                .IsRequired();
+        });
+        builder.ComplexProperty(c => c.ShippingAddress, shippingAddressProp =>
+        {
+            shippingAddressProp.Property(n => n.Value)
+                          .HasColumnName(nameof(Order.ShippingAddress))
+                          .HasMaxLength(1000)
+                          .IsRequired();
+            shippingAddressProp.Property(n => n.NormalizedValue)
+                          .HasColumnName($"Normalized{nameof(Order.ShippingAddress)}")
+                          .HasMaxLength(1000)
+                          .IsRequired();
+        });
+
         builder.Property(d => d.ShowPrice).IsRequired().HasDefaultValue(false);
         builder.Property(d => d.Note).HasMaxLength(2000).IsRequired(false);
         

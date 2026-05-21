@@ -201,8 +201,8 @@ public sealed class DirectShipManager(
             var kw = keywords.Trim().ToLower();
             query = query.Where(d =>
                 d.Code.ToLower().Contains(kw) ||
-                d.CustomerName.ToLower().Contains(kw) ||
-                d.ShippingAddress.ToLower().Contains(kw));
+                d.CustomerInfo.FullName.Value.ToLower().Contains(kw) ||
+                d.ShippingAddress.Value.ToLower().Contains(kw));
         }
 
         if (fromDateUtc.HasValue)
@@ -380,9 +380,9 @@ public sealed class DirectShipManager(
             OrderCode = d.OrderCode,
             WarehouseId = d.WarehouseId,
             CustomerId = d.CustomerId,
-            CustomerName = d.CustomerName,
-            CustomerPhone = d.CustomerPhone,
-            CustomerAddress = d.CustomerAddress,
+            CustomerName = d.CustomerInfo.FullName,
+            CustomerPhone = d.CustomerInfo.PhoneNumber,
+            CustomerAddress = d.CustomerInfo.Address,
             ShippingAddress = d.ShippingAddress,
             ShowPrice = d.ShowPrice,
             Note = d.Note,

@@ -160,7 +160,7 @@ public sealed class GoodsReceiptManager(
             IList<Guid?> userIds = [];
 
             query = query.Where(goodsReceipt =>
-                (goodsReceipt.TruckDriverName != null && (goodsReceipt.TruckDriverName.ToUpper().Contains(uppercaseKeywords) || goodsReceipt.TruckDriverName.ToUpper().Contains(normalizedKeywords) || goodsReceipt.TruckDriverNameNormalized.Contains(normalizedKeywords)))
+                (goodsReceipt.TruckDriverName.Value != null && (goodsReceipt.TruckDriverName.Value.ToUpper().Contains(uppercaseKeywords) || goodsReceipt.TruckDriverName.Value.ToUpper().Contains(normalizedKeywords) || goodsReceipt.TruckDriverName.NormalizedValue.Contains(normalizedKeywords)))
                 || (goodsReceipt.TruckNumberSerial != null && goodsReceipt.TruckNumberSerial.ToUpper().Contains(uppercaseKeywords))
                 || userIds.Contains(goodsReceipt.CreatedByUserId));
         }

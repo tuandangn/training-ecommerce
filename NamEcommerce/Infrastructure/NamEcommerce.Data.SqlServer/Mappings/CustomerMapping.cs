@@ -17,7 +17,7 @@ public sealed class CustomerMapping : IEntityTypeConfiguration<Customer>
                           .IsRequired();
             fullNameProp.Property(n => n.NormalizedValue)
                           .HasColumnName($"Normalized{nameof(Customer.FullName)}")
-                          .HasMaxLength(20)
+                          .HasMaxLength(200)
                           .IsRequired();
         });
         builder.ComplexProperty(c => c.Address, addressProp =>

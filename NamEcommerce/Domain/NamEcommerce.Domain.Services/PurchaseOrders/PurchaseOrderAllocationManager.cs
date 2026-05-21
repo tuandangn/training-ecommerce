@@ -348,13 +348,13 @@ public sealed class PurchaseOrderAllocationManager(
                     OrderItemId = ctx.Item.Id,
                     OrderId = ctx.Order.Id,
                     OrderCode = ctx.Order.Code,
-                    CustomerName = ctx.Order.CustomerName ?? string.Empty,
+                    CustomerName = ctx.Order.CustomerInfo.FullName,
+                    CustomerPhone = ctx.Order.CustomerInfo.PhoneNumber,
                     ProductName = ctx.Item.ProductName ?? string.Empty,
                     TotalQuantity = ctx.Item.Quantity,
                     AllocatedOutstanding = outstanding,
                     AvailableToAllocate = Math.Max(0m, ctx.Item.Quantity - outstanding),
-                    ShippingAddress = ctx.Order.ShippingAddress,
-                    CustomerPhone = ctx.Order.CustomerPhone
+                    ShippingAddress = ctx.Order.ShippingAddress
                 };
             })
             .Where(dto => dto.AvailableToAllocate > 0)

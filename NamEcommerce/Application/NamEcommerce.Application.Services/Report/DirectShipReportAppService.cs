@@ -94,7 +94,7 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             .Select(dn => new
             {
                 dn.Code,
-                dn.CustomerName,
+                dn.CustomerInfo.FullName,
                 dn.TotalAmount,
                 dn.CreatedOnUtc,
                 dn.Status,
@@ -117,7 +117,7 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
 
         // ── D9.2 — Top customers ────────────────────────────────────────────────
         var byCustomer = dns
-            .GroupBy(dn => dn.CustomerName)
+            .GroupBy(dn => dn.FullName)
             .Select(g => new DirectShipByCustomerAppDto
             {
                 CustomerName = g.Key,
@@ -147,12 +147,12 @@ public sealed class DirectShipReportAppService : IDirectShipReportAppService
             .Where(dn => dn.SourceType == DeliveryNoteSourceType.DirectShipToCustomer
                       && dn.Status == DeliveryNoteStatus.Confirmed
                       && dn.CreatedOnUtc < cutoff)
-            .Select(dn => new { dn.Code, dn.CustomerName, dn.TotalAmount, dn.CreatedOnUtc })
+            .Select(dn => new { dn.Code, dn.CustomerInfo.FullName, dn.TotalAmount, dn.CreatedOnUtc })
             .ToList()
             .Select(dn => new DirectShipPendingAlertAppDto
             {
                 DeliveryNoteCode = dn.Code,
-                CustomerName = dn.CustomerName,
+                CustomerName = dn.FullName,
                 TotalAmount = dn.TotalAmount,
                 DaysPending = (int)(DateTime.UtcNow - dn.CreatedOnUtc).TotalDays
             })
