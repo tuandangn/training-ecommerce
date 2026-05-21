@@ -547,15 +547,19 @@ public sealed class OrderModelFactory : IOrderModelFactory
             .OrderBy(row => row.DispatchedOn)
             .ToList();
 
+        var revenue = model.Items
+            .Select(item => (item, deliveredQty: item.GetDeliveredToCustomerQuantity(model.DeliveryNotes), item.UnitPrice))
+            .Where(info => info.deliveredQty > 0)
+            .Sum(info => info.deliveredQty * info.UnitPrice);
         var totalCost = costRows.Sum(row => row.TotalCost ?? 0);
         var totalExpenses = expenseRows.Sum(row => row.Amount);
 
         return new OrderDetailsModel.SettlementModel
         {
-            Revenue = model.TotalAmount,
+            Revenue = revenue,
             TotalCost = totalCost,
             TotalExpenses = totalExpenses,
-            Profit = model.TotalAmount - totalCost - totalExpenses,
+            Profit = revenue - totalCost - totalExpenses,
             IsProfitFinal = costRows.Count > 0 && costRows.All(row => row.UnitCost.HasValue),
             Debts = debtRows,
             Expenses = expenseRows,

@@ -129,7 +129,7 @@
 
                 <div class="mb-4">
                     <label class="form-label small fw-bold text-muted text-uppercase mb-1">Đơn hàng tham chiếu</label>
-                    <div><a asp-controller="Order" asp-action="Edit" asp-route-id="@Model.OrderId" class="fw-bold text-decoration-none">@Model.OrderCode</a></div>
+                    <div><a asp-controller="Order" asp-action="Details" asp-route-id="@Model.OrderId" class="fw-bold text-decoration-none">@Model.OrderCode</a></div>
                 </div>
 
                 <div class="mb-4">
@@ -240,7 +240,6 @@
         </div>
     </div>
 
-    <!-- Cột phải: Danh sách hàng hóa (col-md-8) -->
     <div class="col-lg-8 order-lg-1">
         <!-- Khách trả hàng -->
         <div class="content-card mb-4" id="customerReturnsCard" data-delivery-note-id="@Model.Id">
