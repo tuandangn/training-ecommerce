@@ -13,7 +13,7 @@ public interface IGoodsReceiptManager
     /// Tự động tạo GoodsReceipt khi nhận 1 item từ PurchaseOrder.
     /// Chỉ dành cho <c>PurchaseOrderManager.ReceiveItemsAsync</c> — không phải flow thủ công.
     /// MarkCreated sẽ trigger <c>GoodsReceiptCreatedHandler</c> cộng tồn + sinh VendorDebt.
-    /// Nếu UnitCost đã có, cũng trigger <c>GoodsReceiptItemUnitCostSetHandler</c> cập nhật AverageCost.
+    /// Nếu UnitCost đã có, cũng trigger <c>GoodsReceiptItemUnitCostSetHandler</c> để chốt inventory cost layer.
     /// </summary>
     Task<CreateGoodsReceiptResultDto> CreateFromPurchaseOrderReceivingAsync(CreateGoodsReceiptFromPurchaseOrderDto dto);
 
@@ -27,7 +27,7 @@ public interface IGoodsReceiptManager
     /// <summary>
     /// Tự động tạo GoodsReceipt khi CustomerReturn được Confirm (SourceType=FromCustomerReturn).
     /// Không sinh VendorDebt. Chỉ cộng tồn kho qua GoodsReceiptCreatedHandler (có guard SourceType).
-    /// UnitCost = AverageCost hiện tại của (ProductId, WarehouseId).
+    /// UnitCost được phục hồi từ allocation gốc nếu đã có, nếu chưa có thì để pending.
     /// </summary>
     Task<Guid> CreateFromCustomerReturnAsync(CreateGoodsReceiptFromCustomerReturnDto dto);
 

@@ -28,9 +28,7 @@ public sealed record DeliveryNoteItem : AppEntity
     public decimal UnitPrice { get; private set; }
 
     /// <summary>
-    /// Giá vốn bình quân tại thời điểm xuất kho (snapshot khi MarkDelivered).
-    /// Null nếu phiếu chưa giao hoặc chưa có dữ liệu giá vốn.
-    /// Dùng để tính COGS chính xác trong báo cáo tài chính.
+    /// Snapshot hiển thị chuyển tiếp. COGS authoritative nằm trong InventoryCostAllocation.
     /// </summary>
     public decimal? CostAtDispatch { get; internal set; }
 

@@ -57,8 +57,7 @@ public sealed record DeliveryNoteItemDto
     public required decimal SubTotal { get; init; }
 
     /// <summary>
-    /// Giá vốn bình quân tại thời điểm xuất kho (snapshot khi MarkDelivered).
-    /// Null nếu phiếu chưa giao hoặc chưa có dữ liệu giá vốn.
+    /// Snapshot hiển thị chuyển tiếp; COGS authoritative nằm trong InventoryCostAllocation.
     /// </summary>
     public decimal? CostAtDispatch { get; init; }
 }
@@ -116,7 +115,7 @@ public sealed record DeliveryNoteLinkDto(Guid Id, string Code, DeliveryNoteStatu
 
 /// <summary>
 /// DTO để tạo DeliveryNote tự động (Status=Delivered ngay) khi VendorReturn được Confirm.
-/// UnitCost đã được ghi trên VendorReturnItem — truyền thẳng vào đây.
+/// UnitCost ở đây là số tiền thu hồi NCC trên VendorReturnItem, không phải inventory COGS.
 /// </summary>
 [Serializable]
 public sealed record CreateDeliveryNoteFromVendorReturnDto

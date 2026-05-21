@@ -30,10 +30,7 @@ public sealed record InventoryStock : AppAggregateEntity
     public decimal QuantityAvailable => QuantityOnHand - QuantityReserved;
 
     /// <summary>
-    /// Giá vốn bình quân, tính lại bằng Full Recalculation mỗi khi một GoodsReceiptItem được set UnitCost
-    /// cho cùng (ProductId, WarehouseId): SUM(qty × unitCost) / SUM(qty) trên các item đã có UnitCost.
-    /// Trong giai đoạn còn item chưa định giá, giá trị này chỉ phản ánh phần đã biết giá → UI cần
-    /// cảnh báo người dùng (xem IsPendingCosting()).
+    /// Legacy snapshot. InventoryCostLedger/Allocation là nguồn giá vốn authoritative.
     /// </summary>
     public decimal AverageCost { get; internal set; }
 
@@ -50,4 +47,3 @@ public sealed record InventoryStock : AppAggregateEntity
     
     public DateTime UpdatedOnUtc { get; internal set; }
 }
-

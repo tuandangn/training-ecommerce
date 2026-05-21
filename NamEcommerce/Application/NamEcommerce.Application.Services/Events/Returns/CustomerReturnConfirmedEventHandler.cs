@@ -10,7 +10,7 @@ namespace NamEcommerce.Application.Services.Events.Returns;
 /// Xử lý sự kiện <see cref="CustomerReturnConfirmed"/> — phiếu trả hàng khách vừa được Confirm.
 /// <list type="number">
 ///   <item><description>Tạo <c>GoodsReceipt(SourceType=FromCustomerReturn)</c> để nhận lại hàng vào kho;
-///     UnitCost = AverageCost tại thời điểm trả (lấy trong GoodsReceiptManager).</description></item>
+///     inventory cost được phục hồi từ allocation gốc nếu đã có.</description></item>
 ///   <item><description>Set <c>CustomerReturn.GeneratedGoodsReceiptId</c> và giảm <c>CustomerDebt</c>
 ///     của Order theo FIFO <c>CreatedOnUtc</c> thông qua <see cref="ICustomerReturnManager.FinalizeConfirmAsync"/>.</description></item>
 /// </list>
@@ -43,8 +43,7 @@ public sealed class CustomerReturnConfirmedEventHandler(
                 {
                     ProductId = i.ProductId,
                     ProductName = i.ProductName,
-                    Quantity = i.AcceptedQuantity,
-                    ReturnUnitPrice = i.ReturnUnitPrice
+                    Quantity = i.AcceptedQuantity
                 })
             }).ConfigureAwait(false);
 

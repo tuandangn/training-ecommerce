@@ -81,7 +81,9 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
                 WarehouseId = item.WarehouseId.Value,
                 Quantity = item.Quantity,
                 UnitCost = item.UnitCost,
-                MovementType = InventoryCostMovementType.GoodsReceipt,
+                MovementType = isFromCustomerReturn
+                    ? InventoryCostMovementType.CustomerReturn
+                    : InventoryCostMovementType.GoodsReceipt,
                 ReferenceType = InventoryCostReferenceType.GoodsReceipt,
                 ReferenceId = goodsReceipt.Id,
                 ReferenceItemId = item.Id,
