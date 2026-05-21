@@ -18,6 +18,9 @@ public sealed class DeliveryNoteDeliveredStockHandler(
         var deliveryNote = await deliveryNoteAppService.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null) return;
 
+        if (deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToCustomer && !deliveryNote.IsDirectShip)
+            return; // Standard delivery notes are handled in ConfirmAsync
+
         var releaseReservedStock = deliveryNote.OrderId != Guid.Empty
             && deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToCustomer;
 
