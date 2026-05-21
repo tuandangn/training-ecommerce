@@ -749,6 +749,36 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.ToTable("CustomerReturnRequestItem", "tbl");
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.CustomerPortal.CustomerReturnRequestItemPicture", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("CustomerReturnRequestItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("PictureId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerReturnRequestItemId");
+
+                    b.HasIndex("PictureId");
+
+                    b.ToTable("CustomerReturnRequestItemPicture", "tbl");
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.CustomerPortal.CustomerSecurityEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1724,6 +1754,337 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("GoodsReceiptItem", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.InventoryCostAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CostingMethod")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("CostingRunId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CostingStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("InboundLayerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("OutboundLedgerEntryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OutboundReferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("OutboundReferenceItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("OutboundReferenceType")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("TotalCost")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("ValuationScope")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CostingRunId");
+
+                    b.HasIndex("CostingStatus");
+
+                    b.HasIndex("InboundLayerId");
+
+                    b.HasIndex("OutboundLedgerEntryId");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.HasIndex("ProductId", "CreatedAtUtc");
+
+                    b.HasIndex("OutboundReferenceType", "OutboundReferenceId", "OutboundReferenceItemId");
+
+                    b.ToTable("InventoryCostAllocation", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.InventoryCostLayer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ClosedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CostingMethod")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("CostingRunId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CostingStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("OpenedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("OriginalQuantity")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("RemainingQuantity")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<Guid>("SourceLedgerEntryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SourceReferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SourceReferenceItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("SourceReferenceType")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("TotalCost")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("ValuationScope")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CostingRunId");
+
+                    b.HasIndex("CostingStatus");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.HasIndex("ProductId", "OpenedAtUtc");
+
+                    b.HasIndex("SourceReferenceType", "SourceReferenceId", "SourceReferenceItemId");
+
+                    b.ToTable("InventoryCostLayer", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.InventoryCostLedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AverageCostAfter")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("CostingMethod")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("CostingRunId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CostingStatus")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MovementType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("QuantityBalanceAfter")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("QuantityDelta")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<Guid>("ReferenceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ReferenceItemId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ReferenceType")
+                        .HasColumnType("int");
+
+                    b.Property<long>("SequenceNumber")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal?>("TotalCost")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("UnitCost")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int>("ValuationScope")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ValueBalanceAfter")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<Guid>("WarehouseId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CostingRunId");
+
+                    b.HasIndex("CostingStatus");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.HasIndex("ProductId", "OccurredAtUtc", "SequenceNumber");
+
+                    b.HasIndex("ReferenceType", "ReferenceId", "ReferenceItemId");
+
+                    b.ToTable("InventoryCostLedgerEntry", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.InventoryCostRebuildRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CostingMethod")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("FromUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("RequestedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ToUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Trigger")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ValuationScope")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("ProductId", "StartedAtUtc");
+
+                    b.ToTable("InventoryCostRebuildRun", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.InventoryCostingPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("CostingMethod")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("EffectiveFromUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("ValuationScope")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive", "EffectiveFromUtc");
+
+                    b.ToTable("InventoryCostingPolicy", "tbl");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.InventoryStock", b =>
@@ -3124,6 +3485,15 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.CustomerPortal.CustomerReturnRequestItemPicture", b =>
+                {
+                    b.HasOne("NamEcommerce.Domain.Entities.CustomerPortal.CustomerReturnRequestItem", null)
+                        .WithMany("EvidencePictures")
+                        .HasForeignKey("CustomerReturnRequestItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNoteItem", b =>
                 {
                     b.HasOne("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNote", null)
@@ -3144,6 +3514,51 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasOne("NamEcommerce.Domain.Entities.Catalog.Product", null)
                         .WithMany()
                         .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.InventoryCostAllocation", b =>
+                {
+                    b.HasOne("NamEcommerce.Domain.Entities.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NamEcommerce.Domain.Entities.Inventory.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.InventoryCostLayer", b =>
+                {
+                    b.HasOne("NamEcommerce.Domain.Entities.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NamEcommerce.Domain.Entities.Inventory.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Inventory.InventoryCostLedgerEntry", b =>
+                {
+                    b.HasOne("NamEcommerce.Domain.Entities.Catalog.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NamEcommerce.Domain.Entities.Inventory.Warehouse", null)
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -3288,6 +3703,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
             modelBuilder.Entity("NamEcommerce.Domain.Entities.CustomerPortal.CustomerReturnRequest", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.CustomerPortal.CustomerReturnRequestItem", b =>
+                {
+                    b.Navigation("EvidencePictures");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNote", b =>
