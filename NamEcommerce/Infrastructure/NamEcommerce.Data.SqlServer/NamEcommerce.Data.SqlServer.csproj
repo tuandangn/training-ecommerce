@@ -21,4 +21,8 @@
 		<ProjectReference Include="..\NamEcommerce.Data\NamEcommerce.Data.Contracts.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Queries\" />
+	</ItemGroup>
+
 </Project>

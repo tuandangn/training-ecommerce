@@ -1,7 +1,6 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.Returns;
-using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
@@ -21,7 +20,7 @@ public sealed class CustomerRefundManager(
     private async Task<string> GenerateCodeAsync()
     {
         var monthPrefix = $"PC-KH-{DateTime.UtcNow:yyMM}";
-        var count = ((EntityDataReader<CustomerRefund>)refundReader).SecuredDataSource.Count(r => r.Code.StartsWith(monthPrefix));
+        var count = refundReader.SecuredDataSource.Count(r => r.Code.StartsWith(monthPrefix));
         return $"{monthPrefix}-{(count + 1):D3}";
     }
 

@@ -174,7 +174,7 @@ public sealed class CustomerPortalAppService(
         }
 
         var customer = customerReader.DataSource.FirstOrDefault(customer => customer.Id == customerId);
-        var customerAddress = NullIfWhiteSpace(customer?.Address?.ToString());
+        var customerAddress = NullIfWhiteSpace(customer?.Address.ToString());
 
         return Task.FromResult(new CustomerOrderRequestDefaultsAppDto
         {

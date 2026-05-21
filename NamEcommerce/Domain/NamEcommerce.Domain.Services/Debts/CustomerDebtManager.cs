@@ -9,7 +9,6 @@ using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Domain.Services.Common;
 
 namespace NamEcommerce.Domain.Services.Debts;
 
@@ -24,14 +23,14 @@ public sealed class CustomerDebtManager(
     private async Task<string> GenerateDebtCodeAsync()
     {
         var monthPrefix = $"CN-KH-{DateTime.UtcNow:yyMM}";
-        var count = ((EntityDataReader<CustomerDebt>)debtReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        var count = debtReader.SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
         return $"{monthPrefix}-{(count + 1):D3}";
     }
 
     private async Task<string> GeneratePaymentCodeAsync()
     {
         var monthPrefix = $"PT-KH-{DateTime.UtcNow:yyMM}";
-        var count = ((EntityDataReader<CustomerPayment>)paymentReader).SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
+        var count = paymentReader.SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
         return $"{monthPrefix}-{(count + 1):D3}";
     }
 

@@ -3,7 +3,6 @@ using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
-using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
@@ -33,7 +32,7 @@ public sealed class OrderManager(
     private Task<string> GenerateCodeAsync()
     {
         var monthPrefix = $"{Order.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        var count = ((EntityDataReader<Order>)orderDataReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        var count = orderDataReader.SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
         return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
     }
 

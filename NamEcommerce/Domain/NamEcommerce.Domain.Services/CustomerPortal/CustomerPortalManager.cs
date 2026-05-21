@@ -1,6 +1,5 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.CustomerPortal;
-using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.CustomerPortal;
 using NamEcommerce.Domain.Shared.Enums.CustomerPortal;
@@ -265,7 +264,7 @@ public sealed class CustomerPortalManager(
     private string GenerateOrderRequestCode()
     {
         var monthPrefix = $"YC-DH-{DateTime.UtcNow:yyMM}";
-        var count = ((EntityDataReader<CustomerOrderRequest>)orderRequestReader).SecuredDataSource.Count(request => request.Code.StartsWith(monthPrefix));
+        var count = orderRequestReader.SecuredDataSource.Count(request => request.Code.StartsWith(monthPrefix));
         return $"{monthPrefix}-{(count + 1):D3}";
     }
 

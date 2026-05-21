@@ -3,7 +3,6 @@ using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
-using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
@@ -26,14 +25,14 @@ public sealed class VendorDebtManager(
     private async Task<string> GenerateDebtCodeAsync()
     {
         var monthPrefix = $"CN-NCC-{DateTime.UtcNow:yyMM}";
-        var count = ((EntityDataReader<VendorDebt>)debtReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        var count = debtReader.SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
         return $"{monthPrefix}-{(count + 1):D3}";
     }
 
     private async Task<string> GeneratePaymentCodeAsync()
     {
         var monthPrefix = $"PC-NCC-{DateTime.UtcNow:yyMM}";
-        var count = ((EntityDataReader<VendorPayment>)paymentReader).SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
+        var count = paymentReader.SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
         return $"{monthPrefix}-{(count + 1):D3}";
     }
 

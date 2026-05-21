@@ -15,7 +15,6 @@ using NamEcommerce.Application.Services.Inventory;
 using NamEcommerce.Application.Services.Media;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Data.SqlServer;
-using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.CustomerPortal;
 using NamEcommerce.Domain.Services.Debts;
 using NamEcommerce.Domain.Services.DeliveryNotes;

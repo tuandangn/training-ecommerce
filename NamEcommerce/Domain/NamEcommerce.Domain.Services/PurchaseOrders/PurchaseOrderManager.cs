@@ -5,7 +5,6 @@ using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Returns;
-using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
@@ -18,7 +17,6 @@ using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
-using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
@@ -76,7 +74,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private Task<string> GenerateCodeAsync()
     {
         var monthPrefix = $"{PurchaseOrder.CODE_PREFIX}-{DateTime.UtcNow:yyMM}";
-        var count = ((EntityDataReader<PurchaseOrder>)_purchaseOrderDataReader).SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        var count = _purchaseOrderDataReader.SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
         return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
     }
 

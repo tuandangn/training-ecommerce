@@ -1,3 +1,5 @@
+#region using
+
 using System.Globalization;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -42,7 +44,6 @@ using NamEcommerce.Data.SqlServer;
 using NamEcommerce.Data.SqlServer.Interceptors;
 using NamEcommerce.Data.SqlServer.Outbox;
 using NamEcommerce.Domain.Services.Catalog;
-using NamEcommerce.Domain.Services.Common;
 using NamEcommerce.Domain.Services.CustomerPortal;
 using NamEcommerce.Domain.Services.Customers;
 using NamEcommerce.Domain.Services.Debts;
@@ -109,6 +110,8 @@ using NamEcommerce.Application.Contracts.StockTransfer;
 using NamEcommerce.Domain.Shared.Services.StockTransfer;
 using NamEcommerce.Domain.Services.StockTransfer;
 using NamEcommerce.Web.Services.Debts;
+
+#endregion
 
 //services
 var builder = WebApplication.CreateBuilder(args);
