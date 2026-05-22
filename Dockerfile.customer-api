@@ -1,19 +1,18 @@
-# ================================
-# Stage 1: Build
-# ================================
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY NamEcommerce/ .
+# Chỉ copy các project cần thiết
+COPY NamEcommerce/Domain/ Domain/
+COPY NamEcommerce/Application/ Application/
+COPY NamEcommerce/Infrastructure/NamEcommerce.Data/ Infrastructure/NamEcommerce.Data/
+COPY NamEcommerce/Infrastructure/NamEcommerce.Data.SqlServer/ Infrastructure/NamEcommerce.Data.SqlServer/
+COPY NamEcommerce/Presentation/Customer/ Presentation/Customer/
 
 RUN dotnet publish Presentation/Customer/NamEcommerce.Customer.Api/NamEcommerce.Customer.Api.csproj \
     -c Release \
     -o /app/publish
 
-# ================================
-# Stage 2: Runtime
-# ================================
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
