@@ -405,8 +405,25 @@
     </div>
 </div>
 
+<div class="modal fade" id="createdPurchaseOrdersModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title">Tạo phiếu nhập thành công</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light" id="createdPurchaseOrdersList">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng & Tải lại trang</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
-    <script>
+    <script type="module">
+        import { toast, confirm } from '/modules/modals.js';
         (() => {
             const formatter = new Intl.NumberFormat('vi-VN');
             const quantityFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 });
@@ -749,73 +766,101 @@
                 return await response.json();
             }
 
-            async function createPurchaseOrders(payload) {
+            async function createPurchaseOrders(payload, lines) {
                 if (payload.groups.length === 0) return;
 
                 createButtons.forEach(button => button.disabled = true);
                 const result = await postJson('/PurchaseOrder/CreateFromShortage', payload);
                 createButtons.forEach(button => button.disabled = false);
                 refreshTotals();
-
                 if (!result.success) {
-                    alert(result.errorMessage || result.message || 'Không thể tạo đơn nhập.');
+                    toast('Lỗi', result.errorMessage || result.message || 'Không thể tạo đơn nhập.', 'error');
                     return;
                 }
 
-                const links = result.items.map(item =>
-                    `<a class="alert-link" href="/PurchaseOrder/Details/${item.purchaseOrderId}">${escapeHtml(item.purchaseOrderCode)}</a>`);
-                resultBox.innerHTML = `Đã tạo/cập nhật ${result.items.length} đơn nhập: ${links.join(', ')}`;
-                resultBox.classList.remove('d-none');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                if (lines) {
+                    let html = `<div class="alert alert-success d-flex align-items-center mb-4 border-0 shadow-sm">
+                                    <i class="bi bi-check-circle-fill fs-4 me-3"></i>
+                                    <div>Đã xử lý thành công <strong>${result.items.length}</strong> đơn nhập hàng từ danh sách hàng thiếu.</div>
+                                </div>`;
+                    
+                    const vendorIds = [...new Set(result.items.map(po => String(po.vendorId).toLowerCase()))];
+                    
+                    vendorIds.forEach(vid => {
+                        const vendorPos = result.items.filter(po => equalsId(po.vendorId, vid));
+                        const poLines = lines.filter(l => equalsId(l.vendorId, vid));
+                        const vendorName = poLines.length > 0 ? poLines[0].vendorName : 'Nhà cung cấp';
+                        
+                        html += `
+                        <div class="card mb-3 border-0 shadow-sm">
+                            <div class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
+                                <span class="fw-bold fs-6"><i class="bi bi-building me-2 text-muted"></i>${escapeHtml(vendorName)}</span>
+                                <div>
+                                    ${vendorPos.map(po => `<a href="/PurchaseOrder/Details/${po.purchaseOrderId}" class="btn btn-sm btn-outline-dark ms-2 fw-medium">Xem chi tiết ${escapeHtml(po.purchaseOrderCode)} <i class="bi bi-arrow-right-short"></i></a>`).join('')}
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                <ul class="list-group list-group-flush border-top">
+                                    ${poLines.map(l => `
+                                        <li class="list-group-item d-flex justify-content-between align-items-center py-2 px-3 border-0 border-bottom">
+                                            <span class="text-body">${escapeHtml(l.productName)}</span>
+                                            <span class="fw-medium text-body-secondary">${formatQuantity(l.quantity, l.unitName)}</span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                        `;
+                    });
+                    
+                    sessionStorage.setItem('shortageCreatedHtml', html);
+                    if (typeof showPageLoading === 'function') {
+                        showPageLoading();
+                    }
+                    location.reload();
+                } else {
+                    location.reload();
+                }
             }
 
-            function renderActionRow({ actionType, label, details, quantity, maxQuantity, checked, poId, poItemId, isNew }) {
+            function renderActionRow({ actionType, label, details, quantity, maxQuantity, checked, poId, poItemId, isNew, statusBadge }) {
                 const maxAttr = maxQuantity ? `max="${formatInputNumber(maxQuantity)}"` : '';
+                const rowClass = isNew ? 'table-primary bg-opacity-10' : '';
+                const actionIcon = isNew ? '<i class="bi bi-plus-circle text-primary me-2"></i>' : 
+                                   actionType === 'AllocateFromExisting' ? '<i class="bi bi-box-seam text-success me-2"></i>' : 
+                                   '<i class="bi bi-diagram-3 text-warning me-2"></i>';
+                                   
                 return `
-                    <div class="related-action-row ${isNew ? 'related-new-action' : ''}">
-                        <input class="form-check-input related-action-check" type="checkbox" ${checked ? 'checked' : ''}
-                               data-action-type="${escapeHtml(actionType)}"
-                               data-po-id="${escapeHtml(poId || '')}"
-                               data-po-item-id="${escapeHtml(poItemId || '')}">
-                        <div class="related-action-copy">
-                            <div class="related-action-label">${label}</div>
-                            <div class="related-action-details">${details}</div>
-                        </div>
-                        <input type="number"
-                               class="form-control related-action-qty ${isNew ? 'shortage-new-action-qty' : ''}"
-                               min="0"
-                               step="any"
-                               ${maxAttr}
-                               value="${formatInputNumber(quantity)}">
-                    </div>`;
+                    <tr class="po-action-row ${rowClass}">
+                        <td class="text-center align-middle">
+                            <input class="form-check-input related-action-check fs-5 m-0" type="checkbox" ${checked ? 'checked' : ''}
+                                   data-action-type="${escapeHtml(actionType)}"
+                                   data-po-id="${escapeHtml(poId || '')}"
+                                   data-po-item-id="${escapeHtml(poItemId || '')}">
+                        </td>
+                        <td class="fw-medium align-middle text-nowrap">
+                            ${actionIcon}
+                            ${label}
+                        </td>
+                        <td class="align-middle">
+                            ${details}
+                            ${statusBadge ? ` <span class="ms-2">${statusBadge}</span>` : ''}
+                        </td>
+                        <td class="align-middle">
+                            <div class="input-group input-group-sm" style="width: 140px; float: right;">
+                                <input type="number"
+                                       class="form-control text-end related-action-qty ${isNew ? 'shortage-new-action-qty' : ''}"
+                                       min="0"
+                                       step="any"
+                                       ${maxAttr}
+                                       value="${formatInputNumber(quantity)}">
+                            </div>
+                        </td>
+                    </tr>`;
             }
 
             function renderPurchaseOrderCard(po, line, allocationRows, mergeRow) {
-                const createdOn = formatDate(po.createdOn);
-                const expectedOn = formatDate(po.expectedDeliveryDate);
-                const meta = [
-                    createdOn ? `Tạo ${createdOn}` : '',
-                    expectedOn ? `Dự kiến ${expectedOn}` : '',
-                    `${formatMoney(po.totalAmount)} · ${po.itemCount} mặt hàng`
-                ].filter(Boolean).join(' · ');
-
-                return `
-                    <div class="related-po-card">
-                        <div class="related-po-heading">
-                            <div>
-                                <div class="related-po-code">
-                                    ${escapeHtml(po.code)}
-                                    <span class="status-badge ${escapeHtml(po.statusClass || 'secondary')}">${escapeHtml(po.statusName || '')}</span>
-                                </div>
-                                <div class="related-po-vendor">${escapeHtml(po.vendorName || line.vendorName)}</div>
-                                <div class="related-po-meta">${escapeHtml(meta)}</div>
-                            </div>
-                        </div>
-                        <div class="related-po-actions">
-                            ${allocationRows}
-                            ${mergeRow}
-                        </div>
-                    </div>`;
+                return allocationRows + mergeRow;
             }
 
             function renderRelatedLine(line, index, purchaseOrders) {
@@ -828,42 +873,45 @@
                         const quantity = Math.min(Math.max(remaining, 0), item.availableForAllocation);
                         const checked = quantity > 0;
                         if (checked) remaining -= quantity;
+                        
+                        const statusBadge = `<span class="badge ${escapeHtml(po.statusClass || 'bg-secondary')}">${escapeHtml(po.statusName || '')}</span>`;
 
                         return renderActionRow({
                             actionType: 'AllocateFromExisting',
-                            label: 'Phân bổ từ PO này',
-                            details: `Còn trống ${formatQuantity(item.availableForAllocation, line.unitName)} / ${formatQuantity(item.quantityOrdered, line.unitName)}`,
+                            label: 'Lấy từ PO có sẵn',
+                            details: `Đơn <strong>${escapeHtml(po.code)}</strong>. Còn trống ${formatQuantity(item.availableForAllocation, line.unitName)} / ${formatQuantity(item.quantityOrdered, line.unitName)}`,
                             quantity,
                             maxQuantity: Math.min(item.availableForAllocation, line.quantity),
                             checked,
                             poId: po.id,
-                            poItemId: item.purchaseOrderItemId
+                            poItemId: item.purchaseOrderItemId,
+                            statusBadge
                         });
                     }).join('');
 
                     const mergeQuantity = Math.max(remaining, 0) || line.quantity;
+                    const statusBadge = `<span class="badge ${escapeHtml(po.statusClass || 'bg-secondary')}">${escapeHtml(po.statusName || '')}</span>`;
                     const mergeRow = po.canMerge
                         ? renderActionRow({
                             actionType: 'MergeIntoDraft',
-                            label: 'Ghép thêm vào PO nháp',
-                            details: `Thêm ${escapeHtml(line.productName)} vào ${escapeHtml(po.code)}`,
+                            label: 'Ghép vào PO nháp',
+                            details: `Thêm vào đơn <strong>${escapeHtml(po.code)}</strong>`,
                             quantity: mergeQuantity,
                             maxQuantity: line.quantity,
                             checked: false,
-                            poId: po.id
+                            poId: po.id,
+                            statusBadge
                         })
                         : '';
 
-                    return allocationRows || mergeRow
-                        ? renderPurchaseOrderCard(po, line, allocationRows, mergeRow)
-                        : '';
+                    return allocationRows + mergeRow;
                 }).filter(Boolean).join('');
 
                 const newQuantity = Math.max(remaining, 0);
                 const newRow = renderActionRow({
                     actionType: 'CreateNew',
                     label: 'Tạo PO mới',
-                    details: `Cho phần còn lại của ${escapeHtml(line.productName)}`,
+                    details: `Tạo một đơn đặt hàng mới cho phần này`,
                     quantity: newQuantity,
                     maxQuantity: line.quantity,
                     checked: newQuantity > 0,
@@ -871,24 +919,34 @@
                 });
 
                 const orderBreakdown = line.underlying && line.underlying.length > 1
-                    ? `<div class="related-line-orders">Cho ${line.underlying.length} đơn: ${line.underlying.map(u => `${escapeHtml(u.orderCode || '')} (${formatQuantity(u.quantity, line.unitName)})`).join(', ')}</div>`
+                    ? `<div class="text-muted mt-1 small">Gồm ${line.underlying.length} đơn: ${line.underlying.map(u => `${escapeHtml(u.orderCode || '')} (${formatQuantity(u.quantity, line.unitName)})`).join(', ')}</div>`
                     : '';
 
                 return `
-                    <div class="related-line-card" data-line-index="${index}" data-quantity="${formatInputNumber(line.quantity)}" data-unit-cost="${formatInputNumber(line.unitCost)}" data-unit-name="${escapeHtml(line.unitName)}">
-                        <div class="related-line-heading">
+                    <div class="card related-line-card mb-4 border shadow-sm" data-line-index="${index}" data-quantity="${formatInputNumber(line.quantity)}" data-unit-cost="${formatInputNumber(line.unitCost)}" data-unit-name="${escapeHtml(line.unitName)}">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
                             <div>
-                                <div class="related-line-product">${escapeHtml(line.productName)}</div>
-                                <div class="related-line-meta">Cần xử lý ${formatQuantity(line.quantity, line.unitName)} · NCC ${escapeHtml(line.vendorName)}</div>
+                                <div class="fw-bold fs-6 text-dark">${escapeHtml(line.productName)}</div>
+                                <div class="text-secondary small mt-1">Cần xử lý: <strong class="text-dark">${formatQuantity(line.quantity, line.unitName)}</strong> · NCC: ${escapeHtml(line.vendorName)}</div>
                                 ${orderBreakdown}
                             </div>
-                            <div class="related-line-balance" data-line-balance></div>
+                            <div class="related-line-balance badge bg-secondary px-3 py-2 fs-6 rounded-pill" data-line-balance></div>
                         </div>
-                        <div class="related-po-stack">
-                            ${poCards || '<div class="related-po-empty">Chưa có PO phù hợp để phân bổ hoặc ghép.</div>'}
-                            <div class="related-po-card related-new-card">
-                                <div class="related-po-actions">${newRow}</div>
-                            </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0 border-top">
+                                <thead class="table-light text-muted small">
+                                    <tr>
+                                        <th style="width: 50px" class="text-center border-bottom-0">Chọn</th>
+                                        <th style="width: 25%" class="border-bottom-0">Giải pháp xử lý</th>
+                                        <th class="border-bottom-0">Thông tin chi tiết</th>
+                                        <th style="width: 150px" class="text-end border-bottom-0 pe-4">Số lượng</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${poCards || '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-inbox fs-4 d-block mb-2 text-black-50"></i>Không có PO phù hợp để lấy hàng hoặc ghép.</td></tr>'}
+                                    ${newRow}
+                                </tbody>
+                            </table>
                         </div>
                     </div>`;
             }
@@ -932,7 +990,7 @@
                 let overMax = false;
 
                 card.querySelectorAll('.related-action-check:checked').forEach(check => {
-                    const row = check.closest('.related-action-row');
+                    const row = check.closest('.po-action-row');
                     const input = row?.querySelector('.related-action-qty');
                     const quantity = readDecimal(input);
                     const max = parseDecimal(input?.getAttribute('max'));
@@ -957,12 +1015,12 @@
                 let nonNewTotal = 0;
                 card.querySelectorAll('.related-action-check:checked').forEach(check => {
                     if (check.dataset.actionType === 'CreateNew') return;
-                    const input = check.closest('.related-action-row')?.querySelector('.related-action-qty');
+                    const input = check.closest('.po-action-row')?.querySelector('.related-action-qty');
                     nonNewTotal += readDecimal(input);
                 });
 
                 const newCheck = card.querySelector('.related-action-check[data-action-type="CreateNew"]');
-                const newInput = newCheck?.closest('.related-action-row')?.querySelector('.related-action-qty');
+                const newInput = newCheck?.closest('.po-action-row')?.querySelector('.related-action-qty');
                 if (newCheck?.checked && newInput) {
                     newInput.value = formatInputNumber(Math.max(0, needed - nonNewTotal));
                 }
@@ -980,15 +1038,20 @@
                     const balanceEl = card.querySelector('[data-line-balance]');
                     const invalid = state.overMax || Math.abs(remaining) > tolerance;
                     card.classList.toggle('is-invalid', invalid);
+                    card.classList.toggle('border-danger', invalid);
 
                     if (state.overMax) {
                         balanceEl.textContent = 'Vượt số lượng có thể dùng';
+                        balanceEl.className = 'related-line-balance badge bg-danger px-3 py-2 fs-6 rounded-pill';
                     } else if (Math.abs(remaining) <= tolerance) {
-                        balanceEl.textContent = 'Đủ số lượng';
+                        balanceEl.textContent = 'Đã phân bổ đủ';
+                        balanceEl.className = 'related-line-balance badge bg-success px-3 py-2 fs-6 rounded-pill';
                     } else if (remaining > 0) {
                         balanceEl.textContent = `Còn thiếu ${formatQuantity(remaining, unitName)}`;
+                        balanceEl.className = 'related-line-balance badge bg-warning text-dark px-3 py-2 fs-6 rounded-pill';
                     } else {
                         balanceEl.textContent = `Vượt ${formatQuantity(Math.abs(remaining), unitName)}`;
+                        balanceEl.className = 'related-line-balance badge bg-danger px-3 py-2 fs-6 rounded-pill';
                     }
 
                     if (invalid) isValid = false;
@@ -1030,7 +1093,7 @@
                     const related = await postJson('/PurchaseOrder/CheckRelatedPurchaseOrders', { vendorIds, productIds });
                     const relatedItems = related.items || [];
                     if (relatedItems.length === 0) {
-                        await createPurchaseOrders(buildPayloadForLines(lines));
+                        await createPurchaseOrders(buildPayloadForLines(lines), lines);
                         return;
                     }
 
@@ -1095,7 +1158,7 @@
                 }
 
                 draftModal?.hide();
-                await createPurchaseOrders(payload);
+                await createPurchaseOrders(payload, modalContext.originalLines);
             }
 
             groups.forEach(wireGroup);
@@ -1128,6 +1191,19 @@
 
             applyFilters();
             refreshTotals();
+
+            // Check for saved modal HTML
+            const savedHtml = sessionStorage.getItem('shortageCreatedHtml');
+            if (savedHtml) {
+                sessionStorage.removeItem('shortageCreatedHtml');
+                const createdListEl = document.getElementById('createdPurchaseOrdersList');
+                if (createdListEl) {
+                    createdListEl.innerHTML = savedHtml;
+                    const modalEl = document.getElementById('createdPurchaseOrdersModal');
+                    const modal = new bootstrap.Modal(modalEl);
+                    modal.show();
+                }
+            }
         })();
     </script>
 }

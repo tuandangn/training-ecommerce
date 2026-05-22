@@ -5,6 +5,7 @@ using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Orders;
 
@@ -52,14 +53,15 @@ public sealed class GetOrderListHandler : IRequestHandler<GetOrderListQuery, Ord
             {
                 Id = order.Id,
                 Code = order.Code,
+                OrderStatus = order.Status,
                 CustomerId = order.CustomerId,
-                CustomerName = customer?.FullName,
-                CustomerPhone = customer?.PhoneNumber,
-                CustomerAddress = customer?.Address,
+                CustomerName = order.CanUpdateInfo ? customer?.FullName : order.CustomerName,
+                CustomerPhone = order.CanUpdateInfo ? customer?.PhoneNumber : order.CustomerPhone,
+                CustomerAddress = order.CanUpdateInfo ? customer?.Address : order.CustomerAddress,
                 TotalAmount = order.TotalAmount,
                 IsFinished = order.IsFinished,
-                ExpectedShippingDate = order.ExpectedShippingDateUtc?.ToLocalTime(),
-                CreatedOn = order.CreatedOnUtc.ToLocalTime(),
+                ExpectedShippingDate = DateTimeHelper.ToLocalTime(order.ExpectedShippingDateUtc),
+                CreatedOn = DateTimeHelper.ToLocalTime(order.CreatedOnUtc.ToLocalTime()),
                 CanUpdateInfo = order.CanUpdateInfo,
                 Items = order.Items.Select(item => new OrderListModel.OrderItemSummaryModel
                 {

@@ -73,7 +73,9 @@
                         <th>Khách hàng</th>
                         <th class="text-end">Tổng đơn</th>
                         <th class="text-center">Ngày dự kiến</th>
-                        <th class="text-center" style="width:120px;">Kết sổ</th>
+                        <th class="text-center" style="width: 120px;">
+                            Trạng thái
+                        </th>
                         <th></th>
                     </tr>
                 </thead>
@@ -155,21 +157,19 @@
                                         }
                                     </div>
                                 </td>
-                                <td class="text-end fw-medium text-nowrap">
+                                <td class="text-end fw-bold text-primary text-nowrap">
                                     @order.TotalAmount.DisplayCurrency()
                                 </td>
                                 <td class="text-muted text-center">
                                     @order.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat)
                                 </td>
                                 <td class="text-center">
-                                    @if (order.IsFinished)
-                                    {
-                                        <i class="bi bi-check-circle-fill text-success ms-1" data-bs-toggle="tooltip" title="Hoàn thành"></i>
+                                    @{
+                                        var orderStatus = (OrderStatus)order.OrderStatus;
                                     }
-                                    else
-                                    {
-                                        <i class="bi bi-x-circle-fill text-info ms-1" data-bs-toggle="tooltip" title="Chưa hoàn thành"></i>
-                                    }
+                                    <span class="status-badge @orderStatus.GetDisplayColor()">
+                                        @orderStatus.GetDisplayText()
+                                    </span>
                                 </td>
                                 <td class="text-end pe-3">
                                     <a class="btn btn-sm btn-light text-decoration-none text-primary" asp-action="Details" asp-route-id="@order.Id" data-bs-toggle="tooltip" title="Xem chi tiết">

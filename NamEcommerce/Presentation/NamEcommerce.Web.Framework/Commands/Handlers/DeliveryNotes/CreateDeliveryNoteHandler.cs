@@ -2,10 +2,11 @@ using MediatR;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
+using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.DeliveryNotes;
 
-public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNoteCommand, bool>
+public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNoteCommand, CommonActionResultModel>
 {
     private readonly IDeliveryNoteAppService _deliveryNoteAppService;
 
@@ -14,11 +15,17 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
         _deliveryNoteAppService = deliveryNoteAppService;
     }
 
-    public async Task<bool> Handle(CreateDeliveryNoteCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(CreateDeliveryNoteCommand request, CancellationToken cancellationToken)
     {
         var selectedItems = request.Items.Where(i => i.Quantity > 0).ToList();
         if (!selectedItems.Any())
-            return false;
+        {
+            return new CommonActionResultModel
+            {
+                Success = false,
+                ErrorMessage = "Error.DeliveryNoteItemsRequired"
+            };
+        }
 
         var dto = new CreateDeliveryNoteAppDto
         {
@@ -37,14 +44,7 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
             }).ToList()
         };
 
-        try
-        {
-            await _deliveryNoteAppService.CreateFromOrderAsync(dto).ConfigureAwait(false);
-            return true;
-        }
-        catch
-        {
-            return false;
-        }
+        await _deliveryNoteAppService.CreateFromOrderAsync(dto).ConfigureAwait(false);
+        return new CommonActionResultModel { Success = true };
     }
 }

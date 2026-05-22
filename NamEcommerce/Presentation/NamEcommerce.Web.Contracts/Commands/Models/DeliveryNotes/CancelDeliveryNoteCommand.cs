@@ -3,7 +3,7 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 
-public sealed class CancelDeliveryNoteCommand : IRequest<CommonActionResultModel>
+public sealed class CancelDeliveryNoteCommand : IRequest<Unit>
 {
     public Guid DeliveryNoteId { get; init; }
 }

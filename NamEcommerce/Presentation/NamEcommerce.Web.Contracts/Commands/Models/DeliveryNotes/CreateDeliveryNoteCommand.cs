@@ -1,9 +1,10 @@
 using MediatR;
+using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 
 [Serializable]
-public sealed class CreateDeliveryNoteCommand : IRequest<bool>
+public sealed class CreateDeliveryNoteCommand : IRequest<CommonActionResultModel>
 {
     public Guid OrderId { get; set; }
     public string ShippingAddress { get; set; } = string.Empty;

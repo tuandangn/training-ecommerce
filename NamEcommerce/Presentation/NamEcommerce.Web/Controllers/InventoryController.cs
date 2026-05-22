@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
@@ -76,41 +77,57 @@ public sealed class InventoryController : BaseAuthorizedController
         if (!ModelState.IsValid)
             return View(model);
 
-        var result = await _mediator.Send(new UpdateInventoryCostingPolicyCommand
+        try
         {
-            CostingMethod = (int)model.CostingMethod,
-            ValuationScope = (int)model.ValuationScope,
-            EffectiveFrom = model.EffectiveFrom,
-            Note = model.Note
-        });
+            var result = await _mediator.Send(new UpdateInventoryCostingPolicyCommand
+            {
+                CostingMethod = (int)model.CostingMethod,
+                ValuationScope = (int)model.ValuationScope,
+                EffectiveFrom = model.EffectiveFrom,
+                Note = model.Note
+            });
 
-        if (!result.Success)
+            if (!result.Success)
+            {
+                AddLocalizedModelError(result.ErrorMessage);
+                return View(model);
+            }
+
+            NotificationService.Success("Đã lưu cài đặt giá vốn.");
+            return RedirectToAction(nameof(CostingPolicy));
+        }
+        catch (NamEcommerceDomainException ex)
         {
-            AddLocalizedModelError(result.ErrorMessage);
+            AddLocalizedModelError(ex.ErrorCode, ex.Parameters);
             return View(model);
         }
-
-        NotificationService.Success("Đã lưu cài đặt giá vốn.");
-        return RedirectToAction(nameof(CostingPolicy));
     }
 
     [HttpPost]
     public async Task<IActionResult> RebuildCosting(InventoryCostingPolicyModel model)
     {
-        var result = await _mediator.Send(new RebuildInventoryCostingCommand
+        try
         {
-            CostingMethod = (int)model.CostingMethod,
-            ValuationScope = (int)model.ValuationScope
-        });
+            var result = await _mediator.Send(new RebuildInventoryCostingCommand
+            {
+                CostingMethod = (int)model.CostingMethod,
+                ValuationScope = (int)model.ValuationScope
+            });
 
-        if (!result.Success)
-        {
-            NotificationService.Error(result.ErrorMessage ?? "Không thể tính lại giá vốn.");
+            if (!result.Success)
+            {
+                NotificationService.Error(string.IsNullOrEmpty(result.ErrorMessage) ? "Không thể tính lại giá vốn." : LocalizeError(result.ErrorMessage));
+                return RedirectToAction(nameof(CostingPolicy));
+            }
+
+            NotificationService.Success($"Đã tính lại giá vốn. Mã lần tính: {result.RebuildRunId}");
             return RedirectToAction(nameof(CostingPolicy));
         }
-
-        NotificationService.Success($"Đã tính lại giá vốn. Mã lần tính: {result.RebuildRunId}");
-        return RedirectToAction(nameof(CostingPolicy));
+        catch (NamEcommerceDomainException ex)
+        {
+            NotificationService.Error(LocalizeError(ex.ErrorCode, ex.Parameters));
+            return RedirectToAction(nameof(CostingPolicy));
+        }
     }
 
     [HttpPost]

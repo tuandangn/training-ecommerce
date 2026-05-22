@@ -81,6 +81,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Customer", "Customer", "{01
 EndProject
 Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "NamEcommerce.Customer.Client", "Presentation\Customer\NamEcommerce.Customer.Client\", "{AB06B5ED-A77F-874A-7960-1E259AEEEE96}"
 	ProjectSection(WebsiteProperties) = preProject
+		TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.8"
 		Debug.AspNetCompiler.VirtualPath = "/localhost_59490"
 		Debug.AspNetCompiler.PhysicalPath = "Presentation\Customer\NamEcommerce.Customer.Client\"
 		Debug.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_59490\"

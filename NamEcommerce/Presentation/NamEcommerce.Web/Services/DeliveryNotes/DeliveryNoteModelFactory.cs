@@ -118,19 +118,21 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             var remainingQty = orderItem.Quantity - deliveredQty;
             if (remainingQty > 0)
             {
-                var itemModel = model.Items.FirstOrDefault(item => item.OrderItemId == orderItem.Id)
-                    ?? new CreateDeliveryNoteItemModel
-                    {
-                        OrderItemId = orderItem.Id,
-                        Quantity = remainingQty,
-                        Selected = true
-                    };
+                var existingItem = model.Items.FirstOrDefault(item => item.OrderItemId == orderItem.Id);
+
+                var itemModel = existingItem ?? new CreateDeliveryNoteItemModel
+                {
+                    OrderItemId = orderItem.Id,
+                    Quantity = remainingQty,
+                    Selected = true
+                };
                 itemModel.ProductName = orderItem.ProductName ?? string.Empty;
                 itemModel.OrderedQuantity = orderItem.Quantity;
                 itemModel.PreviouslyDeliveredQuantity = deliveredQty;
                 itemModel.UnitPrice = orderItem.UnitPrice;
 
-                model.Items.Add(itemModel);
+                if (existingItem is null)
+                    model.Items.Add(itemModel);
             }
             else
             {
