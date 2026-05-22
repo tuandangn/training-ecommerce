@@ -22,6 +22,7 @@ public sealed class ConfirmDeliveryNoteHandler : IRequestHandler<ConfirmDelivery
 
     public async Task<ConfirmDeliveryNoteResultModel> Handle(ConfirmDeliveryNoteCommand request, CancellationToken cancellationToken)
     {
+        //*TODO*
         try
         {
             await _deliveryNoteAppService.ConfirmAsync(request.DeliveryNoteId).ConfigureAwait(false);

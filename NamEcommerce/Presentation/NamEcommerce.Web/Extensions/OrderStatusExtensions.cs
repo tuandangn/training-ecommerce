@@ -22,9 +22,9 @@ public static class OrderStatusExtensions
 
         public string GetDisplayColor() => status switch
         {
-            OrderStatus.Pending => "secondary",
-            OrderStatus.Completed => "success",
-            OrderStatus.Cancelled => "danger",
+            OrderStatus.Pending => "bg-info text-light",
+            OrderStatus.Completed => "bg-success text-light",
+            OrderStatus.Cancelled => "bg-danger text-light",
             _ => throw new InvalidDataException(nameof(status)),
         };
     }

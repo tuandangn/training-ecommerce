@@ -11,6 +11,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Web.Models.DeliveryNotes;
+using NamEcommerce.Web.Framework.Services;
 
 namespace NamEcommerce.Web.Services.DeliveryNotes;
 
@@ -93,8 +94,13 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             Items = []
         };
         model.OrderCode = order.Code;
+        //*TODO*
+        model.PlacedOn = DateTimeHelper.ToLocalTime(order.CreatedOnUtc);
+        model.ExpectedShippingDate = DateTimeHelper.ToLocalTime(order.ExpectedShippingDateUtc);
         model.OrderNote = order.Note;
         model.CustomerName = order.CustomerName ?? string.Empty;
+        model.CustomerAddress = order.CustomerAddress;
+        model.CustomerPhoneNumber = order.CustomerPhone ?? string.Empty;
         model.ShippingAddress = order.ShippingAddress ?? string.Empty;
 
         var warehouses = await _warehouseAppService.GetWarehousesAsync().ConfigureAwait(false);
@@ -118,19 +124,21 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             var remainingQty = orderItem.Quantity - deliveredQty;
             if (remainingQty > 0)
             {
-                var itemModel = model.Items.FirstOrDefault(item => item.OrderItemId == orderItem.Id)
-                    ?? new CreateDeliveryNoteItemModel
-                    {
-                        OrderItemId = orderItem.Id,
-                        Quantity = remainingQty,
-                        Selected = true
-                    };
+                var existingItem = model.Items.FirstOrDefault(item => item.OrderItemId == orderItem.Id);
+
+                var itemModel = existingItem ?? new CreateDeliveryNoteItemModel
+                {
+                    OrderItemId = orderItem.Id,
+                    Quantity = remainingQty,
+                    Selected = true
+                };
                 itemModel.ProductName = orderItem.ProductName ?? string.Empty;
                 itemModel.OrderedQuantity = orderItem.Quantity;
                 itemModel.PreviouslyDeliveredQuantity = deliveredQty;
                 itemModel.UnitPrice = orderItem.UnitPrice;
 
-                model.Items.Add(itemModel);
+                if (existingItem is null)
+                    model.Items.Add(itemModel);
             }
             else
             {

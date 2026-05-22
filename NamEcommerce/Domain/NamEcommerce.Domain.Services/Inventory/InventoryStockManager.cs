@@ -7,6 +7,7 @@ using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 
 namespace NamEcommerce.Domain.Services.Inventory;
 
@@ -248,13 +249,19 @@ public sealed class InventoryStockManager : IInventoryStockManager
 
     public Task<decimal> GetGlobalOnHandQuantityForProductAsync(Guid productId)
     {
-        var stockQuery = _inventoryStockDataReader.DataSource.Where(x => x.ProductId == productId);
+        var stockQuery = from s in _inventoryStockDataReader.DataSource
+                         join w in _warehouseDataReader.DataSource on s.WarehouseId equals w.Id
+                         where s.ProductId == productId && w.WarehouseType == WarehouseType.Physical
+                         select s;
         return Task.FromResult(stockQuery.Sum(x => x.QuantityOnHand));
     }
 
     public Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId)
     {
-        var stockQuery = _inventoryStockDataReader.DataSource.Where(x => x.ProductId == productId);
+        var stockQuery = from s in _inventoryStockDataReader.DataSource
+                         join w in _warehouseDataReader.DataSource on s.WarehouseId equals w.Id
+                         where s.ProductId == productId && w.WarehouseType == WarehouseType.Physical
+                         select s;
         var quantityOnHand = stockQuery.Sum(x => x.QuantityOnHand);
         var quantityReservedByWarehouse = stockQuery.Sum(x => x.QuantityReserved);
         var quantityReservedByOrder = _productReservationDataReader.DataSource

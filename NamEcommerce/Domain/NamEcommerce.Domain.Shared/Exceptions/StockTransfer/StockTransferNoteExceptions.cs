@@ -1,10 +1,10 @@
 namespace NamEcommerce.Domain.Shared.Exceptions.StockTransfer;
 
 public sealed class StockTransferNoteNotFoundException(Guid id)
-    : NamEcommerceDomainException($"StockTransferNote with id '{id}' was not found.");
+    : NamEcommerceDomainException($"StockTransferNote was not found.");
 
 public sealed class StockTransferNoteCannotChangeStatusException(string from, string to)
-    : NamEcommerceDomainException($"Cannot change StockTransferNote status from '{from}' to '{to}'.");
+    : NamEcommerceDomainException($"Cannot change StockTransferNote status.");
 
 public sealed class StockTransferSameWarehouseException()
     : NamEcommerceDomainException("Error.StockTransfer.SameWarehouse");

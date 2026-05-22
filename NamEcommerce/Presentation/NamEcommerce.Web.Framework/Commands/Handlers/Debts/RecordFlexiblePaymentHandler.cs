@@ -16,31 +16,23 @@ public sealed class RecordFlexiblePaymentHandler(
 
     public async Task<CommonActionResultModel> Handle(RecordFlexiblePaymentCommand request, CancellationToken cancellationToken)
     {
-        try
+        var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
+        var dto = new CreateCustomerPaymentAppDto
         {
-            var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
-            var dto = new CreateCustomerPaymentAppDto
-            {
-                CustomerId = request.Model.CustomerId,
-                // CustomerDebtId không set → hệ thống tự phân bổ FIFO
-                Amount = request.Model.Amount,
-                PaymentMethod = request.Model.PaymentMethod,
-                PaymentType = request.Model.PaymentType,
-                Note = request.Model.Note,
-                PaidOnUtc = request.Model.PaidOnUtc.ToUniversalTime(),
-                RecordedByUserId = currentUser?.Id
-            };
+            CustomerId = request.Model.CustomerId,
+            Amount = request.Model.Amount,
+            PaymentMethod = request.Model.PaymentMethod,
+            PaymentType = request.Model.PaymentType,
+            Note = request.Model.Note,
+            PaidOnUtc = request.Model.PaidOnUtc.ToUniversalTime(),
+            RecordedByUserId = currentUser?.Id
+        };
 
-            var payments = await _debtAppService.RecordFlexiblePaymentForCustomerAsync(dto).ConfigureAwait(false);
-            return new CommonActionResultModel
-            {
-                Success = true,
-                SuccessMessage = $"Đã ghi nhận {payments.Count} giao dịch thanh toán."
-            };
-        }
-        catch (Exception ex)
+        var payments = await _debtAppService.RecordFlexiblePaymentForCustomerAsync(dto).ConfigureAwait(false);
+        return new CommonActionResultModel
         {
-            return new CommonActionResultModel { Success = false, ErrorMessage = ex.Message };
-        }
+            Success = true,
+            SuccessMessage = $"Đã ghi nhận {payments.Count} giao dịch thanh toán."
+        };
     }
 }

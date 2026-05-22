@@ -99,21 +99,6 @@
                                         @purchaseOrder.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
                                     </span>
                                 </td>
-                                <td>
-                                    <div class="position-relative">
-                                        <a asp-action="Details" asp-controller="VendorDebt" asp-route-vendorid="@purchaseOrder.VendorId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
-                                            @HighlighHelper.Highlight(purchaseOrder.VendorName, query)
-                                        </a>
-                                        @if (!string.IsNullOrEmpty(purchaseOrder.VendorPhone))
-                                        {
-                                            <div>
-                                                <span class="text-muted small">
-                                                    @HighlighHelper.Highlight(purchaseOrder.VendorPhone, Model.Keywords)
-                                                </span>
-                                            </div>
-                                        }
-                                    </div>
-                                </td>
                                 <td class="d-none d-md-block">
                                     @{
                                         var itemCount = purchaseOrder.Items.Count;
@@ -154,6 +139,21 @@
                                             </button>
                                         </div>
                                     }
+                                </td>
+                                <td>
+                                    <div class="position-relative">
+                                        <a asp-action="Details" asp-controller="VendorDebt" asp-route-vendorid="@purchaseOrder.VendorId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
+                                            @HighlighHelper.Highlight(purchaseOrder.VendorName, query)
+                                        </a>
+                                        @if (!string.IsNullOrEmpty(purchaseOrder.VendorPhone))
+                                        {
+                                            <div>
+                                                <span class="text-muted small">
+                                                    @HighlighHelper.Highlight(purchaseOrder.VendorPhone, Model.Keywords)
+                                                </span>
+                                            </div>
+                                        }
+                                    </div>
                                 </td>
                                 <td class="text-end fw-bold text-primary text-nowrap">
                                     @purchaseOrder.TotalAmount.DisplayCurrencyWithSymbol()

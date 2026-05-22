@@ -18,29 +18,18 @@ public sealed class UpdateInventoryCostingPolicyHandler : IRequestHandler<Update
 
     public async Task<UpdateInventoryCostingPolicyResultModel> Handle(UpdateInventoryCostingPolicyCommand request, CancellationToken cancellationToken)
     {
-        try
+        var policy = await _inventoryCostingAppService.UpdatePolicyAsync(new UpdateInventoryCostingPolicyAppDto
         {
-            var policy = await _inventoryCostingAppService.UpdatePolicyAsync(new UpdateInventoryCostingPolicyAppDto
-            {
-                CostingMethod = request.CostingMethod,
-                ValuationScope = request.ValuationScope,
-                EffectiveFromUtc = DateTimeHelper.ToUniversalTime(request.EffectiveFrom),
-                Note = request.Note
-            }).ConfigureAwait(false);
+            CostingMethod = request.CostingMethod,
+            ValuationScope = request.ValuationScope,
+            EffectiveFromUtc = DateTimeHelper.ToUniversalTime(request.EffectiveFrom),
+            Note = request.Note
+        }).ConfigureAwait(false);
 
-            return new UpdateInventoryCostingPolicyResultModel
-            {
-                Success = true,
-                UpdatedId = policy.Id
-            };
-        }
-        catch (Exception ex)
+        return new UpdateInventoryCostingPolicyResultModel
         {
-            return new UpdateInventoryCostingPolicyResultModel
-            {
-                Success = false,
-                ErrorMessage = ex.Message
-            };
-        }
+            Success = true,
+            UpdatedId = policy.Id
+        };
     }
 }

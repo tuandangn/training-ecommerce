@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.Debts;
 using NamEcommerce.Web.Contracts.Queries.Models.Debts;
 using NamEcommerce.Web.Contracts.Models.Debts;
+using NamEcommerce.Domain.Shared.Exceptions;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -45,10 +46,21 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
         if (!ModelState.IsValid)
             return Json(new { success = false, message = LocalizeError("Error.InvalidRequest", GetErrorMessage()) });
 
-        var result = await _mediator.Send(new RecordCustomerPaymentCommand { Model = model }).ConfigureAwait(false);
-        return result.Success
-            ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
-            : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+        try
+        {
+            var result = await _mediator.Send(new RecordCustomerPaymentCommand { Model = model }).ConfigureAwait(false);
+            return result.Success
+                ? Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") })
+                : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return Json(new
+            {
+                success = false,
+                message = LocalizeError(ex.ErrorCode, ex.Parameters)
+            });
+        }
     }
 
     [HttpPost]
@@ -57,10 +69,17 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
         if (!ModelState.IsValid)
             return Json(new { success = false, message = LocalizeError("Error.InvalidRequest", GetErrorMessage()) });
 
-        var result = await _mediator.Send(new RecordFlexiblePaymentCommand { Model = model }).ConfigureAwait(false);
-        return result.Success
-            ? Json(new { success = true, message = result.SuccessMessage ?? LocalizeError("Msg.SaveSuccess") })
-            : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+        try
+        {
+            var result = await _mediator.Send(new RecordFlexiblePaymentCommand { Model = model }).ConfigureAwait(false);
+            return result.Success
+                ? Json(new { success = true, message = result.SuccessMessage ?? LocalizeError("Msg.SaveSuccess") })
+                : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return Json(new { success = false, message = LocalizeError(ex.ErrorCode, ex.Parameters) });
+        }
     }
 
     /// <summary>In biên lai cho 1 lần thanh toán cụ thể.</summary>

@@ -8,6 +8,7 @@ using NamEcommerce.Web.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Application.Contracts.Orders;
+using Microsoft.Extensions.Localization;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -60,6 +61,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         return Json(result);
     }
 
+    [HttpPost]
     public async Task<IActionResult> CreateFromShortage([FromBody] CreatePurchaseOrdersFromShortageCommand command)
     {
         var result = await _mediator.Send(command).ConfigureAwait(false);
@@ -69,7 +71,8 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         return Json(new
         {
             success = true,
-            items = result.Items
+            items = result.Items,
+            message = Localizer["Msg.PurchaseOrders.CreateSuccess", result.Items.Count].Value
         });
     }
 

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Models.DeliveryNotes;
@@ -36,7 +37,6 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         return View(model);
     }
 
-    // Accept optional selected order item ids as comma separated list in query string
     public async Task<IActionResult> Create(Guid orderId, string? selected = null)
     {
         try
@@ -78,9 +78,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     {
         if (!ModelState.IsValid)
         {
-            var refModel = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId).ConfigureAwait(false);
-            model.OrderCode = refModel.OrderCode;
-            model.CustomerName = refModel.CustomerName;
+            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model).ConfigureAwait(false);
             return View(model);
         }
 
@@ -88,40 +86,45 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         if (!orderItems.Any())
         {
             AddLocalizedModelError("Error.DeliveryNoteItemRequired");
-            var refModel = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId).ConfigureAwait(false);
-            model.OrderCode = refModel.OrderCode;
-            model.CustomerName = refModel.CustomerName;
+            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model).ConfigureAwait(false);
             return View(model);
         }
 
-        var result = await _mediator.Send(new CreateDeliveryNoteCommand
+        try
         {
-            OrderId = model.OrderId,
-            ShippingAddress = model.ShippingAddress,
-            WarehouseId = model.WarehouseId,
-            ShowPrice = model.ShowPrice,
-            Note = model.Note,
-            Surcharge = model.Surcharge,
-            SurchargeReason = model.SurchargeReason,
-            AmountToCollect = model.AmountToCollect,
-            Items = orderItems.Select(i => new CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel
+            var result = await _mediator.Send(new CreateDeliveryNoteCommand
             {
-                OrderItemId = i.OrderItemId,
-                Quantity = i.Quantity
-            }).ToList()
-        }).ConfigureAwait(false);
+                OrderId = model.OrderId,
+                ShippingAddress = model.ShippingAddress,
+                WarehouseId = model.WarehouseId,
+                ShowPrice = model.ShowPrice,
+                Note = model.Note,
+                Surcharge = model.Surcharge,
+                SurchargeReason = model.SurchargeReason,
+                AmountToCollect = model.AmountToCollect,
+                Items = orderItems.Select(i => new CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel
+                {
+                    OrderItemId = i.OrderItemId,
+                    Quantity = i.Quantity
+                }).ToList()
+            }).ConfigureAwait(false);
 
-        if (result)
-        {
-            NotifySuccess("Msg.SaveSuccess");
-            return RedirectToAction(nameof(List));
+            if (result.Success)
+            {
+                NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
+                return RedirectToAction(nameof(List));
+            }
+
+            AddLocalizedModelError(result.ErrorMessage ?? "Error.DeliveryNoteCreateFailed");
+            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model).ConfigureAwait(false);
+            return View(model);
         }
-
-        AddLocalizedModelError("Error.DeliveryNoteCreateFailed");
-        var refModel2 = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId).ConfigureAwait(false);
-        model.OrderCode = refModel2.OrderCode;
-        model.CustomerName = refModel2.CustomerName;
-        return View(model);
+        catch (NamEcommerceDomainException ex)
+        {
+            AddLocalizedModelError(ex.ErrorCode, ex.Parameters);
+            model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model).ConfigureAwait(false);
+            return View(model);
+        }
     }
 
     public async Task<IActionResult> Details(Guid id)
@@ -182,15 +185,19 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [HttpPost]
     public async Task<IActionResult> MarkDelivering(Guid id)
     {
-        var result = await _mediator.Send(new MarkDeliveringDeliveryNoteCommand
+        try
         {
-            DeliveryNoteId = id
-        }).ConfigureAwait(false);
+            await _mediator.Send(new MarkDeliveringDeliveryNoteCommand
+            {
+                DeliveryNoteId = id
+            }).ConfigureAwait(false);
 
-        if (result.Success)
             return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
-
-        return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return Json(new { success = false, message = LocalizeError(ex.ErrorCode, ex.Parameters) });
+        }
     }
 
     [HttpPost]
@@ -201,39 +208,50 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             return Json(new { success = false, message = LocalizeError("Error.DeliveryProofRequired") });
         }
 
-        using var memoryStream = new MemoryStream();
-        await pictureFile.CopyToAsync(memoryStream);
-        var fileBytes = memoryStream.ToArray();
-
-        var result = await _mediator.Send(new MarkDeliveryNoteDeliveredCommand
+        try
         {
-            DeliveryNoteId = deliveryNoteId,
-            ReceiverName = receiverName,
-            PictureData = fileBytes,
-            PictureContentType = pictureFile.ContentType,
-            PictureFileName = pictureFile.FileName
-        });
+            using var memoryStream = new MemoryStream();
+            await pictureFile.CopyToAsync(memoryStream);
+            var fileBytes = memoryStream.ToArray();
 
-        if (result.Success)
-        {
-            return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
+            var result = await _mediator.Send(new MarkDeliveryNoteDeliveredCommand
+            {
+                DeliveryNoteId = deliveryNoteId,
+                ReceiverName = receiverName,
+                PictureData = fileBytes,
+                PictureContentType = pictureFile.ContentType,
+                PictureFileName = pictureFile.FileName
+            });
+
+            if (result.Success)
+            {
+                return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
+            }
+
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
         }
-
-        return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+        catch (NamEcommerceDomainException ex)
+        {
+            return Json(new { success = false, message = LocalizeError(ex.ErrorCode, ex.Parameters) });
+        }
     }
 
     [HttpPost]
     public async Task<IActionResult> Cancel(Guid id)
     {
-        var result = await _mediator.Send(new CancelDeliveryNoteCommand
+        try
         {
-            DeliveryNoteId = id
-        }).ConfigureAwait(false);
+            await _mediator.Send(new CancelDeliveryNoteCommand
+            {
+                DeliveryNoteId = id
+            }).ConfigureAwait(false);
 
-        if (result.Success)
             return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
-
-        return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return Json(new { success = false, message = LocalizeError(ex.ErrorCode, ex.Parameters) });
+        }
     }
 
     [HttpPost]
@@ -301,14 +319,36 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 }).ToList()
             }).ConfigureAwait(false);
 
-            if (createResult)
-                return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
+            if (createResult.Success)
+            {
+                return Json(new
+                {
+                    success = true,
+                    message = LocalizeError(createResult.SuccessMessage ?? "Msg.SaveSuccess")
+                });
+            }
 
-            return Json(new { success = false, message = LocalizeError("Error.DeliveryNoteCreateFailed") });
+            return Json(new
+            {
+                success = false,
+                message = LocalizeError(createResult.ErrorMessage ?? "Error.DeliveryNoteCreateFailed")
+            });
         }
-        catch (Exception ex)
+        catch (NamEcommerceDomainException ex)
         {
-            return Json(new { success = false, message = "Lỗi: " + ex.Message });
+            return Json(new
+            {
+                success = false,
+                message = LocalizeError(ex.ErrorCode, ex.Parameters)
+            });
+        }
+        catch
+        {
+            return Json(new
+            {
+                success = false,
+                message = LocalizeError("Error.GenericError")
+            });
         }
     }
 }

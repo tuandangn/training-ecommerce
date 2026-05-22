@@ -190,7 +190,7 @@
     <value>Product name is required.</value>
   </data>
   <data name="Error.ProductAlreadyInCategory" xml:space="preserve">
-    <value>Product '{0}' is already in category '{1}'.</value>
+    <value>Product '{0}' is already in category.</value>
   </data>
   <data name="Error.ProductUnitPriceCannotBeNegative" xml:space="preserve">
     <value>Unit price cannot be negative.</value>
@@ -271,7 +271,7 @@
     <value>Insufficient stock for product</value>
   </data>
   <data name="Error.GoodsReceiptCannotDeleteDueToReservedStock" xml:space="preserve">
-    <value>Goods receipt '{0}' cannot be deleted because its stock is reserved for another delivery (product '{1}' in warehouse '{2}'). Cancel the related delivery note first or wait for the goods to be returned.</value>
+    <value>Goods receipt cannot be deleted because its stock is reserved for another delivery (product in warehouse). Cancel the related delivery note first or wait for the goods to be returned.</value>
   </data>
   <data name="Error.CannotReleaseMoreThanReserved" xml:space="preserve">
     <value>Cannot release more than reserved quantity. Reserved: {0}, requested: {1}.</value>
@@ -587,6 +587,9 @@
   </data>
   <data name="Msg.SaveSuccess" xml:space="preserve">
     <value>Saved successfully.</value>
+  </data>
+  <data name="Msg.PurchaseOrders.CreateSuccess" xml:space="preserve">
+    <value>Successfully created {0} purchase order(s).</value>
   </data>
   <data name="Msg.BulkReceive.CreatedMultiple" xml:space="preserve">
     <value>Created {0} goods receipts.</value>

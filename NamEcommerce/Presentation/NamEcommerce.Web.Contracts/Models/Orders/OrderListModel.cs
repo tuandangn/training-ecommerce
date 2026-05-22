@@ -14,6 +14,7 @@ public sealed class OrderListModel
     {
         public required Guid Id { get; init; }
         public required string Code { get; set; }
+        public required int OrderStatus { get; set; }
         public required Guid CustomerId { get; init; }
         public string? CustomerName { get; init; }
         public string? CustomerAddress { get; set; }

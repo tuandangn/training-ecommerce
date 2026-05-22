@@ -16,28 +16,21 @@ public sealed class RecordCustomerPaymentHandler(
 
     public async Task<CommonActionResultModel> Handle(RecordCustomerPaymentCommand request, CancellationToken cancellationToken)
     {
-        try
+        var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
+        var dto = new CreateCustomerPaymentAppDto
         {
-            var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
-            var dto = new CreateCustomerPaymentAppDto
-            {
-                CustomerId = request.Model.CustomerId,
-                CustomerDebtId = request.Model.CustomerDebtId,
-                OrderId = request.Model.OrderId,
-                Amount = request.Model.Amount,
-                PaymentMethod = request.Model.PaymentMethod,
-                PaymentType = request.Model.PaymentType,
-                Note = request.Model.Note,
-                PaidOnUtc = request.Model.PaidOnUtc.ToUniversalTime(),
-                RecordedByUserId = currentUser?.Id
-            };
+            CustomerId = request.Model.CustomerId,
+            CustomerDebtId = request.Model.CustomerDebtId,
+            OrderId = request.Model.OrderId,
+            Amount = request.Model.Amount,
+            PaymentMethod = request.Model.PaymentMethod,
+            PaymentType = request.Model.PaymentType,
+            Note = request.Model.Note,
+            PaidOnUtc = request.Model.PaidOnUtc.ToUniversalTime(),
+            RecordedByUserId = currentUser?.Id
+        };
 
-            await _debtAppService.RecordPaymentAsync(dto).ConfigureAwait(false);
-            return new CommonActionResultModel { Success = true };
-        }
-        catch (Exception ex)
-        {
-            return new CommonActionResultModel { Success = false, ErrorMessage = ex.Message };
-        }
+        await _debtAppService.RecordPaymentAsync(dto).ConfigureAwait(false);
+        return new CommonActionResultModel { Success = true };
     }
 }

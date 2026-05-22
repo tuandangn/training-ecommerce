@@ -1,11 +1,10 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
-using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.DeliveryNotes;
 
-public sealed class CancelDeliveryNoteHandler : IRequestHandler<CancelDeliveryNoteCommand, CommonActionResultModel>
+public sealed class CancelDeliveryNoteHandler : IRequestHandler<CancelDeliveryNoteCommand, Unit>
 {
     private readonly IDeliveryNoteAppService _deliveryNoteAppService;
 
@@ -14,23 +13,9 @@ public sealed class CancelDeliveryNoteHandler : IRequestHandler<CancelDeliveryNo
         _deliveryNoteAppService = deliveryNoteAppService;
     }
 
-    public async Task<CommonActionResultModel> Handle(CancelDeliveryNoteCommand request, CancellationToken cancellationToken)
+    public async Task<Unit> Handle(CancelDeliveryNoteCommand request, CancellationToken cancellationToken)
     {
-        try
-        {
-            await _deliveryNoteAppService.CancelAsync(request.DeliveryNoteId).ConfigureAwait(false);
-            return new CommonActionResultModel
-            {
-                Success = true
-            };
-        }
-        catch (Exception ex)
-        {
-            return new CommonActionResultModel
-            {
-                Success = false,
-                ErrorMessage = ex.Message
-            };
-        }
+        await _deliveryNoteAppService.CancelAsync(request.DeliveryNoteId).ConfigureAwait(false);
+        return Unit.Value;
     }
 }

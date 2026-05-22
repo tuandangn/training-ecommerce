@@ -17,27 +17,16 @@ public sealed class RebuildInventoryCostingHandler : IRequestHandler<RebuildInve
 
     public async Task<RebuildInventoryCostingResultModel> Handle(RebuildInventoryCostingCommand request, CancellationToken cancellationToken)
     {
-        try
+        var runId = await _inventoryCostingAppService.RebuildAllAsync(new RebuildInventoryCostingAppDto
         {
-            var runId = await _inventoryCostingAppService.RebuildAllAsync(new RebuildInventoryCostingAppDto
-            {
-                CostingMethod = request.CostingMethod,
-                ValuationScope = request.ValuationScope
-            }).ConfigureAwait(false);
+            CostingMethod = request.CostingMethod,
+            ValuationScope = request.ValuationScope
+        }).ConfigureAwait(false);
 
-            return new RebuildInventoryCostingResultModel
-            {
-                Success = true,
-                RebuildRunId = runId
-            };
-        }
-        catch (Exception ex)
+        return new RebuildInventoryCostingResultModel
         {
-            return new RebuildInventoryCostingResultModel
-            {
-                Success = false,
-                ErrorMessage = ex.Message
-            };
-        }
+            Success = true,
+            RebuildRunId = runId
+        };
     }
 }
