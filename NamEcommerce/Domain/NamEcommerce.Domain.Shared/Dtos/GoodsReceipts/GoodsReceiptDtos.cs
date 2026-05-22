@@ -3,6 +3,81 @@ using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 namespace NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 
 [Serializable]
+public sealed record CreateGoodsReceiptFromPurchaseOrderDto
+{
+    public required Guid PurchaseOrderId { get; init; }
+    public required string PurchaseOrderCode { get; init; }
+
+    public Guid? VendorId { get; init; }
+
+    public required Guid ProductId { get; init; }
+    public required Guid WarehouseId { get; init; }
+    public required decimal Quantity { get; init; }
+
+    public decimal? UnitCost { get; init; }
+
+    public void Verify()
+    {
+        if (PurchaseOrderId == Guid.Empty)
+            throw new ArgumentException("PurchaseOrderId is required", nameof(PurchaseOrderId));
+        if (string.IsNullOrEmpty(PurchaseOrderCode))
+            throw new ArgumentException("PurchaseOrderCode is required", nameof(PurchaseOrderCode));
+        if (ProductId == Guid.Empty)
+            throw new ArgumentException("ProductId is required", nameof(ProductId));
+        if (WarehouseId == Guid.Empty)
+            throw new ArgumentException("WarehouseId is required", nameof(WarehouseId));
+        if (Quantity <= 0)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityMustBePositive");
+    }
+}
+
+[Serializable]
+public sealed record CreateGoodsReceiptFromPurchaseOrderBulkDto
+{
+    public required Guid PurchaseOrderId { get; init; }
+    public required string PurchaseOrderCode { get; init; }
+
+    public Guid? VendorId { get; init; }
+
+    public required Guid WarehouseId { get; init; }
+
+    public Guid? BulkReceiveBatchId { get; init; }
+
+    public required IList<CreateGoodsReceiptFromPurchaseOrderBulkItemDto> Items { get; init; }
+
+    public void Verify()
+    {
+        if (PurchaseOrderId == Guid.Empty)
+            throw new ArgumentException("PurchaseOrderId is required", nameof(PurchaseOrderId));
+        if (string.IsNullOrEmpty(PurchaseOrderCode))
+            throw new ArgumentException("PurchaseOrderCode is required", nameof(PurchaseOrderCode));
+        if (WarehouseId == Guid.Empty)
+            throw new ArgumentException("WarehouseId is required", nameof(WarehouseId));
+        if (Items is null || Items.Count == 0)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityMustBePositive");
+        foreach (var item in Items)
+            item.Verify();
+    }
+}
+
+[Serializable]
+public sealed record CreateGoodsReceiptFromPurchaseOrderBulkItemDto
+{
+    public required Guid ProductId { get; init; }
+    public required decimal Quantity { get; init; }
+
+    public decimal? UnitCost { get; init; }
+
+    public void Verify()
+    {
+        if (ProductId == Guid.Empty)
+            throw new ArgumentException("ProductId is required", nameof(ProductId));
+        if (Quantity <= 0)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityMustBePositive");
+    }
+}
+
+[Serializable]
 public abstract record BaseGoodsReceiptDto
 {
     public required DateTime ReceivedOnUtc { get; init; }
@@ -14,12 +89,11 @@ public abstract record BaseGoodsReceiptDto
 
     public string? Note { get; set; }
 
-    /// <summary>Nhà cung cấp — nullable.</summary>
     public Guid? VendorId { get; set; }
 
     public virtual void Verify()
     {
-        if (!PictureIds.Any())
+        if (PictureIds is null || !PictureIds.Any())
             throw new GoodsReceiptProofPictureRequired();
 
         if (ReceivedOnUtc > DateTime.UtcNow)
@@ -30,17 +104,18 @@ public abstract record BaseGoodsReceiptDto
 [Serializable]
 public sealed record GoodsReceiptDto(Guid Id) : BaseGoodsReceiptDto
 {
+    public string Code { get; init; } = string.Empty;
     public required IEnumerable<GoodsReceiptItemDto> Items { get; init; }
     public bool IsPendingCosting { get; init; }
 
-    // Vendor snapshot — chỉ có trong DTO đọc, không phải DTO ghi
     public string? VendorName { get; init; }
     public string? VendorPhone { get; init; }
     public string? VendorAddress { get; init; }
 
-    // PurchaseOrder linkage
     public Guid? PurchaseOrderId { get; init; }
     public string? PurchaseOrderCode { get; init; }
+
+    public Guid? BulkReceiveBatchId { get; init; }
 }
 
 [Serializable]
@@ -78,7 +153,6 @@ public sealed record DeleteGoodsReceiptDto(Guid GoodsReceiptId) : BaseGoodsRecei
 [Serializable]
 public sealed record SetGoodsReceiptVendorDto(Guid GoodsReceiptId)
 {
-    /// <summary>null = xoá vendor khỏi phiếu.</summary>
     public Guid? VendorId { get; init; }
 
     public void Verify()
@@ -92,4 +166,20 @@ public sealed record SetGoodsReceiptVendorDto(Guid GoodsReceiptId)
 public sealed record SetGoodsReceiptVendorResultDto
 {
     public required Guid UpdatedId { get; init; }
+}
+
+[Serializable]
+public sealed record CreateGoodsReceiptFromCustomerReturnDto
+{
+    public required Guid CustomerReturnId { get; init; }
+    public required Guid WarehouseId { get; init; }
+    public required IEnumerable<CreateGoodsReceiptFromCustomerReturnItemDto> Items { get; init; }
+}
+
+[Serializable]
+public sealed record CreateGoodsReceiptFromCustomerReturnItemDto
+{
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public required decimal Quantity { get; init; }
 }

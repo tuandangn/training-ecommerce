@@ -13,4 +13,7 @@ public sealed class AppConfig
     public string BreadcrumbSeparator { get; set; } = ">";
 
     public string N8nEndpoint { get; set; } = "";
+
+    public decimal[] TaxRates { get; set; } = [];
+    public decimal DefaultTaxRate { get; set; } = 10;
 }

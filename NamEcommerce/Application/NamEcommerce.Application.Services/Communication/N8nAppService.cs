@@ -41,6 +41,13 @@ public sealed class N8nAppService(HttpClient httpClient, IDeliveryNoteAppService
         };
         var requestContent = new StringContent(JsonSerializer.Serialize(infoJson), Encoding.UTF8, "application/json");
 
-        var response = await httpClient.PostAsync(PATH, requestContent).ConfigureAwait(false);
+        try
+        {
+            var response = await httpClient.PostAsync(PATH, requestContent).ConfigureAwait(false);
+        }
+        catch(Exception ex)
+        {
+            //*TODO* log error
+        }
     }
 }

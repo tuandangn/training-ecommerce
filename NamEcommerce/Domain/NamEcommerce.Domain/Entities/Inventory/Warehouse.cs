@@ -10,6 +10,8 @@ namespace NamEcommerce.Domain.Entities.Inventory;
 [Serializable]
 public sealed record Warehouse : AppAggregateEntity
 {
+    public const string CODE_PREFIX = "KH";
+
     internal Warehouse(string code, string name, WarehouseType warehouseType) : base(Guid.NewGuid())
     {
         if (string.IsNullOrEmpty(code))
@@ -83,21 +85,16 @@ public sealed record Warehouse : AppAggregateEntity
 
     internal void SetActive(bool isActive) => IsActive = isActive;
 
-    /// <summary>
-    /// Đánh dấu kho vừa được khởi tạo — Manager gọi trước <c>InsertAsync</c>.
-    /// </summary>
+    #endregion
+
+    #region Events
+
     internal void MarkCreated()
         => RaiseDomainEvent(new WarehouseCreated(Id, Code, Name));
 
-    /// <summary>
-    /// Đánh dấu kho vừa được cập nhật — raise <see cref="WarehouseUpdated"/>.
-    /// </summary>
     internal void MarkUpdated()
         => RaiseDomainEvent(new WarehouseUpdated(Id));
 
-    /// <summary>
-    /// Đánh dấu kho bị xoá — Manager gọi trước <c>DeleteAsync</c>.
-    /// </summary>
     internal void MarkDeleted()
         => RaiseDomainEvent(new WarehouseDeleted(Id, Code, Name));
 

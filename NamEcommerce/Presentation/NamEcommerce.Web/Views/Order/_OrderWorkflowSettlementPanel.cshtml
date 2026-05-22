@@ -1,0 +1,245 @@
+@model OrderDetailsModel
+@{
+    var isActive = Model.Workflow.ActiveStage == OrderDetailsModel.WorkflowStage.Settlement;
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<section class="workflow-panel @(isActive ? "active" : "")" data-workflow-panel="settlement" role="tabpanel">
+    <div class="content-card">
+        <div class="content-card-header">
+            <div>
+                <h5>Kết sổ</h5>
+                <div class="text-muted small">Chi phí phát sinh, công nợ, giá vốn và lời lãi</div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-link text-dark text-decoration-none" data-bs-toggle="modal" data-bs-target="#orderExpenseModal">
+                    <i class="bi bi-plus-lg me-1"></i>Thêm chi phí
+                </button>
+                @if (Model.CanCompleteOrder)
+                {
+                    <button type="button" class="btn btn-sm btn-primary" id="btnCompleteOrder" data-order-id="@Model.Id">
+                        <i class="bi bi-check-circle me-1"></i>Hoàn thành đơn
+                    </button>
+                }
+                @if (Model.CanCancelOrder || Model.CanDeleteOrder)
+                {
+                    <div class="btn-group btn-group-sm">
+                        @if (Model.CanCancelOrder)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="btnCancelOrder">
+                                <i class="bi bi-x-circle me-1"></i>Hủy đơn
+                            </button>
+                        }
+                        @if (Model.CanDeleteOrder)
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteOrderModal">
+                                <i class="bi bi-trash me-1"></i>Xóa đơn
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="content-card-body">
+            <div class="workflow-metric-grid mb-3">
+                <div class="workflow-metric">
+                    <span>Doanh thu</span>
+                    <strong>@Model.Settlement.Revenue.DisplayCurrencyWithSymbol()</strong>
+                </div>
+                <div class="workflow-metric">
+                    <span>Giá vốn</span>
+                    <strong>@Model.Settlement.TotalCost.DisplayCurrencyWithSymbol()</strong>
+                </div>
+                <div class="workflow-metric">
+                    <span>Chi phí</span>
+                    <strong>@Model.Settlement.TotalExpenses.DisplayCurrencyWithSymbol()</strong>
+                </div>
+                <div class="workflow-metric @(Model.Settlement.Profit >= 0 ? "profit-positive" : "profit-negative")">
+                    <span>Lãi / lỗ</span>
+                    <strong>@Model.Settlement.Profit.DisplayCurrencyWithSymbol()</strong>
+                </div>
+            </div>
+
+            @if (!Model.Settlement.IsProfitFinal)
+            {
+                <div class="alert alert-warning small mb-3">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Lợi nhuận có thể chưa chốt vì còn dòng xuất hàng chưa có giá vốn.
+                </div>
+            }
+
+            <div class="workflow-section-title">Công nợ</div>
+            @if (Model.Settlement.Debts.Count == 0)
+            {
+                <div class="workflow-soft-empty mb-3">
+                    <i class="bi bi-cash-coin"></i>
+                    <span>Chưa có công nợ cho đơn này.</span>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive mb-3">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Mã nợ</th>
+                                <th>Phiếu giao</th>
+                                <th class="text-end">Tổng nợ</th>
+                                <th class="text-end">Đã thu</th>
+                                <th class="text-end">Còn lại</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var debt in Model.Settlement.Debts)
+                            {
+                                <tr>
+                                    <td class="fw-600">@debt.Code</td>
+                                    <td>@debt.DeliveryNoteCode</td>
+                                    <td class="text-end">@debt.TotalAmount.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end">@debt.PaidAmount.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end fw-bold @(debt.RemainingAmount > 0 ? "text-danger" : "text-success")">
+                                        @debt.RemainingAmount.DisplayCurrencyWithSymbol()
+                                    </td>
+                                    <td>@debt.StatusText</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <div class="workflow-section-title">Chi phí phát sinh</div>
+            @if (Model.Settlement.Expenses.Count == 0)
+            {
+                <div class="workflow-soft-empty mb-3">
+                    <i class="bi bi-wallet2"></i>
+                    <span>Chưa có chi phí phát sinh.</span>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive mb-3">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Khoản chi</th>
+                                <th>Loại</th>
+                                <th>Lý do</th>
+                                <th class="text-end">Số tiền</th>
+                                <th class="text-end">Ngày</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var expense in Model.Settlement.Expenses)
+                            {
+                                <tr>
+                                    <td class="fw-600">@expense.Title</td>
+                                    <td>@expense.ExpenseTypeText</td>
+                                    <td>@(expense.Description ?? "-")</td>
+                                    <td class="text-end text-danger fw-bold">@expense.Amount.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end">@expense.IncurredDate.ToString(ViewConstants.DefaultDateFormat)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <div class="workflow-section-title">Giá vốn từng lần xuất</div>
+            @if (Model.Settlement.Costs.Count == 0)
+            {
+                <div class="workflow-soft-empty">
+                    <i class="bi bi-receipt-cutoff"></i>
+                    <span>Chưa có dữ liệu xuất hàng để tính giá vốn.</span>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Phiếu giao</th>
+                                <th>Hàng hóa</th>
+                                <th>Nguồn</th>
+                                <th class="text-end">SL</th>
+                                <th class="text-end">Giá vốn</th>
+                                <th class="text-end">Tổng vốn</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cost in Model.Settlement.Costs)
+                            {
+                                <tr>
+                                    <td>
+                                        <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@cost.DeliveryNoteId" class="text-decoration-none fw-600">
+                                            @cost.DeliveryNoteCode
+                                        </a>
+                                    </td>
+                                    <td>@cost.ProductName</td>
+                                    <td>@(cost.IsDirectShip ? "Giao thẳng" : "Xuất kho")</td>
+                                    <td class="text-end">@cost.Quantity.DisplayQuantity()</td>
+                                    <td class="text-end">@(cost.UnitCost?.DisplayCurrencyWithSymbol() ?? "-")</td>
+                                    <td class="text-end fw-600">@(cost.TotalCost?.DisplayCurrencyWithSymbol() ?? "-")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="modal fade" id="orderExpenseModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Thêm chi phí phát sinh</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="orderExpenseForm" method="post" action="/Order/AddExpense">
+                    <div class="modal-body py-3">
+                        <input type="hidden" name="SourceOrderId" value="@Model.Id" />
+                        <div class="mb-3">
+                            <label class="form-label" for="orderExpenseTitle">Khoản chi</label>
+                            <input id="orderExpenseTitle" name="Title" class="form-control" required maxlength="200" />
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="form-label" for="orderExpenseAmount">Số tiền</label>
+                                <input id="orderExpenseAmount" name="Amount" class="form-control decimal-input"
+                                       data-decimal="currency" data-decimals="0" autocomplete="off" required />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="orderExpenseType">Loại phí</label>
+                                <select id="orderExpenseType" name="ExpenseType" class="form-select">
+                                    <option value="5">Khác</option>
+                                    <option value="1">Lương thưởng</option>
+                                    <option value="2">Mặt bằng</option>
+                                    <option value="3">Tiếp thị</option>
+                                    <option value="4">Điện nước</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3 mt-3">
+                            <label class="form-label" for="orderExpenseDate">Ngày phát sinh</label>
+                            <input id="orderExpenseDate" name="IncurredDate" type="date" class="form-control"
+                                   value="@today" required />
+                        </div>
+                        <div>
+                            <label class="form-label" for="orderExpenseDescription">Lý do</label>
+                            <textarea id="orderExpenseDescription" name="Description" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 pb-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy bỏ</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-floppy me-1"></i>Lưu lại
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>

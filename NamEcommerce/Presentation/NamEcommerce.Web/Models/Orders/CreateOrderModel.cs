@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
+using NamEcommerce.Web.Contracts.Models.Common;
 using System.ComponentModel.DataAnnotations;
 
 namespace NamEcommerce.Web.Models.Orders;
@@ -28,6 +29,13 @@ public sealed class CreateOrderModel
     public string? Note { get; set; }
 
     public IList<CreateOrderItemModel> Items { get; set; } = [];
+
+    [ValidateNever]
+    public EntityOptionListModel? AvailableCategories { get; set; }
+    [ValidateNever]
+    public EntityOptionListModel? AvailableUnitMeasurements { get; set; }
+    [ValidateNever]
+    public EntityOptionListModel? AvailableVendors { get; set; }
 
     [ValidateNever]
     public decimal OrderSubTotal => Items.Sum(item => item.ItemSubTotal);

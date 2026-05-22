@@ -1,0 +1,61 @@
+@using NamEcommerce.Application.Contracts.Dtos.CustomerPortal
+@using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@model IReadOnlyCollection<CustomerPortalOrderRequestAdminAppDto>
+@{
+    ViewData[ViewConstants.PageTitle] = "Yêu cầu đặt hàng từ portal";
+    var status = ViewData["Status"] as int?;
+}
+
+<div class="page-header">
+    <div class="d-flex align-items-center">
+        <a asp-action="Index" class="btn btn-icon btn-light me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <div>
+            <h1 class="page-header-title">Yêu cầu đặt hàng từ portal</h1>
+            <p class="page-header-subtitle">Khách chỉ tạo yêu cầu; admin duyệt trước khi xử lý thành đơn nội bộ</p>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="OrderRequests" class="btn btn-outline-secondary">Tất cả</a>
+        <a asp-action="OrderRequests" asp-route-status="@((int)CustomerOrderRequestStatus.PendingApproval)" class="btn btn-primary">Chờ duyệt</a>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="table data-table align-middle">
+            <thead>
+                <tr>
+                    <th class="ps-4">Mã yêu cầu</th>
+                    <th>Khách hàng</th>
+                    <th class="text-end">Giá trị</th>
+                    <th class="text-center">Trạng thái</th>
+                    <th class="text-center">Ngày tạo</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model)
+            {
+                var requestStatus = (CustomerOrderRequestStatus)item.Status;
+                <tr>
+                    <td class="ps-4 fw-semibold">@item.Code</td>
+                    <td>
+                        <div class="fw-medium">@item.CustomerName</div>
+                        <div class="text-muted small">@item.CustomerPhone</div>
+                    </td>
+                    <td class="text-end fw-bold">@item.TotalAmount.ToString(ViewConstants.CurrencyDisplayFormat)</td>
+                    <td class="text-center"><span class="badge @requestStatus.GetDisplayColor()">@requestStatus.GetDisplayText()</span></td>
+                    <td class="text-center text-muted small">@item.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</td>
+                    <td class="text-end pe-3">
+                        <a asp-action="OrderRequestDetails" asp-route-id="@item.Id" class="btn btn-sm btn-light text-primary">Xem</a>
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="6"><div class="empty-state py-5 text-muted">Không có yêu cầu đặt hàng@(status.HasValue ? " phù hợp" : "")</div></td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

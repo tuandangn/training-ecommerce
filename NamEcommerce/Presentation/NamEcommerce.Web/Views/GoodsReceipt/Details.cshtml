@@ -1,7 +1,10 @@
 @model GoodsReceiptDetailsModel
+@inject AppConfig AppConfig
 @{
     ViewData[ViewConstants.PageTitle] = $"Phiếu nhập - {Model.CreatedOn.ToString(ViewConstants.DefaultDateFormat)}";
     var totalValue = Model.IsPendingCosting ? (decimal?)null : Model.Items.Sum(i => i.Quantity * (i.UnitCost ?? 0));
+    var taxRates = AppConfig.TaxRates ?? [];
+    var defaultTaxRate = AppConfig.DefaultTaxRate;
 }
 @section TitleSection {
     <h1 class="topbar-page-title">
@@ -42,6 +45,9 @@
                     </span>
                 }
             </div>
+            @{
+                var hasReturnedItems = Model.Items.Any(i => i.ReturnedQuantity > 0 || i.PendingReturnQuantity > 0);
+            }
             <div class="content-card-body-flush">
                 <table class="table data-table mb-0">
                     <thead>
@@ -49,6 +55,10 @@
                             <th class="ps-4">Sản phẩm</th>
                             <th style="width:130px">Kho</th>
                             <th class="text-end" style="width:100px">SL nhập</th>
+                            @if (hasReturnedItems)
+                            {
+                                <th class="text-end" style="width:110px" data-bs-toggle="tooltip" title="Số lượng đã trả NCC (Confirmed)">Đã trả</th>
+                            }
                             <th class="text-end pe-4" style="width:160px">Đơn giá nhập</th>
                         </tr>
                     </thead>
@@ -65,7 +75,8 @@
                                 <td class="text-muted small">
                                     @if (!string.IsNullOrEmpty(item.WarehouseName))
                                     {
-                                        <i class="bi bi-building me-1"></i>@item.WarehouseName
+                                        <i class="bi bi-building me-1"></i>
+                                        @item.WarehouseName
                                     }
                                     else
                                     {
@@ -75,6 +86,36 @@
                                 <td class="text-end fw-medium">
                                     @item.Quantity.DisplayQuantity()
                                 </td>
+                                @if (hasReturnedItems)
+                                {
+                                    <td class="text-end">
+                                        @if (item.ReturnedQuantity <= 0 && item.PendingReturnQuantity <= 0)
+                                        {
+                                            <span class="text-muted small">—</span>
+                                        }
+                                        else
+                                        {
+                                            if (item.ReturnedQuantity >= item.Quantity)
+                                            {
+                                                <span class="status-badge danger small" data-bs-toggle="tooltip" title="Toàn bộ đã trả NCC">
+                                                    <i class="bi bi-arrow-return-right"></i> @item.ReturnedQuantity.DisplayQuantity()
+                                                </span>
+                                            }
+                                            else if (item.ReturnedQuantity > 0)
+                                            {
+                                                <span class="status-badge warning small" data-bs-toggle="tooltip" title="Đã trả một phần">
+                                                    @item.ReturnedQuantity.DisplayQuantity()
+                                                </span>
+                                            }
+                                            if (item.PendingReturnQuantity > 0)
+                                            {
+                                                <div class="small text-info mt-1" data-bs-toggle="tooltip" title="Đang chờ xác nhận (Draft/Inspecting)">
+                                                    <i class="bi bi-hourglass-split"></i> @item.PendingReturnQuantity.DisplayQuantity()
+                                                </div>
+                                            }
+                                        }
+                                    </td>
+                                }
                                 <td class="text-end pe-4">
                                     @if (item.IsPendingCosting)
                                     {
@@ -100,7 +141,7 @@
                     {
                         <tfoot>
                             <tr class="table-light">
-                                <td colspan="3" class="ps-4 text-end text-muted small fw-medium pe-3">Tổng giá trị phiếu</td>
+                                <td colspan="@(hasReturnedItems ? 4 : 3)" class="ps-4 text-end text-muted small fw-medium pe-3">Tổng giá trị phiếu</td>
                                 <td class="text-end pe-4 fw-bold text-dark">@totalValue.Value.DisplayCurrency()</td>
                             </tr>
                         </tfoot>
@@ -118,13 +159,57 @@
                         <i class="bi bi-trash me-1"></i>Xóa phiếu
                     </button>
                 </form>
-                <form method="post" asp-action="SetToPurchaseOrder" asp-route-id="@Model.Id" id="setPurchaseOrderForm">
-                    @Html.AntiForgeryToken()
-                    <input type="hidden" id="purchaseOrderCode" name="code"/>
-                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="purchaseOrderCode.value = prompt('Nhập code: ');">
-                        Gắn đơn nhập
-                    </button>
-                </form>
+            </div>
+        </div>
+
+        <!-- Trả hàng NCC -->
+        <div class="content-card mt-3" id="vendorReturnsCard" data-goods-receipt-id="@Model.Id">
+            <div class="content-card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-arrow-return-right me-2 text-warning"></i>Trả hàng NCC
+                </h5>
+                @if (Model.VendorId.HasValue)
+                {
+                    <a asp-controller="VendorReturn" asp-action="Create"
+                       asp-route-goodsReceiptId="@Model.Id"
+                       asp-route-vendorId="@Model.VendorId"
+                       asp-route-vendorName="@Model.VendorName"
+                       asp-route-goodsReceiptCode="@Model.CreatedOn.ToString("dd/MM/yyyy")"
+                       class="btn btn-sm btn-outline-warning">
+                        <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="VendorReturn" asp-action="Create"
+                       asp-route-goodsReceiptId="@Model.Id"
+                       asp-route-goodsReceiptCode="@Model.CreatedOn.ToString("dd/MM/yyyy")"
+                       class="btn btn-sm btn-outline-warning">
+                        <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
+                    </a>
+                }
+            </div>
+            <div class="content-card-body p-0">
+                <div id="vendorReturnsLoading" class="px-4 py-3 text-center text-muted small">
+                    <span class="spinner-border spinner-border-sm me-1"></span>Đang tải...
+                </div>
+                <div id="vendorReturnsEmpty" class="d-none px-4 py-3 text-center text-muted small fst-italic">
+                    — Chưa có phiếu trả hàng NCC nào liên kết
+                </div>
+                <div id="vendorReturnsList" class="d-none">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Mã phiếu</th>
+                                <th>Ngày trả</th>
+                                <th class="text-center">Trạng thái</th>
+                                <th class="text-end">Số mặt hàng</th>
+                                <th class="text-end pe-4">Tổng giá trị</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vendorReturnsTableBody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -151,7 +236,11 @@
                             {
                                 @Model.TruckDriverName
                             }
-                            else { <span class="text-muted fst-italic">—</span> }
+                            else
+                            {
+
+                                <span class="text-muted fst-italic">—</span>
+                            }
                         </dd>
                     </div>
                     <div class="receipt-info-row">
@@ -159,9 +248,14 @@
                         <dd>
                             @if (!string.IsNullOrEmpty(Model.TruckNumberSerial))
                             {
-                                <i class="bi bi-truck me-1 text-muted"></i>@Model.TruckNumberSerial
+                                <i class="bi bi-truck me-1 text-muted"></i>
+                                @Model.TruckNumberSerial
                             }
-                            else { <span class="text-muted fst-italic">—</span> }
+                            else
+                            {
+
+                                <span class="text-muted fst-italic">—</span>
+                            }
                         </dd>
                     </div>
                     @if (!string.IsNullOrEmpty(Model.Note))
@@ -250,7 +344,47 @@
             </div>
         </div>
 
-        <!-- Ảnh chụp -->
+        <div class="content-card mb-3" id="poLinkCard">
+            <div class="content-card-header">
+                <h5 class="mb-0">Đơn nhập</h5>
+                @if (!Model.PurchaseOrderId.HasValue)
+                {
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-light" id="btnSearchPoByCode">
+                            <i class="bi bi-search me-1"></i>Tìm theo mã
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnQuickCreatePo"
+                                data-bs-toggle="modal" data-bs-target="#quickCreatePoModal">
+                            <i class="bi bi-plus-lg me-1"></i>Tạo mới PO
+                        </button>
+                    </div>
+                }
+            </div>
+            <div class="content-card-body p-0">
+                @if (Model.PurchaseOrderId.HasValue)
+                {
+                    <div class="px-3 py-3">
+                        <a asp-controller="PurchaseOrder" asp-action="Details" asp-route-id="@Model.PurchaseOrderId"
+                           class="badge bg-success-subtle text-success border border-success-subtle text-decoration-none fs-6 px-3 py-2">
+                            <i class="bi bi-link-45deg me-1"></i> @Model.PurchaseOrderCode
+                        </a>
+                    </div>
+                }
+                else
+                {
+                    <div id="poSuggestionsPanel" data-receipt-id="@Model.Id">
+                        <div id="poSuggestionsLoading" class="px-3 py-3 text-center text-muted small">
+                            <span class="spinner-border spinner-border-sm me-1"></span>Đang tìm phiếu phù hợp...
+                        </div>
+                        <div id="poSuggestionsList" class="d-none"></div>
+                        <div id="poSuggestionsEmpty" class="d-none px-3 py-3 text-center text-muted small fst-italic">
+                            — Không tìm thấy phiếu đặt hàng phù hợp
+                        </div>
+                        <div id="poSuggestionsError" class="d-none px-3 py-2 text-danger small"></div>
+                    </div>
+                }
+            </div>
+        </div>
         <div class="content-card">
             <div class="content-card-header">
                 <h5 class="mb-0">Ảnh chụp</h5>
@@ -269,7 +403,175 @@
                      data-picture-ids="@string.Join(",", Model.PictureIds)"></div>
             </div>
         </div>
+    </div>
+</div>
 
+<div class="modal fade" id="searchPoByCodeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Tìm theo mã phiếu</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <label class="form-label small fw-medium text-muted" for="poCodeInput">Mã phiếu đặt hàng</label>
+                <input type="text" id="poCodeInput" class="form-control" placeholder="VD: PO-2024-001" autocomplete="off" />
+                <div id="searchPoByCodeError" class="alert alert-danger d-none mt-2 py-2 mb-0 small"></div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnConfirmPoByCode" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>Xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="quickCreatePoModal"
+     data-receipt-id="@Model.Id"
+     data-vendor-locked="@(Model.VendorId.HasValue ? "true" : "false")"
+     data-vendor-id="@(Model.VendorId?.ToString() ?? "")"
+     tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Tạo đơn nhập hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <div id="quickPoError" class="alert alert-danger d-none mb-3 py-2"></div>
+                @if (Model.VendorId.HasValue)
+                {
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium text-muted">Nhà cung cấp</label>
+                        <div class="form-control bg-light d-flex align-items-center" style="cursor:not-allowed;">
+                            <i class="bi bi-building-fill me-2 text-primary"></i>
+                            <span class="fw-semibold">@Model.VendorName</span>
+                            @if (!string.IsNullOrEmpty(Model.VendorPhone))
+                            {
+                                <span class="text-muted ms-2 small">@Model.VendorPhone</span>
+                            }
+                            <i class="bi bi-lock-fill ms-auto text-muted"></i>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="mb-3">
+                        <label class="form-label small fw-medium text-muted">Nhà cung cấp <span class="text-danger">*</span></label>
+                        <div id="quickPoVendorPicker"></div>
+                        <input type="hidden" id="quickPoSelectedVendorId" />
+                        <div id="quickPoVendorError" class="invalid-feedback d-none">Vui lòng chọn nhà cung cấp.</div>
+                    </div>
+                }
+                <div class="mb-3">
+                    <label class="form-label small fw-medium text-muted mb-1">Danh sách hàng hóa</label>
+                    <div class="table-responsive rounded-3 border">
+                        <table class="table table-sm mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Sản phẩm</th>
+                                    <th class="text-end pe-3">Số lượng</th>
+                                    <th class="text-end pe-3" style="width:180px">Đơn giá nhập <span class="text-danger">*</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Items)
+                                {
+                                    var lineTotal = item.IsPendingCosting ? 0m : item.Quantity * (item.UnitCost ?? 0m);
+                                    <tr class="quick-po-row" data-line-total="@lineTotal">
+                                        <td class="ps-3 text-truncate" style="max-width:220px">@item.ProductName</td>
+                                        <td class="text-end pe-3">@item.Quantity.DisplayQuantity()</td>
+                                        <td class="text-end pe-3">
+                                            @if (item.IsPendingCosting)
+                                            {
+                                                <input class="form-control form-control-sm text-end quick-po-unitcost"
+                                                       data-item-id="@item.Id" data-quantity="@item.Quantity" data-decimal="currency"
+                                                       data-val="true" data-val-required="Vui lòng nhập đơn giá."
+                                                       data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
+                                                       data-val-number="Đơn giá phải là số"
+                                                       placeholder="Nhập đơn giá" />
+                                            }
+                                            else
+                                            {
+                                                <span class="fw-semibold">@item.UnitCost!.Value.DisplayCurrency()</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="mb-1" id="quickPoFees">
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <div class="mb-2">
+                                <span class="small fw-medium text-muted">
+                                    Chi phí
+                                </span>
+                            </div>
+                            <div>
+                                <input id="quickPoShippingAmount" class="form-control form-control-sm text-end" data-decimal="currency" placeholder="Nhập chi phí"/>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span>
+                                        <span class="small fw-medium text-muted">
+                                            Thuế
+                                        </span>
+                                        <span class="small text-muted" id="quickPoTaxPreview">
+                                            (Tạm tính: <span class="value">0</span>)
+                                        </span>
+                                    </span>
+                                    <div class="btn-group btn-group-sm" role="group" aria-label="Tax mode">
+                                        <input type="radio" class="btn-check" name="quickPoTaxMode" id="quickPoTaxModePercent" value="percent" />
+                                        <label class="btn btn-outline-secondary py-0 px-2" for="quickPoTaxModePercent">%</label>
+
+                                        <input type="radio" class="btn-check" name="quickPoTaxMode" id="quickPoTaxModeAmount" value="amount" checked />
+                                        <label class="btn btn-outline-secondary py-0 px-2" for="quickPoTaxModeAmount">Số tiền</label>
+                                    </div>
+                                </div>
+                                <div id="quickPoTaxPercentBox" class="d-none">
+                                    <div class="d-flex flex-wrap gap-1 mb-2" id="quickPoTaxRateChips">
+                                        @foreach (var rate in taxRates)
+                                        {
+                                            <input type="radio" class="btn-check" name="quickPoTaxRate"
+                                                   id="quickPoTaxRate_@rate" value="@rate"
+                                            @(rate == defaultTaxRate ? "checked" : "") />
+                                            <label class="btn btn-sm btn-outline-primary px-2 py-1" for="quickPoTaxRate_@rate">@rate%</label>
+                                        }
+                                        <input type="radio" class="btn-check" name="quickPoTaxRate" id="quickPoTaxRate_custom" value="custom" />
+                                        <label class="btn btn-sm btn-outline-primary px-2 py-1" for="quickPoTaxRate_custom">Khác</label>
+                                    </div>
+                                    <div class="input-group input-group-sm d-none" id="quickPoTaxCustomBox">
+                                        <span class="input-group-text bg-light">Tỷ lệ</span>
+                                        <input type="number" id="quickPoTaxCustomRate" class="form-control text-end" min="0" max="100" step="any" placeholder="0" />
+                                        <span class="input-group-text bg-light">%</span>
+                                    </div>
+                                </div>
+                                <div id="quickPoTaxAmountBox">
+                                    <input id="quickPoTaxAmountInput" class="form-control form-control-sm text-end" data-decimal="currency" placeholder="Nhập tiền thuế" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-medium text-muted" for="quickPoNote">Ghi chú</label>
+                    <textarea id="quickPoNote" class="form-control" rows="3" placeholder="Nhập ghi chú" maxlength="2000"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnConfirmQuickCreatePo" class="btn btn-primary">
+                    <span class="spinner-border spinner-border-sm d-none me-1" id="quickPoSpinner"></span>
+                    <i class="bi bi-check-lg me-1" id="quickPoIcon"></i> Tạo đơn nhập
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -377,58 +679,163 @@
 </div>
 
 @section Styles {
-<style>
-    /* ── Receipt info DL ── */
-    .receipt-info-list { margin: 0; }
-    .receipt-info-row {
-        display: flex;
-        align-items: baseline;
-        padding: .6rem 1.25rem;
-        border-bottom: 1px solid var(--bs-border-color-translucent);
-        gap: .75rem;
-    }
-    .receipt-info-row:last-child { border-bottom: none; }
-    .receipt-info-row dt {
-        font-size: .75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: .03em;
-        color: var(--bs-secondary);
-        width: 72px;
-        flex-shrink: 0;
-    }
-    .receipt-info-row dd { margin: 0; font-size: .875rem; }
+    <style>
+        /* ── Receipt info DL ── */
+        .receipt-info-list {
+            margin: 0;
+        }
 
-    /* ── Product links ── */
-    .details-product-link:hover { color: var(--bs-primary) !important; text-decoration: underline !important; }
+        .receipt-info-row {
+            display: flex;
+            align-items: baseline;
+            padding: .6rem 1.25rem;
+            border-bottom: 1px solid var(--bs-border-color-translucent);
+            gap: .75rem;
+        }
 
-    /* ── Picture picker ── */
-    .picture-upload-slot {
-        position: relative; width: 100px; height: 100px;
-        border-radius: 10px; overflow: hidden; flex-shrink: 0;
-    }
-    .picture-upload-label {
-        display: flex; flex-direction: column; align-items: center;
-        justify-content: center; width: 100px; height: 100px;
-        border: 2px dashed var(--bs-border-color); border-radius: 10px;
-        cursor: pointer; background: #f8f9fa;
-        transition: border-color .15s, background .15s;
-        font-size: .7rem; color: var(--bs-secondary); gap: 3px;
-    }
-    .picture-upload-label:hover, .picture-upload-label.drag-over {
-        border-color: var(--bs-primary); background: #eef3ff; color: var(--bs-primary);
-    }
-    .picture-upload-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; pointer-events: none; }
-    .picture-thumbnail-wrapper { position: relative; width: 100px; height: 100px; margin-right:.5rem; flex-shrink: 0; }
-    .picture-thumbnail-img { width: 100px; height: 100px; object-fit: cover; border-radius: 10px; border: 1px solid var(--bs-border-color); display: block; }
-    .btn-remove-picture {
-        position: absolute; top: 3px; right: 3px; width: 18px; height: 18px;
-        border-radius: 50%; border: none; background: rgba(0,0,0,.55); color: #fff;
-        font-size: .6rem; display: flex; align-items: center; justify-content: center;
-        cursor: pointer; padding: 0; transition: background .15s;
-    }
-    .btn-remove-picture:hover { background: var(--bs-danger); }
-</style>
+            .receipt-info-row:last-child {
+                border-bottom: none;
+            }
+
+            .receipt-info-row dt {
+                font-size: .75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: .03em;
+                color: var(--bs-secondary);
+                width: 72px;
+                flex-shrink: 0;
+            }
+
+            .receipt-info-row dd {
+                margin: 0;
+                font-size: .875rem;
+            }
+
+        /* ── Product links ── */
+        .details-product-link:hover {
+            color: var(--bs-primary) !important;
+            text-decoration: underline !important;
+        }
+
+        /* ── PO Suggestion rows ── */
+        .po-suggestion-row {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            padding: .6rem 1rem;
+            border-bottom: 1px solid var(--bs-border-color-translucent);
+        }
+
+            .po-suggestion-row:last-child {
+                border-bottom: none;
+            }
+
+        .po-score-bar {
+            height: 5px;
+            flex: 1;
+            border-radius: 3px;
+            background: var(--bs-border-color);
+            overflow: hidden;
+            min-width: 40px;
+        }
+
+        .po-score-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width .3s;
+        }
+
+        .po-score-full {
+            background: var(--bs-success);
+        }
+
+        .po-score-partial {
+            background: var(--bs-warning);
+        }
+
+        /* ── Picture picker ── */
+        .picture-upload-slot {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 10px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .picture-upload-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100px;
+            height: 100px;
+            border: 2px dashed var(--bs-border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            background: #f8f9fa;
+            transition: border-color .15s, background .15s;
+            font-size: .7rem;
+            color: var(--bs-secondary);
+            gap: 3px;
+        }
+
+            .picture-upload-label:hover, .picture-upload-label.drag-over {
+                border-color: var(--bs-primary);
+                background: #eef3ff;
+                color: var(--bs-primary);
+            }
+
+        .picture-upload-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            pointer-events: none;
+        }
+
+        .picture-thumbnail-wrapper {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            margin-right: .5rem;
+            flex-shrink: 0;
+        }
+
+        .picture-thumbnail-img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid var(--bs-border-color);
+            display: block;
+        }
+
+        .btn-remove-picture {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0,0,0,.55);
+            color: #fff;
+            font-size: .6rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+            transition: background .15s;
+        }
+
+            .btn-remove-picture:hover {
+                background: var(--bs-danger);
+            }
+    </style>
 }
 
 @section Scripts {
@@ -617,6 +1024,354 @@
             }
         });
 
+        // ── Phiếu đặt hàng — Suggested PO ────────────────────────────────────
+        (function initPoSuggestions() {
+            const panel = document.getElementById('poSuggestionsPanel');
+            if (!panel) return; // Đã linked — không cần load
+
+            const receiptId = panel.dataset.receiptId;
+            const loadingEl = document.getElementById('poSuggestionsLoading');
+            const listEl    = document.getElementById('poSuggestionsList');
+            const emptyEl   = document.getElementById('poSuggestionsEmpty');
+            const errorEl   = document.getElementById('poSuggestionsError');
+
+            async function linkToPurchaseOrder(purchaseOrderId, poCode) {
+                if (!confirm(`Xác nhận gắn phiếu nhập này với phiếu đặt hàng "${poCode}"?`)) return;
+
+                const fd = new FormData();
+                fd.append('id', receiptId);
+                fd.append('purchaseOrderId', purchaseOrderId);
+                fd.append('__RequestVerificationToken', antiForgeryToken);
+
+                try {
+                    const res = await fetch('@Url.Action("SetToPurchaseOrder")', { method: 'POST', body: fd }).then(r => r.json());
+                    if (res.success) {
+                        location.reload();
+                    } else {
+                        alert(res.message || 'Gắn phiếu thất bại. Vui lòng thử lại.');
+                    }
+                } catch {
+                    alert('Lỗi kết nối. Vui lòng thử lại.');
+                }
+            }
+
+            function renderRow(po) {
+                const isFullMatch = po.isFullMatch;
+                const scoreClass  = isFullMatch ? 'po-score-full' : 'po-score-partial';
+                const badgeClass  = isFullMatch ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning border-warning-subtle';
+                const badgeIcon   = isFullMatch ? 'bi-check-circle-fill' : 'bi-lightning-charge-fill';
+                const badgeLabel  = isFullMatch ? 'Khớp hoàn toàn' : `Khớp ${po.matchScore}%`;
+                const placedDate  = new Date(po.placedOn).toLocaleDateString('vi-VN');
+
+                const row = document.createElement('div');
+                row.className = 'po-suggestion-row';
+                row.innerHTML = `
+                    <div style="flex:1;min-width:0;">
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <span class="badge border ${badgeClass} py-1" style="font-size:.7rem;">
+                                <i class="bi ${badgeIcon} me-1"></i>${badgeLabel}
+                            </span>
+                            <span class="fw-semibold text-truncate" style="font-size:.875rem;">${po.purchaseOrderCode}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted" style="font-size:.75rem;">${placedDate}</span>
+                            <div class="po-score-bar"><div class="po-score-fill ${scoreClass}" style="width:${po.matchScore}%"></div></div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary flex-shrink-0 btnSelectPo"
+                            data-po-id="${po.purchaseOrderId}" data-po-code="${po.purchaseOrderCode}">
+                        Chọn
+                    </button>`;
+
+                row.querySelector('.btnSelectPo').addEventListener('click', () => {
+                    linkToPurchaseOrder(po.purchaseOrderId, po.purchaseOrderCode);
+                });
+                return row;
+            }
+
+            async function loadSuggestions() {
+                try {
+                    const res = await fetch(`@Url.Action("GetSuggestedPurchaseOrders")?id=${receiptId}`).then(r => r.json());
+
+                    loadingEl.classList.add('d-none');
+
+                    if (!res || res.length === 0) {
+                        emptyEl.classList.remove('d-none');
+                        return;
+                    }
+
+                    res.forEach(po => listEl.appendChild(renderRow(po)));
+                    listEl.classList.remove('d-none');
+                } catch {
+                    loadingEl.classList.add('d-none');
+                    if (errorEl) {
+                        errorEl.textContent = 'Không thể tải danh sách phiếu đặt hàng.';
+                        errorEl.classList.remove('d-none');
+                    }
+                }
+            }
+
+            loadSuggestions();
+
+            // ── Tìm theo mã thủ công ──
+            document.getElementById('btnSearchPoByCode')?.addEventListener('click', () => {
+                document.getElementById('poCodeInput').value = '';
+                document.getElementById('searchPoByCodeError').classList.add('d-none');
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('searchPoByCodeModal')).show();
+            });
+
+            document.getElementById('btnConfirmPoByCode')?.addEventListener('click', async () => {
+                const code = document.getElementById('poCodeInput').value.trim();
+                const errEl = document.getElementById('searchPoByCodeError');
+                errEl.classList.add('d-none');
+
+                if (!code) {
+                    errEl.textContent = 'Vui lòng nhập mã phiếu.';
+                    errEl.classList.remove('d-none');
+                    return;
+                }
+
+                const btn = document.getElementById('btnConfirmPoByCode');
+                btn.disabled = true;
+                try {
+                    const fd = new FormData();
+                    fd.append('id', receiptId);
+                    fd.append('code', code);
+                    fd.append('__RequestVerificationToken', antiForgeryToken);
+
+                    const res = await fetch('@Url.Action("SetToPurchaseOrderByCode")', { method: 'POST', body: fd }).then(r => r.json());
+                    if (res.success) {
+                        location.reload();
+                    } else {
+                        errEl.textContent = res.message || 'Không tìm thấy phiếu đặt hàng.';
+                        errEl.classList.remove('d-none');
+                    }
+                } catch {
+                    errEl.textContent = 'Lỗi kết nối. Vui lòng thử lại.';
+                    errEl.classList.remove('d-none');
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        })();
+
+        // ── Quick Create PO từ GoodsReceipt ──────────────────────────────────
+        (function initQuickCreatePo() {
+            const modalEl = document.getElementById('quickCreatePoModal');
+            if (!modalEl) return;
+
+            const errorEl    = document.getElementById('quickPoError');
+            const confirmBtn = document.getElementById('btnConfirmQuickCreatePo');
+            const spinner    = document.getElementById('quickPoSpinner');
+            const icon       = document.getElementById('quickPoIcon');
+            if (!confirmBtn) return;
+
+            const receiptId    = modalEl.dataset.receiptId;
+            const vendorLocked = modalEl.dataset.vendorLocked === 'true';
+            const lockedVendorId = modalEl.dataset.vendorId || '';
+
+            // Vendor picker chỉ tồn tại khi GR chưa có vendor.
+            const vendorPickerEl = document.getElementById('quickPoVendorPicker');
+            const vendorIdInput  = document.getElementById('quickPoSelectedVendorId');
+            const vendorErrorEl  = document.getElementById('quickPoVendorError');
+            let picker = null;
+
+            if (!vendorLocked && vendorPickerEl) {
+                picker = new VendorPicker(vendorPickerEl);
+                vendorPickerEl.addEventListener('select', (e) => {
+                    vendorIdInput.value = e.detail?.vendor?.id ?? '';
+                    vendorErrorEl?.classList.add('d-none');
+                    errorEl.classList.add('d-none');
+                });
+                vendorPickerEl.addEventListener('remove', () => {
+                    vendorIdInput.value = '';
+                });
+            }
+
+            // ── Tax UI helpers ───────────────────────────────────────────────
+            const taxPercentBox  = document.getElementById('quickPoTaxPercentBox');
+            const taxAmountBox   = document.getElementById('quickPoTaxAmountBox');
+            const taxAmountInput = document.getElementById('quickPoTaxAmountInput');
+            const taxCustomBox   = document.getElementById('quickPoTaxCustomBox');
+            const taxCustomRate  = document.getElementById('quickPoTaxCustomRate');
+            const taxPreviewEl   = document.getElementById('quickPoTaxPreview');
+
+            const fmtVnd = (n) => (Number.isFinite(n) ? n : 0).toLocaleString('vi-VN') + 'đ';
+
+            function getSelectedTaxMode() {
+                const el = document.querySelector('input[name="quickPoTaxMode"]:checked');
+                return el ? el.value : 'percent';
+            }
+            function getSelectedTaxRate() {
+                const el = document.querySelector('input[name="quickPoTaxRate"]:checked');
+                if (!el) return 0;
+                if (el.value === 'custom') return parseFloat(taxCustomRate.value) || 0;
+                return parseFloat(el.value) || 0;
+            }
+            function computeSubtotal() {
+                let total = 0;
+                document.querySelectorAll('.quick-po-row').forEach(row => {
+                    const baseTotal = parseFloat(row.dataset.lineTotal) || 0;
+                    if (baseTotal > 0) { total += baseTotal; return; }
+                    const input = row.querySelector('.quick-po-unitcost');
+                    if (input) {
+                        const qty  = parseFloat(input.dataset.quantity) || 0;
+                        const cost = parseFloat(DecimalFields.stripFormatting(input.value)) || 0;
+                        total += qty * cost;
+                    }
+                });
+                return total;
+            }
+            function computeTaxAmount() {
+                if (getSelectedTaxMode() === 'amount') {
+                    return Math.max(0, parseFloat(DecimalFields.stripFormatting(taxAmountInput.value)) || 0);
+                }
+                const rate = Math.max(0, getSelectedTaxRate());
+                return computeSubtotal() * rate / 100;
+            }
+            function refreshTaxPreview() {
+                taxPreviewEl.classList.toggle('d-none', document.getElementById('quickPoTaxModeAmount').checked);
+                taxPreviewEl.querySelector('.value').textContent = DecimalFields.formatCurrencyWithSymbol(computeTaxAmount());
+            }
+
+            document.querySelectorAll('input[name="quickPoTaxMode"]').forEach(el => {
+                el.addEventListener('change', () => {
+                    if (getSelectedTaxMode() === 'amount') {
+                        taxPercentBox.classList.add('d-none');
+                        taxAmountBox.classList.remove('d-none');
+                    } else {
+                        taxPercentBox.classList.remove('d-none');
+                        taxAmountBox.classList.add('d-none');
+                    }
+                    refreshTaxPreview();
+                });
+            });
+            document.querySelectorAll('input[name="quickPoTaxRate"]').forEach(el => {
+                el.addEventListener('change', () => {
+                    const isCustom = document.querySelector('input[name="quickPoTaxRate"]:checked')?.value === 'custom';
+                    taxCustomBox.classList.toggle('d-none', !isCustom);
+                    if (isCustom) taxCustomRate.focus();
+                    refreshTaxPreview();
+                });
+            });
+            taxCustomRate.addEventListener('input', refreshTaxPreview);
+            taxAmountInput.addEventListener('input', refreshTaxPreview);
+            document.querySelectorAll('.quick-po-unitcost').forEach(i => {
+                i.addEventListener('input', refreshTaxPreview);
+            });
+
+            // Reset form khi mở modal.
+            modalEl.addEventListener('show.bs.modal', () => {
+                if (!vendorLocked && picker) {
+                    picker.clear?.();
+                    if (vendorIdInput) vendorIdInput.value = '';
+                    vendorErrorEl?.classList.add('d-none');
+                }
+                document.querySelectorAll('.quick-po-unitcost').forEach(i => {
+                    i.value = '';
+                });
+                document.getElementById('quickPoNote').value = '';
+                document.getElementById('quickPoShippingAmount').value = '0';
+
+                // Reset tax: mode = %, default rate, ẩn custom
+                document.getElementById('quickPoTaxModeAmount').checked = true;
+                taxPercentBox.classList.add('d-none');
+                taxAmountBox.classList.remove('d-none');
+                taxCustomBox.classList.add('d-none');
+                taxCustomRate.value = '';
+                taxAmountInput.value = '0';
+                const defaultRadio = document.getElementById('quickPoTaxRate_@(defaultTaxRate)');
+                if (defaultRadio) defaultRadio.checked = true;
+                refreshTaxPreview();
+
+                errorEl.classList.add('d-none');
+                confirmBtn.disabled = false;
+                spinner.classList.add('d-none');
+                icon.classList.remove('d-none');
+            });
+
+            confirmBtn.addEventListener('click', async () => {
+                vendorErrorEl?.classList.add('d-none');
+                errorEl.classList.add('d-none');
+
+                // 1) Vendor
+                let vendorId;
+                if (vendorLocked) {
+                    vendorId = lockedVendorId;
+                } else {
+                    vendorId = (vendorIdInput?.value || '').trim();
+                    if (!vendorId) {
+                        vendorErrorEl.classList.remove('d-none');
+                        vendorErrorEl.style.display = 'block';
+                        return;
+                    }
+                }
+
+                // 2) Đơn giá per-item (bắt buộc cho các item chưa định giá)
+                const unitCostInputs = document.querySelectorAll('.quick-po-unitcost');
+                const itemCosts = {};
+                let invalidCost = false;
+                unitCostInputs.forEach(input => {
+                    const raw = (input.value || '').trim();
+                    const num = parseFloat(DecimalFields.stripFormatting(raw));
+                    if (raw === '' || isNaN(num) || num <= 0) {
+                        invalidCost = true;
+                    } else {
+                        itemCosts[input.dataset.itemId] = num;
+                    }
+                });
+                if (invalidCost) {
+                    errorEl.textContent = 'Vui lòng nhập đơn giá nhập (> 0) cho tất cả mặt hàng chưa định giá.';
+                    errorEl.classList.remove('d-none');
+                    return;
+                }
+
+                // 3) Fees
+                const shippingAmount = parseFloat(DecimalFields.stripFormatting(document.getElementById('quickPoShippingAmount').value)) || 0;
+                const taxAmount      = computeTaxAmount();
+                if (shippingAmount < 0 || taxAmount < 0) {
+                    errorEl.textContent = 'Chi phí phát sinh không được âm.';
+                    errorEl.classList.remove('d-none');
+                    return;
+                }
+
+                const note = document.getElementById('quickPoNote').value;
+
+                confirmBtn.disabled = true;
+                spinner.classList.remove('d-none');
+                icon.classList.add('d-none');
+
+                try {
+                    const fd = new FormData();
+                    fd.append('id', receiptId);
+                    if (vendorId) fd.append('vendorId', vendorId);
+                    if (note) fd.append('note', note);
+                    fd.append('taxAmount', String(taxAmount));
+                    fd.append('shippingAmount', String(shippingAmount));
+                    Object.entries(itemCosts).forEach(([itemId, cost]) => {
+                        fd.append(`itemUnitCosts[${itemId}]`, String(cost));
+                    });
+                    fd.append('__RequestVerificationToken', antiForgeryToken);
+
+                    const res = await fetch('@Url.Action("QuickCreateAndLink")', { method: 'POST', body: fd }).then(r => r.json());
+                    if (res.success) {
+                        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+                        location.reload();
+                    } else {
+                        errorEl.textContent = res.message || 'Tạo phiếu đặt hàng thất bại.';
+                        errorEl.classList.remove('d-none');
+                    }
+                } catch {
+                    errorEl.textContent = 'Lỗi kết nối. Vui lòng thử lại.';
+                    errorEl.classList.remove('d-none');
+                } finally {
+                    confirmBtn.disabled = false;
+                    spinner.classList.add('d-none');
+                    icon.classList.remove('d-none');
+                }
+            });
+        })();
+
         // ── Lưu thông tin ─────────────────────────────────────────────────────
         document.getElementById('btnSaveInfo')?.addEventListener('click', async () => {
             const fd = new FormData(document.getElementById('editInfoForm'));
@@ -631,5 +1386,42 @@
                 document.getElementById('editInfoError').classList.remove('d-none');
             }
         });
+
+        // ── Tải danh sách phiếu trả hàng NCC ────────────────────────────────
+        (function loadVendorReturns() {
+            const card = document.getElementById('vendorReturnsCard');
+            if (!card) return;
+            const receiptId = card.dataset.goodsReceiptId;
+            const loadingEl = document.getElementById('vendorReturnsLoading');
+            const emptyEl   = document.getElementById('vendorReturnsEmpty');
+            const listEl    = document.getElementById('vendorReturnsList');
+            const tbody     = document.getElementById('vendorReturnsTableBody');
+
+            fetch('/VendorReturn/GetByGoodsReceipt?goodsReceiptId=' + receiptId)
+                .then(r => r.json())
+                .then(function(returns) {
+                    loadingEl.classList.add('d-none');
+                    if (!returns || returns.length === 0) {
+                        emptyEl.classList.remove('d-none');
+                        return;
+                    }
+                    returns.forEach(function(ret) {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML =
+                            '<td class="ps-4"><a href="/VendorReturn/Details/' + ret.id + '" class="fw-medium text-decoration-none">' + ret.code + '</a></td>' +
+                            '<td class="text-muted small">' + ret.returnDate + '</td>' +
+                            '<td class="text-center"><span class="badge bg-' + ret.statusColor + '">' + ret.statusLabel + '</span></td>' +
+                            '<td class="text-end text-muted small">' + ret.itemCount + '</td>' +
+                            '<td class="text-end pe-4 fw-semibold">' + ret.totalAmount.toLocaleString('vi-VN') + 'đ</td>';
+                        tbody.appendChild(tr);
+                    });
+                    listEl.classList.remove('d-none');
+                })
+                .catch(function() {
+                    loadingEl.classList.add('d-none');
+                    emptyEl.textContent = 'Không thể tải dữ liệu phiếu trả NCC.';
+                    emptyEl.classList.remove('d-none');
+                });
+        })();
     </script>
 }

@@ -15,9 +15,9 @@ public sealed class CreateProductCommand : IRequest<CreateProductResultModel>
     public int DisplayOrder { get; set; }
     public FileInfoModel? ImageFile { get; set; }
     public decimal? UnitPrice { get; set; }
-    public decimal? CostPrice { get; set; }
-    public IEnumerable<ProductStockModel> ProductStocks { get; set; } = [];
 
-    [Serializable]
-    public sealed record ProductStockModel(Guid? WarehouseId, decimal Quantity);
+    // Tồn kho ban đầu — nếu có sẽ tự tạo + duyệt StockAdjustmentNote
+    public IEnumerable<ProductStockModel>? ProductStocks { get; set; }
+
+    public sealed record ProductStockModel(Guid WarehouseId, decimal Quantity);
 }

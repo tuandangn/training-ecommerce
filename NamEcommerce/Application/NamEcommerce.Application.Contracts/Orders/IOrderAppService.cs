@@ -6,13 +6,13 @@ namespace NamEcommerce.Application.Contracts.Orders;
 public interface IOrderAppService
 {
     Task<OrderAppDto?> GetOrderByIdAsync(Guid id);
-    Task<IPagedDataAppDto<OrderAppDto>> GetOrdersAsync(string? keywords, int? status, int pageIndex, int pageSize);
+    Task<IPagedDataAppDto<OrderAppDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status);
 
     Task<CreateOrderResultAppDto> CreateOrderAsync(CreateOrderAppDto dto);
     Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto);
     Task<DeleteOrderResultAppDto> DeleteOrderAsync(DeleteOrderAppDto dto);
 
-    Task<LockOrderResultAppDto> LockOrderAsync(LockOrderAppDto dto);
+    Task<CompleteOrderResultAppDto> CompleteOrderAsync(CompleteOrderAppDto dto);
     Task<UpdateOrderShippingResultAppDto> UpdateShippingAsync(UpdateOrderShippingAppDto dto);
 
     Task<AddOrderItemResultAppDto> AddOrderItemAsync(AddOrderItemAppDto dto);
@@ -21,5 +21,5 @@ public interface IOrderAppService
 
     Task<MarkOrderItemDeliveredResultAppDto> MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredAppDto dto);
 
-    Task<string> NextOrderCodeAsync();
+    Task<CancelOrderResultAppDto> CancelOrderAsync(CancelOrderAppDto dto);
 }

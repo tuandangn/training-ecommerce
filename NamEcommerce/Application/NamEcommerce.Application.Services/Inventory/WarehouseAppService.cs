@@ -99,9 +99,9 @@ public sealed class WarehouseAppService : IWarehouseAppService
         return warehouse?.ToDto();
     }
 
-    public async Task<IPagedDataAppDto<WarehouseAppDto>> GetWarehousesAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue)
+    public async Task<IPagedDataAppDto<WarehouseAppDto>> GetWarehousesAsync(int pageIndex = 0, int pageSize = int.MaxValue, string? keywords = null)
     {
-        var pagedData = await _warehouseManager.GetWarehousesAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);
+        var pagedData = await _warehouseManager.GetWarehousesAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
         var result = PagedDataAppDto.Create(
             pagedData.Select(warehouse => warehouse.ToDto()),
             pageIndex, pageSize, pagedData.PagerInfo.TotalCount);

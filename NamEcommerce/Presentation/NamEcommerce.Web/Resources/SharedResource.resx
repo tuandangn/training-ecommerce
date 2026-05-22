@@ -267,6 +267,12 @@
   <data name="Error.InsufficientStock" xml:space="preserve">
     <value>Insufficient stock for product '{0}' in warehouse '{1}'. Required: {2}, available: {3}.</value>
   </data>
+  <data name="Error.ProductInsufficientStock" xml:space="preserve">
+    <value>Insufficient stock for product</value>
+  </data>
+  <data name="Error.GoodsReceiptCannotDeleteDueToReservedStock" xml:space="preserve">
+    <value>Goods receipt '{0}' cannot be deleted because its stock is reserved for another delivery (product '{1}' in warehouse '{2}'). Cancel the related delivery note first or wait for the goods to be returned.</value>
+  </data>
   <data name="Error.CannotReleaseMoreThanReserved" xml:space="preserve">
     <value>Cannot release more than reserved quantity. Reserved: {0}, requested: {1}.</value>
   </data>
@@ -293,6 +299,9 @@
   </data>
   <data name="Error.OrderItemRequired" xml:space="preserve">
     <value>Order must have at least one item.</value>
+  </data>
+  <data name="Error.PurchaseOrderItemRequired" xml:space="preserve">
+    <value>Purchase order must have at least one item.</value>
   </data>
   <data name="Error.OrderCannotLock" xml:space="preserve">
     <value>Order cannot be locked at current state.</value>
@@ -378,6 +387,12 @@
   <data name="Error.PurchaseOrderIsNotFound" xml:space="preserve">
     <value>Purchase order not found.</value>
   </data>
+  <data name="Error.PurchaseOrder.VendorIsNotAppropriate" xml:space="preserve">
+    <value>Appropriate vendor for products is not found</value>
+  </data>
+  <data name="Error.PurchaseOrder.NoVendorsAppropriate" xml:space="preserve">
+    <value>Vendor is not appropriate for products</value>
+  </data>
   <data name="Error.PurchaseOrderCannotSubmit" xml:space="preserve">
     <value>Purchase order cannot be submitted at current state.</value>
   </data>
@@ -420,6 +435,9 @@
   <data name="Error.WarehouseRequired" xml:space="preserve">
     <value>Warehouse is required.</value>
   </data>
+  <data name="Error.PhysicalWarehouseRequired" xml:space="preserve">
+    <value>Physical warehouse is required.</value>
+  </data>
   <data name="Error.PurchaseOrderCodeExists" xml:space="preserve">
     <value>Purchase order code already exists.</value>
   </data>
@@ -428,9 +446,6 @@
   </data>
   <data name="Error.PurchaseOrderCannotUpdateOrderItems" xml:space="preserve">
     <value>Purchase order items cannot be updated at current state.</value>
-  </data>
-  <data name="Error.PurchaseOrderCannotAddItem" xml:space="preserve">
-    <value>Cannot add items to purchase order at current state.</value>
   </data>
   <data name="Error.PurchaseOrderReceiveQuantityExceedsOrderedQuantity" xml:space="preserve">
     <value>Receive quantity exceeds the ordered quantity.</value>
@@ -452,6 +467,12 @@
   </data>
   <data name="Error.DeliveryNoteCannotChangeStatus" xml:space="preserve">
     <value>Delivery note cannot change status from '{0}' to '{1}'.</value>
+  </data>
+  <data name="Error.DeliveryNoteHasConfirmedReturns" xml:space="preserve">
+    <value>Cannot cancel this delivery note because it has confirmed customer returns. Please process the returns first.</value>
+  </data>
+  <data name="Error.GoodsReceiptHasConfirmedReturns" xml:space="preserve">
+    <value>Cannot delete this goods receipt because it has confirmed vendor returns. Please process the returns first.</value>
   </data>
   <data name="Error.DeliveryProofRequired" xml:space="preserve">
     <value>Delivery proof is required.</value>
@@ -561,14 +582,14 @@
   <data name="Error.PurchaseOrderQuantityMustBePositive" xml:space="preserve">
     <value>Quantity must be greater than 0.</value>
   </data>
-  <data name="Error.PurchaseOrderUnitCostCannotBeNegative" xml:space="preserve">
-    <value>Unit cost cannot be negative.</value>
-  </data>
   <data name="Msg.DeleteConfirmTitle" xml:space="preserve">
     <value>Confirm Delete</value>
   </data>
   <data name="Msg.SaveSuccess" xml:space="preserve">
     <value>Saved successfully.</value>
+  </data>
+  <data name="Msg.BulkReceive.CreatedMultiple" xml:space="preserve">
+    <value>Created {0} goods receipts.</value>
   </data>
   <data name="Msg.ImageSizeLimit" xml:space="preserve">
     <value>Image size must be less than {0}Mb.</value>
@@ -791,5 +812,29 @@
   </data>
   <data name="Label.ExpectedDeliveryDate" xml:space="preserve">
     <value>Expected delivery date</value>
+  </data>
+  <data name="Error.PurchaseOrder.ProductsAreNotFound" xml:space="preserve">
+    <value>Products are not found</value>
+  </data>
+  <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.Physical" xml:space="preserve">
+    <value>Physical warehouse</value>
+  </data>
+  <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.Virtual" xml:space="preserve">
+    <value>Virtual warehouse</value>
+  </data>
+  <data name="Enums.NamEcommerce.Domain.Shared.Enums.Inventory.WarehouseType.DirectTransit" xml:space="preserve">
+    <value>Direct transit warehouse</value>
+  </data>
+  <data name="Error.DirectShip.TransitWarehouseNotConfigured" xml:space="preserve">
+    <value>No Direct-Ship Transit warehouse configured. Please create a warehouse of type DirectShipTransit first.</value>
+  </data>
+  <data name="Error.DirectShip.TransitWarehouseAlreadyExists" xml:space="preserve">
+    <value>A Direct-Ship Transit warehouse already exists. Only one is allowed.</value>
+  </data>
+  <data name="Error.VirtualWarehouseCannotDelete" xml:space="preserve">
+    <value>Virtual warehouse cannot delete</value>
+  </data>
+  <data name="Error.WarehouseIsNotSuitableException" xml:space="preserve">
+    <value>Warehouse is not suitable.</value>
   </data>
 </root>

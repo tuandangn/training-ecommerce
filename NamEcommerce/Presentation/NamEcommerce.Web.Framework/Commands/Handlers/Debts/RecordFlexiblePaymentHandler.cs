@@ -19,7 +19,6 @@ public sealed class RecordFlexiblePaymentHandler(
         try
         {
             var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
-
             var dto = new CreateCustomerPaymentAppDto
             {
                 CustomerId = request.Model.CustomerId,

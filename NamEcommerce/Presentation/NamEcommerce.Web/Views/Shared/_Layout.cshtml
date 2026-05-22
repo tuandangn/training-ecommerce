@@ -15,7 +15,6 @@
 </head>
 <body>
     <div class="app-layout">
-        <!-- Sidebar overlay cho mobile -->
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
         <aside class="sidebar" id="appSidebar">
             <a class="sidebar-brand" asp-controller="Home" asp-action="Index">
@@ -61,7 +60,14 @@
             </footer>
         </div>
     </div>
+    <div id="loading-mask" class="loader-wrapper" style="display: none;">
+        <div class="loader-content">
+            <div class="spinner"></div>
+            <p>Đang xử lý, vui lòng đợi trong giây lát...</p>
+        </div>
+    </div>
     <partial name="_ReusedModals" />
+    <partial name="_GlobalOffcanvas" />
     <partial name="_Scripts" />
     <partial name="_Notifications" />
     @await RenderSectionAsync(ViewConstants.ScriptSection, required: false)

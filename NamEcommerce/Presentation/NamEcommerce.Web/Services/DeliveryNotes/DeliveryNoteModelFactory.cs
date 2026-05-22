@@ -1,10 +1,13 @@
+using MediatR;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
+using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Common;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Web.Models.DeliveryNotes;
@@ -18,19 +21,22 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
     private readonly IPictureAppService _pictureAppService;
     private readonly IWarehouseAppService _warehouseAppService;
     private readonly IWebHelper _webHelper;
+    private readonly IMediator _mediator;
 
     public DeliveryNoteModelFactory(
         IDeliveryNoteAppService deliveryNoteAppService,
         IOrderAppService orderAppService,
         IPictureAppService pictureAppService,
         IWarehouseAppService warehouseAppService,
-        IWebHelper webHelper)
+        IWebHelper webHelper,
+        IMediator mediator)
     {
         _deliveryNoteAppService = deliveryNoteAppService;
         _orderAppService = orderAppService;
         _pictureAppService = pictureAppService;
         _warehouseAppService = warehouseAppService;
         _webHelper = webHelper;
+        _mediator = mediator;
     }
 
     public async Task<DeliveryNoteListModel> PrepareDeliveryNoteListModelAsync(DeliveryNoteSearchModel searchModel)
@@ -145,12 +151,19 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 
         var order = await _orderAppService.GetOrderByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
 
+        // Tổng số lượng đã trả (Confirmed) — group theo DeliveryNoteItemId.
+        var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
+        {
+            DeliveryNoteId = id
+        }).ConfigureAwait(false);
+
         var model = new DeliveryNoteDetailsModel
         {
             Id = deliveryNote.Id,
             Code = deliveryNote.Code,
             OrderId = deliveryNote.OrderId,
             OrderCode = order?.Code ?? string.Empty,
+            CustomerId = deliveryNote.CustomerId,
             CustomerName = deliveryNote.CustomerName,
             CustomerPhone = deliveryNote.CustomerPhone,
             CustomerAddress = deliveryNote.CustomerAddress,
@@ -158,6 +171,9 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             ShowPrice = deliveryNote.ShowPrice,
             Note = deliveryNote.Note,
             Status = deliveryNote.Status,
+            SourceType = deliveryNote.SourceType,
+            IsDirectShip = deliveryNote.IsDirectShip,
+            DeliveryConfirmationStatus = deliveryNote.DeliveryConfirmationStatus,
             StatusName = GetStatusName((DeliveryNoteStatus)deliveryNote.Status),
             CreatedOnUtc = deliveryNote.CreatedOnUtc,
             DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
@@ -168,13 +184,19 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
             WarehouseId = deliveryNote.WarehouseId,
-            Items = deliveryNote.Items.Select(i => new DeliveryNoteItemModel
+            Items = deliveryNote.Items.Select(i =>
             {
-                Id = i.Id,
-                ProductName = i.ProductName,
-                Quantity = i.Quantity,
-                UnitPrice = i.UnitPrice,
-                SubTotal = i.SubTotal
+                returnedQuantities.TryGetValue(i.Id, out var summary);
+                return new DeliveryNoteItemModel
+                {
+                    Id = i.Id,
+                    ProductName = i.ProductName,
+                    Quantity = i.Quantity,
+                    UnitPrice = i.UnitPrice,
+                    SubTotal = i.SubTotal,
+                    ReturnedQuantity = summary?.ConfirmedQuantity ?? 0m,
+                    PendingReturnQuantity = summary?.PendingQuantity ?? 0m
+                };
             }).ToList()
         };
 
@@ -189,6 +211,11 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 model.DeliveryProofPictureUrl = picture.Base64Value;
             }
         }
+
+        model.ShortageInfo = await _mediator.Send(new GetDeliveryNoteShortageInfoQuery
+        {
+            DeliveryNoteId = id
+        }).ConfigureAwait(false);
 
         return model;
     }

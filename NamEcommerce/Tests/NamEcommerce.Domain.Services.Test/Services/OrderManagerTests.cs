@@ -24,13 +24,11 @@ public sealed class OrderManagerTests
     private static User NewUser(Guid id)
         => new(id, "username", "fullName", "phoneNumber");
 
-    private static CreateOrderDto BuildCreateOrderDto(Guid customerId, Guid? userId = null, params AddOrderItemDto[] items)
+    private static CreateOrderDto BuildCreateOrderDto(Guid customerId, params AddOrderItemDto[] items)
     {
         var dto = new CreateOrderDto
         {
-            Code = "O-CODE-001",
             CustomerId = customerId,
-            CreatedByUserId = userId,
             ShippingAddress = "shipping-address",
             ExpectedShippingDateUtc = DateTime.UtcNow.Date.AddDays(1),
             Note = "note",
@@ -46,7 +44,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task CreateOrderAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => manager.CreateOrderAsync(null!));
     }
@@ -56,12 +54,10 @@ public sealed class OrderManagerTests
     {
         var dto = new CreateOrderDto
         {
-            Code = "O-001",
             CustomerId = Guid.NewGuid(),
-            CreatedByUserId = null,
             ExpectedShippingDateUtc = DateTime.UtcNow.Date.AddDays(-1)
         };
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderDataIsInvalidException>(() => manager.CreateOrderAsync(dto));
     }
@@ -71,12 +67,10 @@ public sealed class OrderManagerTests
     {
         var dto = new CreateOrderDto
         {
-            Code = "O-001",
             CustomerId = Guid.NewGuid(),
-            CreatedByUserId = null,
             OrderDiscount = -1
         };
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderDataIsInvalidException>(() => manager.CreateOrderAsync(dto));
     }
@@ -84,33 +78,15 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task CreateOrderAsync_ItemQuantityZero_ThrowsOrderItemDataIsInvalidException()
     {
-        var dto = BuildCreateOrderDto(Guid.NewGuid(), null, new AddOrderItemDto
+        var dto = BuildCreateOrderDto(Guid.NewGuid(), new AddOrderItemDto
         {
             ProductId = Guid.NewGuid(),
             Quantity = 0,
             UnitPrice = 10
         });
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderItemDataIsInvalidException>(() => manager.CreateOrderAsync(dto));
-    }
-
-    [Fact]
-    public async Task CreateOrderAsync_CodeAlreadyExists_ThrowsOrderCodeExistsException()
-    {
-        var customer = NewCustomer();
-        var existingOrder = new Order("O-001");
-        var orderDataReaderStub = OrderDataReader.HasOne(existingOrder);
-        var customerDataReaderStub = CustomerDataReader.CustomerById(customer.Id, customer);
-        var dto = new CreateOrderDto
-        {
-            Code = existingOrder.Code,
-            CustomerId = customer.Id,
-            CreatedByUserId = null
-        };
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, customerDataReaderStub.Object, null!, null!);
-
-        await Assert.ThrowsAsync<OrderCodeExistsException>(() => manager.CreateOrderAsync(dto));
     }
 
     [Fact]
@@ -120,7 +96,7 @@ public sealed class OrderManagerTests
         var dto = BuildCreateOrderDto(notFoundCustomerId);
         var orderDataReaderStub = OrderDataReader.Empty();
         var customerDataReaderMock = CustomerDataReader.NotFound(notFoundCustomerId);
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, customerDataReaderMock.Object, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, customerDataReaderMock.Object, null!, null!, null!);
 
         await Assert.ThrowsAsync<CustomerIsNotFoundException>(() => manager.CreateOrderAsync(dto));
         customerDataReaderMock.Verify();
@@ -131,11 +107,11 @@ public sealed class OrderManagerTests
     {
         var customer = NewCustomer();
         var notFoundUserId = Guid.NewGuid();
-        var dto = BuildCreateOrderDto(customer.Id, notFoundUserId);
+        var dto = BuildCreateOrderDto(customer.Id);
         var orderDataReaderStub = OrderDataReader.Empty();
         var customerDataReaderStub = CustomerDataReader.CustomerById(customer.Id, customer);
         var userDataReaderMock = UserDataReader.NotFound(notFoundUserId);
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, customerDataReaderStub.Object, userDataReaderMock.Object, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, customerDataReaderStub.Object, null!, null!, null!);
 
         await Assert.ThrowsAsync<UserIsNotFoundException>(() => manager.CreateOrderAsync(dto));
         userDataReaderMock.Verify();
@@ -147,7 +123,7 @@ public sealed class OrderManagerTests
         var customer = NewCustomer();
         var product = NewProduct();
         var item = new AddOrderItemDto { ProductId = product.Id, Quantity = 2, UnitPrice = 100 };
-        var dto = BuildCreateOrderDto(customer.Id, null, item);
+        var dto = BuildCreateOrderDto(customer.Id, item);
 
         var orderDataReaderStub = OrderDataReader.Empty();
         var customerDataReaderStub = CustomerDataReader.CustomerById(customer.Id, customer);
@@ -166,14 +142,13 @@ public sealed class OrderManagerTests
             productDataReaderStub.Object,
             customerDataReaderStub.Object,
             null!,
-            null!);
+            null!, null!);
 
         var result = await manager.CreateOrderAsync(dto);
 
         Assert.NotEqual(Guid.Empty, result.CreatedId);
         repositoryMock.Verify(r => r.InsertAsync(It.Is<Order>(o =>
-            o.Code == dto.Code
-            && o.CustomerId == customer.Id
+            o.CustomerId == customer.Id
             && o.OrderItems.Count() == 1
             && o.OrderSubTotal == 200
             && o.OrderTotal == 200
@@ -189,7 +164,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task UpdateOrderAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => manager.UpdateOrderAsync(null!));
     }
@@ -200,7 +175,7 @@ public sealed class OrderManagerTests
         var notFoundId = Guid.NewGuid();
         var dto = new UpdateOrderDto(notFoundId);
         var orderDataReaderMock = OrderDataReader.NotFound(notFoundId);
-        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderIsNotFoundException>(() => manager.UpdateOrderAsync(dto));
         orderDataReaderMock.Verify();
@@ -209,11 +184,11 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task UpdateOrderAsync_OrderLocked_ThrowsOrderCannotUpdateInfoException()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         order.LockOrder("done");
         var dto = new UpdateOrderDto(order.Id) { Note = "new note" };
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderCannotUpdateInfoException>(() => manager.UpdateOrderAsync(dto));
     }
@@ -221,7 +196,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task UpdateOrderAsync_ValidDto_UpdatesOrder()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         var dto = new UpdateOrderDto(order.Id)
         {
             Note = "new-note",
@@ -230,7 +205,7 @@ public sealed class OrderManagerTests
         };
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
         var repositoryMock = OrderRepository.UpdateAnyOrderWillReturns(order);
-        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         var result = await manager.UpdateOrderAsync(dto);
 
@@ -247,7 +222,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task AddOrderItemAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => manager.AddOrderItemAsync(Guid.NewGuid(), null!));
     }
@@ -256,7 +231,7 @@ public sealed class OrderManagerTests
     public async Task AddOrderItemAsync_DtoInvalid_ThrowsOrderItemDataIsInvalidException()
     {
         var dto = new AddOrderItemDto { ProductId = Guid.NewGuid(), Quantity = 0, UnitPrice = 10 };
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderItemDataIsInvalidException>(() => manager.AddOrderItemAsync(Guid.NewGuid(), dto));
     }
@@ -267,7 +242,7 @@ public sealed class OrderManagerTests
         var notFoundOrderId = Guid.NewGuid();
         var dto = new AddOrderItemDto { ProductId = Guid.NewGuid(), Quantity = 1, UnitPrice = 1 };
         var orderDataReaderMock = OrderDataReader.NotFound(notFoundOrderId);
-        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderIsNotFoundException>(() => manager.AddOrderItemAsync(notFoundOrderId, dto));
         orderDataReaderMock.Verify();
@@ -276,11 +251,11 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task AddOrderItemAsync_ProductNotFound_ThrowsProductIsNotFoundException()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         var dto = new AddOrderItemDto { ProductId = Guid.NewGuid(), Quantity = 1, UnitPrice = 10 };
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
         var productDataReaderMock = ProductDataReader.NotFound(dto.ProductId);
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, productDataReaderMock.Object, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, productDataReaderMock.Object, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ProductIsNotFoundException>(() => manager.AddOrderItemAsync(order.Id, dto));
         productDataReaderMock.Verify();
@@ -289,13 +264,13 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task AddOrderItemAsync_ValidDto_AddsOrderItemAndPublishesEvent()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         var product = NewProduct();
         var dto = new AddOrderItemDto { ProductId = product.Id, Quantity = 3, UnitPrice = 50 };
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         var repositoryMock = OrderRepository.UpdateAnyOrderWillReturns(order);
-        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, productDataReaderStub.Object, null!, null!, null!);
+        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, productDataReaderStub.Object, null!, null!, null!, null!);
 
         await manager.AddOrderItemAsync(order.Id, dto);
 
@@ -311,7 +286,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task UpdateOrderItemAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => manager.UpdateOrderItemAsync(null!));
     }
@@ -326,7 +301,7 @@ public sealed class OrderManagerTests
             Quantity = 0,
             UnitPrice = 10
         };
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderItemDataIsInvalidException>(() => manager.UpdateOrderItemAsync(dto));
     }
@@ -343,7 +318,7 @@ public sealed class OrderManagerTests
             UnitPrice = 1
         };
         var orderDataReaderMock = OrderDataReader.NotFound(notFoundOrderId);
-        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderIsNotFoundException>(() => manager.UpdateOrderItemAsync(dto));
         orderDataReaderMock.Verify();
@@ -352,7 +327,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task UpdateOrderItemAsync_OrderItemNotFound_ThrowsOrderItemIsNotFoundException()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         var dto = new UpdateOrderItemDto
         {
             OrderId = order.Id,
@@ -361,7 +336,7 @@ public sealed class OrderManagerTests
             UnitPrice = 1
         };
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderItemIsNotFoundException>(() => manager.UpdateOrderItemAsync(dto));
     }
@@ -369,7 +344,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task UpdateOrderItemAsync_ValidDto_UpdatesItem()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         var product = NewProduct();
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await order.AddOrderItemAsync(product.Id, 100, 2, productDataReaderStub.Object);
@@ -384,7 +359,7 @@ public sealed class OrderManagerTests
         };
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
         var repositoryMock = OrderRepository.UpdateAnyOrderWillReturns(order);
-        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await manager.UpdateOrderItemAsync(dto);
 
@@ -401,7 +376,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task DeleteOrderItemAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => manager.DeleteOrderItemAsync(null!));
     }
@@ -412,7 +387,7 @@ public sealed class OrderManagerTests
         var notFoundOrderId = Guid.NewGuid();
         var dto = new DeleteOrderItemDto(notFoundOrderId, Guid.NewGuid());
         var orderDataReaderMock = OrderDataReader.NotFound(notFoundOrderId);
-        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderIsNotFoundException>(() => manager.DeleteOrderItemAsync(dto));
         orderDataReaderMock.Verify();
@@ -421,11 +396,11 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task DeleteOrderItemAsync_OrderLocked_ThrowsOrderCannotUpdateOrderItemsException()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         order.LockOrder("done");
         var dto = new DeleteOrderItemDto(order.Id, Guid.NewGuid());
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderCannotUpdateOrderItemsException>(() => manager.DeleteOrderItemAsync(dto));
     }
@@ -433,7 +408,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task DeleteOrderItemAsync_ValidDto_RemovesItem()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         var product = NewProduct();
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await order.AddOrderItemAsync(product.Id, 100, 2, productDataReaderStub.Object);
@@ -442,7 +417,7 @@ public sealed class OrderManagerTests
         var dto = new DeleteOrderItemDto(order.Id, addedItem.Id);
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
         var repositoryMock = OrderRepository.UpdateAnyOrderWillReturns(order);
-        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await manager.DeleteOrderItemAsync(dto);
 
@@ -458,7 +433,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task LockOrderAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => manager.LockOrderAsync(null!));
     }
@@ -469,7 +444,7 @@ public sealed class OrderManagerTests
         var notFoundOrderId = Guid.NewGuid();
         var dto = new LockOrderDto { OrderId = notFoundOrderId, Reason = "reason" };
         var orderDataReaderMock = OrderDataReader.NotFound(notFoundOrderId);
-        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderIsNotFoundException>(() => manager.LockOrderAsync(dto));
         orderDataReaderMock.Verify();
@@ -478,11 +453,11 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task LockOrderAsync_AlreadyLocked_ThrowsOrderLockedException()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         order.LockOrder("first");
         var dto = new LockOrderDto { OrderId = order.Id, Reason = "second" };
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderLockedException>(() => manager.LockOrderAsync(dto));
     }
@@ -490,11 +465,11 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task LockOrderAsync_ValidDto_LocksOrder()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         var dto = new LockOrderDto { OrderId = order.Id, Reason = "reason" };
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
         var repositoryMock = OrderRepository.UpdateAnyOrderWillReturns(order);
-        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await manager.LockOrderAsync(dto);
 
@@ -510,7 +485,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task UpdateShippingAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => manager.UpdateShippingAsync(null!));
     }
@@ -524,7 +499,7 @@ public sealed class OrderManagerTests
             ExpectedShippingDateUtc = DateTime.UtcNow.Date.AddDays(-1),
             Address = "addr"
         };
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderDataIsInvalidException>(() => manager.UpdateShippingAsync(dto));
     }
@@ -540,7 +515,7 @@ public sealed class OrderManagerTests
             Address = "addr"
         };
         var orderDataReaderMock = OrderDataReader.NotFound(notFoundOrderId);
-        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderIsNotFoundException>(() => manager.UpdateShippingAsync(dto));
         orderDataReaderMock.Verify();
@@ -549,7 +524,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task UpdateShippingAsync_ValidDto_UpdatesShipping()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         var newDate = DateTime.UtcNow.Date.AddDays(3);
         var dto = new UpdateShippingDto
         {
@@ -559,7 +534,7 @@ public sealed class OrderManagerTests
         };
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
         var repositoryMock = OrderRepository.UpdateAnyOrderWillReturns(order);
-        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await manager.UpdateShippingAsync(dto);
 
@@ -575,7 +550,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task MarkOrderItemDeliveredAsync_DtoIsNull_ThrowsArgumentNullException()
     {
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => manager.MarkOrderItemDeliveredAsync(null!));
     }
@@ -591,7 +566,7 @@ public sealed class OrderManagerTests
             PictureId = Guid.NewGuid()
         };
         var orderDataReaderMock = OrderDataReader.NotFound(notFoundOrderId);
-        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderMock.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderIsNotFoundException>(() => manager.MarkOrderItemDeliveredAsync(dto));
         orderDataReaderMock.Verify();
@@ -600,7 +575,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task MarkOrderItemDeliveredAsync_ItemNotFound_ThrowsOrderItemIsNotFoundException()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         var dto = new MarkOrderItemDeliveredDto
         {
             OrderId = order.Id,
@@ -608,7 +583,7 @@ public sealed class OrderManagerTests
             PictureId = Guid.NewGuid()
         };
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<OrderItemIsNotFoundException>(() => manager.MarkOrderItemDeliveredAsync(dto));
     }
@@ -616,7 +591,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task MarkOrderItemDeliveredAsync_ValidDto_MarksDelivered()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         var productA = NewProduct(Guid.NewGuid(), "A");
         var productB = NewProduct(Guid.NewGuid(), "B");
         var productDataReaderStub = ProductDataReader
@@ -634,7 +609,7 @@ public sealed class OrderManagerTests
         };
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
         var repositoryMock = OrderRepository.UpdateAnyOrderWillReturns(order);
-        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await manager.MarkOrderItemDeliveredAsync(dto);
 
@@ -646,7 +621,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task MarkOrderItemDeliveredAsync_AllItemsDelivered_AutoLocksOrder()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         var product = NewProduct();
         var productDataReaderStub = ProductDataReader.ProductById(product.Id, product);
         await order.AddOrderItemAsync(product.Id, 10, 1, productDataReaderStub.Object);
@@ -660,7 +635,7 @@ public sealed class OrderManagerTests
         };
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
         var repositoryMock = OrderRepository.UpdateAnyOrderWillReturns(order);
-        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(repositoryMock.Object, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         await manager.MarkOrderItemDeliveredAsync(dto);
 
@@ -678,7 +653,7 @@ public sealed class OrderManagerTests
     {
         var id = Guid.NewGuid();
         var orderDataReaderStub = OrderDataReader.NotFound(id);
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         var result = await manager.GetOrderByIdAsync(id);
 
@@ -688,9 +663,9 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task GetOrderByIdAsync_Found_ReturnsOrderDto()
     {
-        var order = new Order("O-001");
+        var order = new Order("O-001", null!);
         var orderDataReaderStub = OrderDataReader.OrderById(order.Id, order);
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         var dto = await manager.GetOrderByIdAsync(order.Id);
 
@@ -706,7 +681,7 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task DoesCodeExistAsync_CodeIsEmpty_ThrowsArgumentException()
     {
-        var manager = new OrderManager(null!, null!, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, null!, null!, null!, null!, null!, null!);
 
         await Assert.ThrowsAsync<ArgumentException>(() => manager.DoesCodeExistAsync(string.Empty));
     }
@@ -714,9 +689,9 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task DoesCodeExistAsync_CodeExists_ReturnsTrue()
     {
-        var existing = new Order("O-EXISTS");
+        var existing = new Order("O-EXISTS", null!);
         var orderDataReaderStub = OrderDataReader.HasOne(existing);
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         var exists = await manager.DoesCodeExistAsync("O-EXISTS");
 
@@ -727,7 +702,7 @@ public sealed class OrderManagerTests
     public async Task DoesCodeExistAsync_CodeDoesNotExist_ReturnsFalse()
     {
         var orderDataReaderStub = OrderDataReader.Empty();
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         var exists = await manager.DoesCodeExistAsync("O-NEW");
 
@@ -737,9 +712,9 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task DoesCodeExistAsync_CodeExistsOnSameId_ReturnsFalse()
     {
-        var existing = new Order("O-EXISTS");
+        var existing = new Order("O-EXISTS", null!);
         var orderDataReaderStub = OrderDataReader.HasOne(existing);
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, null!, null!, null!, null!);
 
         var exists = await manager.DoesCodeExistAsync("O-EXISTS", existing.Id);
 
@@ -753,13 +728,13 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task GetOrdersAsync_NoFilters_ReturnsPagedData()
     {
-        var order1 = new Order("O-001");
-        var order2 = new Order("O-002");
+        var order1 = new Order("O-001", null!);
+        var order2 = new Order("O-002", null!);
         var orderDataReaderStub = OrderDataReader.WithData(order1, order2);
         var customerDataReaderStub = CustomerDataReader.Empty();
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, customerDataReaderStub.Object, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, customerDataReaderStub.Object, null!, null!, null!);
 
-        var paged = await manager.GetOrdersAsync(keywords: null, status: (OrderStatus?)null, pageIndex: 0, pageSize: 10);
+        var paged = await manager.GetOrdersAsync(pageIndex: 0, pageSize: 10, keywords: null, status: (OrderStatus?)null);
 
         Assert.Equal(2, paged.PagerInfo.TotalCount);
     }
@@ -767,14 +742,14 @@ public sealed class OrderManagerTests
     [Fact]
     public async Task GetOrdersAsync_FilterByStatus_ReturnsMatchingOrders()
     {
-        var pendingOrder = new Order("O-PENDING");
-        var lockedOrder = new Order("O-LOCKED");
+        var pendingOrder = new Order("O-PENDING", null!);
+        var lockedOrder = new Order("O-LOCKED", null!);
         lockedOrder.LockOrder("done");
         var orderDataReaderStub = OrderDataReader.WithData(pendingOrder, lockedOrder);
         var customerDataReaderStub = CustomerDataReader.Empty();
-        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, customerDataReaderStub.Object, null!, null!);
+        var manager = new OrderManager(null!, orderDataReaderStub.Object, null!, customerDataReaderStub.Object, null!, null!, null!);
 
-        var paged = await manager.GetOrdersAsync(keywords: null, status: OrderStatus.Locked, pageIndex: 0, pageSize: 10);
+        var paged = await manager.GetOrdersAsync(pageIndex: 0, pageSize: 10, keywords: null, status: OrderStatus.Locked);
 
         Assert.Equal(1, paged.PagerInfo.TotalCount);
     }

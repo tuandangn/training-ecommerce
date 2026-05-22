@@ -59,7 +59,6 @@ public sealed record VendorDebtAppDto
     public DateTime? DueDateUtc { get; init; }
 
     public DateTime CreatedOnUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public IList<VendorPaymentAppDto> Payments { get; init; } = [];
 }
@@ -95,7 +94,6 @@ public sealed record CreateVendorDebtAppDto
     public required Guid PurchaseOrderId { get; init; }
     public required decimal TotalAmount { get; init; }
     public DateTime? DueDateUtc { get; init; }
-    public Guid? CreatedByUserId { get; init; }
 
     public (bool valid, string? errorMessage) Validate()
     {
@@ -145,6 +143,30 @@ public sealed record CreateVendorDebtResultAppDto
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
     public Guid? CreatedId { get; init; }
+    public VendorDebtAppDto? Debt { get; init; }
+}
+
+[Serializable]
+public sealed record CreateInitialVendorDebtAppDto
+{
+    public required Guid VendorId { get; init; }
+    public required decimal TotalAmount { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (VendorId == Guid.Empty)
+            return (false, "Error.VendorRequired");
+        if (TotalAmount <= 0)
+            return (false, "Error.VendorDebtTotalAmountMustBePositive");
+
+        return (true, string.Empty);
+    }
+}
+[Serializable]
+public sealed record CreateInitialVendorDebtResultAppDto
+{
+    public bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
     public VendorDebtAppDto? Debt { get; init; }
 }
 

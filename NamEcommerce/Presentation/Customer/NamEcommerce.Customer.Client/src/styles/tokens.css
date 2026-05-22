@@ -1,0 +1,14 @@
+:root {
+  --color-primary: #5346e0;
+  --color-success: #00a389;
+  --color-danger: #ef4444;
+  --color-alert: #d97706;
+  --color-bg: #f8fafc;
+  --color-card: #ffffff;
+  --color-border: #e2e8f0;
+  --color-text: #1e293b;
+  --color-muted: #64748b;
+  --color-sidebar: #14172a;
+  --radius-card: 8px;
+  --font-base: Inter, Segoe UI, Roboto, sans-serif;
+}

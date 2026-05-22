@@ -114,7 +114,35 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
         return (PagedDataAppDto<CustomerPaymentAppDto>)PagedDataAppDto.Create(mappedItems, paged.PagerInfo.PageIndex, paged.PagerInfo.PageSize, paged.PagerInfo.TotalCount);
     }
 
-    // ── Private helpers ──────────────────────────────────────────────────────
+    public async Task<CreateInitialCustomerDebtResultAppDto> CreateInitialDebtAsync(CreateInitialCustomerDebtAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return new CreateInitialCustomerDebtResultAppDto { Success = false, ErrorMessage = errorMessage };
+
+        try
+        {
+            var domainDto = MapToDomainDto(dto);
+            var result = await _debtManager.CreateInitialDebtAsync(domainDto).ConfigureAwait(false);
+            return new CreateInitialCustomerDebtResultAppDto
+            {
+                Success = true,
+                Debt = result.ToDto()
+            };
+        }
+        catch (Exception ex)
+        {
+            return new CreateInitialCustomerDebtResultAppDto { Success = false, ErrorMessage = ex.Message };
+        }
+    }
+    private static CreateInitialCustomerDebtDto MapToDomainDto(CreateInitialCustomerDebtAppDto dto)
+        => new()
+        {
+            CustomerId = dto.CustomerId,
+            TotalAmount = dto.TotalAmount
+        };
 
     private static CreateCustomerPaymentDto MapToDomainDto(CreateCustomerPaymentAppDto dto)
         => new()

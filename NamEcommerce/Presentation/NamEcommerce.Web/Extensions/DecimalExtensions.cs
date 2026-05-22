@@ -9,6 +9,11 @@ public static class DecimalExtensions
     public static string DisplayCurrency(this decimal? value) 
         => DecimalFormatHelper.FormatCurrency(value);
 
+    public static string DisplayCurrencyWithSymbol(this decimal value) 
+        => DecimalFormatHelper.FormatCurrencyWithSymbol(value);
+    public static string DisplayCurrencyWithSymbol(this decimal? value) 
+        => DecimalFormatHelper.FormatCurrencyWithSymbol(value);
+
     public static string DisplayVietnameseCurrencyHint(this decimal value) 
         => DecimalFormatHelper.ToVietnameseCurrencyHint(value);
     public static string DisplayVietnameseCurrencyHint(this decimal? value) 

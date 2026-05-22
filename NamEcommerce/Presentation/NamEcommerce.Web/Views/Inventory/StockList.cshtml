@@ -4,13 +4,60 @@
     var query = Model.Keywords;
 }
 
+@section Styles {
+    <style>
+        .stock-table { font-variant-numeric: tabular-nums; }
+        .stock-table thead th {
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-bottom: 1px solid #e9ecef;
+            white-space: nowrap;
+        }
+        .stock-table tbody tr { transition: background-color 120ms ease; }
+        .stock-table tbody tr.is-low-stock > td:first-child {
+            box-shadow: inset 3px 0 0 var(--bs-danger);
+        }
+        .stock-table tbody tr.is-low-stock { background-color: rgba(var(--bs-danger-rgb), 0.03); }
+        .stock-table .col-product { min-width: 240px; max-width: 320px; }
+        .stock-table .product-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .stock-table .btn:focus-visible {
+            outline: 2px solid var(--bs-primary);
+            outline-offset: 2px;
+        }
+        #view-toggle-list.active, #view-toggle-grid.active {
+            background-color: #212529;
+            color: #fff;
+            border-color: #212529;
+        }
+    </style>
+}
+
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-1 fw-bold">Quản lý Tồn kho</h1>
             <p class="text-muted small mb-0">Theo dõi và cân đối hàng hóa trên toàn hệ thống</p>
         </div>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center">
+            <a asp-action="CostingPolicy" class="btn btn-outline-secondary rounded-3 px-4 shadow-sm" title="Cài đặt giá vốn">
+                <i class="bi bi-calculator me-1" aria-hidden="true"></i> Giá vốn
+            </a>
+            <div class="btn-group shadow-sm rounded-3 overflow-hidden" role="group" aria-label="Chuyển đổi giao diện">
+                <button type="button" class="btn btn-outline-secondary active px-3" id="view-toggle-list" title="Dạng danh sách" aria-label="Xem dạng danh sách" aria-pressed="true">
+                    <i class="bi bi-list-ul" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary px-3" id="view-toggle-grid" title="Dạng lưới" aria-label="Xem dạng lưới" aria-pressed="false">
+                    <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
+                </button>
+            </div>
             <button type="button" class="btn btn-outline-primary rounded-3 px-4 shadow-sm" onclick="window.location.reload()">
                 <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
             </button>
@@ -24,7 +71,7 @@
                 <div class="col-md-9">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" name="Keywords" class="form-control border-start-0 ps-0" 
+                        <input type="text" name="Keywords" class="form-control border-start-0 ps-0"
                                placeholder="Tìm theo tên sản phẩm hoặc mã..." value="@query">
                     </div>
                 </div>
@@ -37,7 +84,117 @@
 
     @if (Model.Data.Pagination.TotalCount > 0)
     {
-        <div class="row g-4">
+        <!-- List view -->
+        <div id="stock-list-view" class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 stock-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-4 py-3 col-product">Sản phẩm</th>
+                            <th class="py-3">Kho</th>
+                            <th class="text-end py-3">&#272;&#227; &#273;&#7863;t</th>
+                            <th class="text-end py-3">Thực tế</th>
+                            <th class="text-end py-3">Chờ giao</th>
+                            <th class="text-end py-3">Sẵn có</th>
+                            <th class="py-3" style="min-width: 200px;">Độ khả dụng</th>
+                            <th class="text-end py-3">Mức CB</th>
+                            <th class="py-3">Cập nhật</th>
+                            <th class="text-end pe-4 py-3">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Data)
+                        {
+                            var stockHealth = item.QuantityAvailable < 5 ? "danger" : (item.QuantityAvailable < 20 ? "warning" : "success");
+                            var availablePercent = item.QuantityOnHand > 0 ? (item.QuantityAvailable / item.QuantityOnHand * 100) : 0;
+                            var isLow = item.QuantityAvailable < 5;
+                            var rowClass = isLow ? "is-low-stock" : "";
+
+                            <tr class="@rowClass">
+                                <td class="ps-4 col-product">
+                                    <div class="product-name fw-semibold text-dark" title="@item.ProductName">@item.ProductName</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-muted rounded-pill px-2 fw-normal">
+                                        <i class="bi bi-geo-alt me-1"></i> @item.WarehouseName
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    @if (item.TotalReservedByOrder > 0)
+                                    {
+                                        <a class="fw-semibold text-primary text-decoration-none"
+                                           asp-action="ReservationLedger"
+                                           asp-route-productId="@item.ProductId"
+                                           title="Xem ledger dat hang cua @item.ProductName">
+                                            @item.TotalReservedByOrder.DisplayQuantity()
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">@item.TotalReservedByOrder.DisplayQuantity()</span>
+                                    }
+                                </td>
+                                <td class="text-end fw-semibold">@item.QuantityOnHand.DisplayQuantity()</td>
+                                <td class="text-end fw-semibold text-warning">@item.QuantityReserved.DisplayQuantity()</td>
+                                <td class="text-end">
+                                    <span class="fw-bold text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</span>
+                                    @if (isLow)
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger rounded-pill px-2 ms-1 fw-semibold" title="Sắp hết hàng">
+                                            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                                            <span class="visually-hidden">Sắp hết hàng</span>
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress rounded-pill flex-grow-1" style="height: 6px;" role="progressbar" aria-valuenow="@availablePercent.ToString("N0")" aria-valuemin="0" aria-valuemax="100">
+                                            <div class="progress-bar bg-@stockHealth" style="width: @availablePercent%"></div>
+                                        </div>
+                                        <span class="small fw-bold text-@stockHealth text-end" style="min-width: 42px;">@availablePercent.ToString("N0")%</span>
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    @if (item.ReorderLevel > 0)
+                                    {
+                                        <span class="fw-semibold">@item.ReorderLevel.DisplayQuantity()</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
+                                <td class="text-muted small">
+                                    <i class="bi bi-clock me-1" aria-hidden="true"></i> @item.UpdatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                                </td>
+                                <td class="text-end pe-4">
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 btn-set-stock-levels"
+                                            data-id="@item.Id"
+                                            data-product-name="@item.ProductName"
+                                            data-warehouse-name="@item.WarehouseName"
+                                            data-reorder-level="@item.ReorderLevel"
+                                            data-max-stock-level="@item.MaxStockLevel"
+                                            title="Cấu hình mức tồn">
+                                        <i class="bi bi-sliders" aria-hidden="true"></i>
+                                    </button>
+                                    <a class="btn btn-outline-dark btn-sm rounded-pill px-3"
+                                       asp-action="MovementLogs"
+                                       asp-route-productId="@item.ProductId"
+                                       asp-route-warehouseId="@item.WarehouseId"
+                                       title="Xem lịch sử nhập xuất"
+                                       aria-label="Xem lịch sử nhập xuất của @item.ProductName tại @item.WarehouseName">
+                                        <i class="bi bi-clock-history" aria-hidden="true"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Grid view -->
+        <div id="stock-grid-view" class="row g-4 d-none">
             @foreach (var item in Model.Data)
             {
                 var stockHealth = item.QuantityAvailable < 5 ? "danger" : (item.QuantityAvailable < 20 ? "warning" : "success");
@@ -59,18 +216,34 @@
                             </div>
                             <h5 class="fw-bold mb-3 text-dark line-clamp-2" style="min-height: 3rem;">@item.ProductName</h5>
                         </div>
-                        
+
                         <div class="card-body px-4 pt-0">
                             <div class="row g-0 mb-4 bg-light rounded-4 p-3 border border-light">
-                                <div class="col-4 border-end border-white text-center">
+                                <div class="col-3 border-end border-white text-center">
                                     <div class="small text-muted mb-1">Thực tế</div>
                                     <div class="fw-bold fs-5">@item.QuantityOnHand.DisplayQuantity()</div>
                                 </div>
-                                <div class="col-4 border-end border-white text-center">
+                                <div class="col-3 border-end border-white text-center">
                                     <div class="small text-muted mb-1">Chờ giao</div>
                                     <div class="fw-bold fs-5 text-warning">@item.QuantityReserved.DisplayQuantity()</div>
                                 </div>
-                                <div class="col-4 text-center">
+                                <div class="col-3 border-end border-white text-center">
+                                    <div class="small text-muted mb-1">&#272;&#227; &#273;&#7863;t</div>
+                                    @if (item.TotalReservedByOrder > 0)
+                                    {
+                                        <a class="fw-bold fs-5 text-primary text-decoration-none"
+                                           asp-action="ReservationLedger"
+                                           asp-route-productId="@item.ProductId"
+                                           title="Xem ledger dat hang cua @item.ProductName">
+                                            @item.TotalReservedByOrder.DisplayQuantity()
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <div class="fw-bold fs-5 text-muted">@item.TotalReservedByOrder.DisplayQuantity()</div>
+                                    }
+                                </div>
+                                <div class="col-3 text-center">
                                     <div class="small text-muted mb-1">Sẵn có</div>
                                     <div class="fw-bold fs-5 text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</div>
                                 </div>
@@ -96,8 +269,8 @@
                                     <a class="btn btn-outline-dark btn-sm border-0 px-3" asp-action="MovementLogs" asp-route-productId="@item.ProductId" asp-route-warehouseId="@item.WarehouseId" title="Lịch sử">
                                         <i class="bi bi-clock-history"></i>
                                     </a>
-                                    <a class="btn btn-primary btn-sm border-0 px-3" asp-action="AdjustStock" asp-route-productId="@item.ProductId" asp-route-warehouseId="@item.WarehouseId">
-                                        Cân bằng <i class="bi bi-sliders ms-1"></i>
+                                    <a class="btn btn-outline-primary btn-sm border-0 px-3" asp-action="ReservationLedger" asp-route-productId="@item.ProductId" title="Ledger dat hang">
+                                        <i class="bi bi-list-check"></i>
                                     </a>
                                 </div>
                             </div>
@@ -113,14 +286,163 @@
     }
     else
     {
+        var isFiltered = !string.IsNullOrWhiteSpace(query);
         <div class="text-center py-5">
             <div class="mb-3">
-                <i class="bi bi-box-seam text-muted display-1 opacity-25"></i>
+                <i class="bi @(isFiltered ? "bi-search" : "bi-box-seam") text-muted display-1 opacity-25" aria-hidden="true"></i>
             </div>
-            <h4 class="text-muted">Kho hàng đang trống</h4>
-            <p class="text-muted small">Chưa có sản phẩm nào được nhập kho.</p>
+            @if (isFiltered)
+            {
+                <h4 class="text-muted">Không tìm thấy kết quả</h4>
+                <p class="text-muted small">Không có sản phẩm nào khớp với từ khóa "<strong>@query</strong>".</p>
+                <a asp-action="StockList" class="btn btn-outline-secondary btn-sm rounded-pill px-4 mt-2">
+                    <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i> Xóa bộ lọc
+                </a>
+            }
+            else
+            {
+                <h4 class="text-muted">Kho hàng đang trống</h4>
+                <p class="text-muted small">Chưa có sản phẩm nào được nhập kho.</p>
+            }
         </div>
     }
 </div>
 
+<div class="modal fade" id="setStockLevelsModal" tabindex="-1" aria-labelledby="setStockLevelsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="setStockLevelsModalLabel">
+                    <i class="bi bi-sliders me-2"></i>Cấu hình mức tồn
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <form id="setStockLevelsForm">
+                <div class="modal-body pt-0">
+                    <input type="hidden" id="setStockLevels-id" name="Id" />
+                    <div class="mb-3">
+                        <label class="form-label small text-muted mb-1">Sản phẩm</label>
+                        <div id="setStockLevels-productName" class="fw-semibold"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted mb-1">Kho</label>
+                        <div id="setStockLevels-warehouseName" class="fw-semibold"></div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label for="setStockLevels-reorderLevel" class="form-label">Mức cảnh báo</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="setStockLevels-reorderLevel" name="ReorderLevel" required />
+                            <div class="form-text">Hàng sẽ vào danh sách cảnh báo nếu tồn ≤ mức này.</div>
+                        </div>
+                        <div class="col-6">
+                            <label for="setStockLevels-maxStockLevel" class="form-label">Mức tối đa</label>
+                            <input type="number" step="0.01" min="0" class="form-control" id="setStockLevels-maxStockLevel" name="MaxStockLevel" required />
+                            <div class="form-text">Để 0 nếu không giới hạn.</div>
+                        </div>
+                    </div>
+                    <div id="setStockLevels-error" class="alert alert-danger mt-3 d-none small mb-0"></div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4" id="setStockLevels-submit">
+                        <span class="spinner-border spinner-border-sm me-2 d-none" id="setStockLevels-spinner" role="status"></span>
+                        Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
+@section Scripts {
+    <script>
+        (function () {
+            const STORAGE_KEY = 'inventory-stock-view-mode';
+            const listBtn = document.getElementById('view-toggle-list');
+            const gridBtn = document.getElementById('view-toggle-grid');
+            const listView = document.getElementById('stock-list-view');
+            const gridView = document.getElementById('stock-grid-view');
+
+            if (!listBtn || !gridBtn) return;
+
+            function applyMode(mode) {
+                const isGrid = mode === 'grid';
+                if (listView) listView.classList.toggle('d-none', isGrid);
+                if (gridView) gridView.classList.toggle('d-none', !isGrid);
+                listBtn.classList.toggle('active', !isGrid);
+                listBtn.setAttribute('aria-pressed', String(!isGrid));
+                gridBtn.classList.toggle('active', isGrid);
+                gridBtn.setAttribute('aria-pressed', String(isGrid));
+            }
+
+            const saved = localStorage.getItem(STORAGE_KEY) || 'list';
+            applyMode(saved);
+
+            listBtn.addEventListener('click', function () {
+                localStorage.setItem(STORAGE_KEY, 'list');
+                applyMode('list');
+            });
+            gridBtn.addEventListener('click', function () {
+                localStorage.setItem(STORAGE_KEY, 'grid');
+                applyMode('grid');
+            });
+        })();
+
+        (function () {
+            const modalEl = document.getElementById('setStockLevelsModal');
+            if (!modalEl) return;
+            const modal = new bootstrap.Modal(modalEl);
+            const form = document.getElementById('setStockLevelsForm');
+            const idInput = document.getElementById('setStockLevels-id');
+            const productNameEl = document.getElementById('setStockLevels-productName');
+            const warehouseNameEl = document.getElementById('setStockLevels-warehouseName');
+            const reorderInput = document.getElementById('setStockLevels-reorderLevel');
+            const maxInput = document.getElementById('setStockLevels-maxStockLevel');
+            const errorEl = document.getElementById('setStockLevels-error');
+            const submitBtn = document.getElementById('setStockLevels-submit');
+            const spinner = document.getElementById('setStockLevels-spinner');
+
+            document.querySelectorAll('.btn-set-stock-levels').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    idInput.value = this.dataset.id;
+                    productNameEl.textContent = this.dataset.productName;
+                    warehouseNameEl.textContent = this.dataset.warehouseName;
+                    reorderInput.value = this.dataset.reorderLevel || '0';
+                    maxInput.value = this.dataset.maxStockLevel || '0';
+                    errorEl.classList.add('d-none');
+                    errorEl.textContent = '';
+                    modal.show();
+                });
+            });
+
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                errorEl.classList.add('d-none');
+                submitBtn.disabled = true;
+                spinner.classList.remove('d-none');
+
+                const formData = new FormData(form);
+                try {
+                    const response = await fetch('@Url.Action("SetStockLevels", "Inventory")', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        modal.hide();
+                        window.location.reload();
+                    } else {
+                        errorEl.textContent = result.errorMessage || 'Có lỗi xảy ra.';
+                        errorEl.classList.remove('d-none');
+                    }
+                } catch (err) {
+                    errorEl.textContent = 'Lỗi kết nối tới máy chủ.';
+                    errorEl.classList.remove('d-none');
+                } finally {
+                    submitBtn.disabled = false;
+                    spinner.classList.add('d-none');
+                }
+            });
+        })();
+    </script>
+}

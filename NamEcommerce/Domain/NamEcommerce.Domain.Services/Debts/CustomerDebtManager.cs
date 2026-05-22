@@ -22,16 +22,41 @@ public sealed class CustomerDebtManager(
 {
     private async Task<string> GenerateDebtCodeAsync()
     {
-        var datePrefix = $"CN-{DateTime.UtcNow:yyyyMMdd}";
-        var count = debtReader.DataSource.Count(d => d.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var monthPrefix = $"CN-KH-{DateTime.UtcNow:yyMM}";
+        var count = debtReader.SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        return $"{monthPrefix}-{(count + 1):D3}";
     }
 
     private async Task<string> GeneratePaymentCodeAsync()
     {
-        var datePrefix = $"PT-{DateTime.UtcNow:yyyyMMdd}";
-        var count = paymentReader.DataSource.Count(p => p.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var monthPrefix = $"PT-KH-{DateTime.UtcNow:yyMM}";
+        var count = paymentReader.SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
+        return $"{monthPrefix}-{(count + 1):D3}";
+    }
+
+    public async Task<CustomerDebtDto> CreateInitialDebtAsync(CreateInitialCustomerDebtDto dto)
+    {
+        dto.Verify();
+
+        var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
+        if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
+
+        var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
+
+        var debt = new CustomerDebt(
+            code: code,
+            customerId: customer.Id,
+            customerName: customer.FullName,
+            totalAmount: dto.TotalAmount
+        )
+        {
+            CustomerAddress = customer.Address,
+            CustomerPhone = customer.PhoneNumber
+        };
+
+        debt.MarkCreated();
+        var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
+        return MapToDto(inserted);
     }
 
     public async Task<CustomerDebtDto> CreateDebtFromDeliveryNoteAsync(CreateCustomerDebtDto dto)
@@ -60,8 +85,7 @@ public sealed class CustomerDebtManager(
             orderId: deliveryNote.OrderId,
             orderCode: deliveryNote.OrderCode ?? string.Empty,
             totalAmount: dto.TotalAmount,
-            dueDateUtc: dto.DueDateUtc,
-            createdByUserId: dto.CreatedByUserId
+            dueDateUtc: dto.DueDateUtc
         )
         {
             CustomerAddress = customer.PhoneNumber,
@@ -80,6 +104,7 @@ public sealed class CustomerDebtManager(
             await paymentRepository.UpdateAsync(deposit).ConfigureAwait(false);
         }
 
+        debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
         return MapToDto(inserted);
     }
@@ -118,6 +143,7 @@ public sealed class CustomerDebtManager(
             {
                 debt.ApplyPayment(payment.Amount);
                 payment.MarkAsApplied();
+                debt.MarkUpdated();
                 await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
             }
         }
@@ -130,10 +156,12 @@ public sealed class CustomerDebtManager(
                 debt.ApplyPayment(payment.Amount);
                 payment.MarkAsApplied();
                 payment.CustomerDebtId = debt.Id;
+                debt.MarkUpdated();
                 await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
             }
         }
 
+        payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
         return MapToPaymentDto(inserted);
     }
@@ -228,7 +256,9 @@ public sealed class CustomerDebtManager(
             debt.ApplyPayment(applyAmount);
             payment.MarkAsApplied();
 
+            debt.MarkUpdated();
             await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+            payment.MarkCreated();
             var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
             results.Add(MapToPaymentDto(inserted));
 
@@ -250,11 +280,56 @@ public sealed class CustomerDebtManager(
                 recordedByUserId: dto.RecordedByUserId,
                 note: string.IsNullOrEmpty(dto.Note) ? "Tiền dư sau khi thanh toán nợ" : dto.Note
             );
+            overpayment.MarkCreated();
             var inserted = await paymentRepository.InsertAsync(overpayment).ConfigureAwait(false);
             results.Add(MapToPaymentDto(inserted));
         }
 
         return results;
+    }
+
+    public async Task<(decimal OverRefundAmount, Guid? DebtId)> ApplyReturnFromCustomerReturnAsync(Guid customerId, Guid returnId, decimal amount)
+    {
+        if (amount <= 0) return (0, null);
+
+        var orderedDebts = debtReader.DataSource
+            .Where(d => d.CustomerId == customerId)
+            .OrderBy(d => d.CreatedOnUtc)
+            .ToList();
+
+        if (!orderedDebts.Any()) return (0, null);
+
+        var touchedDebts = new List<CustomerDebt>();
+        var remaining = amount;
+
+        foreach (var debt in orderedDebts)
+        {
+            if (remaining <= 0) break;
+            if (debt.RemainingAmount <= 0) continue;
+
+            var toApply = Math.Min(remaining, debt.RemainingAmount);
+            debt.ApplyReturn(toApply, returnId);
+            touchedDebts.Add(debt);
+            remaining -= toApply;
+        }
+
+        decimal overRefundAmount = 0;
+        Guid? overRefundDebtId = null;
+        if (remaining > 0)
+        {
+            var first = orderedDebts[0];
+            first.ApplyReturn(remaining, returnId);
+            if (!touchedDebts.Contains(first))
+                touchedDebts.Add(first);
+
+            overRefundAmount = remaining;
+            overRefundDebtId = first.Id;
+        }
+
+        foreach (var debt in touchedDebts)
+            await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+
+        return (overRefundAmount, overRefundDebtId);
     }
 
     public async Task<IPagedDataDto<CustomerDebtSummaryDto>> GetCustomersWithDebtsAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
@@ -320,7 +395,6 @@ public sealed class CustomerDebtManager(
 
         if (debts.Count == 0) return null;
 
-        // Load payments gắn với từng debt
         var debtDtos = new List<CustomerDebtDto>();
         foreach (var debt in debts)
         {
@@ -331,13 +405,11 @@ public sealed class CustomerDebtManager(
             debtDtos.Add(MapToDto(debt) with { Payments = payments.Select(MapToPaymentDto).ToList() });
         }
 
-        // Tiền cọc chưa áp dụng
         var deposits = paymentReader.DataSource
             .Where(p => p.CustomerId == customerId && p.PaymentType == PaymentType.Deposit && !p.IsApplied)
             .OrderByDescending(p => p.PaidOnUtc)
             .ToList();
 
-        // Lịch sử 20 giao dịch gần nhất
         var recentPayments = paymentReader.DataSource
             .Where(p => p.CustomerId == customerId)
             .OrderByDescending(p => p.PaidOnUtc)
@@ -410,8 +482,7 @@ public sealed class CustomerDebtManager(
             RemainingAmount = debt.RemainingAmount,
             Status = debt.Status,
             DueDateUtc = debt.DueDateUtc,
-            CreatedOnUtc = debt.CreatedOnUtc,
-            CreatedByUserId = debt.CreatedByUserId
+            CreatedOnUtc = debt.CreatedOnUtc
         };
     }
 

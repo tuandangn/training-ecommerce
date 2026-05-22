@@ -1,4 +1,5 @@
 @model DeliveryNoteListModel
+@using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
 @using NamEcommerce.Web.Constants
 @{
     ViewData["Title"] = "Phiếu xuất kho";
@@ -106,22 +107,22 @@
                                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="dropdownMenuButton-@deliveryNote.Id">
                                         <li><a class="dropdown-item py-2" asp-action="Details" asp-route-id="@deliveryNote.Id"><i class="bi bi-info-circle me-2 text-primary"></i>Chi tiết</a></li>
                                         <li><a class="dropdown-item py-2" asp-action="Print" asp-route-id="@deliveryNote.Id" target="_blank"><i class="bi bi-printer me-2 text-secondary"></i>In phiếu (2 bản)</a></li>
-                                        @if (deliveryNote.Status == 10)
+                                        @if (deliveryNote.Status == (int)DeliveryNoteStatus.Draft)
                                         {
                                             <li><hr class="dropdown-divider"></li>
                                             <li><a class="dropdown-item py-2 text-primary btn-confirm fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-check-all me-2"></i>Xác nhận xuất</a></li>
                                         }
-                                        @if (deliveryNote.Status == 20)
+                                        @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed)
                                         {
                                             <li><hr class="dropdown-divider"></li>
                                             <li><a class="dropdown-item py-2 text-warning btn-delivering fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-truck me-2"></i>Bắt đầu đi giao</a></li>
                                         }
-                                        @if (deliveryNote.Status == 30 || deliveryNote.Status == 20)
+                                        @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering)
                                         {
                                             <li><hr class="dropdown-divider"></li>
                                             <li><a class="dropdown-item py-2 text-success btn-delivered fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-check-circle-fill me-2"></i>Xác nhận Đã giao</a></li>
                                         }
-                                        @if (deliveryNote.Status != 40 && deliveryNote.Status != 50)
+                                        @if (deliveryNote.Status != (int)DeliveryNoteStatus.Delivered && deliveryNote.Status != (int)DeliveryNoteStatus.Cancelled)
                                         {
                                             <li><hr class="dropdown-divider"></li>
                                             <li><a class="dropdown-item py-2 text-danger btn-cancel fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-x-circle me-2"></i>Hủy phiếu</a></li>

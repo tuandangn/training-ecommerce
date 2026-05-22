@@ -1,3 +1,55 @@
 ﻿<script src="~/lib/jquery-validation/dist/jquery.validate.min.js" defer></script>
 <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js" defer></script>
 <script src="~/js/decimal-validation-patch.js" defer></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        if (!$ || !$.validator) {
+            console.warn('jQuery Validate chua duoc load.');
+            return;
+        }
+        const defaultRange = $.validator.methods.range;
+
+        function isIsoDate(value) {
+
+            return typeof value === "string"
+                && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value);
+        }
+
+        $.validator.methods.range = function (value, element, params) {
+
+            // empty -> để required xử lý
+            if (this.optional(element)) {
+                return true;
+            }
+
+            // ISO datetime
+            if (isIsoDate(value)) {
+                const current = new Date(value).getTime();
+                if (isNaN(current)) {
+                    return false;
+                }
+
+                const dataset = element.dataset;
+                let min;
+                let max;
+                if (dataset.valRangeMin)
+                    min = new Date(dataset.valRangeMin).getTime();
+                if (dataset.valRangeMax)
+                    max = new Date(dataset.valRangeMax).getTime();
+
+                if (min !== null && current < min) {
+                    return false;
+                }
+
+                if (max !== null && current > max) {
+                    return false;
+                }
+
+                return true;
+            }
+
+            // fallback default behavior
+            return defaultRange.call(this, value, element, params);
+        };
+    });
+</script>

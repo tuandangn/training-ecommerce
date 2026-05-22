@@ -1,0 +1,84 @@
+@model OrderDetailsModel
+@{
+    var isActive = Model.Workflow.ActiveStage == OrderDetailsModel.WorkflowStage.Delivery;
+    var canCreateDelivery = Model.Status != (int)OrderStatus.Completed
+        && Model.Status != (int)OrderStatus.Cancelled
+        && !Model.AreAllItemsFullyCovered;
+}
+
+<section class="workflow-panel @(isActive ? "active" : "")" data-workflow-panel="delivery" role="tabpanel">
+    <div class="content-card">
+        <div class="content-card-header">
+            <div>
+                <h5>Giao hàng <span class="status-badge @Model.DeliveryWorkflow.StatusClass">@Model.DeliveryWorkflow.StatusText</span></h5>
+                <div class="text-muted small">Phiếu xuất kho, tiến độ giao và trạng thái từng phiếu</div>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                
+                @if (canCreateDelivery)
+                {
+                    <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@Model.Id" class="btn btn-sm btn-link text-dark text-decoration-none">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Xuất hàng
+                    </a>
+                }
+            </div>
+        </div>
+        <div class="content-card-body">
+            @if (Model.DeliveryWorkflow.Notes.Count == 0)
+            {
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="bi bi-truck"></i></div>
+                    <h5>Chưa có phiếu giao</h5>
+                    <p>Phiếu giao sẽ xuất hiện ở đây sau khi xuất kho.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Phiếu giao</th>
+                                <th>Nguồn</th>
+                                <th class="text-end">SL xuất</th>
+                                <th class="text-end">Giá trị</th>
+                                <th>Trạng thái</th>
+                                <th class="text-end">Ngày tạo</th>
+                                <th class="text-end">Ngày giao xong</th>
+                                <th class="text-end"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var note in Model.DeliveryWorkflow.Notes)
+                            {
+                                <tr>
+                                    <td class="fw-600">@note.Code</td>
+                                    <td>
+                                        @if (note.IsDirectShip)
+                                        {
+                                            <span class="status-badge info">Giao thẳng</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@(note.WarehouseName ?? "Kho")</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">@note.TotalQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">@note.TotalAmount.DisplayCurrencyWithSymbol()</td>
+                                    <td><span class="status-badge @note.StatusClass">@note.StatusText</span></td>
+                                    <td class="text-end">@note.CreatedOn.ToString(ViewConstants.DefaultDateFormat)</td>
+                                    <td class="text-end">@(note.DeliveredOn?.ToString(ViewConstants.DefaultDateFormat) ?? "-")</td>
+                                    <td class="text-end">
+                                        <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@note.DeliveryNoteId" class="btn-table-action" title="Theo dõi phiếu giao">
+                                            <i class="bi bi-arrow-right"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</section>

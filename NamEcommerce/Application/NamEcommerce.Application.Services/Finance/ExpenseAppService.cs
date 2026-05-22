@@ -52,10 +52,32 @@ public class ExpenseAppService : IExpenseAppService
                 Description = x.Description,
                 Amount = x.Amount,
                 ExpenseType = (int)x.ExpenseType,
-                IncurredDate = x.IncurredDate
-            }).ToList();
+                IncurredDate = x.IncurredDate,
+                SourceOrderId = x.SourceOrderId
+            })
+            .ToList();
 
         return PagedDataAppDto.Create(items, pageIndex, pageSize, totalCount);
+    }
+
+    public Task<IList<ExpenseAppDto>> GetExpensesByOrderIdAsync(Guid orderId)
+    {
+        var items = _expenseDataReader.DataSource
+            .Where(x => x.SourceOrderId == orderId)
+            .OrderByDescending(x => x.IncurredDate)
+            .Select(x => new ExpenseAppDto
+            {
+                Id = x.Id,
+                Title = x.Title,
+                Description = x.Description,
+                Amount = x.Amount,
+                ExpenseType = (int)x.ExpenseType,
+                IncurredDate = x.IncurredDate,
+                SourceOrderId = x.SourceOrderId
+            })
+            .ToList();
+
+        return Task.FromResult<IList<ExpenseAppDto>>(items);
     }
 
     public async Task<ExpenseAppDto?> GetExpenseByIdAsync(Guid id)
@@ -63,15 +85,7 @@ public class ExpenseAppService : IExpenseAppService
         var x = await _expenseDataReader.GetByIdAsync(id);
         if (x is null) return null;
 
-        return new ExpenseAppDto
-        {
-            Id = x.Id,
-            Title = x.Title,
-            Description = x.Description,
-            Amount = x.Amount,
-            ExpenseType = (int)x.ExpenseType,
-            IncurredDate = x.IncurredDate
-        };
+        return MapExpense(x);
     }
 
     public async Task<CreateExpenseResultAppDto> CreateExpenseAsync(CreateExpenseAppDto dto)
@@ -86,7 +100,8 @@ public class ExpenseAppService : IExpenseAppService
             Amount = dto.Amount,
             ExpenseType = (NamEcommerce.Domain.Shared.Enums.Finance.ExpenseType)dto.ExpenseType,
             IncurredDate = dto.IncurredDate,
-            RecordedByUserId = dto.RecordedByUserId
+            RecordedByUserId = dto.RecordedByUserId,
+            SourceOrderId = dto.SourceOrderId
         });
 
         return new CreateExpenseResultAppDto { Success = true, CreatedId = result.CreatedId };
@@ -120,4 +135,16 @@ public class ExpenseAppService : IExpenseAppService
         await _expenseManager.DeleteExpenseAsync(id);
         return new DeleteExpenseResultAppDto { Success = true };
     }
+
+    private static ExpenseAppDto MapExpense(Expense expense)
+        => new()
+        {
+            Id = expense.Id,
+            Title = expense.Title,
+            Description = expense.Description,
+            Amount = expense.Amount,
+            ExpenseType = (int)expense.ExpenseType,
+            IncurredDate = expense.IncurredDate,
+            SourceOrderId = expense.SourceOrderId
+        };
 }

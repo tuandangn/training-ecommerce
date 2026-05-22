@@ -1,0 +1,160 @@
+@model OrderDetailsModel
+
+@functions {
+    (string BadgeClass, string Text, string Icon) GetDeliveryStatus(int status)
+    {
+        return (DeliveryNoteStatus)status switch
+        {
+            DeliveryNoteStatus.Draft => ("secondary", "Bản nháp", "bi-pencil"),
+            DeliveryNoteStatus.Confirmed => ("info text-white", "Đã xác nhận", "bi-check-all"),
+            DeliveryNoteStatus.Delivering => ("warning", "Đang giao", "bi-truck"),
+            DeliveryNoteStatus.Delivered => ("success", "Đã giao", "bi-check-circle-fill"),
+            DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy", "bi-x-circle"),
+            _ => ("secondary", "Không rõ", "bi-question-circle")
+        };
+    }
+
+    (string BadgeClass, string Text) GetDirectShipStatus(OrderDetailsModel.DirectShipAllocationModel alloc)
+    {
+        var deliveryStatus = alloc.DeliveryStatus.HasValue
+            ? (DeliveryNoteStatus)alloc.DeliveryStatus.Value
+            : (DeliveryNoteStatus?)null;
+
+        return deliveryStatus switch
+        {
+            DeliveryNoteStatus.Confirmed => ("info text-white", "Chờ khách xác nhận"),
+            DeliveryNoteStatus.Delivered => ("success", "Khách đã nhận"),
+            DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy/từ chối"),
+            _ => alloc.Status switch
+            {
+                0 => ("secondary", "Chờ nhận"),
+                1 => ("warning", "Nhận một phần"),
+                2 => ("info text-white", "Đã nhận"),
+                _ => ("secondary", "Không rõ")
+            }
+        };
+    }
+}
+
+@if (Model.DeliveryNotes.Count == 0 && Model.DirectShipAllocations.Count == 0)
+{
+    <div class="text-center text-muted py-4">
+        <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+        <p class="mt-2 mb-0">Đơn hàng này chưa có phiếu giao.</p>
+    </div>
+}
+else
+{
+    <div class="d-flex flex-column gap-3">
+        @if (Model.DeliveryNotes.Count > 0)
+        {
+            @foreach (var note in Model.DeliveryNotes.OrderByDescending(note => note.CreatedOn))
+            {
+                var status = GetDeliveryStatus(note.Status);
+                var totalQuantity = note.Items.Sum(item => item.Quantity);
+                <div class="allocated-po-card">
+                    <table class="table table-sm mb-0 allocated-po-items caption-top">
+                        <caption>
+                            <div class="d-flex align-items-start justify-content-between gap-2">
+                                <div>
+                                    <a class="fw-medium text-decoration-none" asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@note.Id">
+                                        @note.Code
+                                    </a>
+                                    <span class="status-badge @status.BadgeClass ms-1">
+                                        <i class="bi @status.Icon"></i> @status.Text
+                                    </span>
+                                    @if (note.IsDirectShip || note.SourceType == (int)DeliveryNoteSourceType.DirectShipToCustomer)
+                                    {
+                                        <span class="badge bg-light text-dark border ms-1">Giao thẳng</span>
+                                    }
+                                </div>
+                                <div class="text-end text-muted small">
+                                    <div>@note.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                                    @if (note.DeliveredOn.HasValue)
+                                    {
+                                        <div>Giao xong @note.DeliveredOn.Value.ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                                    }
+                                </div>
+                            </div>
+                        </caption>
+                        <thead class="text-muted small">
+                            <tr>
+                                <th>Hàng hóa</th>
+                                <th class="text-end" style="width: 120px;">Số lượng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in note.Items)
+                            {
+                                <tr>
+                                    <td>@item.ProductName</td>
+                                    <td class="text-end fw-medium">@item.Quantity.DisplayQuantity()</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2" class="border-bottom-0">
+                                    <div class="d-flex align-items-center justify-content-between small">
+                                        <span class="text-muted">
+                                            Kho xuất: @(string.IsNullOrEmpty(note.WarehouseName) ? "Chưa rõ" : note.WarehouseName)
+                                        </span>
+                                        <span class="fw-medium">Tổng @totalQuantity.DisplayQuantity()</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
+        }
+
+        @if (Model.DirectShipAllocations.Count > 0)
+        {
+            <div class="content-card mb-0">
+                <div class="content-card-header">
+                    <h5><i class="bi bi-truck-flatbed me-2"></i>Giao thẳng từ nhà cung cấp</h5>
+                </div>
+                <div class="content-card-body p-0">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Hàng hóa</th>
+                                <th class="text-end" style="width: 120px;">SL nhận</th>
+                                <th style="width: 160px;">Trạng thái</th>
+                                <th style="width: 130px;">Phiếu</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var alloc in Model.DirectShipAllocations)
+                            {
+                                var dsStatus = GetDirectShipStatus(alloc);
+                                <tr>
+                                    <td class="ps-3">@alloc.ProductName</td>
+                                    <td class="text-end">
+                                        @alloc.ReceivedQuantity.DisplayQuantity() / @alloc.AllocatedQuantity.DisplayQuantity()
+                                    </td>
+                                    <td>
+                                        <span class="status-badge @dsStatus.BadgeClass">@dsStatus.Text</span>
+                                    </td>
+                                    <td>
+                                        @if (alloc.DeliveryNoteId.HasValue)
+                                        {
+                                            <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@alloc.DeliveryNoteId">
+                                                @alloc.DeliveryNoteCode
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+}

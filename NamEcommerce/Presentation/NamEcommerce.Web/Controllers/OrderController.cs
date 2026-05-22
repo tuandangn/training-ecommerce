@@ -1,12 +1,11 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Domain.Shared.Enums.Orders;
-using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
+using NamEcommerce.Web.Contracts.Commands.Models.Finance;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
-using NamEcommerce.Web.Extensions;
+using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Models.Orders;
 using NamEcommerce.Web.Services.Orders;
 
@@ -32,9 +31,9 @@ public sealed class OrderController : BaseAuthorizedController
         return View(model);
     }
 
-    public IActionResult Create()
+    public async Task<IActionResult> Create()
     {
-        var model = new CreateOrderModel();
+        var model = await _orderModelFactory.PrepareCreateOrderModel();
         return View(model);
     }
 
@@ -47,15 +46,7 @@ public sealed class OrderController : BaseAuthorizedController
             return View(model);
         }
 
-        if (model.Items.Count == 0)
-        {
-            AddLocalizedModelError("Error.OrderItemRequired");
-            model = await _orderModelFactory.PrepareCreateOrderModel(model);
-            return View(model);
-        }
-
-        var orderSubTotal = model.Items.Sum(item => item.ItemSubTotal);
-        if ((model.OrderDiscount ?? 0) > orderSubTotal)
+        if ((model.OrderDiscount ?? 0) > model.OrderSubTotal)
         {
             ModelState.AddModelError(nameof(model.OrderDiscount), LocalizeError("Error.OrderDiscountExceedsTotal"));
             model = await _orderModelFactory.PrepareCreateOrderModel(model);
@@ -85,7 +76,7 @@ public sealed class OrderController : BaseAuthorizedController
         }
 
         NotifySuccess("Msg.SaveSuccess");
-        return RedirectToAction(nameof(List));
+        return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
     public async Task<IActionResult> Details(Guid id)
@@ -100,8 +91,26 @@ public sealed class OrderController : BaseAuthorizedController
         return View(model);
     }
 
+    public async Task<IActionResult> AllocatedPurchaseOrders(Guid id)
+    {
+        var listModel = await _mediator.Send(new GetAllocatedPurchaseOrdersForOrderQuery
+        {
+            OrderId = id
+        });
+        return PartialView("_AllocatedPurchaseOrdersOffcanvasBody", listModel);
+    }
+
+    public async Task<IActionResult> DeliveryNotes(Guid id)
+    {
+        var model = await _orderModelFactory.PrepareOrderDetailsModel(id);
+        if (model is null)
+            return NotFound();
+
+        return PartialView("_DeliveryNotesOffcanvasBody", model);
+    }
+
     [HttpPost]
-    public async Task<IActionResult> LockOrder(LockOrderModel model)
+    public async Task<IActionResult> CompleteOrder(CompleteOrderModel model)
     {
         if (!ModelState.IsValid)
             return Json(new { success = false, message = GetErrorMessage() });
@@ -113,15 +122,34 @@ public sealed class OrderController : BaseAuthorizedController
         if (order is null)
             return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
 
-        if (!order.CanLockOrder)
-            return Json(new { success = false, message = LocalizeError("Error.OrderCannotLock") });
+        if (!order.CanCompleteOrder)
+            return Json(new { success = false, message = LocalizeError("Error.OrderCannotComplete") });
 
-        var result = await _mediator.Send(new LockOrderCommand(model.OrderId, model.Reason!));
+        var result = await _mediator.Send(new CompleteOrderCommand(model.OrderId));
 
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
         return Json(new { success = true, message = string.Empty });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CancelOrder([FromBody] CancelOrderModel model)
+    {
+        var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
+        if (order is null)
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
+
+        var orderItemIds = order.Items.Select(i => i.Id).ToList();
+        var result = await _mediator.Send(new CancelOrderCommand(
+            model.OrderId,
+            orderItemIds,
+            model.ReturnWarehouseId));
+
+        if (!result.Success)
+            return Json(new { success = false, message = result.ErrorMessage });
+
+        return Json(new { success = true, redirectUrl = Url.Action(nameof(List), "Order") });
     }
 
     [HttpPost]
@@ -281,6 +309,23 @@ public sealed class OrderController : BaseAuthorizedController
 
         var result = await _mediator.Send(new UpdateOrderShippingCommand(model.OrderId, model.ExpectedShippingDate, model.Address));
 
+        if (!result.Success)
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+
+        return Json(new { success = true, message = string.Empty });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddExpense(CreateExpenseCommand command)
+    {
+        if (!command.SourceOrderId.HasValue || command.SourceOrderId == Guid.Empty)
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
+
+        var order = await _mediator.Send(new GetOrderByIdQuery { Id = command.SourceOrderId.Value });
+        if (order is null)
+            return Json(new { success = false, message = LocalizeError("Error.OrderIsNotFound") });
+
+        var result = await _mediator.Send(command);
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 

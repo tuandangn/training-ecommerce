@@ -15,19 +15,19 @@ public static class OrderExtensions
             OrderDiscount = order.OrderDiscount,
             Status = order.OrderStatus,
             CustomerId = order.CustomerId,
-            CustomerName = order.CustomerName,
-            CustomerPhone = order.CustomerPhone,
-            CustomerAddress = order.CustomerAddress,
+            CustomerName = order.CustomerInfo.FullName,
+            CustomerPhone = order.CustomerInfo.PhoneNumber,
+            CustomerAddress = order.CustomerInfo.Address,
             CreatedByUserId = order.CreatedByUserId,
             CreatedByUsername = order.CreatedByUsername,
             Note = order.Note,
-            LockOrderReason = order.LockOrderReason,
+            CompletedOnUtc = order.CompletedOnUtc,
             ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
             ShippingAddress = order.ShippingAddress,
             CreatedOnUtc = order.CreatedOnUtc,
             CanUpdateOrderItems = order.CanUpdateOrderItems(),
             CanUpdateInfo = order.CanUpdateInfo(),
-            CanLockOrder = order.CanLockOrder()
+            CanCompleteOrder = order.CanCompleteOrder()
         };
 
         foreach (var orderItem in order.OrderItems)

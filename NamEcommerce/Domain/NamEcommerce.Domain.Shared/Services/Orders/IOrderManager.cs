@@ -10,16 +10,18 @@ public interface IOrderManager : ICodeExistCheckingService
     Task<CreateOrderResultDto> CreateOrderAsync(CreateOrderDto dto);
     Task<UpdateOrderResultDto> UpdateOrderAsync(UpdateOrderDto dto);
     Task DeleteOrderAsync(DeleteOrderDto dto);
+    Task CancelOrderAsync(CancelOrderDto dto);
 
     Task AddOrderItemAsync(Guid orderId, AddOrderItemDto dto);
     Task UpdateOrderItemAsync(UpdateOrderItemDto dto);
     Task DeleteOrderItemAsync(DeleteOrderItemDto dto);
 
     Task UpdateShippingAsync(UpdateShippingDto dto);
-    Task LockOrderAsync(LockOrderDto dto);
+    Task CompleteOrderAsync(CompleteOrderDto dto);
     Task MarkOrderItemDeliveredAsync(MarkOrderItemDeliveredDto dto);
+    Task MarkOrderItemReceivedByCustomerAsync(MarkOrderItemReceivedByCustomerDto dto);
 
     Task<OrderDto?> GetOrderByIdAsync(Guid id);
-    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, OrderStatus? status, int pageIndex, int pageSize);
-    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(string? keywords, IEnumerable<OrderStatus> status, int pageIndex, int pageSize);
+    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status);
+    Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus> status);
 }

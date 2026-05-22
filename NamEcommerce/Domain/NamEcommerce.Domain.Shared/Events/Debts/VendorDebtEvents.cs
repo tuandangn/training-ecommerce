@@ -19,3 +19,14 @@ public sealed record VendorDebtUpdated(Guid VendorDebtId) : DomainEvent;
 /// Phiếu công nợ NCC đã được trả hết (fully paid).
 /// </summary>
 public sealed record VendorDebtFullyPaid(Guid VendorDebtId, Guid VendorId) : DomainEvent;
+
+/// <summary>
+/// Công nợ NCC bị âm — số tiền hoàn từ phiếu trả vượt quá tổng công nợ còn lại; phần dư áp lên
+/// debt đầu tiên khiến <c>RemainingAmount &lt; 0</c>. Audit để kế toán xử lý (vendor đang nợ mình).
+/// </summary>
+public sealed record VendorDebtBecameNegative(
+    Guid VendorDebtId,
+    Guid VendorId,
+    Guid VendorReturnId,
+    decimal OverAmount,
+    decimal NewRemainingAmount) : DomainEvent;

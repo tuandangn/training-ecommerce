@@ -60,3 +60,10 @@ public sealed record MarkOrderItemDeliveredDto
     public required Guid OrderItemId { get; init; }
     public required Guid PictureId { get; init; }
 }
+
+[Serializable]
+public sealed record MarkOrderItemReceivedByCustomerDto
+{
+    public required Guid OrderId { get; init; }
+    public required Guid OrderItemId { get; init; }
+}

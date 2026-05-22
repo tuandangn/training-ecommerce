@@ -1,0 +1,267 @@
+@model NamEcommerce.Web.Models.StockTransfer.CreateStockTransferNoteModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Tạo phiếu chuyển kho";
+}
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Thêm mới
+        <span class="text-muted">Phiếu chuyển kho</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="StockTransfer" class="text-decoration-none">Phiếu chuyển kho</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
+            </ol>
+        </nav>
+    </div>
+}
+<div>
+    <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible"></div>
+    <form method="post" id="createTransferForm" asp-antiforgery="true">
+        <div class="row g-3">
+            <!-- Cột trái: danh sách hàng hóa -->
+            <div class="col-lg-8 order-1 order-lg-0">
+                <div class="content-card mb-3">
+                    <div class="content-card-header">
+                        <h5>Danh sách hàng hóa chuyển kho</h5>
+                        <button type="button" class="btn btn-sm bg-light text-primary"
+                                data-bs-toggle="modal" data-bs-target="#addItemModal">
+                            <i class="bi bi-plus-lg me-1"></i> Thêm hàng hóa
+                        </button>
+                    </div>
+                    <div class="content-card-body-flush">
+                        <div class="table-responsive">
+                            <table class="table data-table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-3">Hàng hóa</th>
+                                        <th class="text-end" style="width:160px">Số lượng chuyển</th>
+                                        <th style="width:40px"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemsTableBody">
+                                    @for (var i = 0; i < Model.Items.Count; i++)
+                                    {
+                                        var item = Model.Items[i];
+                                        <tr>
+                                            <td class="ps-3">
+                                                <div class="fw-medium">@item.ProductName</div>
+                                                <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
+                                                <input type="hidden" name="Items[@i].ProductName" value="@item.ProductName" />
+                                            </td>
+                                            <td class="text-end">
+                                                <input name="Items[@i].Quantity" value="@item.Quantity"
+                                                       class="form-control form-control-sm text-end"
+                                                       data-decimal="quantity" min="0.001" step="0.001" placeholder="0" />
+                                            </td>
+                                            <td class="pe-3">
+                                                <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="noItemsMessage" class="py-4 text-center text-muted"
+                             style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
+                            Chưa có hàng hóa nào được thêm vào phiếu chuyển kho.
+                        </div>
+                    </div>
+                    <div class="content-card-footer py-2 d-flex align-items-center justify-content-between">
+                        <a asp-action="List" class="btn btn-link text-decoration-none">
+                            <span class="text-muted small">Trở về</span>
+                        </a>
+                        <button type="submit" class="btn btn-primary d-lg-none">Tạo phiếu</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cột phải: thông tin phiếu -->
+            <div class="col-lg-4">
+                <div class="content-card">
+                    <div class="content-card-header">
+                        <h5>Thông tin chuyển kho</h5>
+                    </div>
+                    <div class="content-card-body">
+                        <div class="mb-3">
+                            <label asp-for="FromWarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Kho nguồn <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="FromWarehouseId" class="form-select" id="fromWarehouseSelect">
+                                <option value="">(Chọn kho nguồn)</option>
+                                @foreach (var warehouse in Model.AvailableWarehouses)
+                                {
+                                    <option value="@warehouse.Id" selected="@(Model.FromWarehouseId == warehouse.Id)">
+                                        @warehouse.Name
+                                    </option>
+                                }
+                            </select>
+                            <span asp-validation-for="FromWarehouseId" class="small text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="ToWarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Kho đích <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="ToWarehouseId" class="form-select">
+                                <option value="">(Chọn kho đích)</option>
+                                @foreach (var warehouse in Model.AvailableWarehouses)
+                                {
+                                    <option value="@warehouse.Id" selected="@(Model.ToWarehouseId == warehouse.Id)">
+                                        @warehouse.Name
+                                    </option>
+                                }
+                            </select>
+                            <span asp-validation-for="ToWarehouseId" class="small text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block">
+                                Lý do / Ghi chú
+                            </label>
+                            <textarea asp-for="Note" class="form-control" rows="3"
+                                      placeholder="Nhập nhầm kho, điều chuyển hàng..."></textarea>
+                        </div>
+                    </div>
+                    <div class="content-card-footer d-none d-lg-block">
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Tạo phiếu chuyển kho</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Modal outside form — ModalProductId is not submitted with the main form -->
+<div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">Thêm hàng hóa chuyển kho</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <div class="mb-3">
+                    <label class="form-label small fw-medium text-muted">
+                        Hàng hóa <span class="text-danger">*</span>
+                    </label>
+                    @Html.EditorFor(m => m.ModalProductId, "ProductPicker", new { warehouseSelector = "#fromWarehouseSelect", placeholder = "Tìm hàng hóa theo tên..." })
+                </div>
+                <div>
+                    <label for="modalQty" class="form-label small fw-medium text-muted">
+                        Số lượng chuyển <span class="text-danger">*</span>
+                    </label>
+                    <input type="number" id="modalQty" class="form-control text-end"
+                           value="1" min="0.001" step="0.001" />
+                </div>
+                <div id="addItemError" class="alert alert-danger d-none mt-3 py-2 mb-0"></div>
+            </div>
+            <div class="modal-footer border-0 pb-3">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnConfirmAddItem" class="btn btn-primary rounded-pill px-4" disabled>
+                    <i class="bi bi-plus-lg me-1"></i>Thêm vào phiếu
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script type="module">
+        let pickedProduct = null;
+        let rowIndex = @Model.Items.Count;
+        const tbody = document.getElementById('itemsTableBody');
+        const noMsg = document.getElementById('noItemsMessage');
+        const addItemModal = new bootstrap.Modal(document.getElementById('addItemModal'));
+        const btnConfirm = document.getElementById('btnConfirmAddItem');
+        const qtyInput = document.getElementById('modalQty');
+        const errEl = document.getElementById('addItemError');
+        const pickerSource = document.getElementById('ModalProductId');
+
+        function updateEmptyState() {
+            noMsg.style.display = tbody.rows.length === 0 ? 'block' : 'none';
+        }
+
+        function addRow(productId, productName, qty) {
+            const i = rowIndex++;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="ps-3">
+                    <div class="fw-medium">${escHtml(productName)}</div>
+                    <input type="hidden" name="Items[${i}].ProductId" value="${escAttr(productId)}" />
+                    <input type="hidden" name="Items[${i}].ProductName" value="${escAttr(productName)}" />
+                </td>
+                <td class="text-end">
+                    <input name="Items[${i}].Quantity" value="${qty}"
+                           class="form-control form-control-sm text-end"
+                           data-decimal="quantity" min="0.001" step="0.001" placeholder="0" />
+                </td>
+                <td class="pe-3">
+                    <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>`;
+            tbody.appendChild(tr);
+            updateEmptyState();
+        }
+
+        tbody.addEventListener('click', e => {
+            const btn = e.target.closest('.btn-remove-item');
+            if (btn) {
+                btn.closest('tr').remove();
+                updateEmptyState();
+            }
+        });
+
+        document.getElementById('addItemModal').addEventListener('show.bs.modal', () => {
+            document.querySelector('#ModalProductId_productPicker .product-picker-clear')?.click();
+            qtyInput.value = '1';
+            errEl.classList.add('d-none');
+            pickedProduct = null;
+            btnConfirm.disabled = true;
+        });
+
+        pickerSource.addEventListener('change', async () => {
+            const id = pickerSource.value;
+            if (!id) {
+                pickedProduct = null;
+                btnConfirm.disabled = true;
+                return;
+            }
+            try {
+                const url = new URL('/Product/PickItem', window.location.origin);
+                url.searchParams.set('id', id);
+                const res = await fetch(url);
+                if (!res.ok) throw new Error();
+                const product = await res.json();
+                pickedProduct = { id: product.id, name: product.name };
+                btnConfirm.disabled = false;
+                errEl.classList.add('d-none');
+            } catch {
+                pickedProduct = null;
+                btnConfirm.disabled = true;
+            }
+        });
+
+        btnConfirm.addEventListener('click', () => {
+            const qty = parseFloat(qtyInput.value);
+            if (!qty || qty <= 0) {
+                errEl.textContent = 'Số lượng phải lớn hơn 0.';
+                errEl.classList.remove('d-none');
+                return;
+            }
+            addRow(pickedProduct.id, pickedProduct.name, qty);
+            addItemModal.hide();
+        });
+
+        function escHtml(v) { return String(v ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;'); }
+        function escAttr(v) { return escHtml(v).replaceAll('"', '&quot;'); }
+    </script>
+}

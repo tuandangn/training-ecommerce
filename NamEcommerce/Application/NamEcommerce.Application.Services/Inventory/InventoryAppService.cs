@@ -1,27 +1,43 @@
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.Inventory;
 using NamEcommerce.Application.Contracts.Inventory;
-using NamEcommerce.Domain.Shared.Services.Inventory;
+using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.Inventory;
+using NamEcommerce.Domain.Entities.Orders;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
+using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Application.Services.Inventory;
 
 public sealed class InventoryAppService : IInventoryAppService
 {
     private readonly IInventoryStockManager _stockManager;
-    private readonly IInventoryValidator _validator;
+    private readonly IEntityDataReader<ProductReservationLedger> _reservationLedgerReader;
+    private readonly IEntityDataReader<Product> _productReader;
+    private readonly IEntityDataReader<Order> _orderReader;
 
     public InventoryAppService(
         IInventoryStockManager stockManager,
-        IInventoryValidator validator)
+        IEntityDataReader<ProductReservationLedger> reservationLedgerReader,
+        IEntityDataReader<Product> productReader,
+        IEntityDataReader<Order> orderReader)
     {
         _stockManager = stockManager;
-        _validator = validator;
+        _reservationLedgerReader = reservationLedgerReader;
+        _productReader = productReader;
+        _orderReader = orderReader;
     }
 
     public async Task<IPagedDataAppDto<InventoryStockAppDto>> GetInventoryStocksAsync(string? keywords, Guid? warehouseId, int pageIndex, int pageSize)
     {
         var (total, dataItems) = await _stockManager.GetInventoryStocksAsync(keywords, warehouseId, pageIndex, pageSize);
+        var productIds = dataItems.Select(x => x.ProductId).Distinct().ToList();
+        var reservedByOrder = _reservationLedgerReader.DataSource
+            .Where(x => productIds.Contains(x.ProductId))
+            .GroupBy(x => x.ProductId)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.QuantityDelta));
 
         var items = dataItems.Select(x => new InventoryStockAppDto
         {
@@ -32,8 +48,11 @@ public sealed class InventoryAppService : IInventoryAppService
             WarehouseName = x.WarehouseName,
             QuantityOnHand = x.QuantityOnHand,
             QuantityReserved = x.QuantityReserved,
+            TotalReservedByOrder = reservedByOrder.GetValueOrDefault(x.ProductId),
             QuantityAvailable = x.QuantityAvailable,
-            UpdatedOnUtc = x.UpdatedOnUtc
+            UpdatedOnUtc = x.UpdatedOnUtc,
+            ReorderLevel = x.ReorderLevel,
+            MaxStockLevel = x.MaxStockLevel
         }).ToList();
 
         return PagedDataAppDto.Create(items, pageIndex, pageSize, total);
@@ -58,6 +77,9 @@ public sealed class InventoryAppService : IInventoryAppService
         return productStockInfoDtos;
     }
 
+    public Task<decimal> GetGlobalAvailableForProductAsync(Guid productId)
+        => _stockManager.GetGlobalAvailableQuantityForProductAsync(productId);
+
     public async Task<IPagedDataAppDto<StockMovementLogAppDto>> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize)
     {
         var (total, dataItems) = await _stockManager.GetStockMovementLogsAsync(productId, warehouseId, pageIndex, pageSize);
@@ -78,113 +100,59 @@ public sealed class InventoryAppService : IInventoryAppService
         return PagedDataAppDto.Create(items, pageIndex, pageSize, total);
     }
 
-    public async Task<ResultAppDto> AdjustStockAsync(AdjustStockAppDto dto)
+    public async Task<SetStockLevelsResultAppDto> SetStockLevelsAsync(SetStockLevelsAppDto dto)
     {
-        try
-        {
-            await _validator.ValidateStockOperationAsync(dto.ProductId, dto.WarehouseId, dto.NewQuantity);
-            await _stockManager.AdjustStockAsync(dto.ProductId, dto.WarehouseId, dto.NewQuantity, dto.Note, dto.ModifiedByUserId);
-            return new ResultAppDto { Success = true, ErrorMessage = null };
-        }
-        catch (InvalidStockOperationException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (WarehouseCapacityExceededException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (Exception)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockAdjustmentFailed" };
-        }
-    }
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return new SetStockLevelsResultAppDto { Success = false, ErrorMessage = errorMessage };
 
-    public async Task<ResultAppDto> ReserveStockAsync(ReserveStockAppDto dto)
-    {
         try
         {
-            await _validator.ValidateStockOperationAsync(dto.ProductId, dto.WarehouseId, dto.Quantity);
-            await _stockManager.ReserveStockAsync(dto.ProductId, dto.WarehouseId, dto.Quantity, dto.ReferenceId, dto.UserId, dto.Note);
-            return new ResultAppDto { Success = true, ErrorMessage = null };
-        }
-        catch (InsufficientStockException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (InvalidStockOperationException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (Exception)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockReservationFailed" };
-        }
-    }
-
-    public async Task<ResultAppDto> ReleaseReservedStockAsync(ReleaseStockAppDto dto)
-    {
-        try
-        {
-            await _validator.ValidateStockOperationAsync(dto.ProductId, dto.WarehouseId, dto.Quantity);
-            await _stockManager.ReleaseReservedStockAsync(dto.ProductId, dto.WarehouseId, dto.Quantity, dto.ReferenceId, dto.UserId, dto.Note);
-            return new ResultAppDto { Success = true, ErrorMessage = null };
+            await _stockManager.SetStockLevelsAsync(new SetStockLevelsDto(dto.Id)
+            {
+                ReorderLevel = dto.ReorderLevel,
+                MaxStockLevel = dto.MaxStockLevel
+            }).ConfigureAwait(false);
         }
         catch (StockNotFoundException ex)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
+            return new SetStockLevelsResultAppDto { Success = false, ErrorMessage = ex.Message };
         }
         catch (InvalidStockOperationException ex)
         {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
+            return new SetStockLevelsResultAppDto { Success = false, ErrorMessage = ex.Message };
         }
-        catch (Exception)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockReleaseFailed" };
-        }
+
+        return new SetStockLevelsResultAppDto { Success = true, UpdatedId = dto.Id };
     }
 
-    public async Task<ResultAppDto> DispatchStockAsync(DispatchStockAppDto dto)
+    public async Task<IPagedDataAppDto<ProductReservationLedgerAppDto>> GetProductReservationLedgerAsync(Guid productId, int pageIndex, int pageSize)
     {
-        try
-        {
-            await _validator.ValidateStockOperationAsync(dto.ProductId, dto.WarehouseId, dto.Quantity);
-            await _stockManager.DispatchStockAsync(dto.ProductId, dto.WarehouseId, dto.Quantity, dto.ReferenceId, dto.UserId, dto.Note);
-            return new ResultAppDto { Success = true, ErrorMessage = null };
-        }
-        catch (InsufficientStockException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (InvalidStockOperationException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (Exception)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockDispatchFailed" };
-        }
-    }
+        var product = await _productReader.GetByIdAsync(productId).ConfigureAwait(false);
+        var query = _reservationLedgerReader.DataSource
+            .Where(x => x.ProductId == productId)
+            .OrderByDescending(x => x.CreatedOnUtc);
 
-    public async Task<ResultAppDto> ReceiveStockAsync(ReceiveStockAppDto dto)
-    {
-        try
+        var total = query.Count();
+        var entries = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
+        var orderIds = entries.Select(x => x.OrderId).Distinct().ToList();
+        var orderCodes = _orderReader.DataSource
+            .Where(x => orderIds.Contains(x.Id))
+            .ToDictionary(x => x.Id, x => x.Code);
+
+        var items = entries.Select(x => new ProductReservationLedgerAppDto
         {
-            await _validator.ValidateStockOperationAsync(dto.ProductId, dto.WarehouseId, dto.Quantity);
-            await _stockManager.ReceiveStockAsync(dto.ProductId, dto.WarehouseId, dto.Quantity, dto.Note, dto.UserId, dto.ReferenceType, dto.ReferenceId);
-            return new ResultAppDto { Success = true, ErrorMessage = null };
-        }
-        catch (WarehouseCapacityExceededException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (InvalidStockOperationException ex)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = ex.ErrorCode };
-        }
-        catch (Exception)
-        {
-            return new ResultAppDto { Success = false, ErrorMessage = "Error.StockReceiveFailed" };
-        }
+            Id = x.Id,
+            ProductId = x.ProductId,
+            ProductName = product?.Name ?? string.Empty,
+            OrderId = x.OrderId,
+            OrderCode = orderCodes.GetValueOrDefault(x.OrderId),
+            QuantityDelta = x.QuantityDelta,
+            Reason = (int)x.Reason,
+            ReferenceId = x.ReferenceId,
+            CreatedOnUtc = x.CreatedOnUtc
+        }).ToList();
+
+        return PagedDataAppDto.Create(items, pageIndex, pageSize, total);
     }
 }

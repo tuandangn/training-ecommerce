@@ -1,10 +1,10 @@
 using MediatR;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
-using NamEcommerce.Web.Models.Catalog;
 using NamEcommerce.Web.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Services.PurchaseOrders;
@@ -13,11 +13,13 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 {
     private readonly IMediator _mediator;
     private readonly AppConfig _appConfig;
+    private readonly IDirectShipAppService _directShipAppService;
 
-    public PurchaseOrderModelFactory(IMediator mediator, AppConfig appConfig)
+    public PurchaseOrderModelFactory(IMediator mediator, AppConfig appConfig, IDirectShipAppService directShipAppService)
     {
         _mediator = mediator;
         _appConfig = appConfig;
+        _directShipAppService = directShipAppService;
     }
 
     public async Task<PurchaseOrderListModel> PreparePurchaseOrderListModel(PurchaseOrderListSearchModel searchModel)
@@ -31,6 +33,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         var model = await _mediator.Send(new GetPurchaseOrderListQuery
         {
             Keywords = searchModel?.Keywords,
+            Status = (int?)searchModel?.Status,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         });
@@ -40,20 +43,23 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
 
     public async Task<CreatePurchaseOrderModel> PrepareCreatePurchaseOrderModel(CreatePurchaseOrderModel? oldModel = null)
     {
-        var vendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
-        var warehouseOptions = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new CreatePurchaseOrderModel
         {
             PlacedOn = DateTime.Now
         };
-        model.AvailableWarehouses = warehouseOptions;
 
-        var vendor = await _mediator.Send(new GetVendorQuery { Id = model.VendorId }).ConfigureAwait(false);
-        if (vendor is not null)
+        if (model.VendorId.HasValue)
         {
-            model.VendorName = vendor.Name;
-            model.VendorPhone = vendor.PhoneNumber;
-            model.VendorAddress = vendor.Address;
+            var vendor = await _mediator.Send(new GetVendorQuery
+            {
+                Id = model.VendorId.Value
+            }).ConfigureAwait(false);
+            if (vendor is not null)
+            {
+                model.VendorName = vendor.Name;
+                model.VendorPhone = vendor.PhoneNumber;
+                model.VendorAddress = vendor.Address;
+            }
         }
 
         if (model.Items.Count > 0)
@@ -65,15 +71,18 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                 {
                     Ids = productIds
                 }).ConfigureAwait(false);
-
                 model.Items = model.Items.Where(i => products.Any(p => p.Id == i.ProductId)).ToList();
-
                 foreach (var item in model.Items)
                 {
                     var product = products.First(p => p.Id == item.ProductId);
                     item.ProductDisplayName = product.Name;
                     item.ProductDisplayPicture = product.PictureUrl;
+                    item.AvailableVendors = product.AvailableVendors;
                 }
+            }
+            else
+            {
+                model.Items.Clear();
             }
         }
 
@@ -86,14 +95,24 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         if (purchaseOrderInfo == null)
             return null;
 
-        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var warehouseTask = _mediator.Send(new GetWarehouseOptionListQuery());
+        var receiptsTask = _mediator.Send(new GetRelatedGoodsReceiptsByPurchaseOrderQuery { PurchaseOrderId = id });
+        var returnsTask = _mediator.Send(new GetRelatedVendorReturnsByPurchaseOrderQuery { PurchaseOrderId = id });
+        await Task.WhenAll(warehouseTask, receiptsTask, returnsTask).ConfigureAwait(false);
+
+        var availableWarehouses = await warehouseTask;
+        var relatedReceipts = await receiptsTask;
+        var relatedReturns = await returnsTask;
 
         var model = new PurchaseOrderDetailsModel
         {
             Info = purchaseOrderInfo,
-            AvailableWarehouses = availableWarehouses
+            AvailableWarehouses = availableWarehouses,
+            RelatedGoodsReceipts = relatedReceipts,
+            RelatedVendorReturns = relatedReturns
         };
         model.CanModifyInfo = purchaseOrderInfo.CanModifyInfo;
+        model.CanAllocateItems = purchaseOrderInfo.Status <= 30;
         if (model.CanModifyInfo)
         {
             model.ModifyInfo = new EditPurchaseOrderModel
@@ -141,6 +160,36 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
                     CurrentUnitPrice = item.CurrentUnitPrice,
                     UnitCost = item.UnitCost,
                     SellingPrice = item.CurrentUnitPrice
+                });
+            }
+        }
+
+        var poItemIds = purchaseOrderInfo.Items.Select(i => i.Id).ToList();
+        if (poItemIds.Count > 0)
+        {
+            var dsAllocations = await _directShipAppService
+                .GetDirectShipAllocationsForPoItemsAsync(poItemIds)
+                .ConfigureAwait(false);
+
+            foreach (var alloc in dsAllocations)
+            {
+                if (!model.DirectShipAllocationsPerItem.TryGetValue(alloc.PurchaseOrderItemId, out var list))
+                {
+                    list = [];
+                    model.DirectShipAllocationsPerItem[alloc.PurchaseOrderItemId] = list;
+                }
+                list.Add(new PurchaseOrderDetailsModel.DirectShipAllocationForPoModel
+                {
+                    AllocationId = alloc.AllocationId,
+                    DirectShipAddress = alloc.DirectShipAddress,
+                    DirectShipContactName = alloc.DirectShipContactName,
+                    DirectShipContactPhone = alloc.DirectShipContactPhone,
+                    AllocatedQuantity = alloc.AllocatedQuantity,
+                    ReceivedQuantity = alloc.ReceivedQuantity,
+                    Status = alloc.Status,
+                    DeliveryStatus = alloc.DeliveryStatus,
+                    DeliveryNoteId = alloc.DeliveryNoteId,
+                    DeliveryNoteCode = alloc.DeliveryNoteCode
                 });
             }
         }

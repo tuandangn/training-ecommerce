@@ -174,17 +174,6 @@
                                     }
                                 </td>
                                 <td class="text-end pe-4 align-middle">
-                                    @if (!detail.IsDelivered)
-                                    {
-                                        <button class="btn btn-sm btn-outline-success btnMarkDelivered w-100"
-                                                data-order-id="@detail.OrderId"
-                                                data-order-item-id="@detail.OrderItemId"
-                                                data-product-name="@preparationItem.ProductName"
-                                                title="Đánh dấu đã giao">
-                                            <i class="bi bi-check2-circle d-md-none"></i>
-                                            <span class="d-none d-md-inline"><i class="bi bi-check-lg me-1"></i>Đã giao</span>
-                                        </button>
-                                    }
                                 </td>
                             </tr>
                         }

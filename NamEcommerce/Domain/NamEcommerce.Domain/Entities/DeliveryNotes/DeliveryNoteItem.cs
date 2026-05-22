@@ -4,16 +4,6 @@ namespace NamEcommerce.Domain.Entities.DeliveryNotes;
 
 public sealed record DeliveryNoteItem : AppEntity
 {
-    public Guid DeliveryNoteId { get; private set; }
-    public Guid OrderItemId { get; private set; }
-    public Guid ProductId { get; private set; }
-    public string ProductName { get; private set; }
-    
-    public decimal Quantity { get; private set; }
-    public decimal UnitPrice { get; private set; }
-    
-    public decimal SubTotal => Quantity * UnitPrice;
-
     public DeliveryNoteItem(Guid id) : base(id)
     {
         ProductName = string.Empty;
@@ -28,4 +18,19 @@ public sealed record DeliveryNoteItem : AppEntity
         Quantity = quantity;
         UnitPrice = unitPrice;
     }
+
+    public Guid DeliveryNoteId { get; private set; }
+    public Guid OrderItemId { get; private set; }
+    public Guid ProductId { get; private set; }
+    public string ProductName { get; private set; }
+    
+    public decimal Quantity { get; private set; }
+    public decimal UnitPrice { get; private set; }
+
+    /// <summary>
+    /// Snapshot hiển thị chuyển tiếp. COGS authoritative nằm trong InventoryCostAllocation.
+    /// </summary>
+    public decimal? CostAtDispatch { get; internal set; }
+
+    public decimal SubTotal => Quantity * UnitPrice;
 }

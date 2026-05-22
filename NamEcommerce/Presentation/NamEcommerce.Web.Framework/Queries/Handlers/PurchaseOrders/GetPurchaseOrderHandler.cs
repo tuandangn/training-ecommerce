@@ -3,6 +3,7 @@ using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.PurchaseOrders;
@@ -13,14 +14,16 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
     private readonly IVendorAppService _vendorAppService;
     private readonly IWarehouseAppService _warehouseAppService;
     private readonly IProductAppService _productAppService;
+    private readonly IMediator _mediator;
 
     public GetPurchaseOrderHandler(IPurchaseOrderAppService appService, IVendorAppService vendorAppService,
-        IWarehouseAppService warehouseAppService, IProductAppService productAppService)
+        IWarehouseAppService warehouseAppService, IProductAppService productAppService, IMediator mediator)
     {
         _purchaseOrderAppService = appService;
         _vendorAppService = vendorAppService;
         _warehouseAppService = warehouseAppService;
         _productAppService = productAppService;
+        _mediator = mediator;
     }
 
     public async Task<PurchaseOrderModel?> Handle(GetPurchaseOrderQuery request, CancellationToken cancellationToken)
@@ -40,6 +43,8 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             ExpectedDeliveryDate = purchaseOrder.ExpectedDeliveryDateUtc?.ToLocalTime(),
             ShippingAmount = purchaseOrder.ShippingAmount,
             TaxAmount = purchaseOrder.TaxAmount,
+            AccumulatedShippingAmount = purchaseOrder.AccumulatedShippingAmount,
+            AccumulatedTaxAmount = purchaseOrder.AccumulatedTaxAmount,
             TotalAmount = purchaseOrder.TotalAmount,
             CreatedOn = purchaseOrder.CreatedOnUtc.ToLocalTime(),
             CanModifyInfo = purchaseOrder.CanModifyInfo,
@@ -50,11 +55,20 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
             CanChangeVendor = purchaseOrder.CanChangeVendor
         };
 
+        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = purchaseOrder.Items.Select(item => item.ProductId).Distinct() }, cancellationToken).ConfigureAwait(false);
+
         foreach (var item in purchaseOrder.Items)
         {
+            var product = products.FirstOrDefault(p => p.Id == item.ProductId);
+            if (product is null) continue;
+
             var itemModel = new PurchaseOrderModel.ItemModel(item.Id)
             {
                 ProductId = item.ProductId,
+                ProductName = product.Name,
+                CurrentUnitPrice = product.CurrentUnitPrice,
+                ProductPicture = product.PictureUrl,
+                UnitMeasurement = product.UnitMeasurement,
                 Note = item.Note,
                 QuantityOrdered = item.QuantityOrdered,
                 QuantityReceived = item.QuantityReceived,
@@ -62,9 +76,6 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
                 UnitCost = item.UnitCost,
                 TotalCost = item.TotalCost
             };
-            var product = await _productAppService.GetProductByIdAsync(item.ProductId).ConfigureAwait(false);
-            itemModel.ProductName = product?.Name ?? string.Empty;
-            itemModel.CurrentUnitPrice = product?.UnitPrice ?? 0m;
 
             model.Items.Add(itemModel);
         }

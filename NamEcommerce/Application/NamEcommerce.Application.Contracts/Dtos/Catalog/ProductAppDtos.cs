@@ -32,24 +32,15 @@ public sealed record ProductAppDto(Guid Id) : BaseProductAppDto
 public sealed record CreateProductAppDto : BaseProductAppDto
 {
     public FileInfoAppDto? ImageFile { get; set; }
-
-    public decimal? UnitPrice { get; set; }
-    public decimal? CostPrice { get; set; }
-    public IEnumerable<ProductStockAppDto> ProductStocks { get; set; } = [];
+    public decimal CostPrice { get; set; }
+    public decimal UnitPrice { get; set; }
 
     public override (bool valid, string? errorMessage) Validate()
     {
-        if (UnitPrice.HasValue && UnitPrice < 0)
-            return (false, "Error.ProductUnitPriceCannotBeNegative");
-
-        if (CostPrice.HasValue && CostPrice < 0)
+        if (CostPrice < 0)
             return (false, "Error.ProductCostPriceCannotBeNegative");
-
-        foreach (var productStock in ProductStocks)
-        {
-            if (productStock.Quantity <= 0)
-                return (false, "Error.QuantityMustBePositive");
-        }
+        if (UnitPrice < 0)
+            return (false, "Error.ProductUnitPriceCannotBeNegative");
 
         return base.Validate();
     }
@@ -102,5 +93,3 @@ public sealed record ProductCategoryAppDto(Guid CategoryId, int DisplayOrder);
 [Serializable]
 public sealed record ProductVendorAppDto(Guid VendorId, int DisplayOrder);
 
-[Serializable]
-public sealed record ProductStockAppDto(Guid? WarehouseId, decimal Quantity);

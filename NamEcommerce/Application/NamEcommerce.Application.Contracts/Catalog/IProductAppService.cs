@@ -5,7 +5,7 @@ namespace NamEcommerce.Application.Contracts.Catalog;
 
 public interface IProductAppService
 {
-    Task<IPagedDataAppDto<ProductAppDto>> GetProductsAsync(string? keywords = null, int pageIndex = 0, int pageSize = int.MaxValue);
+    Task<IPagedDataAppDto<ProductAppDto>> GetProductsAsync(int pageIndex, int pageSize, string? keywords = null, Guid? categoryId = null, Guid? vendorId = null);
 
     Task<ProductAppDto?> GetProductByIdAsync(Guid id);
 

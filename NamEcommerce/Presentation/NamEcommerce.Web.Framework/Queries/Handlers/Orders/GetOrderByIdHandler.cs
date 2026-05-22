@@ -46,10 +46,10 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             Note = order.Note,
             ExpectedShippingDate = order.ExpectedShippingDateUtc?.ToLocalTime(),
             ShippingAddress = order.ShippingAddress,
-            LockOrderReason = order.LockOrderReason,
+            CompletedOn = order.CompletedOnUtc?.ToLocalTime(),
             CanUpdateInfo = order.CanUpdateInfo,
             CanUpdateOrderItems = order.CanUpdateOrderItems,
-            CanLockOrder = order.CanCancelOrder,
+            CanCompleteOrder = order.CanCompleteOrder,
             CreatedOn = order.CreatedOnUtc.ToLocalTime()
         };
         var products = order.CanUpdateInfo 

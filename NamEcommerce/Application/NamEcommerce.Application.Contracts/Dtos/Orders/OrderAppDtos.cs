@@ -34,12 +34,13 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
     public required decimal TotalAmount { get; init; }
     public required int Status { get; init; }
     public bool IsFinished { get; set; }
-    public string? LockOrderReason { get; set; }
+    public DateTime? CompletedOnUtc { get; set; }
 
     public string? ShippingAddress { get; set; }
 
     public bool CanUpdateInfo { get; init; }
     public bool CanCancelOrder { get; init; }
+    public bool CanCompleteOrder { get; init; }
     public bool CanUpdateOrderItems { get; init; }
 
     public DateTime CreatedOnUtc { get; set; }
@@ -51,7 +52,6 @@ public sealed record OrderAppDto(Guid Id) : BaseOrderAppDto
 public sealed record CreateOrderAppDto : BaseOrderAppDto
 {
     public required Guid CustomerId { get; init; }
-    public required Guid? CreatedByUserId { get; init; }
     public string? ShippingAddress { get; set; }
     public IList<OrderItemAppDto> Items { get; } = [];
 
@@ -60,6 +60,8 @@ public sealed record CreateOrderAppDto : BaseOrderAppDto
         if (ExpectedShippingDateUtc < DateTime.UtcNow.Date)
             return (false, "Error.ExpectedShippingDateInvalid");
 
+        if (Items.Count == 0)
+            return (false, "Error.OrderItemRequired");
         foreach (var item in Items)
         {
             var validateResult = item.Validate();
@@ -138,13 +140,12 @@ public sealed record UpdateOrderShippingResultAppDto
 }
 
 [Serializable]
-public sealed record LockOrderAppDto
+public sealed record CompleteOrderAppDto
 {
     public required Guid OrderId { get; init; }
-    public required string? Reason { get; init; }
 }
 [Serializable]
-public sealed record LockOrderResultAppDto
+public sealed record CompleteOrderResultAppDto
 {
     public required bool Success { get; init; }
     public string? ErrorMessage { get; set; }
@@ -162,5 +163,19 @@ public sealed record MarkOrderItemDeliveredResultAppDto
 {
     public required bool Success { get; init; }
     public string? ErrorMessage { get; set; }
-    public bool OrderAutoLocked { get; set; }
+}
+
+[Serializable]
+public sealed record CancelOrderAppDto
+{
+    public required Guid OrderId { get; init; }
+    public IReadOnlyList<Guid> OrderItemIds { get; init; } = [];
+    public Guid? ReturnWarehouseId { get; init; }
+}
+
+[Serializable]
+public sealed record CancelOrderResultAppDto
+{
+    public bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
 }

@@ -31,8 +31,11 @@ public sealed class GetInventoryStockListHandler : IRequestHandler<GetInventoryS
                 WarehouseName = item.WarehouseName,
                 QuantityOnHand = item.QuantityOnHand,
                 QuantityReserved = item.QuantityReserved,
+                TotalReservedByOrder = item.TotalReservedByOrder,
                 QuantityAvailable = item.QuantityAvailable,
-                UpdatedOn = item.UpdatedOnUtc.ToLocalTime()
+                UpdatedOn = item.UpdatedOnUtc.ToLocalTime(),
+                ReorderLevel = item.ReorderLevel,
+                MaxStockLevel = item.MaxStockLevel
             })
         };
 

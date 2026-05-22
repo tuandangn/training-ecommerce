@@ -1,0 +1,17 @@
+@*
+    Generic right-side offcanvas dùng chung toàn site.
+    Mở bằng JS: window.openCoworkOffcanvas({ title, url, size, onLoaded })
+*@
+<div class="offcanvas offcanvas-end cowork-offcanvas" tabindex="-1" id="coworkOffcanvas"
+     aria-labelledby="coworkOffcanvasLabel" data-bs-scroll="false">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="coworkOffcanvasLabel">Chi tiết</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Đóng"></button>
+    </div>
+    <div class="offcanvas-body" id="coworkOffcanvasBody">
+        <div class="cowork-offcanvas-loading text-center py-4 text-muted">
+            <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+            Đang tải...
+        </div>
+    </div>
+</div>

@@ -19,7 +19,8 @@ public sealed class GetCategoryOptionListHandler : IRequestHandler<GetCategoryOp
         {
             Keywords = null,
             PageIndex = 0,
-            PageSize = int.MaxValue
+            PageSize = int.MaxValue,
+            BreadcrumbOpts = request.BreadcrumbOpts
         }, cancellationToken);
 
         var optionsData = categoryData.Data

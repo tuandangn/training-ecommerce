@@ -1,0 +1,99 @@
+@using NamEcommerce.Domain.Shared.Enums.Returns
+@model NamEcommerce.Web.Contracts.Models.Returns.VendorReturnListModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Trả hàng nhà cung cấp";
+}
+@section TitleSection {
+    <h1 class="topbar-page-title">Trả hàng nhà cung cấp</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Trả hàng nhà cung cấp</li>
+            </ol>
+        </nav>
+    </div>
+}
+<div class="content-card">
+    <div class="action-toolbar">
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            @if (Model.Status.HasValue || Model.VendorId.HasValue || Model.PurchaseOrderId.HasValue || Model.GoodsReceiptId.HasValue)
+            {
+                <a asp-action="List" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-x-lg me-1"></i>Bỏ lọc
+                </a>
+            }
+        </div>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Tạo phiếu trả
+        </a>
+    </div>
+    <div class="content-card-body-flush">
+        <div class="table-responsive">
+            <table class="table data-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width:130px">Mã phiếu</th>
+                        <th>Nhà cung cấp</th>
+                        <th>Kho xuất</th>
+                        <th class="text-end">Giá trị trả</th>
+                        <th class="text-center" style="width:130px">Trạng thái</th>
+                        <th class="text-center" style="width:110px">Ngày trả</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Data.Pagination.TotalCount > 0)
+                    {
+                        @foreach (var item in Model.Data)
+                        {
+                            <tr class="align-middle">
+                                <td class="ps-4">
+                                    <a asp-action="Details" asp-route-id="@item.Id"
+                                       class="fw-semibold text-decoration-none">
+                                        @item.Code
+                                    </a>
+                                </td>
+                                <td>@item.VendorName</td>
+                                <td class="text-muted small">@item.WarehouseName</td>
+                                <td class="text-end fw-semibold">@item.TotalAmount.DisplayCurrency()</td>
+                                <td class="text-center">
+                                    @{
+                                        var (badgeClass, badgeText) = (VendorReturnStatus)item.Status switch
+                                        {
+                                            VendorReturnStatus.Draft => ("bg-secondary", "Bản nháp"),
+                                            VendorReturnStatus.Inspecting => ("bg-warning text-dark", "Đang kiểm tra"),
+                                            VendorReturnStatus.Confirmed => ("bg-success", "Đã xác nhận"),
+                                            VendorReturnStatus.Cancelled => ("bg-danger", "Đã huỷ"),
+                                            _ => ("bg-secondary", "—")
+                                        };
+                                    }
+                                    <span class="badge @badgeClass">@badgeText</span>
+                                </td>
+                                <td class="text-center text-muted small">@item.ReturnDate.ToString(ViewConstants.DefaultDateFormat)</td>
+                                <td class="text-end pe-3">
+                                    <a class="btn btn-sm btn-light text-primary"
+                                       asp-action="Details" asp-route-id="@item.Id">Xem</a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <span class="text-muted">Không có phiếu trả hàng nào</span>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (Model.Data.Pagination.TotalCount > 0)
+        {
+            <partial name="_Pager" model="Model.Data.Pagination" />
+        }
+    </div>
+</div>

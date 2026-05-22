@@ -1,23 +1,36 @@
 using MediatR;
-using NamEcommerce.Application.Contracts.Communication;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Services.Outbox;
 
 namespace NamEcommerce.Application.Services.Events.DeliveryNotes;
 
 /// <summary>
-/// Khi phiếu giao hàng được duyệt — gửi notification ra n8n để báo cho team giao nhận.
+/// Khi phiếu giao hàng được duyệt — enqueue <see cref="DeliveryNoteConfirmedIntegrationEvent"/>
+/// vào Outbox để background service publish ra n8n (thay vì call trực tiếp).
+/// <para>
+/// Lý do dùng Outbox:
+/// <list type="bullet">
+///   <item>Atomic với transaction nghiệp vụ — nếu SaveChanges fail thì không leak notification ra ngoài.</item>
+///   <item>n8n down tạm thời không làm fail business operation.</item>
+///   <item>Retry tự động khi gọi n8n thất bại.</item>
+/// </list>
+/// </para>
 /// </summary>
 public sealed class DeliveryNoteConfirmedEventHandler : INotificationHandler<DeliveryNoteConfirmed>
 {
-    private readonly IN8nAppService _n8nAppService;
+    private readonly IOutbox _outbox;
 
-    public DeliveryNoteConfirmedEventHandler(IN8nAppService n8nAppService)
+    public DeliveryNoteConfirmedEventHandler(IOutbox outbox)
     {
-        _n8nAppService = n8nAppService;
+        ArgumentNullException.ThrowIfNull(outbox);
+        _outbox = outbox;
     }
 
-    public async Task Handle(DeliveryNoteConfirmed notification, CancellationToken cancellationToken)
+    public Task Handle(DeliveryNoteConfirmed notification, CancellationToken cancellationToken)
     {
-        await _n8nAppService.NotifyDeliveryNoteIsConfirmed(notification.DeliveryNoteId).ConfigureAwait(false);
+        ArgumentNullException.ThrowIfNull(notification);
+
+        var integrationEvent = new DeliveryNoteConfirmedIntegrationEvent(notification.DeliveryNoteId);
+        return _outbox.AddAsync(integrationEvent, cancellationToken);
     }
 }

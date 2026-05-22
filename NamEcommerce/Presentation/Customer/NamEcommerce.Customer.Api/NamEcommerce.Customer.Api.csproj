@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.7" />
+    <PackageReference Include="MediatR" Version="14.1.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Application\NamEcommerce.Application.Contracts\NamEcommerce.Application.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\Application\NamEcommerce.Application.Services\NamEcommerce.Application.Services.csproj" />
+    <ProjectReference Include="..\..\..\Domain\NamEcommerce.Domain.Services\NamEcommerce.Domain.Services.csproj" />
+    <ProjectReference Include="..\..\..\Domain\NamEcommerce.Domain.Shared\NamEcommerce.Domain.Shared.csproj" />
+    <ProjectReference Include="..\..\..\Infrastructure\NamEcommerce.Data.SqlServer\NamEcommerce.Data.SqlServer.csproj" />
+    <ProjectReference Include="..\NamEcommerce.Customer.Contracts\NamEcommerce.Customer.Contracts.csproj" />
+    <ProjectReference Include="..\NamEcommerce.Customer.Framework\NamEcommerce.Customer.Framework.csproj" />
+  </ItemGroup>
+</Project>

@@ -13,9 +13,27 @@ public interface IDeliveryNoteManager
     Task MarkDeliveringAsync(Guid id);
     
     Task MarkDeliveredAsync(MarkDeliveryNoteDeliveredDto dto);
+
+    Task MarkReceivedByCustomerAsync(Guid id, DateTime receivedAtUtc, string? receiverName, string? note);
     
     Task CancelAsync(Guid id);
     
+    /// <summary>
+    /// Tự động tạo DeliveryNote ở trạng thái Delivered ngay khi VendorReturn được Confirm.
+    /// SourceType=ToVendorReturn — handler downstream trừ tồn kho nhưng KHÔNG sinh CustomerDebt.
+    /// </summary>
+    Task<Guid> CreateAsDeliveredAsync(CreateDeliveryNoteFromVendorReturnDto dto);
+
+    /// <summary>
+    /// Tự động tạo DeliveryNote direct-ship ở trạng thái Confirmed để chờ khách xác nhận.
+    /// Manager tự tìm Order/Customer/Product từ <paramref name="dto"/>.OrderItemId.
+    /// </summary>
+    Task<Guid> CreateForDirectShipAsync(CreateDeliveryNoteForDirectShipDto dto, CancellationToken ct = default);
+
+    Task ConfirmDirectShipDeliveryAsync(Guid id, DateTime confirmedAtUtc, string? note, CancellationToken ct = default);
+
+    Task RejectDirectShipDeliveryAsync(Guid id, string reason, CancellationToken ct = default);
+
     Task<DeliveryNoteDto?> GetByIdAsync(Guid id);
     
     Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize, string? keywords = null, Guid? orderId = null, IEnumerable<DeliveryNoteStatus>? status = null);

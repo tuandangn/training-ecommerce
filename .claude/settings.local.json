@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rtk git *)",
+      "Bash(rtk dotnet *)",
+      "Bash(rtk ls *)",
+      "Bash(dir *)",
+      "Bash(rtk wc *)",
+      "Bash(rtk grep *)",
+      "Bash(rtk find *)",
+      "Bash(python *)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Skill(superpowers:writing-plans)",
+      "Bash(cd /d \"D:\\\\Learning\\\\NamTraining\\\\training-ecommerce\\\\.claude\\\\worktrees\\\\shortage-supplier-selection\")",
+      "Bash(findstr /r \"ConfirmReceiptAsync\\\\|ReceiveAsync\" NamEcommerce\\\\Application\\\\NamEcommerce.Application.Services\\\\PurchaseOrders\\\\*.cs)",
+      "Bash(powershell -command \"Select-String -Path 'NamEcommerce/Presentation/NamEcommerce.Web/Resources/SharedResource.vi-VN.resx' -Pattern 'Enums\\\\.' | Select-Object -First 10\")",
+      "Bash(powershell -command \"Get-Content 'NamEcommerce/Presentation/NamEcommerce.Web/Resources/SharedResource.resx' | Select-Object -Last 15\")",
+      "Bash(git merge *)",
+      "Skill(agent-skills:spec)",
+      "Skill(agent-skills:incremental-implementation)",
+      "Bash(rtk read *)",
+      "Skill(agent-skills:debugging-and-error-recovery)",
+      "Bash(findstr /I \"error\")",
+      "Bash(findstr /V \"warning\")",
+      "Skill(agent-skills:using-agent-skills)",
+      "Bash(xargs cat)",
+      "Bash(xargs grep -l \"IEntityDataReader\")",
+      "Skill(agent-skills:planning-and-task-breakdown)",
+      "Bash(Select-String -Pattern \"error|Error|warning\")",
+      "Bash(Select-Object -First 40)",
+      "PowerShell(dotnet build *)"
+    ]
+  }
+}

@@ -21,6 +21,8 @@ public sealed class PurchaseOrderModel
     public DateTime? ExpectedDeliveryDate { get; set; }
     public decimal ShippingAmount { get; set; }
     public decimal TaxAmount { get; set; }
+    public decimal AccumulatedShippingAmount { get; set; }
+    public decimal AccumulatedTaxAmount { get; set; }
     public decimal TotalAmount { get; set; }
 
     public DateTime CreatedOn { get; set; }
@@ -40,6 +42,8 @@ public sealed class PurchaseOrderModel
         public required Guid ProductId { get; init; }
         public string ProductName { get; set; } = "";
         public string? ProductPicture { get; set; }
+
+        public string? UnitMeasurement { get; set; }
 
         public decimal QuantityOrdered { get; set; }
         public decimal UnitCost { get; set; }

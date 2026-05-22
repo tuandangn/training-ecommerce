@@ -1,0 +1,28 @@
+@model OrderDetailsModel
+
+<div class="content-card order-workflow-bar mb-3">
+    <div class="order-workflow-steps" role="tablist" aria-label="Quy trình đơn hàng">
+        @foreach (var step in Model.Workflow.Steps)
+        {
+            <button type="button"
+                    class="workflow-step @(step.IsActive ? "active" : "") @(step.IsComplete ? "complete" : "")"
+                    data-workflow-target="@step.Key"
+                    role="tab"
+                    aria-selected="@(step.IsActive ? "true" : "false")">
+                <span class="workflow-step-index">
+                    <i class="bi @step.Icon"></i>
+                </span>
+                <span class="workflow-step-copy">
+                    <span class="workflow-step-title">
+                        @step.Title
+                        @if (step.HasWarnings)
+                        {
+                            <i class="bi bi-exclamation-triangle text-danger fw-bold"></i>
+                        }
+                    </span>
+                    <span class="workflow-step-summary">@step.Summary</span>
+                </span>
+            </button>
+        }
+    </div>
+</div>

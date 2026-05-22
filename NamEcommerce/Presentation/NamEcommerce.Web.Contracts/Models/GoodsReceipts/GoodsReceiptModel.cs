@@ -4,6 +4,7 @@ namespace NamEcommerce.Web.Contracts.Models.GoodsReceipts;
 public sealed class GoodsReceiptModel
 {
     public required Guid Id { get; init; }
+    public string Code { get; init; } = string.Empty;
     public required DateTime ReceivedOn { get; init; }
     public string? TruckDriverName { get; init; }
     public string? TruckNumberSerial { get; init; }

@@ -7,6 +7,7 @@ namespace NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 public sealed class GetPurchaseOrderListQuery : IRequest<PurchaseOrderListModel>
 {
     public string? Keywords { get; init; }
+    public int? Status { get; set; }
     public int PageIndex { get; init; }
     public int PageSize { get; init; }
 }

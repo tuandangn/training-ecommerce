@@ -14,6 +14,7 @@ public sealed class ProductListForOrderModel
     public sealed record ProductItemModel(Guid Id)
     {
         public required string Name { get; init; }
+        public string? UnitMeasurement { get; set; }
         public string? PictureUrl { get; set; }
         public string? UnitMeasurementName { get; set; }
         public decimal UnitPrice { get; set; }
@@ -24,10 +25,7 @@ public sealed class ProductListForOrderModel
 
         public string? CategoryName { get; set; }
 
-        public IList<Guid> AvailableWarehouseIds { get; set; } = [];
-        public IList<VendorOptionModel> AvailableVendors { get; set; } = [];
+        public IEnumerable<EntityOptionListModel.EntityOptionModel> AvailableWarehouses { get; set; } = [];
+        public IEnumerable<EntityOptionListModel.EntityOptionModel> AvailableVendors { get; set; } = [];
     }
-
-    [Serializable]
-    public sealed record VendorOptionModel(Guid Id, string Name);
 }

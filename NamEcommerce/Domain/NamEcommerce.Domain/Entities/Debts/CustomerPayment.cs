@@ -1,6 +1,7 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Events.Debts;
 
 namespace NamEcommerce.Domain.Entities.Debts;
 
@@ -61,4 +62,10 @@ public sealed record CustomerPayment : AppAggregateEntity
         AppliedOnUtc = DateTime.UtcNow;
         UpdatedOnUtc = DateTime.UtcNow;
     }
+
+    /// <summary>
+    /// Đánh dấu khoản thanh toán vừa được ghi nhận — Manager gọi trước <c>InsertAsync</c>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new CustomerPaymentRecorded(Id, CustomerId, Amount, CustomerDebtId));
 }

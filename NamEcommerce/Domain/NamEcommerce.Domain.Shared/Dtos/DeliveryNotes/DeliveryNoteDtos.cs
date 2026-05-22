@@ -24,6 +24,9 @@ public sealed record DeliveryNoteDto
     public string? Note { get; init; }
     
     public DeliveryNoteStatus Status { get; init; }
+    public DeliveryNoteSourceType SourceType { get; init; }
+    public bool IsDirectShip { get; init; }
+    public DeliveryConfirmationStatus DeliveryConfirmationStatus { get; init; }
     
     public DateTime? DeliveredOnUtc { get; init; }
     public Guid? DeliveryProofPictureId { get; init; }
@@ -52,6 +55,11 @@ public sealed record DeliveryNoteItemDto
     public required decimal Quantity { get; init; }
     public required decimal UnitPrice { get; init; }
     public required decimal SubTotal { get; init; }
+
+    /// <summary>
+    /// Snapshot hiển thị chuyển tiếp; COGS authoritative nằm trong InventoryCostAllocation.
+    /// </summary>
+    public decimal? CostAtDispatch { get; init; }
 }
 
 [Serializable]
@@ -66,7 +74,6 @@ public sealed record CreateDeliveryNoteDto
     public decimal Surcharge { get; init; }
     public string? SurchargeReason { get; init; }
     public decimal AmountToCollect { get; init; }
-    public Guid? CreatedByUserId { get; init; }
     public required IList<CreateDeliveryNoteItemDto> Items { get; init; } = [];
 
     public void Verify()
@@ -105,3 +112,38 @@ public sealed record MarkDeliveryNoteDeliveredDto
 
 [Serializable]
 public sealed record DeliveryNoteLinkDto(Guid Id, string Code, DeliveryNoteStatus Status, DateTime CreatedOnUtc);
+
+/// <summary>
+/// DTO để tạo DeliveryNote tự động (Status=Delivered ngay) khi VendorReturn được Confirm.
+/// UnitCost ở đây là số tiền thu hồi NCC trên VendorReturnItem, không phải inventory COGS.
+/// </summary>
+[Serializable]
+public sealed record CreateDeliveryNoteFromVendorReturnDto
+{
+    public required Guid VendorReturnId { get; init; }
+    public required Guid WarehouseId { get; init; }
+    public required IEnumerable<CreateDeliveryNoteFromVendorReturnItemDto> Items { get; init; }
+}
+
+[Serializable]
+public sealed record CreateDeliveryNoteFromVendorReturnItemDto
+{
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public required decimal Quantity { get; init; }
+    public required decimal UnitCost { get; init; }
+}
+
+/// <summary>
+/// DTO để tạo DeliveryNote direct-ship tự động ở trạng thái Confirmed khi GoodsReceipt
+/// phân bổ hàng cho một allocation direct-ship. DeliveryNoteManager tự tìm Order/Customer từ OrderItemId.
+/// </summary>
+[Serializable]
+public sealed record CreateDeliveryNoteForDirectShipDto
+{
+    public required Guid GoodsReceiptId { get; init; }
+    public required Guid OrderItemId { get; init; }
+    public required decimal Quantity { get; init; }
+    public required Guid DirectShipWarehouseId { get; init; }
+    public required string ShippingAddress { get; init; }
+}

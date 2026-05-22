@@ -8,7 +8,6 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
-using NamEcommerce.Domain.Shared.Events;
 using NamEcommerce.Domain.Shared.Exceptions.Debts;
 using NamEcommerce.Domain.Shared.Services.Debts;
 
@@ -21,21 +20,46 @@ public sealed class VendorDebtManager(
     IEntityDataReader<VendorPayment> paymentReader,
     IEntityDataReader<Vendor> vendorReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
-    IEntityDataReader<GoodsReceipt> goodsReceiptReader,
-    IEventPublisher eventPublisher) : IVendorDebtManager
+    IEntityDataReader<GoodsReceipt> goodsReceiptReader) : IVendorDebtManager
 {
     private async Task<string> GenerateDebtCodeAsync()
     {
-        var datePrefix = $"CNNCC-{DateTime.UtcNow:yyyyMMdd}";
-        var count = debtReader.DataSource.Count(d => d.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var monthPrefix = $"CN-NCC-{DateTime.UtcNow:yyMM}";
+        var count = debtReader.SecuredDataSource.Count(d => d.Code.StartsWith(monthPrefix));
+        return $"{monthPrefix}-{(count + 1):D3}";
     }
 
     private async Task<string> GeneratePaymentCodeAsync()
     {
-        var datePrefix = $"PCNCC-{DateTime.UtcNow:yyyyMMdd}";
-        var count = paymentReader.DataSource.Count(p => p.Code.StartsWith(datePrefix));
-        return $"{datePrefix}-{(count + 1):D3}";
+        var monthPrefix = $"PC-NCC-{DateTime.UtcNow:yyMM}";
+        var count = paymentReader.SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
+        return $"{monthPrefix}-{(count + 1):D3}";
+    }
+
+    public async Task<VendorDebtDto> CreateInitialDebtAsync(CreateInitialVendorDebtDto dto)
+    {
+        dto.Verify();
+
+        var vendor = await vendorReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false);
+        if (vendor == null)
+            throw new ArgumentException($"Vendor with id '{dto.VendorId}' is not found");
+
+        var code = await GenerateDebtCodeAsync().ConfigureAwait(false);
+
+        var debt = new VendorDebt(
+            code: code,
+            vendorId: vendor.Id,
+            vendorName: vendor.Name,
+            totalAmount: dto.TotalAmount
+        )
+        {
+            VendorPhone = vendor.PhoneNumber,
+            VendorAddress = vendor.Address
+        };
+
+        debt.MarkCreated();
+        await debtRepository.InsertAsync(debt).ConfigureAwait(false);
+        return debt.ToDto();
     }
 
     public async Task<VendorDebtDto> CreateDebtFromPurchaseOrderAsync(CreateVendorDebtDto dto)
@@ -64,8 +88,7 @@ public sealed class VendorDebtManager(
             purchaseOrderId: purchaseOrder.Id,
             purchaseOrderCode: purchaseOrder.Code,
             totalAmount: dto.TotalAmount,
-            dueDateUtc: dto.DueDateUtc,
-            createdByUserId: dto.CreatedByUserId
+            dueDateUtc: dto.DueDateUtc
         )
         {
             VendorPhone = vendor.PhoneNumber,
@@ -93,8 +116,8 @@ public sealed class VendorDebtManager(
             await paymentRepository.UpdateAsync(advance).ConfigureAwait(false);
         }
 
+        debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return inserted.ToDto();
     }
 
@@ -123,8 +146,7 @@ public sealed class VendorDebtManager(
             vendorName: vendor.Name,
             goodsReceiptId: goodsReceipt.Id,
             totalAmount: dto.TotalAmount,
-            dueDateUtc: dto.DueDateUtc,
-            createdByUserId: dto.CreatedByUserId
+            dueDateUtc: dto.DueDateUtc
         )
         {
             VendorPhone = vendor.PhoneNumber,
@@ -150,8 +172,8 @@ public sealed class VendorDebtManager(
             await paymentRepository.UpdateAsync(advance).ConfigureAwait(false);
         }
 
+        debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return inserted.ToDto();
     }
 
@@ -194,13 +216,13 @@ public sealed class VendorDebtManager(
                 payment.MarkAsApplied();
                 payment.PurchaseOrderId = debt.PurchaseOrderId;
                 payment.PurchaseOrderCode = debt.PurchaseOrderCode;
+                debt.MarkUpdated();
                 await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-                await eventPublisher.EntityUpdated(debt).ConfigureAwait(false);
             }
         }
 
+        payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return inserted.ToDto();
     }
 
@@ -248,8 +270,9 @@ public sealed class VendorDebtManager(
             debt.ApplyPayment(applyAmount);
             payment.MarkAsApplied();
 
+            debt.MarkUpdated();
             await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-            await eventPublisher.EntityUpdated(debt).ConfigureAwait(false);
+            payment.MarkCreated();
             var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
             results.Add(inserted.ToDto());
 
@@ -271,6 +294,7 @@ public sealed class VendorDebtManager(
                 recordedByUserId: dto.RecordedByUserId,
                 note: string.IsNullOrEmpty(dto.Note) ? "Tiền dư sau khi thanh toán nợ NCC" : dto.Note
             );
+            overpayment.MarkCreated();
             var inserted = await paymentRepository.InsertAsync(overpayment).ConfigureAwait(false);
             results.Add(inserted.ToDto());
         }
@@ -300,8 +324,8 @@ public sealed class VendorDebtManager(
             note: dto.Note
         );
 
+        payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
-        await eventPublisher.EntityCreated(inserted).ConfigureAwait(false);
         return inserted.ToDto();
     }
 
@@ -333,6 +357,93 @@ public sealed class VendorDebtManager(
 
         var dto = debt.ToDto();
         return dto with { Payments = payments.Select(p => p.ToDto()).ToList() };
+    }
+
+    public async Task DeleteDebtFromGoodsReceiptAsync(Guid goodsReceiptId)
+    {
+        var debt = debtReader.DataSource
+            .FirstOrDefault(d => d.GoodsReceiptId == goodsReceiptId);
+        if (debt == null) return;
+
+        await debtRepository.DeleteAsync(debt).ConfigureAwait(false);
+    }
+
+    public async Task ApplyReturnFromVendorReturnAsync(Guid returnId, Guid? goodsReceiptId, Guid? purchaseOrderId, decimal amount)
+    {
+        if (amount <= 0) return;
+
+        var debtsQuery = debtReader.DataSource.AsQueryable();
+        if (goodsReceiptId.HasValue)
+            debtsQuery = debtsQuery.Where(d => d.GoodsReceiptId == goodsReceiptId.Value);
+        else if (purchaseOrderId.HasValue)
+            debtsQuery = debtsQuery.Where(d => d.PurchaseOrderId == purchaseOrderId.Value);
+        else
+            return;
+
+        var orderedDebts = debtsQuery.OrderBy(d => d.CreatedOnUtc).ToList();
+        if (!orderedDebts.Any()) return;
+
+        var touchedDebts = new List<VendorDebt>();
+        var remaining = amount;
+
+        foreach (var debt in orderedDebts)
+        {
+            if (remaining <= 0) break;
+            if (debt.RemainingAmount <= 0) continue;
+
+            var toApply = Math.Min(remaining, debt.RemainingAmount);
+            debt.ApplyReturn(toApply, returnId);
+            touchedDebts.Add(debt);
+            remaining -= toApply;
+        }
+
+        if (remaining > 0)
+        {
+            var first = orderedDebts[0];
+            first.ApplyReturn(remaining, returnId);
+            if (!touchedDebts.Contains(first))
+                touchedDebts.Add(first);
+        }
+
+        foreach (var debt in touchedDebts)
+            await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+    }
+
+    public async Task ReverseReturnFromVendorReturnAsync(Guid? goodsReceiptId, Guid? purchaseOrderId, decimal amount)
+    {
+        if (amount <= 0) return;
+
+        var debtsQuery = debtReader.DataSource.AsQueryable();
+        if (goodsReceiptId.HasValue)
+            debtsQuery = debtsQuery.Where(d => d.GoodsReceiptId == goodsReceiptId.Value);
+        else if (purchaseOrderId.HasValue)
+            debtsQuery = debtsQuery.Where(d => d.PurchaseOrderId == purchaseOrderId.Value);
+        else
+            return;
+
+        var orderedDebts = debtsQuery.OrderByDescending(d => d.CreatedOnUtc).ToList();
+        if (!orderedDebts.Any()) return;
+
+        var remaining = amount;
+        foreach (var debt in orderedDebts)
+        {
+            if (remaining <= 0) break;
+
+            var alreadyReturned = debt.TotalAmount - debt.PaidAmount - debt.RemainingAmount;
+            var toReverse = Math.Min(remaining, Math.Max(0, alreadyReturned));
+            if (toReverse <= 0) continue;
+
+            debt.ReverseReturn(toReverse);
+            remaining -= toReverse;
+            await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+        }
+
+        if (remaining > 0)
+        {
+            var first = orderedDebts[0];
+            first.ReverseReturn(remaining);
+            await debtRepository.UpdateAsync(first).ConfigureAwait(false);
+        }
     }
 
     public async Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId)

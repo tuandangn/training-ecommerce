@@ -1,4 +1,7 @@
 using NamEcommerce.Domain.Entities.DeliveryNotes;
+using NamEcommerce.Domain.Metadata;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Values;
 
 namespace NamEcommerce.Data.SqlServer.Mappings;
 
@@ -6,7 +9,7 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
 {
     public void Configure(EntityTypeBuilder<DeliveryNote> builder)
     {
-        builder.ToTable("DeliveryNote", DbScheme);
+        builder.ToTable(nameof(DeliveryNote), DbScheme);
 
         builder.HasKey(d => d.Id);
 
@@ -17,13 +20,45 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.Property(d => d.WarehouseId).IsRequired();
         builder.Property(d => d.OrderCode);
 
+        builder.Property(d => d.SourceType)
+            .IsRequired()
+            .HasDefaultValue(DeliveryNoteSourceType.ToCustomer)
+            .HasConversion<int>();
+
         builder.Property(d => d.CustomerId).IsRequired();
-        builder.Property(d => d.CustomerName).HasMaxLength(255).IsRequired();
-        builder.Property(d => d.CustomerPhone).HasMaxLength(50).IsRequired(false);
-        builder.Property(d => d.CustomerAddress).HasMaxLength(1000).IsRequired(false);
-        
-        builder.Property(d => d.ShippingAddress).HasMaxLength(1000).IsRequired();
-        
+        builder.ComplexProperty(o => o.CustomerInfo, customerInfoBuilder =>
+        {
+            customerInfoBuilder.Property(info => info.FullName)
+                .HasColumnName($"CustomerName")
+                .HasMaxLength(200)
+                .HasConversion(
+                    info => info.Value,
+                    value => new NormalizableString(value)
+                );
+            customerInfoBuilder.Property(info => info.Address)
+                .HasColumnName($"Customer{nameof(CustomerInfo.Address)}")
+                .HasMaxLength(500)
+                .HasConversion(
+                    info => info.Value,
+                    value => new NormalizableString(value)
+                );
+            customerInfoBuilder.Property(c => c.PhoneNumber)
+                .HasColumnName("CustomerPhone")
+                .HasMaxLength(50)
+                .IsRequired();
+        });
+        builder.ComplexProperty(c => c.ShippingAddress, shippingAddressProp =>
+        {
+            shippingAddressProp.Property(n => n.Value)
+                          .HasColumnName(nameof(Order.ShippingAddress))
+                          .HasMaxLength(1000)
+                          .IsRequired();
+            shippingAddressProp.Property(n => n.NormalizedValue)
+                          .HasColumnName($"Normalized{nameof(Order.ShippingAddress)}")
+                          .HasMaxLength(1000)
+                          .IsRequired();
+        });
+
         builder.Property(d => d.ShowPrice).IsRequired().HasDefaultValue(false);
         builder.Property(d => d.Note).HasMaxLength(2000).IsRequired(false);
         
@@ -33,6 +68,15 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.Property(d => d.DeliveryProofPictureId).IsRequired(false);
         builder.Property(d => d.DeliveryReceiverName).HasMaxLength(255).IsRequired(false);
         
+        builder.Property(d => d.IsDirectShip).IsRequired().HasDefaultValue(false);
+        builder.Property(d => d.DeliveryConfirmationStatus)
+            .IsRequired()
+            .HasDefaultValue(DeliveryConfirmationStatus.NotApplicable)
+            .HasConversion<int>();
+        builder.Property(d => d.ConfirmedAtUtc).IsRequired(false);
+        builder.Property(d => d.ConfirmedNote).HasMaxLength(2000).IsRequired(false);
+        builder.Property(d => d.SourceGoodsReceiptId).IsRequired(false);
+
         builder.Property(d => d.CreatedByUserId).IsRequired(false);
         builder.Property(d => d.CreatedOnUtc).IsRequired();
         builder.Property(d => d.UpdatedOnUtc).IsRequired(false);

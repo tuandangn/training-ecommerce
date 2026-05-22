@@ -8,23 +8,27 @@ using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.GoodsReceipts;
 
 public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
 {
     private readonly IGoodsReceiptManager _goodsReceiptManager;
+    private readonly IPurchaseOrderAppService _purchaseOrderAppService;
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
     private readonly IEntityDataReader<Picture> _pictureDataReader;
 
     public GoodsReceiptAppService(
         IGoodsReceiptManager goodsReceiptManager,
+        IPurchaseOrderAppService purchaseOrderAppService,
         IEntityDataReader<Product> productDataReader,
         IEntityDataReader<Warehouse> warehouseDataReader,
         IEntityDataReader<Picture> pictureDataReader)
     {
         _goodsReceiptManager = goodsReceiptManager;
+        _purchaseOrderAppService = purchaseOrderAppService;
         _productDataReader = productDataReader;
         _warehouseDataReader = warehouseDataReader;
         _pictureDataReader = pictureDataReader;
@@ -50,6 +54,12 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
             return null;
 
         return goodsReceipt.ToDto();
+    }
+
+    public async Task<IList<GoodsReceiptAppDto>> GetGoodsReceiptsByPurchaseOrderIdAsync(Guid purchaseOrderId)
+    {
+        var receipts = await _goodsReceiptManager.GetGoodsReceiptsByPurchaseOrderIdAsync(purchaseOrderId).ConfigureAwait(false);
+        return receipts.Select(r => r.ToDto()).ToList();
     }
 
     public async Task<CreateGoodsReceiptResultAppDto> CreateGoodsReceiptAsync(CreateGoodsReceiptAppDto dto)
@@ -260,8 +270,8 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
     {
         try
         {
-            await _goodsReceiptManager.SetGoodsReceiptToPurchaseOrder(new SetGoodsReceiptToPurchaseOrderDto(dto.Id, dto.PurchaseOrderId)).ConfigureAwait(false);
-            return CommonActionResultDto.CreateSuccess();
+            return await _purchaseOrderAppService.SetGoodsReceiptToPurchaseOrderAsync(dto)
+                .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -273,12 +283,52 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
     {
         try
         {
-            await _goodsReceiptManager.RemoveGoodsReceiptFromPurchaseOrder(new RemoveGoodsReceiptFromPurchaseOrderDto(dto.Id)).ConfigureAwait(false);
-            return CommonActionResultDto.CreateSuccess();
+            return await _purchaseOrderAppService.RemoveGoodsReceiptFromPurchaseOrderAsync(dto)
+                .ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             return CommonActionResultDto.CreateError(ex.Message);
         }
+    }
+
+    public async Task<IList<SuggestedPurchaseOrderForGoodsReceiptAppDto>> GetSuggestedPurchaseOrdersAsync(Guid goodsReceiptId)
+    {
+        var domainList = await _goodsReceiptManager.GetSuggestedPurchaseOrdersAsync(goodsReceiptId).ConfigureAwait(false);
+
+        if (domainList.Count == 0)
+            return [];
+
+        // Thu thập tất cả ProductId cần enrich tên, batch query một lần.
+        var productIds = domainList
+            .SelectMany(po => po.Items.Select(i => i.ProductId))
+            .Distinct()
+            .ToList();
+
+        var productNameMap = new Dictionary<Guid, string?>();
+        foreach (var productId in productIds)
+        {
+            var product = await _productDataReader.GetByIdAsync(productId).ConfigureAwait(false);
+            if (product is not null)
+                productNameMap[productId] = product.Name;
+        }
+
+        return domainList.Select(po => new SuggestedPurchaseOrderForGoodsReceiptAppDto
+        {
+            PurchaseOrderId = po.PurchaseOrderId,
+            PurchaseOrderCode = po.PurchaseOrderCode,
+            PlacedOn = po.PlacedOnUtc.ToLocalTime(),
+            VendorId = po.VendorId,
+            MatchScore = po.MatchScore,
+            IsFullMatch = po.IsFullMatch,
+            Items = po.Items.Select(i => new SuggestedPurchaseOrderItemForGoodsReceiptAppDto
+            {
+                ProductId = i.ProductId,
+                ProductName = productNameMap.GetValueOrDefault(i.ProductId),
+                QuantityOrdered = i.QuantityOrdered,
+                QuantityReceived = i.QuantityReceived,
+                UnitCost = i.UnitCost
+            }).ToList()
+        }).ToList();
     }
 }

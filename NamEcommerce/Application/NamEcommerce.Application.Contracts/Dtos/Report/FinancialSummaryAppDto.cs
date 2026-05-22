@@ -4,6 +4,8 @@ public class ProfitLossSummaryAppDto
 {
     public decimal TotalRevenue { get; set; }
     public decimal TotalCogs { get; set; } // Cost of Goods Sold
+    public bool HasPendingCogs { get; set; }
+    public bool HasRevaluedCogs { get; set; }
     public decimal GrossProfit => TotalRevenue - TotalCogs;
     
     public decimal TotalOperatingExpenses { get; set; }

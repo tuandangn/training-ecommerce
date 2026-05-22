@@ -7,7 +7,7 @@ namespace NamEcommerce.Domain.Shared.Services.Catalog;
 public interface IProductManager : INameExistCheckingService
 {
     Task<IEnumerable<ProductDto>> GetProductsByIdsAsync(IEnumerable<Guid> ids);
-    Task<IPagedDataDto<ProductDto>> GetProductsAsync(int pageIndex, int pageSize, string? keywords = null, Guid? categoryId = null);
+    Task<IPagedDataDto<ProductDto>> GetProductsAsync(int pageIndex, int pageSize, string? keywords = null, Guid? categoryId = null, Guid? vendorId = null);
 
     Task<IEnumerable<ProductDto>> GetProductsByVendorIdAsync(Guid vendorId);
     Task AddProductVendorAsync(Guid productId, Guid vendorId, int displayOrder);

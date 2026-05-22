@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Models.Inventory;
@@ -45,8 +46,8 @@ public sealed class WarehouseController : BaseAuthorizedController
         var createWarehouseResult = await _mediator.Send(new CreateWarehouseCommand
         {
             Name = model.Name!,
-            Code = model.Code!,
-            WarehouseType = model.WarehouseType,
+            Code = _warehouseModelFactory.PrepareWarehouseCode(model.Code!),
+            WarehouseType = (int)WarehouseType.Physical,
             Address = model.Address,
             PhoneNumber = model.PhoneNumber,
             IsActive = model.IsActive
@@ -93,9 +94,9 @@ public sealed class WarehouseController : BaseAuthorizedController
         var updateWarehouseResult = await _mediator.Send(new UpdateWarehouseCommand
         {
             Id = model.Id,
-            Code = model.Code!,
+            Code = _warehouseModelFactory.PrepareWarehouseCode(model.Code!),
             Name = model.Name!,
-            WarehouseType = model.WarehouseType,
+            WarehouseType = warehouse.WarehouseType,
             PhoneNumber = model.PhoneNumber,
             Address = model.Address,
             IsActive = model.IsActive
@@ -122,6 +123,18 @@ public sealed class WarehouseController : BaseAuthorizedController
     [HttpPost]
     public async Task<IActionResult> Delete(Guid id)
     {
+        var warehouse = await _mediator.Send(new GetWarehouseQuery { Id = id });
+        if (warehouse == null)
+        {
+            NotifyError("Error.WarehouseIsNotFound");
+            return RedirectToAction(nameof(List));
+        }
+        if (warehouse.WarehouseType == (int)WarehouseType.DirectTransit)
+        {
+            NotifyError("Error.VirtualWarehouseCannotDelete");
+            return RedirectToAction(nameof(List));
+        }
+
         var resultDto = await _mediator.Send(new DeleteWarehouseCommand(id));
 
         if (!resultDto.Success)

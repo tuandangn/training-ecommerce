@@ -17,7 +17,7 @@ public abstract record BaseGoodsReceiptAppDto
 
     public virtual (bool valid, string? errorMessage) Validate()
     {
-        if (!PictureIds.Any())
+        if (PictureIds is null || !PictureIds.Any())
             return (false, "Error.GoodsReceipt.ProofPictureRequired");
         if (ReceivedOnUtc > DateTime.UtcNow)
             return (false, "Error.GoodsReceipt.ReceivedDateGreaterThanNow");
@@ -29,6 +29,7 @@ public abstract record BaseGoodsReceiptAppDto
 [Serializable]
 public sealed record GoodsReceiptAppDto(Guid Id) : BaseGoodsReceiptAppDto
 {
+    public string Code { get; init; } = string.Empty;
     public IList<GoodsReceiptItemAppDto> Items { get; } = [];
     public bool IsPendingCosting { get; init; }
 

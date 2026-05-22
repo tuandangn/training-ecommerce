@@ -11,4 +11,11 @@ public sealed class ReceivePurchaseOrderItemCommand : IRequest<ReceivePurchaseOr
     public required Guid? WarehouseId { get; set; }
     public required decimal ReceivedQuantity { get; set; }
     public decimal? SellingPrice { get; set; }
+    public decimal? ActualUnitCost { get; set; }
+    public string? OversupplyAction { get; set; }
+    public Guid? DirectShipOrderId { get; set; }
+    public Guid? DirectShipOrderItemId { get; set; }
+    public string? DirectShipAddress { get; set; }
+    public string? DirectShipContactName { get; set; }
+    public string? DirectShipContactPhone { get; set; }
 }

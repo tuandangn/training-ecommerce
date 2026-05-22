@@ -1,35 +1,33 @@
-﻿using MediatR;
-using NamEcommerce.Data.Contracts;
-using NamEcommerce.Domain.Entities.Catalog;
-using NamEcommerce.Domain.Entities.Media;
-using NamEcommerce.Domain.Shared.Common;
+using MediatR;
+using NamEcommerce.Domain.Shared.Events.Catalog;
+using NamEcommerce.Domain.Shared.Services.Media;
 
 namespace NamEcommerce.Application.Services.Events.Catalog;
 
-public sealed class ProductDeletedEventHandler : INotificationHandler<EntityDeletedNotification<Product>>
+/// <summary>
+/// Sau khi sản phẩm bị xoá: dọn toàn bộ <see cref="Picture"/> đính kèm sản phẩm khỏi storage.
+/// </summary>
+public sealed class ProductDeletedEventHandler : INotificationHandler<ProductDeleted>
 {
-    private readonly IRepository<Picture> _pictureRepository;
-    private readonly IEntityDataReader<Picture> _pictureDataReader;
+    private readonly IPictureManager _pictureManager;
 
-    public ProductDeletedEventHandler(IRepository<Picture> pictureRepository, IEntityDataReader<Picture> pictureDataReader)
+    public ProductDeletedEventHandler(IPictureManager pictureManager)
     {
-        _pictureRepository = pictureRepository;
-        _pictureDataReader = pictureDataReader;
+        _pictureManager = pictureManager;
     }
 
-    public async Task Handle(EntityDeletedNotification<Product> notification, CancellationToken cancellationToken)
+    public async Task Handle(ProductDeleted notification, CancellationToken cancellationToken)
     {
-        var product = notification.Entity;
-        if (!product.ProductPictures.Any())
+        if (notification.PictureIds is null || notification.PictureIds.Count == 0)
             return;
 
-        foreach (var productPicture in product.ProductPictures)
+        foreach (var pictureId in notification.PictureIds)
         {
-            var picture = await _pictureDataReader.GetByIdAsync(productPicture.PictureId).ConfigureAwait(false);
+            var picture = await _pictureManager.GetPictureByIdAsync(pictureId).ConfigureAwait(false);
             if (picture is null)
                 continue;
 
-            await _pictureRepository.DeleteAsync(picture).ConfigureAwait(false);
+            await _pictureManager.DeletePictureAsync(pictureId).ConfigureAwait(false);
         }
     }
 }

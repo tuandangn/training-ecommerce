@@ -10,11 +10,11 @@ public sealed class ProductMapping : IEntityTypeConfiguration<Product>
 
         builder.Property(p => p.Name).HasMaxLength(200).IsRequired();
         builder.Property(p => p.NormalizedName).HasMaxLength(400);
-        builder.Property(p => p.ShortDesc).HasMaxLength(800).IsRequired();
+        builder.Property(p => p.ShortDesc).HasMaxLength(800);
         builder.Property(p => p.NormalizedShortDesc).HasMaxLength(1600);
         builder.Property(p => p.CostPrice).HasColumnType("decimal(18,2)").IsRequired();
 
-        builder.Property(p => p.CreatedOnUtc).IsRequired();
+        builder.Property(p => p.CreatedOnUtc);
         builder.Property(p => p.UpdatedOnUtc);
 
         builder.Navigation(p => p.ProductCategories).AutoInclude();

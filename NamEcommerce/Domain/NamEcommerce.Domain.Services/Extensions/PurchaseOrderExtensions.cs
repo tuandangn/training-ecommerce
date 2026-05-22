@@ -18,8 +18,10 @@ public static class PurchaseOrderExtensions
             Note = purchaseOrder.Note,
             ShippingAmount = purchaseOrder.ShippingAmount,
             TaxAmount = purchaseOrder.TaxAmount,
+            AccumulatedShippingAmount = purchaseOrder.AccumulatedShippingAmount,
+            AccumulatedTaxAmount = purchaseOrder.AccumulatedTaxAmount,
             Status = purchaseOrder.Status,
-            CanAddItems = purchaseOrder.CanUpdatePurchaseOrderItems(),
+            CanAddItems = purchaseOrder.CanUpdateItems(),
             CanReceiveGoods = purchaseOrder.CanReceiveGoods(),
             CreatedOnUtc = purchaseOrder.CreatedOnUtc,
             TotalAmount = purchaseOrder.TotalAmount

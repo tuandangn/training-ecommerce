@@ -25,6 +25,9 @@ public sealed class CreateCustomerModel
 
     [Display(Name = "Ghi chú")]
     public string? Note { get; set; }
+
+    [Display(Name = "Công nợ ban đầu")]
+    public decimal? InitialDebt { get; set; }
 }
 
 public sealed class EditCustomerModel
@@ -45,4 +48,11 @@ public sealed class EditCustomerModel
 
     [Display(Name = "Ghi chú")]
     public string? Note { get; set; }
+
+    public bool HasPortalAccount { get; set; }
+    public int? PortalAccountStatus { get; set; }
+    public bool HasPortalPassword { get; set; }
+    public DateTime? PortalPasswordSetOnUtc { get; set; }
+    public DateTime? PortalLastLoginOnUtc { get; set; }
+    public DateTime? PortalUpdatedOnUtc { get; set; }
 }

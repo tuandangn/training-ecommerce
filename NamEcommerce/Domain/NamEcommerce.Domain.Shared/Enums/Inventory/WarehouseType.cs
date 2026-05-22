@@ -2,7 +2,6 @@
 
 public enum WarehouseType
 {
-    Main,
-    SubWarehouse,
-    ReturnWarehouse
+    Physical,
+    DirectTransit
 }

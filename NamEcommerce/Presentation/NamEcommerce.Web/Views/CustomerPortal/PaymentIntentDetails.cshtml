@@ -1,0 +1,92 @@
+@using NamEcommerce.Application.Contracts.Dtos.CustomerPortal
+@using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@model CustomerPortalPaymentIntentAdminAppDto
+@{
+    ViewData[ViewConstants.PageTitle] = "Đối soát thanh toán online";
+    var status = (CustomerPaymentIntentStatus)Model.Status;
+    var returnUrl = Context.Request.Path.ToString() + Context.Request.QueryString.ToString();
+}
+
+<div class="page-header">
+    <div class="d-flex align-items-center">
+        <a asp-action="PaymentIntents" class="btn btn-icon btn-light me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <div>
+            <h1 class="page-header-title">Thanh toán @Model.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</h1>
+            <p class="page-header-subtitle">@Model.CustomerName · @Model.Provider</p>
+        </div>
+    </div>
+    <span class="badge @status.GetDisplayColor() fs-6">@status.GetDisplayText()</span>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="content-card p-4">
+            <h6 class="fw-bold mb-4">Thông tin thanh toán</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="text-muted small text-uppercase fw-bold">Số tiền</div>
+                    <div class="fs-4 fw-bold text-danger">@Model.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small text-uppercase fw-bold">Provider intent</div>
+                    <div class="fw-medium">@(!string.IsNullOrWhiteSpace(Model.ProviderIntentId) ? Model.ProviderIntentId : "—")</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small text-uppercase fw-bold">Phiếu nợ</div>
+                    <div class="fw-medium">@(!string.IsNullOrWhiteSpace(Model.CustomerDebtCode) ? Model.CustomerDebtCode : "Thanh toán chung")</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small text-uppercase fw-bold">Đơn / Phiếu giao</div>
+                    <div class="fw-medium">@Model.OrderCode / @Model.DeliveryNoteCode</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small text-uppercase fw-bold">Ngày tạo</div>
+                    <div>@Model.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="text-muted small text-uppercase fw-bold">Hoàn tất mock</div>
+                    <div>@(Model.CompletedOnUtc.HasValue ? Model.CompletedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat) : "—")</div>
+                </div>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(Model.FailureReason))
+            {
+                <div class="alert alert-danger mt-4 mb-0">@Model.FailureReason</div>
+            }
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="content-card p-4 mb-4">
+            <h6 class="fw-bold mb-3">Khách hàng</h6>
+            <div class="fw-semibold">@Model.CustomerName</div>
+            <div class="text-muted small mb-3">@Model.CustomerPhone</div>
+            <form asp-action="BlockAccount" method="post">
+                <input type="hidden" name="customerId" value="@Model.CustomerId" />
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-shield-lock me-1"></i>Khóa khách này
+                </button>
+            </form>
+        </div>
+        @if (status == CustomerPaymentIntentStatus.SucceededPendingReconciliation)
+        {
+            <div class="content-card p-4">
+                <h6 class="fw-bold mb-3">Đối soát</h6>
+                <div class="alert alert-warning border-0 small">
+                    Chỉ bấm đối soát khi đã kiểm tra giao dịch thật. Sau đó hệ thống mới ghi nhận thanh toán vào công nợ.
+                </div>
+                <form asp-action="ReconcilePaymentIntent" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <textarea name="adminNote" class="form-control mb-2" rows="2" placeholder="Ghi chú đối soát"></textarea>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2-circle me-1"></i>Đã đối soát</button>
+                </form>
+            </div>
+        }
+        else if (Model.CustomerPaymentId.HasValue)
+        {
+            <div class="content-card p-4">
+                <h6 class="fw-bold mb-2">Đã ghi nhận</h6>
+                <div class="text-muted small">Payment Id: @Model.CustomerPaymentId</div>
+            </div>
+        }
+    </div>
+</div>

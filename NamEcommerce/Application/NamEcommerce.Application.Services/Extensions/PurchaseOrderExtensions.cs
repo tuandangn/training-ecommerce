@@ -19,12 +19,14 @@ public static class PurchaseOrderExtensions
             CreatedByUserId = purchaseOrder.CreatedByUserId,
             TaxAmount = purchaseOrder.TaxAmount,
             ShippingAmount = purchaseOrder.ShippingAmount,
+            AccumulatedTaxAmount = purchaseOrder.AccumulatedTaxAmount,
+            AccumulatedShippingAmount = purchaseOrder.AccumulatedShippingAmount,
             Status = (int)purchaseOrder.Status,
             ExpectedDeliveryDateUtc = purchaseOrder.ExpectedDeliveryDateUtc,
             Note = purchaseOrder.Note,
             CreatedOnUtc = purchaseOrder.CreatedOnUtc,
             TotalAmount = purchaseOrder.TotalAmount,
-            CanAddItems = purchaseOrder.CanUpdatePurchaseOrderItems(),
+            CanAddItems = purchaseOrder.CanUpdateItems(),
             CanReceiveGoods = purchaseOrder.CanReceiveGoods()
         };
 
@@ -56,6 +58,8 @@ public static class PurchaseOrderExtensions
             CreatedByUserId = purchaseOrder.CreatedByUserId,
             TaxAmount = purchaseOrder.TaxAmount,
             ShippingAmount = purchaseOrder.ShippingAmount,
+            AccumulatedTaxAmount = purchaseOrder.AccumulatedTaxAmount,
+            AccumulatedShippingAmount = purchaseOrder.AccumulatedShippingAmount,
             Status = (int)purchaseOrder.Status,
             ExpectedDeliveryDateUtc = purchaseOrder.ExpectedDeliveryDateUtc,
             Note = purchaseOrder.Note,

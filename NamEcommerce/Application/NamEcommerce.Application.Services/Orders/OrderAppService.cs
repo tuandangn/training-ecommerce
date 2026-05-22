@@ -5,23 +5,24 @@ using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
-using NamEcommerce.Domain.Entities.Orders;
-using NamEcommerce.Domain.Entities.Users;
+using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Exceptions.Inventory;
+using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Orders;
+using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.Orders;
 
-public sealed class OrderAppService(
-    IOrderManager orderManager,
+public sealed class OrderAppService(IOrderManager orderManager,
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
-    IEntityDataReader<User> userDataReader,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
-    IEntityDataReader<Order> orderDataReader) : IOrderAppService
+    IInventoryStockManager inventoryStockManager,
+    IDirectShipManager directShipManager) : IOrderAppService
 {
     public async Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto)
     {
@@ -122,6 +123,19 @@ public sealed class OrderAppService(
             };
         }
 
+        if (!product.ProductVendors.Any())
+        {
+            var availableQuantity = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(dto.ProductId).ConfigureAwait(false);
+            if (availableQuantity < dto.Quantity)
+            {
+                return new AddOrderItemResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.ProductInsufficientStock"
+                };
+            }
+        }
+
         await orderManager.AddOrderItemAsync(dto.OrderId, new AddOrderItemDto
         {
             ProductId = dto.ProductId,
@@ -187,6 +201,31 @@ public sealed class OrderAppService(
                 Success = false,
                 ErrorMessage = "Error.OrderDiscountExceedsTotal"
             };
+        }
+
+
+        var product = await productDataReader.GetByIdAsync(orderItem.ProductId).ConfigureAwait(false);
+        if (product is null)
+        {
+            return new UpdateOrderItemResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.ProductIsNotFound"
+            };
+        }
+
+        if (!product.ProductVendors.Any())
+        {
+            var needCheckQuantity = Math.Max(0, dto.Quantity - orderItem.Quantity);
+            var availableQuantity = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(orderItem.ProductId).ConfigureAwait(false);
+            if (availableQuantity < dto.Quantity)
+            {
+                return new UpdateOrderItemResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.ProductInsufficientStock"
+                };
+            }
         }
 
         var deliveryNoteOrderItems = (from deliveryNote in deliveryNoteDataReader.DataSource
@@ -338,39 +377,49 @@ public sealed class OrderAppService(
         };
     }
 
-    public async Task<LockOrderResultAppDto> LockOrderAsync(LockOrderAppDto dto)
+    public async Task<CompleteOrderResultAppDto> CompleteOrderAsync(CompleteOrderAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
         var order = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
         if (order is null)
         {
-            return new LockOrderResultAppDto
+            return new CompleteOrderResultAppDto
             {
                 Success = false,
                 ErrorMessage = "Error.OrderIsNotFound"
             };
         }
 
-        if (!order.CanUpdateInfo)
+        if (!order.CanCompleteOrder)
         {
-            return new LockOrderResultAppDto
+            return new CompleteOrderResultAppDto
             {
                 Success = false,
-                ErrorMessage = "Error.OrderCannotUpdateShipping"
+                ErrorMessage = "Error.OrderCannotComplete"
             };
         }
 
-        await orderManager.LockOrderAsync(new LockOrderDto
+        try
         {
-            OrderId = dto.OrderId,
-            Reason = dto.Reason
-        }).ConfigureAwait(false);
+            await orderManager.CompleteOrderAsync(new CompleteOrderDto
+            {
+                OrderId = dto.OrderId
+            }).ConfigureAwait(false);
 
-        return new LockOrderResultAppDto
+            return new CompleteOrderResultAppDto
+            {
+                Success = true
+            };
+        }
+        catch (Exception ex)
         {
-            Success = true
-        };
+            return new CompleteOrderResultAppDto
+            {
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
     }
 
     public async Task<OrderAppDto?> GetOrderByIdAsync(Guid id)
@@ -383,10 +432,10 @@ public sealed class OrderAppService(
         return order.ToDto();
     }
 
-    public async Task<IPagedDataAppDto<OrderAppDto>> GetOrdersAsync(string? keywords, int? status, int pageIndex, int pageSize)
+    public async Task<IPagedDataAppDto<OrderAppDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status)
     {
         OrderStatus? orderStatus = status.HasValue ? (OrderStatus)status : null;
-        var pagedData = await orderManager.GetOrdersAsync(keywords, orderStatus, pageIndex, pageSize).ConfigureAwait(false);
+        var pagedData = await orderManager.GetOrdersAsync(pageIndex, pageSize, keywords, orderStatus).ConfigureAwait(false);
 
         return PagedDataAppDto.Create(pagedData.Select(order => order.ToDto()), pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
     }
@@ -415,27 +464,38 @@ public sealed class OrderAppService(
             };
         }
 
-        if (dto.CreatedByUserId.HasValue)
+        foreach (var itemGroup in dto.Items.GroupBy(item => item.ProductId))
         {
-            var user = await userDataReader.GetByIdAsync(dto.CreatedByUserId.Value).ConfigureAwait(false);
-            if (user is null)
+            var product = await productDataReader.GetByIdAsync(itemGroup.Key).ConfigureAwait(false);
+            if (product is null)
             {
                 return new CreateOrderResultAppDto
                 {
                     Success = false,
-                    ErrorMessage = "Error.UserIsNotFound"
+                    ErrorMessage = "Error.ProductIsNotFound"
+                };
+            }
+
+            if (product.ProductVendors.Any())
+                continue;
+
+            var requestedQuantity = itemGroup.Sum(item => item.Quantity);
+            var availableQuantity = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(itemGroup.Key).ConfigureAwait(false);
+            if (availableQuantity < requestedQuantity)
+            {
+                return new CreateOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.ProductInsufficientStock"
                 };
             }
         }
 
-        var code = await NextOrderCodeAsync().ConfigureAwait(false);
         var createOrderDto = new CreateOrderDto
         {
-            Code = code,
             CustomerId = dto.CustomerId,
             Note = dto.Note,
             OrderDiscount = dto.OrderDiscount,
-            CreatedByUserId = dto.CreatedByUserId,
             ExpectedShippingDateUtc = dto.ExpectedShippingDateUtc,
             ShippingAddress = dto.ShippingAddress
         };
@@ -498,30 +558,10 @@ public sealed class OrderAppService(
             PictureId = dto.PictureId
         }).ConfigureAwait(false);
 
-        // Re-fetch to check if order was auto-locked
-        var updatedOrder = await orderManager.GetOrderByIdAsync(dto.OrderId).ConfigureAwait(false);
-
         return new MarkOrderItemDeliveredResultAppDto
         {
-            Success = true,
-            OrderAutoLocked = updatedOrder?.Status == OrderStatus.Locked
+            Success = true
         };
-    }
-
-    public async Task<string> NextOrderCodeAsync()
-    {
-        var code = string.Empty;
-        var now = DateTime.UtcNow;
-        var monthDateStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        var monthDateEnd = new DateTime(now.Year, now.Month, DateTime.DaysInMonth(now.Year, now.Month), 23, 59, 59, DateTimeKind.Utc);
-        var monthOrderCount = await Task.Run(() => orderDataReader.DataSource.Where(o => o.CreatedOnUtc >= monthDateStart && o.CreatedOnUtc <= monthDateEnd).Count()).ConfigureAwait(false);
-        do
-        {
-            code = $"{Order.OrderCodePrefix}{now:MMyy}{++monthOrderCount:D3}";
-        }
-        while (await orderManager.DoesCodeExistAsync(code).ConfigureAwait(false));
-
-        return code;
     }
 
     public async Task<DeleteOrderResultAppDto> DeleteOrderAsync(DeleteOrderAppDto dto)
@@ -538,7 +578,8 @@ public sealed class OrderAppService(
             };
         }
 
-        if (!order.CanUpdateInfo)
+        var canDeleteOrder = order.Status is OrderStatus.Pending or OrderStatus.Cancelled;
+        if (!canDeleteOrder)
         {
             return new DeleteOrderResultAppDto
             {
@@ -547,10 +588,10 @@ public sealed class OrderAppService(
             };
         }
 
-        var processingDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
-                                      where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Draft && deliveryNote.Status != DeliveryNoteStatus.Cancelled
-                                      select deliveryNote;
-        if (processingDeliveryNotes.Any())
+        var activeDeliveryNotes = from deliveryNote in deliveryNoteDataReader.DataSource
+                                  where deliveryNote.OrderId == order.Id && deliveryNote.Status != DeliveryNoteStatus.Cancelled
+                                  select deliveryNote;
+        if (activeDeliveryNotes.Any())
         {
             return new DeleteOrderResultAppDto
             {
@@ -565,5 +606,53 @@ public sealed class OrderAppService(
         {
             Success = true
         };
+    }
+
+    public async Task<CancelOrderResultAppDto> CancelOrderAsync(CancelOrderAppDto dto)
+    {
+        try
+        {
+            var hasBlockingDeliveryNotes = deliveryNoteDataReader.DataSource
+                .Any(d => d.OrderId == dto.OrderId
+                    && d.Status != DeliveryNoteStatus.Cancelled
+                    && (d.SourceType != DeliveryNoteSourceType.DirectShipToCustomer
+                        || d.Status != DeliveryNoteStatus.Confirmed));
+            if (hasBlockingDeliveryNotes)
+                return new CancelOrderResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.OrderCannotCancel_Processing"
+                };
+
+            var hasReceivedDirectShipAllocations = await directShipManager
+                .HasReceivedDirectShipAllocationsAsync(dto.OrderId)
+                .ConfigureAwait(false);
+            if (hasReceivedDirectShipAllocations)
+            {
+                if (!dto.ReturnWarehouseId.HasValue || dto.ReturnWarehouseId == Guid.Empty)
+                    return new CancelOrderResultAppDto
+                    {
+                        Success = false,
+                        ErrorMessage = "Vui lòng chọn kho nhận hàng trả về."
+                    };
+
+                await directShipManager.HandleSoCancelledForReceivedDirectShipAsync(
+                    dto.OrderId,
+                    dto.ReturnWarehouseId.Value,
+                    Guid.Empty,
+                    $"Đơn bán {dto.OrderId} bị hủy — chuyển hàng giao thẳng về kho đã chọn").ConfigureAwait(false);
+            }
+
+            await orderManager.CancelOrderAsync(new CancelOrderDto(dto.OrderId)
+            {
+                FullyReceivedAllocationIds = []
+            }).ConfigureAwait(false);
+
+            return new CancelOrderResultAppDto { Success = true };
+        }
+        catch (Exception ex)
+        {
+            return new CancelOrderResultAppDto { Success = false, ErrorMessage = ex.Message };
+        }
     }
 }

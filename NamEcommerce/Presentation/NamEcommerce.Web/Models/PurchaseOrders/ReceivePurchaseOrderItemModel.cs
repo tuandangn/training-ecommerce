@@ -38,4 +38,14 @@ public sealed class ReceivePurchaseOrderItemModel
     /// </summary>
     [ValidateNever]
     public decimal UnitCost { get; set; }
+
+    [ValidateNever]
+    public string? OversupplyAction { get; set; }
+
+    // Optional direct-ship: if set, creates an allocation to the chosen SO item and marks it DS
+    public Guid? DirectShipOrderId { get; set; }
+    public Guid? DirectShipOrderItemId { get; set; }
+    public string? DirectShipAddress { get; set; }
+    public string? DirectShipContactName { get; set; }
+    public string? DirectShipContactPhone { get; set; }
 }

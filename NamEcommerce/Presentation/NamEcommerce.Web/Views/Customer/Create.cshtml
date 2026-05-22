@@ -24,7 +24,10 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label asp-for="FullName" class="form-label"></label>
-                    <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên đầy đủ" autofocus />
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person text-muted"></i></span>
+                        <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên đầy đủ" autofocus />
+                    </div>
                     <span asp-validation-for="FullName" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
@@ -37,7 +40,10 @@
                 </div>
                 <div class="col-12">
                     <label asp-for="Address" class="form-label"></label>
-                    <textarea asp-for="Address" class="form-control" rows="2" placeholder="Địa chỉ thường trú"></textarea>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-geo-alt text-muted"></i></span>
+                        <input asp-for="Address" class="form-control" placeholder="Địa chỉ thường trú"/>
+                    </div>
                     <span asp-validation-for="Address" class="text-danger small"></span>
                 </div>
                 <div class="col-12">
@@ -52,6 +58,17 @@
                     <label asp-for="Note" class="form-label"></label>
                     <textarea asp-for="Note" class="form-control" rows="3" placeholder="Ghi chú thêm về khách hàng..."></textarea>
                     <span asp-validation-for="Note" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="InitialDebt" class="form-label"></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-cash-stack text-muted"></i></span>
+                        <input asp-for="InitialDebt" class="form-control text-end" type="number" step="1000" min="0"
+                               placeholder="0 — để trống nếu không có nợ cũ" />
+                        <span class="input-group-text">₫</span>
+                    </div>
+                    <div class="form-text text-muted">Nhập số dư công nợ có sẵn trước khi dùng hệ thống. Để trống hoặc nhập 0 nếu không có.</div>
+                    <span asp-validation-for="InitialDebt" class="text-danger small"></span>
                 </div>
             </div>
             <div class="form-card-footer" style="margin: 1.5rem -1.5rem -1.5rem; border-radius: 0 0 var(--card-radius) var(--card-radius);">

@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Contracts.Commands.Models.Preparation;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Models.Preparations;
@@ -65,29 +64,4 @@ public sealed class PreparationController : BaseAuthorizedController
         return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess"), purchaseOrderId = result.CreatedId });
     }
 
-    [HttpPost]
-    public async Task<IActionResult> MarkDelivered(Guid orderId, Guid orderItemId, IFormFile? proofImage)
-    {
-        if (proofImage is null || proofImage.Length == 0)
-            return Json(new { success = false, message = LocalizeError("Error.DeliveryProofRequired") });
-
-        byte[] pictureData;
-        using (var memoryStream = new MemoryStream())
-        {
-            await proofImage.CopyToAsync(memoryStream);
-            pictureData = memoryStream.ToArray();
-        }
-
-        var result = await _mediator.Send(new MarkOrderItemDeliveredCommand(
-            orderId, 
-            orderItemId, 
-            pictureData, 
-            proofImage.FileName, 
-            proofImage.ContentType));
-
-        if (!result.Success)
-            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
-
-        return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
-    }
 }

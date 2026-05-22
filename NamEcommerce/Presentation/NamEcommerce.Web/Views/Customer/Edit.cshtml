@@ -1,7 +1,11 @@
 @using NamEcommerce.Web.Models.Customers
+@using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@using NamEcommerce.Web.Extensions
 @model EditCustomerModel
 @{
     ViewData[ViewConstants.PageTitle] = "Chỉnh sửa Khách hàng";
+    var returnUrl = Context.Request.Path.ToString() + Context.Request.QueryString.ToString();
+    var portalStatus = Model.PortalAccountStatus.HasValue ? (CustomerPortalAccountStatus)Model.PortalAccountStatus.Value : (CustomerPortalAccountStatus?)null;
 }
 
 <div class="page-header">
@@ -64,6 +68,71 @@
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<div class="form-card mt-4">
+    <div class="form-card-header">
+        <h2 class="form-card-title"><i class="bi bi-shield-lock me-2 text-primary"></i>Cổng khách hàng</h2>
+        <a asp-controller="CustomerPortal" asp-action="SecurityEvents" asp-route-customerId="@Model.Id" class="form-card-breadcrumb">
+            <i class="bi bi-clock-history"></i> Xem sự kiện
+        </a>
+    </div>
+    <div class="form-card-body">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-3">
+                <div class="text-muted small mb-1">Trạng thái truy cập</div>
+                @if (portalStatus.HasValue)
+                {
+                    <span class="badge @portalStatus.Value.GetDisplayColor()">@portalStatus.Value.GetDisplayText()</span>
+                }
+                else
+                {
+                    <span class="badge bg-light text-dark border">Chưa kích hoạt</span>
+                }
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small mb-1">Mật khẩu</div>
+                <span class="badge @(Model.HasPortalPassword ? "bg-success" : "bg-light text-dark border")">
+                    @(Model.HasPortalPassword ? "Đã cài" : "Chưa cài")
+                </span>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small mb-1">Lần đăng nhập cuối</div>
+                <div class="fw-medium">
+                    @(Model.PortalLastLoginOnUtc.HasValue ? Model.PortalLastLoginOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat) : "—")
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="text-muted small mb-1">Cập nhật cuối</div>
+                <div class="fw-medium">
+                    @(Model.PortalUpdatedOnUtc.HasValue ? Model.PortalUpdatedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat) : "—")
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-3">
+            @if (portalStatus == CustomerPortalAccountStatus.Blocked)
+            {
+                <form asp-controller="CustomerPortal" asp-action="UnblockAccount" method="post">
+                    <input type="hidden" name="customerId" value="@Model.Id" />
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <button type="submit" class="btn btn-outline-success">
+                        <i class="bi bi-unlock me-1"></i>Mở khóa truy cập
+                    </button>
+                </form>
+            }
+            else
+            {
+                <form asp-controller="CustomerPortal" asp-action="BlockAccount" method="post">
+                    <input type="hidden" name="customerId" value="@Model.Id" />
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="bi bi-lock me-1"></i>Khóa truy cập
+                    </button>
+                </form>
+            }
+        </div>
     </div>
 </div>
 

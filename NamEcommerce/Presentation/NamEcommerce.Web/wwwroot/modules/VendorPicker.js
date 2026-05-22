@@ -8,6 +8,7 @@ export class Vendor {
 
 export default class VendorPicker {
     #vendors = [];
+    #limitVendorIds = null;
     #selectedVendor = null;
     #debounceTimer = null;
     #abortController = null;
@@ -19,12 +20,29 @@ export default class VendorPicker {
         if (!(target instanceof HTMLElement)) {
             throw new TypeError('Target phải là một HTMLElement hợp lệ');
         }
-
         this.target = target;
         this.#init();
-    }
 
-    // ─── Khởi tạo ───────────────────────────────────────────────────────────────
+        const dataset = target.dataset;
+
+        let limitIds = null;
+        if (dataset.empty == 'true') {
+            limitIds = [];
+        }
+        else if (dataset.limit) {
+            const ids = dataset.limit.split(',').map(id => id.trim());
+            if (ids.length > 0)
+                limitIds = ids;
+        }
+        this.#limitVendorIds = Array.isArray(limitIds) ? limitIds : null;
+
+        const { id, name } = dataset;
+        if (id && name && (limitIds === null || limitIds.includes(id))) {
+            var vendor = new Vendor({ id, name });
+            this.#selectedVendor = vendor;
+            this.displayVendor(vendor);
+        }
+    }
 
     #init() {
         this.target.innerHTML = this.#template();
@@ -43,8 +61,6 @@ export default class VendorPicker {
         this.loadingSpinner = q('.searchSpinner');
         this.searchIcon = q('.searchIcon');
     }
-
-    // ─── Sự kiện ────────────────────────────────────────────────────────────────
 
     #bindEvents() {
         this.input.addEventListener('input', (e) => this.#onInput(e));
@@ -83,12 +99,10 @@ export default class VendorPicker {
         }
     }
 
-    // ─── Tìm kiếm ───────────────────────────────────────────────────────────────
-
     async #search(query) {
         this.#setLoading(true);
 
-        const data = await this.#fetchVendors(query);
+        let data = await this.#fetchVendors(query);
 
         this.#setLoading(false);
 
@@ -122,12 +136,15 @@ export default class VendorPicker {
         this.#abortController = null;
     }
 
-    // ─── Render ─────────────────────────────────────────────────────────────────
-
     #renderSuggestion(query = '') {
         this.suggestion.innerHTML = '';
 
-        if (!this.#vendors.length) {
+        let vendors = this.#vendors;
+
+        if (this.#limitVendorIds)
+            vendors = vendors.filter(v => this.#limitVendorIds.includes(v.id));
+
+        if (!vendors.length) {
             this.suggestion.innerHTML = `
                 <div class="list-group-item p-3 text-center text-muted small">
                     <i class="bi bi-inbox me-1"></i> Không tìm thấy kết quả
@@ -138,7 +155,7 @@ export default class VendorPicker {
 
         const fragment = document.createDocumentFragment();
 
-        this.#vendors.forEach((data, index) => {
+        vendors.forEach((data, index) => {
             const vendor = new Vendor(data);
             const btn = document.createElement('button');
             btn.type = 'button';
@@ -181,8 +198,8 @@ export default class VendorPicker {
     }
 
     #setLoading(loading) {
-        this.loadingSpinner.style.display = loading ? 'block' : 'none';
-        this.searchIcon.style.display = loading ? 'none' : 'block';
+        //    this.loadingSpinner.style.display = loading ? 'block' : 'none';
+        //    this.searchIcon.style.display = loading ? 'none' : 'block';
     }
 
     #showError(message) {
@@ -197,7 +214,33 @@ export default class VendorPicker {
         this.suggestion.style.display = 'none';
     }
 
-    // ─── Chọn nhà cung cấp ───────────────────────────────────────────────────────
+    #dispatch(eventName, detail = {}) {
+        this.target.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
+    }
+
+    #template() {
+        return `
+        <div class="input-group-container">
+            <input type="text" class="form-control vendorSearch" id="vendorSearch"
+                placeholder="Nhập tên, số điện thoại..." autocomplete="off"
+                aria-label="Tìm kiếm nhà cung cấp" aria-autocomplete="list" />
+        </div>
+
+        <div class="list-group position-absolute w-100 shadow-lg mt-1 vendorSuggestion"
+            style="z-index: 1050; display: none; max-height: 300px; overflow-y: auto;"
+            role="listbox"></div>
+
+        <div class="alert alert-light d-none border-0 rounded-3 d-flex align-items-center mb-0 selectedVendorInfo" role="status">
+            <i class="bi bi-building-fill fs-4 me-3 flex-shrink-0"></i>
+            <div class="flex-grow-1 overflow-hidden">
+                <div class="fw-bold text-truncate name-field"></div>
+                <div class="small text-muted phone-field"></div>
+                <div class="small text-muted text-truncate address-field"></div>
+            </div>
+            <button type="button" class="btn-close ms-2 clearVendor" aria-label="Xóa nhà cung cấp"></button>
+        </div>
+        `;
+    }
 
     displayVendor(vendor) {
         this.displayInfo.querySelector('.name-field').textContent = vendor.name;
@@ -208,13 +251,24 @@ export default class VendorPicker {
         this.displayInfo.classList.remove('d-none');
         this.#hideSuggestion();
     }
+
+    setLimitVendorIds(ids) {
+        this.#limitVendorIds = Array.isArray(ids) ? ids : null;
+        if (this.#selectedVendor && this.#limitVendorIds && !this.#limitVendorIds.includes(this.#selectedVendor.id))
+            this.removeVendor();
+    }
+
     selectVendor(vendor) {
+        if (this.#limitVendorIds && !this.#limitVendorIds.includes(vendor.id))
+            throw new Error('Nhà cung cấp không hợp lệ');
+
+        const oldVendor = this.#selectedVendor;
         this.#selectedVendor = vendor instanceof Vendor ? vendor : new Vendor(vendor);
 
         this.displayVendor(this.#selectedVendor);
 
         this.input.value = '';
-        this.#dispatch('select', { vendor: this.#selectedVendor });
+        this.#dispatch('select', { vendor: this.#selectedVendor, oldVendor });
     }
 
     removeVendor() {
@@ -222,10 +276,6 @@ export default class VendorPicker {
         this.inputGroup.classList.remove('d-none');
         this.displayInfo.classList.add('d-none');
         this.#dispatch('remove');
-    }
-
-    #dispatch(eventName, detail = {}) {
-        this.target.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
     }
 
     setLocked(isLocked) {
@@ -238,36 +288,21 @@ export default class VendorPicker {
         }
     }
 
-    // ─── Template ────────────────────────────────────────────────────────────────
+    updateValue(vendor) {
+        if (vendor && this.#limitVendorIds && !this.#limitVendorIds.includes(vendor.id))
+            throw new Error('Nhà cung cấp không hợp lệ');
 
-    #template() {
-        return `
-        <div class="input-group-container">
-            <div class="input-group">
-                <span class="input-group-text bg-white border-end-0">
-                    <span class="spinner-border spinner-border-sm text-secondary d-none searchSpinner" role="status"></span>
-                    <i class="bi bi-search text-muted searchSpinner d-none"></i>
-                    <i class="bi bi-search text-muted searchIcon"></i>
-                </span>
-                <input type="text" class="form-control border-start-0 ps-0 vendorSearch" id="vendorSearch"
-                    placeholder="Nhập tên, số điện thoại..." autocomplete="off"
-                    aria-label="Tìm kiếm nhà cung cấp" aria-autocomplete="list" />
-            </div>
-        </div>
+        if (vendor) {
+            this.#selectedVendor = vendor instanceof Vendor ? vendor : new Vendor(vendor);
+            this.displayVendor(this.#selectedVendor);
+        } else {
+            this.#selectedVendor = null;
+            this.inputGroup.classList.remove('d-none');
+            this.displayInfo.classList.add('d-none');
+        }
+    }
 
-        <div class="list-group position-absolute w-100 shadow-lg mt-1 vendorSuggestion"
-            style="z-index: 1050; display: none; max-height: 300px; overflow-y: auto;"
-            role="listbox"></div>
-
-        <div class="alert alert-primary d-none border-0 rounded-3 d-flex align-items-center mb-0 selectedVendorInfo" role="status">
-            <i class="bi bi-building-fill fs-4 me-3 flex-shrink-0"></i>
-            <div class="flex-grow-1 overflow-hidden">
-                <div class="fw-bold text-truncate name-field"></div>
-                <div class="small text-muted phone-field"></div>
-                <div class="small text-muted text-truncate address-field"></div>
-            </div>
-            <button type="button" class="btn-close ms-2 clearVendor" aria-label="Xóa nhà cung cấp"></button>
-        </div>
-        `;
+    get value() {
+        return this.#selectedVendor;
     }
 }

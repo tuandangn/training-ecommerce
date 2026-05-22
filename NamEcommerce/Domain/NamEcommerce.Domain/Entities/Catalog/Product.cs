@@ -1,6 +1,7 @@
 using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Events.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Media;
 using NamEcommerce.Domain.Shared.Helpers;
@@ -168,6 +169,18 @@ public record Product : AppAggregateEntity
         UnitPrice = unitPrice;
         CostPrice = costPrice;
     }
+
+    internal void MarkCreated()
+        => RaiseDomainEvent(new ProductCreated(Id, Name));
+
+    internal void MarkUpdated(IEnumerable<Guid> deletedPictureIds)
+        => RaiseDomainEvent(new ProductUpdated(Id, deletedPictureIds.ToList().AsReadOnly()));
+
+    internal void MarkDeleted()
+        => RaiseDomainEvent(new ProductDeleted(Id, Name, _productPictures.Select(p => p.PictureId).ToList().AsReadOnly()));
+
+    internal void MarkPriceChanged(decimal oldUnitPrice, decimal oldCostPrice)
+        => RaiseDomainEvent(new ProductPriceChanged(Id, oldUnitPrice, UnitPrice, oldCostPrice, CostPrice));
 
     #endregion
 }

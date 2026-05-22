@@ -1,13 +1,12 @@
 using NamEcommerce.Application.Contracts.Dtos.Common;
+using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 
 namespace NamEcommerce.Application.Contracts.PurchaseOrders;
 
 public interface IPurchaseOrderAppService
 {
-    Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(string? keywords, int pageIndex, int pageSize);
-
-    Task<string> NextPurchaseOrderCodeAsync();
+    Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status);
 
     Task<PurchaseOrderAppDto?> GetPurchaseOrderByIdAsync(Guid id);
     Task<PurchaseOrderAppDto?> GetPurchaseOrderByCodeAsync(string code);
@@ -17,13 +16,32 @@ public interface IPurchaseOrderAppService
 
     Task<CommonActionResultDto> SubmitsPurchaseOrderAsync(Guid id);
     Task<CommonActionResultDto> CancelPurchaseOrderAsync(Guid id);
+    Task<CommonActionResultDto> ClosePartialPurchaseOrderAsync(Guid id, string reason);
+    Task<CommonActionResultDto> ApprovePurchaseOrderAsync(Guid id);
     Task<CommonActionResultDto> ChangeStatusAsync(Guid purchaseOrderId, int newStatus);
 
     Task<CommonActionResultDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemAppDto dto);
 
     Task<CommonActionResultDto> DeletePurchaseOrderItemAsync(DeletePurchaseOrderItemAppDto dto);
 
-    Task<CommonActionResultDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto);
+    Task<ReceiveItemResultAppDto> ReceiveItemAsync(ReceivedGoodsForItemAppDto dto);
+
+    Task<BulkReceiveGoodsResultAppDto> BulkReceiveAsync(BulkReceiveGoodsAppDto dto);
+
+    Task<CommonActionResultDto> AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping, decimal additionalTax);
+
+    Task<CommonActionResultDto> SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderAppDto dto);
+
+    Task<CommonActionResultDto> RemoveGoodsReceiptFromPurchaseOrderAsync(RemoveGoodsReceiptFromPurchaseOrderAppDto dto);
 
     Task<IList<RecentPurchasePriceAppDto>> GetRecentPurchasePricesAsync(Guid productId);
+
+    Task<IList<OrderAllocatedPurchaseOrderAppDto>> GetAllocatedPurchaseOrdersForOrderAsync(Guid orderId);
+
+    Task<IList<EligibleOrderItemForAllocationAppDto>> GetEligibleOrderItemsForPoItemAsync(Guid purchaseOrderItemId);
+    Task<decimal> GetMaxAllocationQuantityForOrderItemAsync(Guid orderId, Guid orderItemId);
+
+    Task<CommonActionResultDto> AllocatePoItemToOrderAsync(AllocatePoItemToOrderAppDto dto);
+
+    Task<string> NextPurchaseOrderCodeAsync();
 }

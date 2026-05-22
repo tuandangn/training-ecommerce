@@ -9,6 +9,7 @@ public static class GoodsReceiptExtensions
     {
         var dto = new GoodsReceiptAppDto(goodsReceipt.Id)
         {
+            Code = goodsReceipt.Code,
             ReceivedOnUtc = goodsReceipt.ReceivedOnUtc,
             TruckDriverName = goodsReceipt.TruckDriverName,
             TruckNumberSerial = goodsReceipt.TruckNumberSerial,

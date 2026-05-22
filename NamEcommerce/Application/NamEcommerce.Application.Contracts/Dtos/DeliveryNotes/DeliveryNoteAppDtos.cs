@@ -25,7 +25,10 @@ public sealed record DeliveryNoteAppDto
     public string? Note { get; init; }
     
     public int Status { get; init; }
-    
+    public int SourceType { get; init; }
+    public bool IsDirectShip { get; init; }
+    public int DeliveryConfirmationStatus { get; init; }
+
     public DateTime? DeliveredOnUtc { get; init; }
     public Guid? DeliveryProofPictureId { get; init; }
     public string? DeliveryReceiverName { get; init; }
@@ -53,6 +56,7 @@ public sealed record DeliveryNoteItemAppDto
     public required decimal Quantity { get; init; }
     public required decimal UnitPrice { get; init; }
     public required decimal SubTotal { get; init; }
+    public decimal? CostAtDispatch { get; init; }
 }
 
 [Serializable]
@@ -109,4 +113,21 @@ public sealed record MarkDeliveryNoteDeliveredResultAppDto
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
+}
+
+[Serializable]
+public sealed record CreateDeliveryNoteFromVendorReturnAppDto
+{
+    public required Guid VendorReturnId { get; init; }
+    public required Guid WarehouseId { get; init; }
+    public required IEnumerable<CreateDeliveryNoteFromVendorReturnItemAppDto> Items { get; init; }
+}
+
+[Serializable]
+public sealed record CreateDeliveryNoteFromVendorReturnItemAppDto
+{
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public required decimal Quantity { get; init; }
+    public required decimal UnitCost { get; init; }
 }

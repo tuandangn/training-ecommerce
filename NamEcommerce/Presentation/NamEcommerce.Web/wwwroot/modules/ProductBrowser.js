@@ -1,46 +1,28 @@
-/**
- * ProductBrowser — reusable product-browsing widget.
- *
- * Usage:
- *   import ProductBrowser from '/modules/ProductBrowser.js';
- *
- *   const browser = new ProductBrowser(
- *       document.getElementById('productBrowser'),
- *       (product) => console.log('add', product),
- *       {
- *           colClass: 'col-12 col-sm-6',        // optional
- *           categoryUrl: '/Category/Options',   // optional
- *           productSearchUrl: '/Product/Search' // optional
- *       }
- *   );
- *   await browser.init();
- *
- * The `product` object passed to `onAdd`:
- *   { id, name, picture, availableQty, categoryName }
- */
 export default class ProductBrowser {
-    // ── state ─────────────────────────────────────────────────────────────────
     #container;
     #onAdd;
     #options;
 
-    #categories = [];
-    #activeCategory = null;
-    #searchQuery = '';
+    #pendingChange = false;
+
     #abortController = null;
 
-    // ── defaults ──────────────────────────────────────────────────────────────
+    #state = {
+        q: '',
+        cid: undefined,
+        vid: null
+    };
+    #categories = [];
+
     static #defaults = {
         colClass: 'col-12 col-sm-6 col-md-4 col-lg-6 col-xl-4',
         categoryUrl: '/Category/Options',
         productSearchUrl: '/Product/Search',
+        purchase: false,
+        initialShow: false,
+        allowCreateNew: false
     };
 
-    /**
-     * @param {HTMLElement} containerEl  – the element to render into
-     * @param {Function}    onAdd        – called with the product when "+" is clicked
-     * @param {object}      [options]    – optional overrides (colClass, categoryUrl, productSearchUrl)
-     */
     constructor(containerEl, onAdd, options = {}) {
         if (!(containerEl instanceof HTMLElement))
             throw new TypeError('ProductBrowser: containerEl must be an HTMLElement');
@@ -50,52 +32,135 @@ export default class ProductBrowser {
         this.#container = containerEl;
         this.#onAdd = onAdd;
         this.#options = { ...ProductBrowser.#defaults, ...options };
+
+        const initialData = Object.assign({}, containerEl.dataset);
+        if (initialData.q)
+            this.#state.q = initialData.q;
+        if (initialData.cid)
+            this.#state.cid = initialData.cid;
+        if (initialData.vid)
+            this.#state.vid = initialData.vid;
+
+        if (this.#options.initialShow)
+            this.#state.cid = null;
     }
 
-    // ── public ────────────────────────────────────────────────────────────────
-
     async init() {
-        this.#render();
-        await this.#loadCategories();
+        this.#controlTemplate();
+        this.#bindEvents();
+        this.#categories = await this.#loadCategories();
+        await this.#render();
+    }
+
+    setVendor(vid) {
+        this.#setState({ vid });
+    }
+    reload() {
+        this.#setState({});
+    }
+
+    #bindEvents() {
+        const input = this.#container.querySelector('.pb-search-input');
+
+        const onChanged = debounce((e) => {
+            this.#setState({ q: e.target.value.trim() });
+        }, 400);
+        input.addEventListener('input', onChanged);
+
+        input.addEventListener('focus', () => {
+            if (!this.#productSuggestionIsShown()) {
+                this.#showProductSuggestions();
+            }
+        });
+
+        const collapse = this.#container.querySelector('.collapse');
+        collapse.addEventListener('shown.bs.collapse', event => {
+            if (this.#pendingChange) {
+                if (this.#state.cid === undefined)
+                    this.#setState({cid: null});
+                else
+                    this.#setState({});
+            }
+        });
+    }
+
+    async #setState(patch) {
+        this.#state = Object.assign({}, this.#state, patch);
+        await this.#render();
+    }
+
+    async #render() {
+        this.#renderCategories();
+        if (!this.#productSuggestionIsShown()) {
+            this.#pendingChange = true;
+            return;
+        }
+        this.#pendingChange = false;
         await this.#loadProducts();
     }
 
-    // ── render ────────────────────────────────────────────────────────────────
-
-    #render() {
+    #controlTemplate() {
         this.#container.innerHTML = `
-            <div class="pb-search mb-2">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-white border-end-0">
-                        <i class="bi bi-search text-muted pb-search-icon"></i>
-                        <span class="spinner-border spinner-border-sm text-secondary d-none pb-spinner" role="status"></span>
-                    </span>
-                    <input type="text" class="form-control border-start-0 ps-0 pb-search-input"
-                           placeholder="Tìm hàng hóa..." autocomplete="off" />
+            <div class="accordion accordion-flush" id="accordionProductBrowser">
+                <div class="accordion-item">
+                    <div class="accordion-header position-relative">
+                        <button class="accordion-button text-dark bg-white w-auto p-1 shadow-none position-absolute ${this.#options.initialShow ? '' : 'collapsed'}" style="top:-10px;right:-10px;" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#collapseProductBrowser" aria-expanded="${this.#options.initialShow}" aria-controls="collapseProductBrowser">
+                            <span class="visually-hidden">Mở thêm hàng hóa</span>
+                        </button>
+                        <div class="pb-search">
+                            <label class="form-label small fw-bold text-muted text-uppercase d-block" for="pbSearchKeywords">Thêm hàng hóa</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0">
+                                    <i class="bi bi-search text-muted pb-search-icon"></i>
+                                    <span class="spinner-border spinner-border-sm text-secondary d-none pb-spinner" role="status"></span>
+                                </span>
+                                <input type="text" id="pbSearchKeywords" class="form-control border-start-0 ps-0 pb-search-input" value="${this.#state.q}" placeholder="Tìm hàng hóa..." autocomplete="off" />
+                                ${this.#options.allowCreateNew ? `<button class="btn btn-outline-secondary" type="button" data-open-quick-product data-bs-toggle="tooltip" title="Thêm hàng hóa mới">
+                    <i class="bi bi-plus"></i>
+                    <span class="visually-hidden">Thêm mới</span>
+                </button>` : ''}
+                            </div>
+                        <div>
+                    </div>
                 </div>
             </div>
-            <div class="pb-categories mb-3 d-flex flex-wrap gap-1">
+            <div class="pb-categories mt-3 d-flex flex-wrap gap-1">
                 <span class="text-muted small">Đang tải danh mục...</span>
             </div>
-            <div class="pb-grid"></div>`;
-
-        this.#container.querySelector('.pb-search-input')
-            ?.addEventListener('input', debounce((e) => {
-                this.#searchQuery = e.target.value.trim();
-                this.#loadProducts();
-            }, 400));
+            <div id="collapseProductBrowser" class="accordion-collapse collapse ${this.#options.initialShow ? 'show' : ''}" aria-labelledby="headingProductBrowser" data-bs-parent="#accordionProductBrowser">
+                <div class="accordion-body p-0 mt-3">
+                    <div class="pb-grid" style="max-height:300px; overflow-y: auto;overflow-x:hidden;">Đang tải hàng hóa...</div>
+                </div>
+            </div>
+        `;
     }
 
-    // ── categories ────────────────────────────────────────────────────────────
+    #showProductSuggestions() {
+        return new Promise(resolve => {
+            const collapse = this.#container.querySelector('.collapse');
+            const bsCollapse = new bootstrap.Collapse(collapse, {
+                toggle: false
+            });
+            bsCollapse.show();
+            collapse.addEventListener('shown.bs.collapse', function onShow() {
+                collapse.removeEventListener('shown.bs.collapse', onShow);
+                resolve();
+            });
+        });
+    }
+    #productSuggestionIsShown() {
+        const collapse = this.#container.querySelector('.collapse');
+        return collapse.classList.contains('show');
+    }
 
     async #loadCategories() {
         try {
             const res = await fetch(this.#options.categoryUrl);
-            this.#categories = res.ok ? await res.json() : [];
+            return res.ok ? await res.json() : [];
         } catch {
-            this.#categories = [];
+            return [];
         }
-        this.#renderCategories();
     }
 
     #renderCategories() {
@@ -110,19 +175,21 @@ export default class ProductBrowser {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.dataset.catId = id ?? '';
-        btn.className = 'btn btn-sm ' + (this.#activeCategory === id ? 'btn-primary' : 'btn-outline-secondary');
+        btn.className = 'btn btn-sm ' + (this.#state.cid === id ? 'btn-primary' : 'btn-outline-secondary');
         btn.textContent = name;
+
         btn.addEventListener('click', () => {
-            this.#activeCategory = id;
-            this.#container.querySelectorAll('.pb-categories button').forEach(b => {
-                b.className = 'btn btn-sm ' + (b.dataset.catId === (id ?? '') ? 'btn-primary' : 'btn-outline-secondary');
-            });
-            this.#loadProducts();
+            if (!this.#productSuggestionIsShown()) {
+                this.#showProductSuggestions().then(() => this.#setState({ cid: id }));
+            } else {
+                if (this.#state.cid == id)
+                    this.#setState({ cid: null });
+                else
+                    this.#setState({ cid: id });
+            }
         });
         return btn;
     }
-
-    // ── products ──────────────────────────────────────────────────────────────
 
     async #loadProducts() {
         this.#abortController?.abort();
@@ -130,8 +197,9 @@ export default class ProductBrowser {
         this.#setLoading(true);
 
         try {
-            let url = `${this.#options.productSearchUrl}?q=${encodeURIComponent(this.#searchQuery)}`;
-            if (this.#activeCategory) url += `&categoryId=${encodeURIComponent(this.#activeCategory)}`;
+            let url = `${this.#options.productSearchUrl}?q=${encodeURIComponent(this.#state.q)}`;
+            if (this.#state.cid) url += `&cid=${encodeURIComponent(this.#state.cid)}`;
+            if (this.#state.vid) url += `&vid=${encodeURIComponent(this.#state.vid)}`;
             const res = await fetch(url, { signal: this.#abortController.signal });
             if (!res.ok) throw new Error();
             const products = await res.json();
@@ -157,9 +225,10 @@ export default class ProductBrowser {
 
         grid.innerHTML = '';
         const row = document.createElement('div');
-        row.className = 'row g-2';
+        row.className = 'row g-2 pb-1';
 
         products.forEach(p => {
+            const isDisabled = !this.#isValidProduct(p);
             const col = document.createElement('div');
             col.className = this.#options.colClass;
 
@@ -167,23 +236,33 @@ export default class ProductBrowser {
                 ? `<img src="${_esc(p.picture)}" class="pb-product-img" alt="${_esc(p.name)}" />`
                 : `<div class="pb-product-img-placeholder"><i class="bi bi-box-seam text-muted fs-4"></i></div>`;
 
-            const qtyHtml = p.availableQty > 0
+            let vendorInfoHtml = '';
+            if (this.#options.purchase) {
+                if (p.vendorCount == 0) {
+                    vendorInfoHtml = `<div class="small text-danger text-decoration-underline">Không có NCC</div>`;
+                } else {
+                    vendorInfoHtml = `<div class="small text-muted"><i class="bi bi-truck me-1"></i>${p.vendorCount} NCC</div>`;
+                }
+            }
+
+            let qtyHtml = p.availableQty > 0
                 ? `<span class="text-success fw-medium">${DecimalFields.formatQuantity ? DecimalFields.formatQuantity(p.availableQty) : p.availableQty}</span>`
                 : `<span class="text-muted">0</span>`;
+            qtyHtml = '<div class="pb-product-stock small"><i class="bi bi-boxes me-1 text-muted"></i>Tồn:' + qtyHtml + '</div>';
 
             const catHtml = p.categoryName
                 ? `<div class="pb-product-category text-truncate">${_esc(p.categoryName)}</div>`
                 : '';
 
             col.innerHTML = `
-                <div class="pb-product-card">
+                <div class="pb-product-card ${isDisabled ? 'bg-light' : ''} position-relative">
                     <div class="pb-product-thumb">${picHtml}</div>
                     <div class="pb-product-info">
-                        <div class="pb-product-name fw-medium text-truncate" title="${_esc(p.name)}">${_esc(p.name)}</div>
+                        <div class="pb-product-name fw-medium text-truncate ${isDisabled ? 'text-muted' : ''}" title="${_esc(p.name)}">${_esc(p.name)}</div>
                         ${catHtml}
-                        <div class="pb-product-stock small"><i class="bi bi-boxes me-1 text-muted"></i>Tồn: ${qtyHtml}</div>
+                        ${this.#options.purchase ? vendorInfoHtml : qtyHtml}
                     </div>
-                    <button type="button" class="pb-add-btn btn btn-sm btn-outline-primary" title="Thêm vào phiếu">
+                    <button type="button" class="stretched-link pb-add-btn btn btn-sm btn-outline-primary ${isDisabled ? 'd-none' : ''}" data-bs-toggle="tooltip" title="Thêm vào phiếu">
                         <i class="bi bi-plus-lg"></i>
                     </button>
                 </div>`;
@@ -195,7 +274,12 @@ export default class ProductBrowser {
         grid.appendChild(row);
     }
 
-    // ── helpers ───────────────────────────────────────────────────────────────
+    #isValidProduct(product) {
+        if (this.#options.purchase) {
+            return product.vendorCount > 0;
+        }
+        return product.availableQty > 0 || product.vendorCount > 0;
+    }
 
     #setLoading(on) {
         this.#container.querySelector('.pb-spinner')?.classList.toggle('d-none', !on);
@@ -203,7 +287,6 @@ export default class ProductBrowser {
     }
 }
 
-// private module-level helper (not exported)
 function _esc(str) {
     return String(str ?? '')
         .replace(/&/g, '&amp;')

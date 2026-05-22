@@ -8,4 +8,5 @@ public class ExpenseAppDto
     public decimal Amount { get; set; }
     public int ExpenseType { get; set; }
     public DateTime IncurredDate { get; set; }
+    public Guid? SourceOrderId { get; set; }
 }

@@ -1,7 +1,36 @@
 @model OrderListModel
-@inject IWebHelper WebHelper
 @{
     ViewData[ViewConstants.PageTitle] = "Đơn hàng";
+    var query = Model.Keywords;
+}
+@functions {
+    string BuildItemsPopoverHtml(IList<OrderListModel.OrderItemSummaryModel> items)
+    {
+        if (items.Count == 0)
+            return string.Empty;
+
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div class=\"order-items-list\">");
+        foreach (var item in items)
+        {
+            var name = System.Net.WebUtility.HtmlEncode(item.ProductName);
+            var ordered = item.QuantityOrdered.DisplayQuantity();
+            var issued = item.QuantityInDeliveryNotes.DisplayQuantity();
+            var delivered = item.QuantityDelivered.DisplayQuantity();
+            var isDone = item.QuantityDelivered >= item.QuantityOrdered;
+            var hasDelivered = item.QuantityDelivered > 0;
+            var hasIssued = item.QuantityInDeliveryNotes > 0;
+            var statusClass = isDone ? "text-success" : (hasDelivered || hasIssued ? "text-warning" : "text-muted");
+            var icon = isDone ? "bi-check-circle-fill" : (hasDelivered || hasIssued ? "bi-hourglass-split" : "bi-circle");
+
+            sb.Append("<div class=\"order-items-row\">");
+            sb.Append($"<div class=\"order-items-name\"><i class=\"bi {icon} {statusClass} me-1\"></i>{name}</div>");
+            sb.Append($"<div class=\"order-items-qty {statusClass}\">{issued} / {ordered}<div class=\"text-muted fw-normal\">Đã giao {delivered}</div></div>");
+            sb.Append("</div>");
+        }
+        sb.Append("</div>");
+        return sb.ToString();
+    }
 }
 @section TitleSection {
     <h1 class="topbar-page-title">Đơn bán</h1>
@@ -23,13 +52,13 @@
     </div>
     <ul class="nav nav-tabs">
         <li class="nav-item">
-            <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : WebHelper.EncodeUrlComponent(Model.Keywords))" asp-route-status=""
+            <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-status=""
                class="nav-link @(Model.Status.HasValue ? "" : "active")">Tất cả</a>
         </li>
         @foreach (var statusOption in OrderStatus.GetOptions())
         {
             <li class="nav-item">
-                <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : WebHelper.EncodeUrlComponent(Model.Keywords))" asp-route-status="@statusOption.value"
+                <a asp-route-keywords="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-status="@statusOption.value"
                    class="nav-link @(statusOption.value == Model.Status ? "active" : "")" aria-current="page">@statusOption.text</a>
             </li>
         }
@@ -40,10 +69,11 @@
                 <thead>
                     <tr>
                         <th class="ps-4">Mã đơn</th>
+                        <th class="d-none d-lg-table-cell">Hàng hóa</th>
                         <th>Khách hàng</th>
                         <th class="text-end">Tổng đơn</th>
                         <th class="text-center">Ngày dự kiến</th>
-                        <th class="text-center">Đã giao</th>
+                        <th class="text-center" style="width:120px;">Kết sổ</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -61,16 +91,65 @@
                                         <span class="text-muted small">@order.CreatedOn.ToString(ViewConstants.DefaultDateTimeFormat)</span>
                                     </div>
                                 </td>
+                                <td class="d-none d-lg-table-cell">
+                                    @{
+                                        var itemCount = order.Items.Count;
+                                        var ordered = order.TotalOrdered;
+                                        var issued = order.TotalDeliveryNoteQuantity;
+                                        var delivered = order.TotalDelivered;
+                                        var issuedPct = ordered > 0 ? Math.Min(100, (int)Math.Round(issued * 100 / ordered)) : 0;
+                                        var isDelivered = ordered > 0 && delivered >= ordered;
+                                        var hasDelivered = delivered > 0;
+                                        var hasIssued = issued > 0;
+                                        var progressClass = isDelivered ? "bg-success" : (hasIssued ? "bg-warning" : "bg-secondary");
+                                        var statusText = isDelivered
+                                            ? "Đã giao đủ"
+                                            : hasDelivered
+                                                ? "Đã giao một phần"
+                                                : hasIssued
+                                                    ? "Đã lập phiếu"
+                                                    : "Chưa giao";
+                                    }
+                                    @if (itemCount == 0)
+                                    {
+                                        <span class="text-muted fst-italic small">Chưa có hàng hóa</span>
+                                    }
+                                    else
+                                    {
+                                        <a asp-action="Details" asp-route-id="@order.Id" type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-start order-items-popover"
+                                                data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="top"
+                                                data-bs-custom-class="order-items-popover-content"
+                                                data-bs-title="@($"Hàng hóa ({itemCount} mặt hàng)")"
+                                                data-bs-content="@BuildItemsPopoverHtml(order.Items)">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="badge rounded-pill bg-light text-dark border">
+                                                    <i class="bi bi-box-seam me-1"></i>@itemCount mặt hàng
+                                                </span>
+                                                <span class="small text-muted">@statusText</span>
+                                            </div>
+                                            <div class="progress mt-1" style="height: 4px; width: 220px;" role="progressbar" aria-valuenow="@issuedPct" aria-valuemin="0" aria-valuemax="100">
+                                                <div class="progress-bar @progressClass" style="width: @(issuedPct)%"></div>
+                                            </div>
+                                            <div class="small text-muted mt-1">
+                                                Đã lập phiếu @issued.DisplayQuantity() / @ordered.DisplayQuantity()
+                                                @if (isDelivered)
+                                                {
+                                                    <i class="bi bi-check-circle-fill text-success ms-1"></i>
+                                                }
+                                            </div>
+                                        </a>
+                                    }
+                                </td>
                                 <td>
                                     <div class="position-relative">
-                                        <a asp-action="Details" asp-controller="CustomerDebt" asp-route-id="@order.CustomerId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
-                                            @HighlighHelper.Highlight(order.CustomerName, Model.Keywords)
+                                        <a asp-action="Details" asp-controller="CustomerDebt" asp-route-customerid="@order.CustomerId" class="stretched-link fw-medium text-dark text-decoration-none text-nowrap" data-bs-toggle="tooltip" title="Xem công nợ">
+                                            @HighlighHelper.Highlight(order.CustomerName, query)
                                         </a>
                                         @if (!string.IsNullOrEmpty(order.CustomerPhone))
                                         {
                                             <div>
                                                 <span class="text-muted small">
-                                                    @HighlighHelper.Highlight(order.CustomerPhone, Model.Keywords)
+                                                    @HighlighHelper.Highlight(order.CustomerPhone, query)
                                                 </span>
                                             </div>
                                         }
@@ -85,15 +164,15 @@
                                 <td class="text-center">
                                     @if (order.IsFinished)
                                     {
-                                        <i class="bi bi-check-circle-fill text-success ms-1" data-bs-toggle="tooltip" title="Đơn hàng đã hoàn thành"></i>
+                                        <i class="bi bi-check-circle-fill text-success ms-1" data-bs-toggle="tooltip" title="Hoàn thành"></i>
                                     }
                                     else
                                     {
-                                        <i class="bi bi-x-circle-fill text-info ms-1" data-bs-toggle="tooltip" title="Đơn hàng chưa hoàn thành"></i>
+                                        <i class="bi bi-x-circle-fill text-info ms-1" data-bs-toggle="tooltip" title="Chưa hoàn thành"></i>
                                     }
                                 </td>
                                 <td class="text-end pe-3">
-                                    <a class="btn btn-sm btn-light text-decoration-none text-primary" asp-action="Details" asp-route-id="@order.Id">
+                                    <a class="btn btn-sm btn-light text-decoration-none text-primary" asp-action="Details" asp-route-id="@order.Id" data-bs-toggle="tooltip" title="Xem chi tiết">
                                         <span>Xem</span>
                                     </a>
                                 </td>
@@ -103,7 +182,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="5">
+                            <td colspan="7">
                                 <div class="empty-state">
                                     <span class="text-muted">Không có đơn hàng nào</span>
                                 </div>
@@ -120,17 +199,68 @@
         }
     </div>
 </div>
+@section Styles {
+    <style>
+        .order-items-popover {
+            line-height: 1.2;
+        }
+
+            .order-items-popover:hover .badge {
+                background-color: var(--bs-primary-bg-subtle, #e7f1ff) !important;
+            }
+
+        .order-items-popover-content .popover-body {
+            padding: 0.5rem 0.75rem;
+        }
+
+        .order-items-list {
+            min-width: 240px;
+        }
+
+        .order-items-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.25rem 0;
+            font-size: 0.85rem;
+        }
+
+            .order-items-row + .order-items-row {
+                border-top: 1px dashed var(--bs-border-color, #dee2e6);
+            }
+
+        .order-items-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 240px;
+        }
+
+        .order-items-qty {
+            min-width: 86px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+            font-weight: 500;
+        }
+    </style>
+}
 @section Scripts {
     <script type="module">
         const txtKeywords = document.getElementById('@Html.IdFor(m => m.Keywords)');
         const form = txtKeywords.closest('form');
         const onSearchChanged = debounce(function () {
         form.submit();
-        }, 700);
+        }, 500);
         txtKeywords.addEventListener('input', onSearchChanged);
 
         if(txtKeywords.value){
         focusEnd(txtKeywords);
         }
+
+        document.querySelectorAll('.order-items-popover').forEach(el => {
+            new bootstrap.Popover(el, { container: 'body', sanitize: false });
+        });
     </script>
 }

@@ -13,8 +13,6 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
 {
     private readonly IVendorDebtManager _debtManager = debtManager;
 
-    // ── Write operations ─────────────────────────────────────────────────────
-
     public async Task<CreateVendorDebtResultAppDto> CreateDebtFromPurchaseOrderAsync(CreateVendorDebtAppDto dto)
     {
         var (valid, errorMessage) = dto.Validate();
@@ -35,6 +33,30 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
         catch (Exception ex)
         {
             return new CreateVendorDebtResultAppDto { Success = false, ErrorMessage = ex.Message };
+        }
+    }
+
+    public async Task<CreateInitialVendorDebtResultAppDto> CreateInitialDebtAsync(CreateInitialVendorDebtAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return new CreateInitialVendorDebtResultAppDto { Success = false, ErrorMessage = errorMessage };
+
+        try
+        {
+            var domainDto = MapToDomainDto(dto);
+            var result = await _debtManager.CreateInitialDebtAsync(domainDto).ConfigureAwait(false);
+            return new CreateInitialVendorDebtResultAppDto
+            {
+                Success = true,
+                Debt = result.ToDto()
+            };
+        }
+        catch (Exception ex)
+        {
+            return new CreateInitialVendorDebtResultAppDto { Success = false, ErrorMessage = ex.Message };
         }
     }
 
@@ -105,8 +127,6 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
             return new RecordVendorPaymentResultAppDto { Success = false, ErrorMessage = ex.Message };
         }
     }
-
-    // ── Read operations ──────────────────────────────────────────────────────
 
     public async Task<VendorDebtAppDto?> GetDebtByIdAsync(Guid id)
     {
@@ -216,16 +236,20 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
             paged.PagerInfo.TotalCount);
     }
 
-    // ── Private helpers ──────────────────────────────────────────────────────
-
     private static CreateVendorDebtDto MapToDomainDto(CreateVendorDebtAppDto dto)
         => new()
         {
             VendorId = dto.VendorId,
             PurchaseOrderId = dto.PurchaseOrderId,
             TotalAmount = dto.TotalAmount,
-            DueDateUtc = dto.DueDateUtc,
-            CreatedByUserId = dto.CreatedByUserId
+            DueDateUtc = dto.DueDateUtc
+        };
+    
+    private static CreateInitialVendorDebtDto MapToDomainDto(CreateInitialVendorDebtAppDto dto)
+        => new()
+        {
+            VendorId = dto.VendorId,
+            TotalAmount = dto.TotalAmount
         };
 
     private static CreateVendorPaymentDto MapToDomainDto(CreateVendorPaymentAppDto dto)
@@ -241,4 +265,5 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
             PaidOnUtc = dto.PaidOnUtc,
             RecordedByUserId = dto.RecordedByUserId
         };
+
 }

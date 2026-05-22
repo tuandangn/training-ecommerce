@@ -1,0 +1,156 @@
+@model InventoryCostingPolicyModel
+@{
+    ViewData["Title"] = "Cài đặt giá vốn";
+
+    string MethodName(InventoryCostingMethod method) => method switch
+    {
+        InventoryCostingMethod.WeightedAverage => "Bình quân gia quyền",
+        InventoryCostingMethod.FIFO => "FIFO",
+        InventoryCostingMethod.LIFO => "LIFO",
+        _ => method.ToString()
+    };
+
+    string ScopeName(InventoryValuationScope scope) => scope switch
+    {
+        InventoryValuationScope.Product => "Theo sản phẩm",
+        InventoryValuationScope.ProductWarehouse => "Theo sản phẩm + kho",
+        _ => scope.ToString()
+    };
+}
+
+@section Styles {
+    <style>
+        .costing-shell { font-variant-numeric: tabular-nums; }
+        .costing-label {
+            color: #8F9BB3;
+            font-size: .72rem;
+            font-weight: 600;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+        .costing-value { color: #1E293B; font-weight: 700; }
+        .costing-card {
+            background: #fff;
+            border: 1px solid #E2E8F0;
+            border-radius: 8px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, .06);
+        }
+        .costing-note {
+            background: #FFF7ED;
+            border: 1px solid #FDBA74;
+            color: #9A3412;
+            border-radius: 8px;
+        }
+    </style>
+}
+
+<div class="container py-4 costing-shell">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-1 fw-bold">Cài đặt giá vốn</h1>
+            <p class="text-muted small mb-0">Chọn cách tính giá vốn cho giao dịch kho mới và kiểm soát thao tác tính lại lịch sử</p>
+        </div>
+        <a asp-action="StockList" class="btn btn-outline-secondary rounded-3 px-4">
+            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Tồn kho
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <section class="costing-card p-4 h-100">
+                <div class="costing-label mb-2">Policy hiện hành</div>
+                <h2 class="h4 costing-value mb-4">@MethodName(Model.CostingMethod)</h2>
+
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="costing-label mb-1">Phạm vi</div>
+                        <div class="fw-semibold">@ScopeName(Model.ValuationScope)</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="costing-label mb-1">Hiệu lực từ</div>
+                        <div class="fw-semibold">@Model.EffectiveFrom.ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="costing-label mb-1">Tạo lúc</div>
+                        <div class="text-muted">@Model.CreatedAt.ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                    </div>
+                    <div class="col-12">
+                        <div class="costing-label mb-1">Ghi chú</div>
+                        <div class="text-muted">@(string.IsNullOrWhiteSpace(Model.Note) ? "Không có ghi chú" : Model.Note)</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-7">
+            <section class="costing-card p-4 mb-4">
+                <form asp-action="CostingPolicy" method="post">
+                    <input type="hidden" asp-for="Id" />
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="CostingMethod" class="form-label">Cách tính giá vốn</label>
+                            <select asp-for="CostingMethod" class="form-select rounded-3">
+                                <option value="@((int)InventoryCostingMethod.WeightedAverage)">Bình quân gia quyền</option>
+                                <option value="@((int)InventoryCostingMethod.FIFO)" disabled>FIFO - sắp hỗ trợ</option>
+                                <option value="@((int)InventoryCostingMethod.LIFO)" disabled>LIFO - sắp hỗ trợ</option>
+                            </select>
+                            <span asp-validation-for="CostingMethod" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phạm vi định giá</label>
+                            <input type="hidden" asp-for="ValuationScope" />
+                            <select class="form-select rounded-3" disabled>
+                                <option selected>Theo sản phẩm</option>
+                                <option>Theo sản phẩm + kho</option>
+                            </select>
+                            <span asp-validation-for="ValuationScope" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="EffectiveFrom" class="form-label">Hiệu lực từ</label>
+                            <input asp-for="EffectiveFrom" type="datetime-local" class="form-control rounded-3" value="@Model.EffectiveFrom.ToString("yyyy-MM-ddTHH:mm")" />
+                            <span asp-validation-for="EffectiveFrom" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Note" class="form-label">Ghi chú</label>
+                            <textarea asp-for="Note" class="form-control rounded-3" rows="4" maxlength="1000"></textarea>
+                            <span asp-validation-for="Note" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary rounded-3 px-4">
+                            <i class="bi bi-check2 me-1" aria-hidden="true"></i> Lưu cài đặt
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="costing-card p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                    <div>
+                        <div class="costing-label mb-2">Tính lại lịch sử</div>
+                        <h2 class="h5 fw-bold mb-2">Tính lại toàn bộ giá vốn</h2>
+                        <p class="text-muted mb-0">Thao tác này tạo một lần rebuild và chạy trực tiếp trong request hiện tại.</p>
+                    </div>
+                    <form asp-action="RebuildCosting" method="post"
+                          onsubmit="return confirm('Tính lại toàn bộ giá vốn lịch sử? Thao tác này có thể mất thời gian.');">
+                        <input type="hidden" asp-for="CostingMethod" />
+                        <input type="hidden" asp-for="ValuationScope" />
+                        <button type="submit" class="btn btn-outline-danger rounded-3 px-4">
+                            <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i> Tính lại
+                        </button>
+                    </form>
+                </div>
+                <div class="costing-note small p-3 mt-4">
+                    Thay đổi cài đặt chỉ ảnh hưởng giao dịch mới từ thời điểm hiệu lực. Lịch sử chỉ đổi khi chạy thao tác tính lại.
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

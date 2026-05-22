@@ -1,23 +1,42 @@
+using NamEcommerce.Domain.Metadata;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
+using NamEcommerce.Domain.Values;
 
 namespace NamEcommerce.Domain.Entities.DeliveryNotes;
 
 [Serializable]
 public sealed record DeliveryNote : AppAggregateEntity
 {
+    public const string CODE_PREFIX = "PX";
+
     public DeliveryNote(Guid id) : base(id)
     {
         Code = string.Empty;
-        CustomerName = string.Empty;
+        CustomerInfo = new CustomerInfo(string.Empty, string.Empty, string.Empty);
+        ShippingAddress = string.Empty;
+        _items = [];
+    }
+
+    internal DeliveryNote(string code, Guid warehouseId, string? note, Guid? createdByUserId) : base(Guid.NewGuid())
+    {
+        Code = code;
+        WarehouseId = warehouseId;
+        Note = note;
+        CreatedByUserId = createdByUserId;
+        Status = DeliveryNoteStatus.Draft;
+        CreatedOnUtc = DateTime.UtcNow;
+        OrderId = Guid.Empty;
+        CustomerId = Guid.Empty;
+        CustomerInfo = new CustomerInfo(string.Empty, string.Empty, string.Empty);
         ShippingAddress = string.Empty;
         _items = [];
     }
 
     internal DeliveryNote(string code, Guid orderId,
-        Guid customerId, string customerName, string? customerPhone, string? customerAddress,
+        Guid customerId, string customerName, string customerPhone, string? customerAddress,
         string shippingAddress, Guid warehouseId, bool showPrice, string? note,
         decimal surcharge, decimal amountToCollect, string? surchargeReason,
         Guid? createdByUserId) : base(Guid.NewGuid())
@@ -25,9 +44,7 @@ public sealed record DeliveryNote : AppAggregateEntity
         Code = code;
         OrderId = orderId;
         CustomerId = customerId;
-        CustomerName = customerName;
-        CustomerPhone = customerPhone;
-        CustomerAddress = customerAddress;
+        CustomerInfo = new CustomerInfo(customerName, customerPhone, customerAddress);
         ShippingAddress = shippingAddress;
         ShowPrice = showPrice;
         Note = note;
@@ -42,6 +59,10 @@ public sealed record DeliveryNote : AppAggregateEntity
     }
 
     public string Code { get; private set; }
+    public DeliveryNoteStatus Status { get; private set; }
+    public Guid? CreatedByUserId { get; private set; }
+    public bool ShowPrice { get; private set; }
+    public string? Note { get; private set; }
 
     public Guid OrderId { get; private set; }
     public string? OrderCode { get; set; }
@@ -50,43 +71,53 @@ public sealed record DeliveryNote : AppAggregateEntity
     public string? WarehouseName { get; internal set; }
 
     public Guid CustomerId { get; private set; }
-    public string CustomerName { get; private set; }
-    public string? CustomerPhone { get; private set; }
-    public string? CustomerAddress { get; private set; }
-    
-    public string ShippingAddress { get; private set; }
-    
-    public bool ShowPrice { get; private set; }
-    public string? Note { get; private set; }
+    public CustomerInfo CustomerInfo { get; private set; }
+    public NormalizableString ShippingAddress { get; internal set; }
     
     public decimal Surcharge { get; internal set; }
     public string? SurchargeReason { get; internal set; }
     public decimal AmountToCollect { get; internal set; }
+    public decimal TotalAmount => _items.Sum(i => i.SubTotal);
+
+    private readonly List<DeliveryNoteItem> _items;
+    public IReadOnlyCollection<DeliveryNoteItem> Items => _items.AsReadOnly();
     
-    public DeliveryNoteStatus Status { get; private set; }
-    
+    public DeliveryNoteSourceType SourceType { get; internal set; } = DeliveryNoteSourceType.ToCustomer;
+
+    public bool IsDirectShip { get; private set; }
+    public DeliveryConfirmationStatus DeliveryConfirmationStatus { get; private set; } = DeliveryConfirmationStatus.NotApplicable;
+    public DateTime? ConfirmedAtUtc { get; private set; }
+    public string? ConfirmedNote { get; private set; }
+    public Guid? SourceGoodsReceiptId { get; private set; }
+
     public DateTime? DeliveredOnUtc { get; private set; }
     public Guid? DeliveryProofPictureId { get; private set; }
     public string? DeliveryReceiverName { get; private set; }
     
-    public Guid? CreatedByUserId { get; private set; }
-
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
-    private readonly List<DeliveryNoteItem> _items;
-    public IReadOnlyCollection<DeliveryNoteItem> Items => _items.AsReadOnly();
-
-    public decimal TotalAmount => _items.Sum(i => i.SubTotal);
+    #region Events
 
     internal void AddItem(Guid orderItemId, Guid productId, string productName, decimal quantity, decimal unitPrice)
     {
         _items.Add(new DeliveryNoteItem(Id, orderItemId, productId, productName, quantity, unitPrice));
     }
 
-    /// <summary>
-    /// Đánh dấu phiếu vừa được khởi tạo (status = Draft) — Manager gọi sau khi setup items để raise <see cref="DeliveryNoteCreated"/>.
-    /// </summary>
+    internal void AddItemFromVendorReturn(Guid productId, string productName, decimal quantity, decimal unitCost)
+    {
+        _items.Add(new DeliveryNoteItem(Id, Guid.Empty, productId, productName, quantity, unitCost));
+    }
+
+    internal void MarkAsDeliveredFromVendorReturn()
+    {
+        Status = DeliveryNoteStatus.Delivered;
+        DeliveredOnUtc = DateTime.UtcNow;
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
+    }
+
     internal void MarkCreated()
         => RaiseDomainEvent(new DeliveryNoteCreated(Id, OrderId, CustomerId));
 
@@ -129,6 +160,33 @@ public sealed record DeliveryNote : AppAggregateEntity
         RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
     }
 
+    internal bool MarkReceivedByCustomer(DateTime receivedAtUtc, string? receiverName, string? note)
+    {
+        if (Status == DeliveryNoteStatus.Delivered)
+        {
+            DeliveryConfirmationStatus = DeliveryConfirmationStatus.Confirmed;
+            ConfirmedAtUtc ??= receivedAtUtc;
+            ConfirmedNote = note;
+            DeliveryReceiverName = string.IsNullOrWhiteSpace(receiverName) ? DeliveryReceiverName : receiverName;
+            UpdatedOnUtc = DateTime.UtcNow;
+            return false;
+        }
+
+        if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
+
+        DeliveryConfirmationStatus = DeliveryConfirmationStatus.Confirmed;
+        ConfirmedAtUtc = receivedAtUtc;
+        ConfirmedNote = note;
+        Status = DeliveryNoteStatus.Delivered;
+        DeliveredOnUtc = receivedAtUtc;
+        DeliveryReceiverName = receiverName;
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
+        return true;
+    }
+
     internal void Cancel()
     {
         if (Status == DeliveryNoteStatus.Delivered)
@@ -141,4 +199,45 @@ public sealed record DeliveryNote : AppAggregateEntity
 
         RaiseDomainEvent(new DeliveryNoteCancelled(Id, wasReservingStock));
     }
+
+    internal void SetAsDirectShip(Guid sourceGoodsReceiptId)
+    {
+        IsDirectShip = true;
+        SourceType = DeliveryNoteSourceType.DirectShipToCustomer;
+        SourceGoodsReceiptId = sourceGoodsReceiptId;
+        DeliveryConfirmationStatus = DeliveryConfirmationStatus.PendingConfirmation;
+    }
+
+    internal void ConfirmDirectShipDelivery(DateTime confirmedAtUtc, string? note)
+    {
+        if (!IsDirectShip || SourceType != DeliveryNoteSourceType.DirectShipToCustomer)
+            throw new DeliveryNoteCannotChangeStatusException(Status, Status);
+        if (Status != DeliveryNoteStatus.Confirmed)
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
+
+        DeliveryConfirmationStatus = DeliveryConfirmationStatus.Confirmed;
+        ConfirmedAtUtc = confirmedAtUtc;
+        ConfirmedNote = note;
+        Status = DeliveryNoteStatus.Delivered;
+        DeliveredOnUtc = confirmedAtUtc;
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
+    }
+
+    internal void RejectDirectShipDelivery(string reason)
+    {
+        if (!IsDirectShip || SourceType != DeliveryNoteSourceType.DirectShipToCustomer)
+            throw new DeliveryNoteCannotChangeStatusException(Status, Status);
+        if (Status != DeliveryNoteStatus.Confirmed)
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Cancelled);
+
+        DeliveryConfirmationStatus = DeliveryConfirmationStatus.Rejected;
+        ConfirmedNote = reason;
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        Cancel();
+    }
+
+    #endregion
 }

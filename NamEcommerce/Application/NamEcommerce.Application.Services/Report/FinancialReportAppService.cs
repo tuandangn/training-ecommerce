@@ -1,105 +1,173 @@
-using NamEcommerce.Application.Contracts.Report;
 using NamEcommerce.Application.Contracts.Dtos.Report;
-using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Domain.Entities.Orders;
+using NamEcommerce.Application.Contracts.Report;
 using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Finance;
-using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Entities.Returns;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Returns;
+using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Application.Services.Report;
 
 public sealed class FinancialReportAppService : IFinancialReportAppService
 {
-    private readonly IEntityDataReader<Order> _orderDataReader;
+    private readonly IEntityDataReader<DeliveryNote> _deliveryNoteReader;
+    private readonly IEntityDataReader<CustomerReturn> _customerReturnReader;
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<Expense> _expenseDataReader;
+    private readonly IInventoryCostingManager _inventoryCostingManager;
 
-    public FinancialReportAppService(IEntityDataReader<Order> orderDataReader, IEntityDataReader<Product> productDataReader, IEntityDataReader<Expense> expenseDataReader)
+    public FinancialReportAppService(
+        IEntityDataReader<DeliveryNote> deliveryNoteReader,
+        IEntityDataReader<CustomerReturn> customerReturnReader,
+        IEntityDataReader<Product> productDataReader,
+        IEntityDataReader<Expense> expenseDataReader,
+        IInventoryCostingManager inventoryCostingManager)
     {
-        _orderDataReader = orderDataReader;
+        _deliveryNoteReader = deliveryNoteReader;
+        _customerReturnReader = customerReturnReader;
         _productDataReader = productDataReader;
         _expenseDataReader = expenseDataReader;
+        _inventoryCostingManager = inventoryCostingManager;
     }
 
-    public Task<ProfitLossSummaryAppDto> GetProfitLossSummaryAsync(DateTime? fromDate, DateTime? toDate)
+    public async Task<ProfitLossSummaryAppDto> GetProfitLossSummaryAsync(DateTime? fromDate, DateTime? toDate)
     {
-        var ordersQuery = _orderDataReader.DataSource;
+        var fromUtc = fromDate?.ToUniversalTime();
+        var toUtc = toDate.HasValue
+            ? toDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime()
+            : (DateTime?)null;
 
-        if (fromDate.HasValue)
-            ordersQuery = ordersQuery.Where(o => o.CreatedOnUtc >= fromDate.Value.ToUniversalTime());
+        var dnQuery = _deliveryNoteReader.DataSource
+            .Where(dn => dn.Status == DeliveryNoteStatus.Delivered
+                      && dn.SourceType == DeliveryNoteSourceType.ToCustomer
+                      && dn.DeliveredOnUtc != null);
 
-        if (toDate.HasValue)
+        if (fromUtc.HasValue) dnQuery = dnQuery.Where(dn => dn.DeliveredOnUtc >= fromUtc.Value);
+        if (toUtc.HasValue) dnQuery = dnQuery.Where(dn => dn.DeliveredOnUtc <= toUtc.Value);
+
+        var deliveredNotes = dnQuery
+            .Select(dn => new
+            {
+                dn.Id,
+                dn.DeliveredOnUtc,
+                dn.TotalAmount,
+                Items = dn.Items.Select(i => new
+                {
+                    i.ProductId,
+                    i.Quantity,
+                    i.UnitPrice,
+                    i.SubTotal
+                }).ToList()
+            })
+            .ToList();
+
+        var crQuery = _customerReturnReader.DataSource
+            .Where(cr => cr.Status == CustomerReturnStatus.Confirmed
+                      && cr.ConfirmedOnUtc != null);
+
+        if (fromUtc.HasValue) crQuery = crQuery.Where(cr => cr.ConfirmedOnUtc >= fromUtc.Value);
+        if (toUtc.HasValue) crQuery = crQuery.Where(cr => cr.ConfirmedOnUtc <= toUtc.Value);
+
+        var confirmedReturns = crQuery
+            .Select(cr => new
+            {
+                cr.ConfirmedOnUtc,
+                Items = cr.Items.Select(i => new { i.AcceptedQuantity, i.ReturnUnitPrice }).ToList()
+            })
+            .ToList();
+
+        var productIds = deliveredNotes.SelectMany(dn => dn.Items).Select(i => i.ProductId).Distinct().ToList();
+        var products = _productDataReader.DataSource.Where(p => productIds.Contains(p.Id)).ToList();
+        var deliveryNoteIds = deliveredNotes.Select(dn => dn.Id).ToList();
+
+        var cogsSummary = await _inventoryCostingManager
+            .GetCogsForReferencesAsync(InventoryCostReferenceType.SalesOrder, deliveryNoteIds)
+            .ConfigureAwait(false);
+
+        var cogsByDeliveryNote = new Dictionary<Guid, decimal>();
+        foreach (var deliveryNoteId in deliveryNoteIds)
         {
-            var endOfDay = toDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-            ordersQuery = ordersQuery.Where(o => o.CreatedOnUtc <= endOfDay);
+            var noteCogs = await _inventoryCostingManager
+                .GetCogsForReferencesAsync(InventoryCostReferenceType.SalesOrder, [deliveryNoteId])
+                .ConfigureAwait(false);
+            cogsByDeliveryNote[deliveryNoteId] = noteCogs.TotalCost;
         }
 
-        // Project to avoid N+1 and relationship load issues with EF Core
-        var projectedOrders = ordersQuery.Select(o => new {
-            o.Id,
-            o.CreatedOnUtc,
-            o.OrderTotal,
-            Items = o.OrderItems.Select(i => new { i.ProductId, i.Quantity, i.SubTotal, i.CostPrice }).ToList()
-        }).ToList();
-        
-        var dto = new ProfitLossSummaryAppDto();
-        dto.TotalRevenue = projectedOrders.Sum(o => o.OrderTotal);
-        
-        decimal totalCogs = 0;
+        decimal grossRevenue = deliveredNotes.Sum(dn => dn.TotalAmount);
+        decimal totalReturnAmt = confirmedReturns.Sum(cr => cr.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitPrice));
+
+        var dto = new ProfitLossSummaryAppDto
+        {
+            TotalRevenue = grossRevenue - totalReturnAmt,
+            TotalCogs = cogsSummary.TotalCost,
+            HasPendingCogs = cogsSummary.HasPendingCost,
+            HasRevaluedCogs = cogsSummary.HasRevaluedCost
+        };
+
         var dateDict = new Dictionary<string, RevenueByDateAppDto>();
         var productDict = new Dictionary<Guid, TopSellingProductAppDto>();
-        
-        var productIds = projectedOrders.SelectMany(o => o.Items).Select(i => i.ProductId).Distinct().ToList();
-        var products = _productDataReader.DataSource.Where(p => productIds.Contains(p.Id)).ToList();
 
-        foreach (var order in projectedOrders)
+        foreach (var dn in deliveredNotes)
         {
-            var dateLabel = order.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy");
-            if (!dateDict.ContainsKey(dateLabel))
-                dateDict[dateLabel] = new RevenueByDateAppDto { DateLabel = dateLabel };
-
-            var dayStats = dateDict[dateLabel];
-            dayStats.Revenue += order.OrderTotal;
-            
-            decimal orderCogs = 0;
-            foreach (var item in order.Items)
+            var dateLabel = dn.DeliveredOnUtc!.Value.ToLocalTime().ToString("dd/MM/yyyy");
+            if (!dateDict.TryGetValue(dateLabel, out var dayStats))
             {
-                orderCogs += item.CostPrice * item.Quantity;
-                
-                if (!productDict.ContainsKey(item.ProductId))
+                dayStats = new RevenueByDateAppDto { DateLabel = dateLabel };
+                dateDict[dateLabel] = dayStats;
+            }
+
+            var dnCogs = cogsByDeliveryNote.GetValueOrDefault(dn.Id);
+            dayStats.Revenue += dn.TotalAmount;
+            dayStats.Profit += dn.TotalAmount - dnCogs;
+
+            foreach (var item in dn.Items)
+            {
+                if (!productDict.TryGetValue(item.ProductId, out var topProd))
                 {
                     var product = products.FirstOrDefault(p => p.Id == item.ProductId);
-                    productDict[item.ProductId] = new TopSellingProductAppDto 
-                    { 
+                    topProd = new TopSellingProductAppDto
+                    {
                         ProductName = product?.Name ?? "(Không xác định)"
                     };
+                    productDict[item.ProductId] = topProd;
                 }
-                
-                var topProd = productDict[item.ProductId];
+
                 topProd.QuantitySold += (int)item.Quantity;
                 topProd.Revenue += item.SubTotal;
             }
-            
-            totalCogs += orderCogs;
-            dayStats.Profit += (order.OrderTotal - orderCogs);
         }
 
-        dto.TotalCogs = totalCogs;
-        
-        // Calculate Operating Expenses
-        var expensesQuery = _expenseDataReader.DataSource;
-        if (fromDate.HasValue)
-            expensesQuery = expensesQuery.Where(e => e.IncurredDate >= fromDate.Value.ToUniversalTime());
-        if (toDate.HasValue)
+        foreach (var cr in confirmedReturns)
         {
-            var endOfDay = toDate.Value.Date.AddDays(1).AddTicks(-1).ToUniversalTime();
-            expensesQuery = expensesQuery.Where(e => e.IncurredDate <= endOfDay);
+            var returnAmt = cr.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitPrice);
+            var dateLabel = cr.ConfirmedOnUtc!.Value.ToLocalTime().ToString("dd/MM/yyyy");
+            if (dateDict.TryGetValue(dateLabel, out var dayStats))
+            {
+                dayStats.Revenue -= returnAmt;
+                dayStats.Profit -= returnAmt;
+            }
+            else
+            {
+                dateDict[dateLabel] = new RevenueByDateAppDto
+                {
+                    DateLabel = dateLabel,
+                    Revenue = -returnAmt,
+                    Profit = -returnAmt
+                };
+            }
         }
+
+        var expensesQuery = _expenseDataReader.DataSource;
+        if (fromUtc.HasValue) expensesQuery = expensesQuery.Where(e => e.IncurredDate >= fromUtc.Value);
+        if (toUtc.HasValue) expensesQuery = expensesQuery.Where(e => e.IncurredDate <= toUtc.Value);
 
         var expensesList = expensesQuery.Select(e => new { e.IncurredDate, e.Amount }).ToList();
         dto.TotalOperatingExpenses = expensesList.Sum(e => e.Amount);
 
-        // Map daily expenses to profit
         foreach (var expense in expensesList)
         {
             var dateLabel = expense.IncurredDate.ToLocalTime().ToString("dd/MM/yyyy");
@@ -109,17 +177,23 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
             }
             else
             {
-                dateDict[dateLabel] = new RevenueByDateAppDto 
-                { 
+                dateDict[dateLabel] = new RevenueByDateAppDto
+                {
                     DateLabel = dateLabel,
                     Profit = -expense.Amount
                 };
             }
         }
-        
-        dto.RevenueTrend = dateDict.Values.OrderBy(x => DateTime.ParseExact(x.DateLabel, "dd/MM/yyyy", null)).ToList();
-        dto.TopProducts = productDict.Values.OrderByDescending(x => x.QuantitySold).Take(5).ToList();
 
-        return Task.FromResult(dto);
+        dto.RevenueTrend = dateDict.Values
+            .OrderBy(x => DateTime.ParseExact(x.DateLabel, "dd/MM/yyyy", null))
+            .ToList();
+
+        dto.TopProducts = productDict.Values
+            .OrderByDescending(x => x.QuantitySold)
+            .Take(5)
+            .ToList();
+
+        return dto;
     }
 }

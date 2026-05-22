@@ -1,19 +1,22 @@
 using MediatR;
-using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Web.Contracts.Commands.Models.Customers;
 using NamEcommerce.Web.Contracts.Models.Customers;
 using NamEcommerce.Application.Contracts.Customers;
 using NamEcommerce.Application.Contracts.Dtos.Customers;
+using NamEcommerce.Application.Contracts.Debts;
+using NamEcommerce.Application.Contracts.Dtos.Debts;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Customers;
 
 public sealed class CreateCustomerHandler : IRequestHandler<CreateCustomerCommand, CreateCustomerResultModel>
 {
     private readonly ICustomerAppService _customerAppService;
+    private readonly ICustomerDebtAppService _customerDebtAppService;
 
-    public CreateCustomerHandler(ICustomerAppService customerAppService)
+    public CreateCustomerHandler(ICustomerAppService customerAppService, ICustomerDebtAppService customerDebtAppService)
     {
         _customerAppService = customerAppService;
+        _customerDebtAppService = customerDebtAppService;
     }
 
     public async Task<CreateCustomerResultModel> Handle(CreateCustomerCommand request, CancellationToken cancellationToken)
@@ -27,10 +30,27 @@ public sealed class CreateCustomerHandler : IRequestHandler<CreateCustomerComman
             Note = request.Note
         }).ConfigureAwait(false);
 
+        if (!result.Success)
+            return new CreateCustomerResultModel
+            {
+                Success = false,
+                ErrorMessage = result.ErrorMessage,
+                CreatedId = Guid.Empty
+            };
+
+        // Tạo công nợ ban đầu nếu có
+        if (request.InitialDebt.HasValue && request.InitialDebt.Value > 0)
+        {
+            await _customerDebtAppService.CreateInitialDebtAsync(new CreateInitialCustomerDebtAppDto
+            {
+                CustomerId = result.CreatedId!.Value,
+                TotalAmount = request.InitialDebt.Value
+            }).ConfigureAwait(false);
+        }
+
         return new CreateCustomerResultModel
         {
-            Success = result.Success,
-            ErrorMessage = result.ErrorMessage,
+            Success = true,
             CreatedId = result.CreatedId ?? Guid.Empty
         };
     }

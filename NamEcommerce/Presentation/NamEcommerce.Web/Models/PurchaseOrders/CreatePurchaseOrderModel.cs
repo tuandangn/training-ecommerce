@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using NamEcommerce.Web.Contracts.Models.Common;
 using System.ComponentModel.DataAnnotations;
 
-namespace NamEcommerce.Web.Models.Catalog;
+namespace NamEcommerce.Web.Models.PurchaseOrders;
 
 [Serializable]
 public sealed class CreatePurchaseOrderModel
@@ -11,7 +11,7 @@ public sealed class CreatePurchaseOrderModel
     public DateTime PlacedOn { get; set; }
 
     [Display(Name = "Nhà cung cấp")]
-    public Guid VendorId { get; set; }
+    public Guid? VendorId { get; set; }
     [ValidateNever]
     public string? VendorName { get; set; }
     [ValidateNever]
@@ -21,8 +21,6 @@ public sealed class CreatePurchaseOrderModel
 
     [Display(Name = "Kho nhập hàng")]
     public Guid? WarehouseId { get; set; }
-    [ValidateNever]
-    public EntityOptionListModel? AvailableWarehouses { get; set; }
 
     [Display(Name = "Ngày giao dự kiến")]
     public DateTime? ExpectedDeliveryDate { get; set; }
@@ -30,7 +28,15 @@ public sealed class CreatePurchaseOrderModel
     [Display(Name = "Ghi chú")]
     public string? Note { get; set; }
 
+    [ValidateNever]
+    public bool NotHasAppropriatedVendor { get; set; }
+
     public IList<CreatePurchaseOrderItemModel> Items { get; set; } = [];
+    [ValidateNever]
+    public IEnumerable<Guid> ValidVendorIds => Items.SelectMany(item => item.AvailableVendors.Select(v => v.Id))
+        .Distinct()
+        .Where(id => Items.All(item => item.AvailableVendors.Any(v => v.Id == id)))
+        .ToList();
 
     [ValidateNever]
     public decimal OrderSubTotal => Items.Sum(item => item.ItemSubTotal);
@@ -58,4 +64,7 @@ public sealed class CreatePurchaseOrderItemModel
 
     [ValidateNever]
     public decimal ItemSubTotal => (UnitCost ?? 0) * (Quantity ?? 0);
+
+    [ValidateNever]
+    public IEnumerable<EntityOptionListModel.EntityOptionModel> AvailableVendors { get; set; } = [];
 }

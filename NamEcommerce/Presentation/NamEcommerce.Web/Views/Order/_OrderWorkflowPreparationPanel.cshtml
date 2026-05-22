@@ -1,0 +1,146 @@
+@model OrderDetailsModel
+@{
+    var isActive = Model.Workflow.ActiveStage == OrderDetailsModel.WorkflowStage.Preparation;
+}
+<section class="workflow-panel @(isActive ? "active" : "")" data-workflow-panel="preparation" role="tabpanel">
+    <div class="content-card">
+        <div class="content-card-header">
+            <div>
+                <h5>Chuẩn bị hàng</h5>
+                <div class="text-muted small">Tồn kho, hàng thiếu, giao thẳng và đơn nhập liên quan</div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                @if (Model.ShortageInfo.HasShortage && Model.CanUpdateInfo)
+                {
+                    <a class="btn btn-sm btn-link text-dark text-decoration-none" href="/PurchaseOrder/ShortageAggregation?orderId=@Model.Id">
+                        <i class="bi bi-box-arrow-in-down"></i> Nhập hàng
+                    </a>
+                }
+            </div>
+        </div>
+        <div class="content-card-body">
+            @if (Model.ShortageInfo.HasShortage)
+            {
+                var shortageNoticeViewData = new ViewDataDictionary(ViewData)
+                {
+                    ["ShortageModalId"] = "orderShortageModal",
+                    ["ShortageMessage"] = $"Đơn hàng có {Model.ShortageInfo.Items.Count} mặt hàng chưa đủ tồn kho. Cần nhập thêm hàng từ nhà cung cấp trước khi giao đủ cho khách.",
+                    ["ShortageActionUrl"] = $"/PurchaseOrder/ShortageAggregation?orderId={Model.Id}",
+                    ["ShortageActionText"] = "Nhập hàng thiếu",
+                    ["ShortagePrimaryQuantityLabel"] = "Đã đặt",
+                    ["ShortageSecondaryQuantityLabel"] = "Đã xuất",
+                    ["ShortageUseShippedQuantity"] = true
+                };
+                @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
+            }
+            @if (Model.Preparation.Items.Count == 0)
+            {
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="bi bi-box-seam"></i></div>
+                    <h5>Chưa có hàng hóa</h5>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive mb-3">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Hàng hóa</th>
+                                <th class="text-end">SL đặt</th>
+                                <th class="text-end">Tồn kho</th>
+                                <th class="text-end">SL thiếu</th>
+                                <th class="text-end">Đã xuất</th>
+                                <th class="text-end">Đã giao</th>
+                                <th class="text-end">Giao thẳng</th>
+                                <th class="text-end">Giá vốn</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Preparation.Items)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-600 text-dark">@item.ProductName</div>
+                                        @if (item.RelatedPurchaseOrders.Count > 0)
+                                        {
+                                            <div class="small text-muted">
+                                                @string.Join(", ", item.RelatedPurchaseOrders.Select(po => po.PurchaseOrderCode))
+                                            </div>
+                                        }
+                                    </td>
+                                    <td class="text-end">@item.OrderedQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">@item.AvailableQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">
+                                        <span class="@(item.ShortageQuantity > 0 ? "text-danger fw-bold" : "text-success fw-600")">
+                                            @item.ShortageQuantity.DisplayQuantity()
+                                        </span>
+                                    </td>
+                                    <td class="text-end">@item.IssuedQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">@item.DeliveredQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">
+                                        @if (item.DirectShipQuantity > 0)
+                                        {
+                                            <div class="fw-600">@item.DirectShipReceivedQuantity.DisplayQuantity() / @item.DirectShipQuantity.DisplayQuantity()</div>
+                                            <div class="small text-muted">@item.DirectShipStatusText</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Không</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @(item.UnitCost.HasValue ? item.UnitCost.Value.DisplayCurrencyWithSymbol() : "-")
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (Model.Preparation.PurchaseOrders.Count == 0)
+            {
+                <div class="workflow-soft-empty">
+                    <i class="bi bi-box-arrow-in-down"></i>
+                    <span>Chưa có đơn nhập liên quan.</span>
+                </div>
+            }
+            else
+            {
+                <div class="workflow-section-title">Đơn nhập liên quan</div>
+                <div class="table-responsive">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Đơn nhập</th>
+                                <th>Nhà cung cấp</th>
+                                <th>Hàng hóa</th>
+                                <th class="text-end">Đã nhận / Phân bổ</th>
+                                <th>Trạng thái</th>
+                                <th class="text-end">Ngày đặt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var po in Model.Preparation.PurchaseOrders)
+                            {
+                                <tr>
+                                    <td>
+                                        <a asp-controller="PurchaseOrder" asp-action="Details" asp-route-id="@po.PurchaseOrderId" class="fw-600 text-decoration-none">
+                                            @po.PurchaseOrderCode
+                                        </a>
+                                    </td>
+                                    <td>@po.VendorName</td>
+                                    <td>@po.ProductName</td>
+                                    <td class="text-end">@po.ReceivedQuantity.DisplayQuantity() / @po.AllocatedQuantity.DisplayQuantity()</td>
+                                    <td><span class="status-badge @po.StatusClass">@po.StatusText</span></td>
+                                    <td class="text-end">@po.PlacedOn.ToString(ViewConstants.DefaultDateFormat)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</section>

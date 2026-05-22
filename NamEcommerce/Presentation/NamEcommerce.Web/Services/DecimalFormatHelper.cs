@@ -17,7 +17,12 @@ public static class DecimalFormatHelper
     public static string FormatCurrency(decimal? value)
     {
         if (!value.HasValue) return string.Empty;
-        return InsertThousandSeparator(((long)value.Value).ToString(), '.', 'đ');
+        return InsertThousandSeparator(((long)value.Value).ToString(), '.');
+    }
+    public static string FormatCurrencyWithSymbol(decimal? value)
+    {
+        if (!value.HasValue) return string.Empty;
+        return InsertThousandSeparator(((long)value.Value).ToString(), '.', '\u20ab');
     }
 
     /// <summary>

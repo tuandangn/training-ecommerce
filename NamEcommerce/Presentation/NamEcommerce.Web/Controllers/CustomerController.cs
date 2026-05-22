@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Application.Contracts.CustomerPortal;
 using NamEcommerce.Web.Contracts.Commands.Models.Customers;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
@@ -10,11 +11,16 @@ namespace NamEcommerce.Web.Controllers;
 public sealed class CustomerController : BaseAuthorizedController
 {
     private readonly AppConfig _appConfig;
+    private readonly ICustomerPortalAdminAppService _customerPortalAdminAppService;
     private readonly IMediator _mediator;
 
-    public CustomerController(AppConfig appConfig, IMediator mediator)
+    public CustomerController(
+        AppConfig appConfig,
+        ICustomerPortalAdminAppService customerPortalAdminAppService,
+        IMediator mediator)
     {
         _appConfig = appConfig;
+        _customerPortalAdminAppService = customerPortalAdminAppService;
         _mediator = mediator;
     }
 
@@ -59,6 +65,22 @@ public sealed class CustomerController : BaseAuthorizedController
         }));
     }
 
+    [HttpGet]
+    public async Task<IActionResult> PickItem(Guid id)
+    {
+        var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = id });
+        if (customer is null)
+            return NotFound();
+
+        return Json(new
+        {
+            id = customer.Id,
+            name = customer.FullName,
+            phone = customer.PhoneNumber,
+            address = customer.Address
+        });
+    }
+
     public IActionResult Create()
     {
         return View(new CreateCustomerModel());
@@ -75,8 +97,9 @@ public sealed class CustomerController : BaseAuthorizedController
             FullName = model.FullName!,
             PhoneNumber = model.PhoneNumber!,
             Email = model.Email,
-            Address = model.Address,
-            Note = model.Note
+            Address = model.Address ?? string.Empty,
+            Note = model.Note,
+            InitialDebt = model.InitialDebt
         });
 
         if (!result.Success)
@@ -87,6 +110,43 @@ public sealed class CustomerController : BaseAuthorizedController
 
         NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(List));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> QuickCreate(CreateCustomerModel model)
+    {
+        if (!ModelState.IsValid)
+            return Json(new { success = false, message = GetErrorMessage() });
+
+        var result = await _mediator.Send(new CreateCustomerCommand
+        {
+            FullName = model.FullName!,
+            PhoneNumber = model.PhoneNumber!,
+            Email = model.Email,
+            Address = model.Address ?? string.Empty,
+            Note = model.Note,
+            InitialDebt = model.InitialDebt
+        });
+
+        if (!result.Success)
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+
+        var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = result.CreatedId });
+        if (customer is null)
+            return Json(new { success = false, message = LocalizeError("Error.CustomerIsNotFound") });
+
+        return Json(new
+        {
+            success = true,
+            message = LocalizeError("Msg.SaveSuccess"),
+            customer = new
+            {
+                id = customer.Id,
+                name = customer.FullName,
+                phone = customer.PhoneNumber,
+                address = customer.Address
+            }
+        });
     }
 
     public async Task<IActionResult> Edit(Guid id)
@@ -108,6 +168,7 @@ public sealed class CustomerController : BaseAuthorizedController
             Note = customer.Note
         };
 
+        await PopulatePortalAccountAsync(model).ConfigureAwait(false);
         return View(model);
     }
 
@@ -115,7 +176,10 @@ public sealed class CustomerController : BaseAuthorizedController
     public async Task<IActionResult> Edit(EditCustomerModel model)
     {
         if (!ModelState.IsValid)
+        {
+            await PopulatePortalAccountAsync(model).ConfigureAwait(false);
             return View(model);
+        }
 
         var result = await _mediator.Send(new UpdateCustomerCommand
         {
@@ -123,13 +187,14 @@ public sealed class CustomerController : BaseAuthorizedController
             FullName = model.FullName!,
             PhoneNumber = model.PhoneNumber!,
             Email = model.Email,
-            Address = model.Address,
+            Address = model.Address ?? string.Empty,
             Note = model.Note
         });
 
         if (!result.Success)
         {
             AddLocalizedModelError(result.ErrorMessage);
+            await PopulatePortalAccountAsync(model).ConfigureAwait(false);
             return View(model);
         }
 
@@ -147,5 +212,22 @@ public sealed class CustomerController : BaseAuthorizedController
         else
             NotifySuccess("Msg.DeleteSuccess");
         return RedirectToAction(nameof(List));
+    }
+
+    private async Task PopulatePortalAccountAsync(EditCustomerModel model)
+    {
+        if (model.Id == Guid.Empty)
+            return;
+
+        var account = await _customerPortalAdminAppService.GetAccountAsync(model.Id).ConfigureAwait(false);
+        if (account is null)
+            return;
+
+        model.HasPortalAccount = true;
+        model.PortalAccountStatus = account.Status;
+        model.HasPortalPassword = account.HasPassword;
+        model.PortalPasswordSetOnUtc = account.PasswordSetOnUtc;
+        model.PortalLastLoginOnUtc = account.LastLoginOnUtc;
+        model.PortalUpdatedOnUtc = account.UpdatedOnUtc;
     }
 }

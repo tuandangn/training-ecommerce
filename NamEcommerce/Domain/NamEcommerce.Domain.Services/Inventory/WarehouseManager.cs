@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Inventory;
@@ -27,6 +28,8 @@ public sealed class WarehouseManager : IWarehouseManager
 
         dto.Verify();
 
+        if (dto.WarehouseType == WarehouseType.DirectTransit && await DirectShipTransitExistsAsync().ConfigureAwait(false))
+            throw new DirectShipTransitWarehouseAlreadyExistsException();
         if (await DoesCodeExistAsync(dto.Code).ConfigureAwait(false))
             throw new WarehouseCodeExistsException(dto.Code);
         if (await DoesNameExistAsync(dto.Name).ConfigureAwait(false))
@@ -93,7 +96,7 @@ public sealed class WarehouseManager : IWarehouseManager
         return warehouse.ToDto();
     }
 
-    public Task<IPagedDataDto<WarehouseDto>> GetWarehousesAsync(string? keywords, int pageIndex, int pageSize)
+    public Task<IPagedDataDto<WarehouseDto>> GetWarehousesAsync(int pageIndex, int pageSize, string? keywords)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
@@ -122,6 +125,13 @@ public sealed class WarehouseManager : IWarehouseManager
         return Task.FromResult(data);
     }
 
+    public Task<bool> DirectShipTransitExistsAsync()
+    {
+        var exists = _warehouseDataReader.DataSource
+            .Any(w => w.WarehouseType == WarehouseType.DirectTransit);
+        return Task.FromResult(exists);
+    }
+
     public async Task<UpdateWarehouseResultDto> UpdateWarehouseAsync(UpdateWarehouseDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
@@ -131,6 +141,10 @@ public sealed class WarehouseManager : IWarehouseManager
         var warehouse = await _warehouseDataReader.GetByIdAsync(dto.Id);
         if (warehouse is null)
             throw new ArgumentException("Warehouse is not found", nameof(dto));
+
+        if (dto.WarehouseType == WarehouseType.DirectTransit && warehouse.WarehouseType != WarehouseType.DirectTransit
+            && await DirectShipTransitExistsAsync().ConfigureAwait(false))
+            throw new DirectShipTransitWarehouseAlreadyExistsException();
 
         await warehouse.SetCodeAsync(dto.Code, this).ConfigureAwait(false);
         await warehouse.SetNameAsync(dto.Name, this).ConfigureAwait(false);

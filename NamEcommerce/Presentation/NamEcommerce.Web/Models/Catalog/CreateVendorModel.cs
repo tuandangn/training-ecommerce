@@ -16,4 +16,7 @@ public sealed class CreateVendorModel
 
     [Display(Name = "Thứ tự hiển thị")]
     public int DisplayOrder { get; set; }
+
+    [Display(Name = "Công nợ ban đầu")]
+    public decimal? InitialDebt { get; set; }
 }

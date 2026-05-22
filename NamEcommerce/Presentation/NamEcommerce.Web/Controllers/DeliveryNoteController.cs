@@ -4,6 +4,7 @@ using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Models.DeliveryNotes;
+using NamEcommerce.Web.Services.CustomerPortal;
 using NamEcommerce.Web.Services.DeliveryNotes;
 
 namespace NamEcommerce.Web.Controllers;
@@ -13,15 +14,18 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     private readonly IDeliveryNoteModelFactory _deliveryNoteModelFactory;
     private readonly IMediator _mediator;
     private readonly IDeliveryNoteAppService _deliveryNoteAppService;
+    private readonly ICustomerPortalQrCodeService _customerPortalQrCodeService;
 
     public DeliveryNoteController(
         IDeliveryNoteModelFactory deliveryNoteModelFactory,
         IMediator mediator,
-        IDeliveryNoteAppService deliveryNoteAppService)
+        IDeliveryNoteAppService deliveryNoteAppService,
+        ICustomerPortalQrCodeService customerPortalQrCodeService)
     {
         _deliveryNoteModelFactory = deliveryNoteModelFactory;
         _mediator = mediator;
         _deliveryNoteAppService = deliveryNoteAppService;
+        _customerPortalQrCodeService = customerPortalQrCodeService;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
@@ -139,6 +143,13 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         try
         {
             var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteDetailsModelAsync(id).ConfigureAwait(false);
+            var qrCode = await _customerPortalQrCodeService.CreateDeliveryQrCodeAsync(id, Request).ConfigureAwait(false);
+            if (qrCode is not null)
+            {
+                model.CustomerPortalUrl = qrCode.Url;
+                model.CustomerPortalQrCodeSvg = qrCode.Svg;
+            }
+
             return View(model);
         }
         catch
@@ -159,7 +170,13 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         if (result.Success)
             return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
 
-        return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+        return Json(new
+        {
+            success = false,
+            message = LocalizeError(result.ErrorMessage!),
+            shortageItems = result.ShortageItems,
+            aggregationUrl = Url.Action("ShortageAggregation", "PurchaseOrder", new { deliveryNoteId = id })
+        });
     }
 
     [HttpPost]

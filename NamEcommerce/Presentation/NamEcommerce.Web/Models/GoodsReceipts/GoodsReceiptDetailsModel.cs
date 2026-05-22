@@ -4,6 +4,7 @@ namespace NamEcommerce.Web.Models.GoodsReceipts;
 public sealed class GoodsReceiptDetailsModel
 {
     public required Guid Id { get; init; }
+    public string Code { get; init; } = string.Empty;
     public required DateTime CreatedOn { get; init; }
     public string? TruckDriverName { get; init; }
     public string? TruckNumberSerial { get; init; }
@@ -38,5 +39,11 @@ public sealed class GoodsReceiptDetailsModel
         public decimal? UnitCost { get; init; }
 
         public bool IsPendingCosting { get; init; }
+
+        /// <summary>Tổng đã trả NCC (Confirmed).</summary>
+        public decimal ReturnedQuantity { get; set; }
+
+        /// <summary>Số đang giữ trong VR Draft/Inspecting.</summary>
+        public decimal PendingReturnQuantity { get; set; }
     }
 }

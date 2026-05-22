@@ -13,19 +13,22 @@ export default class CustomerPicker {
     #debounceTimer = null;
     #abortController = null;
 
+    #options;
+
     static #DEBOUNCE_DELAY = 500;
     static #MIN_QUERY_LENGTH = 0;
 
-    constructor(target) {
+    constructor(target, opts) {
         if (!(target instanceof HTMLElement)) {
             throw new TypeError('Target phải là một HTMLElement hợp lệ');
         }
 
         this.target = target;
+        this.#options = Object.assign({
+            allowCreateNew: false
+        }, opts);
         this.#init();
     }
-
-    // ─── Khởi tạo ───────────────────────────────────────────────────────────────
 
     #init() {
         this.target.innerHTML = this.#template();
@@ -43,8 +46,6 @@ export default class CustomerPicker {
         this.clearBtn = q('.clearCustomer');
         this.searchIcon = q('.searchIcon');
     }
-
-    // ─── Sự kiện ────────────────────────────────────────────────────────────────
 
     #bindEvents() {
         this.input.addEventListener('input', (e) => this.#onInput(e));
@@ -83,8 +84,6 @@ export default class CustomerPicker {
         }
     }
 
-    // ─── Tìm kiếm ───────────────────────────────────────────────────────────────
-
     async #search(query) {
         this.#setLoading(true);
 
@@ -121,8 +120,6 @@ export default class CustomerPicker {
         this.#abortController?.abort();
         this.#abortController = null;
     }
-
-    // ─── Render ─────────────────────────────────────────────────────────────────
 
     #renderSuggestion(query = '') {
         this.suggestion.innerHTML = '';
@@ -166,7 +163,6 @@ export default class CustomerPicker {
         this.suggestion.style.display = 'block';
     }
 
-    /** Highlight từ khóa tìm kiếm trong kết quả */
     #highlight(text, query) {
         if (!query) return text;
         const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -190,8 +186,6 @@ export default class CustomerPicker {
         this.input.readonly = isLoading;
     }
 
-    // ─── Chọn / Xóa khách hàng ──────────────────────────────────────────────────
-
     displayCustomer(customer) {
         this.displayInfo.querySelector('.name-field').textContent = customer.name;
         this.displayInfo.querySelector('.phone-field').textContent = customer.phone;
@@ -201,6 +195,7 @@ export default class CustomerPicker {
         this.displayInfo.classList.remove('d-none');
         this.#hideSuggestion();
     }
+
     selectCustomer(customer) {
         this.#selectedCustomer = customer instanceof Customer ? customer : new Customer(customer);
 
@@ -217,8 +212,6 @@ export default class CustomerPicker {
         this.#dispatch('remove');
     }
 
-    // ─── Tiện ích ────────────────────────────────────────────────────────────────
-
     #dispatch(eventName, detail = {}) {
         this.target.dispatchEvent(new CustomEvent(eventName, { bubbles: true, detail }));
     }
@@ -227,13 +220,17 @@ export default class CustomerPicker {
         return this.#selectedCustomer;
     }
 
-    // ─── Template HTML ───────────────────────────────────────────────────────────
     #template() {
         return `
         <div class="input-group-container">
-            <input type="text" class="form-control customerSearch" id="customerSearch"
-                placeholder="Nhập tên, số điện thoại..." autocomplete="off"
-                aria-label="Tìm kiếm khách hàng" aria-autocomplete="list" />
+            <div class="input-group">
+                <input type="text" class="form-control customerSearch" id="customerSearch" placeholder="Nhập tên, số điện thoại..."
+                    autocomplete="off" aria-label="Tìm kiếm khách hàng" aria-autocomplete="list" />
+                ${this.#options.allowCreateNew ? `<button class="btn btn-outline-secondary" type="button" data-open-quick-customer data-bs-toggle="tooltip" title="Thêm khách hàng mới">
+                    <i class="bi bi-plus"></i>
+                    <span class="visually-hidden">Thêm mới</span>
+                </button>` : ''}
+            </div>
         </div>
         <div class="list-group list-group-flush position-absolute w-100 shadow-lg mt-1 customerSuggestion" style="z-index: 1050; display: none; max-height: 300px; overflow-y: auto;" role="listbox"></div>
         <div class="alert alert-primary d-none border-0 rounded-3 d-flex align-items-center mb-0 selectedCustomerInfo" role="status">

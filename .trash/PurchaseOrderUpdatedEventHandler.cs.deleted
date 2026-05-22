@@ -1,0 +1,8 @@
+// Deprecated — moved to PurchaseOrderItemReceivedEventHandler.cs.
+// The old EntityUpdatedNotification<PurchaseOrder> handler ran on every update of a PurchaseOrder
+// (vendor change, note change, etc.) which was wasteful. The actual trigger we care about is
+// "an item just received quantity", so the new handler subscribes to the concrete
+// PurchaseOrderItemReceived domain event instead.
+//
+// File kept as an empty placeholder because the scheduled task session cannot delete files.
+// Tuấn có thể xóa file này trong lần dọn Phase 5 — Cleanup.

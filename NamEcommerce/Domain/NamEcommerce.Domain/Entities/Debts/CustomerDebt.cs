@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Events.Debts;
 using NamEcommerce.Domain.Shared.Helpers;
 
 namespace NamEcommerce.Domain.Entities.Debts;
@@ -18,7 +19,7 @@ public sealed record CustomerDebt : AppAggregateEntity
     internal CustomerDebt(string code, Guid customerId, string customerName, 
         Guid deliveryNoteId, string deliveryNoteCode, 
         Guid orderId, string orderCode,
-        decimal totalAmount, DateTime? dueDateUtc, Guid? createdByUserId) : base(Guid.NewGuid())
+        decimal totalAmount, DateTime? dueDateUtc) : base(Guid.NewGuid())
     {
         Code = code;
         CustomerId = customerId;
@@ -32,7 +33,25 @@ public sealed record CustomerDebt : AppAggregateEntity
         PaidAmount = 0;
         Status = DebtStatus.Outstanding;
         DueDateUtc = dueDateUtc;
-        CreatedByUserId = createdByUserId;
+        CreatedOnUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>Constructor cho công nợ ban đầu (số dư đầu kỳ) — không gắn phiếu xuất hay đơn hàng.</summary>
+    internal CustomerDebt(string code, Guid customerId, string customerName,
+        decimal totalAmount) : base(Guid.NewGuid())
+    {
+        Code = code;
+        CustomerId = customerId;
+        CustomerName = customerName;
+        DeliveryNoteId = Guid.Empty;
+        DeliveryNoteCode = string.Empty;
+        OrderId = Guid.Empty;
+        OrderCode = string.Empty;
+        TotalAmount = totalAmount;
+        RemainingAmount = totalAmount;
+        PaidAmount = 0;
+        Status = DebtStatus.Outstanding;
+        DueDateUtc = null;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
@@ -78,17 +97,16 @@ public sealed record CustomerDebt : AppAggregateEntity
     public DebtStatus Status { get; private set; }
     public DateTime? DueDateUtc { get; private set; }
     
-    public Guid? CreatedByUserId { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
     internal void ApplyPayment(decimal amount)
     {
         if (amount <= 0) return;
-        
+
         PaidAmount += amount;
         RemainingAmount = TotalAmount - PaidAmount;
-        
+
         if (RemainingAmount <= 0)
         {
             RemainingAmount = 0;
@@ -98,7 +116,40 @@ public sealed record CustomerDebt : AppAggregateEntity
         {
             Status = DebtStatus.PartiallyPaid;
         }
-        
+
         UpdatedOnUtc = DateTime.UtcNow;
+    }
+
+    /// <summary>
+    /// Giảm công nợ do khách trả hàng — <c>RemainingAmount</c> có thể xuống âm (hoàn tiền mặt xử lý Phase C).
+    /// Idempotent: caller kiểm tra <c>returnId</c> trước khi gọi để tránh áp dụng 2 lần.
+    /// </summary>
+    internal void ApplyReturn(decimal amount, Guid returnId)
+    {
+        if (amount <= 0) return;
+
+        RemainingAmount -= amount;
+        UpdatedOnUtc = DateTime.UtcNow;
+
+        // Nếu về 0 hoặc âm → đánh dấu FullyPaid; số âm xử lý hoàn tiền ở Phase C
+        if (RemainingAmount <= 0)
+            Status = DebtStatus.FullyPaid;
+    }
+
+    /// <summary>
+    /// Đánh dấu phiếu công nợ vừa được khởi tạo — Manager gọi trước <c>InsertAsync</c>.
+    /// </summary>
+    internal void MarkCreated()
+        => RaiseDomainEvent(new CustomerDebtCreated(Id, CustomerId, TotalAmount, DeliveryNoteId, OrderId));
+
+    /// <summary>
+    /// Đánh dấu phiếu công nợ vừa được cập nhật — raise <see cref="CustomerDebtUpdated"/>.
+    /// Nếu sau update <c>Status == FullyPaid</c> thì raise thêm <see cref="CustomerDebtFullyPaid"/>.
+    /// </summary>
+    internal void MarkUpdated()
+    {
+        RaiseDomainEvent(new CustomerDebtUpdated(Id));
+        if (Status == DebtStatus.FullyPaid)
+            RaiseDomainEvent(new CustomerDebtFullyPaid(Id, CustomerId));
     }
 }

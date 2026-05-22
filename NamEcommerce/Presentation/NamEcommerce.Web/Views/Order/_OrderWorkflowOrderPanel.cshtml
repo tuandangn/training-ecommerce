@@ -1,0 +1,188 @@
+@model OrderDetailsModel
+@inject IWebHelper WebHelper
+@{
+    var isActive = Model.Workflow.ActiveStage == OrderDetailsModel.WorkflowStage.Order;
+}
+
+<section class="workflow-panel @(isActive ? "active" : "")" data-workflow-panel="order" role="tabpanel">
+    <div class="content-card">
+        <div class="content-card-header">
+            <div>
+                <h5>Chi tiết đặt hàng</h5>
+                <div class="text-muted small">Thông tin khách hàng và hàng hóa khách đặt</div>
+            </div>
+            @if (Model.CanUpdateOrderItems)
+            {
+                <button type="button" class="btn btn-sm btn-link text-dark text-decoration-none" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                    <i class="bi bi-plus-lg me-1"></i>Thêm hàng hóa
+                </button>
+            }
+        </div>
+        <div class="content-card-body">
+            <div class="order-workflow-info-grid mb-3">
+                <div>
+                    <div class="workflow-info-label">Khách hàng</div>
+                    <div class="fw-bold text-dark">@Model.CustomerName</div>
+                    @if (!string.IsNullOrWhiteSpace(Model.CustomerPhoneNumber))
+                    {
+                        <a href="tel:@Model.CustomerPhoneNumber" class="text-decoration-none small">@Model.CustomerPhoneNumber</a>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.CustomerAddress))
+                    {
+                        var encodedCustomerAddress = WebHelper.EncodeUrlComponent(Model.CustomerAddress);
+                        <div class="small text-muted mt-1">
+                            @Model.CustomerAddress
+                            <a href="https://www.google.com/maps/search/@encodedCustomerAddress" target="_blank" class="text-decoration-none text-nowrap ms-1">
+                                <i class="bi bi-geo-alt"></i>
+                            </a>
+                        </div>
+                    }
+                </div>
+                <div>
+                    <div class="workflow-info-label">Vận chuyển</div>
+                    <div class="fw-bold text-dark">
+                        @(Model.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat) ?? "Chưa hẹn ngày")
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(Model.ShippingAddress))
+                    {
+                        var encodedShippingAddress = WebHelper.EncodeUrlComponent(Model.ShippingAddress);
+                        <div class="small text-muted mt-1">
+                            @Model.ShippingAddress
+                            <a href="https://www.google.com/maps/search/@encodedShippingAddress" target="_blank" class="text-decoration-none text-nowrap ms-1">
+                                <i class="bi bi-geo-alt"></i>
+                            </a>
+                        </div>
+                    }
+                    @if (Model.CanUpdateInfo)
+                    {
+                        <button type="button" class="btn btn-sm btn-light mt-2" data-bs-toggle="modal" data-bs-target="#shippingModal">
+                            <i class="bi bi-pencil-square me-1"></i>Sửa
+                        </button>
+                    }
+                </div>
+                <div>
+                    <div class="workflow-info-label">Ghi chú</div>
+                    @if (!string.IsNullOrWhiteSpace(Model.Note))
+                    {
+                        <div class="text-dark">@Model.Note</div>
+                    }
+                    else
+                    {
+                        <div class="text-muted">Không có ghi chú</div>
+                    }
+                    @if (Model.CanUpdateInfo)
+                    {
+                        <button type="button" class="btn btn-sm btn-light mt-2" data-bs-toggle="modal" data-bs-target="#changeNoteModal">
+                            <i class="bi bi-pencil-square me-1"></i>Sửa
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table data-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Hàng hóa</th>
+                            <th class="text-end">SL đặt</th>
+                            <th class="text-end">Đơn giá</th>
+                            <th class="text-end">Thành tiền</th>
+                            @if (Model.CanUpdateOrderItems)
+                            {
+                                <th class="text-end" style="width: 48px"></th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody id="itemsTableBody">
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr data-item-id="@item.Id">
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        @if (!string.IsNullOrEmpty(item.ProductPicture))
+                                        {
+                                            <img src="@item.ProductPicture" class="rounded d-none d-lg-block item-product-img"
+                                                 style="width: 40px; height: 40px; object-fit: cover;" alt="" />
+                                        }
+                                        else
+                                        {
+                                            <div class="d-none d-lg-flex align-items-center justify-content-center rounded bg-light"
+                                                 style="width: 40px; height: 40px; flex-shrink: 0;">
+                                                <i class="bi bi-image text-muted small"></i>
+                                            </div>
+                                        }
+                                        <span class="fw-medium text-dark">@item.ProductName</span>
+                                    </div>
+                                </td>
+                                <td class="text-end fw-600">@item.Quantity.DisplayQuantity()</td>
+                                <td class="text-end text-muted">@item.UnitPrice.DisplayCurrencyWithSymbol()</td>
+                                <td class="text-end fw-600 text-primary">@item.SubTotal.DisplayCurrencyWithSymbol()</td>
+                                @if (Model.CanUpdateOrderItems)
+                                {
+                                    <td class="text-end">
+                                        <button class="btn-table-action" type="button" data-bs-toggle="dropdown">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                            <li>
+                                                <button class="dropdown-item btnEditItem" data-id="@item.Id"
+                                                        data-product="@item.ProductName"
+                                                        data-availableQty="@item.ProductAvailableQty?.DisplayQuantity()"
+                                                        data-qty="@item.Quantity.ToString("#")"
+                                                        data-price="@item.UnitPrice.ToString("#")">
+                                                    <i class="bi bi-pencil me-2 text-primary"></i>Chỉnh sửa
+                                                </button>
+                                            </li>
+                                            @if (Model.Items.Count > 1)
+                                            {
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <button class="dropdown-item text-danger btnRemoveItem" data-id="@item.Id"
+                                                            data-order="@Model.Id" data-name="@item.ProductName">
+                                                        <i class="bi bi-trash me-2"></i>Xóa
+                                                    </button>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="order-summary mt-3" id="tableFooter">
+                <div class="order-summary-row small">
+                    <span class="label">Tạm tính</span>
+                    <span class="value" id="subTotal">@Model.OrderSubTotal.DisplayCurrencyWithSymbol()</span>
+                </div>
+                <div class="order-summary-row position-relative">
+                    <span class="label">
+                        Giảm giá
+                        @if (Model.CanUpdateInfo)
+                        {
+                            <a href="#" class="text-muted stretched-link" data-bs-toggle="modal" data-bs-target="#editDiscountModal">
+                                <i class="bi bi-pencil-square"></i>
+                                <span class="visually-hidden">Chỉnh sửa</span>
+                            </a>
+                        }
+                    </span>
+                    <span class="value" id="discountDisplay">
+                        @(Model.OrderDiscount > 0 ? $"-{Model.OrderDiscount.DisplayCurrencyWithSymbol()}" : 0m.DisplayCurrencyWithSymbol())
+                    </span>
+                </div>
+                <div class="order-summary-row total">
+                    <span class="label">Tổng cộng</span>
+                    <span class="value" id="grandTotal">@Model.TotalAmount.DisplayCurrencyWithSymbol()</span>
+                </div>
+                <div class="currency-hint text-end visible" id="grandTotalHint">
+                    @if (Model.TotalAmount > 0)
+                    {
+                        @Model.TotalAmount.DisplayVietnameseCurrencyHint()
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,142 @@
+@using NamEcommerce.Application.Contracts.Dtos.CustomerPortal
+@using NamEcommerce.Application.Contracts.Dtos.Inventory
+@using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@model CustomerPortalReturnRequestAdminAppDto
+@{
+    ViewData[ViewConstants.PageTitle] = $"Yêu cầu trả hàng {Model.DeliveryNoteCode}";
+    var status = (CustomerReturnRequestStatus)Model.Status;
+    var returnUrl = Context.Request.Path.ToString() + Context.Request.QueryString.ToString();
+    var warehouses = ViewBag.Warehouses as IReadOnlyCollection<WarehouseAppDto> ?? Array.Empty<WarehouseAppDto>();
+}
+
+<div class="page-header">
+    <div class="d-flex align-items-center">
+        <a asp-action="ReturnRequests" class="btn btn-icon btn-light me-3 shadow-sm border"><i class="bi bi-arrow-left"></i></a>
+        <div>
+            <h1 class="page-header-title">Yêu cầu trả hàng</h1>
+            <p class="page-header-subtitle">@Model.CustomerName · Phiếu giao @Model.DeliveryNoteCode</p>
+        </div>
+    </div>
+    <span class="badge @status.GetDisplayColor() fs-6">@status.GetDisplayText()</span>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="content-card">
+            <div class="action-toolbar">
+                <h6 class="mb-0 fw-bold">Hàng khách muốn trả</h6>
+                <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@Model.DeliveryNoteId" class="btn btn-sm btn-outline-secondary">Xem phiếu giao</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table data-table align-middle">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Sản phẩm</th>
+                            <th class="text-end">SL yêu cầu</th>
+                            <th>Lý do từng dòng</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-medium">@item.ProductName</td>
+                            <td class="text-end">@item.RequestedQuantity</td>
+                            <td>
+                                <div class="text-muted">@(!string.IsNullOrWhiteSpace(item.Reason) ? item.Reason : "—")</div>
+                                @if (item.EvidencePictures.Count > 0)
+                                {
+                                    <div class="d-flex flex-wrap gap-2 mt-2">
+                                        @foreach (var picture in item.EvidencePictures)
+                                        {
+                                            if (!string.IsNullOrWhiteSpace(picture.PictureUrl))
+                                            {
+                                                <a href="@picture.PictureUrl" target="_blank" rel="noopener" class="d-inline-block border rounded overflow-hidden" title="@picture.FileName">
+                                                    <img src="@picture.PictureUrl" alt="Ảnh hiện trạng @item.ProductName" style="width: 88px; height: 88px; object-fit: cover;" />
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="content-card p-4 mb-4">
+            <h6 class="fw-bold mb-3">Khách hàng</h6>
+            <div class="fw-semibold">@Model.CustomerName</div>
+            <div class="text-muted small mb-3">@Model.CustomerPhone</div>
+            <form asp-action="BlockAccount" method="post">
+                <input type="hidden" name="customerId" value="@Model.CustomerId" />
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <button type="submit" class="btn btn-sm btn-outline-danger">
+                    <i class="bi bi-shield-lock me-1"></i>Khóa khách này
+                </button>
+            </form>
+        </div>
+        <div class="content-card p-4 mb-4">
+            <h6 class="fw-bold mb-3">Lý do khách gửi</h6>
+            <div>@(!string.IsNullOrWhiteSpace(Model.Reason) ? Model.Reason : "—")</div>
+        </div>
+        @if (status == CustomerReturnRequestStatus.PendingReview)
+        {
+            <div class="content-card p-4">
+                <h6 class="fw-bold mb-3">Xem xét yêu cầu</h6>
+                <form asp-action="AcceptReturnRequest" method="post" class="mb-3">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <textarea name="adminNote" class="form-control mb-2" rows="2" placeholder="Ghi chú nội bộ"></textarea>
+                    <button type="submit" class="btn btn-primary w-100"><i class="bi bi-check2-circle me-1"></i>Chấp nhận</button>
+                </form>
+                <form asp-action="RejectReturnRequest" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <textarea name="adminNote" class="form-control mb-2" rows="2" placeholder="Lý do từ chối"></textarea>
+                    <button type="submit" class="btn btn-outline-danger w-100">Từ chối</button>
+                </form>
+            </div>
+        }
+        else if (status == CustomerReturnRequestStatus.Accepted)
+        {
+            <div class="content-card p-4">
+                <h6 class="fw-bold mb-3">Tạo phiếu trả nội bộ</h6>
+                <form asp-action="ConvertReturnRequest" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Kho nhận</label>
+                        <select name="warehouseId" class="form-select" required>
+                            <option value="">Chọn kho nhận hàng trả</option>
+                            @foreach (var warehouse in warehouses)
+                            {
+                                <option value="@warehouse.Id">@warehouse.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <textarea name="adminNote" class="form-control mb-2" rows="2" placeholder="Ghi chú khi tạo phiếu trả"></textarea>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-arrow-right-circle me-1"></i>Tạo phiếu trả
+                    </button>
+                </form>
+            </div>
+        }
+        else if (status == CustomerReturnRequestStatus.ConvertedToReturn && Model.ConvertedCustomerReturnId.HasValue)
+        {
+            <div class="content-card p-4">
+                <h6 class="fw-bold mb-3">Phiếu trả đã tạo</h6>
+                <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@Model.ConvertedCustomerReturnId" class="btn btn-primary w-100">
+                    Xem phiếu trả
+                </a>
+            </div>
+        }
+        @if (!string.IsNullOrWhiteSpace(Model.AdminNote))
+        {
+            <div class="content-card p-4">
+                <h6 class="fw-bold mb-2">Ghi chú admin</h6>
+                <div class="text-muted">@Model.AdminNote</div>
+            </div>
+        }
+    </div>
+</div>

@@ -15,7 +15,7 @@ public sealed class EntityDataReaderTests
             new Category(Guid.NewGuid(), "category 1") { DisplayOrder = 1 }
         };
         var dbContextMock = DbContext.Create()
-            .WhenCall(dbContext => dbContext.GetDataSource<Category>(), data);
+            .WhenCall(dbContext => dbContext.GetDataSource<Category>(false), data);
 
         var entityDataReader = new EntityDataReader<Category>(dbContextMock.Object, null!);
         var unorderedCategories = entityDataReader.DataSource;
@@ -83,7 +83,7 @@ public sealed class EntityDataReaderTests
             new Category(ids[1], "Category 2")
         };
         var dbContextMock = DbContext.Create()
-            .WhenCall(dbContext => dbContext.GetDataSource<Category>(), categories);
+            .WhenCall(dbContext => dbContext.GetDataSource<Category>(false), categories);
         var entityDataReader = new EntityDataReader<Category>(dbContextMock.Object, null!);
 
         var result = await entityDataReader.GetByIdsAsync(ids);

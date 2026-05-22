@@ -19,6 +19,7 @@ public class CreateExpenseAppDto
     public DateTime IncurredDate { get; set; }
     
     public Guid? RecordedByUserId { get; set; }
+    public Guid? SourceOrderId { get; set; }
 
     public (bool isValid, string? errorMessage) Validate()
     {

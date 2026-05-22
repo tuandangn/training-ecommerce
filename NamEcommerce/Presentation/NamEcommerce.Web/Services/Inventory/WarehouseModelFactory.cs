@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
@@ -17,26 +18,18 @@ public sealed class WarehouseModelFactory : IWarehouseModelFactory
         _appConfig = appConfig;
     }
 
-    public async Task<CreateWarehouseModel> PrepareCreateWarehouseModel(CreateWarehouseModel? oldModel = null)
+    private static string CodePrefix => Warehouse.CODE_PREFIX;
+    public string PrepareWarehouseCode(string code) => $"{CodePrefix}{code}";
+
+    public Task<CreateWarehouseModel> PrepareCreateWarehouseModel(CreateWarehouseModel? oldModel = null)
     {
-        var availableWarehouseTypes = await _mediator.Send(new GetWarehouseTypeOptionsQuery());
         var model = oldModel ?? new CreateWarehouseModel
         {
-            IsActive = true,
-            AvailableWarehouseTypes = availableWarehouseTypes
+            IsActive = true
         };
-        if (oldModel is not null)
-            model.AvailableWarehouseTypes = availableWarehouseTypes;
-        else
-        {
-            var defaultWarehouseTypeOption = availableWarehouseTypes.FirstOrDefault();
-            if (defaultWarehouseTypeOption is not null && int.TryParse(defaultWarehouseTypeOption.Value, out var defaultWarehouseType))
-            {
-                model.WarehouseType = defaultWarehouseType;
-            }
-        }
+        model.CodePrefix = CodePrefix;
 
-        return model;
+        return Task.FromResult(model);
     }
 
     public async Task<EditWarehouseModel?> PrepareEditWarehouseModel(Guid id, EditWarehouseModel? oldModel = null)
@@ -45,20 +38,16 @@ public sealed class WarehouseModelFactory : IWarehouseModelFactory
         if (warehouse is null && oldModel is null)
             return null;
 
-        var availableWarehouseTypes = await _mediator.Send(new GetWarehouseTypeOptionsQuery());
         var model = oldModel ?? new EditWarehouseModel
         {
             Id = warehouse!.Id,
-            Code = warehouse!.Code,
+            Code = warehouse!.Code.StartsWith(CodePrefix) ? warehouse!.Code.Substring(CodePrefix.Length) : warehouse.Code,
             Name = warehouse!.Name,
-            WarehouseType = warehouse!.WarehouseType,
             Address = warehouse.Address,
             PhoneNumber = warehouse.PhoneNumber,
-            AvailableWarehouseTypes = availableWarehouseTypes,
             IsActive = warehouse.IsActive
         };
-        if (oldModel is not null)
-            model.AvailableWarehouseTypes = availableWarehouseTypes;
+        model.CodePrefix = CodePrefix;
 
         return model;
     }

@@ -15,6 +15,7 @@ public sealed record DeliveryNoteConfirmed(Guid DeliveryNoteId) : DomainEvent;
 
 /// <summary>
 /// Phiếu giao hàng đang trong tình trạng giao (Confirmed → Delivering).
+/// Hiện không có handler — event để audit/tracking trạng thái giao hàng.
 /// </summary>
 public sealed record DeliveryNoteDelivering(Guid DeliveryNoteId) : DomainEvent;
 
@@ -28,8 +29,29 @@ public sealed record DeliveryNoteDelivered(
     decimal TotalAmount) : DomainEvent;
 
 /// <summary>
-/// Phiếu giao hàng bị huỷ — stock đã reserve cần được release nếu phiếu trước đó là Confirmed/Delivering.
+/// Phiếu giao hàng bị huỷ.
+/// Hiện không có handler — stock release và cascade cancel CustomerReturn đang xử lý trực tiếp trong DeliveryNoteManager.CancelAsync.
+/// Giữ event để audit/tracking; tách side-effect sang handler là refactor dài hạn.
 /// </summary>
 public sealed record DeliveryNoteCancelled(
     Guid DeliveryNoteId,
     bool WasReservingStock) : DomainEvent;
+
+// ── Direct-Ship Events ──────────────────────────────────────────────────────
+
+/// <summary>
+/// Legacy direct-ship event. Flow hiện tại dùng <see cref="DeliveryNoteDelivered"/>.
+/// </summary>
+public sealed record DirectShipDeliveryConfirmed(
+    Guid DeliveryNoteId,
+    Guid OrderId,
+    Guid CustomerId,
+    decimal TotalAmount) : DomainEvent;
+
+/// <summary>
+/// Legacy direct-ship event. Flow hiện tại xử lý reject trong DirectShipManager rồi raise <see cref="DeliveryNoteCancelled"/>.
+/// </summary>
+public sealed record DirectShipDeliveryRejected(
+    Guid DeliveryNoteId,
+    Guid OrderId,
+    Guid? SourceGoodsReceiptId) : DomainEvent;

@@ -18,3 +18,10 @@ public sealed class GetStockMovementLogsQuery : IRequest<StockMovementLogListMod
     public int PageIndex { get; init; }
     public int PageSize { get; init; }
 }
+
+public sealed class GetProductReservationLedgerQuery : IRequest<ProductReservationLedgerListModel>
+{
+    public required Guid ProductId { get; init; }
+    public int PageIndex { get; init; }
+    public int PageSize { get; init; }
+}

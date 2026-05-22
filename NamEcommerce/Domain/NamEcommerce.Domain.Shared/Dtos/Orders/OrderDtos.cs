@@ -33,13 +33,13 @@ public sealed record OrderDto(Guid Id) : BaseOrderDto
     public required decimal OrderSubTotal { get; init; }
     public required decimal TotalAmount { get; init; }
     public required OrderStatus Status { get; init; }
-    public string? LockOrderReason { get; set; }
+    public DateTime? CompletedOnUtc { get; set; }
 
     public string? ShippingAddress { get; set; }
     public DateTime CreatedOnUtc { get; set; }
 
     public bool CanUpdateInfo { get; init; }
-    public bool CanLockOrder { get; init; }
+    public bool CanCompleteOrder { get; init; }
     public bool CanUpdateOrderItems { get; init; }
 
     public IList<OrderItemDto> Items { get; } = [];
@@ -49,9 +49,7 @@ public sealed record OrderDto(Guid Id) : BaseOrderDto
 [Serializable]
 public sealed record CreateOrderDto : BaseOrderDto
 {
-    public required string Code { get; init; }
     public required Guid CustomerId { get; init; }
-    public required Guid? CreatedByUserId { get; init; }
     public string? ShippingAddress { get; set; }
     public IList<AddOrderItemDto> Items { get; } = [];
 
@@ -86,6 +84,12 @@ public sealed record UpdateOrderResultDto
 public sealed record DeleteOrderDto(Guid OrderId) : BaseOrderDto;
 
 [Serializable]
+public sealed record CancelOrderDto(Guid OrderId) : BaseOrderDto
+{
+    public IReadOnlyList<Guid> FullyReceivedAllocationIds { get; init; } = [];
+}
+
+[Serializable]
 public sealed record UpdateShippingDto
 {
     public required Guid OrderId { get; init; }
@@ -100,8 +104,7 @@ public sealed record UpdateShippingDto
 }
 
 [Serializable]
-public sealed record LockOrderDto
+public sealed record CompleteOrderDto
 {
     public required Guid OrderId { get; init; }
-    public required string? Reason { get; init; }
 }
