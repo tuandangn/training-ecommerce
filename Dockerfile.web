@@ -1,0 +1,32 @@
+# ================================
+# Stage 1: Build
+# ================================
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy toàn bộ solution
+COPY NamEcommerce/ .
+
+# Restore & publish NamEcommerce.Web
+RUN dotnet publish Presentation/NamEcommerce.Web/NamEcommerce.Web.csproj \
+    -c Release \
+    -o /app/publish
+
+# ================================
+# Stage 2: Runtime
+# ================================
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
+ENV TZ=Asia/Ho_Chi_Minh
+
+COPY --from=build /app/publish .
+
+RUN mkdir -p /app/wwwroot/uploads
+
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_ENVIRONMENT=Production
+
+ENTRYPOINT ["dotnet", "NamEcommerce.Web.dll"]
