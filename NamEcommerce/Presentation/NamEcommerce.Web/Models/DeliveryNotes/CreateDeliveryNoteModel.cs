@@ -12,9 +12,16 @@ public sealed class CreateDeliveryNoteModel
     [ValidateNever]
     public string OrderCode { get; set; } = string.Empty;
     [ValidateNever]
+    public DateTime? ExpectedShippingDate { get; set; }
+    [ValidateNever]
+    public DateTime PlacedOn { get; set; }
+    [ValidateNever]
     public string? OrderNote { get; set; }
     [ValidateNever]
     public string CustomerName { get; set; } = string.Empty;
+    [ValidateNever]
+    public string CustomerPhoneNumber { get; set; } = string.Empty;
+    public string? CustomerAddress { get; set; }
     
     [Display(Name = "Địa chỉ giao hàng (*)", Prompt = "Nhập địa chỉ giao hàng")]
     [Required(ErrorMessage = "Địa chỉ giao hàng là bắt buộc.")]
@@ -36,7 +43,7 @@ public sealed class CreateDeliveryNoteModel
     [Display(Name = "Phụ phí")]
     public decimal Surcharge { get; set; }
 
-    [Display(Name = "Lý do phụ phí", Prompt = "Nhập lý do thu phụ phí...")]
+    [Display(Name = "Lý do", Prompt = "Nhập lý do thu phụ phí...")]
     public string? SurchargeReason { get; set; }
 
     [Display(Name = "Số tiền phải thu (mặc định = tổng tiền + phụ phí)")]

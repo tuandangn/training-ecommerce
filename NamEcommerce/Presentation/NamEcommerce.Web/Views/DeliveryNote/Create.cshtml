@@ -1,4 +1,5 @@
 @model CreateDeliveryNoteModel
+@inject IWebHelper WebHelper
 @{
     ViewData[ViewConstants.PageTitle] = "Tạo phiếu xuất kho";
 }
@@ -23,23 +24,65 @@
     <input type="hidden" asp-for="OrderId" />
 
     <div class="row g-4">
-        <!-- Danh sách hàng hóa cần xuất (cột trái) -->
         <div class="col-md-8">
-            <div class="content-card h-100 d-flex flex-column">
+            <div class="content-card">
                 <div class="content-card-header">
-                    <div class="d-flex justify-content-between align-items-center w-100">
-                        <h5 class="mb-0 fw-bold">
-                            <i class="bi bi-box-seam me-2 text-primary"></i>
-                            Hàng hóa cần xuất
-                        </h5>
-                        <div class="text-end" id="selectedTotalContainer" style="display:none;">
-                            <span class="text-muted small">Tổng tiền chọn:</span>
-                            <span class="fw-bold text-dark ms-2" id="selectedTotalText">0đ</span>
+                    <div>
+                        <h5>Chi tiết phiếu xuất hàng</h5>
+                        <div class="text-muted small">Thông tin khách hàng và hàng hóa xuất</div>
+                    </div>
+                </div>
+                <div class="content-card-body">
+                    <div class="order-workflow-info-grid">
+                        <div>
+                            <div class="workflow-info-label">Đơn hàng</div>
+                            <div class="fw-bold text-dark">
+                                @Model.OrderCode
+                            </div>
+                            <div class="small text-primary mt-1">
+                                Ngày đặt @(Model.PlacedOn.ToString(ViewConstants.DefaultDateFormat))
+                            </div>
+                            <div class="small text-muted mt-1">
+                                @(Model.ExpectedShippingDate.HasValue ? $"Ngày hẹn {Model.ExpectedShippingDate.Value.ToString(ViewConstants.DefaultDateFormat)}" : "Chưa hẹn ngày")
+                            </div>
+                        </div>
+                        <div>
+                            <div class="workflow-info-label">Khách hàng</div>
+                            <div class="fw-bold text-dark">@Model.CustomerName</div>
+                            @if (!string.IsNullOrWhiteSpace(Model.CustomerPhoneNumber))
+                            {
+                                <a href="tel:@Model.CustomerPhoneNumber" class="text-decoration-none small">@Model.CustomerPhoneNumber</a>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(Model.CustomerAddress))
+                            {
+                                var encodedCustomerAddress = WebHelper.EncodeUrlComponent(Model.CustomerAddress);
+                                <div class="small text-muted mt-1">
+                                    @Model.CustomerAddress
+                                    <a href="https://www.google.com/maps/search/@encodedCustomerAddress" target="_blank" class="text-decoration-none text-nowrap ms-1">
+                                        <i class="bi bi-geo-alt"></i>
+                                    </a>
+                                </div>
+                            }
+                        </div>
+                        <div>
+                            <div class="workflow-info-label">Ghi chú</div>
+                            @if (!string.IsNullOrWhiteSpace(Model.OrderNote))
+                            {
+                                <div class="text-dark">@Model.OrderNote</div>
+                            }
+                            else
+                            {
+                                <div class="text-muted small">Không có ghi chú</div>
+                            }
                         </div>
                     </div>
                 </div>
                 <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
-                <div class="content-card-body-flush flex-grow-1">
+                <div class="content-card-body-flush">
+                    <div class="text-end px-3" id="selectedTotalContainer" style="display:none;">
+                        <span class="text-muted small">Tổng tiền chọn:</span>
+                        <span class="fw-bold text-success ms-2" id="selectedTotalText">0đ</span>
+                    </div>
                     <div class="table-responsive">
                         <table class="table data-table mb-0">
                             <thead>
@@ -68,10 +111,11 @@
                                                 <input type="hidden" asp-for="Items[i].UnitPrice" class="item-price" />
                                             </td>
                                             <td class="align-middle fw-medium">@Model.Items[i].ProductName</td>
-                                            <td class="text-end align-middle">@Model.Items[i].OrderedQuantity.ToString("N2")</td>
-                                            <td class="text-end align-middle text-success">@Model.Items[i].PreviouslyDeliveredQuantity.ToString("N2")</td>
+                                            <td class="text-end align-middle">@Model.Items[i].OrderedQuantity.DisplayQuantity()</td>
+                                            <td class="text-end align-middle text-success">@Model.Items[i].PreviouslyDeliveredQuantity.DisplayQuantity()</td>
                                             <td class="pe-4">
-                                                <input type="number" asp-for="Items[i].Quantity" class="form-control text-end quantity-input fw-bold" step="0.01" min="0.01" max="@Model.Items[i].OrderedQuantity" />
+                                                <input asp-for="Items[i].Quantity" class="form-control text-end quantity-input fw-bold"
+                                                       max="@Model.Items[i].OrderedQuantity" data-decimal="quantity" value="@Model.Items[i].Quantity.DisplayQuantity()" />
                                             </td>
                                         </tr>
                                     }
@@ -103,7 +147,6 @@
             </div>
         </div>
 
-        <!-- Thông tin phiếu & Thanh toán (cột phải) -->
         <div class="col-md-4">
             <!-- Info Card -->
             <div class="content-card mb-4">
@@ -114,19 +157,6 @@
                     </h5>
                 </div>
                 <div class="content-card-body">
-                    <div class="mb-3">
-                        <span class="form-label small text-muted text-uppercase d-block mb-2">Đơn hàng tham chiếu</span>
-                        <span class="fw-bold d-block ps-2">@Model.OrderCode</span>
-                        @if (!string.IsNullOrEmpty(Model.OrderNote))
-                        {
-                            <p class="text-muted bg-light p-2 small mt-2 rounded mb-0">@Model.OrderNote</p>
-                        }
-                        <span asp-validation-for="OrderId" class="text-danger small"></span>
-                    </div>
-                    <div class="mb-3">
-                        <span class="form-label small text-muted text-uppercase d-block mb-2">Khách hàng</span>
-                        <span class="fw-bold d-block ps-2">@Model.CustomerName</span>
-                    </div>
                     <div class="mb-3">
                         <label asp-for="ShippingAddress" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
                         <textarea asp-for="ShippingAddress" class="form-control" rows="2"></textarea>
@@ -155,8 +185,22 @@
                     </h5>
                 </div>
                 <div class="content-card-body">
-                    <div class="payment-breakdown mb-4 p-3 bg-light rounded border">
-                        <div class="d-flex justify-content-between mb-2">
+                    <div class="row mb-3">
+                        <div class="col-xl-6 mb-3">
+                            <label asp-for="Surcharge" class="form-label small fw-bold text-muted text-uppercase mb-2" for="surchargeInput"></label>
+                            <div class="input-group">
+                                <input asp-for="Surcharge" class="form-control text-end" id="surchargeInput" placeholder="0" data-decimal="currency" />
+                                <span class="input-group-text bg-white">đ</span>
+                            </div>
+                        </div>
+                        <div class="col-xl-6">
+                            <label asp-for="SurchargeReason" class="form-label small fw-bold text-muted text-uppercase mb-2" for="SurchargeReason"></label>
+                            <input asp-for="SurchargeReason" class="form-control" placeholder="Lý do thu phụ phí (ví dụ: phí vận chuyển xa, phí bốc xếp...)"/>
+                        </div>
+                    </div>
+
+                    <div class="payment-breakdown mb-3 p-3 bg-light rounded border" id="moneySummary">
+                        <div class="d-flex justify-content-between mb-2 @(Model.ShowPrice ? "" : "d-none")" id="productsPrice">
                             <span class="text-muted small">Tiền hàng:</span>
                             <span class="fw-bold" id="breakdown-items">0đ</span>
                         </div>
@@ -171,36 +215,17 @@
                     </div>
 
                     <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label asp-for="Surcharge" class="form-label small fw-bold text-muted text-uppercase mb-0"></label>
-                        </div>
+                        <label asp-for="AmountToCollect" class="form-label small fw-bold text-primary text-uppercase mb-2" for="amountToCollectInput">Số tiền phải thu</label>
                         <div class="input-group">
-                            <input asp-for="Surcharge" class="form-control text-end" type="number" step="1000" id="surchargeInput" placeholder="0" />
-                            <span class="input-group-text bg-white">đ</span>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label asp-for="SurchargeReason" class="form-label small fw-bold text-muted text-uppercase mb-2"></label>
-                        <textarea asp-for="SurchargeReason" class="form-control" rows="2" placeholder="Lý do thu phụ phí (ví dụ: phí vận chuyển xa, phí bốc xếp...)"></textarea>
-                    </div>
-
-                    <div class="mb-4">
-                        <label asp-for="AmountToCollect" class="form-label small fw-bold text-primary text-uppercase mb-2">Số tiền phải thu</label>
-                        <div class="input-group">
-                            <input asp-for="AmountToCollect" class="form-control text-end fw-bold text-primary fs-5" type="number" step="any" id="amountToCollectInput" />
+                            <input asp-for="AmountToCollect" class="form-control text-end fw-bold text-primary fs-5" id="amountToCollectInput" data-decimal="currency" />
                             <span class="input-group-text bg-primary text-white border-primary">đ</span>
                         </div>
                         <span asp-validation-for="AmountToCollect" class="text-danger small"></span>
-                        <div class="form-text mt-2 text-primary" id="calculationInfo" style="font-size: 0.75rem;">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Tự động tính theo phụ phí
-                        </div>
                     </div>
 
                     <div class="form-check form-switch mb-0 p-3 bg-light rounded border">
                         <input class="form-check-input ms-0" type="checkbox" asp-for="ShowPrice" role="switch" id="showPriceSwitch">
-                        <label class="form-check-label ms-2 fw-medium" asp-for="ShowPrice">
+                        <label class="form-check-label ms-2 fw-medium" asp-for="ShowPrice" for="showPriceSwitch">
                             Hiển thị giá trên phiếu
                         </label>
                     </div>
@@ -225,8 +250,13 @@
             const $breakdownSurcharge = $('#breakdown-surcharge');
             const $breakdownTotal = $('#breakdown-total');
 
-            function formatCurrency(amount) {
-                return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+            const $moneySummary = $('#moneySummary');
+            const $productsPrice = $('#productsPrice');
+
+            function formatCurrency(amount, withSymbol) {
+                if (withSymbol)
+                    return DecimalFields.formatCurrencyWithSymbol(amount);
+                return DecimalFields.formatCurrency(amount);
             }
 
             function calculateAmount() {
@@ -234,13 +264,13 @@
                 $('.item-row').each(function() {
                     const isSelected = $(this).find('.item-checkbox').is(':checked');
                     if (isSelected) {
-                        const qty = parseFloat($(this).find('.quantity-input').val()) || 0;
+                        const qty = parseFloat(DecimalFields.stripFormatting($(this).find('.quantity-input').val(), 2)) || 0;
                         const price = parseFloat($(this).find('.item-price').val()) || 0;
                         totalSelected += qty * price;
                     }
                 });
 
-                const surcharge = parseFloat($surchargeInput.val()) || 0;
+                const surcharge = parseFloat(DecimalFields.stripFormatting($surchargeInput.val())) || 0;
                 const showPrice = $showPriceSwitch.is(':checked');
 
                 let amountToCollect = surcharge;
@@ -248,20 +278,23 @@
 
                 if (showPrice) {
                     amountToCollect = totalSelected + surcharge;
-                    infoText = `Tổng tiền hàng (${formatCurrency(totalSelected)}) + Phụ phí (${formatCurrency(surcharge)})`;
+                    infoText = `Tổng tiền hàng (${formatCurrency(totalSelected, true)}) + Phụ phí (${formatCurrency(surcharge, true)})`;
                     $selectedTotalContainer.show();
-                    $selectedTotalText.text(formatCurrency(totalSelected));
+                    $selectedTotalText.text(formatCurrency(totalSelected, true));
+                    $productsPrice.removeClass('d-none');
                 } else {
                     $selectedTotalContainer.hide();
+                    $productsPrice.addClass('d-none');
                 }
+                $moneySummary.toggleClass('d-none', amountToCollect <= 0);
 
-                $amountToCollectInput.val(amountToCollect);
+                $amountToCollectInput.val(formatCurrency(amountToCollect));
                 $calculationInfo.html(`<i class="bi bi-info-circle me-1"></i> ${infoText}`);
 
                 // Update breakdown
-                $breakdownItems.text(formatCurrency(totalSelected));
-                $breakdownSurcharge.text(formatCurrency(surcharge));
-                $breakdownTotal.text(formatCurrency(amountToCollect));
+                $breakdownItems.text(formatCurrency(totalSelected, true));
+                $breakdownSurcharge.text(formatCurrency(surcharge, true));
+                $breakdownTotal.text(formatCurrency(amountToCollect, true));
             }
 
             // Events
@@ -284,14 +317,14 @@
                 var allChecked = $('.item-checkbox').length === $('.item-checkbox:checked').length;
                 $('#selectAll').prop('checked', allChecked);
             });
-        
+
             // Validation on submit
             $('#createDeliveryForm').submit(function(e) {
                 var hasSelected = false;
                 $('.item-checkbox:checked').each(function() {
                     hasSelected = true;
                     var row = $(this).closest('tr');
-                    var qty = parseFloat(row.find('.quantity-input').val());
+                    var qty = parseFloat(DecimalFields.stripFormatting(row.find('.quantity-input').val(), 2));
                     if (isNaN(qty) || qty <= 0) {
                         alert('Vui lòng nhập số lượng hợp lệ cho các mặt hàng được chọn.');
                         e.preventDefault();
