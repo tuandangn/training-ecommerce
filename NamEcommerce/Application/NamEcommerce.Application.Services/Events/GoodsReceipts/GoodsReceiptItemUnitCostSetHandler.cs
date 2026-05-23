@@ -28,6 +28,9 @@ public sealed class GoodsReceiptItemUnitCostSetHandler : INotificationHandler<Go
 
     public async Task Handle(GoodsReceiptItemUnitCostSet notification, CancellationToken cancellationToken)
     {
+        if (notification is null)
+            return;
+
         var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId).ConfigureAwait(false);
         if (goodsReceipt is null) return;
 

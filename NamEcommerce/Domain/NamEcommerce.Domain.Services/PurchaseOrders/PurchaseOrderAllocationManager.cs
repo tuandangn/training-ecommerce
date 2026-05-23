@@ -38,7 +38,6 @@ public sealed class PurchaseOrderAllocationManager(
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemCannotAllocate");
 
         var (order, orderItem) = EnsureOrderItemExists(dto.OrderItemId);
-
         EnsureOrderItemCanAllocate(orderItem, purchaseOrderItem.ProductId, dto.AllocationQuantity);
 
         var allocatedQuantity = allocationReader.DataSource

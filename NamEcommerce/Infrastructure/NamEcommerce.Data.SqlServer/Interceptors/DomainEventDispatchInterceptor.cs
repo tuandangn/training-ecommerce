@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace NamEcommerce.Data.SqlServer.Interceptors;
 
@@ -16,12 +17,12 @@ namespace NamEcommerce.Data.SqlServer.Interceptors;
 /// </summary>
 public sealed class DomainEventDispatchInterceptor : SaveChangesInterceptor
 {
-    private readonly IPublisher _publisher;
+    private readonly IServiceProvider _serviceProvider;
 
-    public DomainEventDispatchInterceptor(IPublisher publisher)
+    public DomainEventDispatchInterceptor(IServiceProvider serviceProvider)
     {
-        ArgumentNullException.ThrowIfNull(publisher);
-        _publisher = publisher;
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+        _serviceProvider = serviceProvider;
     }
 
     public override async ValueTask<int> SavedChangesAsync(
@@ -29,29 +30,25 @@ public sealed class DomainEventDispatchInterceptor : SaveChangesInterceptor
         int result,
         CancellationToken cancellationToken = default)
     {
+        var resultValue = await base.SavedChangesAsync(eventData, result, cancellationToken)
+            .ConfigureAwait(false);
+
         var context = eventData.Context;
-        if (context is null)
-        {
-            return await base.SavedChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
-        }
+        if (context is not null)
+            await DispatchDomainEventsAsync(context, cancellationToken).ConfigureAwait(false);
 
-        await DispatchDomainEventsAsync(context, cancellationToken).ConfigureAwait(false);
-
-        return await base.SavedChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
+        return resultValue;
     }
 
     public override int SavedChanges(SaveChangesCompletedEventData eventData, int result)
     {
+        var resultValue = base.SavedChanges(eventData, result);
+
         var context = eventData.Context;
-        if (context is null)
-        {
-            return base.SavedChanges(eventData, result);
-        }
+        if (context is not null)
+            DispatchDomainEventsAsync(context, default).GetAwaiter().GetResult();
 
-        // Async dispatch trên sync path — block để đảm bảo hoàn tất trước khi return.
-        DispatchDomainEventsAsync(context, CancellationToken.None).GetAwaiter().GetResult();
-
-        return base.SavedChanges(eventData, result);
+        return resultValue;
     }
 
     private async Task DispatchDomainEventsAsync(DbContext context, CancellationToken cancellationToken)
@@ -67,13 +64,11 @@ public sealed class DomainEventDispatchInterceptor : SaveChangesInterceptor
         var events = aggregates.SelectMany(a => a.DomainEvents).ToList();
 
         foreach (var aggregate in aggregates)
-        {
             aggregate.ClearDomainEvents();
-        }
+
+        var publisher = _serviceProvider.GetRequiredService<IPublisher>();
 
         foreach (var domainEvent in events)
-        {
-            await _publisher.Publish(domainEvent, cancellationToken).ConfigureAwait(false);
-        }
+            await publisher.Publish(domainEvent, cancellationToken).ConfigureAwait(false);
     }
 }

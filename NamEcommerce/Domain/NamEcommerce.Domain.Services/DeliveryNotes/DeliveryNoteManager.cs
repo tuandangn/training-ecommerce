@@ -49,131 +49,97 @@ public sealed class DeliveryNoteManager(
         return summary.AverageCost;
     }
 
-    public Task<DeliveryNoteDto> CreateFromOrderAsync(CreateDeliveryNoteDto dto)
+    public async Task<DeliveryNoteDto> CreateFromOrderAsync(CreateDeliveryNoteDto dto)
     {
         dto.Verify();
 
-        return ExecuteInTransactionAsync(async () =>
+        var order = await orderReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
+        if (order is null)
+            throw new OrderIsNotFoundException(dto.OrderId);
+
+        var orderItemsById = order.OrderItems.ToDictionary(item => item.Id);
+        var requestedQuantitiesByOrderItem = dto.Items
+            .GroupBy(item => item.OrderItemId)
+            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+
+        var requestedOrderItemIds = requestedQuantitiesByOrderItem.Keys.ToList();
+        var activeDeliveryQuantitiesByOrderItem = deliveryNoteReader.DataSource
+            .Where(note => note.OrderId == order.Id && note.Status != DeliveryNoteStatus.Cancelled)
+            .SelectMany(note => note.Items)
+            .Where(item => requestedOrderItemIds.Contains(item.OrderItemId))
+            .GroupBy(item => item.OrderItemId)
+            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+
+        foreach (var (orderItemId, requestedQuantity) in requestedQuantitiesByOrderItem)
         {
-            var order = await orderReader.GetByIdAsync(dto.OrderId).ConfigureAwait(false);
-            if (order is null)
-                throw new OrderIsNotFoundException(dto.OrderId);
+            if (!orderItemsById.TryGetValue(orderItemId, out var orderItem))
+                throw new OrderItemIsNotFoundException();
 
-            var orderItemsById = order.OrderItems.ToDictionary(item => item.Id);
-            var requestedQuantitiesByOrderItem = dto.Items
-                .GroupBy(item => item.OrderItemId)
-                .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
-
-            var requestedOrderItemIds = requestedQuantitiesByOrderItem.Keys.ToList();
-            var activeDeliveryQuantitiesByOrderItem = deliveryNoteReader.DataSource
-                .Where(note => note.OrderId == order.Id && note.Status != DeliveryNoteStatus.Cancelled)
-                .SelectMany(note => note.Items)
-                .Where(item => requestedOrderItemIds.Contains(item.OrderItemId))
-                .GroupBy(item => item.OrderItemId)
-                .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
-
-            foreach (var (orderItemId, requestedQuantity) in requestedQuantitiesByOrderItem)
+            var alreadyInDeliveryNotes = activeDeliveryQuantitiesByOrderItem.GetValueOrDefault(orderItemId);
+            var remainingQuantity = orderItem.Quantity - alreadyInDeliveryNotes;
+            if (requestedQuantity > remainingQuantity)
             {
-                if (!orderItemsById.TryGetValue(orderItemId, out var orderItem))
-                    throw new OrderItemIsNotFoundException();
-
-                var alreadyInDeliveryNotes = activeDeliveryQuantitiesByOrderItem.GetValueOrDefault(orderItemId);
-                var remainingQuantity = orderItem.Quantity - alreadyInDeliveryNotes;
-                if (requestedQuantity > remainingQuantity)
-                {
-                    throw new NamEcommerceDomainException(
-                        "Error.QuantityExceedsRemaining",
-                        orderItem.ProductName ?? string.Empty,
-                        Math.Max(0, remainingQuantity));
-                }
+                throw new NamEcommerceDomainException(
+                    "Error.QuantityExceedsRemaining",
+                    orderItem.ProductName ?? string.Empty,
+                    Math.Max(0, remainingQuantity));
             }
+        }
 
-            var itemsByProduct = dto.Items
-                .GroupBy(item => orderItemsById[item.OrderItemId].ProductId)
-                .Select(g => new { ProductId = g.Key, Quantity = g.Sum(item => item.Quantity) })
-                .ToList();
+        var itemsByProduct = dto.Items
+            .GroupBy(item => orderItemsById[item.OrderItemId].ProductId)
+            .Select(g => new { ProductId = g.Key, Quantity = g.Sum(item => item.Quantity) })
+            .ToList();
 
-            foreach (var item in itemsByProduct)
-            {
-                var stock = await stockManager.GetInventoryStockForProductAsync(item.ProductId, dto.WarehouseId).ConfigureAwait(false);
-                if (stock is null)
-                    throw new InsufficientStockException(item.ProductId, dto.WarehouseId, item.Quantity, 0);
-                if (stock.QuantityAvailable < item.Quantity)
-                    throw new InsufficientStockException(item.ProductId, dto.WarehouseId, item.Quantity, stock.QuantityAvailable);
-            }
+        foreach (var item in itemsByProduct)
+        {
+            var stock = await stockManager.GetInventoryStockForProductAsync(item.ProductId, dto.WarehouseId).ConfigureAwait(false);
+            if (stock is null)
+                throw new InsufficientStockException(item.ProductId, dto.WarehouseId, item.Quantity, 0);
+            if (stock.QuantityAvailable < item.Quantity)
+                throw new InsufficientStockException(item.ProductId, dto.WarehouseId, item.Quantity, stock.QuantityAvailable);
+        }
 
-            var code = await GenerateCodeAsync().ConfigureAwait(false);
+        var code = await GenerateCodeAsync().ConfigureAwait(false);
 
-            var deliveryNote = new DeliveryNote(
-                code: code,
-                orderId: order.Id,
-                customerId: order.CustomerId,
-                customerName: order.CustomerInfo.FullName,
-                customerPhone: order.CustomerInfo.PhoneNumber,
-                customerAddress: order.CustomerInfo.Address,
-                shippingAddress: dto.ShippingAddress,
-                warehouseId: dto.WarehouseId,
-                showPrice: dto.ShowPrice,
-                note: dto.Note,
-                surcharge: dto.Surcharge,
-                amountToCollect: dto.AmountToCollect,
-                surchargeReason: dto.SurchargeReason,
-                createdByUserId: order.CreatedByUserId
-            )
-            {
-                OrderCode = order.Code,
-                WarehouseName = dto.WarehouseName
-            };
+        var deliveryNote = new DeliveryNote(
+            code: code,
+            orderId: order.Id,
+            customerId: order.CustomerId,
+            customerName: order.CustomerInfo.FullName,
+            customerPhone: order.CustomerInfo.PhoneNumber,
+            customerAddress: order.CustomerInfo.Address,
+            shippingAddress: dto.ShippingAddress,
+            warehouseId: dto.WarehouseId,
+            showPrice: dto.ShowPrice,
+            note: dto.Note,
+            surcharge: dto.Surcharge,
+            amountToCollect: dto.AmountToCollect,
+            surchargeReason: dto.SurchargeReason,
+            createdByUserId: order.CreatedByUserId
+        )
+        {
+            OrderCode = order.Code,
+            WarehouseName = dto.WarehouseName
+        };
 
-            foreach (var itemDto in dto.Items)
-            {
-                var orderItem = orderItemsById[itemDto.OrderItemId];
+        foreach (var itemDto in dto.Items)
+        {
+            var orderItem = orderItemsById[itemDto.OrderItemId];
 
-                deliveryNote.AddItem(
-                    orderItemId: orderItem.Id,
-                    productId: orderItem.ProductId,
-                    productName: orderItem.ProductName ?? string.Empty,
-                    quantity: itemDto.Quantity,
-                    unitPrice: orderItem.UnitPrice
-                );
-            }
+            deliveryNote.AddItem(
+                orderItemId: orderItem.Id,
+                productId: orderItem.ProductId,
+                productName: orderItem.ProductName ?? string.Empty,
+                quantity: itemDto.Quantity,
+                unitPrice: orderItem.UnitPrice
+            );
+        }
 
-            if (order.Id != Guid.Empty)
-            {
-                foreach (var item in itemsByProduct)
-                {
-                    var reservedQuantity = await productReservationManager.GetReservedForOrderAsync(item.ProductId, order.Id).ConfigureAwait(false);
-                    if (reservedQuantity < item.Quantity)
-                        throw new InvalidStockOperationException("Error.CannotReleaseMoreThanReserved", reservedQuantity, item.Quantity);
-                }
+        deliveryNote.MarkCreated();
+        var inserted = await deliveryNoteRepository.InsertAsync(deliveryNote).ConfigureAwait(false);
 
-                foreach (var item in itemsByProduct)
-                {
-                    await productReservationManager.ReleaseAsync(
-                        item.ProductId,
-                        item.Quantity,
-                        order.Id,
-                        ProductReservationReason.DeliveryNoteCreated,
-                        deliveryNote.Id).ConfigureAwait(false);
-                }
-            }
-
-            foreach (var item in itemsByProduct)
-            {
-                await stockManager.ReserveStockAsync(
-                    item.ProductId,
-                    deliveryNote.WarehouseId,
-                    item.Quantity,
-                    deliveryNote.Id,
-                    Guid.Empty,
-                    $"Giữ hàng cho phiếu xuất {deliveryNote.Code}").ConfigureAwait(false);
-            }
-
-            deliveryNote.MarkCreated();
-            var inserted = await deliveryNoteRepository.InsertAsync(deliveryNote).ConfigureAwait(false);
-
-            return MapToDto(inserted);
-        });
+        return MapToDto(inserted);
     }
 
     public async Task ConfirmAsync(Guid id)
@@ -188,33 +154,7 @@ public sealed class DeliveryNoteManager(
                 throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, DeliveryNoteStatus.Confirmed);
 
             foreach (var item in deliveryNote.Items)
-            {
                 item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
-            }
-
-            foreach (var item in deliveryNote.Items)
-            {
-                await stockManager.DispatchStockAsync(
-                    item.ProductId,
-                    deliveryNote.WarehouseId,
-                    item.Quantity,
-                    deliveryNote.Id,
-                    Guid.Empty,
-                    $"Xuất hàng cho phiếu xuất {deliveryNote.Code}",
-                    releaseReservedStock: true).ConfigureAwait(false);
-
-                await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
-                {
-                    ProductId = item.ProductId,
-                    WarehouseId = deliveryNote.WarehouseId,
-                    Quantity = item.Quantity,
-                    MovementType = InventoryCostMovementType.SaleDispatch,
-                    ReferenceType = InventoryCostReferenceType.SalesOrder,
-                    ReferenceId = deliveryNote.Id,
-                    ReferenceItemId = item.Id,
-                    OccurredAtUtc = DateTime.UtcNow
-                }).ConfigureAwait(false);
-            }
 
             deliveryNote.Confirm();
             await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
@@ -388,8 +328,7 @@ public sealed class DeliveryNoteManager(
         return inserted.Id;
     }
 
-    public async Task ConfirmDirectShipDeliveryAsync(
-        Guid id, DateTime confirmedAtUtc, string? note, CancellationToken ct = default)
+    public async Task ConfirmDirectShipDeliveryAsync(Guid id, DateTime confirmedAtUtc, string? note, CancellationToken ct = default)
     {
         var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id, ct).ConfigureAwait(false);
         if (deliveryNote is null)
@@ -703,22 +642,6 @@ public sealed class DeliveryNoteManager(
         {
             await action().ConfigureAwait(false);
             await transaction.CommitAsync().ConfigureAwait(false);
-        }
-        catch
-        {
-            await transaction.RollbackAsync().ConfigureAwait(false);
-            throw;
-        }
-    }
-
-    private async Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> action)
-    {
-        await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
-        try
-        {
-            var result = await action().ConfigureAwait(false);
-            await transaction.CommitAsync().ConfigureAwait(false);
-            return result;
         }
         catch
         {
