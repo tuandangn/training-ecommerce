@@ -676,7 +676,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         if (!await _purchaseOrderManager.CanChangeStatusToAsync(id, PurchaseOrderStatus.Cancelled))
             return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotCancel");
 
-        await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Cancelled).ConfigureAwait(false);
+        await _purchaseOrderManager.CancelAsync(id).ConfigureAwait(false);
 
         return CommonActionResultDto.CreateSuccess();
     }

@@ -158,13 +158,10 @@ public sealed class PurchaseOrderAllocationManager(
         return allocations.Select(allocation => allocation.ToDto()).ToList();
     }
 
-    public async Task ReleaseAllocationsForOrderItemAsync(Guid orderItemId)
+    public async Task ReleaseAllocationsOfPurchaseOrderItemAsync(SecondaryItemId purchaseOrderItemId)
     {
-        if (orderItemId == Guid.Empty)
-            return;
-
         var allocations = await allocationReader.DataSource
-            .Where(allocation => allocation.OrderItemId == orderItemId)
+            .Where(allocation => allocation.PurchaseOrderItemId == purchaseOrderItemId.SecondaryId)
             .ToListAsync()
             .ConfigureAwait(false);
 
@@ -198,6 +195,33 @@ public sealed class PurchaseOrderAllocationManager(
         foreach (var orderItemId in orderItemIds)
             await ReleaseAllocationsForOrderItemAsync(orderItemId).ConfigureAwait(false);
     }
+
+    public async Task ReleaseAllocationsForOrderItemAsync(Guid orderItemId)
+    {
+        if (orderItemId == Guid.Empty)
+            return;
+
+        var allocations = await allocationReader.DataSource
+            .Where(allocation => allocation.OrderItemId == orderItemId)
+            .ToListAsync()
+            .ConfigureAwait(false);
+
+        foreach (var allocation in allocations)
+        {
+            if (allocation.ReceivedQuantity == 0)
+            {
+                await allocationRepository.DeleteAsync(allocation).ConfigureAwait(false);
+                continue;
+            }
+
+            if (allocation.AllocatedQuantity > allocation.ReceivedQuantity)
+            {
+                allocation.ReduceAllocationToReceived();
+                await allocationRepository.UpdateAsync(allocation).ConfigureAwait(false);
+            }
+        }
+    }
+
 
     public Task<IList<OrderAllocatedPurchaseOrderDto>> GetAllocatedPurchaseOrdersForOrderAsync(Guid orderId)
     {
@@ -391,4 +415,5 @@ public sealed class PurchaseOrderAllocationManager(
             DirectShipReceipts = [],
             WarehouseReceipts = []
         };
+
 }

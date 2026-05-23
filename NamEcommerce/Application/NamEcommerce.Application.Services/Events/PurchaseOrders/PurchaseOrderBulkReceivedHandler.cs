@@ -4,11 +4,11 @@ using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.Events.PurchaseOrders;
 
-public sealed class PurchaseOrderBulkReceivedEventHandler : INotificationHandler<PurchaseOrderBulkReceived>
+public sealed class PurchaseOrderBulkReceivedHandler : INotificationHandler<PurchaseOrderBulkReceived>
 {
     private readonly IPurchaseOrderManager _purchaseOrderManager;
 
-    public PurchaseOrderBulkReceivedEventHandler(IPurchaseOrderManager purchaseOrderManager)
+    public PurchaseOrderBulkReceivedHandler(IPurchaseOrderManager purchaseOrderManager)
     {
         _purchaseOrderManager = purchaseOrderManager;
     }

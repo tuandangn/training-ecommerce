@@ -20,32 +20,25 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task<CreatePoFromShortageResultDto> CreatePurchaseOrderFromShortageAsync(CreatePoFromShortageDto dto);
     Task<CreatePoFromShortageResultDto> AddItemsToExistingDraftAsync(Guid purchaseOrderId, IList<CreatePoFromShortageItemDto> items);
     Task<UpdatePurchaseOrderResultDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderDto dto);
-    
     Task<AddPurchaseOrderItemResultDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemDto dto);
     Task DeleteOrderItemAsync(Guid purchaseOrderId, Guid itemId);
     Task<ReceivedGoodsForItemResultDto> ReceiveItemsAsync(ReceivedGoodsForItemDto dto);
-
     Task<BulkReceiveGoodsForPurchaseOrderResultDto> BulkReceiveItemsAsync(BulkReceiveGoodsForPurchaseOrderDto dto);
 
     Task SetGoodsReceiptToPurchaseOrderAsync(SetGoodsReceiptToPurchaseOrderDto dto);
-
     Task RemoveGoodsReceiptFromPurchaseOrderAsync(RemoveGoodsReceiptFromPurchaseOrderDto dto);
 
     Task AddReceiptFeesAsync(Guid purchaseOrderId, decimal additionalShipping, decimal additionalTax);
 
     Task ChangeStatusAsync(Guid purchaseOrderId, PurchaseOrderStatus status);
-
     Task ClosePartialAsync(Guid purchaseOrderId, string reason);
+    Task CancelAsync(Guid purchaseOrderId);
     Task VerifyStatusAsync(Guid purchaseOrderId);
 
     Task<bool> CanChangeStatusToAsync(Guid purchaseOrderId, PurchaseOrderStatus status);
     Task<bool> CanAddPurchaseOrderItemsAsync(Guid purchaseOrderId);
     Task<bool> CanReceiveGoodsAsync(Guid purchaseOrderId);
 
-    Task AcceptOversupplyToMainWarehouseAsync(
-        Guid purchaseOrderId,
-        Guid purchaseOrderItemId,
-        decimal oversupplyQuantity,
-        Guid warehouseId,
-        CancellationToken ct = default);
+    Task AcceptOversupplyToMainWarehouseAsync(Guid purchaseOrderId, Guid purchaseOrderItemId,
+        decimal oversupplyQuantity, Guid warehouseId, CancellationToken ct = default);
 }
