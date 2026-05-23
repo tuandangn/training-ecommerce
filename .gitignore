@@ -459,3 +459,5 @@ $RECYCLE.BIN/
 
 # Git Worktrees
 .worktrees/
+
+**/appsettings.Development.json

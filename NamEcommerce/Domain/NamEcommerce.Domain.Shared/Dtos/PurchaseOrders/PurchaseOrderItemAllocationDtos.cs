@@ -1,4 +1,6 @@
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 
 namespace NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 
@@ -16,6 +18,36 @@ public sealed record PurchaseOrderItemAllocationDto(Guid Id)
     public string? DirectShipContactPhone { get; init; }
     public int DirectShipPriority { get; init; }
     public required DateTime CreatedOnUtc { get; init; }
+}
+
+[Serializable]
+public sealed record AllocatePurchaseOrderItemForOrder
+{
+    public SecondaryItemId PurchaseOrderItemId { get; set; }
+    public SecondaryItemId OrderItemId { get; set; }
+    public decimal AllocationQuantity { get; set; }
+    public AllocateDirectShipInfo? DirectShipInfo { get; set; }
+
+    public void Verify()
+    {
+        if (AllocationQuantity <= 0)
+            throw new PurchaseOrderItemAllocationDataIsInvalidException("Error.AllocatedQuantityMustBePositive", "Label.Quantity");
+
+        if (DirectShipInfo is not null)
+            DirectShipInfo.Verify();
+    }
+
+    [Serializable]
+    public sealed record AllocateDirectShipInfo(string? ContactName, string ContactPhone, string? Address)
+    {
+        public int Priority { get; set; }
+
+        public void Verify()
+        {
+            if (string.IsNullOrEmpty(ContactPhone))
+                throw new DirectShipDataIsInvalidException("Error.DirectShipDataIsInvalid", "Label.ContactPhone");
+        }
+    }
 }
 
 [Serializable]

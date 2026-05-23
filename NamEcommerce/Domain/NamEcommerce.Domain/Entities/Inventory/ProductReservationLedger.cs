@@ -1,5 +1,7 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Domain.Shared.Events.Inventory;
+using NamEcommerce.Domain.Shared.Events.Orders;
 
 namespace NamEcommerce.Domain.Entities.Inventory;
 
@@ -27,4 +29,6 @@ public sealed record ProductReservationLedger : AppAggregateEntity
     public ProductReservationReason Reason { get; init; }
     public Guid? ReferenceId { get; init; }
     public DateTime CreatedOnUtc { get; init; }
+
+    internal void MarkAsCreated() => RaiseDomainEvent(new ProductReservationLedgerCreated(Id, ProductId, OrderId, QuantityDelta));
 }

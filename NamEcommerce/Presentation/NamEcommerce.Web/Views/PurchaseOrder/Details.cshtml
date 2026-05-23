@@ -193,7 +193,7 @@
                                                                 @if (Model.CanAllocateItems)
                                                                 {
                                                                     <li>
-                                                                        <button class="dropdown-item btn-allocate-to-order"
+                                                                        <button class="dropdown-item btn-allocate-to-order" data-purchase-id="@Model.Info.Id"
                                                                                 data-item-id="@item.Id" data-item-name="@item.ProductName">
                                                                             <i class="bi bi-diagram-3 me-2"></i>
                                                                             Phân bổ cho đơn hàng
@@ -1856,6 +1856,7 @@
                     const modal = document.getElementById('allocateToOrderModal');
                     if (!modal) return;
 
+                    let currentPoId = null;
                     let currentPoItemId = null;
                     let selectedRow = null;
                     let originalPhone = '';
@@ -1875,6 +1876,7 @@
                     document.addEventListener('click', function (e) {
                         const btn = e.target.closest('.btn-allocate-to-order');
                         if (!btn) return;
+                        currentPoId = btn.dataset.purchaseId;
                         currentPoItemId = btn.dataset.itemId;
                         selectedRow = null;
                         document.getElementById('allocateModalItemName').textContent = btn.dataset.itemName || '';
@@ -2009,6 +2011,7 @@
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || '' },
                             body: JSON.stringify({
+                                purchaseOrderId: currentPoId,
                                 purchaseOrderItemId: currentPoItemId,
                                 orderItemId: orderItemId,
                                 orderId: orderId,

@@ -4,6 +4,8 @@ namespace NamEcommerce.Domain.Shared.Services.Inventory;
 
 public interface IInventoryStockManager
 {
+    Task InitializeStockAsync(Guid productId, Guid warehouseId, Guid? unitMeasurementId = null);
+
     Task<StockMovementLogDto?> ReceiveStockAsync(Guid productId, Guid warehouseId, decimal receivedQuantity, string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId);
 
     /// <summary>
@@ -35,9 +37,9 @@ public interface IInventoryStockManager
         Guid userId,
         string? note = null);
 
-    Task<(int Total, List<InventoryStockDto> Items)> GetInventoryStocksAsync(string? keywords, Guid? warehouseId, int pageIndex, int pageSize);
-    //*TODO* remove warehouse id
-    Task<IEnumerable<InventoryStockDto>> GetInventoryStocksForProductAsync(Guid productId, Guid? warehouseId);
+    Task<(int Total, List<InventoryStockDto> Items)> GetInventoryStocksAsync(int pageIndex, int pageSize, Guid? warehouseId = null, Guid? productId = null, string? keywords = null);
+    Task<InventoryStockDto?> GetInventoryStockForProductAsync(Guid productId, Guid warehouseId);
+    Task<IEnumerable<InventoryStockDto>> GetInventoryStocksForProductAsync(Guid productId);
     Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId);
     Task<(int Total, List<StockMovementLogDto> Items)> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize);
     

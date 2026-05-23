@@ -58,6 +58,7 @@ public sealed class ProductReservationManager : IProductReservationManager
         EnsureValid(productId, quantity, orderId);
 
         var entry = new ProductReservationLedger(productId, orderId, quantity, reason, referenceId);
+        entry.MarkAsCreated();
         await _repository.InsertAsync(entry).ConfigureAwait(false);
     }
 
@@ -78,6 +79,7 @@ public sealed class ProductReservationManager : IProductReservationManager
                 quantity);
 
         var entry = new ProductReservationLedger(productId, orderId, -quantity, reason, referenceId);
+        entry.MarkAsCreated();
         await _repository.InsertAsync(entry).ConfigureAwait(false);
     }
 

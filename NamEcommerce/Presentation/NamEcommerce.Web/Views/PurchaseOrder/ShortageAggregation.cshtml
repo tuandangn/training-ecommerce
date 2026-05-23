@@ -415,7 +415,7 @@
             <div class="modal-body bg-light" id="createdPurchaseOrdersList">
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng & Tải lại trang</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
             </div>
         </div>
     </div>
@@ -741,7 +741,7 @@
                         }];
 
                     groupMap.get(line.vendorId).items.push({
-                        orderItem: line.orderId,
+                        orderId: line.orderId,
                         orderItemId: line.orderItemId,
                         productId: line.productId,
                         quantity: line.quantity,

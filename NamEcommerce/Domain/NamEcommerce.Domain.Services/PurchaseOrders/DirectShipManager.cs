@@ -290,7 +290,7 @@ public sealed class DirectShipManager(
             .FirstOrDefault(item => item.Id == purchaseOrderItemId);
 
         if (purchaseOrderItem is null)
-            throw new PurchaseOrderItemIsNotFoundException(purchaseOrderItemId);
+            throw new PurchaseOrderItemIsNotFoundException();
 
         return purchaseOrderItem;
     }

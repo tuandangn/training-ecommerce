@@ -75,7 +75,7 @@ public sealed class DeliveryNoteManager(
             foreach (var (orderItemId, requestedQuantity) in requestedQuantitiesByOrderItem)
             {
                 if (!orderItemsById.TryGetValue(orderItemId, out var orderItem))
-                    throw new OrderItemIsNotFoundException(orderItemId);
+                    throw new OrderItemIsNotFoundException();
 
                 var alreadyInDeliveryNotes = activeDeliveryQuantitiesByOrderItem.GetValueOrDefault(orderItemId);
                 var remainingQuantity = orderItem.Quantity - alreadyInDeliveryNotes;
@@ -95,7 +95,7 @@ public sealed class DeliveryNoteManager(
 
             foreach (var item in itemsByProduct)
             {
-                var stock = (await stockManager.GetInventoryStocksForProductAsync(item.ProductId, dto.WarehouseId).ConfigureAwait(false)).SingleOrDefault();
+                var stock = await stockManager.GetInventoryStockForProductAsync(item.ProductId, dto.WarehouseId).ConfigureAwait(false);
                 if (stock is null)
                     throw new InsufficientStockException(item.ProductId, dto.WarehouseId, item.Quantity, 0);
                 if (stock.QuantityAvailable < item.Quantity)

@@ -146,12 +146,19 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             if (allocationQuantity <= 0)
                 continue;
 
-            var allocation = await _purchaseOrderAllocationManager.AllocateAsync(purchaseOrderItem.Id, source.OrderItemId, allocationQuantity).ConfigureAwait(false);
-            if (source.DirectShipInfo is { } ds)
-            {
-                await _directShipManager.MarkAllocationAsDirectShipAsync(
-                    allocation.Id, ds.Address, ds.ContactName, ds.ContactPhone, ds.Priority).ConfigureAwait(false);
-            }
+            await _purchaseOrderAllocationManager
+                .AllocatePurchaseOrderItemForOrder(new AllocatePurchaseOrderItemForOrder
+                {
+                    PurchaseOrderItemId = (purchaseOrderItem.PurchaseOrderId, purchaseOrderItem.Id),
+                    OrderItemId = source.OrderItemId,
+                    AllocationQuantity = allocationQuantity,
+                    DirectShipInfo = source.DirectShipInfo is not null && !string.IsNullOrEmpty(source.DirectShipInfo.ContactPhone)
+                        ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(source.DirectShipInfo.ContactName, source.DirectShipInfo.ContactPhone, source.DirectShipInfo.Address)
+                        {
+                            Priority = source.DirectShipInfo.Priority
+                        } : null
+                })
+                .ConfigureAwait(false);
         }
     }
 
@@ -606,7 +613,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(i => i.Id == dto.PurchaseOrderItemId);
         if (purchaseOrderItem is null)
-            throw new PurchaseOrderItemIsNotFoundException(dto.PurchaseOrderItemId);
+            throw new PurchaseOrderItemIsNotFoundException();
 
         var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
         if (product is null)
@@ -694,7 +701,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         {
             var poItem = purchaseOrder.Items.FirstOrDefault(i => i.Id == group.Key);
             if (poItem is null)
-                throw new PurchaseOrderItemIsNotFoundException(group.Key);
+                throw new PurchaseOrderItemIsNotFoundException();
 
             var totalReceiving = group.Sum(x => x.ReceivedQuantity);
             if (poItem.QuantityReceived + totalReceiving > poItem.QuantityOrdered)
@@ -1196,7 +1203,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             ?? throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
         var item = purchaseOrder.Items.FirstOrDefault(i => i.Id == purchaseOrderItemId)
-            ?? throw new PurchaseOrderItemIsNotFoundException(purchaseOrderItemId);
+            ?? throw new PurchaseOrderItemIsNotFoundException();
 
         purchaseOrder.MarkOversupplyAccepted(item.Id, warehouseId, oversupplyQuantity, item.UnitCost);
         await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
