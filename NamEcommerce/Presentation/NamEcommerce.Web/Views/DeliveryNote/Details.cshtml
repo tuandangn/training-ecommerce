@@ -49,19 +49,19 @@
     <div class="d-flex gap-2">
         @if (!isDirectShip && Model.Status == 10)
         {
-            <button type="button" class="btn btn-outline-primary btn-confirm" data-id="@Model.Id">
+            <button type="button" class="btn btn-outline-primary btn-confirm" data-testid="delivery-confirm" data-id="@Model.Id">
                 <i class="bi bi-check-all me-1"></i> Xác nhận xuất
             </button>
         }
         @if (!isDirectShip && Model.Status == 20)
         {
-            <button type="button" class="btn btn-outline-warning btn-delivering" data-id="@Model.Id">
+            <button type="button" class="btn btn-outline-warning btn-delivering" data-testid="delivery-mark-delivering" data-id="@Model.Id">
                 <i class="bi bi-truck me-1"></i> Bắt đầu đi giao
             </button>
         }
         @if (!isDirectShip && (Model.Status == 30 || Model.Status == 20))
         {
-            <button type="button" class="btn btn-outline-success btn-delivered" data-id="@Model.Id">
+            <button type="button" class="btn btn-outline-success btn-delivered" data-testid="delivery-mark-delivered-open" data-id="@Model.Id">
                 <i class="bi bi-check-circle-fill me-1"></i> Xác nhận Đã giao
             </button>
         }
@@ -431,11 +431,11 @@
                     </div>
                     <div class="mb-3">
                         <label for="receiverName" class="form-label small fw-bold text-muted text-uppercase mb-2">Tên người nhận (Không bắt buộc)</label>
-                        <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="receiverName" name="receiverName" placeholder="Ví dụ: Anh Tâm">
+                        <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="receiverName" name="receiverName" data-testid="delivery-receiver-name" placeholder="Ví dụ: Anh Tâm">
                     </div>
                     <div class="mb-3">
                         <label for="deliveryProofPicture" class="form-label small fw-bold text-muted text-uppercase mb-2">Hình ảnh bằng chứng <span class="text-danger">*</span></label>
-                        <input class="form-control form-control-lg rounded-3 fs-6" type="file" id="deliveryProofPicture" name="pictureFile" accept="image/*" capture="environment" required>
+                        <input class="form-control form-control-lg rounded-3 fs-6" type="file" id="deliveryProofPicture" name="pictureFile" data-testid="delivery-proof-file" accept="image/*" capture="environment" required>
                         <div class="form-text mt-2 mb-0">Ví dụ: Chụp ảnh hàng hóa đã xếp lên cửa hàng, chữ ký người nhận. Bắt buộc chụp/tải ảnh lên!</div>
                     </div>
                     <div class="mt-3 text-center d-none" id="previewContainer">
@@ -444,7 +444,7 @@
                 </div>
                 <div class="modal-footer border-0 pt-0 pb-4 px-4">
                     <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-success px-4 rounded-3 shadow-sm px-5" id="btnSubmitDelivery">
+                    <button type="submit" class="btn btn-success px-4 rounded-3 shadow-sm px-5" id="btnSubmitDelivery" data-testid="delivery-mark-delivered">
                         <i class="bi bi-camera me-1"></i> Xác nhận Đã giao
                     </button>
                 </div>

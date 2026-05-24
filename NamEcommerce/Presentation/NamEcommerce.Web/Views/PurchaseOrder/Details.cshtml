@@ -175,14 +175,14 @@
                                                 {
                                                     <td class="text-center">
                                                         <div>
-                                                            <button class="btn-table-action" type="button" data-bs-toggle="dropdown">
+                                                            <button class="btn-table-action" type="button" data-testid="po-item-actions" data-bs-toggle="dropdown">
                                                                 <i class="bi bi-three-dots-vertical"></i>
                                                             </button>
                                                             <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
                                                                 @if (Model.Info.CanReceiveGoods && item.RemainingQuantity > 0)
                                                                 {
                                                                     <li>
-                                                                        <button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#receiveItemModal"
+                                    <button class="dropdown-item" data-testid="po-receive-item-open" data-bs-toggle="modal" data-bs-target="#receiveItemModal"
                                                                                 data-item-id="@item.Id" data-item-name="@item.ProductName" data-item-remaining="@item.RemainingQuantity"
                                                                                 data-item-unit-cost="@item.UnitCost" data-item-unit-price="@item.CurrentUnitPrice" data-unit="@item.UnitMeasurement">
                                                                             <i class="bi bi-truck"></i>
@@ -193,7 +193,7 @@
                                                                 @if (Model.CanAllocateItems)
                                                                 {
                                                                     <li>
-                                                                        <button class="dropdown-item btn-allocate-to-order" data-purchase-id="@Model.Info.Id"
+                                    <button class="dropdown-item btn-allocate-to-order" data-testid="po-allocate-open" data-purchase-id="@Model.Info.Id"
                                                                                 data-item-id="@item.Id" data-item-name="@item.ProductName">
                                                                             <i class="bi bi-diagram-3 me-2"></i>
                                                                             Phân bổ cho đơn hàng
@@ -543,7 +543,7 @@
             @if (Model.Info.Status == (int)PurchaseOrderStatus.Draft)
             {
                 <form asp-action="SubmitsPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline">
-                    <button type="submit" class="btn btn-primary">
+                    <button type="submit" class="btn btn-primary" data-testid="po-submit-for-approval">
                         <i class="bi bi-send me-1"></i> Gửi đơn
                     </button>
                 </form>
@@ -551,7 +551,7 @@
             else if (Model.Info.Status == (int)PurchaseOrderStatus.Submitted)
             {
                 <form asp-action="ChangeStatus" asp-route-id="@Model.Info.Id" asp-route-status="@((int)PurchaseOrderStatus.Approved)" method="post" class="d-inline">
-                    <button type="submit" class="btn btn-info text-white">
+                    <button type="submit" class="btn btn-info text-white" data-testid="po-approve">
                         <i class="bi bi-check-all me-1"></i> Duyệt đơn
                     </button>
                 </form>
@@ -739,7 +739,7 @@
 
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase">Số lượng nhận</label>
-                            <input name="ReceivedQuantity" id="modalReceivedQty" class="form-control" data-decimal="quantity" value="0" required />
+                            <input name="ReceivedQuantity" id="modalReceivedQty" class="form-control" data-testid="po-receive-quantity" data-decimal="quantity" value="0" required />
                             <div id="modalDistributionPreview" class="d-none mt-2 p-2 rounded border-start border-3 border-primary bg-light small">
                                 <div class="fw-semibold text-muted mb-1 text-uppercase" style="font-size:0.7rem">Phân phối hàng nhận</div>
                                 <div id="modalDistributionDetails" class="d-flex flex-column gap-1"></div>
@@ -778,7 +778,7 @@
 
                         <div class="mb-3" id="modalWarehouseSection">
                             <label class="form-label small fw-bold text-muted text-uppercase">Kho nhập hàng</label>
-                            <select name="WarehouseId" class="form-select" required>
+                            <select name="WarehouseId" class="form-select" data-testid="po-receive-warehouse" required>
                                 @foreach (var option in Model.AvailableWarehouses.Options)
                                 {
                                     <option value="@option.Id" selected="@(Model.Info.WarehouseId == option.Id)">@option.Name</option>
@@ -806,7 +806,7 @@
                         <hr class="my-3" />
                         <div>
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="modalDsToggle" />
+                                <input class="form-check-input" type="checkbox" id="modalDsToggle" data-testid="po-receive-direct-ship" />
                                 <label class="form-check-label fw-semibold small" for="modalDsToggle">
                                     <i class="bi bi-send me-1"></i> Giao thẳng cho khách hàng
                                 </label>
@@ -845,7 +845,7 @@
                     </div>
                     <div class="modal-footer border-0 pt-0 pb-4">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-                        <button type="submit" class="btn btn-success">
+                        <button type="submit" class="btn btn-success" data-testid="po-receive-submit">
                             Xác nhận nhập kho
                         </button>
                     </div>
@@ -1087,12 +1087,12 @@
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Giao thẳng (tùy chọn)</label>
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="allocateIsDirectShip" />
+                                <input class="form-check-input" type="checkbox" id="allocateIsDirectShip" data-testid="po-allocate-direct-ship" />
                                 <label class="form-check-label small" for="allocateIsDirectShip">Đánh dấu là giao thẳng</label>
                             </div>
                             <div id="allocateDirectShipFields" class="d-none">
                                 <div class="mb-2">
-                                    <input type="text" class="form-control form-control-sm" id="allocateDsAddress" placeholder="Địa chỉ giao *" />
+                                    <input type="text" class="form-control form-control-sm" id="allocateDsAddress" data-testid="po-allocate-direct-ship-address" placeholder="Địa chỉ giao *" />
                                 </div>
                                 <div class="row g-2">
                                     <div class="col-6">
@@ -1109,7 +1109,7 @@
                     </div>
                     <div class="modal-footer border-0 pt-0 pb-4">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
-                        <button type="button" class="btn btn-primary d-none" id="btnAllocateToOrder">
+                        <button type="button" class="btn btn-primary d-none" id="btnAllocateToOrder" data-testid="po-allocate-submit">
                             <i class="bi bi-check-lg me-1"></i> Xác nhận phân bổ
                         </button>
                     </div>

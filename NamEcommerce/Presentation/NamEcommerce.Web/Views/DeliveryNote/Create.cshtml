@@ -140,7 +140,7 @@
                     <a asp-action="Details" asp-controller="Order" asp-route-id="@Model.OrderId" class="btn btn-link text-decoration-none text-muted btn-sm ps-0">
                         <i class="bi bi-arrow-left"></i> Quay lại Đơn hàng
                     </a>
-                    <button type="submit" class="btn btn-primary px-4 shadow-sm" @(Model.Items.Any() ? "" : "disabled")>
+                    <button type="submit" class="btn btn-primary px-4 shadow-sm" data-testid="delivery-create-submit" @(Model.Items.Any() ? "" : "disabled")>
                         <i class="bi bi-floppy"></i> Tạo phiếu xuất
                     </button>
                 </div>
