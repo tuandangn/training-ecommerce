@@ -3,7 +3,7 @@
 # Chạy TRƯỚC khi deploy, sau khi đã trỏ DNS về IP của VM
 set -e
 
-DOMAIN="tuankhoivlxd.vn"
+DOMAIN="dangvy.com"
 
 echo "📦 Cài Certbot..."
 sudo apt-get update -q
