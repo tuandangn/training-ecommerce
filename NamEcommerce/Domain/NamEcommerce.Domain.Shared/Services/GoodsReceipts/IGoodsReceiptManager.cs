@@ -17,6 +17,8 @@ public interface IGoodsReceiptManager
     /// </summary>
     Task<CreateGoodsReceiptResultDto> CreateFromPurchaseOrderReceivingAsync(CreateGoodsReceiptFromPurchaseOrderDto dto);
 
+    Task<Guid> CreateFromVendorOversupplyAsync(CreateGoodsReceiptFromVendorOversupplyDto dto);
+
     /// <summary>
     /// Tự động tạo 1 GoodsReceipt cho nhiều items cùng nhập vào 1 kho từ 1 PurchaseOrder.
     /// Dùng cho <c>PurchaseOrderManager.BulkReceiveItemsAsync</c> — caller đã group lines theo WarehouseId trước khi gọi.

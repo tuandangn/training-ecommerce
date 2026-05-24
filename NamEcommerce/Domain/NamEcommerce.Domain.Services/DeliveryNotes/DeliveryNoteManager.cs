@@ -125,21 +125,18 @@ public sealed class DeliveryNoteManager(
 
     public async Task ConfirmAsync(Guid id)
     {
-        await ExecuteInTransactionAsync(async () =>
-        {
-            var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
-            if (deliveryNote is null)
-                throw new DeliveryNoteNotFoundException(id);
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(id);
 
-            if (deliveryNote.Status != DeliveryNoteStatus.Draft)
-                throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, DeliveryNoteStatus.Confirmed);
+        if (deliveryNote.Status != DeliveryNoteStatus.Draft)
+            throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, DeliveryNoteStatus.Confirmed);
 
-            foreach (var item in deliveryNote.Items)
-                item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
+        foreach (var item in deliveryNote.Items)
+            item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
 
-            deliveryNote.Confirm();
-            await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
-        }).ConfigureAwait(false);
+        deliveryNote.Confirm();
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
     }
 
     public async Task MarkDeliveringAsync(Guid id)
@@ -154,76 +151,70 @@ public sealed class DeliveryNoteManager(
 
     public async Task MarkDeliveredAsync(MarkDeliveryNoteDeliveredDto dto)
     {
-        await ExecuteInTransactionAsync(async () =>
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
+
+        // Snapshot hiển thị trước khi xuất kho; COGS authoritative được ghi trong cost allocation.
+        // Lưu cùng entity — DeliveryNoteDeliveredStockHandler sẽ dispatch stock sau khi event fire.
+        foreach (var item in deliveryNote.Items)
         {
-            var deliveryNote = await deliveryNoteRepository.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
-            if (deliveryNote is null)
-                throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
+            item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
+        }
 
-            // Snapshot hiển thị trước khi xuất kho; COGS authoritative được ghi trong cost allocation.
-            // Lưu cùng entity — DeliveryNoteDeliveredStockHandler sẽ dispatch stock sau khi event fire.
-            foreach (var item in deliveryNote.Items)
+        // 1. Mark DeliveryNote Delivered — raise DeliveryNoteDelivered event
+        deliveryNote.MarkDelivered(dto.PictureId, dto.ReceiverName);
+
+        // Save entity (display cost + status) → interceptor fires event → DeliveryNoteDeliveredStockHandler dispatches stock/cost.
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+
+        // 2. Mark related OrderItems as Delivered only when the full ordered quantity has been delivered.
+        var order = await orderReader.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
+        if (order is not null)
+        {
+            var deliveredQuantitiesByOrderItem = deliveryNoteReader.DataSource
+                .Where(note => note.OrderId == order.Id && note.Status == DeliveryNoteStatus.Delivered)
+                .SelectMany(note => note.Items)
+                .Where(item => item.OrderItemId != Guid.Empty)
+                .GroupBy(item => item.OrderItemId)
+                .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+
+            foreach (var noteItem in deliveryNote.Items.Where(item => item.OrderItemId != Guid.Empty))
             {
-                item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
-            }
-
-            // 1. Mark DeliveryNote Delivered — raise DeliveryNoteDelivered event
-            deliveryNote.MarkDelivered(dto.PictureId, dto.ReceiverName);
-
-            // Save entity (display cost + status) → interceptor fires event → DeliveryNoteDeliveredStockHandler dispatches stock/cost.
-            await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
-
-            // 2. Mark related OrderItems as Delivered only when the full ordered quantity has been delivered.
-            var order = await orderReader.GetByIdAsync(deliveryNote.OrderId).ConfigureAwait(false);
-            if (order is not null)
-            {
-                var deliveredQuantitiesByOrderItem = deliveryNoteReader.DataSource
-                    .Where(note => note.OrderId == order.Id && note.Status == DeliveryNoteStatus.Delivered)
-                    .SelectMany(note => note.Items)
-                    .Where(item => item.OrderItemId != Guid.Empty)
-                    .GroupBy(item => item.OrderItemId)
-                    .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
-
-                foreach (var noteItem in deliveryNote.Items.Where(item => item.OrderItemId != Guid.Empty))
+                var orderItem = order.OrderItems.FirstOrDefault(i => i.Id == noteItem.OrderItemId);
+                var deliveredQuantity = deliveredQuantitiesByOrderItem.GetValueOrDefault(noteItem.OrderItemId);
+                if (orderItem != null && !orderItem.IsDelivered && deliveredQuantity >= orderItem.Quantity)
                 {
-                    var orderItem = order.OrderItems.FirstOrDefault(i => i.Id == noteItem.OrderItemId);
-                    var deliveredQuantity = deliveredQuantitiesByOrderItem.GetValueOrDefault(noteItem.OrderItemId);
-                    if (orderItem != null && !orderItem.IsDelivered && deliveredQuantity >= orderItem.Quantity)
+                    await orderManager.MarkOrderItemDeliveredAsync(new MarkOrderItemDeliveredDto
                     {
-                        await orderManager.MarkOrderItemDeliveredAsync(new MarkOrderItemDeliveredDto
-                        {
-                            OrderId = order.Id,
-                            OrderItemId = orderItem.Id,
-                            PictureId = dto.PictureId
-                        }).ConfigureAwait(false);
-                    }
+                        OrderId = order.Id,
+                        OrderItemId = orderItem.Id,
+                        PictureId = dto.PictureId
+                    }).ConfigureAwait(false);
                 }
             }
-        }).ConfigureAwait(false);
+        }
     }
 
     public async Task MarkReceivedByCustomerAsync(Guid id, DateTime receivedAtUtc, string? receiverName, string? note)
     {
-        await ExecuteInTransactionAsync(async () =>
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(id);
+
+        if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
         {
-            var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
-            if (deliveryNote is null)
-                throw new DeliveryNoteNotFoundException(id);
-
-            if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
+            foreach (var item in deliveryNote.Items)
             {
-                foreach (var item in deliveryNote.Items)
-                {
-                    item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
-                }
+                item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
             }
+        }
 
-            var transitionedToDelivered = deliveryNote.MarkReceivedByCustomer(receivedAtUtc, receiverName, note);
-            await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+        var transitionedToDelivered = deliveryNote.MarkReceivedByCustomer(receivedAtUtc, receiverName, note);
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
 
-            if (transitionedToDelivered)
-                await MarkRelatedOrderItemsReceivedByCustomerAsync(deliveryNote).ConfigureAwait(false);
-        }).ConfigureAwait(false);
+        if (transitionedToDelivered)
+            await MarkRelatedOrderItemsReceivedByCustomerAsync(deliveryNote).ConfigureAwait(false);
     }
 
     public async Task<Guid> CreateAsDeliveredAsync(CreateDeliveryNoteFromVendorReturnDto dto)
@@ -340,35 +331,91 @@ public sealed class DeliveryNoteManager(
 
     public async Task CancelAsync(Guid id)
     {
-        await ExecuteInTransactionAsync(async () =>
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(id);
+
+        var linkedReturns = customerReturnReader.DataSource
+            .Where(r => r.DeliveryNoteId == id)
+            .Select(r => new { r.Id, r.Status })
+            .ToList();
+
+        if (linkedReturns.Any(r => r.Status == CustomerReturnStatus.Confirmed))
+            throw new DeliveryNoteHasConfirmedReturnsException(id);
+
+        var cancellableReturnIds = linkedReturns
+            .Where(r => r.Status == CustomerReturnStatus.Draft || r.Status == CustomerReturnStatus.Inspecting)
+            .Select(r => r.Id)
+            .ToList();
+
+        foreach (var returnId in cancellableReturnIds)
+            await customerReturnManager.CancelAsync(returnId).ConfigureAwait(false);
+
+        bool wasDraft = deliveryNote.Status == DeliveryNoteStatus.Draft;
+        bool wasConfirmed = deliveryNote.Status == DeliveryNoteStatus.Confirmed || deliveryNote.Status == DeliveryNoteStatus.Delivering;
+
+        deliveryNote.Cancel();
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+
+        if (wasDraft && deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer && !deliveryNote.IsDirectShip)
         {
-            var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
-            if (deliveryNote is null)
-                throw new DeliveryNoteNotFoundException(id);
-
-            var linkedReturns = customerReturnReader.DataSource
-                .Where(r => r.DeliveryNoteId == id)
-                .Select(r => new { r.Id, r.Status })
+            var itemsByProduct = deliveryNote.Items
+                .GroupBy(item => item.ProductId)
+                .Select(g => new { ProductId = g.Key, Quantity = g.Sum(item => item.Quantity) })
                 .ToList();
 
-            if (linkedReturns.Any(r => r.Status == CustomerReturnStatus.Confirmed))
-                throw new DeliveryNoteHasConfirmedReturnsException(id);
+            foreach (var item in itemsByProduct)
+            {
+                await stockManager.ReleaseReservedStockAsync(
+                    item.ProductId,
+                    deliveryNote.WarehouseId,
+                    item.Quantity,
+                    deliveryNote.Id,
+                    Guid.Empty,
+                    $"Giải phóng hàng phiếu xuất {deliveryNote.Code} bị hủy").ConfigureAwait(false);
+            }
 
-            var cancellableReturnIds = linkedReturns
-                .Where(r => r.Status == CustomerReturnStatus.Draft || r.Status == CustomerReturnStatus.Inspecting)
-                .Select(r => r.Id)
-                .ToList();
+            if (deliveryNote.OrderId != Guid.Empty)
+            {
+                foreach (var item in itemsByProduct)
+                {
+                    await productReservationManager.ReserveAsync(
+                        item.ProductId,
+                        item.Quantity,
+                        deliveryNote.OrderId,
+                        ProductReservationReason.DeliveryNoteCancelled,
+                        deliveryNote.Id).ConfigureAwait(false);
+                }
+            }
+        }
+        else if (wasConfirmed && deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer && !deliveryNote.IsDirectShip)
+        {
+            foreach (var item in deliveryNote.Items)
+            {
+                await stockManager.ReceiveStockAsync(
+                    item.ProductId,
+                    deliveryNote.WarehouseId,
+                    item.Quantity,
+                    $"Nhập lại kho do hủy phiếu xuất {deliveryNote.Code}",
+                    Guid.Empty,
+                    (int)StockReferenceType.SalesOrder,
+                    deliveryNote.Id).ConfigureAwait(false);
 
-            foreach (var returnId in cancellableReturnIds)
-                await customerReturnManager.CancelAsync(returnId).ConfigureAwait(false);
+                await inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
+                {
+                    ProductId = item.ProductId,
+                    WarehouseId = deliveryNote.WarehouseId,
+                    Quantity = item.Quantity,
+                    UnitCost = item.CostAtDispatch,
+                    MovementType = InventoryCostMovementType.CustomerReturn,
+                    ReferenceType = InventoryCostReferenceType.SalesOrder,
+                    ReferenceId = deliveryNote.Id,
+                    ReferenceItemId = item.Id,
+                    OccurredAtUtc = DateTime.UtcNow
+                }).ConfigureAwait(false);
+            }
 
-            bool wasDraft = deliveryNote.Status == DeliveryNoteStatus.Draft;
-            bool wasConfirmed = deliveryNote.Status == DeliveryNoteStatus.Confirmed || deliveryNote.Status == DeliveryNoteStatus.Delivering;
-
-            deliveryNote.Cancel();
-            await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
-
-            if (wasDraft && deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer && !deliveryNote.IsDirectShip)
+            if (deliveryNote.OrderId != Guid.Empty)
             {
                 var itemsByProduct = deliveryNote.Items
                     .GroupBy(item => item.ProductId)
@@ -377,74 +424,15 @@ public sealed class DeliveryNoteManager(
 
                 foreach (var item in itemsByProduct)
                 {
-                    await stockManager.ReleaseReservedStockAsync(
+                    await productReservationManager.ReserveAsync(
                         item.ProductId,
-                        deliveryNote.WarehouseId,
                         item.Quantity,
-                        deliveryNote.Id,
-                        Guid.Empty,
-                        $"Giải phóng hàng phiếu xuất {deliveryNote.Code} bị hủy").ConfigureAwait(false);
-                }
-
-                if (deliveryNote.OrderId != Guid.Empty)
-                {
-                    foreach (var item in itemsByProduct)
-                    {
-                        await productReservationManager.ReserveAsync(
-                            item.ProductId,
-                            item.Quantity,
-                            deliveryNote.OrderId,
-                            ProductReservationReason.DeliveryNoteCancelled,
-                            deliveryNote.Id).ConfigureAwait(false);
-                    }
-                }
-            }
-            else if (wasConfirmed && deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer && !deliveryNote.IsDirectShip)
-            {
-                foreach (var item in deliveryNote.Items)
-                {
-                    await stockManager.ReceiveStockAsync(
-                        item.ProductId,
-                        deliveryNote.WarehouseId,
-                        item.Quantity,
-                        $"Nhập lại kho do hủy phiếu xuất {deliveryNote.Code}",
-                        Guid.Empty,
-                        (int)StockReferenceType.SalesOrder,
+                        deliveryNote.OrderId,
+                        ProductReservationReason.DeliveryNoteCancelled,
                         deliveryNote.Id).ConfigureAwait(false);
-
-                    await inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
-                    {
-                        ProductId = item.ProductId,
-                        WarehouseId = deliveryNote.WarehouseId,
-                        Quantity = item.Quantity,
-                        UnitCost = item.CostAtDispatch,
-                        MovementType = InventoryCostMovementType.CustomerReturn,
-                        ReferenceType = InventoryCostReferenceType.SalesOrder,
-                        ReferenceId = deliveryNote.Id,
-                        ReferenceItemId = item.Id,
-                        OccurredAtUtc = DateTime.UtcNow
-                    }).ConfigureAwait(false);
-                }
-
-                if (deliveryNote.OrderId != Guid.Empty)
-                {
-                    var itemsByProduct = deliveryNote.Items
-                        .GroupBy(item => item.ProductId)
-                        .Select(g => new { ProductId = g.Key, Quantity = g.Sum(item => item.Quantity) })
-                        .ToList();
-
-                    foreach (var item in itemsByProduct)
-                    {
-                        await productReservationManager.ReserveAsync(
-                            item.ProductId,
-                            item.Quantity,
-                            deliveryNote.OrderId,
-                            ProductReservationReason.DeliveryNoteCancelled,
-                            deliveryNote.Id).ConfigureAwait(false);
-                    }
                 }
             }
-        }).ConfigureAwait(false);
+        }
     }
 
     public async Task<DeliveryNoteDto?> GetByIdAsync(Guid id)
@@ -672,20 +660,5 @@ public sealed class DeliveryNoteManager(
                 CostAtDispatch = i.CostAtDispatch
             }).ToList()
         };
-    }
-
-    private async Task ExecuteInTransactionAsync(Func<Task> action)
-    {
-        await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
-        try
-        {
-            await action().ConfigureAwait(false);
-            await transaction.CommitAsync().ConfigureAwait(false);
-        }
-        catch
-        {
-            await transaction.RollbackAsync().ConfigureAwait(false);
-            throw;
-        }
     }
 }

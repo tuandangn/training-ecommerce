@@ -3,12 +3,14 @@ using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Orders;
+using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Catalog;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
@@ -26,6 +28,7 @@ public sealed class OrderManager(
     IEntityDataReader<Product> productDataReader,
     IEntityDataReader<Customer> customerDataReader,
     IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
+    IEntityDataReader<PurchaseOrderItemAllocation> allocationDataReader,
     IInventoryStockManager stockManager,
     ICurrentUserAccessor currentUserAccessor) : IOrderManager
 {
@@ -132,8 +135,11 @@ public sealed class OrderManager(
                                      .SelectMany(deliveryNote => deliveryNote.Items.Where(item => item.OrderItemId == dto.OrderItemId))
                                      .ToList();
         var deliveryNoteQty = deliveryNoteOrderItems.Sum(item => item.Quantity);
+        var outstandingAllocationQty = GetOutstandingAllocationQuantity(dto.OrderItemId);
         if (dto.Quantity < deliveryNoteQty)
             throw new InvalidOperationException("Updated order item quantity cannot less than its delivering quantity.");
+        if (dto.Quantity < deliveryNoteQty + outstandingAllocationQty)
+            throw new OrderCannotUpdateOrderItemsException();
         if (deliveryNoteOrderItems.Any(item => item.UnitPrice != dto.UnitPrice))
             throw new InvalidOperationException("Updated order item cannot change unit price of items that are already in delivery notes.");
 
@@ -167,6 +173,8 @@ public sealed class OrderManager(
                                         && deliveryNote.Status != DeliveryNoteStatus.Cancelled
                                      select deliveryNote;
         if (orderItemDeliveryNotes.Any())
+            throw new OrderCannotUpdateOrderItemsException();
+        if (HasReceivedAllocations(dto.OrderItemId))
             throw new OrderCannotUpdateOrderItemsException();
 
         order.RemoveOrderItem(dto.OrderItemId);
@@ -374,4 +382,17 @@ public sealed class OrderManager(
                 throw new InsufficientStockException(itemGroup.Key, Guid.Empty, requestedQuantity, availableQuantity);
         }
     }
+
+    private decimal GetOutstandingAllocationQuantity(Guid orderItemId)
+        => allocationDataReader.DataSource
+            .Where(allocation => allocation.OrderItemId == orderItemId
+                && allocation.Status != AllocationStatus.Cancelled)
+            .ToList()
+            .Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
+
+    private bool HasReceivedAllocations(Guid orderItemId)
+        => allocationDataReader.DataSource
+            .Any(allocation => allocation.OrderItemId == orderItemId
+                && allocation.Status != AllocationStatus.Cancelled
+                && allocation.ReceivedQuantity > 0);
 }

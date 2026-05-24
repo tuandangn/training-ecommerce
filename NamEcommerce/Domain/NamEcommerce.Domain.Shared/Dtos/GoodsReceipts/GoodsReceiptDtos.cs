@@ -32,6 +32,36 @@ public sealed record CreateGoodsReceiptFromPurchaseOrderDto
 }
 
 [Serializable]
+public sealed record CreateGoodsReceiptFromVendorOversupplyDto
+{
+    public required Guid PurchaseOrderId { get; init; }
+    public required string PurchaseOrderCode { get; init; }
+    public required Guid VendorId { get; init; }
+    public required Guid ProductId { get; init; }
+    public required Guid WarehouseId { get; init; }
+    public required decimal Quantity { get; init; }
+    public required decimal UnitCost { get; init; }
+
+    public void Verify()
+    {
+        if (PurchaseOrderId == Guid.Empty)
+            throw new ArgumentException("PurchaseOrderId is required", nameof(PurchaseOrderId));
+        if (string.IsNullOrEmpty(PurchaseOrderCode))
+            throw new ArgumentException("PurchaseOrderCode is required", nameof(PurchaseOrderCode));
+        if (VendorId == Guid.Empty)
+            throw new ArgumentException("VendorId is required", nameof(VendorId));
+        if (ProductId == Guid.Empty)
+            throw new ArgumentException("ProductId is required", nameof(ProductId));
+        if (WarehouseId == Guid.Empty)
+            throw new ArgumentException("WarehouseId is required", nameof(WarehouseId));
+        if (Quantity <= 0)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityMustBePositive");
+        if (UnitCost < 0)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.UnitCostCannotBeNegative");
+    }
+}
+
+[Serializable]
 public sealed record CreateGoodsReceiptFromPurchaseOrderBulkDto
 {
     public required Guid PurchaseOrderId { get; init; }

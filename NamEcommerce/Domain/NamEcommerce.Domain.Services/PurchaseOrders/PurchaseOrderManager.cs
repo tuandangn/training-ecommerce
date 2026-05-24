@@ -1,6 +1,7 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Debts;
+using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
@@ -10,6 +11,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Returns;
@@ -35,6 +37,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
     private readonly IGoodsReceiptManager _goodsReceiptManager;
     private readonly IRepository<GoodsReceipt> _goodsReceiptRepository;
     private readonly IEntityDataReader<GoodsReceipt> _goodsReceiptDataReader;
+    private readonly IEntityDataReader<DeliveryNote> _deliveryNoteReader;
     private readonly IEntityDataReader<VendorReturn> _vendorReturnReader;
     private readonly IEntityDataReader<VendorDebt> _vendorDebtReader;
     private readonly IPurchaseOrderAllocationManager _purchaseOrderAllocationManager;
@@ -48,6 +51,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         IGoodsReceiptManager goodsReceiptManager,
         IRepository<GoodsReceipt> goodsReceiptRepository,
         IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
+        IEntityDataReader<DeliveryNote> deliveryNoteReader,
         IEntityDataReader<VendorReturn> vendorReturnReader,
         IEntityDataReader<VendorDebt> vendorDebtReader,
         IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
@@ -63,6 +67,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         _goodsReceiptManager = goodsReceiptManager;
         _goodsReceiptRepository = goodsReceiptRepository;
         _goodsReceiptDataReader = goodsReceiptDataReader;
+        _deliveryNoteReader = deliveryNoteReader;
         _vendorReturnReader = vendorReturnReader;
         _vendorDebtReader = vendorDebtReader;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
@@ -653,6 +658,11 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             return;
 
         var purchaseOrderId = goodsReceipt.PurchaseOrderId.Value;
+        var hasActiveDirectShipDelivery = _deliveryNoteReader.DataSource
+            .Any(note => note.SourceGoodsReceiptId == dto.Id && note.Status != DeliveryNoteStatus.Cancelled);
+        if (hasActiveDirectShipDelivery)
+            throw new GoodsReceiptCannotRemoveDueToDirectShipDeliveryException(dto.Id);
+
         var hasConfirmedReturns = _vendorReturnReader.DataSource
             .Any(r => r.GoodsReceiptId == dto.Id && r.Status == VendorReturnStatus.Confirmed);
         if (hasConfirmedReturns)
@@ -673,6 +683,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         var revertByProductCost = goodsReceipt.Items
             .GroupBy(i => (i.ProductId, i.UnitCost))
             .ToDictionary(g => g.Key, g => g.Sum(i => i.Quantity));
+        var changedPurchaseOrderItemIds = new HashSet<Guid>();
 
         foreach (var ((productId, unitCost), totalQty) in revertByProductCost)
         {
@@ -689,6 +700,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                 if (remaining <= 0) break;
                 var revertQty = Math.Min(poItem.QuantityReceived, remaining);
                 poItem.RevertQuantityReceived(revertQty);
+                changedPurchaseOrderItemIds.Add(poItem.Id);
                 remaining -= revertQty;
             }
         }
@@ -702,6 +714,14 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         purchaseOrder.RevertReceivingIfEmpty();
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
         await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
+
+        foreach (var itemId in changedPurchaseOrderItemIds)
+        {
+            var purchaseOrderItem = purchaseOrder.Items.First(item => item.Id == itemId);
+            await _purchaseOrderAllocationManager
+                .SyncReceivedForPurchaseOrderItemAsync(itemId, purchaseOrderItem.QuantityReceived)
+                .ConfigureAwait(false);
+        }
     }
 
     private void EnsureDirectShipTransitWarehouseConfigured()

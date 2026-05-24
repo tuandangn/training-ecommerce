@@ -76,8 +76,8 @@ public sealed class PurchaseOrderAllocationManager(
     {
         if (purchaseOrderItemId == Guid.Empty)
             throw new PurchaseOrderItemIsNotFoundException();
-        if (purchaseOrderItemReceivedQuantity <= 0)
-            return EmptyDistributeResult();
+        if (purchaseOrderItemReceivedQuantity < 0)
+            throw new ArgumentOutOfRangeException(nameof(purchaseOrderItemReceivedQuantity));
 
         var allocations = await GetAllocationsOfPurchaseOrderItem((Guid.Empty, purchaseOrderItemId)).ConfigureAwait(false);
         allocations = allocations.Where(allocation => allocation.Status != AllocationStatus.Cancelled)
@@ -92,8 +92,13 @@ public sealed class PurchaseOrderAllocationManager(
         var currentReceived = allocations.Sum(allocation => allocation.ReceivedQuantity);
         var targetReceived = Math.Min(purchaseOrderItemReceivedQuantity, totalAllocated);
         var quantityToDistribute = targetReceived - currentReceived;
-        if (quantityToDistribute <= 0)
+        if (quantityToDistribute == 0)
             return EmptyDistributeResult();
+        if (quantityToDistribute < 0)
+        {
+            await ReduceReceivedForAllocationsAsync(allocations, Math.Abs(quantityToDistribute)).ConfigureAwait(false);
+            return EmptyDistributeResult();
+        }
 
         var directShipReceipts = new List<AllocationReceiptDto>();
         var warehouseReceipts = new List<AllocationReceiptDto>();
@@ -430,6 +435,25 @@ public sealed class PurchaseOrderAllocationManager(
             DirectShipReceipts = [],
             WarehouseReceipts = []
         };
+
+    private async Task ReduceReceivedForAllocationsAsync(IList<PurchaseOrderItemAllocation> allocations, decimal quantityToReduce)
+    {
+        foreach (var allocation in allocations
+            .Where(allocation => allocation.ReceivedQuantity > 0)
+            .OrderBy(allocation => allocation.IsDirectShip)
+            .ThenBy(allocation => allocation.DirectShipPriority)
+            .ThenByDescending(allocation => allocation.CreatedOnUtc))
+        {
+            if (quantityToReduce <= 0)
+                break;
+
+            var reduceQuantity = Math.Min(allocation.ReceivedQuantity, quantityToReduce);
+            allocation.ReduceReceived(reduceQuantity);
+            await allocationRepository.UpdateAsync(allocation).ConfigureAwait(false);
+
+            quantityToReduce -= reduceQuantity;
+        }
+    }
 
     private readonly IList<PurchaseOrderItemAllocation> _newPurchaseOrderItemAllocations = new List<PurchaseOrderItemAllocation>();
     private readonly IDictionary<Guid, IList<PurchaseOrderItemAllocation>> _purchaseOrderItemAllocationMap = new Dictionary<Guid, IList<PurchaseOrderItemAllocation>>();

@@ -55,6 +55,21 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
         Status = ReceivedQuantity >= AllocatedQuantity ? AllocationStatus.FullyReceived : AllocationStatus.PartiallyReceived;
     }
 
+    internal void ReduceReceived(decimal receivedQuantity)
+    {
+        if (receivedQuantity <= 0)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderReceiveQuantityMustBePositive");
+        if (receivedQuantity > ReceivedQuantity)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.ReceivedQuantityCannotBeNegative");
+
+        ReceivedQuantity -= receivedQuantity;
+        Status = ReceivedQuantity <= 0
+            ? AllocationStatus.Allocated
+            : ReceivedQuantity >= AllocatedQuantity
+                ? AllocationStatus.FullyReceived
+                : AllocationStatus.PartiallyReceived;
+    }
+
     internal void ReduceAllocationToReceived()
     {
         AllocatedQuantity = ReceivedQuantity;

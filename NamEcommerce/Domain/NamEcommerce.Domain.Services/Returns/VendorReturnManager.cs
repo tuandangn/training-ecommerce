@@ -122,7 +122,14 @@ public sealed class VendorReturnManager(
             ?? throw new VendorReturnNotFoundException(id);
 
         // Validate: tổng AcceptedQuantity không được vượt quá số đã nhập từ NCC
-        foreach (var item in vendorReturn.Items)
+        var acceptedByProduct = vendorReturn.Items
+            .GroupBy(item => item.ProductId)
+            .Select(group => new
+            {
+                ProductId = group.Key,
+                AcceptedQuantity = group.Sum(item => item.AcceptedQuantity)
+            });
+        foreach (var item in acceptedByProduct)
         {
             var receivedQty = GetTotalReceivedQuantity(vendorReturn, item.ProductId);
             var previouslyReturned = await GetTotalConfirmedReturnQuantityAsync(
