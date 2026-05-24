@@ -462,6 +462,14 @@ $RECYCLE.BIN/
 # Git Worktrees
 .worktrees/
 
+# Bỏ qua các thư mục AI assistant và rác local
+.agentmemory/
+.claude/
+.clone/
+.rtk/
+.skill-extract/
+.superpowers/
+.trash/
 **/appsettings.Production.json
 **/appsettings.Development.json
 **/appsettings.E2E.json
