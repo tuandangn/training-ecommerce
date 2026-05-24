@@ -38,6 +38,15 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
             maxAllocationQuantityForOrderItem = await _purchaseOrderAppService.GetMaxAllocationQuantityForOrderItemAsync(
                 request.DirectShipOrderId!.Value, request.DirectShipOrderItemId!.Value
             ).ConfigureAwait(false);
+            if (maxAllocationQuantityForOrderItem <= 0)
+            {
+                return new ReceivePurchaseOrderItemResultModel
+                {
+                    Success = false,
+                    ErrorMessage = "Error.PurchaseOrderItemAllocationQuantityExceedsAvailable"
+                };
+            }
+
             var physicalWarehouseRequired = request.ReceivedQuantity > maxAllocationQuantityForOrderItem;
 
             var purchaseOrder = await _purchaseOrderAppService.GetPurchaseOrderByIdAsync(request.PurchaseOrderId).ConfigureAwait(false);

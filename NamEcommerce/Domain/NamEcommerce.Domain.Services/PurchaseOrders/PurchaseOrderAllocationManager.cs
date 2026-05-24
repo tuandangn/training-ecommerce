@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
+using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
@@ -18,6 +20,7 @@ namespace NamEcommerce.Domain.Services.PurchaseOrders;
 public sealed class PurchaseOrderAllocationManager(
     IRepository<PurchaseOrderItemAllocation> allocationRepository,
     IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
+    IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
     IEntityDataReader<Order> orderReader,
     IEntityDataReader<Vendor> vendorReader,
@@ -332,11 +335,13 @@ public sealed class PurchaseOrderAllocationManager(
             .ToDictionary(
                 g => g.Key,
                 g => g.Sum(a => Math.Max(0m, a.AllocatedQuantity - a.ReceivedQuantity)));
+        var activeDeliveryQuantitiesByOrderItemId = GetActiveDeliveryQuantities(eligibleOrderItemIds);
 
         return eligibleItems
             .Select(ctx =>
             {
                 var outstanding = allocatedOutstandingByOrderItemId.TryGetValue(ctx.Item.Id, out var v) ? v : 0m;
+                var activeDeliveryQuantity = activeDeliveryQuantitiesByOrderItemId.GetValueOrDefault(ctx.Item.Id);
                 return new EligibleOrderItemForAllocationDto
                 {
                     OrderItemId = ctx.Item.Id,
@@ -347,7 +352,7 @@ public sealed class PurchaseOrderAllocationManager(
                     ProductName = ctx.Item.ProductName ?? string.Empty,
                     TotalQuantity = ctx.Item.Quantity,
                     AllocatedOutstanding = outstanding,
-                    AvailableToAllocate = Math.Max(0m, ctx.Item.Quantity - outstanding),
+                    AvailableToAllocate = Math.Max(0m, ctx.Item.Quantity - activeDeliveryQuantity - outstanding),
                     ShippingAddress = ctx.Order.ShippingAddress
                 };
             })
@@ -397,9 +402,26 @@ public sealed class PurchaseOrderAllocationManager(
                 && allocation.Status != AllocationStatus.Cancelled)
             .ToList()
             .Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
-        var availableQuantity = orderItem.Quantity - allocatedOutstanding;
+        var activeDeliveryQuantity = GetActiveDeliveryQuantity(orderItem.Id);
+        var availableQuantity = orderItem.Quantity - activeDeliveryQuantity - allocatedOutstanding;
         if (quantity > availableQuantity)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemAllocationQuantityExceedsAvailable");
+    }
+
+    private decimal GetActiveDeliveryQuantity(Guid orderItemId)
+        => GetActiveDeliveryQuantities([orderItemId]).GetValueOrDefault(orderItemId);
+
+    private Dictionary<Guid, decimal> GetActiveDeliveryQuantities(IReadOnlyCollection<Guid> orderItemIds)
+    {
+        if (orderItemIds.Count == 0)
+            return [];
+
+        return deliveryNoteReader.DataSource
+            .Where(deliveryNote => deliveryNote.Status != DeliveryNoteStatus.Cancelled)
+            .SelectMany(deliveryNote => deliveryNote.Items)
+            .Where(item => orderItemIds.Contains(item.OrderItemId))
+            .GroupBy(item => item.OrderItemId)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity));
     }
 
     private static DistributeReceivedQuantityResultDto EmptyDistributeResult()

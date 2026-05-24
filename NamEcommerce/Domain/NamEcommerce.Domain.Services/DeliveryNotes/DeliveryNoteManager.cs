@@ -2,6 +2,7 @@ using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
+using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
@@ -10,6 +11,7 @@ using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Dtos.Orders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
@@ -28,6 +30,7 @@ public sealed class DeliveryNoteManager(
     IRepository<DeliveryNote> deliveryNoteRepository,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<Order> orderReader,
+    IEntityDataReader<PurchaseOrderItemAllocation> allocationReader,
     IOrderManager orderManager,
     IInventoryStockManager stockManager,
     IInventoryCostingManager inventoryCostingManager,
@@ -62,29 +65,7 @@ public sealed class DeliveryNoteManager(
             .GroupBy(item => item.OrderItemId)
             .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
 
-        var requestedOrderItemIds = requestedQuantitiesByOrderItem.Keys.ToList();
-        var activeDeliveryQuantitiesByOrderItem = deliveryNoteReader.DataSource
-            .Where(note => note.OrderId == order.Id && note.Status != DeliveryNoteStatus.Cancelled)
-            .SelectMany(note => note.Items)
-            .Where(item => requestedOrderItemIds.Contains(item.OrderItemId))
-            .GroupBy(item => item.OrderItemId)
-            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
-
-        foreach (var (orderItemId, requestedQuantity) in requestedQuantitiesByOrderItem)
-        {
-            if (!orderItemsById.TryGetValue(orderItemId, out var orderItem))
-                throw new OrderItemIsNotFoundException();
-
-            var alreadyInDeliveryNotes = activeDeliveryQuantitiesByOrderItem.GetValueOrDefault(orderItemId);
-            var remainingQuantity = orderItem.Quantity - alreadyInDeliveryNotes;
-            if (requestedQuantity > remainingQuantity)
-            {
-                throw new NamEcommerceDomainException(
-                    "Error.QuantityExceedsRemaining",
-                    orderItem.ProductName ?? string.Empty,
-                    Math.Max(0, remainingQuantity));
-            }
-        }
+        EnsureQuantitiesCanBeDelivered(order, requestedQuantitiesByOrderItem);
 
         var itemsByProduct = dto.Items
             .GroupBy(item => orderItemsById[item.OrderItemId].ProductId)
@@ -290,6 +271,10 @@ public sealed class DeliveryNoteManager(
             ?? throw new OrderIsNotFoundException(dto.OrderItemId);
 
         var orderItem = order.OrderItems.First(oi => oi.Id == dto.OrderItemId);
+        EnsureQuantitiesCanBeDelivered(order, new Dictionary<Guid, decimal>
+        {
+            [orderItem.Id] = dto.Quantity
+        });
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
 
@@ -588,6 +573,60 @@ public sealed class DeliveryNoteManager(
                 }).ConfigureAwait(false);
             }
         }
+    }
+
+    private void EnsureQuantitiesCanBeDelivered(Order order, IReadOnlyDictionary<Guid, decimal> requestedQuantitiesByOrderItem)
+    {
+        var orderItemsById = order.OrderItems.ToDictionary(item => item.Id);
+        var requestedOrderItemIds = requestedQuantitiesByOrderItem.Keys.ToList();
+        var activeDeliveryQuantitiesByOrderItem = GetActiveDeliveryQuantitiesByOrderItem(order.Id, requestedOrderItemIds);
+        var directShipOutstandingQuantitiesByOrderItem = GetDirectShipOutstandingQuantitiesByOrderItem(requestedOrderItemIds);
+
+        foreach (var (orderItemId, requestedQuantity) in requestedQuantitiesByOrderItem)
+        {
+            if (!orderItemsById.TryGetValue(orderItemId, out var orderItem))
+                throw new OrderItemIsNotFoundException();
+
+            var alreadyInDeliveryNotes = activeDeliveryQuantitiesByOrderItem.GetValueOrDefault(orderItemId);
+            var directShipOutstanding = directShipOutstandingQuantitiesByOrderItem.GetValueOrDefault(orderItemId);
+            var remainingQuantity = orderItem.Quantity - alreadyInDeliveryNotes - directShipOutstanding;
+            if (requestedQuantity > remainingQuantity)
+            {
+                throw new NamEcommerceDomainException(
+                    "Error.QuantityExceedsRemaining",
+                    orderItem.ProductName ?? string.Empty,
+                    Math.Max(0m, remainingQuantity));
+            }
+        }
+    }
+
+    private Dictionary<Guid, decimal> GetActiveDeliveryQuantitiesByOrderItem(Guid orderId, IReadOnlyCollection<Guid> orderItemIds)
+    {
+        if (orderItemIds.Count == 0)
+            return [];
+
+        return deliveryNoteReader.DataSource
+            .Where(note => note.OrderId == orderId && note.Status != DeliveryNoteStatus.Cancelled)
+            .SelectMany(note => note.Items)
+            .Where(item => orderItemIds.Contains(item.OrderItemId))
+            .GroupBy(item => item.OrderItemId)
+            .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+    }
+
+    private Dictionary<Guid, decimal> GetDirectShipOutstandingQuantitiesByOrderItem(IReadOnlyCollection<Guid> orderItemIds)
+    {
+        if (orderItemIds.Count == 0)
+            return [];
+
+        return allocationReader.DataSource
+            .Where(allocation => allocation.IsDirectShip
+                && allocation.Status != AllocationStatus.Cancelled
+                && orderItemIds.Contains(allocation.OrderItemId))
+            .ToList()
+            .GroupBy(allocation => allocation.OrderItemId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity)));
     }
 
     private static DeliveryNoteDto MapToDto(DeliveryNote deliveryNote)

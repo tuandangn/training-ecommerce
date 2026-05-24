@@ -1,7 +1,9 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Contracts.Services;
@@ -19,6 +21,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 {
     private readonly IDeliveryNoteAppService _deliveryNoteAppService;
     private readonly IOrderAppService _orderAppService;
+    private readonly IDirectShipAppService _directShipAppService;
     private readonly IPictureAppService _pictureAppService;
     private readonly IWarehouseAppService _warehouseAppService;
     private readonly IWebHelper _webHelper;
@@ -27,6 +30,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
     public DeliveryNoteModelFactory(
         IDeliveryNoteAppService deliveryNoteAppService,
         IOrderAppService orderAppService,
+        IDirectShipAppService directShipAppService,
         IPictureAppService pictureAppService,
         IWarehouseAppService warehouseAppService,
         IWebHelper webHelper,
@@ -34,6 +38,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
     {
         _deliveryNoteAppService = deliveryNoteAppService;
         _orderAppService = orderAppService;
+        _directShipAppService = directShipAppService;
         _pictureAppService = pictureAppService;
         _warehouseAppService = warehouseAppService;
         _webHelper = webHelper;
@@ -114,6 +119,16 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         };
 
         var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
+        var orderItemIds = order.Items.Select(item => item.Id).ToList();
+        var directShipOutstandingQuantities = (await _directShipAppService
+                .GetDirectShipAllocationsForOrderAsync(orderItemIds)
+                .ConfigureAwait(false))
+            .Where(allocation => allocation.Status != (int)AllocationStatus.Cancelled)
+            .GroupBy(allocation => allocation.OrderItemId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity)));
+
         foreach (var orderItem in order.Items)
         {
             var deliveredQty = deliveryNotes
@@ -121,7 +136,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 .SelectMany(n => n.Items)
                 .Where(i => i.OrderItemId == orderItem.Id)
                 .Sum(i => i.Quantity);
-            var remainingQty = orderItem.Quantity - deliveredQty;
+            var directShipOutstandingQty = directShipOutstandingQuantities.GetValueOrDefault(orderItem.Id);
+            var remainingQty = orderItem.Quantity - deliveredQty - directShipOutstandingQty;
             if (remainingQty > 0)
             {
                 var existingItem = model.Items.FirstOrDefault(item => item.OrderItemId == orderItem.Id);

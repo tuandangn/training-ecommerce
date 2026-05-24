@@ -4,6 +4,7 @@ using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
@@ -11,6 +12,7 @@ using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions;
@@ -31,13 +33,15 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<PurchaseOrder> _purchaseOrderDataReader;
     private readonly IEntityDataReader<PurchaseOrderItemAllocation> _purchaseOrderItemAllocationDataReader;
+    private readonly IEntityDataReader<DeliveryNote> _deliveryNoteDataReader;
     private readonly IEntityDataReader<Order> _orderDataReader;
 
     public PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
         IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
         IEntityDataReader<PurchaseOrderItemAllocation> purchaseOrderItemAllocationDataReader, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IEntityDataReader<Vendor> vendorDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader,
-        IEntityDataReader<Product> productDataReader, IDirectShipManager directShipManager, IEntityDataReader<Order> orderDataReader)
+        IEntityDataReader<Product> productDataReader, IDirectShipManager directShipManager,
+        IEntityDataReader<DeliveryNote> deliveryNoteDataReader, IEntityDataReader<Order> orderDataReader)
     {
         _purchaseOrderManager = purchaseOrderManager;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
@@ -48,6 +52,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         _productDataReader = productDataReader;
         _directShipManager = directShipManager;
         _purchaseOrderItemAllocationDataReader = purchaseOrderItemAllocationDataReader;
+        _deliveryNoteDataReader = deliveryNoteDataReader;
         _orderDataReader = orderDataReader;
     }
 
@@ -818,7 +823,12 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             .Where(allocation => allocation.OrderItemId == orderItemId && allocation.Status != AllocationStatus.Cancelled)
             .ToList()
             .Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
+        var activeDeliveryQuantity = _deliveryNoteDataReader.DataSource
+            .Where(deliveryNote => deliveryNote.Status != DeliveryNoteStatus.Cancelled)
+            .SelectMany(deliveryNote => deliveryNote.Items)
+            .Where(item => item.OrderItemId == orderItemId)
+            .Sum(item => item.Quantity);
 
-        return orderItem.Quantity - allocatedOutstanding;
+        return Math.Max(0m, orderItem.Quantity - activeDeliveryQuantity - allocatedOutstanding);
     }
 }
