@@ -470,6 +470,9 @@ $RECYCLE.BIN/
 .skill-extract/
 .superpowers/
 .trash/
+**/appsettings.Production.json
+**/appsettings.Development.json
+**/appsettings.E2E.json
 NamEcommerce/.claude/
 NamEcommerce/.vscode/
 
