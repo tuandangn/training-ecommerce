@@ -158,6 +158,10 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         opts.UseSqlServer(configuration.GetConnectionString(nameof(NamEcommerceEfDbContext)),
             opt => opt.MigrationsAssembly("NamEcommerce.Data.SqlServer"));
         opts.AddInterceptors(sp.GetRequiredService<DomainEventDispatchInterceptor>());
+
+        if (builder.Environment.IsDevelopment())
+            opts.EnableSensitiveDataLogging(true);
+
     });
     services.AddScoped<IDbContext, NamEcommerceEfDbContext>();
     services.AddScoped(typeof(IRepository<>), typeof(NamEcommerceEfRepository<>));
