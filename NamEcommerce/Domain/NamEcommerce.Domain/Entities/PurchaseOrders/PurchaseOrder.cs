@@ -79,6 +79,15 @@ public sealed record PurchaseOrder : AppAggregateEntity
         CloseReason = reason;
         ClosedOnUtc = DateTime.UtcNow;
     }
+    internal void Cancel()
+    {
+        if (!CanChangeStatusTo(PurchaseOrderStatus.Cancelled))
+            throw new PurchaseOrderCannotChangeStatusException();
+
+        Status = PurchaseOrderStatus.Cancelled;
+
+        MarkCancelled();
+    }
 
     internal void SetPlacedDate(DateTime placedOnUtc)
     {
@@ -176,7 +185,6 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
         return Enum.IsDefined(toStatus);
     }
-
     internal void ChangeStatus(PurchaseOrderStatus status, Guid? actingUserId = null)
     {
         if (!CanChangeStatusTo(status))
@@ -223,11 +231,12 @@ public sealed record PurchaseOrder : AppAggregateEntity
 
     #region Domain Event Markers
 
-    internal void MarkCreated()
-        => RaiseDomainEvent(new PurchaseOrderCreated(Id, Code, VendorId, WarehouseId));
+    internal void MarkCreated() => RaiseDomainEvent(new PurchaseOrderCreated(Id, Code, VendorId, WarehouseId));
 
     internal void MarkUpdated()
         => RaiseDomainEvent(new PurchaseOrderUpdated(Id));
+
+    internal void MarkCancelled() => RaiseDomainEvent(new PurchaseOrderCancelled(Id));
 
     internal void MarkStatusChanged(PurchaseOrderStatus oldStatus)
         => RaiseDomainEvent(new PurchaseOrderStatusChanged(Id, oldStatus, Status));
@@ -238,10 +247,6 @@ public sealed record PurchaseOrder : AppAggregateEntity
     internal void MarkItemRemoved(Guid itemId)
         => RaiseDomainEvent(new PurchaseOrderItemRemoved(Id, itemId));
 
-    /// <summary>
-    /// Đánh dấu một dòng hàng vừa được nhận hàng — raise <see cref="PurchaseOrderItemReceived"/>.
-    /// Handler sẽ subscribe event này để verify + transition trạng thái đơn (Approved → Receiving → Completed).
-    /// </summary>
     internal void MarkItemReceived(Guid itemId, decimal receivedQuantity, Guid? goodsReceiptId = null)
     {
         LastReceivedOnUtc = DateTime.UtcNow;

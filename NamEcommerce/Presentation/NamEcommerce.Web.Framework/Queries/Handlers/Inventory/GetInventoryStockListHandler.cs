@@ -17,7 +17,7 @@ public sealed class GetInventoryStockListHandler : IRequestHandler<GetInventoryS
 
     public async Task<InventoryStockListModel> Handle(GetInventoryStockListQuery request, CancellationToken cancellationToken)
     {
-        var pagedData = await _inventoryAppService.GetInventoryStocksAsync(request.Keywords, request.WarehouseId, request.PageIndex, request.PageSize);
+        var pagedData = await _inventoryAppService.GetInventoryStocksAsync(request.PageIndex, request.PageSize, request.WarehouseId, null, request.Keywords);
 
         var model = new InventoryStockListModel
         {

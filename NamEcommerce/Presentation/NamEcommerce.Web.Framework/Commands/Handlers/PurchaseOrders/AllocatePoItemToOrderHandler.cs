@@ -13,6 +13,7 @@ public sealed class AllocatePoItemToOrderHandler(IPurchaseOrderAppService purcha
     {
         var result = await purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
         {
+            PurchaseOrderId = request.PurchaseOrderId,
             PurchaseOrderItemId = request.PurchaseOrderItemId,
             OrderId = request.OrderId,
             OrderItemId = request.OrderItemId,

@@ -83,8 +83,7 @@ public sealed class StockTransferNoteManager(
             var costSummary = await inventoryCostingManager.GetCurrentCostSummaryAsync(item.ProductId).ConfigureAwait(false);
             var unitCost = costSummary.AverageCost;
 
-            var stocks = await stockManager.GetInventoryStocksForProductAsync(item.ProductId, note.FromWarehouseId).ConfigureAwait(false);
-            var fromStock = stocks.FirstOrDefault(s => s.WarehouseId == note.FromWarehouseId);
+            var fromStock = await stockManager.GetInventoryStockForProductAsync(item.ProductId, note.FromWarehouseId).ConfigureAwait(false);
             if (fromStock is null || fromStock.QuantityAvailable < item.Quantity)
                 throw new StockTransferInsufficientStockException(item.ProductName, fromStock?.QuantityAvailable ?? 0, item.Quantity);
 

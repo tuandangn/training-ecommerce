@@ -32,15 +32,10 @@
             outline: 2px solid var(--bs-primary);
             outline-offset: 2px;
         }
-        #view-toggle-list.active, #view-toggle-grid.active {
-            background-color: #212529;
-            color: #fff;
-            border-color: #212529;
-        }
     </style>
 }
 
-<div class="container py-4">
+<div class="container py-4" data-responsive-list data-list-key="inventory-stock-list">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-1 fw-bold">Quản lý Tồn kho</h1>
@@ -50,11 +45,11 @@
             <a asp-action="CostingPolicy" class="btn btn-outline-secondary rounded-3 px-4 shadow-sm" title="Cài đặt giá vốn">
                 <i class="bi bi-calculator me-1" aria-hidden="true"></i> Giá vốn
             </a>
-            <div class="btn-group shadow-sm rounded-3 overflow-hidden" role="group" aria-label="Chuyển đổi giao diện">
-                <button type="button" class="btn btn-outline-secondary active px-3" id="view-toggle-list" title="Dạng danh sách" aria-label="Xem dạng danh sách" aria-pressed="true">
+            <div class="responsive-list-toolbar" role="group" aria-label="Chọn kiểu hiển thị">
+                <button type="button" class="responsive-list-toggle" data-list-view="list" title="Dạng danh sách" aria-label="Dạng danh sách" aria-pressed="false">
                     <i class="bi bi-list-ul" aria-hidden="true"></i>
                 </button>
-                <button type="button" class="btn btn-outline-secondary px-3" id="view-toggle-grid" title="Dạng lưới" aria-label="Xem dạng lưới" aria-pressed="false">
+                <button type="button" class="responsive-list-toggle" data-list-view="grid" title="Dạng lưới" aria-label="Dạng lưới" aria-pressed="false">
                     <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
                 </button>
             </div>
@@ -85,7 +80,7 @@
     @if (Model.Data.Pagination.TotalCount > 0)
     {
         <!-- List view -->
-        <div id="stock-list-view" class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden">
+        <div id="stock-list-view" class="responsive-list-panel card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" data-list-view-panel="list">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 stock-table">
                     <thead>
@@ -194,7 +189,7 @@
         </div>
 
         <!-- Grid view -->
-        <div id="stock-grid-view" class="row g-4 d-none">
+        <div id="stock-grid-view" class="responsive-list-panel row g-4" data-list-view-panel="grid" hidden>
             @foreach (var item in Model.Data)
             {
                 var stockHealth = item.QuantityAvailable < 5 ? "danger" : (item.QuantityAvailable < 20 ? "warning" : "success");
@@ -356,38 +351,6 @@
 
 @section Scripts {
     <script>
-        (function () {
-            const STORAGE_KEY = 'inventory-stock-view-mode';
-            const listBtn = document.getElementById('view-toggle-list');
-            const gridBtn = document.getElementById('view-toggle-grid');
-            const listView = document.getElementById('stock-list-view');
-            const gridView = document.getElementById('stock-grid-view');
-
-            if (!listBtn || !gridBtn) return;
-
-            function applyMode(mode) {
-                const isGrid = mode === 'grid';
-                if (listView) listView.classList.toggle('d-none', isGrid);
-                if (gridView) gridView.classList.toggle('d-none', !isGrid);
-                listBtn.classList.toggle('active', !isGrid);
-                listBtn.setAttribute('aria-pressed', String(!isGrid));
-                gridBtn.classList.toggle('active', isGrid);
-                gridBtn.setAttribute('aria-pressed', String(isGrid));
-            }
-
-            const saved = localStorage.getItem(STORAGE_KEY) || 'list';
-            applyMode(saved);
-
-            listBtn.addEventListener('click', function () {
-                localStorage.setItem(STORAGE_KEY, 'list');
-                applyMode('list');
-            });
-            gridBtn.addEventListener('click', function () {
-                localStorage.setItem(STORAGE_KEY, 'grid');
-                applyMode('grid');
-            });
-        })();
-
         (function () {
             const modalEl = document.getElementById('setStockLevelsModal');
             if (!modalEl) return;

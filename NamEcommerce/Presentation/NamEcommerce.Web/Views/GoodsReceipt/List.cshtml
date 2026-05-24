@@ -13,15 +13,24 @@
         </nav>
     </div>
 }
-<div class="content-card">
+<div class="content-card" data-responsive-list data-list-key="goods-receipt-list">
     <div class="action-toolbar">
         <partial name="_Search" model="@(new GoodsReceiptListSearchModel { Keywords = Model.Keywords, FromDate = Model.FromDate, ToDate = Model.ToDate })" />
         <a asp-action="Create" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i> Tạo phiếu
         </a>
+        <div class="responsive-list-toolbar" role="group" aria-label="Chọn kiểu hiển thị">
+            <button type="button" class="responsive-list-toggle" data-list-view="list" title="Dạng danh sách" aria-label="Dạng danh sách" aria-pressed="false">
+                <i class="bi bi-list-ul"></i>
+            </button>
+            <button type="button" class="responsive-list-toggle" data-list-view="grid" title="Dạng lưới" aria-label="Dạng lưới" aria-pressed="false">
+                <i class="bi bi-grid-3x3-gap"></i>
+            </button>
+        </div>
     </div>
     <div class="content-card-body-flush">
-        <div class="table-responsive">
+        <div class="responsive-list-panel" data-list-view-panel="list">
+            <div class="table-responsive">
             <table class="table data-table">
                 <thead>
                     <tr>
@@ -131,6 +140,105 @@
                     }
                 </tbody>
             </table>
+            </div>
+        </div>
+        <div class="responsive-list-panel responsive-list-grid" data-list-view-panel="grid" hidden>
+            @if (Model.Data.Pagination.TotalCount > 0)
+            {
+                @foreach (var receipt in Model.Data)
+                {
+                    <article class="list-card">
+                        <div class="list-card-header">
+                            <div class="list-card-title-group">
+                                <a asp-action="Details" asp-route-id="@receipt.Id" class="list-card-title">
+                                    @receipt.ReceivedOn.ToString(ViewConstants.DefaultDateFormat)
+                                </a>
+                                <div class="list-card-meta">@receipt.ReceivedOn.ToString("HH:mm")</div>
+                            </div>
+                            @if (receipt.IsPendingCosting)
+                            {
+                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                    <i class="bi bi-hourglass-split me-1"></i>Chờ định giá
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Đã định giá
+                                </span>
+                            }
+                        </div>
+                        <div class="list-card-fields">
+                            <div class="list-card-field list-card-field-stack">
+                                <span class="list-card-label">Hàng hóa nhập</span>
+                                @if (receipt.Items.Count == 0)
+                                {
+                                    <span class="text-muted fst-italic small">Chưa có hàng</span>
+                                }
+                                else
+                                {
+                                    <div class="d-flex flex-column gap-1">
+                                        @foreach (var item in receipt.Items)
+                                        {
+                                            <div class="d-flex align-items-baseline justify-content-between gap-2">
+                                                <a asp-action="StockList" asp-controller="Inventory" asp-route-keywords="@item.ProductName" class="text-decoration-none fw-medium text-body receipt-item-link" title="Xem tồn kho">
+                                                    @item.ProductName
+                                                </a>
+                                                <span class="text-muted text-nowrap">
+                                                    × @item.Quantity.DisplayQuantity()
+                                                    @if (item.UnitCost.HasValue)
+                                                    {
+                                                        <span class="ms-1 text-secondary">(@item.UnitCost.Value.DisplayCurrency())</span>
+                                                    }
+                                                </span>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            <div class="list-card-field">
+                                <span class="list-card-label">Giá trị đơn</span>
+                                @if (receipt.TotalValue.HasValue)
+                                {
+                                    <span class="list-card-value">@receipt.TotalValue.Value.DisplayCurrency()</span>
+                                }
+                                else
+                                {
+                                    <span class="list-card-value fw-normal text-muted">—</span>
+                                }
+                            </div>
+                            <div class="list-card-field list-card-field-stack">
+                                <span class="list-card-label">Tài xế / Biển số</span>
+                                @if (!string.IsNullOrEmpty(receipt.TruckDriverName))
+                                {
+                                    <span class="fw-medium text-dark">@receipt.TruckDriverName</span>
+                                }
+                                @if (!string.IsNullOrEmpty(receipt.TruckNumberSerial))
+                                {
+                                    <span class="text-muted small">
+                                        <i class="bi bi-truck me-1"></i>@receipt.TruckNumberSerial
+                                    </span>
+                                }
+                                @if (string.IsNullOrEmpty(receipt.TruckDriverName) && string.IsNullOrEmpty(receipt.TruckNumberSerial))
+                                {
+                                    <span class="text-muted fst-italic small">—</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="list-card-actions">
+                            <a class="btn btn-sm btn-light text-primary" asp-action="Details" asp-route-id="@receipt.Id">
+                                Xem
+                            </a>
+                        </div>
+                    </article>
+                }
+            }
+            else
+            {
+                <div class="empty-state">
+                    <span class="text-muted">Không có phiếu nhập hàng nào</span>
+                </div>
+            }
         </div>
         @if (Model.Data.Pagination.TotalCount > 0)
         {

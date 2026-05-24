@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Common;
 
 namespace NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 
@@ -53,7 +54,7 @@ public sealed record DirectShipInfoDto
 [Serializable]
 public sealed record CreatePoFromShortageItemDto
 {
-    public required Guid OrderItemId { get; init; }
+    public required SecondaryItemId OrderItemId { get; init; }
     public required Guid ProductId { get; init; }
     public required decimal Quantity { get; init; }
     public decimal? AllocationQuantity { get; init; }
@@ -63,7 +64,7 @@ public sealed record CreatePoFromShortageItemDto
 
     public void Verify()
     {
-        if (OrderItemId == Guid.Empty)
+        if (!OrderItemId.IsValid())
             throw new PurchaseOrderItemDataIsInvalidException("Error.OrderItemIsNotFound");
         if (ProductId == Guid.Empty)
             throw new PurchaseOrderItemDataIsInvalidException("Error.ProductIsNotFound");

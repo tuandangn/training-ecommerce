@@ -264,7 +264,7 @@ public sealed class ShortageAggregationAppService(
 
     private sealed class CreatedPurchaseOrderItemBucket
     {
-        public required Guid PurchaseOrderItemId { get; init; }
+        public required SecondaryItemId PurchaseOrderItemId { get; init; }
         public required Guid ProductId { get; init; }
         public required decimal UnitCost { get; init; }
         public decimal RemainingQuantity { get; set; }
@@ -309,14 +309,12 @@ public sealed class ShortageAggregationAppService(
         };
     }
 
-    private async Task AllocateCreatedPurchaseOrderItemsAsync(
-        PurchaseOrderAppDto purchaseOrder,
-        IList<CreatePoFromShortageItemDto> items)
+    private async Task AllocateCreatedPurchaseOrderItemsAsync(PurchaseOrderAppDto purchaseOrder, IList<CreatePoFromShortageItemDto> items)
     {
         var buckets = purchaseOrder.Items
             .Select(item => new CreatedPurchaseOrderItemBucket
             {
-                PurchaseOrderItemId = item.Id,
+                PurchaseOrderItemId = (purchaseOrder.Id, item.Id),
                 ProductId = item.ProductId,
                 UnitCost = item.UnitCost,
                 RemainingQuantity = item.QuantityOrdered
@@ -336,15 +334,18 @@ public sealed class ShortageAggregationAppService(
             {
                 var allocationQuantity = Math.Min(remainingAllocationQuantity, bucket.RemainingQuantity);
                 var allocation = await purchaseOrderAllocationManager
-                    .AllocateAsync(bucket.PurchaseOrderItemId, item.OrderItemId, allocationQuantity)
+                    .AllocatePurchaseOrderItemForOrder(new AllocatePurchaseOrderItemForOrder
+                    {
+                        PurchaseOrderItemId = bucket.PurchaseOrderItemId,
+                        OrderItemId = item.OrderItemId,
+                        AllocationQuantity = allocationQuantity,
+                        DirectShipInfo = item.DirectShipInfo is not null && !string.IsNullOrEmpty(item.DirectShipInfo.ContactPhone)
+                            ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(item.DirectShipInfo.ContactName, item.DirectShipInfo.ContactPhone, item.DirectShipInfo.Address)
+                            {
+                                Priority = item.DirectShipInfo.Priority
+                            } : null
+                    })
                     .ConfigureAwait(false);
-
-                if (item.DirectShipInfo is { } ds)
-                {
-                    await directShipManager
-                        .MarkAllocationAsDirectShipAsync(allocation.Id, ds.Address, ds.ContactName, ds.ContactPhone, ds.Priority)
-                        .ConfigureAwait(false);
-                }
 
                 bucket.RemainingQuantity -= allocationQuantity;
                 remainingAllocationQuantity -= allocationQuantity;
@@ -420,13 +421,18 @@ public sealed class ShortageAggregationAppService(
                             if (actionAllocationQuantity > 0)
                             {
                                 var allocationDto = await purchaseOrderAllocationManager
-                                    .AllocateFromExistingPurchaseOrderItemAsync(action.PurchaseOrderItemId.Value, default, item.OrderItemId, actionAllocationQuantity)
+                                    .AllocatePurchaseOrderItemForOrder(new AllocatePurchaseOrderItemForOrder
+                                    {
+                                        PurchaseOrderItemId = (action.PurchaseOrderId.Value, action.PurchaseOrderItemId.Value),
+                                        OrderItemId = (item.OrderId, item.OrderItemId),
+                                        AllocationQuantity = actionAllocationQuantity,
+                                        DirectShipInfo = item.DirectShipInfo is not null && !string.IsNullOrEmpty(item.DirectShipInfo.ContactPhone)
+                                            ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(item.DirectShipInfo.ContactName, item.DirectShipInfo.ContactPhone, item.DirectShipInfo.Address)
+                                            {
+                                                Priority = item.DirectShipInfo.Priority
+                                            } : null
+                                    })
                                     .ConfigureAwait(false);
-
-                                if (item.DirectShipInfo is { } ds && !string.IsNullOrWhiteSpace(ds.Address))
-                                    await directShipManager
-                                        .MarkAllocationAsDirectShipAsync(allocationDto.Id, ds.Address, ds.ContactName, ds.ContactPhone, ds.Priority)
-                                        .ConfigureAwait(false);
                             }
 
                             await AddExistingPurchaseOrderResultAsync(results, action.PurchaseOrderId.Value, false).ConfigureAwait(false);
@@ -517,7 +523,7 @@ public sealed class ShortageAggregationAppService(
 
         return new()
         {
-            OrderItemId = item.OrderItemId,
+            OrderItemId = (item.OrderId, item.OrderItemId),
             ProductId = item.ProductId,
             Quantity = finalQuantity,
             AllocationQuantity = finalAllocationQuantity,

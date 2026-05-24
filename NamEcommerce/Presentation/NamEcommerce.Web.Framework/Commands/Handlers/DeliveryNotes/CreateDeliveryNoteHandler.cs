@@ -6,7 +6,7 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.DeliveryNotes;
 
-public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNoteCommand, CommonActionResultModel>
+public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNoteCommand, CreateDeliveryNoteResultModel>
 {
     private readonly IDeliveryNoteAppService _deliveryNoteAppService;
 
@@ -15,12 +15,12 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
         _deliveryNoteAppService = deliveryNoteAppService;
     }
 
-    public async Task<CommonActionResultModel> Handle(CreateDeliveryNoteCommand request, CancellationToken cancellationToken)
+    public async Task<CreateDeliveryNoteResultModel> Handle(CreateDeliveryNoteCommand request, CancellationToken cancellationToken)
     {
         var selectedItems = request.Items.Where(i => i.Quantity > 0).ToList();
         if (!selectedItems.Any())
         {
-            return new CommonActionResultModel
+            return new CreateDeliveryNoteResultModel
             {
                 Success = false,
                 ErrorMessage = "Error.DeliveryNoteItemsRequired"
@@ -44,7 +44,11 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
             }).ToList()
         };
 
-        await _deliveryNoteAppService.CreateFromOrderAsync(dto).ConfigureAwait(false);
-        return new CommonActionResultModel { Success = true };
+        var result = await _deliveryNoteAppService.CreateFromOrderAsync(dto).ConfigureAwait(false);
+        return new CreateDeliveryNoteResultModel
+        {
+            Success = true,
+            CreatedId = result.Id
+        };
     }
 }

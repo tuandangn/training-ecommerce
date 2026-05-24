@@ -12,7 +12,6 @@ using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
-using NamEcommerce.Domain.Shared.Exceptions.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
@@ -119,8 +118,7 @@ public sealed class DirectShipManager(
             }, ct).ConfigureAwait(false);
     }
 
-    public async Task ConfirmDeliveryAsync(
-        Guid deliveryNoteId, DateTime confirmedAtUtc, string? note, CancellationToken ct = default)
+    public async Task ConfirmDeliveryAsync(Guid deliveryNoteId, DateTime confirmedAtUtc, string? note, CancellationToken ct = default)
     {
         await deliveryNoteManager.ConfirmDirectShipDeliveryAsync(
             deliveryNoteId,
@@ -129,8 +127,7 @@ public sealed class DirectShipManager(
             ct).ConfigureAwait(false);
     }
 
-    public async Task RejectDeliveryAsync(
-        Guid deliveryNoteId, Guid returnWarehouseId, string reason, CancellationToken ct = default)
+    public async Task RejectDeliveryAsync(Guid deliveryNoteId, Guid returnWarehouseId, string reason, CancellationToken ct = default)
     {
         var deliveryNote = await deliveryNoteReader.GetByIdAsync(deliveryNoteId)
             ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
@@ -290,7 +287,7 @@ public sealed class DirectShipManager(
             .FirstOrDefault(item => item.Id == purchaseOrderItemId);
 
         if (purchaseOrderItem is null)
-            throw new PurchaseOrderItemIsNotFoundException(purchaseOrderItemId);
+            throw new PurchaseOrderItemIsNotFoundException();
 
         return purchaseOrderItem;
     }

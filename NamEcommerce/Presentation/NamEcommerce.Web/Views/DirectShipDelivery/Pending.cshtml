@@ -107,7 +107,7 @@
                                 @item.CreatedOn.ToString("dd/MM/yyyy HH:mm")
                             </td>
                             <td class="text-end pe-4">
-                                <button type="button" class="btn btn-sm btn-success btn-confirm-delivery"
+                                <button type="button" class="btn btn-sm btn-success btn-confirm-delivery" data-testid="directship-confirm-open"
                                         data-id="@item.Id" data-code="@item.Code">
                                     <i class="bi bi-check2 me-1"></i>Xác nhận
                                 </button>
@@ -156,7 +156,7 @@
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-success" id="btnConfirmSubmit">
+                <button type="button" class="btn btn-success" id="btnConfirmSubmit" data-testid="directship-confirm-submit">
                     <i class="bi bi-check2 me-1"></i>Xác nhận đã nhận hàng
                 </button>
             </div>

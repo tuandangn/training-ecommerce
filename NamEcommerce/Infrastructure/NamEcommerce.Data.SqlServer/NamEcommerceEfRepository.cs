@@ -36,18 +36,6 @@ public sealed class NamEcommerceEfRepository<TEntity> : IRepository<TEntity> whe
         if (entity is null)
             throw new ArgumentNullException(nameof(entity));
 
-        TryDetachEntity(entity);
-
         return _dbContext.UpdateAsync(entity, cancellationToken);
-    }
-
-    private void TryDetachEntity(TEntity entity)
-    {
-        var existing = ((NamEcommerceEfDbContext)_dbContext).ChangeTracker
-            .Entries<TEntity>()
-            .FirstOrDefault(e => e.Entity.Id == entity.Id);
-
-        if (existing != null)
-            existing.State = EntityState.Detached;
     }
 }
