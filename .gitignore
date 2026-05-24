@@ -468,3 +468,8 @@ $RECYCLE.BIN/
 .skill-extract/
 .superpowers/
 .trash/
+
+*.skill
+TodoList.md
+CLAUDE.md
+AGENTS.md
