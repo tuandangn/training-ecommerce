@@ -487,14 +487,14 @@ NamEcommerce/Presentation/NamEcommerce.Api.GraphQl/
 NamEcommerce/Presentation/NamEcommerce.Api.Restful/
 
 # Ẩn các file log build sinh ra ở local
-NameEcommerce/build_errors.txt
-NameEcommerce/build_output.txt
+NamEcommerce/build_errors.txt
+NamEcommerce/build_output.txt
 
 # Ẩn các file script sửa lỗi tạm thời (nếu không dùng chung)
-NameEcommerce/fix_error_suffix.ps1
-NameEcommerce/refactor_controllers.ps1
-NameEcommerce/refactor_exceptions.ps1
-NameEcommerce/refactor_exceptions.py
+NamEcommerce/fix_error_suffix.ps1
+NamEcommerce/refactor_controllers.ps1
+NamEcommerce/refactor_exceptions.ps1
+NamEcommerce/refactor_exceptions.py
 
 # Nếu bạn muốn ẩn tạm thời cả thư mục Tests (khi nào xong mới hiện)
-NameEcommerce/Tests/
+NamEcommerce/Tests/
