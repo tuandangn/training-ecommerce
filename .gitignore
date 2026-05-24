@@ -473,3 +473,31 @@ $RECYCLE.BIN/
 **/appsettings.Production.json
 **/appsettings.Development.json
 **/appsettings.E2E.json
+NamEcommerce/.claude/
+NamEcommerce/.vscode/
+
+*.skill
+TodoList.md
+CLAUDE.md
+AGENTS.md
+
+#unload project
+NamEcommerce/Application/NamEcommerce.Application.Miscellaneous/
+NamEcommerce/Domain/NamEcommerce.Domain.Entities.GoodsReceipts/
+NamEcommerce/Infrastructure/NamEcommerce.Data.MongoDb/
+NamEcommerce/Presentation/Admin/
+NamEcommerce/Presentation/NamEcommerce.Api.GraphQl/
+NamEcommerce/Presentation/NamEcommerce.Api.Restful/
+
+# Ẩn các file log build sinh ra ở local
+NamEcommerce/build_errors.txt
+NamEcommerce/build_output.txt
+
+# Ẩn các file script sửa lỗi tạm thời (nếu không dùng chung)
+NamEcommerce/fix_error_suffix.ps1
+NamEcommerce/refactor_controllers.ps1
+NamEcommerce/refactor_exceptions.ps1
+NamEcommerce/refactor_exceptions.py
+
+# Nếu bạn muốn ẩn tạm thời cả thư mục Tests (khi nào xong mới hiện)
+NamEcommerce/Tests/
