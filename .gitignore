@@ -473,3 +473,6 @@ $RECYCLE.BIN/
 **/appsettings.Production.json
 **/appsettings.Development.json
 **/appsettings.E2E.json
+
+.env
+ssl/
