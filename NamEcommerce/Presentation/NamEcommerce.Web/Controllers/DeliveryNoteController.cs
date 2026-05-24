@@ -112,7 +112,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             if (result.Success)
             {
                 NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
-                return RedirectToAction(nameof(List));
+                return RedirectToAction(nameof(Details), new { id = result.CreatedId });
             }
 
             AddLocalizedModelError(result.ErrorMessage ?? "Error.DeliveryNoteCreateFailed");

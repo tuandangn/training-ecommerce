@@ -1,3 +1,4 @@
+using DocumentFormat.OpenXml.Office.CustomUI;
 using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Customers;
@@ -212,6 +213,11 @@ public sealed class E2ETestDataService(
             .Where(stock => ids.ProductIds.Contains(stock.ProductId) && ids.WarehouseIds.Contains(stock.WarehouseId))
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
+        var productReservationLedgerEntries = await dbContext.Set<ProductReservationLedger>()
+            .AsNoTracking()
+            .Where(entry => ids.ProductIds.Contains(entry.ProductId) && ids.OrderIds.Contains(entry.OrderId))
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         return new E2EOrderWorkflowState
         {
@@ -225,9 +231,14 @@ public sealed class E2ETestDataService(
             OrderedQuantity = order?.OrderItems.Sum(x => x.Quantity) ?? 0,
             ReceivedQuantity = purchaseOrder?.Items.Sum(x => x.QuantityReceived) ?? 0,
             DeliveredQuantity = deliveryNote?.Items.Sum(x => x.Quantity) ?? 0,
-            StockOnHandQuantity = inventoryStock?.QuantityOnHand ?? 0,
-            StockReservedQuantity = inventoryStock?.QuantityReserved ?? 0,
-            StockAvailableQuantity = inventoryStock?.QuantityAvailable ?? 0
+            StockInfo = new E2EInventoryStockState
+            {
+                ScenarioId = scenarioId,
+                GlobalReservedQuantity = productReservationLedgerEntries.Sum(entry => entry.QuantityDelta),
+                StockOnHandQuantity = inventoryStock?.QuantityOnHand ?? 0,
+                StockReservedQuantity = inventoryStock?.QuantityReserved ?? 0,
+                StockAvailableQuantity = inventoryStock?.QuantityAvailable ?? 0
+            }
         };
     }
 
@@ -422,10 +433,10 @@ public sealed class E2ETestDataService(
             .Where(stock => ids.ProductIds.Contains(stock.ProductId) && ids.WarehouseIds.Contains(stock.WarehouseId))
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
-        var productReservationLedger = await dbContext.Set<ProductReservationLedger>()
+        var productReservationLedgers = await dbContext.Set<ProductReservationLedger>()
             .AsNoTracking()
             .Where(entry => ids.ProductIds.Contains(entry.ProductId) && ids.OrderIds.Contains(entry.OrderId))
-            .FirstOrDefaultAsync(cancellationToken)
+            .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return new E2EInventoryStockState
@@ -434,7 +445,7 @@ public sealed class E2ETestDataService(
             StockOnHandQuantity = inventoryStock?.QuantityOnHand ?? 0,
             StockReservedQuantity = inventoryStock?.QuantityReserved ?? 0,
             StockAvailableQuantity = inventoryStock?.QuantityAvailable ?? 0,
-            GlobalReservedQuantity = productReservationLedger?.QuantityDelta ?? 0
+            GlobalReservedQuantity = productReservationLedgers.Sum(item => item.QuantityDelta)
         };
     }
 

@@ -35,9 +35,8 @@ public sealed record E2EOrderWorkflowState
     public required decimal OrderedQuantity { get; init; }
     public required decimal ReceivedQuantity { get; init; }
     public required decimal DeliveredQuantity { get; init; }
-    public required decimal StockOnHandQuantity { get; init; }
-    public required decimal StockReservedQuantity { get; init; }
-    public required decimal StockAvailableQuantity { get; init; }
+
+    public required E2EInventoryStockState StockInfo { get; set; }
 }
 
 public sealed record E2EInventoryStockState

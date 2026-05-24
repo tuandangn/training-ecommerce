@@ -51,9 +51,12 @@ test.describe.serial('Order workflow', () => {
       orderedQuantity: quantity,
       receivedQuantity: quantity,
       deliveredQuantity: quantity,
-      stockAvailableQuantity: 0,
-      stockOnHandQuantity: 0,
-      stockReservedQuantity: 0
+      stockInfo: {
+        globalReservedQuantity: 0,
+        stockAvailableQuantity: 0,
+        stockOnHandQuantity: 0,
+        stockReservedQuantity: 0
+      }
     });
   });
 
