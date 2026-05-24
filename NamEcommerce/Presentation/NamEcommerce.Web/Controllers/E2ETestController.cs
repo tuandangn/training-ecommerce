@@ -53,6 +53,16 @@ public sealed class E2ETestController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("state/inventory-stock/{scenarioId}")]
+    public async Task<IActionResult> GetInventoryStockState(string scenarioId, CancellationToken cancellationToken)
+    {
+        if (!IsAllowed())
+            return NotFound();
+
+        var result = await GetTestDataService().GetInventoryStockStateAsync(scenarioId, cancellationToken).ConfigureAwait(false);
+        return Ok(result);
+    }
+
     private IE2ETestDataService GetTestDataService()
         => _serviceProvider.GetRequiredService<IE2ETestDataService>();
 

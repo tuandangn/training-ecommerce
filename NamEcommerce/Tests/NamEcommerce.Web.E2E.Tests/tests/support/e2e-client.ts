@@ -56,6 +56,14 @@ export class E2EClient {
     return await response.json();
   }
 
+  async getCurrentInventoryState(scenarioId: string): Promise<OrderWorkflowState> {
+    const response = await this.request.get(`/__e2e/state/inventory-stock/${scenarioId}`, {
+      headers: this.headers(),
+    });
+    await this.expectOk(response, 'read inventory state');
+    return await response.json();
+  }
+
   private headers() {
     return { 'X-E2E-Token': this.token };
   }

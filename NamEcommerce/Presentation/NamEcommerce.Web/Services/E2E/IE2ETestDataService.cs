@@ -13,4 +13,8 @@ public interface IE2ETestDataService
     Task<E2EOrderWorkflowState> GetOrderWorkflowStateAsync(
         string scenarioId,
         CancellationToken cancellationToken = default);
+
+    Task<E2EInventoryStockState> GetInventoryStockStateAsync(
+        string scenarioId,
+        CancellationToken cancellationToken = default);
 }

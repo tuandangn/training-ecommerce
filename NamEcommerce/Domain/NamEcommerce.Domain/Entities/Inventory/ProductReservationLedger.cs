@@ -1,7 +1,6 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Events.Inventory;
-using NamEcommerce.Domain.Shared.Events.Orders;
 
 namespace NamEcommerce.Domain.Entities.Inventory;
 

@@ -8,6 +8,7 @@ import {
   PurchaseOrderCreatePage,
   PurchaseOrderWorkflowPage,
 } from '../pages/OrderWorkflowPage';
+import { StockInventoryState } from '../states/StockInventoryState';
 
 test.describe.serial('Order workflow', () => {
   test('creates one-product order, receives stock, delivers, then completes order', async ({ page, request }) => {
@@ -15,8 +16,12 @@ test.describe.serial('Order workflow', () => {
     const scenarioId = `order-stock-${Date.now()}`;
     const quantity = 3;
     const seed = await client.seedOrderWorkflow(scenarioId, quantity, false);
+    const inventory = new StockInventoryState(client);
 
     const orderUrl = await new OrderCreatePage(page).create(seed);
+    await inventory.checkInventoryState(scenarioId, {
+      globalReservedQuantity: quantity
+    });
     const poUrl = await new PurchaseOrderCreatePage(page).create(seed);
 
     await page.goto(poUrl);
@@ -26,7 +31,15 @@ test.describe.serial('Order workflow', () => {
 
     await page.goto(orderUrl);
     await new OrderDetailsWorkflowPage(page).createDelivery(seed);
-    await new DeliveryNoteWorkflowPage(page).confirmAndDeliver();
+
+    const deliveryNoteWorkflowPage = new DeliveryNoteWorkflowPage(page);
+    await deliveryNoteWorkflowPage.confirm();
+    await inventory.checkInventoryState(scenarioId, {
+      globalReservedQuantity: 0,
+      stockOnHandQuantity: quantity,
+      stockReservedQuantity: quantity
+    });
+    await deliveryNoteWorkflowPage.processDelivery();
 
     await page.goto(orderUrl);
     await new OrderDetailsWorkflowPage(page).completeOrder();
@@ -38,6 +51,9 @@ test.describe.serial('Order workflow', () => {
       orderedQuantity: quantity,
       receivedQuantity: quantity,
       deliveredQuantity: quantity,
+      stockAvailableQuantity: 0,
+      stockOnHandQuantity: 0,
+      stockReservedQuantity: 0
     });
   });
 

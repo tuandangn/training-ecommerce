@@ -207,6 +207,11 @@ public sealed class E2ETestDataService(
             .OrderByDescending(x => x.CreatedOnUtc)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
+        var inventoryStock = await dbContext.Set<InventoryStock>()
+            .AsNoTracking()
+            .Where(stock => ids.ProductIds.Contains(stock.ProductId) && ids.WarehouseIds.Contains(stock.WarehouseId))
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         return new E2EOrderWorkflowState
         {
@@ -219,7 +224,10 @@ public sealed class E2ETestDataService(
             DeliveryStatus = deliveryNote?.Status.ToString() ?? "Missing",
             OrderedQuantity = order?.OrderItems.Sum(x => x.Quantity) ?? 0,
             ReceivedQuantity = purchaseOrder?.Items.Sum(x => x.QuantityReceived) ?? 0,
-            DeliveredQuantity = deliveryNote?.Items.Sum(x => x.Quantity) ?? 0
+            DeliveredQuantity = deliveryNote?.Items.Sum(x => x.Quantity) ?? 0,
+            StockOnHandQuantity = inventoryStock?.QuantityOnHand ?? 0,
+            StockReservedQuantity = inventoryStock?.QuantityReserved ?? 0,
+            StockAvailableQuantity = inventoryStock?.QuantityAvailable ?? 0
         };
     }
 
@@ -374,6 +382,13 @@ public sealed class E2ETestDataService(
             .Select(x => x.Id)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+        var productReservationLedgerIds = await dbContext.Set<ProductReservationLedger>()
+            .IgnoreQueryFilters()
+            .Where(x => productIds.Contains(x.ProductId)
+                        || orderIds.Contains(x.OrderId))
+            .Select(x => x.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         return new ScenarioIds(
             customerIds,
@@ -387,13 +402,41 @@ public sealed class E2ETestDataService(
             deliveryNoteIds,
             goodsReceiptIds,
             customerDebtIds,
-            vendorDebtIds);
+            vendorDebtIds,
+            productReservationLedgerIds
+        );
     }
 
     private static string GetMarker(string scenarioId) => $"E2E-{scenarioId}";
 
     private static string StableSuffix(string scenarioId)
         => new(scenarioId.Where(char.IsLetterOrDigit).TakeLast(8).ToArray());
+
+    public async Task<E2EInventoryStockState> GetInventoryStockStateAsync(string scenarioId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(scenarioId);
+
+        var ids = await GetScenarioIdsAsync(scenarioId, cancellationToken).ConfigureAwait(false);
+        var inventoryStock = await dbContext.Set<InventoryStock>()
+            .AsNoTracking()
+            .Where(stock => ids.ProductIds.Contains(stock.ProductId) && ids.WarehouseIds.Contains(stock.WarehouseId))
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var productReservationLedger = await dbContext.Set<ProductReservationLedger>()
+            .AsNoTracking()
+            .Where(entry => ids.ProductIds.Contains(entry.ProductId) && ids.OrderIds.Contains(entry.OrderId))
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return new E2EInventoryStockState
+        {
+            ScenarioId = scenarioId,
+            StockOnHandQuantity = inventoryStock?.QuantityOnHand ?? 0,
+            StockReservedQuantity = inventoryStock?.QuantityReserved ?? 0,
+            StockAvailableQuantity = inventoryStock?.QuantityAvailable ?? 0,
+            GlobalReservedQuantity = productReservationLedger?.QuantityDelta ?? 0
+        };
+    }
 
     private sealed record ScenarioIds(
         List<Guid> CustomerIds,
@@ -407,5 +450,7 @@ public sealed class E2ETestDataService(
         List<Guid> DeliveryNoteIds,
         List<Guid> GoodsReceiptIds,
         List<Guid> CustomerDebtIds,
-        List<Guid> VendorDebtIds);
+        List<Guid> VendorDebtIds,
+        List<Guid> ProductReservationLedgerIds
+    );
 }

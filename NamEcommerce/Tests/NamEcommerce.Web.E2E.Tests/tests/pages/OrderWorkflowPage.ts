@@ -96,6 +96,26 @@ export class OrderDetailsWorkflowPage {
 export class DeliveryNoteWorkflowPage {
   constructor(private readonly page: Page) {}
 
+  async confirm() {
+    this.page.once('dialog', dialog => dialog.accept());
+    await clickAndWait(this.page, () => this.page.getByTestId('delivery-confirm').click());
+  }
+
+  async processDelivery() {
+    await clickAndWait(this.page, () => this.page.getByTestId('delivery-mark-delivering').click());
+    await this.page.getByTestId('delivery-mark-delivered-open').click();
+    await this.page.getByTestId('delivery-receiver-name').fill('E2E Receiver');
+    await this.page.getByTestId('delivery-proof-file').setInputFiles({
+      name: 'delivery-proof.png',
+      mimeType: 'image/png',
+      buffer: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lFK6LwAAAABJRU5ErkJggg==',
+        'base64'
+      ),
+    });
+    await clickAndWait(this.page, () => this.page.getByTestId('delivery-mark-delivered').click());
+  }
+
   async confirmAndDeliver() {
     this.page.once('dialog', dialog => dialog.accept());
     await clickAndWait(this.page, () => this.page.getByTestId('delivery-confirm').click());
@@ -128,5 +148,15 @@ export class DirectShipDeliveryPage {
     await expect(row).toBeVisible();
     await row.getByTestId('directship-confirm-open').click();
     await clickAndWait(this.page, () => this.page.getByTestId('directship-confirm-submit').click());
+  }
+}
+
+export class InventoryPage {
+  constructor(private readonly page: Page) {}
+
+  async validQuantities() {
+    await this.page.goto('/Inventory/StockList');
+
+    await expect(this.page.locator('#itemsTableBody tr')).toHaveCount(1);
   }
 }

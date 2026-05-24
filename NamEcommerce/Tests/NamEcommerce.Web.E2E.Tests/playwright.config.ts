@@ -7,6 +7,13 @@ const isWorkflowRun = process.env.E2E_WORKFLOW === 'true';
 export default defineConfig({
   testDir: './tests/specs',
   globalSetup: './tests/support/global-setup',
+  webServer: {
+    command: 'dotnet run --launch-profile E2E --project ../../Presentation/NamEcommerce.Web/NamEcommerce.Web.csproj',
+    url: 'http://localhost:4132',
+    reuseExistingServer: true,
+    timeout: 120_000,
+    ignoreHTTPSErrors: true,
+  },
   timeout: 60 * 1000,
   expect: {
     timeout: 10000
@@ -20,7 +27,7 @@ export default defineConfig({
     ['list']
   ],
   use: {
-    baseURL: process.env.E2E_BASE_URL || 'http://localhost:5132',
+    baseURL: process.env.E2E_BASE_URL || 'http://localhost:4132',
     storageState: authState,
     headless: true,
     viewport: { width: 1280, height: 720 },
@@ -31,23 +38,23 @@ export default defineConfig({
   },
   projects: isWorkflowRun
     ? [
-        {
-          name: 'workflow-chromium',
-          use: { ...devices['Desktop Chrome'] },
-        },
-      ]
+      {
+        name: 'workflow-chromium',
+        use: { ...devices['Desktop Chrome'] },
+      },
+    ]
     : [
-        {
-          name: 'chromium',
-          use: { ...devices['Desktop Chrome'] },
-        },
-        {
-          name: 'firefox',
-          use: { ...devices['Desktop Firefox'] },
-        },
-        {
-          name: 'webkit',
-          use: { ...devices['Desktop Safari'] },
-        },
-      ],
+      {
+        name: 'chromium',
+        use: { ...devices['Desktop Chrome'] },
+      },
+      {
+        name: 'firefox',
+        use: { ...devices['Desktop Firefox'] },
+      },
+      {
+        name: 'webkit',
+        use: { ...devices['Desktop Safari'] },
+      },
+    ],
 });

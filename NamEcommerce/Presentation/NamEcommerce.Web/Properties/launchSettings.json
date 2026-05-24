@@ -17,6 +17,15 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
+    "E2E": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "https://localhost:6132;http://localhost:4132",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "E2E"
+      }
+    },
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
