@@ -676,7 +676,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         if (!await _purchaseOrderManager.CanChangeStatusToAsync(id, PurchaseOrderStatus.Cancelled))
             return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotCancel");
 
-        await _purchaseOrderManager.ChangeStatusAsync(id, PurchaseOrderStatus.Cancelled).ConfigureAwait(false);
+        await _purchaseOrderManager.CancelAsync(id).ConfigureAwait(false);
 
         return CommonActionResultDto.CreateSuccess();
     }
@@ -781,15 +781,16 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         try
         {
             var allocation = await _purchaseOrderAllocationManager
-                .AllocateFromExistingPurchaseOrderItemAsync(dto.PurchaseOrderItemId, dto.OrderId, dto.OrderItemId, dto.Quantity)
+                .AllocatePurchaseOrderItemForOrder(new AllocatePurchaseOrderItemForOrder
+                {
+                    PurchaseOrderItemId = (dto.PurchaseOrderId, dto.PurchaseOrderItemId),
+                    OrderItemId = (dto.OrderId, dto.OrderItemId),
+                    AllocationQuantity = dto.Quantity,
+                    DirectShipInfo = !string.IsNullOrEmpty(dto.DirectShipContactPhone) 
+                        ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(dto.DirectShipContactName, dto.DirectShipContactPhone, dto.DirectShipAddress)
+                        : null
+                })
                 .ConfigureAwait(false);
-
-            if (!string.IsNullOrWhiteSpace(dto.DirectShipAddress))
-            {
-                await _directShipManager
-                    .MarkAllocationAsDirectShipAsync(allocation.Id, dto.DirectShipAddress, dto.DirectShipContactName, dto.DirectShipContactPhone, 0)
-                    .ConfigureAwait(false);
-            }
 
             return CommonActionResultDto.CreateSuccess();
         }
@@ -811,7 +812,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
 
         var orderItem = order.OrderItems.FirstOrDefault(item => item.Id == orderItemId);
         if (orderItem is null)
-            throw new OrderItemIsNotFoundException(orderId);
+            throw new OrderItemIsNotFoundException();
 
         var allocatedOutstanding = _purchaseOrderItemAllocationDataReader.DataSource
             .Where(allocation => allocation.OrderItemId == orderItemId && allocation.Status != AllocationStatus.Cancelled)

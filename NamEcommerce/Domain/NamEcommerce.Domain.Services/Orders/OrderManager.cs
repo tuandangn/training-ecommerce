@@ -139,7 +139,7 @@ public sealed class OrderManager(
 
         var currentItem = order.OrderItems.FirstOrDefault(item => item.Id == dto.OrderItemId);
         if (currentItem is null)
-            throw new OrderItemIsNotFoundException(dto.OrderItemId);
+            throw new OrderItemIsNotFoundException();
 
         var deltaQuantity = dto.Quantity - currentItem.Quantity;
         if (deltaQuantity > 0)

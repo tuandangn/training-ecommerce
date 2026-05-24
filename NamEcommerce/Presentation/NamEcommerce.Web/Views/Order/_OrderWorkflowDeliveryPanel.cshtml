@@ -17,7 +17,7 @@
                 
                 @if (canCreateDelivery)
                 {
-                    <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@Model.Id" class="btn btn-sm btn-link text-dark text-decoration-none">
+                    <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@Model.Id" class="btn btn-sm btn-link text-dark text-decoration-none" data-testid="order-create-delivery">
                         <i class="bi bi-box-arrow-up-right me-1"></i>Xuất hàng
                     </a>
                 }
@@ -69,7 +69,7 @@
                                     <td class="text-end">@note.CreatedOn.ToString(ViewConstants.DefaultDateFormat)</td>
                                     <td class="text-end">@(note.DeliveredOn?.ToString(ViewConstants.DefaultDateFormat) ?? "-")</td>
                                     <td class="text-end">
-                                        <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@note.DeliveryNoteId" class="btn-table-action" title="Theo dõi phiếu giao">
+                                        <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@note.DeliveryNoteId" class="btn-table-action" data-testid="order-open-delivery" title="Theo dõi phiếu giao">
                                             <i class="bi bi-arrow-right"></i>
                                         </a>
                                     </td>

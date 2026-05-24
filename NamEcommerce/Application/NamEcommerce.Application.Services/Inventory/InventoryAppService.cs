@@ -30,9 +30,9 @@ public sealed class InventoryAppService : IInventoryAppService
         _orderReader = orderReader;
     }
 
-    public async Task<IPagedDataAppDto<InventoryStockAppDto>> GetInventoryStocksAsync(string? keywords, Guid? warehouseId, int pageIndex, int pageSize)
+    public async Task<IPagedDataAppDto<InventoryStockAppDto>> GetInventoryStocksAsync(int pageIndex, int pageSize, Guid? warehouseId = null, Guid? productId = null, string keywords = null)
     {
-        var (total, dataItems) = await _stockManager.GetInventoryStocksAsync(keywords, warehouseId, pageIndex, pageSize);
+        var (total, dataItems) = await _stockManager.GetInventoryStocksAsync(pageIndex, pageSize, productId, warehouseId, keywords).ConfigureAwait(false);
         var productIds = dataItems.Select(x => x.ProductId).Distinct().ToList();
         var reservedByOrder = _reservationLedgerReader.DataSource
             .Where(x => productIds.Contains(x.ProductId))
@@ -56,25 +56,6 @@ public sealed class InventoryAppService : IInventoryAppService
         }).ToList();
 
         return PagedDataAppDto.Create(items, pageIndex, pageSize, total);
-    }
-
-    public async Task<IEnumerable<ProductInventoryStockInfoAppDto>> GetInventoryStocksForProductAsync(Guid productId, Guid? warehouseId)
-    {
-        var stockItems = await _stockManager.GetInventoryStocksForProductAsync(productId, warehouseId);
-
-        var productStockInfoDtos = stockItems.Select(stockItem => new ProductInventoryStockInfoAppDto
-        {
-            ProductId = productId,
-            ProductName = stockItem.ProductName,
-            WarehouseId = stockItem.WarehouseId,
-            WarehouseName = stockItem.WarehouseName,
-            QuantityOnHand = stockItem.QuantityOnHand,
-            QuantityReserved = stockItem.QuantityReserved,
-            QuantityAvailable = stockItem.QuantityAvailable,
-            UpdatedOnUtc = stockItem.UpdatedOnUtc
-        });
-
-        return productStockInfoDtos;
     }
 
     public Task<decimal> GetGlobalAvailableForProductAsync(Guid productId)

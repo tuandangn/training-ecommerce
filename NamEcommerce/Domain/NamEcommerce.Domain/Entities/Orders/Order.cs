@@ -122,7 +122,7 @@ public sealed record Order : AppAggregateEntity
 
         var orderItem = _orderItems.FirstOrDefault(item => item.Id == orderItemId);
         if (orderItem is null)
-            throw new OrderItemIsNotFoundException(orderItemId);
+            throw new OrderItemIsNotFoundException();
 
         var calculatedSubTotal = OrderSubTotal - orderItem.SubTotal + quantity * unitPrice;
         if (OrderDiscount > calculatedSubTotal)
@@ -233,7 +233,7 @@ public sealed record Order : AppAggregateEntity
     {
         var orderItem = _orderItems.FirstOrDefault(i => i.Id == orderItemId);
         if (orderItem is null)
-            throw new OrderItemIsNotFoundException(orderItemId);
+            throw new OrderItemIsNotFoundException();
 
         orderItem.MarkDelivered(pictureId);
 
@@ -244,7 +244,7 @@ public sealed record Order : AppAggregateEntity
     {
         var orderItem = _orderItems.FirstOrDefault(i => i.Id == orderItemId);
         if (orderItem is null)
-            throw new OrderItemIsNotFoundException(orderItemId);
+            throw new OrderItemIsNotFoundException();
 
         orderItem.MarkReceivedByCustomer();
 

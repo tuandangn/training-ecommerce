@@ -39,6 +39,9 @@ public sealed class GoodsReceiptDeletedEventHandler : INotificationHandler<Goods
 
     public async Task Handle(GoodsReceiptDeleted notification, CancellationToken cancellationToken)
     {
+        if (notification is null)
+            return;
+
         // Re-fetch entity (soft delete vẫn cho GetByIdAsync trả entity với các Items được hydrate
         // — cần Items để hoàn nguyên tồn kho).
         var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId).ConfigureAwait(false);

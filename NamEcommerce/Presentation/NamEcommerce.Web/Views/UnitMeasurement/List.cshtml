@@ -14,12 +14,21 @@
     </a>
 </div>
 
-<div class="content-card">
+<div class="content-card" data-responsive-list data-list-key="unit-measurement-list">
     <div class="action-toolbar">
         <partial name="_Search" model="@(new UnitMeasurementListSearchModel { Keywords = Model.Keywords })" />
+        <div class="responsive-list-toolbar" role="group" aria-label="Chọn kiểu hiển thị">
+            <button type="button" class="responsive-list-toggle" data-list-view="list" title="Dạng danh sách" aria-label="Dạng danh sách" aria-pressed="false">
+                <i class="bi bi-list-ul"></i>
+            </button>
+            <button type="button" class="responsive-list-toggle" data-list-view="grid" title="Dạng lưới" aria-label="Dạng lưới" aria-pressed="false">
+                <i class="bi bi-grid-3x3-gap"></i>
+            </button>
+        </div>
     </div>
 
-    <div class="table-responsive">
+    <div class="responsive-list-panel" data-list-view-panel="list">
+        <div class="table-responsive">
         <table class="table data-table">
             <thead>
                 <tr>
@@ -62,6 +71,41 @@
                 }
             </tbody>
         </table>
+        </div>
+    </div>
+
+    <div class="responsive-list-panel responsive-list-grid" data-list-view-panel="grid" hidden>
+        @if (Model.Data.Pagination.TotalCount > 0)
+        {
+            @foreach (var item in Model.Data)
+            {
+                <article class="list-card">
+                    <div class="list-card-header">
+                        <div class="list-card-title-group">
+                            <div class="list-card-title">@HighlighHelper.Highlight(item.Name, query)</div>
+                            <div class="list-card-meta">Thứ tự @item.DisplayOrder</div>
+                        </div>
+                    </div>
+                    <div class="list-card-actions">
+                        <a class="btn-table-action" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <button type="button" class="btn-table-action danger btnDelete"
+                                data-id="@item.Id" data-name="@item.Name" title="Xóa">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </article>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <div class="empty-icon"><i class="bi bi-rulers"></i></div>
+                <h5>Chưa có đơn vị tính nào</h5>
+                <p>Tạo đơn vị tính để gắn vào hàng hóa.</p>
+            </div>
+        }
     </div>
 
     @if (Model.Data.Pagination.TotalCount > 0)

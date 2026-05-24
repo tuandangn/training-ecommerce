@@ -18,6 +18,9 @@ public sealed class ProductUpdatedEventHandler : INotificationHandler<ProductUpd
 
     public async Task Handle(ProductUpdated notification, CancellationToken cancellationToken)
     {
+        if (notification is null)
+            return;
+
         if (notification.DeletedPictureIds is null || notification.DeletedPictureIds.Count == 0)
             return;
 

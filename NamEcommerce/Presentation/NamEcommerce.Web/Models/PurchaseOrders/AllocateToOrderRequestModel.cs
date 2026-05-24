@@ -2,6 +2,7 @@ namespace NamEcommerce.Web.Models.PurchaseOrders;
 
 public sealed class AllocateToOrderRequestModel
 {
+    public Guid PurchaseOrderId { get; set; }
     public Guid PurchaseOrderItemId { get; set; }
     public Guid OrderId { get; set; }
     public Guid OrderItemId { get; set; }

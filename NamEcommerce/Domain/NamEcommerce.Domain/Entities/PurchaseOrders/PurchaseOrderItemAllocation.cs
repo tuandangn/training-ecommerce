@@ -42,6 +42,8 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
 
     public DateTime CreatedOnUtc { get; private set; }
 
+    #region Methods
+
     internal void IncreaseReceived(decimal receivedQuantity)
     {
         if (receivedQuantity <= 0)
@@ -58,9 +60,6 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
         AllocatedQuantity = ReceivedQuantity;
     }
 
-    /// <summary>
-    /// Đánh dấu allocation là direct-ship. Address bắt buộc khi IsDirectShip = true.
-    /// </summary>
     internal void SetDirectShip(string address, string? contactName, string? contactPhone, int priority)
     {
         if (string.IsNullOrWhiteSpace(address))
@@ -96,4 +95,6 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
     }
 
     internal void SetStatus(AllocationStatus newStatus) => Status = newStatus;
+
+    #endregion
 }
