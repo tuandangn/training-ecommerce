@@ -135,6 +135,7 @@ public sealed record EligibleOrderItemForAllocationAppDto
 [Serializable]
 public sealed record AllocatePoItemToOrderAppDto
 {
+    public required Guid PurchaseOrderId { get; set; }
     public required Guid PurchaseOrderItemId { get; init; }
     public required Guid OrderId { get; set; }
     public required Guid OrderItemId { get; init; }

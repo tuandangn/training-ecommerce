@@ -14,8 +14,7 @@ public sealed class DirectShipAppService(
     {
         try
         {
-            await directShipManager.MarkAllocationAsDirectShipAsync(
-                dto.AllocationId, dto.Address, dto.ContactName, dto.ContactPhone, dto.Priority)
+            await directShipManager.MarkAllocationAsDirectShipAsync(dto.AllocationId, dto.Address, dto.ContactName, dto.ContactPhone, dto.Priority)
                 .ConfigureAwait(false);
             return CommonActionResultDto.CreateSuccess();
         }

@@ -51,47 +51,84 @@
     <style>
         .dashboard-grid {
             display: grid;
-            gap: 1rem;
+            gap: 1.5rem;
+            max-width: 1280px;
+            margin: 0 auto;
         }
 
         .dashboard-kpi,
         .dashboard-panel {
-            background: var(--bs-white, #fff);
-            border: 1px solid var(--bs-border-color, #dee2e6);
-            border-radius: 8px;
+            background: #fff;
+            border: 1px solid #E2E8F0;
+            border-radius: 12px;
             box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .dashboard-kpi:hover,
+        .dashboard-panel:hover {
+            border-color: #CBD5E1;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
         }
 
         .dashboard-kpi {
             min-height: 118px;
-            padding: 1rem;
+            padding: 1.25rem;
         }
 
         .dashboard-kpi-icon {
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             border-radius: 8px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
             flex: 0 0 auto;
+            font-size: 1.05rem;
+        }
+
+        .dashboard-kpi-icon.bg-primary {
+            background: #EEF2FF !important;
+            color: #4F46E5;
+        }
+
+        .dashboard-kpi-icon.bg-info {
+            background: #E0F2FE !important;
+            color: #0EA5E9;
+        }
+
+        .dashboard-kpi-icon.bg-warning {
+            background: #FEF3C7 !important;
+            color: #D97706;
+        }
+
+        .dashboard-kpi-icon.bg-success,
+        .dashboard-kpi-icon.bg-teal {
+            background: #D1FAE5 !important;
+            color: #10B981;
+        }
+
+        .dashboard-kpi-icon.bg-secondary,
+        .dashboard-kpi-icon.bg-dark {
+            background: #F1F5F9 !important;
+            color: #475569;
         }
 
         .dashboard-kpi-label {
-            color: var(--bs-secondary-color, #6c757d);
-            font-size: 0.8rem;
-            font-weight: 600;
+            color: #64748B;
+            font-size: 0.75rem;
+            font-weight: 700;
             text-transform: uppercase;
             white-space: nowrap;
         }
 
         .dashboard-kpi-value {
-            color: var(--bs-body-color, #212529);
-            font-size: 1.35rem;
+            color: #0F172A;
+            font-size: 1.45rem;
             font-weight: 700;
             line-height: 1.2;
             overflow-wrap: anywhere;
+            margin-top: 0.25rem;
         }
 
         .dashboard-panel-header {
@@ -99,62 +136,80 @@
             justify-content: space-between;
             align-items: center;
             gap: 1rem;
-            padding: 1rem 1rem 0.75rem;
+            padding: 1.25rem 1.25rem 0.85rem;
         }
 
         .dashboard-panel-title {
             margin: 0;
-            font-size: 1rem;
+            color: #0F172A;
+            font-size: 1.05rem;
             font-weight: 700;
-            color: var(--bs-body-color, #212529);
         }
 
         .dashboard-panel-subtitle {
             margin: 0.15rem 0 0;
-            color: var(--bs-secondary-color, #6c757d);
+            color: #64748B;
             font-size: 0.82rem;
         }
 
         .dashboard-chart-wrap {
             height: 290px;
-            padding: 0 1rem 1rem;
+            padding: 0 1.25rem 1.25rem;
         }
 
         .dashboard-chart-wrap-sm {
             height: 290px;
-            padding: 0 1rem 1rem;
+            padding: 0 1.25rem 1.25rem;
         }
 
         .dashboard-table {
             margin: 0;
         }
 
+        .dashboard-table > :not(caption) > * > * {
+            border-bottom-color: #F1F5F9;
+            padding: 0.9rem 0.75rem;
+        }
+
         .dashboard-table th {
-            color: var(--bs-secondary-color, #6c757d);
+            color: #64748B;
             font-size: 0.75rem;
             font-weight: 700;
             text-transform: uppercase;
             white-space: nowrap;
+            background: #F8FAFC;
+            border-bottom: 1px solid #E2E8F0 !important;
         }
 
         .dashboard-table td {
+            color: #334155;
             vertical-align: middle;
         }
 
         .dashboard-link {
-            color: var(--bs-body-color, #212529);
+            color: #0F172A;
             font-weight: 600;
             text-decoration: none;
         }
 
         .dashboard-link:hover {
-            color: var(--bs-primary, #0d6efd);
+            color: #4F46E5;
         }
 
         .dashboard-empty {
-            color: var(--bs-secondary-color, #6c757d);
+            color: #64748B;
             padding: 1.5rem;
             text-align: center;
+            background: #F8FAFC;
+        }
+
+        .dashboard-panel .btn-light {
+            width: 2.25rem;
+            height: 2.25rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
         }
 
         .stock-progress {
@@ -162,8 +217,9 @@
         }
 
         .stock-progress .progress {
-            height: 7px;
+            height: 8px;
             border-radius: 8px;
+            background: #E2E8F0;
         }
 
         .stock-progress-value {
@@ -171,7 +227,7 @@
             justify-content: space-between;
             gap: 0.75rem;
             font-size: 0.8rem;
-            color: var(--bs-secondary-color, #6c757d);
+            color: #64748B;
             font-variant-numeric: tabular-nums;
         }
 
@@ -331,7 +387,7 @@
                         <h2 class="dashboard-panel-title">5 đơn bán cần xử lý</h2>
                         <p class="dashboard-panel-subtitle">Đơn còn hàng chưa giao xong.</p>
                     </div>
-                    <a asp-controller="Order" asp-action="List" class="btn btn-sm btn-light" title="Xem đơn bán"><i class="bi bi-box-arrow-up-right"></i></a>
+                    <a asp-controller="Order" asp-action="List" class="btn btn-sm btn-light" title="Xem đơn bán" aria-label="Xem đơn bán"><i class="bi bi-box-arrow-up-right"></i></a>
                 </div>
                 <div class="table-responsive">
                     <table class="table dashboard-table">
@@ -379,7 +435,7 @@
                         <h2 class="dashboard-panel-title">5 đơn nhập cần xử lý</h2>
                         <p class="dashboard-panel-subtitle">Đơn nhập chưa nhận đủ hàng.</p>
                     </div>
-                    <a asp-controller="PurchaseOrder" asp-action="List" class="btn btn-sm btn-light" title="Xem đơn nhập"><i class="bi bi-box-arrow-up-right"></i></a>
+                    <a asp-controller="PurchaseOrder" asp-action="List" class="btn btn-sm btn-light" title="Xem đơn nhập" aria-label="Xem đơn nhập"><i class="bi bi-box-arrow-up-right"></i></a>
                 </div>
                 <div class="table-responsive">
                     <table class="table dashboard-table">
@@ -509,7 +565,7 @@
                 <h2 class="dashboard-panel-title">10 hàng tồn thấp</h2>
                 <p class="dashboard-panel-subtitle">Lọc theo tồn hiện tại nhỏ hơn hoặc bằng mức đặt hàng lại.</p>
             </div>
-            <a asp-controller="Inventory" asp-action="StockList" class="btn btn-sm btn-light" title="Xem tồn kho"><i class="bi bi-box-arrow-up-right"></i></a>
+            <a asp-controller="Inventory" asp-action="StockList" class="btn btn-sm btn-light" title="Xem tồn kho" aria-label="Xem tồn kho"><i class="bi bi-box-arrow-up-right"></i></a>
         </div>
         <div class="table-responsive">
             <table class="table dashboard-table">

@@ -34,7 +34,7 @@
                                         <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
                                             <label for="customerSearch" class="form-label small fw-bold text-muted text-uppercase mb-0">Khách hàng</label>
                                         </div>
-                                        <div id="customerPicker" data-id="@Model.CustomerId" data-name="@Model.CustomerDisplayName"
+                                        <div id="customerPicker" data-testid="order-customer-picker" data-id="@Model.CustomerId" data-name="@Model.CustomerDisplayName"
                                              data-phone="@Model.CustomerDisplayPhone" data-address="@Model.CustomerDisplayAddress"></div>
                                         <input type="text" class="visually-hidden" asp-for="CustomerId" />
                                         <span asp-validation-for="CustomerId" class="small text-danger"></span>
@@ -82,7 +82,7 @@
                     <div class="content-card-header">
                         <h5>Danh sách hàng hóa</h5>
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-sm btn-link text-dark text-decoration-none" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                            <button type="button" class="btn btn-sm btn-link text-dark text-decoration-none" data-testid="order-add-product-open" data-bs-toggle="modal" data-bs-target="#addProductModal">
                                 <i class="bi bi-plus-lg me-1"></i>
                                 <span class="d-none d-lg-inline">Thêm hàng hóa</span>
                                 <span class="d-lg-none">Thêm</span>
@@ -204,7 +204,7 @@
                             Trở về
                         </a>
                         <div class="d-block">
-                            <button type="submit" class="btn btn-primary" id="btnSubmitOrder">
+                            <button type="submit" class="btn btn-primary" id="btnSubmitOrder" data-testid="order-submit">
                                 <i class="bi bi-floppy"></i>
                                 Tạo đơn
                             </button>
@@ -232,13 +232,13 @@
             <form action="#" method="post" id="addProductForm">
                 <div class="modal-body py-3">
                     <div class="mb-3">
-                        <div id="productPicker"></div>
+                        <div id="productPicker" data-testid="order-product-picker"></div>
                     </div>
                     <div id="modalProductInfo" class="d-none">
                         <div class="row g-2 mb-2">
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted" for="itemQuantity">Số lượng</label>
-                                <input id="itemQuantity" name="itemProductQuantity" class="form-control no-additional-element"
+                                <input id="itemQuantity" name="itemProductQuantity" class="form-control no-additional-element" data-testid="order-item-quantity"
                                        data-decimal="quantity" value="1" autocomplete="off"
                                        data-val="true" data-val-required="Vui lòng nhập số lượng"
                                        data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
@@ -248,7 +248,7 @@
                             </div>
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted noRefill" for="itemUnitPrice">Đơn giá</label>
-                                <input id="itemUnitPrice" name="itemProductUnitPrice" class="form-control" 
+                                <input id="itemUnitPrice" name="itemProductUnitPrice" class="form-control" data-testid="order-item-unit-price"
                                        data-decimal="currency" autocomplete="off"
                                        data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                        data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
@@ -296,7 +296,7 @@
                 </div>
                 <div class="modal-footer border-0 pt-0 pb-3">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" id="addItemToTable" class="btn btn-success d-none noDisabled">
+                    <button type="submit" id="addItemToTable" class="btn btn-success d-none noDisabled" data-testid="order-add-item-submit">
                         <i class="bi bi-plus-lg me-1"></i> Thêm vào
                     </button>
                 </div>

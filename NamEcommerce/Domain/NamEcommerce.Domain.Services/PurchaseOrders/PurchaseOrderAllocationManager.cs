@@ -23,60 +23,39 @@ public sealed class PurchaseOrderAllocationManager(
     IEntityDataReader<Vendor> vendorReader,
     IEntityDataReader<Product> productReader) : IPurchaseOrderAllocationManager
 {
-    public async Task<PurchaseOrderItemAllocationDto> AllocateAsync(Guid purchaseOrderItemId, Guid orderItemId, decimal quantity)
+    public async Task<PurchaseOrderItemAllocationDto> AllocatePurchaseOrderItemForOrder(AllocatePurchaseOrderItemForOrder dto)
     {
-        if (quantity <= 0)
-            throw new PurchaseOrderItemDataIsInvalidException("Error.AllocatedQuantityMustBePositive");
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
 
-        var purchaseOrderItem = EnsurePurchaseOrderItemExists(purchaseOrderItemId);
-        var orderItem = EnsureOrderItemExists(orderItemId);
-        EnsureOrderItemCanAllocate(orderItem, purchaseOrderItem.ProductId, quantity);
-
-        var allocation = new PurchaseOrderItemAllocation(purchaseOrderItemId, orderItemId, quantity);
-        var inserted = await allocationRepository.InsertAsync(allocation).ConfigureAwait(false);
-
-        return inserted.ToDto();
-    }
-
-    public async Task<PurchaseOrderItemAllocationDto> AllocateFromExistingPurchaseOrderItemAsync(Guid purchaseOrderItemId, Guid orderId, Guid orderItemId, decimal quantity)
-    {
-        if (quantity <= 0)
-            throw new PurchaseOrderItemDataIsInvalidException("Error.AllocatedQuantityMustBePositive");
-
-        var purchaseOrderItemContext = purchaseOrderReader.DataSource
-            .SelectMany(purchaseOrder => purchaseOrder.Items.Select(item => new { PurchaseOrder = purchaseOrder, Item = item }))
-            .FirstOrDefault(context => context.Item.Id == purchaseOrderItemId);
-        if (purchaseOrderItemContext is null)
-            throw new PurchaseOrderItemIsNotFoundException(purchaseOrderItemId);
-
-        var canAllocate = purchaseOrderItemContext.PurchaseOrder.Status is PurchaseOrderStatus.Draft
+        var (purchaseOrder, purchaseOrderItem) = EnsurePurchaseOrderItemExists(dto.PurchaseOrderItemId);
+        var isValidPurchaseOrderStatus = purchaseOrder.Status
+            is PurchaseOrderStatus.Draft
             or PurchaseOrderStatus.Submitted
             or PurchaseOrderStatus.Approved
-            or PurchaseOrderStatus.Receiving
-            or PurchaseOrderStatus.Completed;
-        if (!canAllocate)
+            or PurchaseOrderStatus.Receiving;
+        if (!isValidPurchaseOrderStatus)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemCannotAllocate");
 
-        var orderItem = orderReader.DataSource
-            .Where(order => order.Id == orderId)
-            .FirstOrDefault()
-            ?.OrderItems
-            .FirstOrDefault(item => item.Id == orderItemId);
-        if (orderItem is null)
-            throw new OrderItemIsNotFoundException(orderItemId);
-        if (orderItem.ProductId != purchaseOrderItemContext.Item.ProductId)
-            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemAllocationProductMismatch");
-        EnsureOrderItemCanAllocate(orderItem, purchaseOrderItemContext.Item.ProductId, quantity);
+        var (order, orderItem) = EnsureOrderItemExists(dto.OrderItemId);
+        EnsureOrderItemCanAllocate(orderItem, purchaseOrderItem.ProductId, dto.AllocationQuantity);
 
-        var allocatedQuantity = allocationReader.DataSource
-            .Where(allocation => allocation.PurchaseOrderItemId == purchaseOrderItemId)
+        var allocatedQuantity = (await GetAllocationsOfPurchaseOrderItem(dto.PurchaseOrderItemId, true).ConfigureAwait(false))
             .Sum(allocation => allocation.AllocatedQuantity);
-        var availableForAllocation = purchaseOrderItemContext.Item.QuantityOrdered - allocatedQuantity;
-        if (quantity > availableForAllocation)
+        var availableForAllocation = purchaseOrderItem.QuantityOrdered - allocatedQuantity;
+        if (dto.AllocationQuantity > availableForAllocation)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemAllocationQuantityExceedsAvailable");
 
-        var allocation = new PurchaseOrderItemAllocation(purchaseOrderItemId, orderItemId, quantity);
+        var allocation = new PurchaseOrderItemAllocation(dto.PurchaseOrderItemId.SecondaryId, dto.OrderItemId.SecondaryId, dto.AllocationQuantity);
+        if (dto.DirectShipInfo is not null)
+        {
+            var (contactName, contactPhone, address) = dto.DirectShipInfo;
+            allocation.SetDirectShip(address ?? string.Empty, contactName, contactPhone, dto.DirectShipInfo.Priority);
+        }
         var inserted = await allocationRepository.InsertAsync(allocation).ConfigureAwait(false);
+
+        //temp
+        _newPurchaseOrderItemAllocations.Add(inserted);
 
         return inserted.ToDto();
     }
@@ -93,18 +72,16 @@ public sealed class PurchaseOrderAllocationManager(
     public async Task<DistributeReceivedQuantityResultDto> SyncReceivedForPurchaseOrderItemAsync(Guid purchaseOrderItemId, decimal purchaseOrderItemReceivedQuantity)
     {
         if (purchaseOrderItemId == Guid.Empty)
-            throw new PurchaseOrderItemIsNotFoundException(purchaseOrderItemId);
+            throw new PurchaseOrderItemIsNotFoundException();
         if (purchaseOrderItemReceivedQuantity <= 0)
             return EmptyDistributeResult();
 
-        var allocations = await allocationReader.DataSource
-            .Where(allocation => allocation.PurchaseOrderItemId == purchaseOrderItemId
-                && allocation.Status != AllocationStatus.Cancelled)
-            .OrderByDescending(allocation => allocation.IsDirectShip)
-            .ThenByDescending(allocation => allocation.DirectShipPriority)
-            .ThenBy(allocation => allocation.CreatedOnUtc)
-            .ToListAsync()
-            .ConfigureAwait(false);
+        var allocations = await GetAllocationsOfPurchaseOrderItem((Guid.Empty, purchaseOrderItemId)).ConfigureAwait(false);
+        allocations = allocations.Where(allocation => allocation.Status != AllocationStatus.Cancelled)
+                .OrderByDescending(allocation => allocation.IsDirectShip)
+                .ThenByDescending(allocation => allocation.DirectShipPriority)
+                .ThenBy(allocation => allocation.CreatedOnUtc)
+                .ToList();
         if (allocations.Count == 0)
             return EmptyDistributeResult();
 
@@ -172,23 +149,14 @@ public sealed class PurchaseOrderAllocationManager(
 
     public async Task<IList<PurchaseOrderItemAllocationDto>> GetAllocationsForPurchaseOrderItemAsync(Guid purchaseOrderItemId)
     {
-        var allocations = await allocationReader.DataSource
-            .Where(allocation => allocation.PurchaseOrderItemId == purchaseOrderItemId)
-            .OrderBy(allocation => allocation.CreatedOnUtc)
-            .ToListAsync()
-            .ConfigureAwait(false);
+        var allocations = await GetAllocationsOfPurchaseOrderItem((Guid.Empty, purchaseOrderItemId), true).ConfigureAwait(false);
 
-        return allocations.Select(allocation => allocation.ToDto()).ToList();
+        return allocations.OrderBy(allocation => allocation.CreatedOnUtc).Select(allocation => allocation.ToDto()).ToList();
     }
 
-    public async Task ReleaseAllocationsForOrderItemAsync(Guid orderItemId)
+    public async Task ReleaseAllocationsOfPurchaseOrderItemAsync(SecondaryItemId purchaseOrderItemId)
     {
-        if (orderItemId == Guid.Empty)
-            return;
-
-        var allocations = await allocationReader.DataSource
-            .Where(allocation => allocation.OrderItemId == orderItemId)
-            .ToListAsync()
+        var allocations = await GetAllocationsOfPurchaseOrderItem(purchaseOrderItemId)
             .ConfigureAwait(false);
 
         foreach (var allocation in allocations)
@@ -222,6 +190,32 @@ public sealed class PurchaseOrderAllocationManager(
             await ReleaseAllocationsForOrderItemAsync(orderItemId).ConfigureAwait(false);
     }
 
+    public async Task ReleaseAllocationsForOrderItemAsync(Guid orderItemId)
+    {
+        if (orderItemId == Guid.Empty)
+            return;
+
+        var allocations = await allocationReader.DataSource
+            .Where(allocation => allocation.OrderItemId == orderItemId)
+            .ToListAsync()
+            .ConfigureAwait(false);
+
+        foreach (var allocation in allocations)
+        {
+            if (allocation.ReceivedQuantity == 0)
+            {
+                await allocationRepository.DeleteAsync(allocation).ConfigureAwait(false);
+                continue;
+            }
+
+            if (allocation.AllocatedQuantity > allocation.ReceivedQuantity)
+            {
+                allocation.ReduceAllocationToReceived();
+                await allocationRepository.UpdateAsync(allocation).ConfigureAwait(false);
+            }
+        }
+    }
+
     public Task<IList<OrderAllocatedPurchaseOrderDto>> GetAllocatedPurchaseOrdersForOrderAsync(Guid orderId)
     {
         if (orderId == Guid.Empty)
@@ -244,7 +238,7 @@ public sealed class PurchaseOrderAllocationManager(
         var purchaseOrderItemIds = allocations.Select(allocation => allocation.PurchaseOrderItemId).ToHashSet();
 
         var purchaseOrders = purchaseOrderReader.DataSource
-            .Where(purchaseOrder => purchaseOrder.Status != PurchaseOrderStatus.Cancelled 
+            .Where(purchaseOrder => purchaseOrder.Status != PurchaseOrderStatus.Cancelled
                 && purchaseOrder.Items.Any(item => purchaseOrderItemIds.Contains(item.Id)))
             .ToList();
 
@@ -362,31 +356,37 @@ public sealed class PurchaseOrderAllocationManager(
             .ToList();
     }
 
-    private PurchaseOrderItem EnsurePurchaseOrderItemExists(Guid purchaseOrderItemId)
+    private (PurchaseOrder, PurchaseOrderItem) EnsurePurchaseOrderItemExists(SecondaryItemId purchaseOrderItemId)
     {
-        var purchaseOrderItem = purchaseOrderReader.DataSource
-            .SelectMany(purchaseOrder => purchaseOrder.Items)
-            .FirstOrDefault(item => item.Id == purchaseOrderItemId);
+        var purchaseOrder = purchaseOrderReader.DataSource
+            .Where(po => po.Id == purchaseOrderItemId.PrimaryId)
+            .FirstOrDefault();
+        if (purchaseOrder is null)
+            throw new PurchaseOrderItemIsNotFoundException();
+
+        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == purchaseOrderItemId.SecondaryId);
         if (purchaseOrderItem is null)
-            throw new PurchaseOrderItemIsNotFoundException(purchaseOrderItemId);
+            throw new PurchaseOrderItemIsNotFoundException();
 
-        return purchaseOrderItem;
+        return (purchaseOrder, purchaseOrderItem);
     }
 
-    private OrderItem EnsureOrderItemExists(Guid orderItemId)
+    private (Order, OrderItem) EnsureOrderItemExists(SecondaryItemId orderItemId)
     {
-        var orderItem = orderReader.DataSource
-            .SelectMany(order => order.OrderItems)
-            .FirstOrDefault(item => item.Id == orderItemId);
+        var order = orderReader.DataSource.Where(order => order.Id == orderItemId.PrimaryId).FirstOrDefault();
+        if (order is null)
+            throw new OrderItemIsNotFoundException();
+
+        var orderItem = order.OrderItems.FirstOrDefault(item => item.Id == orderItemId.SecondaryId);
         if (orderItem is null)
-            throw new OrderItemIsNotFoundException(orderItemId);
+            throw new OrderItemIsNotFoundException();
 
-        return orderItem;
+        return (order, orderItem);
     }
 
-    private void EnsureOrderItemCanAllocate(OrderItem orderItem, Guid purchaseOrderItemProductId, decimal quantity)
+    private void EnsureOrderItemCanAllocate(OrderItem orderItem, Guid productId, decimal quantity)
     {
-        if (orderItem.ProductId != purchaseOrderItemProductId)
+        if (orderItem.ProductId != productId)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemAllocationProductMismatch");
 
         // Use net outstanding (AllocatedQty - ReceivedQty) so fully/partially received allocations
@@ -408,4 +408,26 @@ public sealed class PurchaseOrderAllocationManager(
             DirectShipReceipts = [],
             WarehouseReceipts = []
         };
+
+    private readonly IList<PurchaseOrderItemAllocation> _newPurchaseOrderItemAllocations = new List<PurchaseOrderItemAllocation>();
+    private readonly IDictionary<Guid, IList<PurchaseOrderItemAllocation>> _purchaseOrderItemAllocationMap = new Dictionary<Guid, IList<PurchaseOrderItemAllocation>>();
+    private async Task<IList<PurchaseOrderItemAllocation>> GetAllocationsOfPurchaseOrderItem(SecondaryItemId purchaseOrderItemId, bool ignoreUpdateCache = false)
+    {
+        var matchedNewAllocations = _newPurchaseOrderItemAllocations.Where(allocation => allocation.PurchaseOrderItemId == purchaseOrderItemId.SecondaryId).ToList();
+
+        if (_purchaseOrderItemAllocationMap.TryGetValue(purchaseOrderItemId.SecondaryId, out var allocations))
+            return returnResult(allocations);
+
+        allocations = await allocationReader.DataSource
+                .Where(allocation => allocation.PurchaseOrderItemId == purchaseOrderItemId.SecondaryId)
+                .ToListAsync().ConfigureAwait(false);
+        if (!ignoreUpdateCache && allocations.Any())
+            _purchaseOrderItemAllocationMap.Add(purchaseOrderItemId.SecondaryId, allocations);
+        return returnResult(allocations);
+
+        //local method
+        IList<PurchaseOrderItemAllocation> returnResult(IEnumerable<PurchaseOrderItemAllocation> items)
+            => items.Where(allocation => !matchedNewAllocations.Any(newAllocation => newAllocation.Id == allocation.Id))
+                .Concat(matchedNewAllocations).ToList();
+    }
 }

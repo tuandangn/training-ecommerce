@@ -50,6 +50,9 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
 
     public async Task Handle(GoodsReceiptCreated notification, CancellationToken cancellationToken)
     {
+        if (notification is null)
+            return;
+
         // Re-fetch entity từ DB — event chỉ mang theo Id để tránh truyền entity reference qua event boundary.
         // Tại thời điểm handler chạy, SaveChanges đã commit nên entity chắc chắn tồn tại.
         var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId).ConfigureAwait(false);

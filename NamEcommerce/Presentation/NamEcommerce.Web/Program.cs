@@ -109,6 +109,7 @@ using NamEcommerce.Web.Services.PurchaseOrders;
 using NamEcommerce.Web.Services.Returns;
 using NamEcommerce.Web.Services.StockAdjustment;
 using NamEcommerce.Web.Services.StockTransfer;
+using NamEcommerce.Web.Services.E2E;
 using NamEcommerce.Web.Services.Users;
 using NamEcommerce.Web.Validators.Users;
 using System.Globalization;
@@ -157,6 +158,10 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         opts.UseSqlServer(configuration.GetConnectionString(nameof(NamEcommerceEfDbContext)),
             opt => opt.MigrationsAssembly("NamEcommerce.Data.SqlServer"));
         opts.AddInterceptors(sp.GetRequiredService<DomainEventDispatchInterceptor>());
+
+        if (builder.Environment.IsDevelopment())
+            opts.EnableSensitiveDataLogging(true);
+
     });
     services.AddScoped<IDbContext, NamEcommerceEfDbContext>();
     services.AddScoped(typeof(IRepository<>), typeof(NamEcommerceEfRepository<>));
@@ -264,6 +269,11 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerRefundModelFactory, CustomerRefundModelFactory>();
     services.AddScoped<IStockAdjustmentNoteModelFactory, StockAdjustmentNoteModelFactory>();
     services.AddScoped<IStockTransferNoteModelFactory, StockTransferNoteModelFactory>();
+
+    if (builder.Environment.IsEnvironment("E2E"))
+    {
+        services.AddScoped<IE2ETestDataService, E2ETestDataService>();
+    }
 
     services.AddMediatR(config =>
     {

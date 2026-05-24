@@ -31,6 +31,9 @@ public sealed class GoodsReceiptVendorChangedHandler : INotificationHandler<Good
 
     public async Task Handle(GoodsReceiptVendorChanged notification, CancellationToken cancellationToken)
     {
+        if (notification is null)
+            return;
+
         var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId).ConfigureAwait(false);
         if (goodsReceipt is null) return;
 

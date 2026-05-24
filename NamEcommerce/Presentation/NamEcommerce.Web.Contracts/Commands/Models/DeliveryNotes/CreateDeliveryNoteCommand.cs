@@ -1,10 +1,9 @@
 using MediatR;
-using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 
 [Serializable]
-public sealed class CreateDeliveryNoteCommand : IRequest<CommonActionResultModel>
+public sealed class CreateDeliveryNoteCommand : IRequest<CreateDeliveryNoteResultModel>
 {
     public Guid OrderId { get; set; }
     public string ShippingAddress { get; set; } = string.Empty;
@@ -23,4 +22,16 @@ public sealed class CreateDeliveryNoteCommand : IRequest<CommonActionResultModel
         public Guid OrderItemId { get; set; }
         public decimal Quantity { get; set; }
     }
+}
+
+[Serializable]
+public sealed class CreateDeliveryNoteResultModel
+{
+    public bool Success { get; set; }
+    public string? ErrorMessage { get; set; }
+    public string? SuccessMessage { get; set; }
+    public Guid? CreatedId { get; set; }
+
+    public void Deconstruct(out bool success, out string? errorMessage)
+        => (success, errorMessage) = (Success, ErrorMessage);
 }

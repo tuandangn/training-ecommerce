@@ -54,10 +54,7 @@ public sealed class PreparationAppService(
         }
 
         foreach (var item in preparationItems)
-        {
-            var stocks = await inventoryStockManager.GetInventoryStocksForProductAsync(item.ProductId, null).ConfigureAwait(false);
-            item.StockQuantityAvailable = stocks.Sum(s => s.QuantityAvailable);
-        }
+            item.StockQuantityAvailable = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(item.ProductId).ConfigureAwait(false);
 
         return PagedDataAppDto.Create(preparationItems, pageIndex, pageSize, totalCount);
     }
@@ -86,7 +83,7 @@ public sealed class PreparationAppService(
         var totalCount = groupedItems.Count;
 
         var selectedGroups = groupedItems.Skip(pageIndex * pageSize).Take(pageSize).ToList();
-        
+
         // Collect all OrderItemIds for the selected groups to fetch delivered quantities and links in one go
         var allOrderItemIds = selectedGroups.SelectMany(g => g.group.Select(info => info.item.Id)).ToList();
         var deliveredQuantities = await deliveryNoteManager.GetDeliveredQuantitiesAsync(allOrderItemIds).ConfigureAwait(false);
@@ -116,10 +113,7 @@ public sealed class PreparationAppService(
             }).ToList();
 
         foreach (var item in preparationItems)
-        {
-            var stocks = await inventoryStockManager.GetInventoryStocksForProductAsync(item.ProductId, null).ConfigureAwait(false);
-            item.StockQuantityAvailable = stocks.Sum(s => s.QuantityAvailable);
-        }
+            item.StockQuantityAvailable = await inventoryStockManager.GetGlobalAvailableQuantityForProductAsync(item.ProductId).ConfigureAwait(false);
 
         return PagedDataAppDto.Create(preparationItems, pageIndex, pageSize, totalCount);
     }

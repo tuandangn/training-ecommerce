@@ -502,6 +502,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
         var result = await _mediator.Send(new AllocatePoItemToOrderCommand
         {
+            PurchaseOrderId = request.PurchaseOrderId,
             PurchaseOrderItemId = request.PurchaseOrderItemId,
             OrderId = request.OrderId,
             OrderItemId = request.OrderItemId,

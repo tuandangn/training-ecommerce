@@ -7,7 +7,7 @@ using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Application.Services.Events.PurchaseOrders;
 
-public sealed class AllocationMarkedAsDirectShipEventHandler(
+public sealed class AllocationMarkedAsDirectShipHandler(
     IWarehouseManager warehouseManager) : INotificationHandler<AllocationMarkedAsDirectShip>
 {
     public async Task Handle(AllocationMarkedAsDirectShip notification, CancellationToken cancellationToken)

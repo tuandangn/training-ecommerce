@@ -4,8 +4,8 @@ using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.Events.PurchaseOrders;
 
-public sealed class PurchaseOrderItemReceivedEventHandler(
-    IPurchaseOrderManager purchaseOrderManager) : INotificationHandler<PurchaseOrderItemReceived>
+public sealed class PurchaseOrderItemReceivedHandler(IPurchaseOrderManager purchaseOrderManager)
+    : INotificationHandler<PurchaseOrderItemReceived>
 {
     public async Task Handle(PurchaseOrderItemReceived notification, CancellationToken cancellationToken)
     {

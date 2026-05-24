@@ -264,8 +264,7 @@ public sealed class GoodsReceiptManager(
         );
         foreach (var deletedProductQty in deletedProductQuantities)
         {
-            var stock = (await inventoryStockManager.GetInventoryStocksForProductAsync(deletedProductQty.ProductId, deletedProductQty.WarehouseId).ConfigureAwait(false))
-                .SingleOrDefault();
+            var stock = await inventoryStockManager.GetInventoryStockForProductAsync(deletedProductQty.ProductId, deletedProductQty.WarehouseId).ConfigureAwait(false);
             var available = stock?.QuantityAvailable ?? 0;
             if (available < deletedProductQty.TotalQuantity)
                 throw new GoodsReceiptCannotDeleteDueToReservedStockException(
