@@ -112,7 +112,14 @@ public sealed class CustomerReturnManager(
             ?? throw new CustomerReturnNotFoundException(id);
 
         // CustomerReturn luôn gắn DeliveryNote — validate qty không vượt quá số đã giao trừ phần đã trả/đang trả
-        foreach (var item in customerReturn.Items)
+        var acceptedByProduct = customerReturn.Items
+            .GroupBy(item => item.ProductId)
+            .Select(group => new
+            {
+                ProductId = group.Key,
+                AcceptedQuantity = group.Sum(item => item.AcceptedQuantity)
+            });
+        foreach (var item in acceptedByProduct)
         {
             var deliveredQty = GetTotalDeliveredQuantity(customerReturn.DeliveryNoteId, item.ProductId);
             var previouslyReturned = await GetTotalReservedReturnQuantityAsync(

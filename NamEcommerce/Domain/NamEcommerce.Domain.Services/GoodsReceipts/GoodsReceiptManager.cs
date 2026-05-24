@@ -329,6 +329,39 @@ public sealed class GoodsReceiptManager(
         return new CreateGoodsReceiptResultDto { CreatedId = insertedGoodsReceipt.Id };
     }
 
+    public async Task<Guid> CreateFromVendorOversupplyAsync(CreateGoodsReceiptFromVendorOversupplyDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
+
+        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
+            ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
+
+        var createdByUser = purchaseOrder.CreatedByUserId.HasValue
+            ? new CurrentUserInfoDto(purchaseOrder.CreatedByUserId.Value, string.Empty, string.Empty)
+            : null;
+        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptDataReader)
+            .ConfigureAwait(false);
+        goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
+        goodsReceipt.SetReceivedDate(DateTime.UtcNow);
+        goodsReceipt.Note = $"Nhap du tu don nhap {dto.PurchaseOrderCode}";
+
+        var vendor = await vendorDataReader.GetByIdAsync(dto.VendorId).ConfigureAwait(false)
+            ?? throw new VendorIsNotFoundException(dto.VendorId);
+        goodsReceipt.SetVendor(vendor.Id, vendor.Name, vendor.PhoneNumber, vendor.Address);
+
+        await goodsReceipt.AddItemAsync(
+            dto.ProductId, dto.WarehouseId, dto.Quantity, dto.UnitCost,
+            productDataReader, warehouseSettings, warehouseDataReader
+        ).ConfigureAwait(false);
+
+        goodsReceipt.MarkCreated();
+        goodsReceipt.MarkItemUnitCostSet(goodsReceipt.Items.Last().Id);
+
+        var inserted = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
+        return inserted.Id;
+    }
+
     public async Task<CreateGoodsReceiptResultDto> CreateBulkFromPurchaseOrderReceivingAsync(CreateGoodsReceiptFromPurchaseOrderBulkDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
