@@ -36,7 +36,7 @@
                                     <div class="mb-3">
                                         <label for="vendorSearch" class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
                                         <div>
-                                            <div id="vendorPicker" data-id="@Model.VendorId" data-name="@Model.VendorName" data-phone="@Model.VendorPhone"
+                                            <div id="vendorPicker" data-testid="po-vendor-picker" data-id="@Model.VendorId" data-name="@Model.VendorName" data-phone="@Model.VendorPhone"
                                                  data-address="@Model.VendorAddress" data-empty="@(Model.NotHasAppropriatedVendor ? "true" : "false")"
                                                  data-limit="@string.Join(',', Model.ValidVendorIds)"></div>
                                             <input type="text" class="visually-hidden" asp-for="VendorId" />
@@ -65,7 +65,7 @@
                             <h5>
                                 Danh sách hàng hóa
                             </h5>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal"
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-testid="po-add-product-open" data-bs-toggle="modal"
                                     data-bs-target="#addProductModal">
                                 <i class="bi bi-plus-lg me-1"></i>
                                 <span class="d-none d-lg-inline">Thêm hàng hóa</span>
@@ -182,7 +182,7 @@
                             Trở về
                         </a>
                         <div class="d-block">
-                            <button type="submit" class="btn btn-primary" id="btnSubmitPurchaseOrder">
+                            <button type="submit" class="btn btn-primary" id="btnSubmitPurchaseOrder" data-testid="po-submit">
                                 <i class="bi bi-floppy"></i>
                                 Tạo đơn
                             </button>
@@ -210,13 +210,13 @@
             <form action="#" method="post" id="addProductForm">
                 <div class="modal-body py-3">
                     <div class="mb-3">
-                        <div id="productPicker"></div>
+                        <div id="productPicker" data-testid="po-product-picker"></div>
                     </div>
                     <div id="modalProductInfo" class="d-none">
                         <div class="row g-2">
                             <div class="col-6">
                                 <label class="form-label small fw-medium text-muted" for="itemQuantity">Số lượng</label>
-                                <input id="itemQuantity" name="itemProductQuantity" class="form-control no-additional-element"
+                                <input id="itemQuantity" name="itemProductQuantity" class="form-control no-additional-element" data-testid="po-item-quantity"
                                        data-decimal="quantity" value="1" autocomplete="off"
                                        data-val="true" data-val-required="Vui lòng nhập số lượng"
                                        data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
@@ -228,7 +228,7 @@
                                 <label class="form-label small fw-medium text-muted" for="itemUnitPrice">
                                     Đơn giá
                                 </label>
-                                <input id="itemUnitPrice" name="itemUnitPrice" class="form-control no-additional-element"
+                                <input id="itemUnitPrice" name="itemUnitPrice" class="form-control no-additional-element" data-testid="po-item-unit-cost"
                                        data-decimal="currency" autocomplete="off"
                                        data-val="true" data-val-required="Vui lòng nhập đơn giá."
                                        data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
@@ -267,7 +267,7 @@
                 </div>
                 <div class="modal-footer border-0 pt-0 pb-3">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" id="addItemToTable" class="btn btn-success d-none">
+                    <button type="submit" id="addItemToTable" class="btn btn-success d-none" data-testid="po-add-item-submit">
                         <i class="bi bi-plus-lg me-1"></i> Thêm vào
                     </button>
                 </div>
