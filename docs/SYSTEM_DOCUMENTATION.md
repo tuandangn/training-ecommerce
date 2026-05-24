@@ -34,9 +34,8 @@ Thư mục gốc chứa file solution `.sln` và các thư mục layer chính:
 ## 3. Các Module Chính (Core Modules)
 
 - **Catalog:** Quản lý sản phẩm, danh mục và đơn vị hàng hóa.
-- **Orders:** Xử lý đơn bán hàng, theo dõi thanh toán và trạng thái giao hàng (Order → DeliveryNote → trừ tồn kho + ghi công nợ khách hàng).
-- **Inventory & PurchaseOrders:** Quản lý kho (Warehouses), nhập hàng (PurchaseOrder → GoodsReceipt → cộng tồn kho + ghi công nợ NCC), kiểm kê và điều phối hàng tồn kho.
-- **Returns:** *(Chưa implement — xem `RETURNS_MODULE_PLAN.md`)* Xử lý trả hàng hai chiều: CustomerReturn (khách trả về) và VendorReturn (cửa hàng trả NCC). Có bước kiểm tra chất lượng (Inspecting) trước khi cập nhật tồn kho và công nợ.
+- **Orders:** Xử lý đơn bán hàng, theo dõi thanh toán và trạng thái giao hàng.
+- **Inventory & PurchaseOrders:** Quản lý kho (Warehouses), nhập hàng (Purchase Orders) từ nhà cung cấp (Vendors), kiểm kê và điều phối hàng tồn kho.
 - **Finance:** Quản lý thu chi (Expenses), báo cáo tài chính và dòng tiền (với module tài chính chuyên sâu).
 - **Customers & Users:** Quản lý thông tin khách hàng và hệ thống phân quyền nhân viên.
 
@@ -46,32 +45,6 @@ Thư mục gốc chứa file solution `.sln` và các thư mục layer chính:
 - **Business Flow:** Yêu cầu từ người dùng qua Presentation -> Gọi Application Service qua Contract -> Application Service gọi Domain Logic hoặc Repository -> Trả về kết quả qua DTO.
 - **Security:** Quản lý phân quyền dựa trên Role và User định danh trong module Security.
 - **UI/UX:** Giao diện được thiết kế theo hướng chuyên nghiệp, hỗ trợ đầy đủ thiết bị di động (Responsive). Các chức năng quản lý được tối ưu hóa cho hiệu suất cao.
-
-### 4.1. Domain Event Pattern
-
-Hệ thống xử lý side-effect ngoài transaction chính (sinh công nợ, dọn ảnh, cập nhật tồn kho, gọi n8n...) thông qua **Domain Event** theo pattern DDD chuẩn:
-
-1. **Concrete Event** — `sealed record` extending `DomainEvent` (tự implement `IDomainEvent : INotification` của MediatR), nằm tại `Domain.Shared/Events/{Module}/{Entity}Events.cs`. Mỗi event mang chính xác data handler cần (KHÔNG truyền entity).
-2. **Aggregate Entity** — kế thừa `AppAggregateEntity` (đã có `RaiseDomainEvent` + collection `DomainEvents` đánh dấu `[NotMapped]`). Entity expose `internal void Mark*()` (ví dụ: `MarkPlaced`, `MarkUpdated`, `MarkDeleted`) để raise concrete event tương ứng.
-3. **Domain Manager** — chỉ gọi `entity.Mark*()` ngay trước `_repository.Insert/Update/DeleteAsync`. Manager **KHÔNG inject** `IEventPublisher` (đang trong Phase 5 cleanup, mọi caller đã được dọn).
-4. **SaveChanges Interceptor** (Infrastructure) — dispatch toàn bộ `DomainEvents` qua `IMediator.Publish` SAU KHI commit thành công, sau đó gọi `ClearDomainEvents()`. Đảm bảo event chỉ phát ra khi DB đã commit thành công.
-5. **Handler** — `INotificationHandler<TConcreteEvent>` đặt tại `Application.Services/Events/{Module}/{Entity}{Action}Handler.cs`. Một handler = một concern (Reserve Stock / sinh CustomerDebt / dọn ảnh / gọi n8n...). Handler nên **idempotent** để chuẩn bị cho Outbox Phase 4.
-
-**Ví dụ flow Order:**
-
-```
-OrderManager.PlaceOrderAsync
-   ├── new Order(...)
-   ├── order.MarkPlaced()                  → RaiseDomainEvent(new OrderPlaced(...))
-   ├── _orderRepository.InsertAsync(order)
-   └── (SaveChanges thành công)
-        ↓
-   Interceptor dispatch OrderPlaced qua MediatR
-        ├── OrderPlacedHandler            → reserve stock (placeholder)
-        └── (handler khác nếu có)
-```
-
-**Lưu ý migrate handler cũ:** subscribe legacy `EntityCreatedNotification<T>` / `EntityUpdatedNotification<T>` / `EntityDeletedNotification<T>` đã được dọn 100% sau session 3 (2026-05-02). Chuỗi `IEventPublisher` / `EventPublisher` / `EventPublisherExtensions` / 3 record notification / DI registration / `BaseEvent` + 2 file `DeliveryNoteConfirmedEvent` / `DeliveryNoteDeliveredEvent` (mồ côi, không ai khởi tạo) **đang chờ xoá ở Phase 5** — xem `TodoList.md`.
 
 ## 5. Công cụ và Công nghệ (Tech Stack)
 
