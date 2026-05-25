@@ -267,32 +267,34 @@ export default class OrderController {
         });
 
         const inputQuantity = row.querySelector('.row-qty');
-        const inputQtyChangeDebounced = debounce((e) => {
+        const inputUnitPrice = row.querySelector('.row-price');
+
+        var inputQtyChangeDebounced = debounce((e) => {
             const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
-            this.#updateItem(index, { quantity: newQuantity });
+            const newUnitPrice = parseNumber(DecimalFields.stripFormatting(inputUnitPrice.value, 0), 0);
+            this.#updateItem(index, { quantity: newQuantity, unitPrice: newUnitPrice });
         }, 2000, () => {
             if (inputQuantity._decimalFormatting)
                 return false;
-
             var quantityRaw = DecimalFields.stripFormatting(inputQuantity.value, 2)
             return DecimalFields.isValidDecimal(inputQuantity, quantityRaw);
-        });
-        inputQuantity.addEventListener('input', inputQtyChangeDebounced);
-        inputQuantity.addEventListener('change', inputQtyChangeDebounced.flush);
-
-        const inputUnitPrice = row.querySelector('.row-price');
-        const inputUnitPriceChangeDebounced = debounce((e) => {
+        }, () => inputUnitPriceChangeDebounced.cancel());
+        var inputUnitPriceChangeDebounced = debounce((e) => {
+            const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
             const newUnitPrice = parseNumber(DecimalFields.stripFormatting(inputUnitPrice.value, 0), 0);
-            this.#updateItem(index, { unitPrice: newUnitPrice });
+            this.#updateItem(index, { unitPrice: newUnitPrice, quantity: newQuantity });
         }, 3000, () => {
             if (inputUnitPrice._decimalFormatting)
                 return false;
-
             var unitPriceRaw = DecimalFields.stripFormatting(inputUnitPrice.value)
             return DecimalFields.isValidDecimal(inputUnitPrice, unitPriceRaw);
-        });
+        }, () => inputQtyChangeDebounced.cancel());
+        
+        inputQuantity.addEventListener('input', inputQtyChangeDebounced);
+        inputQuantity.addEventListener('change', inputQtyChangeDebounced);
+
         inputUnitPrice.addEventListener('input', inputUnitPriceChangeDebounced);
-        inputUnitPrice.addEventListener('change', inputUnitPriceChangeDebounced.flush);
+        inputUnitPrice.addEventListener('change', inputUnitPriceChangeDebounced);
 
         return row;
     }
