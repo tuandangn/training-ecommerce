@@ -106,6 +106,30 @@ public sealed class InventoryStockManager : IInventoryStockManager
         };
     }
 
+    public Task<StockMovementLogDto?> ReceiveStockUpToAsync(
+        Guid productId,
+        Guid warehouseId,
+        decimal targetQuantity,
+        string? note,
+        Guid? receivedByUserId,
+        int referenceType,
+        Guid? referenceId)
+    {
+        if (targetQuantity <= 0)
+            return Task.FromResult<StockMovementLogDto?>(null);
+
+        var alreadyReceived = GetMovedQuantity(
+            productId,
+            warehouseId,
+            StockMovementType.Inbound,
+            (StockReferenceType)referenceType,
+            referenceId);
+        var missingQuantity = targetQuantity - alreadyReceived;
+        return missingQuantity <= 0
+            ? Task.FromResult<StockMovementLogDto?>(null)
+            : ReceiveStockAsync(productId, warehouseId, missingQuantity, note, receivedByUserId, referenceType, referenceId);
+    }
+
     public async Task<StockMovementLogDto?> RevertReceiveAsync(Guid productId, Guid warehouseId, decimal quantity, Guid goodsReceiptId, Guid modifiedByUserId)
     {
         if (quantity <= 0)
@@ -156,6 +180,23 @@ public sealed class InventoryStockManager : IInventoryStockManager
             CreatedOnUtc = stockMovementLog.CreatedOnUtc,
             Note = stockMovementLog.Note
         };
+    }
+
+    public Task<StockMovementLogDto?> RevertReceiveUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity, Guid goodsReceiptId, Guid modifiedByUserId)
+    {
+        if (targetQuantity <= 0)
+            return Task.FromResult<StockMovementLogDto?>(null);
+
+        var alreadyReverted = GetMovedQuantity(
+            productId,
+            warehouseId,
+            StockMovementType.Revert,
+            StockReferenceType.GoodsReceipt,
+            goodsReceiptId);
+        var missingQuantity = targetQuantity - alreadyReverted;
+        return missingQuantity <= 0
+            ? Task.FromResult<StockMovementLogDto?>(null)
+            : RevertReceiveAsync(productId, warehouseId, missingQuantity, goodsReceiptId, modifiedByUserId);
     }
 
     public async Task UpdateAverageCostAsync(Guid productId, Guid warehouseId, decimal newAverageCost)
@@ -344,7 +385,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return true;
     }
 
-    public async Task<StockMovementLogDto?> DispatchStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, bool releaseReservedStock = false)
+    public async Task<StockMovementLogDto?> DispatchStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, bool releaseReservedStock = false, int referenceType = (int)StockReferenceType.SalesOrder)
     {
         if (quantity <= 0) return null;
 
@@ -387,7 +428,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
             quantity,
             quantityBefore,
             stock.QuantityOnHand,
-            StockReferenceType.SalesOrder,
+            (StockReferenceType)referenceType,
             referenceId,
             note,
             userId
@@ -405,6 +446,39 @@ public sealed class InventoryStockManager : IInventoryStockManager
             CreatedOnUtc = log.CreatedOnUtc,
             Note = log.Note
         };
+    }
+
+    public Task<StockMovementLogDto?> DispatchStockUpToAsync(
+        Guid productId,
+        Guid warehouseId,
+        decimal targetQuantity,
+        Guid? referenceId,
+        Guid userId,
+        string? note = null,
+        bool releaseReservedStock = false,
+        int referenceType = (int)StockReferenceType.SalesOrder)
+    {
+        if (targetQuantity <= 0)
+            return Task.FromResult<StockMovementLogDto?>(null);
+
+        var alreadyDispatched = GetMovedQuantity(
+            productId,
+            warehouseId,
+            StockMovementType.Outbound,
+            (StockReferenceType)referenceType,
+            referenceId);
+        var missingQuantity = targetQuantity - alreadyDispatched;
+        return missingQuantity <= 0
+            ? Task.FromResult<StockMovementLogDto?>(null)
+            : DispatchStockAsync(
+                productId,
+                warehouseId,
+                missingQuantity,
+                referenceId,
+                userId,
+                note,
+                releaseReservedStock,
+                referenceType);
     }
 
     public async Task<(StockMovementLogDto? OutLog, StockMovementLogDto? InLog)> TransferStockAsync(
@@ -619,6 +693,20 @@ public sealed class InventoryStockManager : IInventoryStockManager
             return stock;
         }).ConfigureAwait(false);
     }
+
+    private decimal GetMovedQuantity(
+        Guid productId,
+        Guid warehouseId,
+        StockMovementType movementType,
+        StockReferenceType referenceType,
+        Guid? referenceId)
+        => _stockMovementDataReader.DataSource
+            .Where(log => log.ProductId == productId
+                && log.WarehouseId == warehouseId
+                && log.MovementType == movementType
+                && log.ReferenceType == referenceType
+                && log.ReferenceId == referenceId)
+            .Sum(log => log.Quantity);
 
     private static StockMovementLogDto ToDto(StockMovementLog log, string productName)
         => new(log.Id)

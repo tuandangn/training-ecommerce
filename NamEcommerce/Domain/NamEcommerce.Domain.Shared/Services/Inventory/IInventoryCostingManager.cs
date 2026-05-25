@@ -7,6 +7,7 @@ public interface IInventoryCostingManager
 {
     Task<InventoryCostMovementResultDto> RegisterInboundAsync(RegisterInventoryInboundCostDto dto);
     Task<InventoryCostMovementResultDto> RegisterOutboundAsync(RegisterInventoryOutboundCostDto dto);
+    Task<InventoryCostMovementResultDto> RegisterReceiptReversalAsync(RegisterInventoryReceiptReversalCostDto dto);
     Task<InventoryCostMovementResultDto> RegisterTransferInAsync(RegisterInventoryTransferInCostDto dto);
     Task AssignGoodsReceiptItemCostAsync(AssignGoodsReceiptItemCostDto dto);
     Task<InventoryCostSummaryDto> GetCurrentCostSummaryAsync(Guid productId);

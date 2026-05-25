@@ -392,10 +392,12 @@ public sealed class DeliveryNoteManager(
         {
             foreach (var item in deliveryNote.Items)
             {
-                await stockManager.ReceiveStockAsync(
+                await stockManager.ReceiveStockUpToAsync(
                     item.ProductId,
                     deliveryNote.WarehouseId,
-                    item.Quantity,
+                    deliveryNote.Items
+                        .Where(i => i.ProductId == item.ProductId)
+                        .Sum(i => i.Quantity),
                     $"Nhập lại kho do hủy phiếu xuất {deliveryNote.Code}",
                     Guid.Empty,
                     (int)StockReferenceType.SalesOrder,

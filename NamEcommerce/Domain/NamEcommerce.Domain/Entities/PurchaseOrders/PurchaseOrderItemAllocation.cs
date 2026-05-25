@@ -73,6 +73,7 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
     internal void ReduceAllocationToReceived()
     {
         AllocatedQuantity = ReceivedQuantity;
+        Status = ReceivedQuantity <= 0 ? AllocationStatus.Cancelled : AllocationStatus.FullyReceived;
     }
 
     internal void SetDirectShip(string address, string? contactName, string? contactPhone, int priority)

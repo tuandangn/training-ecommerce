@@ -68,10 +68,12 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
             if (!item.WarehouseId.HasValue) continue;
             if (item.Quantity <= 0) continue;
 
-            await _inventoryStockManager.ReceiveStockAsync(
+            await _inventoryStockManager.ReceiveStockUpToAsync(
                 productId: item.ProductId,
                 warehouseId: item.WarehouseId.Value,
-                receivedQuantity: item.Quantity,
+                targetQuantity: goodsReceipt.Items
+                    .Where(i => i.ProductId == item.ProductId && i.WarehouseId == item.WarehouseId)
+                    .Sum(i => i.Quantity),
                 note: $"Nhập từ phiếu {goodsReceipt.Id}",
                 receivedByUserId: goodsReceipt.CreatedByUserId,
                 referenceType: (int)StockReferenceType.GoodsReceipt,

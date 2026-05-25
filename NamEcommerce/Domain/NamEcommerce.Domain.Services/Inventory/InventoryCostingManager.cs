@@ -47,6 +47,13 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         ArgumentNullException.ThrowIfNull(dto);
         ValidatePositiveQuantity(dto.Quantity);
 
+        var existingLedger = GetExistingLedger(dto.MovementType, dto.ReferenceType, dto.ReferenceId, dto.ReferenceItemId);
+        if (existingLedger is not null)
+        {
+            await EnsureInboundLayerExistsAsync(existingLedger).ConfigureAwait(false);
+            return ToMovementResult(existingLedger);
+        }
+
         var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
         var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
         EnsureWeightedAverage(policy);
@@ -117,6 +124,13 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
     {
         ArgumentNullException.ThrowIfNull(dto);
         ValidatePositiveQuantity(dto.Quantity);
+
+        var existingLedger = GetExistingLedger(dto.MovementType, dto.ReferenceType, dto.ReferenceId, dto.ReferenceItemId);
+        if (existingLedger is not null)
+        {
+            await EnsureOutboundAllocationExistsAsync(existingLedger, null).ConfigureAwait(false);
+            return ToMovementResult(existingLedger);
+        }
 
         var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
         var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
@@ -189,10 +203,131 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         };
     }
 
+    public async Task<InventoryCostMovementResultDto> RegisterReceiptReversalAsync(RegisterInventoryReceiptReversalCostDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        ValidatePositiveQuantity(dto.Quantity);
+
+        var existingLedger = GetExistingLedger(
+            InventoryCostMovementType.RevertReceipt,
+            InventoryCostReferenceType.GoodsReceipt,
+            dto.GoodsReceiptId,
+            dto.GoodsReceiptItemId);
+        if (existingLedger is not null)
+        {
+            var existingLayer = GetActiveReceiptLayer(dto.GoodsReceiptId, dto.GoodsReceiptItemId);
+            var allocationCreated = await EnsureOutboundAllocationExistsAsync(existingLedger, existingLayer?.Id).ConfigureAwait(false);
+            if (allocationCreated && existingLayer is not null && existingLayer.RemainingQuantity >= Math.Abs(existingLedger.QuantityDelta))
+            {
+                existingLayer.Consume(Math.Abs(existingLedger.QuantityDelta));
+                await _layerRepository.UpdateAsync(existingLayer).ConfigureAwait(false);
+            }
+
+            return ToMovementResult(existingLedger);
+        }
+
+        var layer = _layerReader.DataSource
+            .Where(l => l.SourceReferenceType == InventoryCostReferenceType.GoodsReceipt
+                     && l.SourceReferenceId == dto.GoodsReceiptId
+                     && l.SourceReferenceItemId == dto.GoodsReceiptItemId
+                     && l.CostingStatus != InventoryCostingStatus.Superseded)
+            .OrderByDescending(l => l.OpenedAtUtc)
+            .FirstOrDefault();
+
+        if (layer is null)
+            throw new InvalidInventoryCostingOperationException("Error.InventoryCosting.ReceiptLayerNotFound", dto.GoodsReceiptItemId);
+        if (layer.RemainingQuantity < dto.Quantity)
+            throw new InvalidInventoryCostingOperationException("Error.InventoryCosting.ReceiptLayerInsufficientQuantity", dto.GoodsReceiptItemId);
+
+        var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
+        var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
+        EnsureWeightedAverage(policy);
+
+        var balance = GetLastProductBalance(dto.ProductId);
+        var sequenceNumber = GetNextSequenceNumber();
+        var unitCost = layer.UnitCost ?? 0m;
+        var totalCost = dto.Quantity * unitCost;
+        var hasPendingCost = HasOpenPendingLayer(dto.ProductId, occurredAtUtc, layer.Id);
+        var status = hasPendingCost ? InventoryCostingStatus.Pending : InventoryCostingStatus.Final;
+        var quantityBalance = balance.Quantity - dto.Quantity;
+        var valueBalance = balance.Value - totalCost;
+        if (quantityBalance <= 0)
+        {
+            quantityBalance = 0;
+            valueBalance = 0;
+        }
+
+        var averageCost = quantityBalance > 0 ? valueBalance / quantityBalance : 0m;
+
+        var ledgerEntry = new InventoryCostLedgerEntry(
+            Guid.NewGuid(),
+            dto.ProductId,
+            dto.WarehouseId,
+            occurredAtUtc,
+            sequenceNumber,
+            InventoryCostMovementType.RevertReceipt,
+            -dto.Quantity,
+            unitCost,
+            totalCost,
+            quantityBalance,
+            valueBalance,
+            averageCost,
+            status,
+            policy.CostingMethod,
+            policy.ValuationScope,
+            InventoryCostReferenceType.GoodsReceipt,
+            dto.GoodsReceiptId,
+            dto.GoodsReceiptItemId,
+            null);
+
+        await _ledgerRepository.InsertAsync(ledgerEntry).ConfigureAwait(false);
+
+        var allocation = new InventoryCostAllocation(
+            Guid.NewGuid(),
+            dto.ProductId,
+            dto.WarehouseId,
+            ledgerEntry.Id,
+            InventoryCostReferenceType.GoodsReceipt,
+            dto.GoodsReceiptId,
+            dto.GoodsReceiptItemId,
+            layer.Id,
+            dto.Quantity,
+            unitCost,
+            totalCost,
+            status,
+            policy.CostingMethod,
+            policy.ValuationScope,
+            null);
+
+        await _allocationRepository.InsertAsync(allocation).ConfigureAwait(false);
+
+        layer.Consume(dto.Quantity);
+        await _layerRepository.UpdateAsync(layer).ConfigureAwait(false);
+
+        return new InventoryCostMovementResultDto
+        {
+            LedgerEntryId = ledgerEntry.Id,
+            UnitCost = unitCost,
+            TotalCost = totalCost,
+            Status = status
+        };
+    }
+
     public async Task<InventoryCostMovementResultDto> RegisterTransferInAsync(RegisterInventoryTransferInCostDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
         ValidatePositiveQuantity(dto.Quantity);
+
+        var existingLedger = GetExistingLedger(
+            InventoryCostMovementType.TransferIn,
+            dto.ReferenceType,
+            dto.ReferenceId,
+            dto.ReferenceItemId);
+        if (existingLedger is not null)
+        {
+            await EnsureInboundLayerExistsAsync(existingLedger).ConfigureAwait(false);
+            return ToMovementResult(existingLedger);
+        }
 
         var occurredAtUtc = dto.OccurredAtUtc ?? DateTime.UtcNow;
         var policy = await GetPolicyForAsync(occurredAtUtc).ConfigureAwait(false);
@@ -500,6 +635,105 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         return policy ?? await GetActivePolicyAsync().ConfigureAwait(false);
     }
 
+    private InventoryCostLedgerEntry? GetExistingLedger(
+        InventoryCostMovementType movementType,
+        InventoryCostReferenceType referenceType,
+        Guid referenceId,
+        Guid referenceItemId)
+        => _ledgerReader.DataSource
+            .Where(l => l.MovementType == movementType
+                && l.ReferenceType == referenceType
+                && l.ReferenceId == referenceId
+                && l.ReferenceItemId == referenceItemId
+                && l.CostingStatus != InventoryCostingStatus.Superseded)
+            .OrderByDescending(l => l.OccurredAtUtc)
+            .ThenByDescending(l => l.SequenceNumber)
+            .FirstOrDefault();
+
+    private InventoryCostLayer? GetActiveReceiptLayer(Guid goodsReceiptId, Guid goodsReceiptItemId)
+        => _layerReader.DataSource
+            .Where(l => l.SourceReferenceType == InventoryCostReferenceType.GoodsReceipt
+                && l.SourceReferenceId == goodsReceiptId
+                && l.SourceReferenceItemId == goodsReceiptItemId
+                && l.CostingStatus != InventoryCostingStatus.Superseded)
+            .OrderByDescending(l => l.OpenedAtUtc)
+            .FirstOrDefault();
+
+    private async Task EnsureInboundLayerExistsAsync(InventoryCostLedgerEntry ledgerEntry)
+    {
+        var exists = _layerReader.DataSource.Any(l =>
+            l.SourceLedgerEntryId == ledgerEntry.Id
+            && l.CostingStatus != InventoryCostingStatus.Superseded);
+        if (exists)
+            return;
+
+        var quantity = Math.Max(0, ledgerEntry.QuantityDelta);
+        if (quantity <= 0)
+            return;
+
+        var layer = new InventoryCostLayer(
+            Guid.NewGuid(),
+            ledgerEntry.ProductId,
+            ledgerEntry.WarehouseId,
+            ledgerEntry.Id,
+            ledgerEntry.ReferenceType,
+            ledgerEntry.ReferenceId,
+            ledgerEntry.ReferenceItemId,
+            ledgerEntry.OccurredAtUtc,
+            quantity,
+            quantity,
+            ledgerEntry.UnitCost,
+            ledgerEntry.TotalCost,
+            ledgerEntry.CostingStatus,
+            ledgerEntry.CostingMethod,
+            ledgerEntry.ValuationScope,
+            ledgerEntry.CostingRunId);
+
+        await _layerRepository.InsertAsync(layer).ConfigureAwait(false);
+    }
+
+    private async Task<bool> EnsureOutboundAllocationExistsAsync(InventoryCostLedgerEntry ledgerEntry, Guid? inboundLayerId)
+    {
+        var exists = _allocationReader.DataSource.Any(a =>
+            a.OutboundLedgerEntryId == ledgerEntry.Id
+            && a.CostingStatus != InventoryCostingStatus.Superseded);
+        if (exists)
+            return false;
+
+        var quantity = Math.Abs(ledgerEntry.QuantityDelta);
+        if (quantity <= 0)
+            return false;
+
+        var allocation = new InventoryCostAllocation(
+            Guid.NewGuid(),
+            ledgerEntry.ProductId,
+            ledgerEntry.WarehouseId,
+            ledgerEntry.Id,
+            ledgerEntry.ReferenceType,
+            ledgerEntry.ReferenceId,
+            ledgerEntry.ReferenceItemId,
+            inboundLayerId,
+            quantity,
+            ledgerEntry.UnitCost,
+            ledgerEntry.TotalCost,
+            ledgerEntry.CostingStatus,
+            ledgerEntry.CostingMethod,
+            ledgerEntry.ValuationScope,
+            ledgerEntry.CostingRunId);
+
+        await _allocationRepository.InsertAsync(allocation).ConfigureAwait(false);
+        return true;
+    }
+
+    private static InventoryCostMovementResultDto ToMovementResult(InventoryCostLedgerEntry ledgerEntry)
+        => new()
+        {
+            LedgerEntryId = ledgerEntry.Id,
+            UnitCost = ledgerEntry.UnitCost ?? ledgerEntry.AverageCostAfter,
+            TotalCost = ledgerEntry.TotalCost ?? 0m,
+            Status = ledgerEntry.CostingStatus
+        };
+
     private long GetNextSequenceNumber()
     {
         var lastSequence = _ledgerReader.DataSource
@@ -523,8 +757,9 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
             : new ProductCostBalance(lastEntry.QuantityBalanceAfter, lastEntry.ValueBalanceAfter, lastEntry.AverageCostAfter, lastEntry.CostingStatus);
     }
 
-    private bool HasOpenPendingLayer(Guid productId, DateTime occurredAtUtc)
+    private bool HasOpenPendingLayer(Guid productId, DateTime occurredAtUtc, Guid? excludedLayerId = null)
         => _layerReader.DataSource.Any(l => l.ProductId == productId
+                                         && (!excludedLayerId.HasValue || l.Id != excludedLayerId.Value)
                                          && l.CostingStatus == InventoryCostingStatus.Pending
                                          && l.OpenedAtUtc <= occurredAtUtc
                                          && l.RemainingQuantity > 0);
