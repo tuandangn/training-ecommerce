@@ -51,7 +51,7 @@ public sealed class WarehouseAppService : IWarehouseAppService
             PhoneNumber = dto.PhoneNumber,
             Address = dto.Address,
             ManagerUserId = dto.ManagerUserId,
-            WarehouseType = (WarehouseType) dto.WarehouseType,
+            WarehouseType = (WarehouseType)dto.WarehouseType,
             IsActive = dto.IsActive
         }).ConfigureAwait(false);
 
@@ -99,9 +99,11 @@ public sealed class WarehouseAppService : IWarehouseAppService
         return warehouse?.ToDto();
     }
 
-    public async Task<IPagedDataAppDto<WarehouseAppDto>> GetWarehousesAsync(int pageIndex = 0, int pageSize = int.MaxValue, string? keywords = null)
+    public async Task<IPagedDataAppDto<WarehouseAppDto>> GetWarehousesAsync(int pageIndex, int pageSize, string? keywords = null, bool includeDirectTransit = false)
     {
-        var pagedData = await _warehouseManager.GetWarehousesAsync(pageIndex, pageSize, keywords).ConfigureAwait(false);
+        var pagedData = includeDirectTransit
+            ? await _warehouseManager.GetWarehousesAsync(pageIndex, pageSize, keywords).ConfigureAwait(false)
+            : await _warehouseManager.GetWarehousesAsync(pageIndex, pageSize, keywords, [.. Enum.GetValues<WarehouseType>().Except([WarehouseType.DirectTransit])]).ConfigureAwait(false);
         var result = PagedDataAppDto.Create(
             pagedData.Select(warehouse => warehouse.ToDto()),
             pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
@@ -149,7 +151,7 @@ public sealed class WarehouseAppService : IWarehouseAppService
             PhoneNumber = dto.PhoneNumber,
             Address = dto.Address,
             ManagerUserId = dto.ManagerUserId,
-            WarehouseType = (WarehouseType) dto.WarehouseType,
+            WarehouseType = (WarehouseType)dto.WarehouseType,
             IsActive = dto.IsActive
         }).ConfigureAwait(false);
 

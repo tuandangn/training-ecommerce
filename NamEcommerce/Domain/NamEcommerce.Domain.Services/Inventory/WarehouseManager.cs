@@ -96,7 +96,7 @@ public sealed class WarehouseManager : IWarehouseManager
         return warehouse.ToDto();
     }
 
-    public Task<IPagedDataDto<WarehouseDto>> GetWarehousesAsync(int pageIndex, int pageSize, string? keywords)
+    public Task<IPagedDataDto<WarehouseDto>> GetWarehousesAsync(int pageIndex, int pageSize, string? keywords = null, WarehouseType[]? types = null)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(pageIndex, 0, nameof(pageIndex));
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(pageSize, 0, nameof(pageSize));
@@ -106,12 +106,15 @@ public sealed class WarehouseManager : IWarehouseManager
         if (!string.IsNullOrEmpty(keywords))
         {
             var normizedKeywords = TextHelper.Normalize(keywords);
-            query = query.Where(c => 
+            query = query.Where(c =>
                 c.Name.Contains(keywords)
                 || c.Name.Contains(normizedKeywords)
-                || c.NormalizedName.Contains(normizedKeywords) 
+                || c.NormalizedName.Contains(normizedKeywords)
                 || c.Code.Contains(keywords));
         }
+
+        if (types != null && types.Length > 0)
+            query = query.Where(c => types.Contains(c.WarehouseType));
 
         query = query.OrderBy(c => c.Name);
 

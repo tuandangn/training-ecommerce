@@ -340,17 +340,20 @@ export default class CreatePurchaseOrderController {
         DecimalFields.autoWrap(row);
 
         const inputQuantity = row.querySelector('.row-qty');
-        const inputQtyChangeDebounced = debounce((e) => {
-            const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
-            this.#updateItem(index, { quantity: newQuantity });
-        }, 1000);
-        inputQuantity.addEventListener('input', inputQtyChangeDebounced);
-
         const inputUnitCost = row.querySelector('.row-price');
-        const inputUnitCostChangeDebounced = debounce((e) => {
+
+        var inputQtyChangeDebounced = debounce((e) => {
+            const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
             const newUnitCost = parseNumber(DecimalFields.stripFormatting(inputUnitCost.value, 0), 0);
-            this.#updateItem(index, { unitCost: newUnitCost });
-        }, 1000);
+            this.#updateItem(index, { quantity: newQuantity, unitCost: newUnitCost });
+        }, 1500, null, () => inputUnitCostChangeDebounced.cancel());
+        var inputUnitCostChangeDebounced = debounce((e) => {
+            const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
+            const newUnitCost = parseNumber(DecimalFields.stripFormatting(inputUnitCost.value, 0), 0);
+            this.#updateItem(index, { quantity: newQuantity, unitCost: newUnitCost });
+        }, 1500, null, () => inputQtyChangeDebounced.cancel());
+
+        inputQuantity.addEventListener('input', inputQtyChangeDebounced);
         inputUnitCost.addEventListener('input', inputUnitCostChangeDebounced);
     }
 

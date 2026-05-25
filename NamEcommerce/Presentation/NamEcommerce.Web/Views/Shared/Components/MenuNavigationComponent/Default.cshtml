@@ -43,7 +43,7 @@
         <div class="collapse @(WebHelper.IsHasController("PurchaseOrder", "Vendor", "VendorReturn") ? "show" : "")" id="collapsePurchases">
             <ul class="nav flex-column sub-menu">
                 <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("PurchaseOrder", "List") ? "active" : "") @(WebHelper.IsMatchRouteInfo("PurchaseOrder", "Details") ? "active" : "")" asp-controller="PurchaseOrder" asp-action="List">Đơn nhập</a>
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("PurchaseOrder", "List") || WebHelper.IsMatchRouteInfo("PurchaseOrder", "Create") || WebHelper.IsMatchRouteInfo("PurchaseOrder", "Details") ? "active" : "")" asp-controller="PurchaseOrder" asp-action="List">Đơn nhập</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("PurchaseOrder", "ShortageAggregation") ? "active" : "")" asp-controller="PurchaseOrder" asp-action="ShortageAggregation">Hàng cần nhập</a>

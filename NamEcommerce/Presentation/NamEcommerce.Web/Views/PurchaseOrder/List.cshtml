@@ -49,14 +49,7 @@
         <a asp-action="Create" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i> Tạo đơn
         </a>
-        <div class="responsive-list-toolbar" role="group" aria-label="Chọn kiểu hiển thị">
-            <button type="button" class="responsive-list-toggle" data-list-view="list" title="Dạng danh sách" aria-label="Dạng danh sách" aria-pressed="false">
-                <i class="bi bi-list-ul"></i>
-            </button>
-            <button type="button" class="responsive-list-toggle" data-list-view="grid" title="Dạng lưới" aria-label="Dạng lưới" aria-pressed="false">
-                <i class="bi bi-grid-3x3-gap"></i>
-            </button>
-        </div>
+        <partial name="_ResponsiveListToolbar" />
     </div>
     <ul class="nav nav-tabs">
         <li class="nav-item">
@@ -78,7 +71,7 @@
                 <thead>
                     <tr>
                         <th class="ps-4">Mã đơn</th>
-                        <th class="d-none d-md-block">
+                        <th class="d-none d-md-table-cell">
                             Hàng hóa
                         </th>
                         <th>
@@ -108,7 +101,7 @@
                                         @purchaseOrder.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
                                     </span>
                                 </td>
-                                <td class="d-none d-md-block">
+                                <td class="d-none d-md-table-cell">
                                     @{
                                         var itemCount = purchaseOrder.Items.Count;
                                         var ordered = purchaseOrder.TotalOrdered;

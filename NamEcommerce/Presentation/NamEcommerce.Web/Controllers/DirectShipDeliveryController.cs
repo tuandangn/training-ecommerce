@@ -122,7 +122,7 @@ public sealed class DirectShipDeliveryController(
 
     private async Task<IList<DirectShipReturnWarehouseOptionModel>> GetReturnWarehouseOptionsAsync()
     {
-        var warehouses = await warehouseAppService.GetWarehousesAsync().ConfigureAwait(false);
+        var warehouses = await warehouseAppService.GetWarehousesAsync(0, int.MaxValue).ConfigureAwait(false);
         return warehouses
             .Where(w => w.IsActive && w.WarehouseType == (int)WarehouseType.Physical)
             .OrderBy(w => w.Name)

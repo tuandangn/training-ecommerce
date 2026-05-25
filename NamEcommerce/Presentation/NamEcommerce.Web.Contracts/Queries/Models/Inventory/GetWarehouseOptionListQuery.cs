@@ -6,4 +6,5 @@ namespace NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 [Serializable]
 public sealed class GetWarehouseOptionListQuery : IRequest<EntityOptionListModel>
 {
+    public bool IncludeDirectTransit { get; set; }
 }

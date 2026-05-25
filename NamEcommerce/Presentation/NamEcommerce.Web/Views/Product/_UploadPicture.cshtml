@@ -1,19 +1,19 @@
 ﻿@model Base64ImageModel
 @inject AppConfig AppConfig
 
-<div class="mb-3">
+<div class="product-picture-uploader">
     <label for="productPictureFile" class="form-label">Hình ảnh</label>
     <input type="file" accept="image/*" id="productPictureFile" class="d-none" />
-    <label for="productPictureFile" class="d-block text-decoration-none" style="cursor:pointer;">
-        <img id="imagePreview" src="@Model.Base64Data" alt="" class="img-thumbnail img-fluid mb-2 @(string.IsNullOrEmpty(Model.Base64Data) ? "d-none" : "")" style="object-fit:cover;" />
-        <div id="imagePlaceholder" class="p-2 text-muted d-flex flex-column align-items-center @(string.IsNullOrEmpty(Model.Base64Data) ? "" : "d-none")" style="background:#fafafa;">
+    <label for="productPictureFile" class="product-picture-dropzone">
+        <img id="imagePreview" src="@Model.Base64Data" alt="Ảnh hàng hóa" class="product-picture-preview @(string.IsNullOrEmpty(Model.Base64Data) ? "d-none" : "")" />
+        <div id="imagePlaceholder" class="product-picture-placeholder text-muted d-flex flex-column align-items-center justify-content-center @(string.IsNullOrEmpty(Model.Base64Data) ? "" : "d-none")">
             <i class="bi bi-card-image" style="font-size:2rem;"></i>
             <div class="small mt-1">Chưa có hình</div>
         </div>
-        <div class="d-grid">
-            <button type="button" class="btn btn-sm btn-light mt-2" id="btnChoosePicture">Chọn ảnh</button>
-        </div>
     </label>
+    <button type="button" class="btn btn-outline-secondary btn-sm product-picture-action" id="btnChoosePicture">
+        <i class="bi bi-upload me-1"></i>Chọn ảnh
+    </button>
     <span asp-validation-for="Base64Data" class="text-danger small"></span>
     <input type="hidden" asp-for="Base64Data" />
     <input type="hidden" asp-for="FileName" />
@@ -56,7 +56,6 @@
             const reader = new FileReader();
             reader.onload = function(ev) {
                 const dataUrl = ev.target.result;
-                console.log(dataUrl);
                 preview.src = dataUrl;
                 preview.classList.remove('d-none');
                 placeholder.classList.add('d-none');

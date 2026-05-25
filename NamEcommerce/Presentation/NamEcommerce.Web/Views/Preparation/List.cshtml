@@ -276,6 +276,40 @@
                 calculateTotals();
             });
 
+            function getSelectedPreparationItems() {
+                const seen = new Set();
+                return $('.select-prep-item:checked').filter(function () {
+                    const orderItemId = String($(this).data('order-item-id') || '');
+                    if (!orderItemId || seen.has(orderItemId)) {
+                        return false;
+                    }
+
+                    seen.add(orderItemId);
+                    return true;
+                });
+            }
+
+            function refreshPreparationSelectionState() {
+                const checkedBoxes = getSelectedPreparationItems();
+                selectedCountEl.text(checkedBoxes.length);
+                btnCreate.prop('disabled', checkedBoxes.length === 0);
+            }
+
+            function syncPreparationSelection($source) {
+                const orderItemId = String($source.data('order-item-id') || '');
+                if (!orderItemId) {
+                    return;
+                }
+
+                const checked = $source.is(':checked');
+                $('.select-prep-item').each(function () {
+                    const $item = $(this);
+                    if ($item[0] !== $source[0] && String($item.data('order-item-id') || '') === orderItemId) {
+                        $item.prop('checked', checked);
+                    }
+                });
+            }
+
             // Toggle all
             $(document).on('change', '.select-all-prep-group, .select-all-customers', function () {
                 const checked = $(this).is(':checked');
@@ -284,13 +318,12 @@
 
             // Update selected count and ensure button state
             $(document).on('change', '.select-prep-item', function () {
-                const checkedBoxes = $('.select-prep-item:checked');
-                selectedCountEl.text(checkedBoxes.length);
-                btnCreate.prop('disabled', checkedBoxes.length === 0);
+                syncPreparationSelection($(this));
+                refreshPreparationSelectionState();
             });
 
             btnCreate.on('click', function () {
-                const checkedBoxes = $('.select-prep-item:checked');
+                const checkedBoxes = getSelectedPreparationItems();
                 if (checkedBoxes.length === 0) {
                     showAlert('danger', 'Vui lòng chọn ít nhất một mặt hàng để tạo phiếu xuất.');
                     return;

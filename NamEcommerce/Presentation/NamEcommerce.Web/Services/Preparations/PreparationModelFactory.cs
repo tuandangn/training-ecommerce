@@ -3,27 +3,13 @@ using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Preparations;
 using NamEcommerce.Web.Models.Preparations;
-using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 
 namespace NamEcommerce.Web.Services.Preparations;
 
-public sealed class PreparationModelFactory(
-    IMediator mediator,
-    AppConfig appConfig,
-    IWarehouseAppService warehouseAppService) : IPreparationModelFactory
+public sealed class PreparationModelFactory(IMediator mediator, AppConfig appConfig) : IPreparationModelFactory
 {
-    private async Task<EntityOptionListModel> GetAvailableWarehousesAsync()
-    {
-        var warehouses = await warehouseAppService.GetWarehousesAsync().ConfigureAwait(false);
-        return new EntityOptionListModel
-        {
-            Options = warehouses.Items.Select(warehouse => new EntityOptionListModel.EntityOptionModel
-            {
-                Id = warehouse.Id,
-                Name = warehouse.Name
-            }).ToList()
-        };
-    }
+    private Task<EntityOptionListModel> GetAvailableWarehousesAsync() => mediator.Send(new GetWarehouseOptionListQuery());
 
     public async Task<CustomerPreparationListModel> PrepareCustomerPreparationListModelAsync(PreparationListSearchModel searchModel)
     {

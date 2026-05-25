@@ -187,7 +187,7 @@ public sealed class CustomerPortalController(
 
     private async Task PrepareWarehouseOptionsAsync()
     {
-        var warehouses = await warehouseAppService.GetWarehousesAsync().ConfigureAwait(false);
+        var warehouses = await warehouseAppService.GetWarehousesAsync(0, int.MaxValue).ConfigureAwait(false);
         ViewBag.Warehouses = warehouses
             .Where(warehouse => warehouse.IsActive && warehouse.IsPhysical)
             .OrderBy(warehouse => warehouse.Name)

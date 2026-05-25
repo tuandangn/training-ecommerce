@@ -12,6 +12,11 @@
         _ => ("secondary", "Không rõ", "bi-question-circle")
     };
     var isDirectShip = Model.SourceType == (int)DeliveryNoteSourceType.DirectShipToCustomer;
+    var deliveryProofPictureSrc = string.IsNullOrWhiteSpace(Model.DeliveryProofPictureUrl)
+        ? null
+        : Model.DeliveryProofPictureUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
+            ? Model.DeliveryProofPictureUrl
+            : $"data:image/jpeg;base64,{Model.DeliveryProofPictureUrl}";
 }
 
 @Html.AntiForgeryToken()
@@ -224,13 +229,13 @@
                         </div>
                     }
                     
-                    @if (!string.IsNullOrEmpty(Model.DeliveryProofPictureUrl))
+                    @if (!string.IsNullOrEmpty(deliveryProofPictureSrc))
                     {
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase mb-2">Bằng chứng giao hàng</label>
                             <div>
                                 <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal">
-                                    <img src="data:image/jpeg;base64,@Model.DeliveryProofPictureUrl" class="img-fluid rounded border shadow-sm" style="max-height: 120px; object-fit: cover; width:100%;" alt="Bằng chứng" />
+                                    <img src="@deliveryProofPictureSrc" class="img-fluid rounded border shadow-sm" style="max-height: 120px; object-fit: cover; width:100%;" alt="Bằng chứng" />
                                 </a>
                             </div>
                         </div>
@@ -397,7 +402,7 @@
 </div>
 
 <!-- Image Modal -->
-@if (!string.IsNullOrEmpty(Model.DeliveryProofPictureUrl))
+@if (!string.IsNullOrEmpty(deliveryProofPictureSrc))
 {
     <div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -407,7 +412,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body text-center py-4">
-                    <img src="data:image/jpeg;base64,@Model.DeliveryProofPictureUrl" class="img-fluid rounded shadow-sm" alt="Bằng chứng giao hàng" />
+                    <img src="@deliveryProofPictureSrc" class="img-fluid rounded shadow-sm" alt="Bằng chứng giao hàng" />
                 </div>
             </div>
         </div>

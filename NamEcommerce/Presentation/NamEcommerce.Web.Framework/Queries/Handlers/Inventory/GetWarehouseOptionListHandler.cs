@@ -16,7 +16,7 @@ public sealed class GetWarehouseOptionListHandler : IRequestHandler<GetWarehouse
 
     public async Task<EntityOptionListModel> Handle(GetWarehouseOptionListQuery request, CancellationToken cancellationToken)
     {
-        var warehouses = await _warehouseAppService.GetWarehousesAsync(0, int.MaxValue, null);
+        var warehouses = await _warehouseAppService.GetWarehousesAsync(0, int.MaxValue, null, request.IncludeDirectTransit);
 
         return new EntityOptionListModel
         {
