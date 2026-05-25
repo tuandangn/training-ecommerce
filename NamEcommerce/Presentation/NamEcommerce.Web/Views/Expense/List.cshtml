@@ -83,8 +83,12 @@
     </div>
 </div>
 
-<div class="content-card">
-    <div class="table-responsive">
+<div class="content-card" data-responsive-list data-list-key="expense-list">
+    <div class="action-toolbar justify-content-end">
+        <partial name="_ResponsiveListToolbar" />
+    </div>
+    <div class="responsive-list-panel" data-list-view-panel="list">
+        <div class="table-responsive">
         <table class="table data-table">
             <thead>
                 <tr>
@@ -147,6 +151,55 @@
                 </tfoot>
             }
         </table>
+        </div>
+    </div>
+
+    <div class="responsive-list-panel responsive-list-grid" data-list-view-panel="grid" hidden>
+        @if (Model.Pagination.TotalCount > 0)
+        {
+            @foreach (var item in Model)
+            {
+                <article class="list-card">
+                    <div class="list-card-header">
+                        <div class="list-card-title-group">
+                            <div class="list-card-title">@item.Title</div>
+                            <div class="list-card-meta">@item.IncurredDate.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                        </div>
+                        <span class="@TypeBadgeClass(item.ExpenseType)">@TypeLabel(item.ExpenseType)</span>
+                    </div>
+                    <div class="list-card-fields">
+                        @if (!string.IsNullOrEmpty(item.Description))
+                        {
+                            <div class="list-card-field list-card-field-stack">
+                                <span class="list-card-label">Mô tả</span>
+                                <span class="text-muted small">@item.Description</span>
+                            </div>
+                        }
+                        <div class="list-card-field">
+                            <span class="list-card-label">Số tiền</span>
+                            <span class="list-card-value text-danger">@item.Amount.ToString("N0") ₫</span>
+                        </div>
+                    </div>
+                    <div class="list-card-actions">
+                        <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <button type="button" class="btn-table-action danger btnDelete"
+                                data-id="@item.Id" data-name="@item.Title" title="Xóa">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </article>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <div class="empty-icon"><i class="bi bi-wallet2"></i></div>
+                <h5>Chưa có chi phí nào</h5>
+                <p>Tạo khoản chi phí đầu tiên của bạn.</p>
+            </div>
+        }
     </div>
 
     @if (Model.Pagination.TotalCount > 0)
