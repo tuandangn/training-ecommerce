@@ -6,7 +6,7 @@ public class ProductVendorMapping : IEntityTypeConfiguration<ProductVendor>
     {
         builder.ToTable(nameof(ProductVendor), DbScheme);
 
-        builder.HasKey(mapping => new { mapping.ProductId, mapping.VendorId });
+        builder.HasKey(pv => pv.Id);
 
         builder.HasOne<Product>()
             .WithMany(p => p.ProductVendors)
