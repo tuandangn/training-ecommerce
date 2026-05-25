@@ -89,19 +89,17 @@
                                     <label class="form-label fw-semibold">Nhà cung cấp</label>
                                     @if (Model.AvailableVendors is not null)
                                     {
-                                        <div class="d-flex flex-wrap gap-2">
+                                        <div class="product-vendor-options">
                                             @foreach (var vendor in Model.AvailableVendors)
                                             {
                                                 var isChecked = Model.VendorIds.Contains(vendor.Id);
-                                                <div class="form-check form-check-inline border rounded px-3 py-2">
+                                                <label class="product-vendor-option" for="vendor_@vendor.Id">
                                                     <input class="form-check-input" type="checkbox"
                                                            name="VendorIds" value="@vendor.Id"
                                                            id="vendor_@vendor.Id"
                                                            checked="@isChecked" />
-                                                    <label class="form-check-label" for="vendor_@vendor.Id">
-                                                        @vendor.Name
-                                                    </label>
-                                                </div>
+                                                    <span>@vendor.Name</span>
+                                                </label>
                                             }
                                         </div>
                                     }
