@@ -504,3 +504,4 @@ NamEcommerce/Tests/
 
 .env
 ssl/
+/NamEcommerce/Migrations/NamEcommerce.Data.SqlServerMigrations/appsettings.Development.json
