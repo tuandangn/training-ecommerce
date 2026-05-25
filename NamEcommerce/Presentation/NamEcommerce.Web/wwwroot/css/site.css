@@ -2293,8 +2293,17 @@ body {
     overflow-x: auto;
     overflow-y: hidden;
     flex-wrap: nowrap;
-    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 }
+
+    .nav-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .nav-tabs .nav-item {
+        flex: 0 0 auto;
+    }
 
     .nav-tabs .nav-link {
         border: none;
