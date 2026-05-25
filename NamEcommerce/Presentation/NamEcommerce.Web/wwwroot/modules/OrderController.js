@@ -273,7 +273,7 @@ export default class OrderController {
             const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
             const newUnitPrice = parseNumber(DecimalFields.stripFormatting(inputUnitPrice.value, 0), 0);
             this.#updateItem(index, { quantity: newQuantity, unitPrice: newUnitPrice });
-        }, 2000, () => {
+        }, 1500, () => {
             if (inputQuantity._decimalFormatting)
                 return false;
             var quantityRaw = DecimalFields.stripFormatting(inputQuantity.value, 2)
@@ -283,7 +283,7 @@ export default class OrderController {
             const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
             const newUnitPrice = parseNumber(DecimalFields.stripFormatting(inputUnitPrice.value, 0), 0);
             this.#updateItem(index, { unitPrice: newUnitPrice, quantity: newQuantity });
-        }, 3000, () => {
+        }, 1500, () => {
             if (inputUnitPrice._decimalFormatting)
                 return false;
             var unitPriceRaw = DecimalFields.stripFormatting(inputUnitPrice.value)
@@ -291,10 +291,7 @@ export default class OrderController {
         }, () => inputQtyChangeDebounced.cancel());
         
         inputQuantity.addEventListener('input', inputQtyChangeDebounced);
-        inputQuantity.addEventListener('change', inputQtyChangeDebounced);
-
         inputUnitPrice.addEventListener('input', inputUnitPriceChangeDebounced);
-        inputUnitPrice.addEventListener('change', inputUnitPriceChangeDebounced);
 
         return row;
     }
