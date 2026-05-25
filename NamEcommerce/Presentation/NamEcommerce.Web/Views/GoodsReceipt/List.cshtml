@@ -15,18 +15,13 @@
 }
 <div class="content-card" data-responsive-list data-list-key="goods-receipt-list">
     <div class="action-toolbar">
-        <partial name="_Search" model="@(new GoodsReceiptListSearchModel { Keywords = Model.Keywords, FromDate = Model.FromDate, ToDate = Model.ToDate })" />
+        <div class="search-group">
+            <partial name="_Search" model="@(new GoodsReceiptListSearchModel { Keywords = Model.Keywords, FromDate = Model.FromDate, ToDate = Model.ToDate })" />
+        </div>
         <a asp-action="Create" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i> Tạo phiếu
         </a>
-        <div class="responsive-list-toolbar" role="group" aria-label="Chọn kiểu hiển thị">
-            <button type="button" class="responsive-list-toggle" data-list-view="list" title="Dạng danh sách" aria-label="Dạng danh sách" aria-pressed="false">
-                <i class="bi bi-list-ul"></i>
-            </button>
-            <button type="button" class="responsive-list-toggle" data-list-view="grid" title="Dạng lưới" aria-label="Dạng lưới" aria-pressed="false">
-                <i class="bi bi-grid-3x3-gap"></i>
-            </button>
-        </div>
+        <partial name="_ResponsiveListToolbar" />
     </div>
     <div class="content-card-body-flush">
         <div class="responsive-list-panel" data-list-view-panel="list">

@@ -14,9 +14,10 @@
     @await RenderSectionAsync(ViewConstants.StyleSection, required: false)
 </head>
 <body>
+    <a class="skip-link" href="#mainContent">Bỏ qua menu</a>
     <div class="app-layout">
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
-        <aside class="sidebar" id="appSidebar">
+        <aside class="sidebar" id="appSidebar" aria-label="Điều hướng chính">
             <a class="sidebar-brand" asp-controller="Home" asp-action="Index">
                 <div class="sidebar-brand-icon">
                     <i class="bi bi-bag-heart-fill"></i>
@@ -26,13 +27,13 @@
                     <div class="sidebar-brand-sub">Quản lý bán hàng</div>
                 </div>
             </a>
-            <nav class="sidebar-nav">
+            <nav class="sidebar-nav" aria-label="Menu chính">
                 @await Component.InvokeAsync("MenuNavigationComponent")
             </nav>
         </aside>
         <div class="main-area">
             <header class="topbar">
-                <button class="topbar-toggle" id="sidebarToggle" type="button" aria-label="Mở/đóng menu">
+                <button class="topbar-toggle" id="sidebarToggle" type="button" aria-label="Mở/đóng menu" aria-controls="appSidebar" aria-expanded="false">
                     <i class="bi bi-list"></i>
                 </button>
                 <div class="topbar-title">
@@ -48,7 +49,7 @@
                 @await Component.InvokeAsync("UserHeaderLinksComponent")
             </header>
             <div class="page-content">
-                <main role="main">
+                <main id="mainContent" role="main">
                     @RenderBody()
                 </main>
             </div>
