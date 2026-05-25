@@ -1,14 +1,20 @@
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Debts;
+using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Entities.PurchaseOrders;
 using NamEcommerce.Domain.Services.Extensions;
+using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Dtos.Finance;
 using NamEcommerce.Domain.Shared.Dtos.Returns;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Finance;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Returns;
+using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Returns;
@@ -22,6 +28,7 @@ namespace NamEcommerce.Domain.Services.Returns;
 
 public sealed class VendorReturnManager(
     IRepository<VendorReturn> vendorReturnRepository,
+    IRepository<DeliveryNote> deliveryNoteRepository,
     IEntityDataReader<VendorReturn> vendorReturnDataReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
     IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
@@ -30,6 +37,7 @@ public sealed class VendorReturnManager(
     IEntityDataReader<Warehouse> warehouseDataReader,
     IEntityDataReader<Expense> expenseDataReader,
     IInventoryStockManager inventoryStockManager,
+    IInventoryCostingManager inventoryCostingManager,
     IExpenseManager expenseManager,
     IVendorDebtManager vendorDebtManager,
     ICurrentUserAccessor currentUserAccessor) : IVendorReturnManager
@@ -161,17 +169,41 @@ public sealed class VendorReturnManager(
         var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new VendorReturnNotFoundException(id);
 
+        EnsureCanReverseVendorReturn(vendorReturn, reason);
+        var generatedDeliveryNote = await GetGeneratedVendorReturnDeliveryAsync(vendorReturn).ConfigureAwait(false);
+
         foreach (var item in vendorReturn.Items)
         {
             if (item.AcceptedQuantity <= 0) continue;
-            await inventoryStockManager.ReceiveStockAsync(
+            await inventoryStockManager.ReceiveStockUpToAsync(
                 productId: item.ProductId,
                 warehouseId: vendorReturn.WarehouseId,
-                receivedQuantity: item.AcceptedQuantity,
+                targetQuantity: vendorReturn.Items
+                    .Where(i => i.ProductId == item.ProductId)
+                    .Sum(i => i.AcceptedQuantity),
                 note: $"Đảo ngược phiếu trả NCC {vendorReturn.Code}",
                 receivedByUserId: vendorReturn.CreatedByUserId,
                 referenceType: (int)NamEcommerce.Domain.Entities.Inventory.StockReferenceType.VendorReturn,
                 referenceId: vendorReturn.Id).ConfigureAwait(false);
+
+            await inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
+            {
+                ProductId = item.ProductId,
+                WarehouseId = vendorReturn.WarehouseId,
+                Quantity = item.AcceptedQuantity,
+                UnitCost = ResolveVendorReturnReversalUnitCost(generatedDeliveryNote, item),
+                MovementType = InventoryCostMovementType.VendorReturnReversal,
+                ReferenceType = InventoryCostReferenceType.VendorReturn,
+                ReferenceId = vendorReturn.Id,
+                ReferenceItemId = item.Id,
+                OccurredAtUtc = DateTime.UtcNow
+            }).ConfigureAwait(false);
+        }
+
+        if (generatedDeliveryNote is not null)
+        {
+            generatedDeliveryNote.ReverseVendorReturnDelivery();
+            await deliveryNoteRepository.UpdateAsync(generatedDeliveryNote).ConfigureAwait(false);
         }
 
         var totalReturnAmount = Math.Max(0,
@@ -285,6 +317,53 @@ public sealed class VendorReturnManager(
         var datePrefix = $"TNCC-{DateTime.UtcNow:yyyyMMdd}";
         var count = vendorReturnDataReader.DataSource.Count(r => r.Code.StartsWith(datePrefix));
         return $"{datePrefix}-{(count + 1):D3}";
+    }
+
+    private static void EnsureCanReverseVendorReturn(VendorReturn vendorReturn, string reason)
+    {
+        if (vendorReturn.Status != VendorReturnStatus.Confirmed)
+            throw new ReturnCannotChangeStatusException(
+                vendorReturn.Status.ToString(),
+                nameof(VendorReturnStatus.Reversed));
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new ReturnDataIsInvalidException("Error.VendorReturn.ReverseReasonRequired");
+    }
+
+    private async Task<DeliveryNote?> GetGeneratedVendorReturnDeliveryAsync(VendorReturn vendorReturn)
+    {
+        if (!vendorReturn.GeneratedDeliveryNoteId.HasValue)
+            return null;
+
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(vendorReturn.GeneratedDeliveryNoteId.Value)
+            .ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(vendorReturn.GeneratedDeliveryNoteId.Value);
+        if (deliveryNote.SourceType != DeliveryNoteSourceType.ToVendorReturn)
+            throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, deliveryNote.Status);
+        if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
+            throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, DeliveryNoteStatus.Cancelled);
+
+        return deliveryNote;
+    }
+
+    private static decimal? ResolveVendorReturnReversalUnitCost(DeliveryNote? deliveryNote, VendorReturnItem item)
+    {
+        var relatedDeliveryItems = deliveryNote?.Items
+            .Where(deliveryItem => deliveryItem.ProductId == item.ProductId && deliveryItem.CostAtDispatch.HasValue)
+            .ToList();
+
+        if (relatedDeliveryItems is { Count: > 0 })
+        {
+            var totalQuantity = relatedDeliveryItems.Sum(deliveryItem => deliveryItem.Quantity);
+            if (totalQuantity > 0)
+            {
+                var totalCost = relatedDeliveryItems.Sum(
+                    deliveryItem => deliveryItem.Quantity * deliveryItem.CostAtDispatch!.Value);
+                return totalCost / totalQuantity;
+            }
+        }
+
+        return item.OriginalUnitCost ?? item.ReturnUnitCost;
     }
 
     /// <summary>

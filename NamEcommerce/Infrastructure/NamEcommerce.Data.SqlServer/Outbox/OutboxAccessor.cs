@@ -41,5 +41,6 @@ public sealed class OutboxAccessor : IOutbox
 
         var message = OutboxMessage.Create(typeName, payload, integrationEvent.OccurredOnUtc);
         await _dbContext.AddAsync(message, cancellationToken).ConfigureAwait(false);
+        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 }

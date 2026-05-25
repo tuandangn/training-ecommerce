@@ -31,10 +31,12 @@ public sealed class DeliveryNoteConfirmedHandler(IEntityDataReader<DeliveryNote>
 
         foreach (var item in deliveryNote.Items)
         {
-            await inventoryStockManager.DispatchStockAsync(
+            await inventoryStockManager.DispatchStockUpToAsync(
                 item.ProductId,
                 deliveryNote.WarehouseId,
-                item.Quantity,
+                deliveryNote.Items
+                    .Where(i => i.ProductId == item.ProductId)
+                    .Sum(i => i.Quantity),
                 deliveryNote.Id,
                 Guid.Empty,
                 $"Xuất hàng cho phiếu xuất {deliveryNote.Code}",
@@ -78,4 +80,3 @@ public sealed class DeliveryNoteConfirmedIntegrationHandler
         await _n8nAppService.NotifyDeliveryNoteIsConfirmed(notification.DeliveryNoteId).ConfigureAwait(false);
     }
 }
-

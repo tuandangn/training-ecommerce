@@ -30,6 +30,17 @@ public sealed record RegisterInventoryOutboundCostDto
 }
 
 [Serializable]
+public sealed record RegisterInventoryReceiptReversalCostDto
+{
+    public required Guid ProductId { get; init; }
+    public required Guid WarehouseId { get; init; }
+    public required decimal Quantity { get; init; }
+    public required Guid GoodsReceiptId { get; init; }
+    public required Guid GoodsReceiptItemId { get; init; }
+    public DateTime? OccurredAtUtc { get; init; }
+}
+
+[Serializable]
 public sealed record RegisterInventoryTransferInCostDto
 {
     public required Guid ProductId { get; init; }

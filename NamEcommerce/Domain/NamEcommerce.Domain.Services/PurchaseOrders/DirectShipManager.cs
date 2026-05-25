@@ -132,6 +132,7 @@ public sealed class DirectShipManager(
         var deliveryNote = await deliveryNoteReader.GetByIdAsync(deliveryNoteId)
             ?? throw new DeliveryNoteNotFoundException(deliveryNoteId);
 
+        EnsureCanRejectDirectShipDelivery(deliveryNote);
         await ReturnDirectShipStockAsync(deliveryNote, returnWarehouseId, reason).ConfigureAwait(false);
         await deliveryNoteManager.RejectDirectShipDeliveryAsync(deliveryNoteId, reason, ct)
             .ConfigureAwait(false);
@@ -159,6 +160,7 @@ public sealed class DirectShipManager(
             var note = string.IsNullOrWhiteSpace(reason)
                 ? $"Đơn bán {orderId} bị hủy — chuyển hàng giao thẳng về kho đã chọn"
                 : reason;
+            EnsureCanRejectDirectShipDelivery(deliveryNote);
             await ReturnDirectShipStockAsync(deliveryNote, returnWarehouseId, note, userId).ConfigureAwait(false);
             await deliveryNoteManager.RejectDirectShipDeliveryAsync(deliveryNoteId, note, ct)
                 .ConfigureAwait(false);
@@ -304,6 +306,14 @@ public sealed class DirectShipManager(
     }
 
     public Task<Guid> GetTransitWarehouseIdAsync() => Task.FromResult(GetTransitWarehouse().Id);
+
+    private static void EnsureCanRejectDirectShipDelivery(DeliveryNote deliveryNote)
+    {
+        if (!deliveryNote.IsDirectShip || deliveryNote.SourceType != DeliveryNoteSourceType.DirectShipToCustomer)
+            throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, deliveryNote.Status);
+        if (deliveryNote.Status != DeliveryNoteStatus.Confirmed)
+            throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, DeliveryNoteStatus.Cancelled);
+    }
 
     private async Task ReturnDirectShipStockAsync(
         DeliveryNote deliveryNote,

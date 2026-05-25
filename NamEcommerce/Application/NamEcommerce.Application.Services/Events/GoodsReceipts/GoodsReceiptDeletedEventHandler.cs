@@ -2,6 +2,7 @@ using MediatR;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Inventory;
 using NamEcommerce.Domain.Shared.Events.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Media;
@@ -26,15 +27,18 @@ public sealed class GoodsReceiptDeletedEventHandler : INotificationHandler<Goods
     private readonly IPictureManager _pictureManager;
     private readonly IEntityDataReader<GoodsReceipt> _goodsReceiptDataReader;
     private readonly IInventoryStockManager _inventoryStockManager;
+    private readonly IInventoryCostingManager _inventoryCostingManager;
 
     public GoodsReceiptDeletedEventHandler(
         IPictureManager pictureManager,
         IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
-        IInventoryStockManager inventoryStockManager)
+        IInventoryStockManager inventoryStockManager,
+        IInventoryCostingManager inventoryCostingManager)
     {
         _pictureManager = pictureManager;
         _goodsReceiptDataReader = goodsReceiptDataReader;
         _inventoryStockManager = inventoryStockManager;
+        _inventoryCostingManager = inventoryCostingManager;
     }
 
     public async Task Handle(GoodsReceiptDeleted notification, CancellationToken cancellationToken)
@@ -52,13 +56,25 @@ public sealed class GoodsReceiptDeletedEventHandler : INotificationHandler<Goods
                 if (!item.WarehouseId.HasValue) continue;
                 if (item.Quantity <= 0) continue;
 
-                await _inventoryStockManager.RevertReceiveAsync(
+                await _inventoryStockManager.RevertReceiveUpToAsync(
                     productId: item.ProductId,
                     warehouseId: item.WarehouseId.Value,
-                    quantity: item.Quantity,
+                    targetQuantity: goodsReceipt.Items
+                        .Where(i => i.ProductId == item.ProductId && i.WarehouseId == item.WarehouseId)
+                        .Sum(i => i.Quantity),
                     goodsReceiptId: goodsReceipt.Id,
                     modifiedByUserId: goodsReceipt.CreatedByUserId ?? Guid.Empty
                 ).ConfigureAwait(false);
+
+                await _inventoryCostingManager.RegisterReceiptReversalAsync(new RegisterInventoryReceiptReversalCostDto
+                {
+                    ProductId = item.ProductId,
+                    WarehouseId = item.WarehouseId.Value,
+                    Quantity = item.Quantity,
+                    GoodsReceiptId = goodsReceipt.Id,
+                    GoodsReceiptItemId = item.Id,
+                    OccurredAtUtc = DateTime.UtcNow
+                }).ConfigureAwait(false);
             }
         }
 

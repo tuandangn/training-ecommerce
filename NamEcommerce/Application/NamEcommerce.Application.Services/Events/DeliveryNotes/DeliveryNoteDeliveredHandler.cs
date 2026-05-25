@@ -62,14 +62,19 @@ public sealed class DeliveryNoteDeliveredStockHandler(
 
         foreach (var item in deliveryNote.Items)
         {
-            await stockManager.DispatchStockAsync(
+            await stockManager.DispatchStockUpToAsync(
                 item.ProductId,
                 deliveryNote.WarehouseId,
-                item.Quantity,
+                deliveryNote.Items
+                    .Where(i => i.ProductId == item.ProductId)
+                    .Sum(i => i.Quantity),
                 deliveryNote.Id,
                 Guid.Empty,
                 $"Xuất hàng cho phiếu xuất {deliveryNote.Code}",
-                releaseReservedStock: releaseReservedStock).ConfigureAwait(false);
+                releaseReservedStock: releaseReservedStock,
+                referenceType: deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn
+                    ? (int)NamEcommerce.Domain.Entities.Inventory.StockReferenceType.VendorReturn
+                    : (int)NamEcommerce.Domain.Entities.Inventory.StockReferenceType.SalesOrder).ConfigureAwait(false);
 
             await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
             {
@@ -89,4 +94,3 @@ public sealed class DeliveryNoteDeliveredStockHandler(
         }
     }
 }
-

@@ -378,6 +378,16 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(purchaseOrderId);
 
+        if (string.IsNullOrWhiteSpace(reason))
+            throw new PurchaseOrderDataIsInvalidException("Error.PurchaseOrder.CloseReasonRequired");
+        if (purchaseOrder.Status != PurchaseOrderStatus.Receiving)
+            throw new PurchaseOrderCannotChangeStatusException();
+
+        foreach (var item in purchaseOrder.Items)
+            await _purchaseOrderAllocationManager
+                .ReleaseAllocationsOfPurchaseOrderItemAsync((purchaseOrder.Id, item.Id))
+                .ConfigureAwait(false);
+
         var oldStatus = purchaseOrder.Status;
         purchaseOrder.ClosePartial(reason);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;

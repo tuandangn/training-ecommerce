@@ -239,5 +239,16 @@ public sealed record DeliveryNote : AppAggregateEntity
         Cancel();
     }
 
+    internal void ReverseVendorReturnDelivery()
+    {
+        if (SourceType != DeliveryNoteSourceType.ToVendorReturn)
+            throw new DeliveryNoteCannotChangeStatusException(Status, Status);
+        if (Status != DeliveryNoteStatus.Delivered)
+            throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Cancelled);
+
+        Status = DeliveryNoteStatus.Cancelled;
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
+
     #endregion
 }

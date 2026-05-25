@@ -7,6 +7,7 @@ public interface IInventoryStockManager
     Task InitializeStockAsync(Guid productId, Guid warehouseId, Guid? unitMeasurementId = null);
 
     Task<StockMovementLogDto?> ReceiveStockAsync(Guid productId, Guid warehouseId, decimal receivedQuantity, string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId);
+    Task<StockMovementLogDto?> ReceiveStockUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity, string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId);
 
     /// <summary>
     /// Hoàn tác nhập hàng — trừ lại <paramref name="quantity"/> đơn vị đã nhập trước đó từ GoodsReceipt bị xóa.
@@ -15,6 +16,7 @@ public interface IInventoryStockManager
     /// </summary>
     /// <exception cref="InvalidStockOperationException">quantity &lt;= 0 hoặc stock không tồn tại</exception>
     Task<StockMovementLogDto?> RevertReceiveAsync(Guid productId, Guid warehouseId, decimal quantity, Guid goodsReceiptId, Guid modifiedByUserId);
+    Task<StockMovementLogDto?> RevertReceiveUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity, Guid goodsReceiptId, Guid modifiedByUserId);
 
     /// <summary>
     /// Legacy compatibility: cập nhật AverageCost snapshot trên InventoryStock.
@@ -26,7 +28,8 @@ public interface IInventoryStockManager
     
     Task<bool> ReserveStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, int? reservationDaysValid = null);
     Task<bool> ReleaseReservedStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null);
-    Task<StockMovementLogDto?> DispatchStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, bool releaseReservedStock = false);
+    Task<StockMovementLogDto?> DispatchStockAsync(Guid productId, Guid warehouseId, decimal quantity, Guid? referenceId, Guid userId, string? note = null, bool releaseReservedStock = false, int referenceType = 2);
+    Task<StockMovementLogDto?> DispatchStockUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity, Guid? referenceId, Guid userId, string? note = null, bool releaseReservedStock = false, int referenceType = 2);
     Task<(StockMovementLogDto? OutLog, StockMovementLogDto? InLog)> TransferStockAsync(
         Guid productId,
         Guid fromWarehouseId,

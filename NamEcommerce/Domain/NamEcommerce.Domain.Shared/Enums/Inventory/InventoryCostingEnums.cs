@@ -24,7 +24,8 @@ public enum InventoryCostMovementType
     PositiveAdjustment = 6,
     NegativeAdjustment = 7,
     Revaluation = 8,
-    RevertReceipt = 9
+    RevertReceipt = 9,
+    VendorReturnReversal = 10
 }
 
 public enum InventoryCostingStatus
