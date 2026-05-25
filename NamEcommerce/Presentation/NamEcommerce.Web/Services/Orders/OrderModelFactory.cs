@@ -248,9 +248,8 @@ public sealed class OrderModelFactory : IOrderModelFactory
 
     private async Task<IList<OrderDetailsModel.ReturnWarehouseOptionModel>> GetReturnWarehouseOptionsAsync()
     {
-        var warehouses = await _warehouseAppService.GetWarehousesAsync().ConfigureAwait(false);
+        var warehouses = await _warehouseAppService.GetWarehousesAsync(0, int.MaxValue).ConfigureAwait(false);
         return warehouses
-            .Where(w => w.IsActive && w.WarehouseType == (int)WarehouseType.Physical)
             .OrderBy(w => w.Name)
             .Select(w => new OrderDetailsModel.ReturnWarehouseOptionModel
             {

@@ -108,15 +108,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         model.CustomerPhoneNumber = order.CustomerPhone ?? string.Empty;
         model.ShippingAddress = order.ShippingAddress ?? string.Empty;
 
-        var warehouses = await _warehouseAppService.GetWarehousesAsync().ConfigureAwait(false);
-        model.AvailableWarehouses = new EntityOptionListModel
-        {
-            Options = warehouses.Items.Select(warehouse => new EntityOptionListModel.EntityOptionModel
-            {
-                Id = warehouse.Id,
-                Name = warehouse.Name
-            }).ToList()
-        };
+        model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
         var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
         var orderItemIds = order.Items.Select(item => item.Id).ToList();

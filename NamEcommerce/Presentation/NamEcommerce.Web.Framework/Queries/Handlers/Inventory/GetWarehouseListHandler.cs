@@ -17,7 +17,7 @@ public sealed class GetWarehouseListHandler : IRequestHandler<GetWarehouseListQu
 
     public async Task<WarehouseListModel> Handle(GetWarehouseListQuery request, CancellationToken cancellationToken)
     {
-        var pagedData = await _warehouseAppService.GetWarehousesAsync(request.PageIndex, request.PageSize, request.Keywords).ConfigureAwait(false);
+        var pagedData = await _warehouseAppService.GetWarehousesAsync(request.PageIndex, request.PageSize, request.Keywords, true).ConfigureAwait(false);
 
         var model = new WarehouseListModel
         {
