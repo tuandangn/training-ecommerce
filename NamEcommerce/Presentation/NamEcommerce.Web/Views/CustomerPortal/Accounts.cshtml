@@ -49,6 +49,18 @@
                         @(item.LastLoginOnUtc.HasValue ? item.LastLoginOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat) : "—")
                     </td>
                     <td class="text-end pe-3">
+                        <form asp-action="ResetAccountPassword" method="post" class="d-flex justify-content-end gap-2 mb-2">
+                            <input type="hidden" name="customerId" value="@item.CustomerId" />
+                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                            <input type="password"
+                                   name="password"
+                                   class="form-control form-control-sm w-auto"
+                                   placeholder="Mật khẩu mới"
+                                   minlength="8"
+                                   required
+                                   autocomplete="new-password" />
+                            <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap">Đặt lại</button>
+                        </form>
                         @if (status == CustomerPortalAccountStatus.Blocked)
                         {
                             <form asp-action="UnblockAccount" method="post" class="d-inline">

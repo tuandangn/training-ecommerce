@@ -133,6 +133,20 @@ public sealed record EligibleOrderItemForAllocationAppDto
 }
 
 [Serializable]
+public sealed record PurchaseOrderItemAllocationForPoItemAppDto
+{
+    public required Guid AllocationId { get; init; }
+    public required Guid PurchaseOrderItemId { get; init; }
+    public required Guid OrderId { get; init; }
+    public required Guid OrderItemId { get; init; }
+    public required string OrderCode { get; init; }
+    public required decimal AllocatedQuantity { get; init; }
+    public required decimal ReceivedQuantity { get; init; }
+    public required int Status { get; init; }
+    public required bool IsDirectShip { get; init; }
+}
+
+[Serializable]
 public sealed record AllocatePoItemToOrderAppDto
 {
     public required Guid PurchaseOrderId { get; set; }

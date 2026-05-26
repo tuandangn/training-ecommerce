@@ -781,6 +781,50 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         }).ToList();
     }
 
+    public Task<IList<PurchaseOrderItemAllocationForPoItemAppDto>> GetAllocationsForPurchaseOrderItemsAsync(IReadOnlyList<Guid> purchaseOrderItemIds)
+    {
+        if (purchaseOrderItemIds.Count == 0)
+            return Task.FromResult<IList<PurchaseOrderItemAllocationForPoItemAppDto>>([]);
+
+        var poItemIds = purchaseOrderItemIds.ToHashSet();
+        var allocations = _purchaseOrderItemAllocationDataReader.DataSource
+            .Where(allocation => poItemIds.Contains(allocation.PurchaseOrderItemId)
+                && allocation.Status != AllocationStatus.Cancelled)
+            .OrderBy(allocation => allocation.CreatedOnUtc)
+            .ToList();
+        if (allocations.Count == 0)
+            return Task.FromResult<IList<PurchaseOrderItemAllocationForPoItemAppDto>>([]);
+
+        var orderItemIds = allocations.Select(allocation => allocation.OrderItemId).ToHashSet();
+        var orderItems = _orderDataReader.DataSource
+            .SelectMany(order => order.OrderItems
+                .Where(item => orderItemIds.Contains(item.Id))
+                .Select(item => new { Order = order, Item = item }))
+            .ToDictionary(x => x.Item.Id);
+
+        var result = allocations
+            .Where(allocation => orderItems.ContainsKey(allocation.OrderItemId))
+            .Select(allocation =>
+            {
+                var orderItem = orderItems[allocation.OrderItemId];
+                return new PurchaseOrderItemAllocationForPoItemAppDto
+                {
+                    AllocationId = allocation.Id,
+                    PurchaseOrderItemId = allocation.PurchaseOrderItemId,
+                    OrderId = orderItem.Order.Id,
+                    OrderItemId = allocation.OrderItemId,
+                    OrderCode = orderItem.Order.Code,
+                    AllocatedQuantity = allocation.AllocatedQuantity,
+                    ReceivedQuantity = allocation.ReceivedQuantity,
+                    Status = (int)allocation.Status,
+                    IsDirectShip = allocation.IsDirectShip
+                };
+            })
+            .ToList();
+
+        return Task.FromResult<IList<PurchaseOrderItemAllocationForPoItemAppDto>>(result);
+    }
+
     public async Task<CommonActionResultDto> AllocatePoItemToOrderAsync(AllocatePoItemToOrderAppDto dto)
     {
         try

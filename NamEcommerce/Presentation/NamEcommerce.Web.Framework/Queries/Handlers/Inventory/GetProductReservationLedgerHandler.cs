@@ -29,6 +29,7 @@ public sealed class GetProductReservationLedgerHandler : IRequestHandler<GetProd
                 OrderId = item.OrderId,
                 OrderCode = item.OrderCode,
                 QuantityDelta = item.QuantityDelta,
+                UnitPrice = item.UnitPrice,
                 Reason = item.Reason,
                 ReferenceId = item.ReferenceId,
                 CreatedOn = item.CreatedOnUtc.ToLocalTime()

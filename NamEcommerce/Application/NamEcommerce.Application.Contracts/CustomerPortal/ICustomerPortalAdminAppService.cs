@@ -9,6 +9,7 @@ public interface ICustomerPortalAdminAppService
     Task<CustomerPortalAccountAdminAppDto?> GetAccountAsync(Guid customerId);
     Task<CustomerActionResultAppDto> BlockAccountAsync(Guid customerId);
     Task<CustomerActionResultAppDto> UnblockAccountAsync(Guid customerId);
+    Task<CustomerActionResultAppDto> ResetAccountPasswordAsync(Guid customerId, string password);
 
     Task<IReadOnlyCollection<CustomerPortalSecurityEventAdminAppDto>> GetSecurityEventsAsync(Guid? customerId = null, int take = 100);
 

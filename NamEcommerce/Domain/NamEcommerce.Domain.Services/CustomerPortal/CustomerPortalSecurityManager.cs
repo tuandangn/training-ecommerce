@@ -40,13 +40,14 @@ public sealed class CustomerPortalSecurityManager(
         return Task.FromResult(account is null ? null : MapToDto(account));
     }
 
-    public async Task SetPasswordAsync(Guid customerId, string passwordHash, string passwordSalt)
+    public async Task SetPasswordAsync(Guid customerId, string passwordHash, string passwordSalt, bool markLoginSucceeded = true)
     {
         var account = accountReader.DataSource.FirstOrDefault(account => account.CustomerId == customerId)
             ?? new CustomerPortalAccount(customerId);
 
         account.SetPassword(passwordHash, passwordSalt);
-        account.MarkLoginSucceeded();
+        if (markLoginSucceeded)
+            account.MarkLoginSucceeded();
 
         if (accountReader.DataSource.Any(existing => existing.Id == account.Id))
             await accountRepository.UpdateAsync(account).ConfigureAwait(false);

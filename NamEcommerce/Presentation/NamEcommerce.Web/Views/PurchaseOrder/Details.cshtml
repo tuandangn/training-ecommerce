@@ -58,6 +58,28 @@
         VendorReturnStatus.Cancelled => "Đã hủy",
         _ => status.ToString()
     };
+
+    string AllocationStatusText(int status) => status switch
+    {
+        0 => "Đã phân bổ",
+        1 => "Nhận một phần",
+        2 => "Đã nhận đủ",
+        3 => "Chờ khách xác nhận",
+        4 => "Khách đã nhận",
+        5 => "Đã hủy",
+        _ => "Không rõ"
+    };
+
+    string AllocationStatusColor(int status) => status switch
+    {
+        0 => "secondary",
+        1 => "warning",
+        2 => "success",
+        3 => "info text-white",
+        4 => "success",
+        5 => "danger",
+        _ => "secondary"
+    };
 }
 @section TitleSection {
     <h1 class="topbar-page-title">
@@ -108,7 +130,7 @@
                                         <th class="text-end">Đã Nhận</th>
                                         <th class="text-end">Đơn giá</th>
                                         <th class="text-end d-none d-md-table-cell @(Model.Info.CanAddItems ? "" : "pe-3")">Thành tiền</th>
-                                        @if (Model.Info.CanAddItems || Model.Info.CanReceiveGoods || Model.DirectShipAllocationsPerItem.Count > 0 || Model.CanAllocateItems)
+                                        @if (Model.Info.CanAddItems || Model.Info.CanReceiveGoods || Model.DirectShipAllocationsPerItem.Count > 0 || Model.AllocationsPerItem.Count > 0 || Model.CanAllocateItems)
                                         {
                                             <th class="text-center"></th>
                                         }
@@ -120,6 +142,8 @@
                                         @for (var i = 0; i < Model.Info.Items.Count; i++)
                                         {
                                             var item = Model.Info.Items[i];
+                                            var hasAllocations = Model.AllocationsPerItem.TryGetValue(item.Id, out var allocations) && allocations.Count > 0;
+                                            var allocatedQuantity = hasAllocations ? allocations!.Sum(allocation => allocation.AllocatedQuantity) : 0m;
                                             <tr id="row-@i" data-item-id="@item.Id">
                                                 <td class="ps-3">
                                                     <div class="d-flex align-items-center gap-2">
@@ -141,6 +165,12 @@
                                                 </td>
                                                 <td class="text-end">
                                                     <span class="quantity-text">@item.QuantityOrdered.DisplayQuantity()</span>
+                                                    @if (allocatedQuantity > 0)
+                                                    {
+                                                        <div class="small text-primary text-nowrap">
+                                                            Phân bổ: @allocatedQuantity.DisplayQuantity()
+                                                        </div>
+                                                    }
                                                     <input type="hidden" class="row-qty" value="@item.QuantityOrdered" />
                                                 </td>
                                                 <td class="text-end">
@@ -215,12 +245,44 @@
                                                         </div>
                                                     </td>
                                                 }
-                                                else if (Model.DirectShipAllocationsPerItem.Count > 0)
+                                                else if (Model.DirectShipAllocationsPerItem.Count > 0 || Model.AllocationsPerItem.Count > 0)
                                                 {
                                                     <td></td>
                                                 }
 
                                             </tr>
+                                            @if (hasAllocations)
+                                            {
+                                                foreach (var allocation in allocations!)
+                                                {
+                                                    var allocationStatusColor = AllocationStatusColor(allocation.Status);
+                                                    var allocationStatusText = AllocationStatusText(allocation.Status);
+                                                    <tr class="table-light">
+                                                        <td colspan="3" class="ps-5 py-1 small">
+                                                            <i class="bi bi-diagram-3 me-1 text-primary"></i>
+                                                            <strong>Phân bổ cho đơn bán:</strong>
+                                                            <a asp-controller="Order" asp-action="Details"
+                                                               asp-route-id="@allocation.OrderId"
+                                                               class="text-decoration-none fw-semibold ms-1">@allocation.OrderCode</a>
+                                                            @if (allocation.IsDirectShip)
+                                                            {
+                                                                <span class="badge bg-info text-white ms-2">Giao thẳng</span>
+                                                            }
+                                                            <span class="d-md-none ms-2 status-badge @allocationStatusColor">@allocationStatusText</span>
+                                                        </td>
+                                                        <td class="py-1 text-end small text-muted">
+                                                            @allocation.ReceivedQuantity.DisplayQuantity() / @allocation.AllocatedQuantity.DisplayQuantity()
+                                                        </td>
+                                                        <td class="py-1 d-none d-md-table-cell">
+                                                            <span class="status-badge @allocationStatusColor">@allocationStatusText</span>
+                                                        </td>
+                                                        @if (Model.Info.CanAddItems || (Model.Info.CanReceiveGoods && item.RemainingQuantity > 0) || Model.CanAllocateItems || Model.DirectShipAllocationsPerItem.Count > 0 || Model.AllocationsPerItem.Count > 0)
+                                                        {
+                                                            <td></td>
+                                                        }
+                                                    </tr>
+                                                }
+                                            }
                                             @if (Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var dsAllocations))
                                             {
                                                 foreach (var alloc in dsAllocations)
@@ -282,7 +344,7 @@
                                     else
                                     {
                                         <tr>
-                                            <td colspan="@(Model.Info.CanAddItems || Model.Info.CanReceiveGoods || Model.DirectShipAllocationsPerItem.Count > 0 || Model.CanAllocateItems ? 6 : 5)">
+                                            <td colspan="@(Model.Info.CanAddItems || Model.Info.CanReceiveGoods || Model.DirectShipAllocationsPerItem.Count > 0 || Model.AllocationsPerItem.Count > 0 || Model.CanAllocateItems ? 6 : 5)">
                                                 <div class="py-4 text-center text-muted">
                                                     <i class="bi bi-box-seam me-1"></i> Chưa có sản phẩm nào.
                                                 </div>
