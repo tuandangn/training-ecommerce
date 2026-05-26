@@ -21,7 +21,7 @@ public sealed class InventoryController : BaseAuthorizedController
 
     public IActionResult Index() => RedirectToAction(nameof(StockList));
 
-    public async Task<IActionResult> StockList(int pageNumber = 1, string? keywords = null)
+    public async Task<IActionResult> StockList(int pageNumber = 1, string? keywords = null, bool includeDS = false)
     {
         var pageSize = _appConfig.DefaultPageSize;
 
@@ -29,6 +29,7 @@ public sealed class InventoryController : BaseAuthorizedController
         {
             Keywords = keywords,
             WarehouseId = null,
+            IncludeDirectTransit = includeDS,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         });

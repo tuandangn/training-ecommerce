@@ -6,6 +6,7 @@ using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 
@@ -17,22 +18,37 @@ public sealed class InventoryAppService : IInventoryAppService
     private readonly IEntityDataReader<ProductReservationLedger> _reservationLedgerReader;
     private readonly IEntityDataReader<Product> _productReader;
     private readonly IEntityDataReader<Order> _orderReader;
+    private readonly IEntityDataReader<Warehouse> _warehouseReader;
 
     public InventoryAppService(
         IInventoryStockManager stockManager,
         IEntityDataReader<ProductReservationLedger> reservationLedgerReader,
         IEntityDataReader<Product> productReader,
-        IEntityDataReader<Order> orderReader)
+        IEntityDataReader<Order> orderReader,
+        IEntityDataReader<Warehouse> warehouseReader)
     {
         _stockManager = stockManager;
         _reservationLedgerReader = reservationLedgerReader;
         _productReader = productReader;
         _orderReader = orderReader;
+        _warehouseReader = warehouseReader;
     }
 
-    public async Task<IPagedDataAppDto<InventoryStockAppDto>> GetInventoryStocksAsync(int pageIndex, int pageSize, Guid? warehouseId = null, Guid? productId = null, string keywords = null)
+    public async Task<IPagedDataAppDto<InventoryStockAppDto>> GetInventoryStocksAsync(int pageIndex, int pageSize,
+        Guid? warehouseId = null, Guid? productId = null, string? keywords = null, bool includeDirectTransit = false)
     {
-        var (total, dataItems) = await _stockManager.GetInventoryStocksAsync(pageIndex, pageSize, productId, warehouseId, keywords).ConfigureAwait(false);
+        Guid?[]? warehouseIds = null;
+        if (warehouseId.HasValue)
+            warehouseIds = [warehouseId.Value];
+        else
+        {
+            var warehouses = await _warehouseReader.GetAllAsync().ConfigureAwait(false);
+            warehouseIds = includeDirectTransit
+                ? warehouses.Select(warehouse => (Guid?)warehouse.Id).ToArray()
+                : warehouses.Where(warehouse => warehouse.WarehouseType != WarehouseType.DirectTransit).Select(warehouse => (Guid?)warehouse.Id).ToArray();
+        }
+
+        var (total, dataItems) = await _stockManager.GetInventoryStocksAsync(pageIndex, pageSize, warehouseIds, [productId], keywords).ConfigureAwait(false);
         var productIds = dataItems.Select(x => x.ProductId).Distinct().ToList();
         var reservedByOrder = _reservationLedgerReader.DataSource
             .Where(x => productIds.Contains(x.ProductId))

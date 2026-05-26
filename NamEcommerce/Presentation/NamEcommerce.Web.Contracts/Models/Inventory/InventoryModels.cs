@@ -7,6 +7,7 @@ public sealed class InventoryStockListModel
 {
     public string? Keywords { get; init; }
     public Guid? WarehouseId { get; init; }
+    public bool IncludeDirectTransit { get; set; }
     public required IPagedDataModel<ItemModel> Data { get; init; }
 
     [Serializable]

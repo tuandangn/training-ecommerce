@@ -6,32 +6,48 @@
 
 @section Styles {
     <style>
-        .stock-table { font-variant-numeric: tabular-nums; }
-        .stock-table thead th {
-            background: #f8f9fa;
-            color: #6c757d;
-            font-size: 0.72rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            border-bottom: 1px solid #e9ecef;
-            white-space: nowrap;
+        .stock-table {
+            font-variant-numeric: tabular-nums;
         }
-        .stock-table tbody tr { transition: background-color 120ms ease; }
-        .stock-table tbody tr.is-low-stock > td:first-child {
-            box-shadow: inset 3px 0 0 var(--bs-danger);
-        }
-        .stock-table tbody tr.is-low-stock { background-color: rgba(var(--bs-danger-rgb), 0.03); }
-        .stock-table .col-product { min-width: 240px; max-width: 320px; }
-        .stock-table .product-name {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .stock-table .btn:focus-visible {
-            outline: 2px solid var(--bs-primary);
-            outline-offset: 2px;
-        }
+
+            .stock-table thead th {
+                background: #f8f9fa;
+                color: #6c757d;
+                font-size: 0.72rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                border-bottom: 1px solid #e9ecef;
+                white-space: nowrap;
+            }
+
+            .stock-table tbody tr {
+                transition: background-color 120ms ease;
+            }
+
+                .stock-table tbody tr.is-low-stock > td:first-child {
+                    box-shadow: inset 3px 0 0 var(--bs-danger);
+                }
+
+                .stock-table tbody tr.is-low-stock {
+                    background-color: rgba(var(--bs-danger-rgb), 0.03);
+                }
+
+            .stock-table .col-product {
+                min-width: 240px;
+                max-width: 320px;
+            }
+
+            .stock-table .product-name {
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .stock-table .btn:focus-visible {
+                outline: 2px solid var(--bs-primary);
+                outline-offset: 2px;
+            }
     </style>
 }
 
@@ -42,9 +58,6 @@
             <p class="text-muted small mb-0">Theo dõi và cân đối hàng hóa trên toàn hệ thống</p>
         </div>
         <div class="d-flex gap-2 align-items-center">
-            <a asp-action="CostingPolicy" class="btn btn-outline-secondary rounded-3 px-4 shadow-sm" title="Cài đặt giá vốn">
-                <i class="bi bi-calculator me-1" aria-hidden="true"></i> Giá vốn
-            </a>
             <div class="responsive-list-toolbar" role="group" aria-label="Chọn kiểu hiển thị">
                 <button type="button" class="responsive-list-toggle" data-list-view="list" title="Dạng danh sách" aria-label="Dạng danh sách" aria-pressed="false">
                     <i class="bi bi-list-ul" aria-hidden="true"></i>
@@ -53,6 +66,9 @@
                     <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
                 </button>
             </div>
+            <a asp-action="CostingPolicy" class="btn btn-outline-secondary rounded-3 px-4 shadow-sm" title="Cài đặt giá vốn">
+                <i class="bi bi-calculator me-1" aria-hidden="true"></i> Giá vốn
+            </a>
             <button type="button" class="btn btn-outline-primary rounded-3 px-4 shadow-sm" onclick="window.location.reload()">
                 <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
             </button>
@@ -68,6 +84,12 @@
                         <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
                         <input type="text" name="Keywords" class="form-control border-start-0 ps-0"
                                placeholder="Tìm theo tên sản phẩm hoặc mã..." value="@query">
+                    </div>
+                    <div class="form-check mt-1 ms-1">
+                        <input class="form-check-input" type="checkbox" value="true" name="includeDs" id="includeDs" checked="@Model.IncludeDirectTransit">
+                        <label class="form-check-label" for="includeDs">
+                            Hiển thị kho trực tiếp
+                        </label>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -86,8 +108,8 @@
                     <thead>
                         <tr>
                             <th class="ps-4 py-3 col-product">Sản phẩm</th>
+                            <th class="text-end py-3">Đã đặt</th>
                             <th class="py-3">Kho</th>
-                            <th class="text-end py-3">&#272;&#227; &#273;&#7863;t</th>
                             <th class="text-end py-3">Thực tế</th>
                             <th class="text-end py-3">Chờ giao</th>
                             <th class="text-end py-3">Sẵn có</th>
@@ -104,15 +126,9 @@
                             var availablePercent = item.QuantityOnHand > 0 ? (item.QuantityAvailable / item.QuantityOnHand * 100) : 0;
                             var isLow = item.QuantityAvailable < 5;
                             var rowClass = isLow ? "is-low-stock" : "";
-
                             <tr class="@rowClass">
                                 <td class="ps-4 col-product">
                                     <div class="product-name fw-semibold text-dark" title="@item.ProductName">@item.ProductName</div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-light text-muted rounded-pill px-2 fw-normal">
-                                        <i class="bi bi-geo-alt me-1"></i> @item.WarehouseName
-                                    </span>
                                 </td>
                                 <td class="text-end">
                                     @if (item.TotalReservedByOrder > 0)
@@ -129,17 +145,22 @@
                                         <span class="text-muted">@item.TotalReservedByOrder.DisplayQuantity()</span>
                                     }
                                 </td>
+                                <td>
+                                    <span class="badge bg-light text-muted rounded-pill px-2 fw-normal">
+                                        <i class="bi bi-geo-alt me-1"></i> @item.WarehouseName
+                                    </span>
+                                </td>
                                 <td class="text-end fw-semibold">@item.QuantityOnHand.DisplayQuantity()</td>
                                 <td class="text-end fw-semibold text-warning">@item.QuantityReserved.DisplayQuantity()</td>
-                                <td class="text-end">
-                                    <span class="fw-bold text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</span>
+                                <td class="text-end text-nowrap">
                                     @if (isLow)
                                     {
-                                        <span class="badge bg-danger-subtle text-danger rounded-pill px-2 ms-1 fw-semibold" title="Sắp hết hàng">
+                                        <span class="badge bg-danger-subtle text-danger rounded-pill pe-1 fw-semibold" title="Sắp hết hàng">
                                             <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
                                             <span class="visually-hidden">Sắp hết hàng</span>
                                         </span>
                                     }
+                                    <span class="fw-bold text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</span>
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center gap-2">
@@ -214,31 +235,15 @@
 
                         <div class="card-body px-4 pt-0">
                             <div class="row g-0 mb-4 bg-light rounded-4 p-3 border border-light">
-                                <div class="col-3 border-end border-white text-center">
+                                <div class="col-4 border-end border-white text-center">
                                     <div class="small text-muted mb-1">Thực tế</div>
                                     <div class="fw-bold fs-5">@item.QuantityOnHand.DisplayQuantity()</div>
                                 </div>
-                                <div class="col-3 border-end border-white text-center">
+                                <div class="col-4 border-end border-white text-center">
                                     <div class="small text-muted mb-1">Chờ giao</div>
                                     <div class="fw-bold fs-5 text-warning">@item.QuantityReserved.DisplayQuantity()</div>
                                 </div>
-                                <div class="col-3 border-end border-white text-center">
-                                    <div class="small text-muted mb-1">&#272;&#227; &#273;&#7863;t</div>
-                                    @if (item.TotalReservedByOrder > 0)
-                                    {
-                                        <a class="fw-bold fs-5 text-primary text-decoration-none"
-                                           asp-action="ReservationLedger"
-                                           asp-route-productId="@item.ProductId"
-                                           title="Xem ledger dat hang cua @item.ProductName">
-                                            @item.TotalReservedByOrder.DisplayQuantity()
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <div class="fw-bold fs-5 text-muted">@item.TotalReservedByOrder.DisplayQuantity()</div>
-                                    }
-                                </div>
-                                <div class="col-3 text-center">
+                                <div class="col-4 text-center">
                                     <div class="small text-muted mb-1">Sẵn có</div>
                                     <div class="fw-bold fs-5 text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</div>
                                 </div>
@@ -251,6 +256,22 @@
                                 </div>
                                 <div class="progress rounded-pill" style="height: 8px;">
                                     <div class="progress-bar bg-@stockHealth" role="progressbar" style="width: @availablePercent%"></div>
+                                </div>
+                                <div>
+                                    <span class="small text-muted mb-1">Đã đặt:</span>
+                                    @if (item.TotalReservedByOrder > 0)
+                                    {
+                                        <a class="fw-bold fs-5 text-primary text-decoration-none"
+                                           asp-action="ReservationLedger"
+                                           asp-route-productId="@item.ProductId"
+                                           title="Xem ledger dat hang cua @item.ProductName">
+                                            @item.TotalReservedByOrder.DisplayQuantity()
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="fw-bold fs-5 text-muted">@item.TotalReservedByOrder.DisplayQuantity()</span>
+                                    }
                                 </div>
                             </div>
                         </div>

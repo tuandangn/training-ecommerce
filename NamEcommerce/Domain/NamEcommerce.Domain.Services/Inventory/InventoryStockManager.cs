@@ -218,13 +218,19 @@ public sealed class InventoryStockManager : IInventoryStockManager
         await _inventoryStockRepository.UpdateAsync(stock).ConfigureAwait(false);
     }
 
-    public async Task<(int Total, List<InventoryStockDto> Items)> GetInventoryStocksAsync(int pageIndex, int pageSize, Guid? warehouseId = null, Guid? productId = null, string? keywords = null)
+    public Task<(int Total, List<InventoryStockDto> Items)> GetInventoryStocksAsync(int pageIndex, int pageSize,
+        Guid? warehouseId = null, Guid? productId = null, string? keywords = null)
+        => GetInventoryStocksAsync(pageIndex, pageSize, [warehouseId], [productId], keywords: keywords);
+
+    public async Task<(int Total, List<InventoryStockDto> Items)> GetInventoryStocksAsync(int pageIndex, int pageSize, Guid?[]? warehouseIds = null, Guid?[]? productIds = null, string? keywords = null)
     {
         var inventoryStockQuery = _inventoryStockDataReader.DataSource;
-        if (productId.HasValue)
-            inventoryStockQuery = inventoryStockQuery.Where(x => x.ProductId == productId);
-        if (warehouseId.HasValue)
-            inventoryStockQuery = inventoryStockQuery.Where(x => x.WarehouseId == warehouseId);
+        var searchProductIds = productIds?.OfType<Guid>().ToArray() ?? [];
+        var searchWarehouseIds = warehouseIds?.OfType<Guid>().ToArray() ?? [];
+        if (searchProductIds.Length > 0)
+            inventoryStockQuery = inventoryStockQuery.Where(x => searchProductIds.Contains(x.ProductId));
+        if (searchWarehouseIds.Length > 0)
+            inventoryStockQuery = inventoryStockQuery.Where(x => searchWarehouseIds.Contains(x.WarehouseId));
 
         var productQuery = _productDataReader.DataSource;
         var warehouseQuery = _warehouseDataReader.DataSource;
@@ -742,4 +748,5 @@ public sealed class InventoryStockManager : IInventoryStockManager
 
         return stocks.Items.FirstOrDefault();
     }
+
 }

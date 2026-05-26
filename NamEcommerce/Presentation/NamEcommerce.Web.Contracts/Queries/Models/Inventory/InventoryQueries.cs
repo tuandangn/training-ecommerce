@@ -7,6 +7,7 @@ public sealed class GetInventoryStockListQuery : IRequest<InventoryStockListMode
 {
     public string? Keywords { get; init; }
     public Guid? WarehouseId { get; init; }
+    public bool IncludeDirectTransit { get; set; }
     public int PageIndex { get; init; }
     public int PageSize { get; init; }
 }

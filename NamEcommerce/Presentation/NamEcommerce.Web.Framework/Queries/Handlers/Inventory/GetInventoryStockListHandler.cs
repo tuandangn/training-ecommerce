@@ -17,12 +17,13 @@ public sealed class GetInventoryStockListHandler : IRequestHandler<GetInventoryS
 
     public async Task<InventoryStockListModel> Handle(GetInventoryStockListQuery request, CancellationToken cancellationToken)
     {
-        var pagedData = await _inventoryAppService.GetInventoryStocksAsync(request.PageIndex, request.PageSize, request.WarehouseId, null, request.Keywords);
+        var pagedData = await _inventoryAppService.GetInventoryStocksAsync(request.PageIndex, request.PageSize, request.WarehouseId, null, request.Keywords, request.IncludeDirectTransit);
 
         var model = new InventoryStockListModel
         {
             Keywords = request.Keywords,
             WarehouseId = request.WarehouseId,
+            IncludeDirectTransit = request.IncludeDirectTransit,
             Data = pagedData.MapToModel(item => new InventoryStockListModel.ItemModel(item.Id)
             {
                 ProductId = item.ProductId,

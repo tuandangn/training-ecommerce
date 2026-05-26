@@ -41,6 +41,7 @@ public interface IInventoryStockManager
         string? note = null);
 
     Task<(int Total, List<InventoryStockDto> Items)> GetInventoryStocksAsync(int pageIndex, int pageSize, Guid? warehouseId = null, Guid? productId = null, string? keywords = null);
+    Task<(int Total, List<InventoryStockDto> Items)> GetInventoryStocksAsync(int pageIndex, int pageSize, Guid?[]? warehouseIds = null, Guid?[]? productIds = null, string? keywords = null);
     Task<InventoryStockDto?> GetInventoryStockForProductAsync(Guid productId, Guid warehouseId);
     Task<IEnumerable<InventoryStockDto>> GetInventoryStocksForProductAsync(Guid productId);
     Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId);
