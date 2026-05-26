@@ -83,59 +83,54 @@
 
 @if (items.Count > 0)
 {
-    <div class="cost-history-list">
+    <div class="cost-history-compact-list">
         @foreach (var history in items)
         {
-            <div class="cost-history-item">
-                <div class="cost-history-item-main">
+            <div class="cost-history-compact-item">
+                <div class="cost-history-compact-main">
                     <div>
-                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                             <span class="badge rounded-pill @GetMovementBadgeClass(history.MovementType)">
                                 @GetMovementText(history.MovementType)
                             </span>
                             <span class="badge rounded-pill @GetStatusBadgeClass(history.CostingStatus)">
                                 @GetStatusText(history.CostingStatus)
                             </span>
+                            <span class="cost-history-compact-date">@history.OccurredAt.ToString(ViewConstants.DefaultDateTimeFormat)</span>
                         </div>
-                        <div class="fw-semibold text-dark">@history.OccurredAt.ToString(ViewConstants.DefaultDateTimeFormat)</div>
-                        <div class="cost-history-meta mt-1">
+                        <div class="cost-history-meta">
                             <span><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>@history.WarehouseName</span>
                             <span>@GetReferenceText(history.ReferenceType)</span>
-                            <span>#@history.SequenceNumber</span>
                         </div>
                     </div>
-                    <div class="text-end">
-                        <div class="small text-muted">SL thay đổi</div>
-                        <div class="fw-bold fs-5 @QuantityDeltaClass(history.QuantityDelta)">
+                    <div class="cost-history-compact-qty">
+                        <div class="small text-muted">SL</div>
+                        <div class="fw-bold @QuantityDeltaClass(history.QuantityDelta)">
                             @QuantityDeltaSign(history.QuantityDelta)@history.QuantityDelta.DisplayQuantity()
                         </div>
                     </div>
                 </div>
 
-                <div class="cost-history-metrics">
-                    <div class="cost-history-metric">
-                        <div class="cost-history-metric-label">Đơn giá</div>
-                        <div class="cost-history-metric-value">@(history.UnitCost.HasValue ? history.UnitCost.Value.DisplayCurrencyWithSymbol() : "-")</div>
+                <div class="cost-history-compact-metrics">
+                    <div class="cost-history-compact-metric">
+                        <span class="cost-history-compact-metric-label">Đơn giá</span>
+                        <span class="cost-history-compact-metric-value">@(history.UnitCost.HasValue ? history.UnitCost.Value.DisplayCurrencyWithSymbol() : "-")</span>
                     </div>
-                    <div class="cost-history-metric">
-                        <div class="cost-history-metric-label">Thành tiền</div>
-                        <div class="cost-history-metric-value">@(history.TotalCost.HasValue ? history.TotalCost.Value.DisplayCurrencyWithSymbol() : "-")</div>
+                    <div class="cost-history-compact-metric">
+                        <span class="cost-history-compact-metric-label">Thành tiền</span>
+                        <span class="cost-history-compact-metric-value">@(history.TotalCost.HasValue ? history.TotalCost.Value.DisplayCurrencyWithSymbol() : "-")</span>
                     </div>
-                    <div class="cost-history-metric">
-                        <div class="cost-history-metric-label">Tồn sau</div>
-                        <div class="cost-history-metric-value">@history.QuantityBalanceAfter.DisplayQuantity()</div>
+                    <div class="cost-history-compact-metric">
+                        <span class="cost-history-compact-metric-label">Tồn sau</span>
+                        <span class="cost-history-compact-metric-value">@history.QuantityBalanceAfter.DisplayQuantity()</span>
                     </div>
-                    <div class="cost-history-metric">
-                        <div class="cost-history-metric-label">Giá trị tồn</div>
-                        <div class="cost-history-metric-value">@history.ValueBalanceAfter.DisplayCurrencyWithSymbol()</div>
+                    <div class="cost-history-compact-metric">
+                        <span class="cost-history-compact-metric-label">Giá trị tồn</span>
+                        <span class="cost-history-compact-metric-value">@history.ValueBalanceAfter.DisplayCurrencyWithSymbol()</span>
                     </div>
-                    <div class="cost-history-metric">
-                        <div class="cost-history-metric-label">BQ sau</div>
-                        <div class="cost-history-metric-value">@history.AverageCostAfter.DisplayCurrencyWithSymbol()</div>
-                    </div>
-                    <div class="cost-history-metric">
-                        <div class="cost-history-metric-label">Mã nguồn</div>
-                        <div class="cost-history-metric-value text-truncate" title="@history.ReferenceId">@history.ReferenceId</div>
+                    <div class="cost-history-compact-metric">
+                        <span class="cost-history-compact-metric-label">BQ sau</span>
+                        <span class="cost-history-compact-metric-value">@history.AverageCostAfter.DisplayCurrencyWithSymbol()</span>
                     </div>
                 </div>
             </div>

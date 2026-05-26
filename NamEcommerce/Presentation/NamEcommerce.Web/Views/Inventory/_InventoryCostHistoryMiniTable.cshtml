@@ -44,45 +44,39 @@
 
 @if (items.Count > 0)
 {
-    <div class="cost-history-list">
-        @foreach (var history in items)
-        {
-            <div class="cost-history-item">
-                <div class="cost-history-item-main">
-                    <div>
-                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0 cost-mini-table">
+            <thead>
+                <tr>
+                    <th>Ngày</th>
+                    <th>Loại</th>
+                    <th>Kho</th>
+                    <th class="text-end">SL</th>
+                    <th class="text-end">Đơn giá</th>
+                    <th class="text-end">Tồn sau</th>
+                    <th class="text-end">BQ sau</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var history in items)
+                {
+                    <tr>
+                        <td>@history.OccurredAt.ToString(ViewConstants.DefaultDateTimeFormat)</td>
+                        <td>
                             <span class="badge rounded-pill @GetMovementBadgeClass(history.MovementType)">
                                 @GetMovementText(history.MovementType)
                             </span>
-                            <span class="text-muted small">@history.OccurredAt.ToString(ViewConstants.DefaultDateTimeFormat)</span>
-                        </div>
-                        <div class="cost-history-meta">
-                            <span><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>@history.WarehouseName</span>
-                            <span>#@history.SequenceNumber</span>
-                        </div>
-                    </div>
-                    <div class="text-end">
-                        <div class="small text-muted">SL thay đổi</div>
-                        <div class="fw-bold @QuantityDeltaClass(history.QuantityDelta)">
+                        </td>
+                        <td class="text-muted">@history.WarehouseName</td>
+                        <td class="text-end fw-semibold @QuantityDeltaClass(history.QuantityDelta)">
                             @QuantityDeltaSign(history.QuantityDelta)@history.QuantityDelta.DisplayQuantity()
-                        </div>
-                    </div>
-                </div>
-                <div class="cost-history-metrics">
-                    <div class="cost-history-metric">
-                        <div class="cost-history-metric-label">Đơn giá</div>
-                        <div class="cost-history-metric-value">@(history.UnitCost.HasValue ? history.UnitCost.Value.DisplayCurrencyWithSymbol() : "-")</div>
-                    </div>
-                    <div class="cost-history-metric">
-                        <div class="cost-history-metric-label">Tồn sau</div>
-                        <div class="cost-history-metric-value">@history.QuantityBalanceAfter.DisplayQuantity()</div>
-                    </div>
-                    <div class="cost-history-metric">
-                        <div class="cost-history-metric-label">BQ sau</div>
-                        <div class="cost-history-metric-value">@history.AverageCostAfter.DisplayCurrencyWithSymbol()</div>
-                    </div>
-                </div>
-            </div>
-        }
+                        </td>
+                        <td class="text-end">@(history.UnitCost.HasValue ? history.UnitCost.Value.DisplayCurrencyWithSymbol() : "-")</td>
+                        <td class="text-end">@history.QuantityBalanceAfter.DisplayQuantity()</td>
+                        <td class="text-end">@history.AverageCostAfter.DisplayCurrencyWithSymbol()</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     </div>
 }
