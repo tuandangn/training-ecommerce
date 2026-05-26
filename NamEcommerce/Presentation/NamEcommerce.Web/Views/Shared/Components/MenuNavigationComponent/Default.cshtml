@@ -6,10 +6,11 @@
             <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Dashboard
         </a>
     </li>
-    
+
     <!-- Bán hàng -->
     <li class="nav-item">
-        <a class="nav-link @(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn", "DirectShipDelivery") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseSales" aria-expanded="@(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn", "DirectShipDelivery") ? "true" : "false")">
+        <a class="nav-link @(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn") || WebHelper.IsMatchRouteInfo("PurchaseOrder", "ShortageAggregation") ? "" : "collapsed")"
+           data-bs-toggle="collapse" href="#collapseSales" aria-expanded="@(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn") || WebHelper.IsMatchRouteInfo("PurchaseOrder", "ShortageAggregation") ? "true" : "false")">
             <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Bán hàng
         </a>
         <div class="collapse @(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn", "DirectShipDelivery") ? "show" : "")" id="collapseSales">
@@ -18,15 +19,13 @@
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("Order") ? "active" : "")" asp-controller="Order" asp-action="List">Đơn hàng</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerReturn") ? "active" : "")" asp-controller="CustomerReturn" asp-action="List">Khách trả hàng</a>
-                </li>
-                <li class="nav-item">
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("Preparation") ? "active" : "")" asp-controller="Preparation" asp-action="List">Chuẩn bị hàng</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("DirectShipDelivery") ? "active" : "")" asp-controller="DirectShipDelivery" asp-action="Pending">
-                        Giao thẳng từ nhà cung cấp
-                    </a>
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("PurchaseOrder", "ShortageAggregation") ? "active" : "")" asp-controller="PurchaseOrder" asp-action="ShortageAggregation">Hàng cần nhập</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("CustomerReturn") ? "active" : "")" asp-controller="CustomerReturn" asp-action="List">Khách trả hàng</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("Customer") ? "active" : "")" asp-controller="Customer" asp-action="List">Khách hàng</a>
@@ -37,7 +36,7 @@
 
     <!-- Mua hàng -->
     <li class="nav-item">
-        <a class="nav-link @(WebHelper.IsHasController("PurchaseOrder", "Vendor", "VendorReturn") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapsePurchases" aria-expanded="@(WebHelper.IsHasController("PurchaseOrder", "Vendor", "VendorReturn") ? "true" : "false")">
+        <a class="nav-link @(WebHelper.IsHasController("PurchaseOrder", "Vendor", "VendorReturn", "DirectShipDelivery") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapsePurchases" aria-expanded="@(WebHelper.IsHasController("PurchaseOrder", "Vendor", "VendorReturn", "DirectShipDelivery") ? "true" : "false")">
             <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Nhập hàng
         </a>
         <div class="collapse @(WebHelper.IsHasController("PurchaseOrder", "Vendor", "VendorReturn") ? "show" : "")" id="collapsePurchases">
@@ -46,13 +45,19 @@
                     <a class="nav-link @(WebHelper.IsMatchRouteInfo("PurchaseOrder", "List") || WebHelper.IsMatchRouteInfo("PurchaseOrder", "Create") || WebHelper.IsMatchRouteInfo("PurchaseOrder", "Details") ? "active" : "")" asp-controller="PurchaseOrder" asp-action="List">Đơn nhập</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("PurchaseOrder", "ShortageAggregation") ? "active" : "")" asp-controller="PurchaseOrder" asp-action="ShortageAggregation">Hàng cần nhập</a>
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("DirectShipDelivery") ? "active" : "")" asp-controller="DirectShipDelivery" asp-action="Pending">
+                        Hàng giao thẳng
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("VendorReturn") ? "active" : "")" asp-controller="VendorReturn" asp-action="List">Trả hàng NCC</a>
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("VendorReturn") ? "active" : "")" asp-controller="VendorReturn" asp-action="List">
+                        Trả hàng NCC
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Vendor") ? "active" : "")" asp-controller="Vendor" asp-action="Index">Nhà cung cấp</a>
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Vendor") ? "active" : "")" asp-controller="Vendor" asp-action="Index">
+                        Nhà cung cấp
+                    </a>
                 </li>
             </ul>
         </div>

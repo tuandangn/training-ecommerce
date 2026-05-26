@@ -1,8 +1,11 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Application.Contracts.Dtos.Inventory;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 using NamEcommerce.Web.Contracts.Configurations;
+using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Models.Inventory;
 
@@ -12,16 +15,18 @@ public sealed class InventoryController : BaseAuthorizedController
 {
     private readonly AppConfig _appConfig;
     private readonly IMediator _mediator;
+    private readonly IInventoryAppService _inventoryAppService;
 
-    public InventoryController(AppConfig appConfig, IMediator mediator)
+    public InventoryController(AppConfig appConfig, IMediator mediator, IInventoryAppService inventoryAppService)
     {
         _appConfig = appConfig;
         _mediator = mediator;
+        _inventoryAppService = inventoryAppService;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(StockList));
 
-    public async Task<IActionResult> StockList(int pageNumber = 1, string? keywords = null)
+    public async Task<IActionResult> StockList(int pageNumber = 1, string? keywords = null, bool includeDS = false, bool groupByProduct = false)
     {
         var pageSize = _appConfig.DefaultPageSize;
 
@@ -29,11 +34,19 @@ public sealed class InventoryController : BaseAuthorizedController
         {
             Keywords = keywords,
             WarehouseId = null,
+            IncludeDirectTransit = includeDS,
+            GroupByProduct = groupByProduct,
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         });
 
         return View(model);
+    }
+
+    public async Task<IActionResult> CostHistory(Guid productId, Guid? warehouseId = null, int take = 20)
+    {
+        var items = await _inventoryAppService.GetInventoryCostHistoryAsync(productId, warehouseId, take);
+        return PartialView("_InventoryCostHistoryFullTable", items.Select(MapCostHistory).ToList());
     }
 
     public async Task<IActionResult> MovementLogs(Guid productId, Guid warehouseId, int pageNumber = 1)
@@ -148,4 +161,26 @@ public sealed class InventoryController : BaseAuthorizedController
 
         return Json(new { success = result.Success, errorMessage = result.ErrorMessage });
     }
+
+    private static InventoryStockListModel.CostHistoryItemModel MapCostHistory(InventoryCostHistoryAppDto item)
+        => new(item.Id)
+        {
+            ProductId = item.ProductId,
+            ProductName = item.ProductName,
+            WarehouseId = item.WarehouseId,
+            WarehouseName = item.WarehouseName,
+            OccurredAt = item.OccurredAtUtc.ToLocalTime(),
+            SequenceNumber = item.SequenceNumber,
+            MovementType = item.MovementType,
+            QuantityDelta = item.QuantityDelta,
+            UnitCost = item.UnitCost,
+            TotalCost = item.TotalCost,
+            QuantityBalanceAfter = item.QuantityBalanceAfter,
+            ValueBalanceAfter = item.ValueBalanceAfter,
+            AverageCostAfter = item.AverageCostAfter,
+            CostingStatus = item.CostingStatus,
+            ReferenceType = item.ReferenceType,
+            ReferenceId = item.ReferenceId,
+            ReferenceItemId = item.ReferenceItemId
+        };
 }

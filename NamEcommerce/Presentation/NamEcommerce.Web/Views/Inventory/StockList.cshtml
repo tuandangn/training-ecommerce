@@ -1,12 +1,26 @@
+@using System.Globalization
 @model NamEcommerce.Web.Contracts.Models.Inventory.InventoryStockListModel
 @{
     ViewData["Title"] = "Tồn kho";
     var query = Model.Keywords;
+    var totalCount = Model.GroupByProduct ? Model.GroupedData.Pagination.TotalCount : Model.Data.Pagination.TotalCount;
+    var listKey = Model.GroupByProduct ? "inventory-stock-product-list" : "inventory-stock-warehouse-list";
+}
+
+@functions {
+    private static decimal AvailablePercent(decimal quantityOnHand, decimal quantityAvailable)
+        => quantityOnHand > 0 ? Math.Clamp(quantityAvailable / quantityOnHand * 100, 0, 100) : 0;
+
+    private static string PercentWidth(decimal value)
+        => value.ToString("0.##", CultureInfo.InvariantCulture) + "%";
 }
 
 @section Styles {
     <style>
-        .stock-table { font-variant-numeric: tabular-nums; }
+        .stock-table {
+            font-variant-numeric: tabular-nums;
+        }
+
         .stock-table thead th {
             background: #f8f9fa;
             color: #6c757d;
@@ -17,34 +31,278 @@
             border-bottom: 1px solid #e9ecef;
             white-space: nowrap;
         }
-        .stock-table tbody tr { transition: background-color 120ms ease; }
+
+        .stock-table tbody tr {
+            transition: background-color 120ms ease;
+        }
+
         .stock-table tbody tr.is-low-stock > td:first-child {
             box-shadow: inset 3px 0 0 var(--bs-danger);
         }
-        .stock-table tbody tr.is-low-stock { background-color: rgba(var(--bs-danger-rgb), 0.03); }
-        .stock-table .col-product { min-width: 240px; max-width: 320px; }
+
+        .stock-table tbody tr.is-low-stock {
+            background-color: rgba(var(--bs-danger-rgb), 0.03);
+        }
+
+        .stock-table .col-product {
+            min-width: 240px;
+            max-width: 340px;
+        }
+
         .stock-table .product-name {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
+        .cost-inline-row > td {
+            background: #f8fafc;
+            border-top: 0;
+        }
+
+        .cost-inline-panel {
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            background: #fff;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+            padding: 0.85rem;
+        }
+
+        .cost-history-heading {
+            color: #475569;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .cost-mini-table {
+            font-variant-numeric: tabular-nums;
+        }
+
+        .cost-mini-table th {
+            color: #64748b;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.35rem 0.5rem;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .cost-mini-table td {
+            border-top-color: #edf2f7;
+            font-size: 0.8rem;
+            padding: 0.45rem 0.5rem;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .cost-history-list {
+            display: grid;
+            gap: 0.6rem;
+        }
+
+        .cost-history-item {
+            border: 1px solid #edf2f7;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 0.75rem;
+        }
+
+        .cost-history-item-main {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.75rem;
+            align-items: start;
+        }
+
+        .cost-history-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem 0.75rem;
+            color: #64748b;
+            font-size: 0.78rem;
+        }
+
+        .cost-history-metrics {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.7rem;
+        }
+
+        .cost-history-metric {
+            border-radius: 10px;
+            background: #f8fafc;
+            padding: 0.5rem 0.65rem;
+            min-width: 0;
+        }
+
+        .cost-history-metric-label {
+            color: #64748b;
+            font-size: 0.7rem;
+            margin-bottom: 0.1rem;
+        }
+
+        .cost-history-metric-value {
+            color: #0f172a;
+            font-size: 0.84rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .cost-history-compact-list {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .cost-history-compact-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fff;
+            padding: 0.7rem;
+        }
+
+        .cost-history-compact-main {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 0.7rem;
+            align-items: start;
+        }
+
+        .cost-history-compact-date {
+            color: #0f172a;
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .cost-history-compact-qty {
+            min-width: 72px;
+            text-align: right;
+        }
+
+        .cost-history-compact-metrics {
+            border-top: 1px solid #eef2f7;
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.55rem;
+            padding-top: 0.55rem;
+        }
+
+        .cost-history-compact-metric {
+            min-width: 0;
+        }
+
+        .cost-history-compact-metric-label {
+            color: #64748b;
+            display: block;
+            font-size: 0.68rem;
+            line-height: 1.2;
+            margin-bottom: 0.1rem;
+        }
+
+        .cost-history-compact-metric-value {
+            color: #0f172a;
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 700;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .cost-history-toggle[aria-expanded="true"] .bi-chevron-down {
+            transform: rotate(180deg);
+        }
+
+        .cost-history-toggle .bi-chevron-down {
+            transition: transform 160ms ease;
+        }
+
+        .warehouse-breakdown {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .warehouse-pill {
+            border: 1px solid #e2e8f0;
+            border-radius: 999px;
+            background: #f8fafc;
+            color: #475569;
+            display: inline-flex;
+            gap: 0.35rem;
+            align-items: center;
+            padding: 0.25rem 0.55rem;
+            font-size: 0.78rem;
+        }
+
+        @@media (max-width: 575.98px) {
+            .cost-history-item-main {
+                grid-template-columns: 1fr;
+            }
+
+            .cost-history-item-main > .text-end {
+                text-align: left !important;
+            }
+
+            .cost-history-metrics {
+                grid-template-columns: 1fr;
+            }
+
+            .cost-history-compact-main {
+                grid-template-columns: 1fr;
+            }
+
+            .cost-history-compact-qty {
+                text-align: left;
+            }
+
+            .cost-history-compact-metrics {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+        }
+
+        .history-action-group .btn:focus-visible,
         .stock-table .btn:focus-visible {
             outline: 2px solid var(--bs-primary);
             outline-offset: 2px;
         }
+
+        .history-action-group .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+        }
     </style>
 }
 
-<div class="container py-4" data-responsive-list data-list-key="inventory-stock-list">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container py-4" data-responsive-list data-list-key="@listKey">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4">
         <div>
             <h1 class="h3 mb-1 fw-bold">Quản lý Tồn kho</h1>
-            <p class="text-muted small mb-0">Theo dõi và cân đối hàng hóa trên toàn hệ thống</p>
+            <p class="text-muted small mb-0">Theo dõi tồn kho và giá vốn hàng bán theo dữ liệu InventoryCost</p>
         </div>
-        <div class="d-flex gap-2 align-items-center">
-            <a asp-action="CostingPolicy" class="btn btn-outline-secondary rounded-3 px-4 shadow-sm" title="Cài đặt giá vốn">
-                <i class="bi bi-calculator me-1" aria-hidden="true"></i> Giá vốn
-            </a>
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <div class="btn-group shadow-sm" role="group" aria-label="Chọn cách gom tồn kho">
+                <a asp-action="StockList"
+                   asp-route-keywords="@query"
+                   asp-route-includeDs="@Model.IncludeDirectTransit"
+                   asp-route-groupByProduct="false"
+                   class="btn btn-sm @(Model.GroupByProduct ? "btn-outline-secondary" : "btn-primary")">
+                    Theo kho
+                </a>
+                <a asp-action="StockList"
+                   asp-route-keywords="@query"
+                   asp-route-includeDs="@Model.IncludeDirectTransit"
+                   asp-route-groupByProduct="true"
+                   class="btn btn-sm @(Model.GroupByProduct ? "btn-primary" : "btn-outline-secondary")">
+                    Gom hàng hóa
+                </a>
+            </div>
             <div class="responsive-list-toolbar" role="group" aria-label="Chọn kiểu hiển thị">
                 <button type="button" class="responsive-list-toggle" data-list-view="list" title="Dạng danh sách" aria-label="Dạng danh sách" aria-pressed="false">
                     <i class="bi bi-list-ul" aria-hidden="true"></i>
@@ -53,21 +311,30 @@
                     <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
                 </button>
             </div>
+            <a asp-action="CostingPolicy" class="btn btn-outline-secondary rounded-3 px-4 shadow-sm" title="Cài đặt giá vốn">
+                <i class="bi bi-calculator me-1" aria-hidden="true"></i> Giá vốn
+            </a>
             <button type="button" class="btn btn-outline-primary rounded-3 px-4 shadow-sm" onclick="window.location.reload()">
                 <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
             </button>
         </div>
     </div>
 
-    <!-- Search & Filters -->
     <div class="card border-0 shadow-sm rounded-4 mb-4">
         <div class="card-body p-4">
             <form method="get" asp-action="StockList" class="row g-3">
+                <input type="hidden" name="groupByProduct" value="@Model.GroupByProduct.ToString().ToLowerInvariant()" />
                 <div class="col-md-9">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
                         <input type="text" name="Keywords" class="form-control border-start-0 ps-0"
-                               placeholder="Tìm theo tên sản phẩm hoặc mã..." value="@query">
+                               placeholder="Tìm theo tên sản phẩm hoặc kho..." value="@query">
+                    </div>
+                    <div class="form-check mt-1 ms-1">
+                        <input class="form-check-input" type="checkbox" value="true" name="includeDs" id="includeDs" checked="@Model.IncludeDirectTransit">
+                        <label class="form-check-label" for="includeDs">
+                            Hiển thị kho trực tiếp
+                        </label>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -77,206 +344,403 @@
         </div>
     </div>
 
-    @if (Model.Data.Pagination.TotalCount > 0)
+    @if (totalCount > 0)
     {
-        <!-- List view -->
         <div id="stock-list-view" class="responsive-list-panel card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" data-list-view-panel="list">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 stock-table">
-                    <thead>
-                        <tr>
-                            <th class="ps-4 py-3 col-product">Sản phẩm</th>
-                            <th class="py-3">Kho</th>
-                            <th class="text-end py-3">&#272;&#227; &#273;&#7863;t</th>
-                            <th class="text-end py-3">Thực tế</th>
-                            <th class="text-end py-3">Chờ giao</th>
-                            <th class="text-end py-3">Sẵn có</th>
-                            <th class="py-3" style="min-width: 200px;">Độ khả dụng</th>
-                            <th class="text-end py-3">Mức CB</th>
-                            <th class="py-3">Cập nhật</th>
-                            <th class="text-end pe-4 py-3">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model.Data)
-                        {
-                            var stockHealth = item.QuantityAvailable < 5 ? "danger" : (item.QuantityAvailable < 20 ? "warning" : "success");
-                            var availablePercent = item.QuantityOnHand > 0 ? (item.QuantityAvailable / item.QuantityOnHand * 100) : 0;
-                            var isLow = item.QuantityAvailable < 5;
-                            var rowClass = isLow ? "is-low-stock" : "";
-
-                            <tr class="@rowClass">
-                                <td class="ps-4 col-product">
-                                    <div class="product-name fw-semibold text-dark" title="@item.ProductName">@item.ProductName</div>
-                                </td>
-                                <td>
-                                    <span class="badge bg-light text-muted rounded-pill px-2 fw-normal">
-                                        <i class="bi bi-geo-alt me-1"></i> @item.WarehouseName
-                                    </span>
-                                </td>
-                                <td class="text-end">
-                                    @if (item.TotalReservedByOrder > 0)
-                                    {
-                                        <a class="fw-semibold text-primary text-decoration-none"
-                                           asp-action="ReservationLedger"
-                                           asp-route-productId="@item.ProductId"
-                                           title="Xem ledger dat hang cua @item.ProductName">
-                                            @item.TotalReservedByOrder.DisplayQuantity()
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">@item.TotalReservedByOrder.DisplayQuantity()</span>
-                                    }
-                                </td>
-                                <td class="text-end fw-semibold">@item.QuantityOnHand.DisplayQuantity()</td>
-                                <td class="text-end fw-semibold text-warning">@item.QuantityReserved.DisplayQuantity()</td>
-                                <td class="text-end">
-                                    <span class="fw-bold text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</span>
-                                    @if (isLow)
-                                    {
-                                        <span class="badge bg-danger-subtle text-danger rounded-pill px-2 ms-1 fw-semibold" title="Sắp hết hàng">
-                                            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
-                                            <span class="visually-hidden">Sắp hết hàng</span>
-                                        </span>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <div class="progress rounded-pill flex-grow-1" style="height: 6px;" role="progressbar" aria-valuenow="@availablePercent.ToString("N0")" aria-valuemin="0" aria-valuemax="100">
-                                            <div class="progress-bar bg-@stockHealth" style="width: @availablePercent%"></div>
-                                        </div>
-                                        <span class="small fw-bold text-@stockHealth text-end" style="min-width: 42px;">@availablePercent.ToString("N0")%</span>
-                                    </div>
-                                </td>
-                                <td class="text-end">
-                                    @if (item.ReorderLevel > 0)
-                                    {
-                                        <span class="fw-semibold">@item.ReorderLevel.DisplayQuantity()</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted small">—</span>
-                                    }
-                                </td>
-                                <td class="text-muted small">
-                                    <i class="bi bi-clock me-1" aria-hidden="true"></i> @item.UpdatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
-                                </td>
-                                <td class="text-end pe-4">
-                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 btn-set-stock-levels"
-                                            data-id="@item.Id"
-                                            data-product-name="@item.ProductName"
-                                            data-warehouse-name="@item.WarehouseName"
-                                            data-reorder-level="@item.ReorderLevel"
-                                            data-max-stock-level="@item.MaxStockLevel"
-                                            title="Cấu hình mức tồn">
-                                        <i class="bi bi-sliders" aria-hidden="true"></i>
-                                    </button>
-                                    <a class="btn btn-outline-dark btn-sm rounded-pill px-3"
-                                       asp-action="MovementLogs"
-                                       asp-route-productId="@item.ProductId"
-                                       asp-route-warehouseId="@item.WarehouseId"
-                                       title="Xem lịch sử nhập xuất"
-                                       aria-label="Xem lịch sử nhập xuất của @item.ProductName tại @item.WarehouseName">
-                                        <i class="bi bi-clock-history" aria-hidden="true"></i>
-                                    </a>
-                                </td>
+                @if (Model.GroupByProduct)
+                {
+                    <table class="table table-hover align-middle mb-0 stock-table">
+                        <thead>
+                            <tr>
+                                <th class="ps-4 py-3 col-product">Sản phẩm</th>
+                                <th class="text-end py-3">Giá vốn</th>
+                                <th class="py-3">Theo kho</th>
+                                <th class="text-end py-3">Thực tế</th>
+                                <th class="text-end py-3">Chờ giao</th>
+                                <th class="text-end py-3">Sẵn có</th>
+                                <th class="py-3">Cập nhật</th>
+                                <th class="text-end pe-4 py-3">Thao tác</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.GroupedData)
+                            {
+                                var stockHealth = item.QuantityAvailable < 5 ? "danger" : (item.QuantityAvailable < 20 ? "warning" : "success");
+                                var historyUrl = Url.Action("CostHistory", "Inventory", new { productId = item.ProductId });
+                                var inlineHistoryId = $"cost-inline-product-{item.ProductId:N}";
+                                var hasCostHistory = item.CostHistory.Any();
+                                <tr>
+                                    <td class="ps-4 col-product">
+                                        <div class="product-name fw-semibold text-dark" title="@item.ProductName">@item.ProductName</div>
+                                        <div class="text-muted small">@item.Warehouses.Count kho</div>
+                                    </td>
+                                    <td class="text-end fw-bold text-info text-nowrap">@item.CurrentUnitCost.DisplayCurrencyWithSymbol()</td>
+                                    <td>
+                                        <div class="warehouse-breakdown">
+                                            @foreach (var warehouse in item.Warehouses)
+                                            {
+                                                <span class="warehouse-pill">
+                                                    <i class="bi bi-geo-alt" aria-hidden="true"></i>
+                                                    <span>@warehouse.WarehouseName:</span>
+                                                    <strong>@warehouse.QuantityOnHand.DisplayQuantity()</strong>
+                                                </span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td class="text-end fw-semibold">@item.QuantityOnHand.DisplayQuantity()</td>
+                                    <td class="text-end fw-semibold text-warning">@item.QuantityReserved.DisplayQuantity()</td>
+                                    <td class="text-end fw-bold text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</td>
+                                    <td class="text-muted small text-nowrap">
+                                        <i class="bi bi-clock me-1" aria-hidden="true"></i> @item.UpdatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group history-action-group">
+                                            @if (hasCostHistory)
+                                            {
+                                                <button type="button"
+                                                        class="btn btn-outline-dark btn-sm rounded-pill px-3 cost-history-toggle"
+                                                        data-bs-toggle="collapse"
+                                                        data-bs-target="#@inlineHistoryId"
+                                                        aria-expanded="false"
+                                                        aria-controls="@inlineHistoryId"
+                                                        title="Lịch sử giá vốn">
+                                                    <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
+                                                    <span class="visually-hidden">Giá vốn</span>
+                                                    <i class="bi bi-chevron-down ms-1" aria-hidden="true"></i>
+                                                </button>
+                                            }
+                                            <a class="btn btn-outline-primary btn-sm rounded-pill px-3"
+                                               asp-action="ReservationLedger"
+                                               asp-route-productId="@item.ProductId"
+                                               title="Lịch sử giữ hàng">
+                                                <i class="bi bi-list-check" aria-hidden="true"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @if (hasCostHistory)
+                                {
+                                    <tr class="cost-inline-row">
+                                        <td colspan="8" class="p-0 border-0">
+                                            <div class="collapse" id="@inlineHistoryId">
+                                                <div class="px-4 pb-3 pt-1">
+                                                    <div class="cost-inline-panel">
+                                                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                                            <span class="cost-history-heading">3 biến động giá vốn gần nhất</span>
+                                                            <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 btn-cost-history-panel"
+                                                                    data-history-url="@historyUrl"
+                                                                    data-history-title="Giá vốn - @item.ProductName">
+                                                                Xem đầy đủ
+                                                            </button>
+                                                        </div>
+                                                        @await Html.PartialAsync("_InventoryCostHistoryMiniTable", item.CostHistory.Take(3).ToList())
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <table class="table table-hover align-middle mb-0 stock-table">
+                        <thead>
+                            <tr>
+                                <th class="ps-4 py-3 col-product">Sản phẩm</th>
+                                <th class="text-end py-3">Giá vốn</th>
+                                <th class="text-end py-3">Đã đặt</th>
+                                <th class="py-3">Kho</th>
+                                <th class="text-end py-3">Thực tế</th>
+                                <th class="text-end py-3">Chờ giao</th>
+                                <th class="text-end py-3">Sẵn có</th>
+                                <th class="py-3" style="min-width: 200px;">Khả dụng</th>
+                                <th class="text-end pe-4 py-3">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Data)
+                            {
+                                var stockHealth = item.QuantityAvailable < 5 ? "danger" : (item.QuantityAvailable < 20 ? "warning" : "success");
+                                var availablePercent = AvailablePercent(item.QuantityOnHand, item.QuantityAvailable);
+                                var isLow = item.QuantityAvailable < 5;
+                                var rowClass = isLow ? "is-low-stock" : "";
+                                var historyUrl = Url.Action("CostHistory", "Inventory", new { productId = item.ProductId, warehouseId = item.WarehouseId });
+                                var inlineHistoryId = $"cost-inline-stock-{item.Id:N}";
+                                var hasCostHistory = item.CostHistory.Any();
+                                <tr class="@rowClass">
+                                    <td class="ps-4 col-product">
+                                        <div class="product-name fw-semibold text-dark" title="@item.ProductName">@item.ProductName</div>
+                                    </td>
+                                    <td class="text-end fw-bold text-info text-nowrap">@item.CurrentUnitCost.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end">
+                                        @if (item.TotalReservedByOrder > 0)
+                                        {
+                                            <a class="fw-semibold text-primary text-decoration-none"
+                                               asp-action="ReservationLedger"
+                                               asp-route-productId="@item.ProductId"
+                                               title="Xem lịch sử giữ hàng của @item.ProductName">
+                                                @item.TotalReservedByOrder.DisplayQuantity()
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">@item.TotalReservedByOrder.DisplayQuantity()</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-muted rounded-pill px-2 fw-normal">
+                                            <i class="bi bi-geo-alt me-1"></i> @item.WarehouseName
+                                        </span>
+                                    </td>
+                                    <td class="text-end fw-semibold">@item.QuantityOnHand.DisplayQuantity()</td>
+                                    <td class="text-end fw-semibold text-warning">@item.QuantityReserved.DisplayQuantity()</td>
+                                    <td class="text-end text-nowrap">
+                                        @if (isLow)
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger rounded-pill pe-1 fw-semibold" title="Sắp hết hàng">
+                                                <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                                                <span class="visually-hidden">Sắp hết hàng</span>
+                                            </span>
+                                        }
+                                        <span class="fw-bold text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="progress rounded-pill flex-grow-1" style="height: 6px;" role="progressbar" aria-valuenow="@availablePercent.ToString("N0")" aria-valuemin="0" aria-valuemax="100">
+                                                <div class="progress-bar bg-@stockHealth" style="width: @PercentWidth(availablePercent)"></div>
+                                            </div>
+                                            <span class="small fw-bold text-@stockHealth text-end" style="min-width: 42px;">@availablePercent.ToString("N0")%</span>
+                                        </div>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group history-action-group">
+                                            @if (hasCostHistory)
+                                            {
+                                                <button type="button"
+                                                        class="btn btn-outline-dark btn-sm rounded-pill px-3 cost-history-toggle"
+                                                        data-bs-toggle="collapse"
+                                                        data-bs-target="#@inlineHistoryId"
+                                                        aria-expanded="false"
+                                                        aria-controls="@inlineHistoryId"
+                                                        title="Lịch sử giá vốn">
+                                                    <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
+                                                    <span class="visually-hidden">Giá vốn</span>
+                                                    <i class="bi bi-chevron-down ms-1" aria-hidden="true"></i>
+                                                </button>
+                                            }
+                                            <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 btn-set-stock-levels"
+                                                    data-id="@item.Id"
+                                                    data-product-name="@item.ProductName"
+                                                    data-warehouse-name="@item.WarehouseName"
+                                                    data-reorder-level="@item.ReorderLevel"
+                                                    data-max-stock-level="@item.MaxStockLevel"
+                                                    title="Cấu hình mức tồn">
+                                                <i class="bi bi-sliders" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @if (hasCostHistory)
+                                {
+                                    <tr class="cost-inline-row">
+                                        <td colspan="9" class="p-0 border-0">
+                                            <div class="collapse" id="@inlineHistoryId">
+                                                <div class="px-4 pb-3 pt-1">
+                                                    <div class="cost-inline-panel">
+                                                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                                            <span class="cost-history-heading">3 biến động giá vốn gần nhất</span>
+                                                            <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 btn-cost-history-panel"
+                                                                    data-history-url="@historyUrl"
+                                                                    data-history-title="Giá vốn - @item.ProductName (@item.WarehouseName)">
+                                                                Xem đầy đủ
+                                                            </button>
+                                                        </div>
+                                                        @await Html.PartialAsync("_InventoryCostHistoryMiniTable", item.CostHistory.Take(3).ToList())
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                }
             </div>
         </div>
 
-        <!-- Grid view -->
         <div id="stock-grid-view" class="responsive-list-panel row g-4" data-list-view-panel="grid" hidden>
-            @foreach (var item in Model.Data)
+            @if (Model.GroupByProduct)
             {
-                var stockHealth = item.QuantityAvailable < 5 ? "danger" : (item.QuantityAvailable < 20 ? "warning" : "success");
-                var availablePercent = item.QuantityOnHand > 0 ? (item.QuantityAvailable / item.QuantityOnHand * 100) : 0;
-
-                <div class="col-md-6 col-lg-4">
-                    <div class="card border-0 shadow-sm rounded-4 h-100 hover-shadow transition">
-                        <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <span class="badge bg-light text-muted rounded-pill px-2">
-                                    <i class="bi bi-geo-alt me-1"></i> @item.WarehouseName
-                                </span>
-                                @if (item.QuantityAvailable < 5)
-                                {
-                                    <span class="badge bg-danger rounded-pill px-2">
-                                        <i class="bi bi-exclamation-triangle me-1"></i> Sắp hết hàng
-                                    </span>
-                                }
-                            </div>
-                            <h5 class="fw-bold mb-3 text-dark line-clamp-2" style="min-height: 3rem;">@item.ProductName</h5>
-                        </div>
-
-                        <div class="card-body px-4 pt-0">
-                            <div class="row g-0 mb-4 bg-light rounded-4 p-3 border border-light">
-                                <div class="col-3 border-end border-white text-center">
-                                    <div class="small text-muted mb-1">Thực tế</div>
-                                    <div class="fw-bold fs-5">@item.QuantityOnHand.DisplayQuantity()</div>
+                @foreach (var item in Model.GroupedData)
+                {
+                    var stockHealth = item.QuantityAvailable < 5 ? "danger" : (item.QuantityAvailable < 20 ? "warning" : "success");
+                    var historyUrl = Url.Action("CostHistory", "Inventory", new { productId = item.ProductId });
+                    var hasCostHistory = item.CostHistory.Any();
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card border-0 shadow-sm rounded-4 h-100">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between gap-3 mb-3">
+                                    <div>
+                                        <h5 class="fw-bold mb-1 text-dark line-clamp-2">@item.ProductName</h5>
+                                        <div class="text-muted small">@item.Warehouses.Count kho đang có hàng</div>
+                                    </div>
+                                    <span class="badge bg-info-subtle text-info align-self-start rounded-pill">@item.CurrentUnitCost.DisplayCurrencyWithSymbol()</span>
                                 </div>
-                                <div class="col-3 border-end border-white text-center">
-                                    <div class="small text-muted mb-1">Chờ giao</div>
-                                    <div class="fw-bold fs-5 text-warning">@item.QuantityReserved.DisplayQuantity()</div>
+
+                                <div class="row g-0 mb-3 bg-light rounded-4 p-3 border border-light">
+                                    <div class="col-4 border-end border-white text-center">
+                                        <div class="small text-muted mb-1">Thực tế</div>
+                                        <div class="fw-bold fs-5">@item.QuantityOnHand.DisplayQuantity()</div>
+                                    </div>
+                                    <div class="col-4 border-end border-white text-center">
+                                        <div class="small text-muted mb-1">Chờ giao</div>
+                                        <div class="fw-bold fs-5 text-warning">@item.QuantityReserved.DisplayQuantity()</div>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <div class="small text-muted mb-1">Sẵn có</div>
+                                        <div class="fw-bold fs-5 text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</div>
+                                    </div>
                                 </div>
-                                <div class="col-3 border-end border-white text-center">
-                                    <div class="small text-muted mb-1">&#272;&#227; &#273;&#7863;t</div>
-                                    @if (item.TotalReservedByOrder > 0)
+
+                                <div class="warehouse-breakdown mb-3">
+                                    @foreach (var warehouse in item.Warehouses)
                                     {
-                                        <a class="fw-bold fs-5 text-primary text-decoration-none"
-                                           asp-action="ReservationLedger"
-                                           asp-route-productId="@item.ProductId"
-                                           title="Xem ledger dat hang cua @item.ProductName">
-                                            @item.TotalReservedByOrder.DisplayQuantity()
-                                        </a>
-                                    }
-                                    else
-                                    {
-                                        <div class="fw-bold fs-5 text-muted">@item.TotalReservedByOrder.DisplayQuantity()</div>
+                                        <span class="warehouse-pill">
+                                            <i class="bi bi-geo-alt" aria-hidden="true"></i>
+                                            <span>@warehouse.WarehouseName:</span>
+                                            <strong>@warehouse.QuantityOnHand.DisplayQuantity()</strong>
+                                        </span>
                                     }
                                 </div>
-                                <div class="col-3 text-center">
-                                    <div class="small text-muted mb-1">Sẵn có</div>
-                                    <div class="fw-bold fs-5 text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</div>
-                                </div>
-                            </div>
 
-                            <div class="mb-4">
-                                <div class="d-flex justify-content-between small mb-1">
-                                    <span class="text-muted">Độ khả dụng</span>
-                                    <span class="fw-bold text-@stockHealth">@availablePercent.ToString("N0")%</span>
-                                </div>
-                                <div class="progress rounded-pill" style="height: 8px;">
-                                    <div class="progress-bar bg-@stockHealth" role="progressbar" style="width: @availablePercent%"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card-footer bg-white border-0 px-4 pb-4 pt-0">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="text-muted small">
-                                    <i class="bi bi-clock me-1"></i> @item.UpdatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
-                                </div>
-                                <div class="btn-group shadow-sm rounded-pill overflow-hidden">
-                                    <a class="btn btn-outline-dark btn-sm border-0 px-3" asp-action="MovementLogs" asp-route-productId="@item.ProductId" asp-route-warehouseId="@item.WarehouseId" title="Lịch sử">
-                                        <i class="bi bi-clock-history"></i>
-                                    </a>
-                                    <a class="btn btn-outline-primary btn-sm border-0 px-3" asp-action="ReservationLedger" asp-route-productId="@item.ProductId" title="Ledger dat hang">
-                                        <i class="bi bi-list-check"></i>
-                                    </a>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="text-muted small">
+                                        <i class="bi bi-clock me-1"></i> @item.UpdatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                                    </div>
+                                    @if (hasCostHistory)
+                                    {
+                                        <button type="button"
+                                                class="btn btn-outline-dark btn-sm rounded-pill px-3 btn-cost-history-panel"
+                                                data-history-url="@historyUrl"
+                                                data-history-title="Giá vốn - @item.ProductName">
+                                            <i class="bi bi-clock-history me-1" aria-hidden="true"></i> Giá vốn
+                                        </button>
+                                    }
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                }
+            }
+            else
+            {
+                @foreach (var item in Model.Data)
+                {
+                    var stockHealth = item.QuantityAvailable < 5 ? "danger" : (item.QuantityAvailable < 20 ? "warning" : "success");
+                    var availablePercent = AvailablePercent(item.QuantityOnHand, item.QuantityAvailable);
+                    var historyUrl = Url.Action("CostHistory", "Inventory", new { productId = item.ProductId, warehouseId = item.WarehouseId });
+                    var hasCostHistory = item.CostHistory.Any();
+
+                    <div class="col-md-6 col-xl-4">
+                        <div class="card border-0 shadow-sm rounded-4 h-100">
+                            <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <span class="badge bg-light text-muted rounded-pill px-2">
+                                        <i class="bi bi-geo-alt me-1"></i> @item.WarehouseName
+                                    </span>
+                                    @if (item.QuantityAvailable < 5)
+                                    {
+                                        <span class="badge bg-danger-subtle text-danger rounded-pill px-2">
+                                            <i class="bi bi-exclamation-triangle me-1"></i> Sắp hết hàng
+                                        </span>
+                                    }
+                                </div>
+                                <h5 class="fw-bold mb-3 text-dark line-clamp-2" style="min-height: 3rem;">@item.ProductName</h5>
+                            </div>
+
+                            <div class="card-body px-4 pt-0">
+                                <div class="row g-0 mb-4 bg-light rounded-4 p-3 border border-light">
+                                    <div class="col-4 border-end border-white text-center">
+                                        <div class="small text-muted mb-1">Thực tế</div>
+                                        <div class="fw-bold fs-5">@item.QuantityOnHand.DisplayQuantity()</div>
+                                    </div>
+                                    <div class="col-4 border-end border-white text-center">
+                                        <div class="small text-muted mb-1">Chờ giao</div>
+                                        <div class="fw-bold fs-5 text-warning">@item.QuantityReserved.DisplayQuantity()</div>
+                                    </div>
+                                    <div class="col-4 text-center">
+                                        <div class="small text-muted mb-1">Sẵn có</div>
+                                        <div class="fw-bold fs-5 text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between small mb-1">
+                                        <span class="text-muted">Độ khả dụng</span>
+                                        <span class="fw-bold text-@stockHealth">@availablePercent.ToString("N0")%</span>
+                                    </div>
+                                    <div class="progress rounded-pill" style="height: 8px;">
+                                        <div class="progress-bar bg-@stockHealth" role="progressbar" style="width: @PercentWidth(availablePercent)"></div>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center pb-2 mt-2">
+                                        <div>
+                                            <span class="small text-muted">Giá vốn</span>
+                                            <span class="fw-bold text-info">@item.CurrentUnitCost.DisplayCurrencyWithSymbol()</span>
+                                        </div>
+                                        <div>
+                                            <span class="small text-muted">Đang đặt</span>
+                                            @if (item.TotalReservedByOrder > 0)
+                                            {
+                                                <a class="fw-semibold fs-5 text-primary text-decoration-none" title="Xem lịch sử giữ hàng của @item.ProductName"
+                                                   asp-action="ReservationLedger" asp-route-productId="@item.ProductId">
+                                                    @item.TotalReservedByOrder.DisplayQuantity()
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <span class="fw-bold fs-5 text-muted">@item.TotalReservedByOrder.DisplayQuantity()</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div class="card-footer bg-white border-0 px-4 pb-4 pt-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="text-muted small">
+                                        <i class="bi bi-clock me-1"></i> @item.UpdatedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                                    </div>
+                                    <div class="btn-group shadow-sm rounded-pill overflow-hidden">
+                                        @if (hasCostHistory)
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-outline-dark btn-sm border-0 px-3 btn-cost-history-panel"
+                                                    data-history-url="@historyUrl"
+                                                    data-history-title="Giá vốn - @item.ProductName (@item.WarehouseName)"
+                                                    title="Lịch sử giá vốn">
+                                                <i class="bi bi-clock-history"></i>
+                                            </button>
+                                        }
+                                        <a class="btn btn-outline-primary btn-sm border-0 px-3" asp-action="ReservationLedger" asp-route-productId="@item.ProductId" title="Lịch sử giữ hàng">
+                                            <i class="bi bi-list-check"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
             }
         </div>
 
         <div class="mt-5 d-flex justify-content-center">
-            <partial name="_Pager" model="Model.Data.Pagination" />
+            <partial name="_Pager" model="@(Model.GroupByProduct ? Model.GroupedData.Pagination : Model.Data.Pagination)" />
         </div>
     }
     else
@@ -327,7 +791,7 @@
                         <div class="col-6">
                             <label for="setStockLevels-reorderLevel" class="form-label">Mức cảnh báo</label>
                             <input type="number" step="0.01" min="0" class="form-control" id="setStockLevels-reorderLevel" name="ReorderLevel" required />
-                            <div class="form-text">Hàng sẽ vào danh sách cảnh báo nếu tồn ≤ mức này.</div>
+                            <div class="form-text">Hàng sẽ vào danh sách cảnh báo nếu tồn <= mức này.</div>
                         </div>
                         <div class="col-6">
                             <label for="setStockLevels-maxStockLevel" class="form-label">Mức tối đa</label>
@@ -351,6 +815,21 @@
 
 @section Scripts {
     <script>
+        (function () {
+            document.querySelectorAll('.btn-cost-history-panel').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const url = this.dataset.historyUrl;
+                    if (!url || typeof window.openCoworkOffcanvas !== 'function') return;
+
+                    window.openCoworkOffcanvas({
+                        title: this.dataset.historyTitle || 'Giá vốn',
+                        url: url,
+                        size: 'lg'
+                    });
+                });
+            });
+        })();
+
         (function () {
             const modalEl = document.getElementById('setStockLevelsModal');
             if (!modalEl) return;

@@ -14,12 +14,18 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
     private readonly IMediator _mediator;
     private readonly AppConfig _appConfig;
     private readonly IDirectShipAppService _directShipAppService;
+    private readonly IPurchaseOrderAppService _purchaseOrderAppService;
 
-    public PurchaseOrderModelFactory(IMediator mediator, AppConfig appConfig, IDirectShipAppService directShipAppService)
+    public PurchaseOrderModelFactory(
+        IMediator mediator,
+        AppConfig appConfig,
+        IDirectShipAppService directShipAppService,
+        IPurchaseOrderAppService purchaseOrderAppService)
     {
         _mediator = mediator;
         _appConfig = appConfig;
         _directShipAppService = directShipAppService;
+        _purchaseOrderAppService = purchaseOrderAppService;
     }
 
     public async Task<PurchaseOrderListModel> PreparePurchaseOrderListModel(PurchaseOrderListSearchModel searchModel)
@@ -167,6 +173,31 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         var poItemIds = purchaseOrderInfo.Items.Select(i => i.Id).ToList();
         if (poItemIds.Count > 0)
         {
+            var allocations = await _purchaseOrderAppService
+                .GetAllocationsForPurchaseOrderItemsAsync(poItemIds)
+                .ConfigureAwait(false);
+
+            foreach (var allocation in allocations)
+            {
+                if (!model.AllocationsPerItem.TryGetValue(allocation.PurchaseOrderItemId, out var list))
+                {
+                    list = [];
+                    model.AllocationsPerItem[allocation.PurchaseOrderItemId] = list;
+                }
+
+                list.Add(new PurchaseOrderDetailsModel.AllocationForPoModel
+                {
+                    AllocationId = allocation.AllocationId,
+                    OrderId = allocation.OrderId,
+                    OrderItemId = allocation.OrderItemId,
+                    OrderCode = allocation.OrderCode,
+                    AllocatedQuantity = allocation.AllocatedQuantity,
+                    ReceivedQuantity = allocation.ReceivedQuantity,
+                    Status = allocation.Status,
+                    IsDirectShip = allocation.IsDirectShip
+                });
+            }
+
             var dsAllocations = await _directShipAppService
                 .GetDirectShipAllocationsForPoItemsAsync(poItemIds)
                 .ConfigureAwait(false);

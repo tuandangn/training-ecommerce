@@ -82,6 +82,7 @@ public sealed record Warehouse : AppAggregateEntity
     }
 
     internal void ChangeType(WarehouseType newType) => WarehouseType = newType;
+    internal bool IsDirectTransit() => WarehouseType == WarehouseType.DirectTransit;
 
     internal void SetActive(bool isActive) => IsActive = isActive;
 

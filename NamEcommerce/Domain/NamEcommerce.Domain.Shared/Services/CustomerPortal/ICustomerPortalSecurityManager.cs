@@ -7,7 +7,7 @@ public interface ICustomerPortalSecurityManager
 {
     Task<CustomerPortalAccountDto> GetOrCreateAccountAsync(Guid customerId);
     Task<CustomerPortalAccountDto?> GetAccountByCustomerIdAsync(Guid customerId);
-    Task SetPasswordAsync(Guid customerId, string passwordHash, string passwordSalt);
+    Task SetPasswordAsync(Guid customerId, string passwordHash, string passwordSalt, bool markLoginSucceeded = true);
     Task BlockAccountAsync(Guid customerId);
     Task UnblockAccountAsync(Guid customerId);
 

@@ -104,6 +104,14 @@ public sealed class CustomerPortalController(
     }
 
     [HttpPost]
+    public async Task<IActionResult> ResetAccountPassword(Guid customerId, string password, string? returnUrl = null)
+    {
+        var result = await customerPortalAdminAppService.ResetAccountPasswordAsync(customerId, password).ConfigureAwait(false);
+        NotifyResult(result);
+        return RedirectBack(returnUrl, nameof(Accounts));
+    }
+
+    [HttpPost]
     public async Task<IActionResult> ApproveOrderRequest(Guid id, Guid[] itemIds, decimal[] unitPrices, string? adminNote)
     {
         var itemPrices = itemIds

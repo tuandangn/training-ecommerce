@@ -17,6 +17,7 @@ using NamEcommerce.Domain.Shared.Enums.CustomerPortal;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Services.CustomerPortal;
+using NamEcommerce.Domain.Shared.Services.Security;
 using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Application.Services.CustomerPortal;
@@ -24,6 +25,7 @@ namespace NamEcommerce.Application.Services.CustomerPortal;
 public sealed class CustomerPortalAdminAppService(
     ICustomerPortalSecurityManager securityManager,
     ICustomerPortalManager customerPortalManager,
+    ISecurityService securityService,
     ICustomerDebtAppService customerDebtAppService,
     IOrderAppService orderAppService,
     IEnumerable<ICustomerPortalNotificationSender> notificationSenders,
@@ -99,6 +101,39 @@ public sealed class CustomerPortalAdminAppService(
         }).ConfigureAwait(false);
 
         return CustomerActionResultAppDto.Ok("Đã mở khóa truy cập portal của khách hàng.");
+    }
+
+    public async Task<CustomerActionResultAppDto> ResetAccountPasswordAsync(Guid customerId, string password)
+    {
+        if (customerId == Guid.Empty)
+            return CustomerActionResultAppDto.Fail("Không tìm thấy khách hàng.");
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
+            return CustomerActionResultAppDto.Fail("Mật khẩu mới cần tối thiểu 8 ký tự.");
+
+        var customer = await customerReader.GetByIdAsync(customerId).ConfigureAwait(false);
+        if (customer is null)
+            return CustomerActionResultAppDto.Fail("Không tìm thấy khách hàng.");
+
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        var account = await securityManager.GetAccountByCustomerIdAsync(customerId).ConfigureAwait(false);
+        var hash = await securityService.HashPasswordAsync(password).ConfigureAwait(false);
+
+        await securityManager.SetPasswordAsync(customerId, hash.PasswordHash, hash.PasswordSalt, markLoginSucceeded: false).ConfigureAwait(false);
+        await securityManager.RecordSecurityEventAsync(new CreateCustomerSecurityEventDto
+        {
+            CustomerId = customerId,
+            EventType = "AdminResetPassword",
+            Outcome = CustomerPortalSecurityEventOutcome.Succeeded,
+            MetadataJson = JsonSerializer.Serialize(new
+            {
+                adminUserId = currentUser?.Id,
+                hadPassword = !string.IsNullOrWhiteSpace(account?.PasswordHash)
+            })
+        }).ConfigureAwait(false);
+
+        return account?.Status == CustomerPortalAccountStatus.Blocked
+            ? CustomerActionResultAppDto.Ok("Đã đặt lại mật khẩu. Tài khoản đang bị khóa, hãy mở khóa trước khi khách đăng nhập.")
+            : CustomerActionResultAppDto.Ok("Đã đặt lại mật khẩu portal cho khách hàng.");
     }
 
     public Task<IReadOnlyCollection<CustomerPortalSecurityEventAdminAppDto>> GetSecurityEventsAsync(Guid? customerId = null, int take = 100)

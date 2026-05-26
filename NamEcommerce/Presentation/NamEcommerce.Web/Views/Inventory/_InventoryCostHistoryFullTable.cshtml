@@ -1,0 +1,139 @@
+@model IEnumerable<NamEcommerce.Web.Contracts.Models.Inventory.InventoryStockListModel.CostHistoryItemModel>
+
+@functions {
+    private static string GetMovementText(int movementType)
+    {
+        return (InventoryCostMovementType)movementType switch
+        {
+            InventoryCostMovementType.GoodsReceipt => "Nhập hàng",
+            InventoryCostMovementType.SaleDispatch => "Xuất bán",
+            InventoryCostMovementType.CustomerReturn => "Khách trả",
+            InventoryCostMovementType.VendorReturn => "Trả NCC",
+            InventoryCostMovementType.TransferOut => "Chuyển đi",
+            InventoryCostMovementType.TransferIn => "Chuyển đến",
+            InventoryCostMovementType.PositiveAdjustment => "Điều chỉnh tăng",
+            InventoryCostMovementType.NegativeAdjustment => "Điều chỉnh giảm",
+            InventoryCostMovementType.Revaluation => "Tính lại giá vốn",
+            InventoryCostMovementType.RevertReceipt => "Hoàn nhập",
+            InventoryCostMovementType.VendorReturnReversal => "Hoàn trả NCC",
+            _ => "Khác"
+        };
+    }
+
+    private static string GetMovementBadgeClass(int movementType)
+    {
+        return (InventoryCostMovementType)movementType switch
+        {
+            InventoryCostMovementType.GoodsReceipt or InventoryCostMovementType.TransferIn or InventoryCostMovementType.CustomerReturn or InventoryCostMovementType.PositiveAdjustment => "bg-success-subtle text-success",
+            InventoryCostMovementType.SaleDispatch or InventoryCostMovementType.TransferOut or InventoryCostMovementType.VendorReturn or InventoryCostMovementType.NegativeAdjustment or InventoryCostMovementType.RevertReceipt => "bg-warning-subtle text-warning-emphasis",
+            InventoryCostMovementType.Revaluation => "bg-info-subtle text-info-emphasis",
+            _ => "bg-secondary-subtle text-secondary"
+        };
+    }
+
+    private static string GetStatusText(int status)
+    {
+        return (InventoryCostingStatus)status switch
+        {
+            InventoryCostingStatus.Pending => "Chờ giá vốn",
+            InventoryCostingStatus.Final => "Đã chốt",
+            InventoryCostingStatus.Revalued => "Đã tính lại",
+            InventoryCostingStatus.Superseded => "Đã thay thế",
+            _ => "Khác"
+        };
+    }
+
+    private static string GetStatusBadgeClass(int status)
+    {
+        return (InventoryCostingStatus)status switch
+        {
+            InventoryCostingStatus.Pending => "bg-warning-subtle text-warning-emphasis",
+            InventoryCostingStatus.Final => "bg-success-subtle text-success",
+            InventoryCostingStatus.Revalued => "bg-info-subtle text-info-emphasis",
+            _ => "bg-secondary-subtle text-secondary"
+        };
+    }
+
+    private static string GetReferenceText(int referenceType)
+    {
+        return (InventoryCostReferenceType)referenceType switch
+        {
+            InventoryCostReferenceType.PurchaseOrder => "Đơn mua",
+            InventoryCostReferenceType.SalesOrder => "Đơn bán",
+            InventoryCostReferenceType.StockIssue => "Xuất kho",
+            InventoryCostReferenceType.StockTransfer => "Chuyển kho",
+            InventoryCostReferenceType.Adjustment => "Điều chỉnh",
+            InventoryCostReferenceType.GoodsReceipt => "Phiếu nhập",
+            InventoryCostReferenceType.CustomerReturn => "Khách trả",
+            InventoryCostReferenceType.VendorReturn => "Trả NCC",
+            _ => "Khác"
+        };
+    }
+
+    private static string QuantityDeltaClass(decimal quantityDelta)
+        => quantityDelta < 0 ? "text-danger" : "text-success";
+
+    private static string QuantityDeltaSign(decimal quantityDelta)
+        => quantityDelta > 0 ? "+" : string.Empty;
+}
+
+@{
+    var items = Model.ToList();
+}
+
+@if (items.Count > 0)
+{
+    <div class="cost-history-compact-list">
+        @foreach (var history in items)
+        {
+            <div class="cost-history-compact-item">
+                <div class="cost-history-compact-main">
+                    <div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <span class="badge rounded-pill @GetMovementBadgeClass(history.MovementType)">
+                                @GetMovementText(history.MovementType)
+                            </span>
+                            <span class="badge rounded-pill @GetStatusBadgeClass(history.CostingStatus)">
+                                @GetStatusText(history.CostingStatus)
+                            </span>
+                            <span class="cost-history-compact-date">@history.OccurredAt.ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                        </div>
+                        <div class="cost-history-meta">
+                            <span><i class="bi bi-geo-alt me-1" aria-hidden="true"></i>@history.WarehouseName</span>
+                            <span>@GetReferenceText(history.ReferenceType)</span>
+                        </div>
+                    </div>
+                    <div class="cost-history-compact-qty">
+                        <div class="small text-muted">SL</div>
+                        <div class="fw-bold @QuantityDeltaClass(history.QuantityDelta)">
+                            @QuantityDeltaSign(history.QuantityDelta)@history.QuantityDelta.DisplayQuantity()
+                        </div>
+                    </div>
+                </div>
+
+                <div class="cost-history-compact-metrics">
+                    <div class="cost-history-compact-metric">
+                        <span class="cost-history-compact-metric-label">Đơn giá</span>
+                        <span class="cost-history-compact-metric-value">@(history.UnitCost.HasValue ? history.UnitCost.Value.DisplayCurrencyWithSymbol() : "-")</span>
+                    </div>
+                    <div class="cost-history-compact-metric">
+                        <span class="cost-history-compact-metric-label">Thành tiền</span>
+                        <span class="cost-history-compact-metric-value">@(history.TotalCost.HasValue ? history.TotalCost.Value.DisplayCurrencyWithSymbol() : "-")</span>
+                    </div>
+                    <div class="cost-history-compact-metric">
+                        <span class="cost-history-compact-metric-label">Tồn sau</span>
+                        <span class="cost-history-compact-metric-value">@history.QuantityBalanceAfter.DisplayQuantity()</span>
+                    </div>
+                    <div class="cost-history-compact-metric">
+                        <span class="cost-history-compact-metric-label">Giá trị tồn</span>
+                        <span class="cost-history-compact-metric-value">@history.ValueBalanceAfter.DisplayCurrencyWithSymbol()</span>
+                    </div>
+                    <div class="cost-history-compact-metric">
+                        <span class="cost-history-compact-metric-label">BQ sau</span>
+                        <span class="cost-history-compact-metric-value">@history.AverageCostAfter.DisplayCurrencyWithSymbol()</span>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

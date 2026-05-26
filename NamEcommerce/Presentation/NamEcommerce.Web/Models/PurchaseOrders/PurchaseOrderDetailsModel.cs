@@ -34,6 +34,23 @@ public sealed class PurchaseOrderDetailsModel
     public IDictionary<Guid, IList<DirectShipAllocationForPoModel>> DirectShipAllocationsPerItem { get; set; }
         = new Dictionary<Guid, IList<DirectShipAllocationForPoModel>>();
 
+    [ValidateNever]
+    public IDictionary<Guid, IList<AllocationForPoModel>> AllocationsPerItem { get; set; }
+        = new Dictionary<Guid, IList<AllocationForPoModel>>();
+
+    [Serializable]
+    public sealed record AllocationForPoModel
+    {
+        public Guid AllocationId { get; init; }
+        public Guid OrderId { get; init; }
+        public Guid OrderItemId { get; init; }
+        public string OrderCode { get; init; } = string.Empty;
+        public decimal AllocatedQuantity { get; init; }
+        public decimal ReceivedQuantity { get; init; }
+        public int Status { get; init; }
+        public bool IsDirectShip { get; init; }
+    }
+
     [Serializable]
     public sealed record DirectShipAllocationForPoModel
     {

@@ -1,0 +1,82 @@
+@model IEnumerable<NamEcommerce.Web.Contracts.Models.Inventory.InventoryStockListModel.CostHistoryItemModel>
+
+@functions {
+    private static string GetMovementText(int movementType)
+    {
+        return (InventoryCostMovementType)movementType switch
+        {
+            InventoryCostMovementType.GoodsReceipt => "Nhập",
+            InventoryCostMovementType.SaleDispatch => "Xuất bán",
+            InventoryCostMovementType.CustomerReturn => "Khách trả",
+            InventoryCostMovementType.VendorReturn => "Trả NCC",
+            InventoryCostMovementType.TransferOut => "Chuyển đi",
+            InventoryCostMovementType.TransferIn => "Chuyển đến",
+            InventoryCostMovementType.PositiveAdjustment => "Tăng",
+            InventoryCostMovementType.NegativeAdjustment => "Giảm",
+            InventoryCostMovementType.Revaluation => "Tính lại",
+            InventoryCostMovementType.RevertReceipt => "Hoàn nhập",
+            InventoryCostMovementType.VendorReturnReversal => "Hoàn trả NCC",
+            _ => "Khác"
+        };
+    }
+
+    private static string GetMovementBadgeClass(int movementType)
+    {
+        return (InventoryCostMovementType)movementType switch
+        {
+            InventoryCostMovementType.GoodsReceipt or InventoryCostMovementType.TransferIn or InventoryCostMovementType.CustomerReturn or InventoryCostMovementType.PositiveAdjustment => "bg-success-subtle text-success",
+            InventoryCostMovementType.SaleDispatch or InventoryCostMovementType.TransferOut or InventoryCostMovementType.VendorReturn or InventoryCostMovementType.NegativeAdjustment or InventoryCostMovementType.RevertReceipt => "bg-warning-subtle text-warning-emphasis",
+            InventoryCostMovementType.Revaluation => "bg-info-subtle text-info-emphasis",
+            _ => "bg-secondary-subtle text-secondary"
+        };
+    }
+
+    private static string QuantityDeltaClass(decimal quantityDelta)
+        => quantityDelta < 0 ? "text-danger" : "text-success";
+
+    private static string QuantityDeltaSign(decimal quantityDelta)
+        => quantityDelta > 0 ? "+" : string.Empty;
+}
+
+@{
+    var items = Model.ToList();
+}
+
+@if (items.Count > 0)
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0 cost-mini-table">
+            <thead>
+                <tr>
+                    <th>Ngày</th>
+                    <th>Loại</th>
+                    <th>Kho</th>
+                    <th class="text-end">SL</th>
+                    <th class="text-end">Đơn giá</th>
+                    <th class="text-end">Tồn sau</th>
+                    <th class="text-end">BQ sau</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var history in items)
+                {
+                    <tr>
+                        <td>@history.OccurredAt.ToString(ViewConstants.DefaultDateTimeFormat)</td>
+                        <td>
+                            <span class="badge rounded-pill @GetMovementBadgeClass(history.MovementType)">
+                                @GetMovementText(history.MovementType)
+                            </span>
+                        </td>
+                        <td class="text-muted">@history.WarehouseName</td>
+                        <td class="text-end fw-semibold @QuantityDeltaClass(history.QuantityDelta)">
+                            @QuantityDeltaSign(history.QuantityDelta)@history.QuantityDelta.DisplayQuantity()
+                        </td>
+                        <td class="text-end">@(history.UnitCost.HasValue ? history.UnitCost.Value.DisplayCurrencyWithSymbol() : "-")</td>
+                        <td class="text-end">@history.QuantityBalanceAfter.DisplayQuantity()</td>
+                        <td class="text-end">@history.AverageCostAfter.DisplayCurrencyWithSymbol()</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
