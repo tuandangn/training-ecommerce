@@ -1,12 +1,14 @@
 @using NamEcommerce.Application.Contracts.Dtos.CustomerPortal
 @using NamEcommerce.Application.Contracts.Dtos.Inventory
 @using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@using System.Globalization
 @model CustomerPortalReturnRequestAdminAppDto
 @{
     ViewData[ViewConstants.PageTitle] = $"Yêu cầu trả hàng {Model.DeliveryNoteCode}";
     var status = (CustomerReturnRequestStatus)Model.Status;
     var returnUrl = Context.Request.Path.ToString() + Context.Request.QueryString.ToString();
     var warehouses = ViewBag.Warehouses as IReadOnlyCollection<WarehouseAppDto> ?? Array.Empty<WarehouseAppDto>();
+    var invariantCulture = CultureInfo.InvariantCulture;
 }
 
 <div class="page-header">
@@ -103,7 +105,7 @@
         {
             <div class="content-card p-4">
                 <h6 class="fw-bold mb-3">Tạo phiếu trả nội bộ</h6>
-                <form asp-action="ConvertReturnRequest" method="post">
+                <form asp-action="ConvertReturnRequest" method="post" id="convertReturnRequestForm">
                     <input type="hidden" name="id" value="@Model.Id" />
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted text-uppercase">Kho nhận</label>
@@ -114,6 +116,67 @@
                                 <option value="@warehouse.Id">@warehouse.Name</option>
                             }
                         </select>
+                    </div>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Hàng hóa</th>
+                                    <th class="text-end" style="width:92px">Khách yêu cầu</th>
+                                    <th class="text-end" style="width:120px">Thực nhận</th>
+                                    <th class="text-end" style="width:120px">Đơn giá hoàn</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Items)
+                                {
+                                    var defaultReturnPrice = item.OriginalUnitPrice ?? 0;
+                                    <tr>
+                                        <td>
+                                            <input type="hidden" name="itemIds" value="@item.Id" />
+                                            <div class="fw-medium">@item.ProductName</div>
+                                            <div class="text-muted small">
+                                                Giá giao: @(item.OriginalUnitPrice.HasValue ? item.OriginalUnitPrice.Value.DisplayCurrency() : "—")
+                                            </div>
+                                        </td>
+                                        <td class="text-end text-muted">@item.RequestedQuantity.DisplayQuantity()</td>
+                                        <td>
+                                            <input name="acceptedQuantities"
+                                                   class="form-control form-control-sm text-end js-return-qty"
+                                                   type="number"
+                                                   min="0"
+                                                   max="@item.RequestedQuantity.ToString("0.###", invariantCulture)"
+                                                   step="0.001"
+                                                   value="@item.RequestedQuantity.ToString("0.###", invariantCulture)"
+                                                   required />
+                                        </td>
+                                        <td>
+                                            <input name="returnUnitPrices"
+                                                   class="form-control form-control-sm text-end js-return-price"
+                                                   type="number"
+                                                   min="0"
+                                                   step="0.01"
+                                                   value="@defaultReturnPrice.ToString("0.##", invariantCulture)"
+                                                   required />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase">Chi phí phát sinh</label>
+                        <input name="additionalCost"
+                               class="form-control text-end js-additional-cost"
+                               type="number"
+                               min="0"
+                               step="0.01"
+                               value="0" />
+                        <div class="form-text">Khoản này sẽ trừ vào số tiền hoàn/cấn trừ công nợ khách.</div>
+                    </div>
+                    <div class="alert alert-light border d-flex justify-content-between align-items-center py-2">
+                        <span class="text-muted small">Dự kiến hoàn/cấn trừ công nợ</span>
+                        <strong id="convertReturnTotal">0</strong>
                     </div>
                     <textarea name="adminNote" class="form-control mb-2" rows="2" placeholder="Ghi chú khi tạo phiếu trả"></textarea>
                     <button type="submit" class="btn btn-primary w-100">
@@ -140,3 +203,30 @@
         }
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const form = document.getElementById('convertReturnRequestForm');
+            if (!form) return;
+
+            const totalEl = document.getElementById('convertReturnTotal');
+            const formatter = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
+            const parseNumber = value => {
+                const parsed = Number(String(value || '').replace(',', '.'));
+                return Number.isFinite(parsed) ? parsed : 0;
+            };
+            const recalculate = () => {
+                const quantities = Array.from(form.querySelectorAll('.js-return-qty'));
+                const prices = Array.from(form.querySelectorAll('.js-return-price'));
+                const gross = quantities.reduce((sum, input, index) =>
+                    sum + parseNumber(input.value) * parseNumber(prices[index]?.value), 0);
+                const additionalCost = parseNumber(form.querySelector('.js-additional-cost')?.value);
+                totalEl.textContent = formatter.format(Math.max(0, gross - additionalCost));
+            };
+
+            form.addEventListener('input', recalculate);
+            recalculate();
+        })();
+    </script>
+}

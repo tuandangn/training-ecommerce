@@ -6,6 +6,7 @@ using NamEcommerce.Application.Contracts.Dtos.Media;
 using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Contracts.Orders;
+using NamEcommerce.Application.Contracts.Returns;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
@@ -28,6 +29,7 @@ public sealed class CustomerPortalAppService(
     IDeliveryNoteManager deliveryNoteManager,
     ICustomerDebtAppService customerDebtAppService,
     IOrderAppService orderAppService,
+    ICustomerReturnAppService customerReturnAppService,
     IEntityDataReader<Order> orderReader,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<Product> productReader,
@@ -490,13 +492,45 @@ public sealed class CustomerPortalAppService(
         var deliveryNote = deliveryNoteReader.DataSource.FirstOrDefault(note => note.Id == dto.DeliveryNoteId && note.CustomerId == customerId);
         if (deliveryNote is null)
             throw new InvalidOperationException("Delivery note was not found.");
+        if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
+            throw new InvalidOperationException("Delivery note must be delivered before creating a return request.");
+        if (deliveryNote.DeliveryConfirmationStatus != DeliveryConfirmationStatus.Confirmed)
+            throw new InvalidOperationException("Please confirm receipt before creating a return request.");
+        if (dto.Items.Count == 0)
+            throw new InvalidOperationException("Return request must contain at least one item.");
 
         var itemsById = deliveryNote.Items.ToDictionary(item => item.Id);
+        var returnableItems = await customerReturnAppService
+            .GetDeliveryNoteItemsForReturnAsync(dto.DeliveryNoteId)
+            .ConfigureAwait(false);
+        var availableByDeliveryItemId = returnableItems
+            .Where(item => item.SourceItemId.HasValue)
+            .ToDictionary(
+                item => item.SourceItemId!.Value,
+                item => Math.Max(0m, item.OriginalQty - item.AlreadyReturnedQty));
+        var pendingPortalQuantitiesByItem = (await customerPortalManager.GetReturnRequestsAsync(customerId).ConfigureAwait(false))
+            .Where(request => request.DeliveryNoteId == dto.DeliveryNoteId
+                && (request.Status == CustomerReturnRequestStatus.PendingReview || request.Status == CustomerReturnRequestStatus.Accepted))
+            .SelectMany(request => request.Items)
+            .GroupBy(item => item.DeliveryNoteItemId)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.RequestedQuantity));
+        var requestedQuantitiesByItem = dto.Items
+            .GroupBy(item => item.DeliveryNoteItemId)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.RequestedQuantity));
+
         foreach (var item in dto.Items)
         {
             var deliveryItem = itemsById.GetValueOrDefault(item.DeliveryNoteItemId);
-            if (deliveryItem is null || item.RequestedQuantity > deliveryItem.Quantity)
+            if (deliveryItem is null || item.RequestedQuantity <= 0)
                 throw new InvalidOperationException("Return request item is invalid.");
+        }
+
+        foreach (var (deliveryNoteItemId, requestedQuantity) in requestedQuantitiesByItem)
+        {
+            var available = availableByDeliveryItemId.GetValueOrDefault(deliveryNoteItemId);
+            var pendingPortalQuantity = pendingPortalQuantitiesByItem.GetValueOrDefault(deliveryNoteItemId);
+            if (requestedQuantity > Math.Max(0m, available - pendingPortalQuantity))
+                throw new InvalidOperationException("Return request quantity exceeds the returnable quantity.");
         }
 
         var evidencePictureIds = new Dictionary<Guid, IList<Guid>>();

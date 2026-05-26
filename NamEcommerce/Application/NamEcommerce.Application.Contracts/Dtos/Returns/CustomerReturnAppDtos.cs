@@ -65,8 +65,10 @@ public sealed record CreateCustomerReturnAppDto
             return (false, "Error.CustomerReturn.WarehouseRequired");
         if (AdditionalCost < 0)
             return (false, "Error.CustomerReturn.AdditionalCostCannotBeNegative");
-        if (!Items.Any())
+        if (Items is null || !Items.Any())
             return (false, "Error.CustomerReturn.NoItems");
+        if (Items.Any(item => item.AcceptedQuantity > item.RequestedQuantity))
+            return (false, "Error.CustomerReturn.AcceptedQuantityExceedsRequested");
         return (true, null);
     }
 }

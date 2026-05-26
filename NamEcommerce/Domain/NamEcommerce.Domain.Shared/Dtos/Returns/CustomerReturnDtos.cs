@@ -67,7 +67,7 @@ public sealed record CreateCustomerReturnDto
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseRequired");
         if (AdditionalCost < 0)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.AdditionalCostCannotBeNegative");
-        if (!Items.Any())
+        if (Items is null || !Items.Any())
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.NoItems");
         foreach (var item in Items)
         {
@@ -75,6 +75,8 @@ public sealed record CreateCustomerReturnDto
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.RequestedQuantityMustBePositive");
             if (item.AcceptedQuantity < 0)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.AcceptedQuantityCannotBeNegative");
+            if (item.AcceptedQuantity > item.RequestedQuantity)
+                throw new ReturnDataIsInvalidException("Error.CustomerReturn.AcceptedQuantityExceedsRequested");
             if (item.ReturnUnitPrice < 0)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.ReturnUnitPriceCannotBeNegative");
         }

@@ -146,4 +146,6 @@ public sealed record CreateDeliveryNoteForDirectShipDto
     public required decimal Quantity { get; init; }
     public required Guid DirectShipWarehouseId { get; init; }
     public required string ShippingAddress { get; init; }
+    public string? ContactName { get; init; }
+    public string? ContactPhone { get; init; }
 }

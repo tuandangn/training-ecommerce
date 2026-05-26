@@ -41,7 +41,13 @@ function AppRoutes() {
   }
 
   if (path === "/verify") {
-    return <OtpVerifyPage challengeId={query.get("challengeId") ?? ""} mockOtp={query.get("mockOtp")} />;
+    return (
+      <OtpVerifyPage
+        challengeId={query.get("challengeId") ?? ""}
+        mockOtp={query.get("mockOtp")}
+        returnUrl={query.get("returnUrl")}
+      />
+    );
   }
 
   if (path === "/login") {

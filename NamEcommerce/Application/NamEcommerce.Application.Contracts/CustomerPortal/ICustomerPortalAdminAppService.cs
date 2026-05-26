@@ -23,7 +23,12 @@ public interface ICustomerPortalAdminAppService
     Task<CustomerPortalReturnRequestAdminAppDto?> GetReturnRequestAsync(Guid id);
     Task<CustomerActionResultAppDto> AcceptReturnRequestAsync(Guid id, string? adminNote);
     Task<CustomerActionResultAppDto> RejectReturnRequestAsync(Guid id, string? adminNote);
-    Task<CustomerPortalConversionResultAppDto> ConvertReturnRequestAsync(Guid id, Guid warehouseId, string? adminNote);
+    Task<CustomerPortalConversionResultAppDto> ConvertReturnRequestAsync(
+        Guid id,
+        Guid warehouseId,
+        IReadOnlyCollection<CustomerPortalReturnConversionItemAppDto> items,
+        decimal additionalCost,
+        string? adminNote);
 
     Task<IReadOnlyCollection<CustomerPortalPaymentIntentAdminAppDto>> GetPaymentIntentsAsync(int? status = null);
     Task<CustomerPortalPaymentIntentAdminAppDto?> GetPaymentIntentAsync(Guid id);

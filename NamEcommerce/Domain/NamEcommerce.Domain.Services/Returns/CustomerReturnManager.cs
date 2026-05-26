@@ -34,6 +34,7 @@ public sealed class CustomerReturnManager(
     {
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
+        var itemDtos = dto.Items.ToList();
 
         var warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId).ConfigureAwait(false);
         if (warehouse is null)
@@ -42,6 +43,42 @@ public sealed class CustomerReturnManager(
         var deliveryNote = await deliveryNoteDataReader.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null)
             throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
+        if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
+            throw new ReturnDataIsInvalidException("Error.CustomerReturn.DeliveryNoteMustBeDelivered", deliveryNote.Code);
+
+        var deliveryNoteItemsById = deliveryNote.Items.ToDictionary(item => item.Id);
+        foreach (var itemDto in itemDtos)
+        {
+            if (!itemDto.DeliveryNoteItemId.HasValue ||
+                !deliveryNoteItemsById.TryGetValue(itemDto.DeliveryNoteItemId.Value, out var deliveryNoteItem) ||
+                deliveryNoteItem.ProductId != itemDto.ProductId)
+            {
+                throw new ReturnDataIsInvalidException("Error.CustomerReturn.DeliveryNoteItemRequired", itemDto.ProductId);
+            }
+        }
+
+        var reservedByDeliveryItem = itemDtos
+            .GroupBy(item => item.DeliveryNoteItemId!.Value)
+            .Select(group => new
+            {
+                DeliveryNoteItemId = group.Key,
+                ProductId = group.First().ProductId,
+                AcceptedQuantity = group.Sum(item => item.AcceptedQuantity)
+            })
+            .ToList();
+
+        foreach (var item in reservedByDeliveryItem)
+        {
+            var deliveryNoteItem = deliveryNoteItemsById[item.DeliveryNoteItemId];
+            var reservedReturnQty = await GetTotalReservedReturnQuantityForDeliveryNoteItemAsync(
+                deliveryNote.Id,
+                item.DeliveryNoteItemId,
+                item.ProductId).ConfigureAwait(false);
+            var maxAllowed = deliveryNoteItem.Quantity - reservedReturnQty;
+
+            if (item.AcceptedQuantity > maxAllowed)
+                throw new ExceedsDeliveredQuantityException(item.ProductId, item.AcceptedQuantity, Math.Max(0m, maxAllowed));
+        }
 
         var customerId = deliveryNote.CustomerId;
         var customerName = deliveryNote.CustomerInfo.FullName;
@@ -61,7 +98,7 @@ public sealed class CustomerReturnManager(
             additionalCost: dto.AdditionalCost,
             createdByUserId: currentUser?.Id);
 
-        foreach (var itemDto in dto.Items)
+        foreach (var itemDto in itemDtos)
         {
             var product = await productDataReader.GetByIdAsync(itemDto.ProductId).ConfigureAwait(false);
             if (product is null)
@@ -112,14 +149,49 @@ public sealed class CustomerReturnManager(
             ?? throw new CustomerReturnNotFoundException(id);
 
         // CustomerReturn luôn gắn DeliveryNote — validate qty không vượt quá số đã giao trừ phần đã trả/đang trả
-        var acceptedByProduct = customerReturn.Items
+        var deliveryNote = deliveryNoteDataReader.DataSource
+            .FirstOrDefault(dn => dn.Id == customerReturn.DeliveryNoteId && dn.Status == DeliveryNoteStatus.Delivered);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(customerReturn.DeliveryNoteId);
+
+        var deliveryNoteItemsById = deliveryNote.Items.ToDictionary(item => item.Id);
+        var acceptedByDeliveryItem = customerReturn.Items
+            .Where(item => item.DeliveryNoteItemId.HasValue)
+            .GroupBy(item => item.DeliveryNoteItemId!.Value)
+            .Select(group => new
+            {
+                DeliveryNoteItemId = group.Key,
+                ProductId = group.First().ProductId,
+                AcceptedQuantity = group.Sum(item => item.AcceptedQuantity)
+            });
+        foreach (var item in acceptedByDeliveryItem)
+        {
+            if (!deliveryNoteItemsById.TryGetValue(item.DeliveryNoteItemId, out var deliveryNoteItem) ||
+                deliveryNoteItem.ProductId != item.ProductId)
+            {
+                throw new ReturnDataIsInvalidException("Error.CustomerReturn.DeliveryNoteItemRequired", item.ProductId);
+            }
+
+            var previouslyReturned = await GetTotalReservedReturnQuantityForDeliveryNoteItemAsync(
+                customerReturn.DeliveryNoteId,
+                item.DeliveryNoteItemId,
+                item.ProductId,
+                excludeReturnId: id).ConfigureAwait(false);
+            var maxAllowed = deliveryNoteItem.Quantity - previouslyReturned;
+
+            if (item.AcceptedQuantity > maxAllowed)
+                throw new ExceedsDeliveredQuantityException(item.ProductId, item.AcceptedQuantity, Math.Max(0m, maxAllowed));
+        }
+
+        var acceptedWithoutDeliveryItemByProduct = customerReturn.Items
+            .Where(item => !item.DeliveryNoteItemId.HasValue)
             .GroupBy(item => item.ProductId)
             .Select(group => new
             {
                 ProductId = group.Key,
                 AcceptedQuantity = group.Sum(item => item.AcceptedQuantity)
             });
-        foreach (var item in acceptedByProduct)
+        foreach (var item in acceptedWithoutDeliveryItemByProduct)
         {
             var deliveredQty = GetTotalDeliveredQuantity(customerReturn.DeliveryNoteId, item.ProductId);
             var previouslyReturned = await GetTotalReservedReturnQuantityAsync(
@@ -127,7 +199,7 @@ public sealed class CustomerReturnManager(
             var maxAllowed = deliveredQty - previouslyReturned;
 
             if (item.AcceptedQuantity > maxAllowed)
-                throw new ExceedsDeliveredQuantityException(item.ProductId, item.AcceptedQuantity, maxAllowed);
+                throw new ExceedsDeliveredQuantityException(item.ProductId, item.AcceptedQuantity, Math.Max(0m, maxAllowed));
         }
 
         customerReturn.Confirm();
@@ -178,7 +250,7 @@ public sealed class CustomerReturnManager(
     {
         var query = customerReturnDataReader.DataSource
             .Where(r => r.DeliveryNoteId == deliveryNoteId
-                        && (r.Status == CustomerReturnStatus.Inspecting || r.Status == CustomerReturnStatus.Confirmed)
+                        && r.Status != CustomerReturnStatus.Cancelled
                         && (excludeReturnId == null || r.Id != excludeReturnId));
 
         decimal total = 0;
@@ -186,6 +258,28 @@ public sealed class CustomerReturnManager(
         foreach (var ret in reservedReturns)
             total += ret.Items
                 .Where(i => i.ProductId == productId)
+                .Sum(i => i.AcceptedQuantity);
+
+        return Task.FromResult(total);
+    }
+
+    private Task<decimal> GetTotalReservedReturnQuantityForDeliveryNoteItemAsync(
+        Guid deliveryNoteId,
+        Guid deliveryNoteItemId,
+        Guid productId,
+        Guid? excludeReturnId = null)
+    {
+        var query = customerReturnDataReader.DataSource
+            .Where(r => r.DeliveryNoteId == deliveryNoteId
+                        && r.Status != CustomerReturnStatus.Cancelled
+                        && (excludeReturnId == null || r.Id != excludeReturnId));
+
+        decimal total = 0;
+        var reservedReturns = query.ToList();
+        foreach (var ret in reservedReturns)
+            total += ret.Items
+                .Where(i => i.DeliveryNoteItemId == deliveryNoteItemId ||
+                            (!i.DeliveryNoteItemId.HasValue && i.ProductId == productId))
                 .Sum(i => i.AcceptedQuantity);
 
         return Task.FromResult(total);

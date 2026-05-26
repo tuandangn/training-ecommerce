@@ -114,7 +114,9 @@ public sealed class DirectShipManager(
                 OrderItemId = allocation.OrderItemId,
                 Quantity = receivedDelta,
                 DirectShipWarehouseId = transitWarehouse.Id,
-                ShippingAddress = allocation.DirectShipAddress ?? string.Empty
+                ShippingAddress = allocation.DirectShipAddress ?? string.Empty,
+                ContactName = allocation.DirectShipContactName,
+                ContactPhone = allocation.DirectShipContactPhone
             }, ct).ConfigureAwait(false);
     }
 

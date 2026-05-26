@@ -159,9 +159,27 @@ public sealed class CustomerPortalController(
     }
 
     [HttpPost]
-    public async Task<IActionResult> ConvertReturnRequest(Guid id, Guid warehouseId, string? adminNote)
+    public async Task<IActionResult> ConvertReturnRequest(
+        Guid id,
+        Guid warehouseId,
+        Guid[] itemIds,
+        decimal[] acceptedQuantities,
+        decimal[] returnUnitPrices,
+        decimal additionalCost,
+        string? adminNote)
     {
-        var result = await customerPortalAdminAppService.ConvertReturnRequestAsync(id, warehouseId, adminNote).ConfigureAwait(false);
+        var items = itemIds
+            .Select((itemId, index) => new CustomerPortalReturnConversionItemAppDto
+            {
+                RequestItemId = itemId,
+                AcceptedQuantity = index < acceptedQuantities.Length ? acceptedQuantities[index] : 0,
+                ReturnUnitPrice = index < returnUnitPrices.Length ? returnUnitPrices[index] : 0
+            })
+            .ToList();
+
+        var result = await customerPortalAdminAppService
+            .ConvertReturnRequestAsync(id, warehouseId, items, additionalCost, adminNote)
+            .ConfigureAwait(false);
         NotifyResult(result);
 
         return result.Success && result.CreatedId.HasValue

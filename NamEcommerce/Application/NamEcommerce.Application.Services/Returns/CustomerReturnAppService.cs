@@ -7,6 +7,7 @@ using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Returns;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.Returns;
 
@@ -172,7 +173,7 @@ public sealed class CustomerReturnAppService(
     {
         var notes = deliveryNoteDataReader.DataSource
             .Where(dn => dn.CustomerId == customerId
-                         && dn.SourceType == DeliveryNoteSourceType.ToCustomer
+                         && (dn.SourceType == DeliveryNoteSourceType.ToCustomer || dn.SourceType == DeliveryNoteSourceType.DirectShipToCustomer)
                          && dn.Status == DeliveryNoteStatus.Delivered)
             .OrderByDescending(dn => dn.DeliveredOnUtc)
             .ToList();
@@ -196,9 +197,9 @@ public sealed class CustomerReturnAppService(
             return Task.FromResult(new List<ReturnableItemAppDto>());
 
         // Tính số lượng đã trả theo từng ProductId
-        var confirmedReturns = customerReturnDataReader.DataSource
+        var activeReturns = customerReturnDataReader.DataSource
             .Where(r => r.DeliveryNoteId == deliveryNoteId
-                        && (int)r.Status == 2 // Confirmed
+                        && r.Status != CustomerReturnStatus.Cancelled
                         && (excludeReturnId == null || r.Id != excludeReturnId))
             .ToList();
 
@@ -221,8 +222,10 @@ public sealed class CustomerReturnAppService(
 
         var result = deliveryNote.Items.Select(item =>
         {
-            var alreadyReturned = confirmedReturns
-                .SelectMany(r => r.Items.Where(i => i.ProductId == item.ProductId))
+            var alreadyReturned = activeReturns
+                .SelectMany(r => r.Items.Where(i =>
+                    i.DeliveryNoteItemId == item.Id ||
+                    (!i.DeliveryNoteItemId.HasValue && i.ProductId == item.ProductId)))
                 .Sum(i => i.AcceptedQuantity);
 
             productDict.TryGetValue(item.ProductId, out var product);

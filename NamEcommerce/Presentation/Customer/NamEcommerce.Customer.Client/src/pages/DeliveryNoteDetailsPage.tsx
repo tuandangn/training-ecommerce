@@ -38,6 +38,10 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
 
   function openReturnModal() {
     if (!note) return;
+    if (!receivedConfirmed) {
+      setMessage("Vui lòng xác nhận đã nhận hàng trước khi gửi yêu cầu trả hàng.");
+      return;
+    }
 
     setReturnReason("");
     setReturnMessage("");
@@ -172,7 +176,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
           >
             Đã nhận hàng
           </button>
-          <button className="button danger" onClick={openReturnModal}>
+          <button className="button danger" onClick={openReturnModal} disabled={!receivedConfirmed}>
             Trả hàng
           </button>
         </div>

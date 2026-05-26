@@ -23,12 +23,17 @@ export function PublicDeliveryPage({ token }: { token: string }) {
   }, []);
 
   async function requestOtp() {
+    if (!note) return;
+
     const result = await apiFetch<OtpRequestResult>("/api/auth/otp/request", {
       method: "POST",
       body: JSON.stringify({ deliveryToken: token }),
     });
     if (result.success && result.challengeId) {
-      const query = new URLSearchParams({ challengeId: result.challengeId });
+      const query = new URLSearchParams({
+        challengeId: result.challengeId,
+        returnUrl: `/delivery-notes/${note.id}`,
+      });
       if (result.mockOtp) query.set("mockOtp", result.mockOtp);
       navigate(`/verify?${query.toString()}`);
     }

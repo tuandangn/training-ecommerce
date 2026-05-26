@@ -268,14 +268,20 @@ public sealed class DeliveryNoteManager(
         });
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
+        string contactName = string.IsNullOrWhiteSpace(dto.ContactName)
+            ? order.CustomerInfo.FullName
+            : dto.ContactName.Trim();
+        string contactPhone = string.IsNullOrWhiteSpace(dto.ContactPhone)
+            ? order.CustomerInfo.PhoneNumber
+            : dto.ContactPhone.Trim();
 
         var deliveryNote = new DeliveryNote(
             code: code,
             orderId: order.Id,
             customerId: order.CustomerId,
-            customerName: order.CustomerInfo.FullName,
-            customerPhone: order.CustomerInfo.PhoneNumber,
-            customerAddress: order.CustomerInfo.Address,
+            customerName: contactName,
+            customerPhone: contactPhone,
+            customerAddress: dto.ShippingAddress,
             shippingAddress: dto.ShippingAddress,
             warehouseId: dto.DirectShipWarehouseId,
             showPrice: false,

@@ -312,6 +312,51 @@
   <data name="Error.DeliveryNoteCreateFailed" xml:space="preserve">
     <value>An error occurred while creating the delivery note.</value>
   </data>
+  <data name="Error.CustomerReturn.DeliveryNoteRequired" xml:space="preserve">
+    <value>Please select a delivery note.</value>
+  </data>
+  <data name="Error.CustomerReturn.WarehouseRequired" xml:space="preserve">
+    <value>Please select a return warehouse.</value>
+  </data>
+  <data name="Error.CustomerReturn.AdditionalCostCannotBeNegative" xml:space="preserve">
+    <value>Additional return cost cannot be negative.</value>
+  </data>
+  <data name="Error.CustomerReturn.NoItems" xml:space="preserve">
+    <value>Please select at least one item to return.</value>
+  </data>
+  <data name="Error.CustomerReturn.RequestedQuantityMustBePositive" xml:space="preserve">
+    <value>Requested return quantity must be greater than 0.</value>
+  </data>
+  <data name="Error.CustomerReturn.AcceptedQuantityCannotBeNegative" xml:space="preserve">
+    <value>Accepted return quantity cannot be negative.</value>
+  </data>
+  <data name="Error.CustomerReturn.AcceptedQuantityExceedsRequested" xml:space="preserve">
+    <value>Accepted return quantity cannot exceed the requested quantity.</value>
+  </data>
+  <data name="Error.CustomerReturn.ReturnUnitPriceCannotBeNegative" xml:space="preserve">
+    <value>Return unit price cannot be negative.</value>
+  </data>
+  <data name="Error.CustomerReturn.WarehouseNotFound" xml:space="preserve">
+    <value>Return warehouse was not found.</value>
+  </data>
+  <data name="Error.CustomerReturn.DeliveryNoteMustBeDelivered" xml:space="preserve">
+    <value>The delivery note must be delivered before creating a customer return.</value>
+  </data>
+  <data name="Error.CustomerReturn.DeliveryNoteItemRequired" xml:space="preserve">
+    <value>Returned item must come from the selected delivery note.</value>
+  </data>
+  <data name="Error.CustomerReturn.ProductNotFound" xml:space="preserve">
+    <value>Returned product was not found.</value>
+  </data>
+  <data name="Error.CustomerReturn.NotFound" xml:space="preserve">
+    <value>Customer return was not found.</value>
+  </data>
+  <data name="Error.CustomerReturn.IsNotFound" xml:space="preserve">
+    <value>Customer return was not found.</value>
+  </data>
+  <data name="Error.CustomerReturn.ExceedsDeliveredQuantity" xml:space="preserve">
+    <value>Return quantity exceeds the remaining returnable quantity.</value>
+  </data>
   <data name="Error.OrderIsNotFound" xml:space="preserve">
     <value>Order not found.</value>
   </data>

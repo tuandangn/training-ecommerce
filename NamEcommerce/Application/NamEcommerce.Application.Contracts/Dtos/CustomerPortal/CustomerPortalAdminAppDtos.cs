@@ -114,8 +114,17 @@ public sealed record CustomerPortalReturnRequestItemAdminAppDto
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
     public decimal RequestedQuantity { get; init; }
+    public decimal? OriginalUnitPrice { get; init; }
     public string? Reason { get; init; }
     public IList<CustomerPortalReturnRequestEvidencePictureAdminAppDto> EvidencePictures { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerPortalReturnConversionItemAppDto
+{
+    public required Guid RequestItemId { get; init; }
+    public required decimal AcceptedQuantity { get; init; }
+    public required decimal ReturnUnitPrice { get; init; }
 }
 
 [Serializable]

@@ -75,13 +75,24 @@ public sealed class CustomerReturnController : BaseAuthorizedController
             return View(model);
         }
 
+        var returnItems = model.Items
+            .Where(i => i.ProductId.HasValue && i.RequestedQuantity > 0)
+            .ToList();
+
+        if (!returnItems.Any())
+        {
+            AddLocalizedModelError("Error.CustomerReturn.NoItems");
+            model = await _customerReturnModelFactory.PrepareCreateCustomerReturnModel(model);
+            return View(model);
+        }
+
         var result = await _mediator.Send(new CreateCustomerReturnCommand
         {
             DeliveryNoteId = model.DeliveryNoteId!.Value,
             WarehouseId = model.WarehouseId!.Value,
             AdditionalCost = model.AdditionalCost,
             Note = model.Note,
-            Items = model.Items.Select(i => new CreateCustomerReturnItemCommand
+            Items = returnItems.Select(i => new CreateCustomerReturnItemCommand
             {
                 ProductId = i.ProductId!.Value,
                 DeliveryNoteItemId = i.DeliveryNoteItemId,

@@ -306,10 +306,19 @@ public sealed class CustomerPortalAdminAppService(
         return CustomerActionResultAppDto.Ok("Đã từ chối yêu cầu trả hàng.");
     }
 
-    public async Task<CustomerPortalConversionResultAppDto> ConvertReturnRequestAsync(Guid id, Guid warehouseId, string? adminNote)
+    public async Task<CustomerPortalConversionResultAppDto> ConvertReturnRequestAsync(
+        Guid id,
+        Guid warehouseId,
+        IReadOnlyCollection<CustomerPortalReturnConversionItemAppDto> items,
+        decimal additionalCost,
+        string? adminNote)
     {
         if (warehouseId == Guid.Empty)
             return CustomerPortalConversionResultAppDto.Fail("Vui lòng chọn kho nhận hàng trả.");
+        if (additionalCost < 0)
+            return CustomerPortalConversionResultAppDto.Fail("Chi phí phát sinh không được âm.");
+        if (items.Count == 0)
+            return CustomerPortalConversionResultAppDto.Fail("Vui lòng nhập số lượng thực nhận cho hàng trả.");
 
         var request = await customerPortalManager.GetReturnRequestByIdAsync(id).ConfigureAwait(false);
         if (request is null)
@@ -328,24 +337,45 @@ public sealed class CustomerPortalAdminAppService(
         if (request.Items.Any(item => !deliveryItems.ContainsKey(item.DeliveryNoteItemId)))
             return CustomerPortalConversionResultAppDto.Fail("Dữ liệu dòng hàng trả không còn khớp với phiếu giao.");
 
+        var conversionByRequestItemId = items
+            .GroupBy(item => item.RequestItemId)
+            .ToDictionary(group => group.Key, group => group.Last());
+        if (request.Items.Any(item => !conversionByRequestItemId.ContainsKey(item.Id)))
+            return CustomerPortalConversionResultAppDto.Fail("Vui lòng nhập đủ số lượng thực nhận cho hàng trả.");
+        if (conversionByRequestItemId.Values.Any(item => item.AcceptedQuantity < 0 || item.ReturnUnitPrice < 0))
+            return CustomerPortalConversionResultAppDto.Fail("Số lượng thực nhận và đơn giá hoàn không được âm.");
+
+        var returnItems = new List<CreateCustomerReturnItemAppDto>();
+        foreach (var item in request.Items)
+        {
+            var conversion = conversionByRequestItemId[item.Id];
+            if (conversion.AcceptedQuantity > item.RequestedQuantity)
+                return CustomerPortalConversionResultAppDto.Fail("Số lượng thực nhận không được vượt quá số lượng khách yêu cầu.");
+            if (conversion.AcceptedQuantity <= 0)
+                continue;
+
+            var deliveryItem = deliveryItems.GetValueOrDefault(item.DeliveryNoteItemId);
+            returnItems.Add(new CreateCustomerReturnItemAppDto
+            {
+                ProductId = item.ProductId,
+                DeliveryNoteItemId = item.DeliveryNoteItemId,
+                RequestedQuantity = item.RequestedQuantity,
+                AcceptedQuantity = conversion.AcceptedQuantity,
+                OriginalUnitPrice = deliveryItem?.UnitPrice,
+                ReturnUnitPrice = conversion.ReturnUnitPrice
+            });
+        }
+
+        if (returnItems.Count == 0)
+            return CustomerPortalConversionResultAppDto.Fail("Cần có ít nhất một dòng hàng được chấp nhận trả.");
+
         var createDto = new CreateCustomerReturnAppDto
         {
             DeliveryNoteId = request.DeliveryNoteId,
             WarehouseId = warehouseId,
+            AdditionalCost = additionalCost,
             Note = BuildConvertedReturnNote(request, adminNote),
-            Items = request.Items.Select(item =>
-            {
-                var deliveryItem = deliveryItems.GetValueOrDefault(item.DeliveryNoteItemId);
-                return new CreateCustomerReturnItemAppDto
-                {
-                    ProductId = item.ProductId,
-                    DeliveryNoteItemId = item.DeliveryNoteItemId,
-                    RequestedQuantity = item.RequestedQuantity,
-                    AcceptedQuantity = item.RequestedQuantity,
-                    OriginalUnitPrice = deliveryItem?.UnitPrice,
-                    ReturnUnitPrice = deliveryItem?.UnitPrice ?? 0
-                };
-            }).ToList()
+            Items = returnItems
         };
 
         if (createDto.Items.Any(item => item.ReturnUnitPrice < 0))
@@ -518,14 +548,19 @@ public sealed class CustomerPortalAdminAppService(
             CreatedOnUtc = request.CreatedOnUtc,
             ReviewedOnUtc = request.ReviewedOnUtc,
             ConvertedCustomerReturnId = request.ConvertedCustomerReturnId,
-            Items = request.Items.Select(item => new CustomerPortalReturnRequestItemAdminAppDto
+            Items = request.Items.Select(item =>
             {
-                Id = item.Id,
-                DeliveryNoteItemId = item.DeliveryNoteItemId,
-                ProductId = item.ProductId,
-                ProductName = item.ProductName,
-                RequestedQuantity = item.RequestedQuantity,
-                Reason = item.Reason
+                var deliveryItem = deliveryNote?.Items.FirstOrDefault(deliveryItem => deliveryItem.Id == item.DeliveryNoteItemId);
+                return new CustomerPortalReturnRequestItemAdminAppDto
+                {
+                    Id = item.Id,
+                    DeliveryNoteItemId = item.DeliveryNoteItemId,
+                    ProductId = item.ProductId,
+                    ProductName = item.ProductName,
+                    RequestedQuantity = item.RequestedQuantity,
+                    OriginalUnitPrice = deliveryItem?.UnitPrice,
+                    Reason = item.Reason
+                };
             }).ToList()
         };
 
