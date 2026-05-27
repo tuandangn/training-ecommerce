@@ -55,6 +55,7 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddSingleton(BuildCustomerPortalSecurityOptions(configuration));
         services.AddSingleton(BuildCustomerPortalStoreOptions(configuration));
+        services.AddSingleton(BuildCustomerPortalAuthCookieOptions(configuration));
         services.AddCustomerPortalDataProtection(configuration);
         services.Configure<ForwardedHeadersOptions>(options =>
         {
@@ -170,6 +171,13 @@ internal static class CustomerApiServiceCollectionExtensions
     {
         var options = new CustomerPortalStoreOptions();
         configuration.GetSection(CustomerPortalStoreOptions.SectionName).Bind(options);
+        return options;
+    }
+
+    private static CustomerPortalAuthCookieOptions BuildCustomerPortalAuthCookieOptions(IConfiguration configuration)
+    {
+        var options = new CustomerPortalAuthCookieOptions();
+        configuration.GetSection(CustomerPortalAuthCookieOptions.SectionName).Bind(options);
         return options;
     }
 
