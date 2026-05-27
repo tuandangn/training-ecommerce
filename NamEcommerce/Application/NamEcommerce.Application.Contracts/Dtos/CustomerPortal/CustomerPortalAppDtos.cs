@@ -298,7 +298,7 @@ public sealed record CustomerOrderRequestDefaultsAppDto
 [Serializable]
 public sealed record CreateCustomerReturnRequestAppDto
 {
-    public required Guid DeliveryNoteId { get; init; }
+    public Guid? DeliveryNoteId { get; init; }
     public string? Reason { get; init; }
     public IList<CreateCustomerReturnRequestItemAppDto> Items { get; init; } = [];
 }
@@ -306,10 +306,23 @@ public sealed record CreateCustomerReturnRequestAppDto
 [Serializable]
 public sealed record CreateCustomerReturnRequestItemAppDto
 {
-    public required Guid DeliveryNoteItemId { get; init; }
+    public Guid? DeliveryNoteItemId { get; init; }
+    public Guid? ProductId { get; init; }
     public required decimal RequestedQuantity { get; init; }
     public string? Reason { get; init; }
     public IList<CreateCustomerReturnRequestPictureAppDto> EvidencePictures { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerReturnableItemAppDto
+{
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public required string Unit { get; init; }
+    public decimal DeliveredQuantity { get; init; }
+    public decimal ReservedReturnQuantity { get; init; }
+    public decimal ReturnableQuantity { get; init; }
+    public decimal LatestUnitPrice { get; init; }
 }
 
 [Serializable]

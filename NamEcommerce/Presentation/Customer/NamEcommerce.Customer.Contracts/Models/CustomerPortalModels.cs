@@ -171,6 +171,19 @@ public sealed record CustomerDeliveryNoteItemModel(
 public sealed record CustomerReturnRequestModel(Guid Id, Guid DeliveryNoteId, int Status, DateTime CreatedOn);
 
 [Serializable]
+public sealed record CustomerReturnableItemListModel(IList<CustomerReturnableItemModel> Items);
+
+[Serializable]
+public sealed record CustomerReturnableItemModel(
+    Guid ProductId,
+    string ProductName,
+    string Unit,
+    decimal DeliveredQuantity,
+    decimal ReservedReturnQuantity,
+    decimal ReturnableQuantity,
+    decimal LatestUnitPrice);
+
+[Serializable]
 public sealed record CustomerReturnRequestListModel(IList<CustomerReturnRequestSummaryModel> Items);
 
 [Serializable]

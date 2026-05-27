@@ -39,7 +39,7 @@
                     <tr>
                         <th class="ps-4" style="width:130px">Mã phiếu</th>
                         <th>Khách hàng</th>
-                        <th>Đơn hàng</th>
+                        <th>Nguồn giao</th>
                         <th>Kho nhận</th>
                         <th class="text-end">Giá trị trả</th>
                         <th class="text-center" style="width:130px">Trạng thái</th>
@@ -132,7 +132,7 @@
                                 <span class="list-card-value">@item.CustomerName</span>
                             </div>
                             <div class="list-card-field">
-                                <span class="list-card-label">Đơn hàng</span>
+                                <span class="list-card-label">Nguồn giao</span>
                                 <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@item.DeliveryNoteId"
                                    class="list-card-value text-decoration-none">
                                     @item.DeliveryNoteCode

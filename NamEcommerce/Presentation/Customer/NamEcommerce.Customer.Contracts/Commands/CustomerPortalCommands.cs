@@ -24,12 +24,13 @@ public sealed record ConfirmCustomerDeliveryNoteCommand(Guid DeliveryNoteId, str
 public sealed record CreateCustomerDeliveryFeedbackCommand(Guid DeliveryNoteId, int? Rating, string? Message) : IRequest<CustomerActionResultModel>;
 
 public sealed record CreateCustomerReturnRequestCommand(
-    Guid DeliveryNoteId,
+    Guid? DeliveryNoteId,
     string? Reason,
     IList<CreateCustomerReturnRequestItemCommand> Items) : IRequest<CustomerReturnRequestModel>;
 
 public sealed record CreateCustomerReturnRequestItemCommand(
-    Guid DeliveryNoteItemId,
+    Guid? DeliveryNoteItemId,
+    Guid? ProductId,
     decimal RequestedQuantity,
     string? Reason,
     IList<CreateCustomerReturnRequestPictureCommand>? EvidencePictures = null);

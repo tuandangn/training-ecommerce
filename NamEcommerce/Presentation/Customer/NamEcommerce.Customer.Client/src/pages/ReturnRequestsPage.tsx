@@ -22,8 +22,8 @@ export function ReturnRequestsPage() {
           <h1 className="page-title">Trả hàng</h1>
           <p className="page-subtitle">Theo dõi các yêu cầu trả hàng đã gửi cho cửa hàng</p>
         </div>
-        <button className="button primary" type="button" onClick={() => navigate("/delivery-notes")}>
-          Tạo từ phiếu giao
+        <button className="button primary" type="button" onClick={() => navigate("/return-requests/new")}>
+          Tạo yêu cầu trả hàng
         </button>
       </div>
 

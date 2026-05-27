@@ -53,14 +53,18 @@ public sealed record CustomerReturnItemDto(Guid Id)
 [Serializable]
 public sealed record CreateCustomerReturnDto
 {
-    public required Guid DeliveryNoteId { get; init; }
+    public Guid? DeliveryNoteId { get; init; }
+    public required Guid CustomerId { get; init; }
     public required Guid WarehouseId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
+    public Guid? ExcludeCustomerReturnRequestId { get; init; }
     public required IEnumerable<CreateCustomerReturnItemDto> Items { get; init; }
 
     public void Verify()
     {
+        if (CustomerId == Guid.Empty)
+            throw new ReturnDataIsInvalidException("Error.CustomerReturn.CustomerRequired");
         if (DeliveryNoteId == Guid.Empty)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.DeliveryNoteRequired");
         if (WarehouseId == Guid.Empty)
@@ -71,6 +75,8 @@ public sealed record CreateCustomerReturnDto
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.NoItems");
         foreach (var item in Items)
         {
+            if (item.ProductId == Guid.Empty)
+                throw new ReturnDataIsInvalidException("Error.CustomerReturn.ProductRequired");
             if (item.RequestedQuantity <= 0)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.RequestedQuantityMustBePositive");
             if (item.AcceptedQuantity < 0)

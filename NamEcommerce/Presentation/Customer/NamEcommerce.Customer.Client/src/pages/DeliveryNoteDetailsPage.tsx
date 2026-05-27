@@ -118,6 +118,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
               mimeType: picture.mimeType,
               base64Data: picture.base64Data,
             })),
+            productId: note.items.find((item) => item.id === deliveryNoteItemId)?.productId,
           })),
         }),
       });

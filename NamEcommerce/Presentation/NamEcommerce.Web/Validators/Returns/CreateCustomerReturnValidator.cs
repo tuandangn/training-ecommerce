@@ -9,7 +9,7 @@ public sealed class CreateCustomerReturnValidator : AbstractValidator<CreateCust
 {
     public CreateCustomerReturnValidator(IStringLocalizer<SharedResource> localizer)
     {
-        RuleFor(m => m.DeliveryNoteId).NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.DeliveryNote"]]);
+        RuleFor(m => m.CustomerId).NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Customer"]]);
         RuleFor(m => m.WarehouseId).NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Warehouse"]]);
     }
 }

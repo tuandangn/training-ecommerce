@@ -20,6 +20,7 @@ public sealed class CreateCustomerReturnHandler : IRequestHandler<CreateCustomer
         var result = await _customerReturnAppService.CreateAsync(new CreateCustomerReturnAppDto
         {
             DeliveryNoteId = request.DeliveryNoteId,
+            CustomerId = request.CustomerId,
             WarehouseId = request.WarehouseId,
             Note = request.Note,
             AdditionalCost = request.AdditionalCost,

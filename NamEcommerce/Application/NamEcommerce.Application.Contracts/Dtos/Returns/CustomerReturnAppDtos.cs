@@ -51,14 +51,18 @@ public sealed record CustomerReturnItemAppDto(Guid Id)
 [Serializable]
 public sealed record CreateCustomerReturnAppDto
 {
-    public required Guid DeliveryNoteId { get; init; }
+    public Guid? DeliveryNoteId { get; init; }
+    public required Guid CustomerId { get; init; }
     public required Guid WarehouseId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
+    public Guid? ExcludeCustomerReturnRequestId { get; init; }
     public required IEnumerable<CreateCustomerReturnItemAppDto> Items { get; init; }
 
     public (bool valid, string? errorMessage) Validate()
     {
+        if (CustomerId == Guid.Empty)
+            return (false, "Error.CustomerReturn.CustomerRequired");
         if (DeliveryNoteId == Guid.Empty)
             return (false, "Error.CustomerReturn.DeliveryNoteRequired");
         if (WarehouseId == Guid.Empty)
@@ -67,6 +71,8 @@ public sealed record CreateCustomerReturnAppDto
             return (false, "Error.CustomerReturn.AdditionalCostCannotBeNegative");
         if (Items is null || !Items.Any())
             return (false, "Error.CustomerReturn.NoItems");
+        if (Items.Any(item => item.ProductId == Guid.Empty))
+            return (false, "Error.CustomerReturn.ProductRequired");
         if (Items.Any(item => item.AcceptedQuantity > item.RequestedQuantity))
             return (false, "Error.CustomerReturn.AcceptedQuantityExceedsRequested");
         return (true, null);

@@ -146,6 +146,7 @@ public sealed class CustomerPortalCommandHandlers(
             Items = request.Items.Select(item => new CreateCustomerReturnRequestItemAppDto
             {
                 DeliveryNoteItemId = item.DeliveryNoteItemId,
+                ProductId = item.ProductId,
                 RequestedQuantity = item.RequestedQuantity,
                 Reason = item.Reason,
                 EvidencePictures = item.EvidencePictures?

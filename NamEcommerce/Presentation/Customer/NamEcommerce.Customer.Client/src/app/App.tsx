@@ -11,6 +11,7 @@ import { DeliveryNotesPage } from "../pages/DeliveryNotesPage";
 import { LoginPage } from "../pages/LoginPage";
 import { MockPaymentPage } from "../pages/MockPaymentPage";
 import { NewOrderRequestPage } from "../pages/NewOrderRequestPage";
+import { NewReturnRequestPage } from "../pages/NewReturnRequestPage";
 import { OrderDetailsPage } from "../pages/OrderDetailsPage";
 import { OrderRequestDetailsPage } from "../pages/OrderRequestDetailsPage";
 import { OrdersPage } from "../pages/OrdersPage";
@@ -117,6 +118,7 @@ function renderPrivatePage(path: string) {
   if (path === "/delivery-notes") return <DeliveryNotesPage />;
   if (path.startsWith("/delivery-notes/")) return <DeliveryNoteDetailsPage id={path.replace("/delivery-notes/", "")} />;
   if (path === "/return-requests") return <ReturnRequestsPage />;
+  if (path === "/return-requests/new") return <NewReturnRequestPage />;
   if (path.startsWith("/return-requests/")) return <ReturnRequestDetailsPage id={path.replace("/return-requests/", "")} />;
   if (path === "/debts") return <DebtsPage />;
   if (path === "/payments") return <MockPaymentPage />;

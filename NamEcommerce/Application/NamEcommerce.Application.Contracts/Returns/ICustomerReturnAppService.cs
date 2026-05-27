@@ -19,4 +19,7 @@ public interface ICustomerReturnAppService
 
     /// <summary>Lấy danh sách items có thể trả của một phiếu xuất kho — bao gồm số lượng đã trả.</summary>
     Task<List<ReturnableItemAppDto>> GetDeliveryNoteItemsForReturnAsync(Guid deliveryNoteId, Guid? excludeReturnId = null);
+
+    /// <summary>Lấy danh sách hàng đã giao còn có thể trả của một khách hàng, không cần chọn phiếu giao.</summary>
+    Task<List<ReturnableItemAppDto>> GetReturnableItemsByCustomerAsync(Guid customerId, Guid? excludeReturnId = null);
 }

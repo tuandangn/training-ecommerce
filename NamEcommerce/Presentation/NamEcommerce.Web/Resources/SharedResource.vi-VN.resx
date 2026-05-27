@@ -315,6 +315,9 @@
   <data name="Error.CustomerReturn.DeliveryNoteRequired" xml:space="preserve">
     <value>Vui lòng chọn phiếu giao hàng.</value>
   </data>
+  <data name="Error.CustomerReturn.CustomerRequired" xml:space="preserve">
+    <value>Vui lòng chọn khách hàng.</value>
+  </data>
   <data name="Error.CustomerReturn.WarehouseRequired" xml:space="preserve">
     <value>Vui lòng chọn kho nhận hàng trả.</value>
   </data>
@@ -343,7 +346,19 @@
     <value>Phiếu giao hàng cần hoàn tất trước khi tạo phiếu trả hàng.</value>
   </data>
   <data name="Error.CustomerReturn.DeliveryNoteItemRequired" xml:space="preserve">
-    <value>Hàng trả phải thuộc phiếu giao hàng đã chọn.</value>
+    <value>Hàng trả phải thuộc hàng đã giao cho khách.</value>
+  </data>
+  <data name="Error.CustomerReturn.DeliveryNoteNotOwnedByCustomer" xml:space="preserve">
+    <value>Phiếu giao hàng không thuộc khách hàng đã chọn.</value>
+  </data>
+  <data name="Error.CustomerReturn.NoDeliveredItems" xml:space="preserve">
+    <value>Khách hàng chưa có hàng đã giao để trả.</value>
+  </data>
+  <data name="Error.CustomerReturn.ProductNotDelivered" xml:space="preserve">
+    <value>Sản phẩm chưa được giao cho khách hàng này.</value>
+  </data>
+  <data name="Error.CustomerReturn.ProductRequired" xml:space="preserve">
+    <value>Vui lòng chọn sản phẩm cần trả.</value>
   </data>
   <data name="Error.CustomerReturn.ProductNotFound" xml:space="preserve">
     <value>Không tìm thấy sản phẩm trong phiếu trả hàng.</value>

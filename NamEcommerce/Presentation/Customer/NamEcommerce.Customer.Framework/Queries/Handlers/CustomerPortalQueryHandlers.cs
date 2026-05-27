@@ -23,6 +23,7 @@ public sealed class CustomerPortalQueryHandlers(
     IRequestHandler<GetCustomerContactQuery, CustomerContactModel>,
     IRequestHandler<GetCustomerDeliveryNotesQuery, CustomerDeliveryNoteListModel>,
     IRequestHandler<GetCustomerDeliveryNoteDetailsQuery, CustomerDeliveryNoteDetailsModel?>,
+    IRequestHandler<GetCustomerReturnableItemsQuery, CustomerReturnableItemListModel>,
     IRequestHandler<GetCustomerReturnRequestsQuery, CustomerReturnRequestListModel>,
     IRequestHandler<GetCustomerReturnRequestDetailsQuery, CustomerReturnRequestDetailsModel?>,
     IRequestHandler<GetCustomerDebtsQuery, CustomerDebtSummaryModel>
@@ -163,6 +164,19 @@ public sealed class CustomerPortalQueryHandlers(
                     item.ReservedReturnQuantity,
                     item.PendingPortalReturnQuantity,
                     item.ReturnableQuantity)).ToList());
+    }
+
+    public async Task<CustomerReturnableItemListModel> Handle(GetCustomerReturnableItemsQuery request, CancellationToken cancellationToken)
+    {
+        var items = await portalAppService.GetReturnableItemsAsync(RequireCustomerId()).ConfigureAwait(false);
+        return new CustomerReturnableItemListModel(items.Select(item => new CustomerReturnableItemModel(
+            item.ProductId,
+            item.ProductName,
+            item.Unit,
+            item.DeliveredQuantity,
+            item.ReservedReturnQuantity,
+            item.ReturnableQuantity,
+            item.LatestUnitPrice)).ToList());
     }
 
     public async Task<CustomerReturnRequestListModel> Handle(GetCustomerReturnRequestsQuery request, CancellationToken cancellationToken)

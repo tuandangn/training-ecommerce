@@ -21,6 +21,10 @@ public sealed class ReturnRequestsController(IMediator mediator) : ControllerBas
         return model is null ? NotFound() : Ok(model);
     }
 
+    [HttpGet("returnable-items")]
+    public async Task<IActionResult> GetReturnableItems()
+        => Ok(await mediator.Send(new GetCustomerReturnableItemsQuery()).ConfigureAwait(false));
+
     [HttpPost]
     public async Task<IActionResult> Create(CreateCustomerReturnRequestCommand command)
     {

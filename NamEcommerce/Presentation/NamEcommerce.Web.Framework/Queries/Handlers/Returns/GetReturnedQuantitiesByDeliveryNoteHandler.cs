@@ -30,9 +30,17 @@ public sealed class GetReturnedQuantitiesByDeliveryNoteHandler
 
     public async Task<IReadOnlyDictionary<Guid, ReturnedQuantitySummary>> Handle(GetReturnedQuantitiesByDeliveryNoteQuery request, CancellationToken cancellationToken)
     {
+        var returnableItems = await _customerReturnAppService
+            .GetDeliveryNoteItemsForReturnAsync(request.DeliveryNoteId)
+            .ConfigureAwait(false);
+        var deliveryNoteItemIds = returnableItems
+            .Where(item => item.SourceItemId.HasValue)
+            .Select(item => item.SourceItemId!.Value)
+            .ToHashSet();
+
         var (_, items) = await _customerReturnAppService.GetListAsync(
             customerId: null,
-            deliveryNoteId: request.DeliveryNoteId,
+            deliveryNoteId: null,
             status: null,
             pageIndex: 0,
             pageSize: FullPageSize).ConfigureAwait(false);
@@ -40,7 +48,7 @@ public sealed class GetReturnedQuantitiesByDeliveryNoteHandler
         var dict = items
             .Where(r => r.Status != CancelledStatus)
             .SelectMany(r => r.Items.Select(i => new { r.Status, Item = i }))
-            .Where(x => x.Item.DeliveryNoteItemId.HasValue)
+            .Where(x => x.Item.DeliveryNoteItemId.HasValue && deliveryNoteItemIds.Contains(x.Item.DeliveryNoteItemId.Value))
             .GroupBy(x => x.Item.DeliveryNoteItemId!.Value)
             .ToDictionary(
                 g => g.Key,
@@ -51,9 +59,9 @@ public sealed class GetReturnedQuantitiesByDeliveryNoteHandler
 
         var portalRequests = await _customerPortalAdminAppService.GetReturnRequestsAsync().ConfigureAwait(false);
         var portalPendingQuantities = portalRequests
-            .Where(r => r.DeliveryNoteId == request.DeliveryNoteId
-                && (r.Status == PortalPendingReviewStatus || r.Status == PortalAcceptedStatus))
+            .Where(r => r.Status == PortalPendingReviewStatus || r.Status == PortalAcceptedStatus)
             .SelectMany(r => r.Items)
+            .Where(i => deliveryNoteItemIds.Contains(i.DeliveryNoteItemId))
             .GroupBy(i => i.DeliveryNoteItemId)
             .ToDictionary(g => g.Key, g => g.Sum(i => i.RequestedQuantity));
 

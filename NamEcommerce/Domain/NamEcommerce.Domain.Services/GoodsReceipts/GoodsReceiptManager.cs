@@ -449,13 +449,19 @@ public sealed class GoodsReceiptManager(
         if (!item.DeliveryNoteItemId.HasValue)
             return null;
 
-        var allocation = inventoryCostAllocationReader.DataSource
+        var allocations = inventoryCostAllocationReader.DataSource
             .Where(a => a.OutboundReferenceType == InventoryCostReferenceType.SalesOrder
-                     && a.OutboundReferenceId == deliveryNoteId
                      && a.OutboundReferenceItemId == item.DeliveryNoteItemId.Value
+                     && a.ProductId == item.ProductId
                      && a.CostingStatus != InventoryCostingStatus.Superseded)
+            .ToList();
+        var allocation = allocations
+            .Where(a => a.OutboundReferenceId == deliveryNoteId)
             .OrderByDescending(a => a.CreatedAtUtc)
-            .FirstOrDefault();
+            .FirstOrDefault()
+            ?? allocations
+                .OrderByDescending(a => a.CreatedAtUtc)
+                .FirstOrDefault();
 
         if (allocation is null || allocation.CostingStatus == InventoryCostingStatus.Pending)
             return null;

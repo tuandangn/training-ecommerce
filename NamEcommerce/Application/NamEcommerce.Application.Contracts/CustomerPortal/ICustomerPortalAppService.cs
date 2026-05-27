@@ -20,6 +20,7 @@ public interface ICustomerPortalAppService
     Task<CustomerDeliveryNoteDetailsAppDto?> GetDeliveryNoteDetailsAsync(Guid customerId, Guid deliveryNoteId);
     Task<CustomerActionResultAppDto> ConfirmDeliveryNoteAsync(Guid customerId, Guid deliveryNoteId, ConfirmCustomerDeliveryNoteAppDto dto);
     Task<CustomerActionResultAppDto> CreateDeliveryFeedbackAsync(Guid customerId, CreateCustomerDeliveryFeedbackAppDto dto);
+    Task<IReadOnlyCollection<CustomerReturnableItemAppDto>> GetReturnableItemsAsync(Guid customerId);
     Task<CustomerReturnRequestAppDto> CreateReturnRequestAsync(Guid customerId, CreateCustomerReturnRequestAppDto dto);
     Task<IReadOnlyCollection<CustomerReturnRequestSummaryAppDto>> GetReturnRequestsAsync(Guid customerId);
     Task<CustomerReturnRequestDetailsAppDto?> GetReturnRequestDetailsAsync(Guid customerId, Guid returnRequestId);

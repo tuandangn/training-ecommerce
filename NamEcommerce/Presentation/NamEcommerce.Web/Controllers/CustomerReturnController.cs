@@ -86,10 +86,25 @@ public sealed class CustomerReturnController : BaseAuthorizedController
             return View(model);
         }
 
+        if (!model.CustomerId.HasValue)
+        {
+            AddLocalizedModelError("Error.CustomerReturn.CustomerRequired");
+            model = await _customerReturnModelFactory.PrepareCreateCustomerReturnModel(model);
+            return View(model);
+        }
+
+        if (!model.WarehouseId.HasValue)
+        {
+            AddLocalizedModelError("Error.CustomerReturn.WarehouseRequired");
+            model = await _customerReturnModelFactory.PrepareCreateCustomerReturnModel(model);
+            return View(model);
+        }
+
         var result = await _mediator.Send(new CreateCustomerReturnCommand
         {
-            DeliveryNoteId = model.DeliveryNoteId!.Value,
-            WarehouseId = model.WarehouseId!.Value,
+            DeliveryNoteId = model.DeliveryNoteId,
+            CustomerId = model.CustomerId.Value,
+            WarehouseId = model.WarehouseId.Value,
             AdditionalCost = model.AdditionalCost,
             Note = model.Note,
             Items = returnItems.Select(i => new CreateCustomerReturnItemCommand
@@ -205,6 +220,17 @@ public sealed class CustomerReturnController : BaseAuthorizedController
         var items = await _mediator.Send(new GetDeliveryNoteItemsForReturnQuery
         {
             DeliveryNoteId = deliveryNoteId,
+            ExcludeReturnId = excludeReturnId
+        });
+        return Json(items);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetReturnableItems(Guid customerId, Guid? excludeReturnId = null)
+    {
+        var items = await _mediator.Send(new GetReturnableItemsByCustomerQuery
+        {
+            CustomerId = customerId,
             ExcludeReturnId = excludeReturnId
         });
         return Json(items);

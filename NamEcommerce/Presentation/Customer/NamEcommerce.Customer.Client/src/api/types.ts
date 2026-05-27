@@ -190,6 +190,20 @@ export type ReturnRequestList = {
   items: ReturnRequestSummary[];
 };
 
+export type ReturnableItemList = {
+  items: ReturnableItem[];
+};
+
+export type ReturnableItem = {
+  productId: string;
+  productName: string;
+  unit: string;
+  deliveredQuantity: number;
+  reservedReturnQuantity: number;
+  returnableQuantity: number;
+  latestUnitPrice: number;
+};
+
 export type ReturnRequestSummary = {
   id: string;
   deliveryNoteId: string;

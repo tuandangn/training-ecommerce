@@ -15,6 +15,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.CustomerPortal;
 using NamEcommerce.Domain.Shared.Enums.CustomerPortal;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Services.CustomerPortal;
 using NamEcommerce.Domain.Shared.Services.Security;
@@ -329,13 +330,16 @@ public sealed class CustomerPortalAdminAppService(
 
         var deliveryNote = await deliveryNoteReader.GetByIdAsync(request.DeliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null)
-            return CustomerPortalConversionResultAppDto.Fail("Không tìm thấy phiếu giao hàng gốc.");
+            return CustomerPortalConversionResultAppDto.Fail("Không tìm thấy phiếu giao hàng tham chiếu.");
         if (deliveryNote.CustomerId != request.CustomerId)
-            return CustomerPortalConversionResultAppDto.Fail("Phiếu giao hàng gốc không thuộc khách hàng này.");
+            return CustomerPortalConversionResultAppDto.Fail("Phiếu giao hàng tham chiếu không thuộc khách hàng này.");
 
-        var deliveryItems = deliveryNote.Items.ToDictionary(item => item.Id);
+        var deliveryItems = deliveryNoteReader.DataSource
+            .Where(note => note.CustomerId == request.CustomerId && note.Status == DeliveryNoteStatus.Delivered)
+            .SelectMany(note => note.Items.Select(item => new { note, item }))
+            .ToDictionary(source => source.item.Id);
         if (request.Items.Any(item => !deliveryItems.ContainsKey(item.DeliveryNoteItemId)))
-            return CustomerPortalConversionResultAppDto.Fail("Dữ liệu dòng hàng trả không còn khớp với phiếu giao.");
+            return CustomerPortalConversionResultAppDto.Fail("Dữ liệu dòng hàng trả không còn khớp với hàng đã giao.");
 
         var conversionByRequestItemId = items
             .GroupBy(item => item.RequestItemId)
@@ -354,7 +358,7 @@ public sealed class CustomerPortalAdminAppService(
             if (conversion.AcceptedQuantity <= 0)
                 continue;
 
-            var deliveryItem = deliveryItems.GetValueOrDefault(item.DeliveryNoteItemId);
+            var deliveryItem = deliveryItems.GetValueOrDefault(item.DeliveryNoteItemId)?.item;
             returnItems.Add(new CreateCustomerReturnItemAppDto
             {
                 ProductId = item.ProductId,
@@ -372,8 +376,10 @@ public sealed class CustomerPortalAdminAppService(
         var createDto = new CreateCustomerReturnAppDto
         {
             DeliveryNoteId = request.DeliveryNoteId,
+            CustomerId = request.CustomerId,
             WarehouseId = warehouseId,
             AdditionalCost = additionalCost,
+            ExcludeCustomerReturnRequestId = request.Id,
             Note = BuildConvertedReturnNote(request, adminNote),
             Items = returnItems
         };
