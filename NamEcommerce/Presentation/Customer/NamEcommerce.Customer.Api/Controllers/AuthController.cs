@@ -8,7 +8,9 @@ namespace NamEcommerce.Customer.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public sealed class AuthController(IMediator mediator) : ControllerBase
+public sealed class AuthController(
+    IMediator mediator,
+    CustomerPortalAuthCookieOptions authCookieOptions) : ControllerBase
 {
     [HttpPost("otp/request")]
     [EnableRateLimiting("CustomerOtp")]
@@ -67,12 +69,12 @@ public sealed class AuthController(IMediator mediator) : ControllerBase
     private void AppendSessionCookie(string token)
         => Response.Cookies.Append(CustomerPortalAuthDefaults.SessionCookieName, token, BuildCookieOptions());
 
-    private static CookieOptions BuildCookieOptions()
+    private CookieOptions BuildCookieOptions()
         => new()
         {
             HttpOnly = true,
             Secure = true,
-            SameSite = SameSiteMode.Lax,
+            SameSite = authCookieOptions.CrossSite ? SameSiteMode.None : SameSiteMode.Lax,
             Path = "/"
         };
 
