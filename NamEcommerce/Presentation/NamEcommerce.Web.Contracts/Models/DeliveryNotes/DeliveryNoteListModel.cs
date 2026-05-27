@@ -35,4 +35,12 @@ public sealed record DeliveryNoteListItemModel
     public string StatusName { get; init; } = string.Empty;
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? DeliveredOnUtc { get; init; }
+    public IList<DeliveryNoteListItemProductModel> Items { get; init; } = [];
+}
+
+public sealed record DeliveryNoteListItemProductModel
+{
+    public required Guid Id { get; init; }
+    public required string ProductName { get; init; }
+    public decimal Quantity { get; init; }
 }

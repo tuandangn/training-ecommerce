@@ -1,9 +1,20 @@
 @model DeliveryNoteListModel
+@using System.Text.Json
 @using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
 @using NamEcommerce.Web.Constants
 @{
     ViewData["Title"] = "Phiếu xuất kho";
     var query = Model.Keywords ?? "";
+    var acceptanceItemsJson = JsonSerializer.Serialize(Model.Data.Items.Select(note => new
+    {
+        id = note.Id,
+        items = note.Items.Select(item => new
+        {
+            id = item.Id,
+            productName = item.ProductName,
+            quantity = item.Quantity
+        })
+    }));
 }
 
 <div class="page-header">
@@ -282,10 +293,11 @@
 
 <!-- Modal Mark Delivered (Bằng chứng) -->
 <div class="modal fade" id="markDeliveredModal" tabindex="-1" aria-labelledby="markDeliveredModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <form id="markDeliveredForm" method="post" enctype="multipart/form-data">
             @Html.AntiForgeryToken()
             <input type="hidden" id="deliveryNoteId" name="deliveryNoteId" />
+            <input type="hidden" id="acceptanceItemsJson" name="acceptanceItemsJson" />
             
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-0 pb-0">
@@ -299,6 +311,36 @@
                     <div class="mb-3">
                         <label for="receiverName" class="form-label small fw-bold text-muted text-uppercase mb-2">Tên người nhận (Không bắt buộc)</label>
                         <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="receiverName" name="receiverName" placeholder="Ví dụ: Anh Tâm">
+                    </div>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Hàng hóa</th>
+                                    <th class="text-end" style="width: 110px;">Số lượng giao</th>
+                                    <th class="text-end" style="width: 150px;">Nhận thực tế</th>
+                                    <th class="text-end" style="width: 110px;">Trả lại</th>
+                                </tr>
+                            </thead>
+                            <tbody id="acceptanceTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="mb-3">
+                        <label for="rejectReason" class="form-label small fw-bold text-muted text-uppercase mb-2">Lý do trả hàng</label>
+                        <textarea class="form-control rounded-3 fs-6" id="rejectReason" rows="2"
+                                  placeholder="Nhập 1 lý do chung cho toàn bộ số lượng trả lại"></textarea>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label for="agreedCustomerCharge" class="form-label small fw-bold text-muted text-uppercase mb-2">Chi phí phát sinh</label>
+                            <input class="form-control form-control-lg rounded-3 fs-6" id="agreedCustomerCharge" name="agreedCustomerCharge"
+                                   value="0" data-decimal="currency" placeholder="Nhập chi phí phát sinh (nếu có)" />
+                        </div>
+                        <div class="col-md-8">
+                            <label for="agreedCustomerChargeReason" class="form-label small fw-bold text-muted text-uppercase mb-2">Lý do</label>
+                            <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="agreedCustomerChargeReason" name="agreedCustomerChargeReason"
+                                   placeholder="Nhập lý do phát sinh chi phí" />
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label for="deliveryProofPicture" class="form-label small fw-bold text-muted text-uppercase mb-2">Hình ảnh bằng chứng <span class="text-danger">*</span></label>
@@ -350,18 +392,105 @@
             });
 
             // Mark Delivered Flow
+            const deliveryItemsSource = @Html.Raw(acceptanceItemsJson);
+            const deliveryItemsByNote = {};
+            for (const sourceItem of deliveryItemsSource) {
+                deliveryItemsByNote[String(sourceItem.id)] = (sourceItem.items || []).map(item => ({
+                    id: item.id,
+                    productName: item.productName,
+                    quantity: Number(item.quantity || 0)
+                }));
+            }
+
             var markDeliveredModal = new bootstrap.Modal(document.getElementById('markDeliveredModal'));
-            
+
             $('.btn-delivered').click(function(e) {
                 e.preventDefault();
-                var id = $(this).data('id');
+                var id = String($(this).data('id'));
                 $('#deliveryNoteId').val(id);
-                $('#deliveryProofPicture').val(''); // clear input
                 $('#receiverName').val('');
+                $('#rejectReason').val('');
+                $('#agreedCustomerCharge').val('0');
+                $('#agreedCustomerChargeReason').val('');
+                $('#deliveryProofPicture').val('');
                 $('#previewContainer').addClass('d-none');
                 $('#imagePreview').hide().attr('src', '#');
+                buildAcceptanceRows(id);
                 markDeliveredModal.show();
             });
+
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, char => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[char]));
+            }
+
+            function buildAcceptanceRows(deliveryNoteId) {
+                const deliveryItems = deliveryItemsByNote[String(deliveryNoteId)] || [];
+                const rowsHtml = deliveryItems.map(item => {
+                    const deliveredQty = Number(item.quantity || 0);
+                    return `
+                        <tr data-item-id="${item.id}" data-delivered-qty="${deliveredQty}">
+                            <td>${escapeHtml(item.productName)}</td>
+                            <td class="text-end">${deliveredQty.toLocaleString('vi-VN')}</td>
+                            <td>
+                                <input type="number" step="0.01" min="0" max="${deliveredQty}" class="form-control form-control-sm text-end accepted-qty" value="${deliveredQty}">
+                            </td>
+                            <td class="text-end rejected-qty text-danger fw-semibold">0</td>
+                        </tr>`;
+                }).join('');
+                $('#acceptanceTableBody').html(rowsHtml);
+            }
+
+            function updateRejectedQuantity($row) {
+                const deliveredQty = Number($row.data('delivered-qty') || 0);
+                let acceptedQty = Number($row.find('.accepted-qty').val() || 0);
+                if (!Number.isFinite(acceptedQty)) acceptedQty = 0;
+                if (acceptedQty < 0) acceptedQty = 0;
+                if (acceptedQty > deliveredQty) acceptedQty = deliveredQty;
+                $row.find('.accepted-qty').val(acceptedQty);
+
+                const rejectedQty = Math.max(0, deliveredQty - acceptedQty);
+                $row.find('.rejected-qty').text(rejectedQty.toLocaleString('vi-VN'));
+            }
+
+            $('#acceptanceTableBody').on('input', '.accepted-qty', function() {
+                updateRejectedQuantity($(this).closest('tr'));
+            });
+
+            function buildAcceptancePayload() {
+                const items = [];
+                let hasRejectedItems = false;
+                const rejectReason = String($('#rejectReason').val() || '').trim();
+
+                $('#acceptanceTableBody tr').each(function() {
+                    const $row = $(this);
+                    const itemId = String($row.data('item-id'));
+                    const deliveredQty = Number($row.data('delivered-qty') || 0);
+                    const acceptedQty = Number($row.find('.accepted-qty').val() || 0);
+                    const normalizedAcceptedQty = Math.max(0, Math.min(deliveredQty, acceptedQty));
+                    const rejectedQty = Math.max(0, deliveredQty - normalizedAcceptedQty);
+                    if (rejectedQty > 0) hasRejectedItems = true;
+
+                    items.push({
+                        deliveryNoteItemId: itemId,
+                        acceptedQuantity: normalizedAcceptedQty,
+                        rejectedQuantity: rejectedQty,
+                        rejectReason: rejectedQty > 0 ? rejectReason : null
+                    });
+                });
+
+                if (hasRejectedItems && !rejectReason) {
+                    alert('Vui lòng nhập lý do trả hàng cho toàn phiếu.');
+                    return null;
+                }
+
+                return items;
+            }
 
             // Image Preview inside Modal
             $("#deliveryProofPicture").change(function () {
@@ -385,6 +514,12 @@
             $('#markDeliveredForm').submit(function(e) {
                 e.preventDefault();
                 var form = $(this)[0];
+                var acceptanceItems = buildAcceptancePayload();
+                if (!acceptanceItems) {
+                    return;
+                }
+
+                $('#acceptanceItemsJson').val(JSON.stringify(acceptanceItems));
                 var formData = new FormData(form);
                 
                 var actionUrl = '/DeliveryNote/MarkDelivered';
@@ -399,6 +534,9 @@
                     data: formData,
                     processData: false, // important
                     contentType: false, // important
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
                     success: function(res) {
                         if (res.success) {
                             alert(res.message);

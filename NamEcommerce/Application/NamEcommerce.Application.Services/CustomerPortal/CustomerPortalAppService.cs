@@ -468,25 +468,84 @@ public sealed class CustomerPortalAppService(
         if (deliveryNote is null)
             return CustomerActionResultAppDto.Fail("Không tìm thấy phiếu giao hàng.");
 
+        var deliveryItemsById = deliveryNote.Items.ToDictionary(item => item.Id);
+        var requestItemsByDeliveryItemId = new Dictionary<Guid, ConfirmCustomerDeliveryAcceptanceItemAppDto>();
+        if (dto.Acceptance?.Items is not null)
+        {
+            foreach (var requestItem in dto.Acceptance.Items)
+            {
+                if (requestItem.DeliveryNoteItemId == Guid.Empty ||
+                    !deliveryItemsById.ContainsKey(requestItem.DeliveryNoteItemId) ||
+                    !requestItemsByDeliveryItemId.TryAdd(requestItem.DeliveryNoteItemId, requestItem))
+                {
+                    return CustomerActionResultAppDto.Fail("Dòng hàng xác nhận không hợp lệ.");
+                }
+            }
+        }
+
+        var rejectedItems = new List<(Guid DeliveryNoteItemId, Guid ProductId, decimal RejectedQuantity)>();
+        foreach (var deliveryItem in deliveryNote.Items)
+        {
+            if (!requestItemsByDeliveryItemId.TryGetValue(deliveryItem.Id, out var requestItem))
+                continue;
+
+            var acceptedQuantity = requestItem.AcceptedQuantity;
+            var rejectedQuantity = requestItem.RejectedQuantity;
+            if (acceptedQuantity < 0 || rejectedQuantity < 0)
+                return CustomerActionResultAppDto.Fail("Số lượng xác nhận không hợp lệ.");
+
+            var totalQuantity = acceptedQuantity + rejectedQuantity;
+            if (Math.Abs(totalQuantity - deliveryItem.Quantity) > 0.0001m)
+                return CustomerActionResultAppDto.Fail("Số lượng xác nhận không khớp số lượng giao.");
+
+            if (rejectedQuantity > 0)
+            {
+                rejectedItems.Add((deliveryItem.Id, deliveryItem.ProductId, rejectedQuantity));
+            }
+        }
+
+        var returnReason = dto.Acceptance?.Items?
+            .Where(item => item.RejectedQuantity > 0)
+            .Select(item => item.RejectReason?.Trim())
+            .FirstOrDefault(reason => !string.IsNullOrWhiteSpace(reason));
+
+        if (rejectedItems.Count > 0 && string.IsNullOrWhiteSpace(returnReason))
+            return CustomerActionResultAppDto.Fail("Vui lòng nhập lý do trả hàng cho toàn phiếu.");
+
         await deliveryNoteManager.MarkReceivedByCustomerAsync(
             deliveryNote.Id,
             DateTime.UtcNow,
             dto.ReceiverName,
             dto.Note,
-            dto.Acceptance is null
-                ? null
-                : new DeliveryAcceptanceDto
+            new DeliveryAcceptanceDto
+            {
+                AgreedCustomerCharge = dto.Acceptance?.AgreedCustomerCharge ?? 0m,
+                AgreedCustomerChargeReason = dto.Acceptance?.AgreedCustomerChargeReason,
+                Items = deliveryNote.Items.Select(item => new DeliveryAcceptanceItemDto
                 {
-                    AgreedCustomerCharge = dto.Acceptance.AgreedCustomerCharge,
-                    AgreedCustomerChargeReason = dto.Acceptance.AgreedCustomerChargeReason,
-                    Items = dto.Acceptance.Items.Select(item => new DeliveryAcceptanceItemDto
-                    {
-                        DeliveryNoteItemId = item.DeliveryNoteItemId,
-                        AcceptedQuantity = item.AcceptedQuantity,
-                        RejectedQuantity = item.RejectedQuantity,
-                        RejectReason = item.RejectReason
-                    }).ToList()
-                }).ConfigureAwait(false);
+                    DeliveryNoteItemId = item.Id,
+                    AcceptedQuantity = item.Quantity,
+                    RejectedQuantity = 0m,
+                    RejectReason = null
+                }).ToList()
+            }).ConfigureAwait(false);
+
+        if (rejectedItems.Count > 0)
+        {
+            await CreateReturnRequestAsync(customerId, new CreateCustomerReturnRequestAppDto
+            {
+                DeliveryNoteId = deliveryNote.Id,
+                Reason = returnReason,
+                Items = rejectedItems.Select(item => new CreateCustomerReturnRequestItemAppDto
+                {
+                    DeliveryNoteItemId = item.DeliveryNoteItemId,
+                    ProductId = item.ProductId,
+                    RequestedQuantity = item.RejectedQuantity,
+                    Reason = returnReason,
+                    EvidencePictures = []
+                }).ToList()
+            }).ConfigureAwait(false);
+        }
 
         await customerPortalManager.CreateDeliveryFeedbackAsync(new CreateCustomerDeliveryFeedbackDto
         {
@@ -495,7 +554,10 @@ public sealed class CustomerPortalAppService(
             Message = BuildConfirmationMessage(dto)
         }).ConfigureAwait(false);
 
-        return CustomerActionResultAppDto.Ok("Đã ghi nhận khách đã nhận hàng.");
+        return CustomerActionResultAppDto.Ok(
+            rejectedItems.Count > 0
+                ? "Đã ghi nhận khách đã nhận hàng và tạo yêu cầu trả hàng."
+                : "Đã ghi nhận khách đã nhận hàng.");
     }
 
     public async Task<CustomerActionResultAppDto> CreateDeliveryFeedbackAsync(Guid customerId, CreateCustomerDeliveryFeedbackAppDto dto)

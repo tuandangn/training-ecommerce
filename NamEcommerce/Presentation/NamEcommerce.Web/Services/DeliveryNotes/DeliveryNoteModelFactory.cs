@@ -66,7 +66,13 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             StatusName = GetStatusName((DeliveryNoteStatus)deliveryNote.Status),
             WarehouseId = deliveryNote.WarehouseId,
             CreatedOnUtc = deliveryNote.CreatedOnUtc,
-            DeliveredOnUtc = deliveryNote.DeliveredOnUtc
+            DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
+            Items = deliveryNote.Items.Select(item => new DeliveryNoteListItemProductModel
+            {
+                Id = item.Id,
+                ProductName = item.ProductName,
+                Quantity = item.Quantity
+            }).ToList()
         }).ToList();
 
         foreach (var deliveryNote in deliveryNotes)

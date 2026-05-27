@@ -29,11 +29,11 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
     const [returnPictures, setReturnPictures] = useState<Record<string, ReturnPictureDraft[]>>({});
     const [returnMessage, setReturnMessage] = useState("");
     const [activeModal, setActiveModal] = useState<ActiveModal>(null);
-    const [receiverName, setReceiverName] = useState(session?.customerName);
+    const [receiverName, setReceiverName] = useState(session?.customerName ?? "");
     const [confirmCharge, setConfirmCharge] = useState("0");
     const [confirmChargeReason, setConfirmChargeReason] = useState("");
     const [confirmAcceptedQuantities, setConfirmAcceptedQuantities] = useState<Record<string, string>>({});
-    const [confirmRejectReasons, setConfirmRejectReasons] = useState<Record<string, string>>({});
+    const [confirmRejectReason, setConfirmRejectReason] = useState("");
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -48,11 +48,11 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
     function openReceivedModal() {
         if (!note) return;
 
-        setReceiverName(session?.customerName);
+        setReceiverName(session?.customerName ?? "");
         setConfirmCharge("0");
         setConfirmChargeReason("");
         setConfirmAcceptedQuantities(Object.fromEntries(note.items.map((item) => [item.id, String(item.quantity)])));
-        setConfirmRejectReasons(Object.fromEntries(note.items.map((item) => [item.id, ""])));
+        setConfirmRejectReason("");
         setActiveModal("received");
     }
 
@@ -87,12 +87,12 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
                 deliveryNoteItemId: item.id,
                 acceptedQuantity: normalizedAcceptedQuantity,
                 rejectedQuantity,
-                rejectReason: rejectedQuantity > 0 ? (confirmRejectReasons[item.id] ?? "").trim() : null,
+                rejectReason: rejectedQuantity > 0 ? confirmRejectReason.trim() : null,
             };
         });
 
-        if (acceptanceItems.some((item) => item.rejectedQuantity > 0 && !item.rejectReason)) {
-            setMessage("Vui lòng nhập lý do cho các dòng hàng không nhận đủ.");
+        if (acceptanceItems.some((item) => item.rejectedQuantity > 0) && !confirmRejectReason.trim()) {
+            setMessage("Vui lòng nhập lý do trả hàng cho toàn phiếu.");
             return;
         }
 
@@ -305,18 +305,6 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
                                                         }))
                                                     }
                                                 />
-                                                {rejectedQuantity > 0 && (
-                                                    <textarea
-                                                        placeholder="Lý do trả lại"
-                                                        value={confirmRejectReasons[item.id] ?? ""}
-                                                        onChange={(event) =>
-                                                            setConfirmRejectReasons((current) => ({
-                                                                ...current,
-                                                                [item.id]: event.target.value,
-                                                            }))
-                                                        }
-                                                    />
-                                                )}
                                             </td>
                                             <td>{quantity(rejectedQuantity)}</td>
                                         </tr>
@@ -324,6 +312,10 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
                                 })}
                             </tbody>
                         </table>
+                        <div className="field">
+                            <label>Lý do trả hàng</label>
+                            <textarea value={confirmRejectReason} onChange={(event) => setConfirmRejectReason(event.target.value)} />
+                        </div>
                         <div className="field">
                             <label>Người nhận</label>
                             <input value={receiverName} onChange={(event) => setReceiverName(event.target.value)} />
