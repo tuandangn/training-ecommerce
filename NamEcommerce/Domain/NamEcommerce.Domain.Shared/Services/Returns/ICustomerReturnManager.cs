@@ -7,7 +7,7 @@ public interface ICustomerReturnManager
     Task<CustomerReturnDto> CreateAsync(CreateCustomerReturnDto dto);
     Task<CustomerReturnDto> UpdateAsync(UpdateCustomerReturnDto dto);
     Task MoveToInspectingAsync(Guid id);
-    Task ConfirmAsync(Guid id);
+    Task ConfirmAsync(Guid id, Guid? warehouseId = null);
     Task CancelAsync(Guid id);
 
     Task<CustomerReturnDto?> GetByIdAsync(Guid id);

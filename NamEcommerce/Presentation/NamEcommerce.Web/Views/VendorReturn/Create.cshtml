@@ -86,6 +86,10 @@
                                         <tr>
                                             <td class="ps-3">
                                                 <div class="fw-medium">@item.ProductDisplayName</div>
+                                                @if (item.OriginalUnitCost.HasValue)
+                                                {
+                                                    <div class="text-muted small">Gia goc: @item.OriginalUnitCost.Value.DisplayCurrency()</div>
+                                                }
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
                                                 <input type="hidden" name="Items[@i].GoodsReceiptItemId" value="@item.GoodsReceiptItemId" />
                                                 <input type="hidden" name="Items[@i].OriginalUnitCost" value="@item.OriginalUnitCost" class="item-orig-cost" />
@@ -200,6 +204,7 @@
                                     }
                                 }
                             </select>
+                            <div class="form-text">Co the bo trong o buoc tao; he thong se yeu cau chon kho khi xac nhan tra hang.</div>
                             <div id="warehouseFilterHint" class="small text-muted mt-1 d-none">
                                 <i class="bi bi-info-circle me-1"></i>
                                 <span id="warehouseFilterHintText"></span>
@@ -231,6 +236,29 @@
             </div>
         </div>
     </form>
+</div>
+
+<div class="modal fade" id="addFreeItemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Them hang tra tu do</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <div id="addFreeProductPicker"></div>
+                <div id="addFreeProductError" class="small text-danger d-none mt-2">
+                    Vui long chon hang hoa.
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Huy</button>
+                <button type="button" class="btn btn-success" id="btnConfirmAddFreeItem" disabled>
+                    <i class="bi bi-plus-lg me-1"></i>Them vao danh sach
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Styles {
@@ -284,6 +312,19 @@
             color: var(--bs-secondary-color);
             font-size: .85rem;
         }
+        /* Keep table concise: hide low-value technical columns on create view */
+        #returnItemsTable th:nth-child(2),
+        #returnItemsTable th:nth-child(3),
+        #returnItemsTable th:nth-child(4),
+        #returnItemsTable th:nth-child(5),
+        #returnItemsTable th:nth-child(7),
+        #returnItemsTable td:nth-child(2),
+        #returnItemsTable td:nth-child(3),
+        #returnItemsTable td:nth-child(4),
+        #returnItemsTable td:nth-child(5),
+        #returnItemsTable td:nth-child(7) {
+            display: none;
+        }
     </style>
 }
 
@@ -291,6 +332,7 @@
     <partial name="_ValidationScriptsPartial" />
     <script type="module">
         import VendorPicker from '/modules/VendorPicker.js';
+        import ProductPicker from '/modules/ProductPicker.js';
 
         // ── VendorPicker ──────────────────────────────────────────────────────────
         const pickerEl = document.getElementById('vendorPicker');
@@ -303,6 +345,29 @@
         const filterPoId = (document.getElementById('hiddenFilterPurchaseOrderId')?.value || '').trim();
 
         const vendorPicker = new VendorPicker(pickerEl);
+        const addFreeItemModalEl = document.getElementById('addFreeItemModal');
+        const addFreeItemModal = addFreeItemModalEl
+            ? bootstrap.Modal.getOrCreateInstance(addFreeItemModalEl)
+            : null;
+        const addFreeProductPickerEl = document.getElementById('addFreeProductPicker');
+        const btnConfirmAddFreeItem = document.getElementById('btnConfirmAddFreeItem');
+        const addFreeProductError = document.getElementById('addFreeProductError');
+        let selectedFreeProduct = null;
+
+        const addFreeProductPicker = addFreeProductPickerEl
+            ? new ProductPicker(addFreeProductPickerEl, { purchase: false, checkProduct: () => true })
+            : null;
+
+        addFreeProductPickerEl?.addEventListener('select', e => {
+            selectedFreeProduct = e.detail?.product ?? null;
+            if (btnConfirmAddFreeItem) btnConfirmAddFreeItem.disabled = !selectedFreeProduct;
+            addFreeProductError?.classList.add('d-none');
+        });
+
+        addFreeProductPickerEl?.addEventListener('remove', () => {
+            selectedFreeProduct = null;
+            if (btnConfirmAddFreeItem) btnConfirmAddFreeItem.disabled = true;
+        });
 
         // Snapshot toàn bộ warehouse options từ server (option[0] = placeholder).
         const allWarehouseOptions = Array.from(warehouseSelect.options)
@@ -344,12 +409,14 @@
         pickerEl.addEventListener('select', async (e) => {
             hiddenVendorId.value = e.detail.vendor.id;
             hiddenGoodsReceiptId.value = '';
+            addFreeProductPicker?.setVendor(e.detail.vendor.id, e.detail.vendor.name ?? '');
             await loadGoodsReceipts(e.detail.vendor.id);
         });
 
         pickerEl.addEventListener('remove', () => {
             hiddenVendorId.value = '';
             hiddenGoodsReceiptId.value = '';
+            addFreeProductPicker?.setVendor(null, null);
             resetGoodsReceiptSelect();
             clearItems();
         });
@@ -586,7 +653,17 @@
 
         function clearItems() {
             tbody.innerHTML = '';
+            rowIndex = 0;
             updateEmptyState();
+        }
+
+        function renumberRows() {
+            Array.from(tbody.querySelectorAll('tr')).forEach((row, index) => {
+                row.querySelectorAll('[name^="Items["]').forEach(input => {
+                    input.name = input.name.replace(/Items\[\d+\]/, `Items[${index}]`);
+                });
+            });
+            rowIndex = tbody.rows.length;
         }
 
         function updateEmptyState() {
@@ -606,10 +683,14 @@
             const i = rowIndex++;
             const origCost = item.unitPrice || 0;
             const available = item.availableQty ?? (item.originalQty - item.alreadyReturnedQty);
+            const unit = (item.unit || '').trim();
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="ps-3">
                     <div class="fw-medium">${item.productName}</div>
+                    <div class="text-muted small">
+                        Da nhap ${fmtQty(item.originalQty)}${unit ? ` ${unit}` : ''} · Da tra ${fmtQty(item.alreadyReturnedQty)} · Con lai ${fmtQty(available)}${origCost > 0 ? ` · Gia goc ${fmtCurrency(origCost)}` : ''}
+                    </div>
                     <input type="hidden" name="Items[${i}].ProductId" value="${item.productId}" />
                     <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="${item.sourceItemId ?? ''}" />
                     <input type="hidden" name="Items[${i}].OriginalUnitCost" value="${origCost}" class="item-orig-cost" />
@@ -639,22 +720,38 @@
             updateEmptyState();
         }
 
-        function addFreeItemRow() {
+        function addFreeItemRow(product) {
+            if (!product?.id) return;
+
+            const existingRow = Array.from(tbody.querySelectorAll('tr')).find(row => {
+                const pid = (row.querySelector('input[name$=".ProductId"]')?.value || '').trim();
+                return pid === String(product.id);
+            });
+
+            if (existingRow) {
+                const qtyInput = existingRow.querySelector('.item-req-qty');
+                const currentQty = parseQuantity(qtyInput?.value);
+                qtyInput.value = currentQty > 0 ? String(currentQty + 1) : '1';
+                qtyInput.dispatchEvent(new Event('input', { bubbles: true }));
+                return;
+            }
+
             const i = rowIndex++;
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="ps-3">
-                    <input name="Items[${i}].ProductId" value=""
-                           class="form-control form-control-sm item-product-id" placeholder="ProductId..." />
+                    <div class="fw-medium">${escapeHtml(product.name ?? '')}</div>
+                    <div class="text-muted small">${escapeHtml(product.unitMeasurement ?? '') || 'Khong ro don vi'}</div>
+                    <input type="hidden" name="Items[${i}].ProductId" value="${product.id}" />
                     <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="" />
                     <input type="hidden" name="Items[${i}].OriginalUnitCost" value="" class="item-orig-cost" />
                 </td>
-                <td class="text-center text-muted small">—</td>
+                <td class="text-center text-muted small">${escapeHtml(product.unitMeasurement ?? '')}</td>
                 <td class="text-end text-muted small">—</td>
                 <td class="text-end text-muted small">—</td>
                 <td class="text-end text-muted small">—</td>
                 <td class="text-end">
-                    <input name="Items[${i}].RequestedQuantity" value=""
+                    <input name="Items[${i}].RequestedQuantity" value="1"
                            class="form-control form-control-sm text-end item-req-qty"
                            data-decimal="quantity" min="0.001" placeholder="0" />
                 </td>
@@ -674,7 +771,24 @@
             updateEmptyState();
         }
 
-        document.getElementById('btnAddFreeItem').addEventListener('click', addFreeItemRow);
+        document.getElementById('btnAddFreeItem').addEventListener('click', () => {
+            selectedFreeProduct = null;
+            if (btnConfirmAddFreeItem) btnConfirmAddFreeItem.disabled = true;
+            addFreeProductError?.classList.add('d-none');
+            addFreeProductPicker?.clear();
+            addFreeItemModal?.show();
+        });
+
+        btnConfirmAddFreeItem?.addEventListener('click', () => {
+            if (!selectedFreeProduct?.id) {
+                addFreeProductError?.classList.remove('d-none');
+                return;
+            }
+            addFreeItemRow(selectedFreeProduct);
+            addFreeItemModal?.hide();
+            updateFooter();
+            debouncedValidate();
+        });
 
         tbody.addEventListener('click', e => {
             const btn = e.target.closest('.btn-remove-item');
@@ -689,8 +803,8 @@
         tbody.addEventListener('input', e => {
             if (e.target.matches('.item-req-qty, .item-return-cost')) {
                 const row = e.target.closest('tr');
-                const qty = parseDecimal(row.querySelector('.item-req-qty')?.value);
-                const cost = parseDecimal(row.querySelector('.item-return-cost')?.value);
+                const qty = parseQuantity(row.querySelector('.item-req-qty')?.value);
+                const cost = parseCurrency(row.querySelector('.item-return-cost')?.value);
                 const sub = row.querySelector('.item-subtotal');
                 if (sub) sub.textContent = fmtCurrency(qty * cost);
                 updateFooter();
@@ -705,7 +819,7 @@
                 const pidInput = row.querySelector('input[name$=".ProductId"]') ?? row.querySelector('.item-product-id');
                 const qtyInput = row.querySelector('.item-req-qty');
                 const productId = (pidInput?.value || '').trim();
-                const qty = parseDecimal(qtyInput?.value);
+                const qty = parseQuantity(qtyInput?.value);
                 if (productId && qty > 0) out.push({ productId, requiredQty: qty });
             });
             return out;
@@ -807,26 +921,68 @@
         // ── Footer ───────────────────────────────────────────────────────────────
         const additionalCostInput = document.getElementById('additionalCostInput');
 
-        function parseDecimal(str) {
+        function parseLocalizedNumber(str, allowDecimal) {
             if (!str) return 0;
-            return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+            if (typeof DecimalFields !== 'undefined' && typeof DecimalFields.stripFormatting === 'function' && allowDecimal !== null) {
+                const raw = DecimalFields.stripFormatting(str, allowDecimal ? 2 : 0);
+                return parseFloat(raw) || 0;
+            }
+
+            const raw = String(str).trim();
+            const normalized = raw.replace(/\s/g, '');
+            const commaPos = normalized.lastIndexOf(',');
+            const dotPos = normalized.lastIndexOf('.');
+
+            if (allowDecimal && commaPos > dotPos) {
+                return parseFloat(normalized.replace(/\./g, '').replace(',', '.')) || 0;
+            }
+
+            if (allowDecimal && dotPos > commaPos) {
+                return parseFloat(normalized.replace(/,/g, '')) || 0;
+            }
+
+            return parseFloat(normalized.replace(/[^\d-]/g, '')) || 0;
+        }
+
+        function parseQuantity(str) {
+            return parseLocalizedNumber(str, true);
+        }
+
+        function parseCurrency(str) {
+            return parseLocalizedNumber(str, false);
         }
 
         function updateFooter() {
             let total = 0;
             tbody.querySelectorAll('tr').forEach(row => {
-                const qty = parseDecimal(row.querySelector('.item-req-qty')?.value);
-                const cost = parseDecimal(row.querySelector('.item-return-cost')?.value);
+                const qty = parseQuantity(row.querySelector('.item-req-qty')?.value);
+                const cost = parseCurrency(row.querySelector('.item-return-cost')?.value);
                 total += qty * cost;
             });
 
-            const addCost = parseDecimal(additionalCostInput.value);
+            const addCost = parseCurrency(additionalCostInput.value);
             const net = Math.max(0, total - addCost);
 
             document.getElementById('totalReturnValue').textContent = fmtCurrency(total);
             document.getElementById('additionalCostDisplay').textContent = fmtCurrency(addCost);
             document.getElementById('netRecoveryAmount').textContent = fmtCurrency(net);
         }
+
+        document.getElementById('createVendorReturnForm').addEventListener('submit', function(e) {
+            renumberRows();
+
+            const hasValidItem = Array.from(tbody.querySelectorAll('tr')).some(row => {
+                const productId = (row.querySelector('input[name$=".ProductId"]')?.value || '').trim();
+                const qty = parseQuantity(row.querySelector('.item-req-qty')?.value);
+                return productId && qty > 0;
+            });
+
+            if (!hasValidItem) {
+                e.preventDefault();
+                alert('Vui lòng thêm ít nhất một hàng trả hợp lệ.');
+                return;
+            }
+        });
 
         additionalCostInput.addEventListener('input', updateFooter);
         updateFooter();

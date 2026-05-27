@@ -7,7 +7,7 @@ public interface IVendorReturnManager
     Task<VendorReturnDto> CreateAsync(CreateVendorReturnDto dto);
     Task<VendorReturnDto> UpdateAsync(UpdateVendorReturnDto dto);
     Task MoveToInspectingAsync(Guid id);
-    Task ConfirmAsync(Guid id);
+    Task ConfirmAsync(Guid id, Guid? warehouseId = null);
     Task CancelAsync(Guid id);
 
     Task ReverseConfirmedAsync(Guid id, string reason);

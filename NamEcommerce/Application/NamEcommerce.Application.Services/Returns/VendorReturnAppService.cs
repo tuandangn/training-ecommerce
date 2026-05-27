@@ -110,11 +110,11 @@ public sealed class VendorReturnAppService(IVendorReturnManager manager,
         }
     }
 
-    public async Task<ConfirmVendorReturnResultAppDto> ConfirmAsync(Guid id)
+    public async Task<ConfirmVendorReturnResultAppDto> ConfirmAsync(Guid id, Guid? warehouseId = null)
     {
         try
         {
-            await _manager.ConfirmAsync(id).ConfigureAwait(false);
+            await _manager.ConfirmAsync(id, warehouseId).ConfigureAwait(false);
             return new ConfirmVendorReturnResultAppDto { Success = true };
         }
         catch (VendorReturnNotFoundException ex)

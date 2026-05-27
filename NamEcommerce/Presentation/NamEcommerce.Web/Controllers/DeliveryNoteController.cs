@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
@@ -201,7 +202,13 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> MarkDelivered(Guid deliveryNoteId, string? receiverName, IFormFile? pictureFile)
+    public async Task<IActionResult> MarkDelivered(
+        Guid deliveryNoteId,
+        string? receiverName,
+        decimal agreedCustomerCharge,
+        string? agreedCustomerChargeReason,
+        string? acceptanceItemsJson,
+        IFormFile? pictureFile)
     {
         if (pictureFile == null || pictureFile.Length == 0)
         {
@@ -214,10 +221,14 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             await pictureFile.CopyToAsync(memoryStream);
             var fileBytes = memoryStream.ToArray();
 
+            var acceptanceItems = ParseAcceptanceItems(acceptanceItemsJson);
             var result = await _mediator.Send(new MarkDeliveryNoteDeliveredCommand
             {
                 DeliveryNoteId = deliveryNoteId,
                 ReceiverName = receiverName,
+                AgreedCustomerCharge = agreedCustomerCharge,
+                AgreedCustomerChargeReason = agreedCustomerChargeReason,
+                Items = acceptanceItems,
                 PictureData = fileBytes,
                 PictureContentType = pictureFile.ContentType,
                 PictureFileName = pictureFile.FileName
@@ -233,6 +244,24 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         catch (NamEcommerceDomainException ex)
         {
             return Json(new { success = false, message = LocalizeError(ex.ErrorCode, ex.Parameters) });
+        }
+    }
+
+    private static IList<MarkDeliveryNoteDeliveredItemCommand> ParseAcceptanceItems(string? acceptanceItemsJson)
+    {
+        if (string.IsNullOrWhiteSpace(acceptanceItemsJson))
+            return [];
+
+        try
+        {
+            var items = JsonSerializer.Deserialize<List<MarkDeliveryNoteDeliveredItemCommand>>(
+                acceptanceItemsJson,
+                new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            return items ?? [];
+        }
+        catch
+        {
+            return [];
         }
     }
 

@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Web.Contracts.Commands.Models.Returns;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Models.Returns;
 using NamEcommerce.Web.Services.Returns;
@@ -93,18 +94,11 @@ public sealed class CustomerReturnController : BaseAuthorizedController
             return View(model);
         }
 
-        if (!model.WarehouseId.HasValue)
-        {
-            AddLocalizedModelError("Error.CustomerReturn.WarehouseRequired");
-            model = await _customerReturnModelFactory.PrepareCreateCustomerReturnModel(model);
-            return View(model);
-        }
-
         var result = await _mediator.Send(new CreateCustomerReturnCommand
         {
             DeliveryNoteId = model.DeliveryNoteId,
             CustomerId = model.CustomerId.Value,
-            WarehouseId = model.WarehouseId.Value,
+            WarehouseId = model.WarehouseId,
             AdditionalCost = model.AdditionalCost,
             Note = model.Note,
             Items = returnItems.Select(i => new CreateCustomerReturnItemCommand
@@ -139,6 +133,8 @@ public sealed class CustomerReturnController : BaseAuthorizedController
             return RedirectToAction(nameof(List));
         }
 
+        ViewBag.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+
         return View(model);
     }
 
@@ -170,9 +166,12 @@ public sealed class CustomerReturnController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Confirm(Guid id)
+    public async Task<IActionResult> Confirm(Guid id, Guid? warehouseId = null)
     {
-        var result = await _mediator.Send(new ConfirmCustomerReturnCommand { Id = id });
+        if (!warehouseId.HasValue || warehouseId.Value == Guid.Empty)
+            return Json(new { success = false, message = LocalizeError("Error.CustomerReturn.WarehouseRequired") });
+
+        var result = await _mediator.Send(new ConfirmCustomerReturnCommand { Id = id, WarehouseId = warehouseId });
 
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });

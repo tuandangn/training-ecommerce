@@ -39,9 +39,13 @@ public sealed class CustomerReturnManager(
         dto.Verify();
         var itemDtos = dto.Items.ToList();
 
-        var warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId).ConfigureAwait(false);
-        if (warehouse is null)
-            throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseNotFound", dto.WarehouseId);
+        Warehouse? warehouse = null;
+        if (dto.WarehouseId.HasValue)
+        {
+            warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
+            if (warehouse is null)
+                throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseNotFound", dto.WarehouseId.Value);
+        }
 
         var deliveryNotes = await GetDeliveredNotesForReturnAsync(dto.CustomerId, dto.DeliveryNoteId)
             .ConfigureAwait(false);
@@ -123,8 +127,8 @@ public sealed class CustomerReturnManager(
             deliveryNoteCode: deliveryNote.Code,
             customerId: customerId,
             customerName: customerName,
-            warehouseId: warehouse.Id,
-            warehouseName: warehouse.Name,
+            warehouseId: warehouse?.Id,
+            warehouseName: warehouse?.Name,
             note: dto.Note,
             additionalCost: dto.AdditionalCost,
             createdByUserId: currentUser?.Id);
@@ -174,10 +178,22 @@ public sealed class CustomerReturnManager(
         await customerReturnRepository.UpdateAsync(customerReturn).ConfigureAwait(false);
     }
 
-    public async Task ConfirmAsync(Guid id)
+    public async Task ConfirmAsync(Guid id, Guid? warehouseId = null)
     {
         var customerReturn = await customerReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new CustomerReturnNotFoundException(id);
+
+        if (warehouseId.HasValue)
+        {
+            if (warehouseId.Value == Guid.Empty)
+                throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseRequired");
+
+            var warehouse = await warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+            if (warehouse is null)
+                throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseNotFound", warehouseId.Value);
+
+            customerReturn.SetWarehouse(warehouse.Id, warehouse.Name);
+        }
 
         // Validate lại theo các hàng đã giao của khách. Phiếu giao trên CustomerReturn chỉ là tham chiếu nội bộ;
         // từng dòng có thể được hệ thống tự phân bổ từ nhiều phiếu giao của cùng khách.

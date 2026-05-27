@@ -12,7 +12,7 @@ public sealed record VendorReturn : AppAggregateEntity
 
     internal VendorReturn(string code, Guid vendorId, string vendorName,
         Guid? purchaseOrderId, Guid? goodsReceiptId,
-        Guid warehouseId, string warehouseName,
+        Guid? warehouseId, string? warehouseName,
         string? note, decimal additionalCost,
         Guid? createdByUserId) : base(Guid.NewGuid())
     {
@@ -21,8 +21,8 @@ public sealed record VendorReturn : AppAggregateEntity
         VendorName = vendorName;
         PurchaseOrderId = purchaseOrderId;
         GoodsReceiptId = goodsReceiptId;
-        WarehouseId = warehouseId;
-        WarehouseName = warehouseName;
+        WarehouseId = warehouseId ?? Guid.Empty;
+        WarehouseName = warehouseName ?? string.Empty;
         Note = note;
         AdditionalCost = additionalCost;
         CreatedByUserId = createdByUserId;
@@ -98,6 +98,16 @@ public sealed record VendorReturn : AppAggregateEntity
         UpdatedOnUtc = DateTime.UtcNow;
     }
 
+    internal void SetWarehouse(Guid warehouseId, string warehouseName)
+    {
+        if (warehouseId == Guid.Empty)
+            throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseRequired");
+
+        WarehouseId = warehouseId;
+        WarehouseName = warehouseName;
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
+
     internal void Confirm()
     {
         if (Status != VendorReturnStatus.Inspecting)
@@ -105,6 +115,8 @@ public sealed record VendorReturn : AppAggregateEntity
 
         if (!_items.Any())
             throw new ReturnDataIsInvalidException("Error.VendorReturn.NoItems");
+        if (WarehouseId == Guid.Empty)
+            throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseRequired");
 
         Status = VendorReturnStatus.Confirmed;
         ConfirmedOnUtc = DateTime.UtcNow;

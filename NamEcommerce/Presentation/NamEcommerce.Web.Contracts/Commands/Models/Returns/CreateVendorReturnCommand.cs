@@ -8,7 +8,7 @@ public sealed class CreateVendorReturnCommand : IRequest<CreateVendorReturnResul
 {
     public required Guid VendorId { get; init; }
     public Guid? GoodsReceiptId { get; init; }
-    public required Guid WarehouseId { get; init; }
+    public Guid? WarehouseId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
     public IList<CreateVendorReturnItemCommand> Items { get; init; } = [];

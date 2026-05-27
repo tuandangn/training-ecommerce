@@ -7,7 +7,7 @@ public interface IVendorReturnAppService
     Task<CreateVendorReturnResultAppDto> CreateAsync(CreateVendorReturnAppDto dto);
     Task<UpdateVendorReturnResultAppDto> UpdateAsync(UpdateVendorReturnAppDto dto);
     Task<ConfirmVendorReturnResultAppDto> MoveToInspectingAsync(Guid id);
-    Task<ConfirmVendorReturnResultAppDto> ConfirmAsync(Guid id);
+    Task<ConfirmVendorReturnResultAppDto> ConfirmAsync(Guid id, Guid? warehouseId = null);
     Task<ConfirmVendorReturnResultAppDto> CancelAsync(Guid id);
     Task<ConfirmVendorReturnResultAppDto> ReverseConfirmedAsync(Guid id, string reason);
 

@@ -29,11 +29,14 @@ public sealed class DeliveryNoteDeliveredHandler(
         // Guard: phiếu xuất do trả NCC không sinh công nợ khách hàng.
         if (deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn) return;
 
+        if (notification.AmountToCollect <= 0)
+            return;
+
         var createDebtDto = new CreateCustomerDebtDto
         {
             CustomerId = notification.CustomerId,
             DeliveryNoteId = notification.DeliveryNoteId,
-            TotalAmount = notification.TotalAmount, // "phiếu đã xuất thì phải thu đủ"
+            TotalAmount = notification.AmountToCollect,
             DueDateUtc = null
         };
 

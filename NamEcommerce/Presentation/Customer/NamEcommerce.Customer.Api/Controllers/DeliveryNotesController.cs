@@ -23,7 +23,20 @@ public sealed class DeliveryNotesController(IMediator mediator) : ControllerBase
     [HttpPost("{id:guid}/confirm")]
     public async Task<IActionResult> Confirm(Guid id, ConfirmDeliveryNoteRequest request)
     {
-        var result = await mediator.Send(new ConfirmCustomerDeliveryNoteCommand(id, request.ReceiverName, request.Note)).ConfigureAwait(false);
+        var result = await mediator.Send(new ConfirmCustomerDeliveryNoteCommand(
+            id,
+            request.ReceiverName,
+            request.Note,
+            request.Acceptance is null
+                ? null
+                : new ConfirmCustomerDeliveryAcceptanceCommand(
+                    request.Acceptance.AgreedCustomerCharge,
+                    request.Acceptance.AgreedCustomerChargeReason,
+                    request.Acceptance.Items.Select(item => new ConfirmCustomerDeliveryAcceptanceItemCommand(
+                        item.DeliveryNoteItemId,
+                        item.AcceptedQuantity,
+                        item.RejectedQuantity,
+                        item.RejectReason)).ToList()))).ConfigureAwait(false);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -34,6 +47,20 @@ public sealed class DeliveryNotesController(IMediator mediator) : ControllerBase
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
-    public sealed record ConfirmDeliveryNoteRequest(string? ReceiverName, string? Note);
+    public sealed record ConfirmDeliveryNoteAcceptanceItemRequest(
+        Guid DeliveryNoteItemId,
+        decimal AcceptedQuantity,
+        decimal RejectedQuantity,
+        string? RejectReason);
+
+    public sealed record ConfirmDeliveryNoteAcceptanceRequest(
+        decimal AgreedCustomerCharge,
+        string? AgreedCustomerChargeReason,
+        IList<ConfirmDeliveryNoteAcceptanceItemRequest> Items);
+
+    public sealed record ConfirmDeliveryNoteRequest(
+        string? ReceiverName,
+        string? Note,
+        ConfirmDeliveryNoteAcceptanceRequest? Acceptance);
     public sealed record CreateFeedbackRequest(int? Rating, string? Message);
 }

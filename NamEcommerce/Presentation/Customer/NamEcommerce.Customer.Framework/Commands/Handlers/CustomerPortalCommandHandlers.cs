@@ -119,7 +119,23 @@ public sealed class CustomerPortalCommandHandlers(
         var result = await portalAppService.ConfirmDeliveryNoteAsync(RequireCustomerId(), request.DeliveryNoteId, new ConfirmCustomerDeliveryNoteAppDto
         {
             ReceiverName = request.ReceiverName,
-            Note = request.Note
+            Note = request.Note,
+            Acceptance = request.Acceptance is null
+                ? null
+                : new ConfirmCustomerDeliveryAcceptanceAppDto
+                {
+                    AgreedCustomerCharge = request.Acceptance.AgreedCustomerCharge,
+                    AgreedCustomerChargeReason = request.Acceptance.AgreedCustomerChargeReason,
+                    Items = request.Acceptance.Items
+                        .Select(item => new ConfirmCustomerDeliveryAcceptanceItemAppDto
+                        {
+                            DeliveryNoteItemId = item.DeliveryNoteItemId,
+                            AcceptedQuantity = item.AcceptedQuantity,
+                            RejectedQuantity = item.RejectedQuantity,
+                            RejectReason = item.RejectReason
+                        })
+                        .ToList()
+                }
         }).ConfigureAwait(false);
 
         return new CustomerActionResultModel(result.Success, result.Message);

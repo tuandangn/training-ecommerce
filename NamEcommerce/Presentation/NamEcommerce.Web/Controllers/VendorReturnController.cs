@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.Returns;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Models.Returns;
 using NamEcommerce.Web.Services.Returns;
@@ -61,14 +62,32 @@ public sealed class VendorReturnController : BaseAuthorizedController
             return View(model);
         }
 
+        var returnItems = model.Items
+            .Where(i => i.ProductId.HasValue && i.RequestedQuantity > 0)
+            .ToList();
+
+        if (!returnItems.Any())
+        {
+            AddLocalizedModelError("Error.VendorReturn.NoItems");
+            model = await _vendorReturnModelFactory.PrepareCreateVendorReturnModel(model);
+            return View(model);
+        }
+
+        if (!model.VendorId.HasValue)
+        {
+            AddLocalizedModelError("Error.VendorReturn.VendorRequired");
+            model = await _vendorReturnModelFactory.PrepareCreateVendorReturnModel(model);
+            return View(model);
+        }
+
         var result = await _mediator.Send(new CreateVendorReturnCommand
         {
-            VendorId = model.VendorId!.Value,
+            VendorId = model.VendorId.Value,
             GoodsReceiptId = model.GoodsReceiptId,
-            WarehouseId = model.WarehouseId!.Value,
+            WarehouseId = model.WarehouseId,
             AdditionalCost = model.AdditionalCost,
             Note = model.Note,
-            Items = model.Items.Select(i => new CreateVendorReturnItemCommand
+            Items = returnItems.Select(i => new CreateVendorReturnItemCommand
             {
                 ProductId = i.ProductId!.Value,
                 GoodsReceiptItemId = i.GoodsReceiptItemId,
@@ -99,6 +118,8 @@ public sealed class VendorReturnController : BaseAuthorizedController
             NotifyError("Error.VendorReturn.IsNotFound");
             return RedirectToAction(nameof(List));
         }
+
+        ViewBag.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
         return View(model);
     }
@@ -131,9 +152,12 @@ public sealed class VendorReturnController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Confirm(Guid id)
+    public async Task<IActionResult> Confirm(Guid id, Guid? warehouseId = null)
     {
-        var result = await _mediator.Send(new ConfirmVendorReturnCommand { Id = id });
+        if (!warehouseId.HasValue || warehouseId.Value == Guid.Empty)
+            return Json(new { success = false, message = LocalizeError("Error.VendorReturn.WarehouseRequired") });
+
+        var result = await _mediator.Send(new ConfirmVendorReturnCommand { Id = id, WarehouseId = warehouseId });
 
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });

@@ -34,7 +34,7 @@ public sealed class ConfirmCustomerReturnHandler
 
     public async Task<CommonActionResultModel> Handle(ConfirmCustomerReturnCommand request, CancellationToken cancellationToken)
     {
-        var result = await _customerReturnAppService.ConfirmAsync(request.Id).ConfigureAwait(false);
+        var result = await _customerReturnAppService.ConfirmAsync(request.Id, request.WarehouseId).ConfigureAwait(false);
         return new CommonActionResultModel { Success = result.Success, ErrorMessage = result.ErrorMessage };
     }
 }

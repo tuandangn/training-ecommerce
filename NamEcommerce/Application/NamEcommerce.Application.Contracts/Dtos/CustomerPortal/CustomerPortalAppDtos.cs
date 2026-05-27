@@ -180,10 +180,28 @@ public sealed record CustomerDeliveryNoteItemAppDto
 }
 
 [Serializable]
+public sealed record ConfirmCustomerDeliveryAcceptanceItemAppDto
+{
+    public required Guid DeliveryNoteItemId { get; init; }
+    public decimal AcceptedQuantity { get; init; }
+    public decimal RejectedQuantity { get; init; }
+    public string? RejectReason { get; init; }
+}
+
+[Serializable]
+public sealed record ConfirmCustomerDeliveryAcceptanceAppDto
+{
+    public decimal AgreedCustomerCharge { get; init; }
+    public string? AgreedCustomerChargeReason { get; init; }
+    public IList<ConfirmCustomerDeliveryAcceptanceItemAppDto> Items { get; init; } = [];
+}
+
+[Serializable]
 public sealed record ConfirmCustomerDeliveryNoteAppDto
 {
     public string? ReceiverName { get; init; }
     public string? Note { get; init; }
+    public ConfirmCustomerDeliveryAcceptanceAppDto? Acceptance { get; init; }
 }
 
 [Serializable]

@@ -37,7 +37,19 @@ public sealed class MarkDeliveryNoteDeliveredHandler : IRequestHandler<MarkDeliv
         {
             DeliveryNoteId = request.DeliveryNoteId,
             PictureId = pictureId,
-            ReceiverName = request.ReceiverName
+            ReceiverName = request.ReceiverName,
+            Acceptance = new DeliveryAcceptanceAppDto
+            {
+                AgreedCustomerCharge = request.AgreedCustomerCharge,
+                AgreedCustomerChargeReason = request.AgreedCustomerChargeReason,
+                Items = request.Items.Select(item => new DeliveryAcceptanceItemAppDto
+                {
+                    DeliveryNoteItemId = item.DeliveryNoteItemId,
+                    AcceptedQuantity = item.AcceptedQuantity,
+                    RejectedQuantity = item.RejectedQuantity,
+                    RejectReason = item.RejectReason
+                }).ToList()
+            }
         }).ConfigureAwait(false);
 
         return new MarkDeliveryNoteDeliveredResult(appResult.Success, appResult.ErrorMessage);

@@ -14,6 +14,7 @@ using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.CustomerPortal;
+using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.CustomerPortal;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
@@ -467,7 +468,25 @@ public sealed class CustomerPortalAppService(
         if (deliveryNote is null)
             return CustomerActionResultAppDto.Fail("Không tìm thấy phiếu giao hàng.");
 
-        await deliveryNoteManager.MarkReceivedByCustomerAsync(deliveryNote.Id, DateTime.UtcNow, dto.ReceiverName, dto.Note).ConfigureAwait(false);
+        await deliveryNoteManager.MarkReceivedByCustomerAsync(
+            deliveryNote.Id,
+            DateTime.UtcNow,
+            dto.ReceiverName,
+            dto.Note,
+            dto.Acceptance is null
+                ? null
+                : new DeliveryAcceptanceDto
+                {
+                    AgreedCustomerCharge = dto.Acceptance.AgreedCustomerCharge,
+                    AgreedCustomerChargeReason = dto.Acceptance.AgreedCustomerChargeReason,
+                    Items = dto.Acceptance.Items.Select(item => new DeliveryAcceptanceItemDto
+                    {
+                        DeliveryNoteItemId = item.DeliveryNoteItemId,
+                        AcceptedQuantity = item.AcceptedQuantity,
+                        RejectedQuantity = item.RejectedQuantity,
+                        RejectReason = item.RejectReason
+                    }).ToList()
+                }).ConfigureAwait(false);
 
         await customerPortalManager.CreateDeliveryFeedbackAsync(new CreateCustomerDeliveryFeedbackDto
         {

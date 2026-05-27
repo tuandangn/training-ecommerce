@@ -549,7 +549,7 @@
                                                                         </span>
                                                                     </td>
                                                                     <td>
-                                                                        <span class="small">@vendorReturn.WarehouseName</span>
+                                                                        <span class="small">@(string.IsNullOrWhiteSpace(vendorReturn.WarehouseName) ? "Chưa chọn" : vendorReturn.WarehouseName)</span>
                                                                     </td>
                                                                     <td>
                                                                         @item.ProductName

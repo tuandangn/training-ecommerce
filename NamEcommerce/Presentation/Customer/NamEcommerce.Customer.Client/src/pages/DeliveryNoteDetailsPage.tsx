@@ -26,6 +26,11 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
   const [returnPictures, setReturnPictures] = useState<Record<string, ReturnPictureDraft[]>>({});
   const [returnMessage, setReturnMessage] = useState("");
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const [receiverName, setReceiverName] = useState("");
+  const [confirmCharge, setConfirmCharge] = useState("0");
+  const [confirmChargeReason, setConfirmChargeReason] = useState("");
+  const [confirmAcceptedQuantities, setConfirmAcceptedQuantities] = useState<Record<string, string>>({});
+  const [confirmRejectReasons, setConfirmRejectReasons] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -35,6 +40,17 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
   async function reloadNote() {
     const updated = await apiFetch<DeliveryNoteDetails>(`/api/delivery-notes/${id}`);
     setNote(updated);
+  }
+
+  function openReceivedModal() {
+    if (!note) return;
+
+    setReceiverName("");
+    setConfirmCharge("0");
+    setConfirmChargeReason("");
+    setConfirmAcceptedQuantities(Object.fromEntries(note.items.map((item) => [item.id, String(item.quantity)])));
+    setConfirmRejectReasons(Object.fromEntries(note.items.map((item) => [item.id, ""])));
+    setActiveModal("received");
   }
 
   function openReturnModal() {
@@ -58,13 +74,42 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
 
   async function confirmReceived(event: FormEvent) {
     event.preventDefault();
+    if (!note) return;
+
+    const acceptanceItems = note.items.map((item) => {
+      const acceptedQuantity = parseQuantity(confirmAcceptedQuantities[item.id]);
+      const normalizedAcceptedQuantity = Math.max(0, Math.min(item.quantity, acceptedQuantity));
+      const rejectedQuantity = Math.max(0, item.quantity - normalizedAcceptedQuantity);
+      return {
+        deliveryNoteItemId: item.id,
+        acceptedQuantity: normalizedAcceptedQuantity,
+        rejectedQuantity,
+        rejectReason: rejectedQuantity > 0 ? (confirmRejectReasons[item.id] ?? "").trim() : null,
+      };
+    });
+
+    if (acceptanceItems.some((item) => item.rejectedQuantity > 0 && !item.rejectReason)) {
+      setMessage("Vui lòng nhập lý do cho các dòng hàng không nhận đủ.");
+      return;
+    }
+
+    const agreedCustomerCharge = parseQuantity(confirmCharge);
+
     setSubmitting(true);
     setMessage("");
 
     try {
       const result = await apiFetch<ActionResult>(`/api/delivery-notes/${id}/confirm`, {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          receiverName: receiverName.trim() || null,
+          note: null,
+          acceptance: {
+            agreedCustomerCharge,
+            agreedCustomerChargeReason: confirmChargeReason.trim() || null,
+            items: acceptanceItems,
+          },
+        }),
       });
       setMessage(result.message ?? "Đã ghi nhận khách đã nhận hàng.");
       setActiveModal(null);
@@ -180,7 +225,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
         <div className="actions">
           <button
             className="button success"
-            onClick={() => setActiveModal("received")}
+            onClick={openReceivedModal}
             disabled={receivedConfirmed}
           >
             Đã nhận hàng
@@ -224,7 +269,81 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
       {activeModal === "received" && (
         <Modal title="Đã nhận hàng" onClose={() => setActiveModal(null)}>
           <form className="stack" onSubmit={confirmReceived}>
-            <p className="page-subtitle">Bạn xác nhận đã nhận đủ hàng của phiếu {note.code}?</p>
+            <p className="page-subtitle">Xác nhận số lượng đã nhận thực tế cho từng dòng hàng.</p>
+            <div className="field">
+              <label>Người nhận</label>
+              <input value={receiverName} onChange={(event) => setReceiverName(event.target.value)} />
+            </div>
+            <div className="field">
+              <label>Chi phí thỏa thuận (+/-)</label>
+              <input
+                className="quantity-input"
+                inputMode="decimal"
+                step="0.01"
+                type="number"
+                value={confirmCharge}
+                onChange={(event) => setConfirmCharge(event.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label>Lý do chi phí thỏa thuận</label>
+              <textarea value={confirmChargeReason} onChange={(event) => setConfirmChargeReason(event.target.value)} />
+            </div>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Hàng hóa</th>
+                  <th>Số lượng giao</th>
+                  <th>Nhận thực tế</th>
+                  <th>Trả lại</th>
+                </tr>
+              </thead>
+              <tbody>
+                {note.items.map((item) => {
+                  const acceptedQuantity = Math.max(
+                    0,
+                    Math.min(item.quantity, parseQuantity(confirmAcceptedQuantities[item.id])),
+                  );
+                  const rejectedQuantity = Math.max(0, item.quantity - acceptedQuantity);
+                  return (
+                    <tr key={item.id}>
+                      <td>{item.productName}</td>
+                      <td>{quantity(item.quantity)}</td>
+                      <td>
+                        <input
+                          className="quantity-input"
+                          inputMode="decimal"
+                          min="0"
+                          max={item.quantity}
+                          step="0.01"
+                          type="number"
+                          value={confirmAcceptedQuantities[item.id] ?? String(item.quantity)}
+                          onChange={(event) =>
+                            setConfirmAcceptedQuantities((current) => ({
+                              ...current,
+                              [item.id]: event.target.value,
+                            }))
+                          }
+                        />
+                        {rejectedQuantity > 0 && (
+                          <textarea
+                            placeholder="Lý do trả lại"
+                            value={confirmRejectReasons[item.id] ?? ""}
+                            onChange={(event) =>
+                              setConfirmRejectReasons((current) => ({
+                                ...current,
+                                [item.id]: event.target.value,
+                              }))
+                            }
+                          />
+                        )}
+                      </td>
+                      <td>{quantity(rejectedQuantity)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
             <div className="modal-actions">
               <button className="button" type="button" onClick={() => setActiveModal(null)}>
                 Hủy

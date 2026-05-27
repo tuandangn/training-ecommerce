@@ -113,11 +113,11 @@ public sealed class CustomerReturnAppService(
         }
     }
 
-    public async Task<ConfirmCustomerReturnResultAppDto> ConfirmAsync(Guid id)
+    public async Task<ConfirmCustomerReturnResultAppDto> ConfirmAsync(Guid id, Guid? warehouseId = null)
     {
         try
         {
-            await _manager.ConfirmAsync(id).ConfigureAwait(false);
+            await _manager.ConfirmAsync(id, warehouseId).ConfigureAwait(false);
             return new ConfirmCustomerReturnResultAppDto { Success = true };
         }
         catch (CustomerReturnNotFoundException ex)

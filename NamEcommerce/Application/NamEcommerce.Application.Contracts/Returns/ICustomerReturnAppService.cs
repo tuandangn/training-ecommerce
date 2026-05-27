@@ -7,7 +7,7 @@ public interface ICustomerReturnAppService
     Task<CreateCustomerReturnResultAppDto> CreateAsync(CreateCustomerReturnAppDto dto);
     Task<UpdateCustomerReturnResultAppDto> UpdateAsync(UpdateCustomerReturnAppDto dto);
     Task<ConfirmCustomerReturnResultAppDto> MoveToInspectingAsync(Guid id);
-    Task<ConfirmCustomerReturnResultAppDto> ConfirmAsync(Guid id);
+    Task<ConfirmCustomerReturnResultAppDto> ConfirmAsync(Guid id, Guid? warehouseId = null);
     Task<ConfirmCustomerReturnResultAppDto> CancelAsync(Guid id);
 
     Task<CustomerReturnAppDto?> GetByIdAsync(Guid id);

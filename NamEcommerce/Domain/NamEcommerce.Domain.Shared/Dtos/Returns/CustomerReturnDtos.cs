@@ -12,8 +12,8 @@ public sealed record CustomerReturnDto(Guid Id)
 
     public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
-    public required Guid WarehouseId { get; init; }
-    public required string WarehouseName { get; init; }
+    public Guid? WarehouseId { get; init; }
+    public string? WarehouseName { get; init; }
     public string? Note { get; init; }
     public required int Status { get; init; }
     public required DateTime ReturnDate { get; init; }
@@ -55,7 +55,7 @@ public sealed record CreateCustomerReturnDto
 {
     public Guid? DeliveryNoteId { get; init; }
     public required Guid CustomerId { get; init; }
-    public required Guid WarehouseId { get; init; }
+    public Guid? WarehouseId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
     public Guid? ExcludeCustomerReturnRequestId { get; init; }
@@ -67,7 +67,7 @@ public sealed record CreateCustomerReturnDto
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.CustomerRequired");
         if (DeliveryNoteId == Guid.Empty)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.DeliveryNoteRequired");
-        if (WarehouseId == Guid.Empty)
+        if (WarehouseId.HasValue && WarehouseId.Value == Guid.Empty)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseRequired");
         if (AdditionalCost < 0)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.AdditionalCostCannotBeNegative");

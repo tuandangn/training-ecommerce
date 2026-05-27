@@ -111,6 +111,27 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
         var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
+        var activeDeliveryNotes = deliveryNotes
+            .Where(note => note.Status != (int)DeliveryNoteStatus.Cancelled)
+            .ToList();
+        var returnedByDeliveryNoteItemId = new Dictionary<Guid, decimal>();
+        foreach (var deliveryNote in activeDeliveryNotes)
+        {
+            var returnedByItem = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
+            {
+                DeliveryNoteId = deliveryNote.Id
+            }).ConfigureAwait(false);
+
+            foreach (var noteItem in deliveryNote.Items.Where(item => item.OrderItemId != Guid.Empty))
+            {
+                if (!returnedByItem.TryGetValue(noteItem.Id, out var summary))
+                    continue;
+
+                var returnedQuantity = Math.Max(0m, summary.ConfirmedQuantity + summary.PendingQuantity);
+                returnedByDeliveryNoteItemId[noteItem.Id] = Math.Min(noteItem.Quantity, returnedQuantity);
+            }
+        }
+
         var orderItemIds = order.Items.Select(item => item.Id).ToList();
         var directShipOutstandingQuantities = (await _directShipAppService
                 .GetDirectShipAllocationsForOrderAsync(orderItemIds)
@@ -123,11 +144,10 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 
         foreach (var orderItem in order.Items)
         {
-            var deliveredQty = deliveryNotes
-                .Where(deliveryNote => deliveryNote.Status != (int)DeliveryNoteStatus.Cancelled)
-                .SelectMany(n => n.Items)
-                .Where(i => i.OrderItemId == orderItem.Id)
-                .Sum(i => i.Quantity);
+            var deliveredQty = activeDeliveryNotes
+                .SelectMany(note => note.Items)
+                .Where(item => item.OrderItemId == orderItem.Id)
+                .Sum(item => Math.Max(0m, item.Quantity - returnedByDeliveryNoteItemId.GetValueOrDefault(item.Id)));
             var directShipOutstandingQty = directShipOutstandingQuantities.GetValueOrDefault(orderItem.Id);
             var remainingQty = orderItem.Quantity - deliveredQty - directShipOutstandingQty;
             if (remainingQty > 0)

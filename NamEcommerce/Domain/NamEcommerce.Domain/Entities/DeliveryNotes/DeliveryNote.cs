@@ -115,7 +115,7 @@ public sealed record DeliveryNote : AppAggregateEntity
         DeliveredOnUtc = DateTime.UtcNow;
         UpdatedOnUtc = DateTime.UtcNow;
 
-        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect));
     }
 
     internal void MarkCreated()
@@ -157,7 +157,7 @@ public sealed record DeliveryNote : AppAggregateEntity
         DeliveryReceiverName = receiverName;
         UpdatedOnUtc = DateTime.UtcNow;
 
-        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect));
     }
 
     internal bool MarkReceivedByCustomer(DateTime receivedAtUtc, string? receiverName, string? note)
@@ -183,7 +183,7 @@ public sealed record DeliveryNote : AppAggregateEntity
         DeliveryReceiverName = receiverName;
         UpdatedOnUtc = DateTime.UtcNow;
 
-        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect));
         return true;
     }
 
@@ -222,7 +222,7 @@ public sealed record DeliveryNote : AppAggregateEntity
         DeliveredOnUtc = confirmedAtUtc;
         UpdatedOnUtc = DateTime.UtcNow;
 
-        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, TotalAmount));
+        RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect));
     }
 
     internal void RejectDirectShipDelivery(string reason)

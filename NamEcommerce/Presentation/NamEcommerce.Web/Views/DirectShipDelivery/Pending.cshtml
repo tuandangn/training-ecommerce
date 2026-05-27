@@ -109,7 +109,7 @@
                             <td class="text-end pe-4">
                                 <button type="button" class="btn btn-sm btn-success btn-confirm-delivery" data-testid="directship-confirm-open"
                                         data-id="@item.Id" data-code="@item.Code">
-                                    <i class="bi bi-check2 me-1"></i>Xác nhận
+                                    <i class="bi bi-check2 me-1"></i>Xử lý nhận hàng
                                 </button>
                                 <button type="button" class="btn btn-sm btn-outline-danger btn-reject-delivery"
                                         data-id="@item.Id" data-code="@item.Code">
@@ -220,11 +220,9 @@
 
     document.querySelectorAll('.btn-confirm-delivery').forEach(btn => {
         btn.addEventListener('click', () => {
-            pendingId = btn.dataset.id;
-            document.getElementById('confirmDnCode').textContent = 'Phiếu: ' + btn.dataset.code;
-            document.getElementById('confirmNote').value = '';
-            document.getElementById('confirmDate').value = new Date().toISOString().slice(0, 10);
-            modalConfirm.show();
+            const id = btn.dataset.id;
+            if (!id) return;
+            window.location.href = '/DeliveryNote/Details/' + id;
         });
     });
 

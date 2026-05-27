@@ -59,9 +59,13 @@ public sealed class VendorReturnManager(
                 throw new ReturnDataIsInvalidException("Error.VendorReturn.GoodsReceiptNotFound", dto.GoodsReceiptId.Value);
         }
 
-        var warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId).ConfigureAwait(false);
-        if (warehouse is null)
-            throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseNotFound", dto.WarehouseId);
+        Warehouse? warehouse = null;
+        if (dto.WarehouseId.HasValue)
+        {
+            warehouse = await warehouseDataReader.GetByIdAsync(dto.WarehouseId.Value).ConfigureAwait(false);
+            if (warehouse is null)
+                throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseNotFound", dto.WarehouseId.Value);
+        }
 
         var code = GenerateCode();
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
@@ -72,8 +76,8 @@ public sealed class VendorReturnManager(
             vendorName: vendor.Name,
             purchaseOrderId: goodsReceipt?.PurchaseOrderId,
             goodsReceiptId: dto.GoodsReceiptId,
-            warehouseId: warehouse.Id,
-            warehouseName: warehouse.Name,
+            warehouseId: warehouse?.Id,
+            warehouseName: warehouse?.Name,
             note: dto.Note,
             additionalCost: dto.AdditionalCost,
             createdByUserId: currentUser?.Id);
@@ -124,10 +128,22 @@ public sealed class VendorReturnManager(
         await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
     }
 
-    public async Task ConfirmAsync(Guid id)
+    public async Task ConfirmAsync(Guid id, Guid? warehouseId = null)
     {
         var vendorReturn = await vendorReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new VendorReturnNotFoundException(id);
+
+        if (warehouseId.HasValue)
+        {
+            if (warehouseId.Value == Guid.Empty)
+                throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseRequired");
+
+            var warehouse = await warehouseDataReader.GetByIdAsync(warehouseId.Value).ConfigureAwait(false);
+            if (warehouse is null)
+                throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseNotFound", warehouseId.Value);
+
+            vendorReturn.SetWarehouse(warehouse.Id, warehouse.Name);
+        }
 
         // Validate: tổng AcceptedQuantity không được vượt quá số đã nhập từ NCC
         var acceptedByProduct = vendorReturn.Items

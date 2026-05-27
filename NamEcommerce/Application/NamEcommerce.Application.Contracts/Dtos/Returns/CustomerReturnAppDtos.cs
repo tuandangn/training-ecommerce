@@ -17,8 +17,8 @@ public sealed record CustomerReturnAppDto(Guid Id)
     public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
 
-    public required Guid WarehouseId { get; init; }
-    public required string WarehouseName { get; init; }
+    public Guid? WarehouseId { get; init; }
+    public string? WarehouseName { get; init; }
 
     public Guid? CreatedByUserId { get; init; }
     public required DateTime CreatedOnUtc { get; init; }
@@ -53,7 +53,7 @@ public sealed record CreateCustomerReturnAppDto
 {
     public Guid? DeliveryNoteId { get; init; }
     public required Guid CustomerId { get; init; }
-    public required Guid WarehouseId { get; init; }
+    public Guid? WarehouseId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
     public Guid? ExcludeCustomerReturnRequestId { get; init; }
@@ -65,7 +65,7 @@ public sealed record CreateCustomerReturnAppDto
             return (false, "Error.CustomerReturn.CustomerRequired");
         if (DeliveryNoteId == Guid.Empty)
             return (false, "Error.CustomerReturn.DeliveryNoteRequired");
-        if (WarehouseId == Guid.Empty)
+        if (WarehouseId.HasValue && WarehouseId.Value == Guid.Empty)
             return (false, "Error.CustomerReturn.WarehouseRequired");
         if (AdditionalCost < 0)
             return (false, "Error.CustomerReturn.AdditionalCostCannotBeNegative");

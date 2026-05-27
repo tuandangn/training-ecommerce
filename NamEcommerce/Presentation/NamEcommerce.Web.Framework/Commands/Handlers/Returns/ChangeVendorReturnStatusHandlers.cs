@@ -34,7 +34,7 @@ public sealed class ConfirmVendorReturnHandler
 
     public async Task<CommonActionResultModel> Handle(ConfirmVendorReturnCommand request, CancellationToken cancellationToken)
     {
-        var result = await _vendorReturnAppService.ConfirmAsync(request.Id).ConfigureAwait(false);
+        var result = await _vendorReturnAppService.ConfirmAsync(request.Id, request.WarehouseId).ConfigureAwait(false);
         return new CommonActionResultModel { Success = result.Success, ErrorMessage = result.ErrorMessage };
     }
 }

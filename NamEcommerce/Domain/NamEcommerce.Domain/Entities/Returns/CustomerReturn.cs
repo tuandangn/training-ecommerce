@@ -13,7 +13,7 @@ public sealed record CustomerReturn : AppAggregateEntity
     internal CustomerReturn(string code,
         Guid deliveryNoteId, string deliveryNoteCode,
         Guid customerId, string customerName,
-        Guid warehouseId, string warehouseName,
+        Guid? warehouseId, string? warehouseName,
         string? note, decimal additionalCost,
         Guid? createdByUserId) : base(Guid.NewGuid())
     {
@@ -45,8 +45,8 @@ public sealed record CustomerReturn : AppAggregateEntity
     public Guid CustomerId { get; private set; }
     public string CustomerName { get; private set; } = string.Empty;
 
-    public Guid WarehouseId { get; private set; }
-    public string WarehouseName { get; private set; } = string.Empty;
+    public Guid? WarehouseId { get; private set; }
+    public string? WarehouseName { get; private set; }
 
     public Guid? GeneratedGoodsReceiptId { get; internal set; }
 
@@ -84,6 +84,16 @@ public sealed record CustomerReturn : AppAggregateEntity
         UpdatedOnUtc = DateTime.UtcNow;
     }
 
+    internal void SetWarehouse(Guid warehouseId, string warehouseName)
+    {
+        if (warehouseId == Guid.Empty)
+            throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseRequired");
+
+        WarehouseId = warehouseId;
+        WarehouseName = warehouseName;
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
+
     internal void Confirm()
     {
         if (Status != CustomerReturnStatus.Inspecting)
@@ -91,12 +101,14 @@ public sealed record CustomerReturn : AppAggregateEntity
 
         if (!_items.Any())
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.NoItems");
+        if (!WarehouseId.HasValue || WarehouseId.Value == Guid.Empty)
+            throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseRequired");
 
         Status = CustomerReturnStatus.Confirmed;
         ConfirmedOnUtc = DateTime.UtcNow;
         UpdatedOnUtc = DateTime.UtcNow;
 
-        RaiseDomainEvent(new CustomerReturnConfirmed(Id, DeliveryNoteId, CustomerId, WarehouseId));
+        RaiseDomainEvent(new CustomerReturnConfirmed(Id, DeliveryNoteId, CustomerId, WarehouseId.Value));
     }
 
     internal void Cancel()

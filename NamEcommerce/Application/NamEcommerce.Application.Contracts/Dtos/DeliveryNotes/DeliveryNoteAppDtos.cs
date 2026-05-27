@@ -101,11 +101,29 @@ public sealed record CreateDeliveryNoteItemAppDto
 }
 
 [Serializable]
+public sealed record DeliveryAcceptanceItemAppDto
+{
+    public required Guid DeliveryNoteItemId { get; init; }
+    public required decimal AcceptedQuantity { get; init; }
+    public required decimal RejectedQuantity { get; init; }
+    public string? RejectReason { get; init; }
+}
+
+[Serializable]
+public sealed record DeliveryAcceptanceAppDto
+{
+    public decimal AgreedCustomerCharge { get; init; }
+    public string? AgreedCustomerChargeReason { get; init; }
+    public IList<DeliveryAcceptanceItemAppDto> Items { get; init; } = [];
+}
+
+[Serializable]
 public sealed record MarkDeliveryNoteDeliveredAppDto
 {
     public required Guid DeliveryNoteId { get; init; }
     public required Guid PictureId { get; init; }
     public string? ReceiverName { get; init; }
+    public DeliveryAcceptanceAppDto? Acceptance { get; init; }
 }
 
 [Serializable]

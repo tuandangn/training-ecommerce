@@ -135,20 +135,6 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <select asp-for="WarehouseId" class="form-select">
-                                <option value="">(Không chọn)</option>
-                                @if (Model.AvailableWarehouses is not null)
-                                {
-                                    foreach (var warehouse in Model.AvailableWarehouses)
-                                    {
-                                        <option value="@warehouse.Id" selected="@(Model.WarehouseId == warehouse.Id)">@warehouse.Name</option>
-                                    }
-                                }
-                            </select>
-                            <span asp-validation-for="WarehouseId" class="small text-danger"></span>
-                        </div>
-                        <div class="mb-3">
                             <label asp-for="AdditionalCost" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <input asp-for="AdditionalCost" id="additionalCostInput"
                                    class="form-control" data-decimal="currency" min="0" placeholder="0"
@@ -179,7 +165,6 @@
         const hiddenCustomerId = document.getElementById('hiddenCustomerId');
         const hiddenDeliveryNoteId = document.getElementById('hiddenDeliveryNoteId');
         const deliveryNoteSelect = document.getElementById('deliveryNoteSelect');
-        const warehouseSelect = document.getElementById('@Html.IdFor(m => m.WarehouseId)');
 
         const customerPicker = new CustomerPicker(customerPickerEl);
 
@@ -218,8 +203,6 @@
                 notes.forEach(n => {
                     const opt = document.createElement('option');
                     opt.value = n.id;
-                    opt.dataset.warehouseId = n.warehouseId;
-                    opt.dataset.warehouseName = n.warehouseName;
                     const date = new Date(n.deliveredOn).toLocaleDateString('vi-VN');
                     opt.textContent = `${n.code} — ${date}`;
                     deliveryNoteSelect.appendChild(opt);
@@ -233,8 +216,6 @@
                 if (noteToSelect && selectedOption) {
                     deliveryNoteSelect.value = noteToSelect;
                     hiddenDeliveryNoteId.value = noteToSelect;
-                    if (selectedOption.dataset.warehouseId)
-                        warehouseSelect.value = selectedOption.dataset.warehouseId;
                     updateLoadBtn(true);
                     await loadItemsFromNote(noteToSelect);
                 }
@@ -251,10 +232,6 @@
         deliveryNoteSelect.addEventListener('change', async () => {
             const noteId = deliveryNoteSelect.value;
             hiddenDeliveryNoteId.value = noteId;
-
-            const selectedOption = deliveryNoteSelect.querySelector(`option[value="${noteId}"]`);
-            if (selectedOption.dataset.warehouseId)
-                warehouseSelect.value = selectedOption.dataset.warehouseId;
 
             if (!noteId) {
                 updateLoadBtn(false);

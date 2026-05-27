@@ -19,8 +19,8 @@ public sealed class CustomerReturnMapping : IEntityTypeConfiguration<CustomerRet
         builder.Property(r => r.CustomerId).IsRequired();
         builder.Property(r => r.CustomerName).IsRequired().HasMaxLength(500);
 
-        builder.Property(r => r.WarehouseId).IsRequired();
-        builder.Property(r => r.WarehouseName).IsRequired().HasMaxLength(500);
+        builder.Property(r => r.WarehouseId).IsRequired(false);
+        builder.Property(r => r.WarehouseName).IsRequired(false).HasMaxLength(500);
 
         builder.Property(r => r.Note).HasMaxLength(2000);
         builder.Property(r => r.Status).IsRequired().HasConversion<int>();
