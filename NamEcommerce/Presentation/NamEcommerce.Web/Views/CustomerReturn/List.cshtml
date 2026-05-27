@@ -9,6 +9,7 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Order" class="text-decoration-none">Đơn bán</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Khách trả hàng</li>
             </ol>
         </nav>
@@ -16,12 +17,10 @@
 }
 <div class="content-card" data-responsive-list data-list-key="customer-return-list">
     <div class="action-toolbar">
-        <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
-            <partial name="_ResponsiveListToolbar" />
-            <a asp-action="Create" class="btn btn-primary">
-                <i class="bi bi-plus-lg me-1"></i> Tạo phiếu trả
-            </a>
-        </div>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Tạo phiếu trả
+        </a>
+        <partial name="_ResponsiveListToolbar" />
     </div>
     <div class="content-card-body-flush">
         <div class="responsive-list-panel" data-list-view-panel="list">

@@ -51,18 +51,6 @@ function confirm(title, body) {
     return promise;
 }
 
-/**
- * Backward-compatible toast() helper.
- *
- * Routes to NotificationCenter (Notyf) so all UI notifications use the same
- * unified system. Falls back to SweetAlert2 if NotificationCenter is not
- * loaded for some reason.
- *
- * Supported shapes:
- *   toast({ icon: 'success'|'error'|'warning'|'info', title, text, timer })
- *   toast(title, text, type)
- *   toast(text)
- */
 const toast = function (...args) {
     if (typeof window !== 'undefined' && window.NotificationCenter) {
         const payload = normalizeToastArgs(args);
@@ -74,7 +62,6 @@ const toast = function (...args) {
             return Promise.resolve(payload);
         }
     }
-    // fallback when NotificationCenter not yet loaded
     return Swal.fire(...args);
 }
 

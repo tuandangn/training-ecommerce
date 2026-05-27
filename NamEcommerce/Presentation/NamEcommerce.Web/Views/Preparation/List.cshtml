@@ -7,23 +7,20 @@
         _ => null
     };
 }
-
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Chuẩn bị hàng</h1>
-        <p class="page-header-subtitle">Danh sách hàng hóa cần chuẩn bị từ đơn hàng chưa khóa</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">Chuẩn bị hàng</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Order" class="text-decoration-none">Đơn bán</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Chuẩn bị hàng</li>
+            </ol>
+        </nav>
     </div>
-</div>
+}
 
 <div id="alertArea"></div>
-
-<div class="mb-3">
-    <button id="btnCreateDeliveryNote" class="btn btn-primary" disabled>
-        <i class="bi bi-file-earmark-plus me-1"></i>
-        Tạo phiếu xuất (<span id="selectedCount">0</span>)
-    </button>
-</div>
-
 @switch (Model)
 {
     case ProductPreparationListModel:
@@ -616,7 +613,7 @@
                     if (response.success) {
                         const poUrl = '@Url.Action("Details", "PurchaseOrder")' + '/' + response.purchaseOrderId;
                         toast('Thành công',
-                            `Đã tạo đơn nhập hàng. <a href="${poUrl}" class="alert-link">Xem đơn nhập</a>`,
+                            `Tạo đơn nhập hàng thành công.`,
                             'success');
                     } else {
                         showAlert('danger', response.message || 'Không thể tạo đơn nhập hàng.');
