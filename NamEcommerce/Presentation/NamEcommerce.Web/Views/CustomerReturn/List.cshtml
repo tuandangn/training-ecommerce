@@ -1,29 +1,21 @@
 @using NamEcommerce.Domain.Shared.Enums.Returns
 @model CustomerReturnListModel
 @{
-    ViewData[ViewConstants.PageTitle] = "Trả hàng khách hàng";
+    ViewData[ViewConstants.PageTitle] = "Khách trả hàng";
 }
 @section TitleSection {
-    <h1 class="topbar-page-title">Trả hàng khách hàng</h1>
+    <h1 class="topbar-page-title">Khách trả hàng</h1>
     <div class="topbar-page-subtitle">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Trả hàng khách hàng</li>
+                <li class="breadcrumb-item active" aria-current="page">Khách trả hàng</li>
             </ol>
         </nav>
     </div>
 }
 <div class="content-card" data-responsive-list data-list-key="customer-return-list">
     <div class="action-toolbar">
-        <div class="d-flex gap-2 align-items-center flex-wrap">
-            @if (Model.Status.HasValue)
-            {
-                <a asp-action="List" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-x-lg me-1"></i>Bỏ lọc
-                </a>
-            }
-        </div>
         <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
             <partial name="_ResponsiveListToolbar" />
             <a asp-action="Create" class="btn btn-primary">
@@ -34,73 +26,73 @@
     <div class="content-card-body-flush">
         <div class="responsive-list-panel" data-list-view-panel="list">
             <div class="table-responsive">
-            <table class="table data-table">
-                <thead>
-                    <tr>
-                        <th class="ps-4" style="width:130px">Mã phiếu</th>
-                        <th>Khách hàng</th>
-                        <th>Nguồn giao</th>
-                        <th>Kho nhận</th>
-                        <th class="text-end">Giá trị trả</th>
-                        <th class="text-center" style="width:130px">Trạng thái</th>
-                        <th class="text-center" style="width:110px">Ngày trả</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.Data.Pagination.TotalCount > 0)
-                    {
-                        @foreach (var item in Model.Data)
+                <table class="table data-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="width:130px">Mã phiếu</th>
+                            <th>Khách hàng</th>
+                            <th>Nguồn giao</th>
+                            <th>Kho nhận</th>
+                            <th class="text-end">Giá trị trả</th>
+                            <th style="width:130px">Trạng thái</th>
+                            @* <th class="text-center" style="width:110px">Ngày trả</th> *@
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Data.Pagination.TotalCount > 0)
                         {
-                            <tr class="align-middle">
-                                <td class="ps-4">
-                                    <a asp-action="Details" asp-route-id="@item.Id"
-                                       class="fw-semibold text-decoration-none">
-                                        @item.Code
-                                    </a>
-                                </td>
-                                <td>@item.CustomerName</td>
-                                <td>
-                                    <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@item.DeliveryNoteId"
-                                       class="text-decoration-none text-muted">
-                                        @item.DeliveryNoteCode
-                                    </a>
-                                </td>
-                                <td class="text-muted small">@item.WarehouseName</td>
-                                <td class="text-end fw-semibold">@item.TotalAmount.DisplayCurrency()</td>
-                                <td class="text-center">
-                                    @{
-                                        var (badgeClass, badgeText) = (CustomerReturnStatus)item.Status switch
-                                        {
-                                            CustomerReturnStatus.Draft => ("bg-secondary", "Bản nháp"),
-                                            CustomerReturnStatus.Inspecting => ("bg-warning text-dark", "Đang kiểm tra"),
-                                            CustomerReturnStatus.Confirmed => ("bg-success", "Đã xác nhận"),
-                                            CustomerReturnStatus.Cancelled => ("bg-danger", "Đã huỷ"),
-                                            _ => ("bg-secondary", "—")
-                                        };
-                                    }
-                                    <span class="badge @badgeClass">@badgeText</span>
-                                </td>
-                                <td class="text-center text-muted small">@item.ReturnDate.ToString(ViewConstants.DefaultDateFormat)</td>
-                                <td class="text-end pe-3">
-                                    <a class="btn btn-sm btn-light text-primary"
-                                       asp-action="Details" asp-route-id="@item.Id">Xem</a>
+                            @foreach (var item in Model.Data)
+                            {
+                                <tr class="align-middle">
+                                    <td class="ps-4">
+                                        <a asp-action="Details" asp-route-id="@item.Id" class="fw-medium d-block text-nowrap text-decoration-none">
+                                            @item.Code
+                                        </a>
+                                        <span class="text-muted small">@item.ReturnDate.ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                                    </td>
+                                    <td>@item.CustomerName</td>
+                                    <td>
+                                        <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@item.DeliveryNoteId"
+                                           class="text-decoration-none fw-medium text-dark">
+                                            @item.DeliveryNoteCode
+                                        </a>
+                                    </td>
+                                    <td class="fw-medium text-dark">@item.WarehouseName</td>
+                                    <td class="text-end fw-bold text-primary text-nowrap">@item.TotalAmount.DisplayCurrencyWithSymbol()</td>
+                                    <td>
+                                        @{
+                                            var (badgeClass, badgeText) = (CustomerReturnStatus)item.Status switch
+                                            {
+                                                CustomerReturnStatus.Draft => ("bg-secondary", "Bản nháp"),
+                                                CustomerReturnStatus.Inspecting => ("bg-warning text-dark", "Đang kiểm tra"),
+                                                CustomerReturnStatus.Confirmed => ("bg-success", "Đã xác nhận"),
+                                                CustomerReturnStatus.Cancelled => ("bg-danger", "Đã huỷ"),
+                                                _ => ("bg-secondary", "—")
+                                            };
+                                        }
+                                        <span class="badge @badgeClass">@badgeText</span>
+                                    </td>
+                                    @* <td class="text-center text-muted small">@item.ReturnDate.ToString(ViewConstants.DefaultDateFormat)</td> *@
+                                    <td class="text-end pe-3">
+                                        <a class="btn btn-sm btn-light text-primary"
+                                           asp-action="Details" asp-route-id="@item.Id">Xem</a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7">
+                                    <div class="empty-state">
+                                        <span class="text-muted">Không có phiếu trả hàng nào</span>
+                                    </div>
                                 </td>
                             </tr>
                         }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="8">
-                                <div class="empty-state">
-                                    <span class="text-muted">Không có phiếu trả hàng nào</span>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
             </div>
         </div>
 

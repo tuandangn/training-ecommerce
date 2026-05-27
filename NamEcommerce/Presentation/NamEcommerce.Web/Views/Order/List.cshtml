@@ -167,7 +167,7 @@
                                     </div>
                                 </td>
                                 <td class="text-end fw-bold text-primary text-nowrap">
-                                    @order.TotalAmount.DisplayCurrency()
+                                    @order.TotalAmount.DisplayCurrencyWithSymbol()
                                 </td>
                                 <td class="text-muted text-center">
                                     @order.ExpectedShippingDate?.ToString(ViewConstants.DefaultDateFormat)
