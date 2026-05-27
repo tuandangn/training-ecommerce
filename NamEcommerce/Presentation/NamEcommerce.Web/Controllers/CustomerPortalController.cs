@@ -198,17 +198,27 @@ public sealed class CustomerPortalController(
     private void NotifyResult(CustomerActionResultAppDto result)
     {
         if (result.Success)
-            NotificationService.Success(result.Message ?? "Thao tác thành công.");
+            NotificationService.Success(ResolveNotificationMessage(result.Message, "Thao tác thành công."));
         else
-            NotificationService.Error(result.Message ?? "Thao tác không thành công.");
+            NotificationService.Error(ResolveNotificationMessage(result.Message, "Thao tác không thành công."));
     }
 
     private void NotifyResult(CustomerPortalConversionResultAppDto result)
     {
         if (result.Success)
-            NotificationService.Success(result.Message ?? "Chuyển đổi thành công.");
+            NotificationService.Success(ResolveNotificationMessage(result.Message, "Chuyển đổi thành công."));
         else
-            NotificationService.Error(result.Message ?? "Chuyển đổi không thành công.");
+            NotificationService.Error(ResolveNotificationMessage(result.Message, "Chuyển đổi không thành công."));
+    }
+
+    private string ResolveNotificationMessage(string? message, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return fallback;
+
+        return message.StartsWith("Error.", StringComparison.Ordinal)
+            ? LocalizeError(message)
+            : message;
     }
 
     private async Task PrepareWarehouseOptionsAsync()

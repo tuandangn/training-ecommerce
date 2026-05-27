@@ -425,13 +425,15 @@ public sealed class CustomerPortalAppService(
         return Task.FromResult<IReadOnlyCollection<CustomerDeliveryNoteSummaryAppDto>>(notes);
     }
 
-    public Task<CustomerDeliveryNoteDetailsAppDto?> GetDeliveryNoteDetailsAsync(Guid customerId, Guid deliveryNoteId)
+    public async Task<CustomerDeliveryNoteDetailsAppDto?> GetDeliveryNoteDetailsAsync(Guid customerId, Guid deliveryNoteId)
     {
         var deliveryNote = deliveryNoteReader.DataSource.FirstOrDefault(note => note.Id == deliveryNoteId && note.CustomerId == customerId);
         if (deliveryNote is null)
-            return Task.FromResult<CustomerDeliveryNoteDetailsAppDto?>(null);
+            return null;
 
-        return Task.FromResult<CustomerDeliveryNoteDetailsAppDto?>(new CustomerDeliveryNoteDetailsAppDto
+        var returnStates = await GetDeliveryItemReturnStatesAsync(customerId, deliveryNoteId).ConfigureAwait(false);
+
+        return new CustomerDeliveryNoteDetailsAppDto
         {
             Id = deliveryNote.Id,
             Code = deliveryNote.Code,
@@ -440,16 +442,23 @@ public sealed class CustomerPortalAppService(
             DeliveryConfirmationStatus = (int)deliveryNote.DeliveryConfirmationStatus,
             CreatedOnUtc = deliveryNote.CreatedOnUtc,
             DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
-            Items = deliveryNote.Items.Select(item => new CustomerDeliveryNoteItemAppDto
+            Items = deliveryNote.Items.Select(item =>
             {
-                Id = item.Id,
-                ProductId = item.ProductId,
-                ProductName = item.ProductName ?? string.Empty,
-                Quantity = item.Quantity,
-                UnitPrice = item.UnitPrice,
-                SubTotal = item.SubTotal
+                returnStates.TryGetValue(item.Id, out var returnState);
+                return new CustomerDeliveryNoteItemAppDto
+                {
+                    Id = item.Id,
+                    ProductId = item.ProductId,
+                    ProductName = item.ProductName ?? string.Empty,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    SubTotal = item.SubTotal,
+                    ReservedReturnQuantity = returnState?.ReservedReturnQuantity ?? 0m,
+                    PendingPortalReturnQuantity = returnState?.PendingPortalReturnQuantity ?? 0m,
+                    ReturnableQuantity = returnState?.ReturnableQuantity ?? item.Quantity
+                };
             }).ToList()
-        });
+        };
     }
 
     public async Task<CustomerActionResultAppDto> ConfirmDeliveryNoteAsync(Guid customerId, Guid deliveryNoteId, ConfirmCustomerDeliveryNoteAppDto dto)
@@ -491,29 +500,16 @@ public sealed class CustomerPortalAppService(
     {
         var deliveryNote = deliveryNoteReader.DataSource.FirstOrDefault(note => note.Id == dto.DeliveryNoteId && note.CustomerId == customerId);
         if (deliveryNote is null)
-            throw new InvalidOperationException("Delivery note was not found.");
+            throw new InvalidOperationException("Không tìm thấy phiếu giao hàng.");
         if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
-            throw new InvalidOperationException("Delivery note must be delivered before creating a return request.");
+            throw new InvalidOperationException("Chỉ có thể yêu cầu trả hàng sau khi phiếu giao đã hoàn tất giao hàng.");
         if (deliveryNote.DeliveryConfirmationStatus != DeliveryConfirmationStatus.Confirmed)
-            throw new InvalidOperationException("Please confirm receipt before creating a return request.");
+            throw new InvalidOperationException("Vui lòng xác nhận đã nhận hàng trước khi gửi yêu cầu trả hàng.");
         if (dto.Items.Count == 0)
-            throw new InvalidOperationException("Return request must contain at least one item.");
+            throw new InvalidOperationException("Yêu cầu trả hàng cần có ít nhất một dòng hàng.");
 
         var itemsById = deliveryNote.Items.ToDictionary(item => item.Id);
-        var returnableItems = await customerReturnAppService
-            .GetDeliveryNoteItemsForReturnAsync(dto.DeliveryNoteId)
-            .ConfigureAwait(false);
-        var availableByDeliveryItemId = returnableItems
-            .Where(item => item.SourceItemId.HasValue)
-            .ToDictionary(
-                item => item.SourceItemId!.Value,
-                item => Math.Max(0m, item.OriginalQty - item.AlreadyReturnedQty));
-        var pendingPortalQuantitiesByItem = (await customerPortalManager.GetReturnRequestsAsync(customerId).ConfigureAwait(false))
-            .Where(request => request.DeliveryNoteId == dto.DeliveryNoteId
-                && (request.Status == CustomerReturnRequestStatus.PendingReview || request.Status == CustomerReturnRequestStatus.Accepted))
-            .SelectMany(request => request.Items)
-            .GroupBy(item => item.DeliveryNoteItemId)
-            .ToDictionary(group => group.Key, group => group.Sum(item => item.RequestedQuantity));
+        var returnStates = await GetDeliveryItemReturnStatesAsync(customerId, dto.DeliveryNoteId).ConfigureAwait(false);
         var requestedQuantitiesByItem = dto.Items
             .GroupBy(item => item.DeliveryNoteItemId)
             .ToDictionary(group => group.Key, group => group.Sum(item => item.RequestedQuantity));
@@ -522,15 +518,14 @@ public sealed class CustomerPortalAppService(
         {
             var deliveryItem = itemsById.GetValueOrDefault(item.DeliveryNoteItemId);
             if (deliveryItem is null || item.RequestedQuantity <= 0)
-                throw new InvalidOperationException("Return request item is invalid.");
+                throw new InvalidOperationException("Dòng hàng trả không hợp lệ.");
         }
 
         foreach (var (deliveryNoteItemId, requestedQuantity) in requestedQuantitiesByItem)
         {
-            var available = availableByDeliveryItemId.GetValueOrDefault(deliveryNoteItemId);
-            var pendingPortalQuantity = pendingPortalQuantitiesByItem.GetValueOrDefault(deliveryNoteItemId);
-            if (requestedQuantity > Math.Max(0m, available - pendingPortalQuantity))
-                throw new InvalidOperationException("Return request quantity exceeds the returnable quantity.");
+            var returnableQuantity = returnStates.GetValueOrDefault(deliveryNoteItemId)?.ReturnableQuantity ?? 0m;
+            if (requestedQuantity > returnableQuantity)
+                throw new InvalidOperationException("Số lượng trả vượt quá số lượng còn có thể trả.");
         }
 
         var evidencePictureIds = new Dictionary<Guid, IList<Guid>>();
@@ -568,6 +563,48 @@ public sealed class CustomerPortalAppService(
             Status = (int)created.Status,
             CreatedOnUtc = created.CreatedOnUtc
         };
+    }
+
+    public async Task<IReadOnlyCollection<CustomerReturnRequestSummaryAppDto>> GetReturnRequestsAsync(Guid customerId)
+    {
+        var deliveryNotes = deliveryNoteReader.DataSource
+            .Where(note => note.CustomerId == customerId)
+            .ToDictionary(note => note.Id);
+        var requests = await customerPortalManager.GetReturnRequestsAsync(customerId).ConfigureAwait(false);
+
+        return requests
+            .OrderByDescending(request => request.CreatedOnUtc)
+            .Select(request => MapReturnRequestSummary(request, deliveryNotes.GetValueOrDefault(request.DeliveryNoteId)))
+            .ToList();
+    }
+
+    public async Task<CustomerReturnRequestDetailsAppDto?> GetReturnRequestDetailsAsync(Guid customerId, Guid returnRequestId)
+    {
+        var request = await customerPortalManager.GetReturnRequestByIdAsync(returnRequestId).ConfigureAwait(false);
+        if (request is null || request.CustomerId != customerId)
+            return null;
+
+        var deliveryNote = await deliveryNoteReader.GetByIdAsync(request.DeliveryNoteId).ConfigureAwait(false);
+        return await MapReturnRequestDetailsAsync(request, deliveryNote).ConfigureAwait(false);
+    }
+
+    public async Task<CustomerActionResultAppDto> CancelReturnRequestAsync(Guid customerId, Guid returnRequestId)
+    {
+        var request = await customerPortalManager.GetReturnRequestByIdAsync(returnRequestId).ConfigureAwait(false);
+        if (request is null || request.CustomerId != customerId)
+            return CustomerActionResultAppDto.Fail("Không tìm thấy yêu cầu trả hàng.");
+        if (request.Status != CustomerReturnRequestStatus.PendingReview)
+            return CustomerActionResultAppDto.Fail("Chỉ có thể hủy yêu cầu trả hàng đang chờ xem xét.");
+
+        try
+        {
+            await customerPortalManager.CancelReturnRequestAsync(returnRequestId, DateTime.UtcNow).ConfigureAwait(false);
+            return CustomerActionResultAppDto.Ok("Đã hủy yêu cầu trả hàng.");
+        }
+        catch (InvalidOperationException)
+        {
+            return CustomerActionResultAppDto.Fail("Không thể hủy yêu cầu trả hàng ở trạng thái hiện tại.");
+        }
     }
 
     public async Task<CustomerDebtSummaryPortalAppDto> GetDebtSummaryAsync(Guid customerId)
@@ -679,6 +716,68 @@ public sealed class CustomerPortalAppService(
             DeliveredOnUtc = deliveryNote.DeliveredOnUtc
         };
 
+    private static CustomerReturnRequestSummaryAppDto MapReturnRequestSummary(CustomerReturnRequestDto request, DeliveryNote? deliveryNote)
+        => new()
+        {
+            Id = request.Id,
+            DeliveryNoteId = request.DeliveryNoteId,
+            DeliveryNoteCode = deliveryNote?.Code,
+            Status = (int)request.Status,
+            Reason = request.Reason,
+            AdminNote = request.AdminNote,
+            CreatedOnUtc = request.CreatedOnUtc,
+            ReviewedOnUtc = request.ReviewedOnUtc,
+            ConvertedCustomerReturnId = request.ConvertedCustomerReturnId,
+            TotalRequestedQuantity = request.Items.Sum(item => item.RequestedQuantity),
+            ItemCount = request.Items.Count
+        };
+
+    private async Task<CustomerReturnRequestDetailsAppDto> MapReturnRequestDetailsAsync(CustomerReturnRequestDto request, DeliveryNote? deliveryNote)
+    {
+        var details = new CustomerReturnRequestDetailsAppDto
+        {
+            Id = request.Id,
+            DeliveryNoteId = request.DeliveryNoteId,
+            DeliveryNoteCode = deliveryNote?.Code,
+            Status = (int)request.Status,
+            Reason = request.Reason,
+            AdminNote = request.AdminNote,
+            CreatedOnUtc = request.CreatedOnUtc,
+            ReviewedOnUtc = request.ReviewedOnUtc,
+            ConvertedCustomerReturnId = request.ConvertedCustomerReturnId,
+            TotalRequestedQuantity = request.Items.Sum(item => item.RequestedQuantity),
+            ItemCount = request.Items.Count
+        };
+
+        foreach (var item in request.Items)
+        {
+            var mappedItem = new CustomerReturnRequestItemAppDto
+            {
+                Id = item.Id,
+                DeliveryNoteItemId = item.DeliveryNoteItemId,
+                ProductId = item.ProductId,
+                ProductName = item.ProductName,
+                RequestedQuantity = item.RequestedQuantity,
+                Reason = item.Reason
+            };
+
+            foreach (var picture in item.EvidencePictures)
+            {
+                var pictureDto = await pictureAppService.GetBase64PictureByIdAsync(picture.PictureId).ConfigureAwait(false);
+                mappedItem.EvidencePictures.Add(new CustomerReturnRequestEvidencePictureAppDto
+                {
+                    PictureId = picture.PictureId,
+                    PictureUrl = pictureDto?.Base64Value,
+                    FileName = pictureDto?.FileName
+                });
+            }
+
+            details.Items.Add(mappedItem);
+        }
+
+        return details;
+    }
+
     private static string BuildConfirmationMessage(ConfirmCustomerDeliveryNoteAppDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.ReceiverName))
@@ -689,20 +788,45 @@ public sealed class CustomerPortalAppService(
             : $"Customer confirmed delivery. Receiver: {dto.ReceiverName}. Note: {dto.Note}";
     }
 
+    private async Task<IReadOnlyDictionary<Guid, DeliveryItemReturnState>> GetDeliveryItemReturnStatesAsync(Guid customerId, Guid deliveryNoteId)
+    {
+        var returnableItems = await customerReturnAppService
+            .GetDeliveryNoteItemsForReturnAsync(deliveryNoteId)
+            .ConfigureAwait(false);
+        var pendingPortalQuantitiesByItem = (await customerPortalManager.GetReturnRequestsAsync(customerId).ConfigureAwait(false))
+            .Where(request => request.DeliveryNoteId == deliveryNoteId
+                && (request.Status == CustomerReturnRequestStatus.PendingReview || request.Status == CustomerReturnRequestStatus.Accepted))
+            .SelectMany(request => request.Items)
+            .GroupBy(item => item.DeliveryNoteItemId)
+            .ToDictionary(group => group.Key, group => group.Sum(item => item.RequestedQuantity));
+
+        return returnableItems
+            .Where(item => item.SourceItemId.HasValue)
+            .ToDictionary(
+                item => item.SourceItemId!.Value,
+                item =>
+                {
+                    var reservedReturnQuantity = Math.Max(0m, item.AlreadyReturnedQty);
+                    var pendingPortalQuantity = Math.Max(0m, pendingPortalQuantitiesByItem.GetValueOrDefault(item.SourceItemId!.Value));
+                    var returnableQuantity = Math.Max(0m, item.OriginalQty - reservedReturnQuantity - pendingPortalQuantity);
+                    return new DeliveryItemReturnState(reservedReturnQuantity, pendingPortalQuantity, returnableQuantity);
+                });
+    }
+
     private async Task<IList<Guid>> CreateReturnEvidencePicturesAsync(ICollection<CreateCustomerReturnRequestPictureAppDto> pictures)
     {
         if (pictures.Count > MaxReturnEvidencePicturesPerItem)
-            throw new InvalidOperationException($"Return request can include at most {MaxReturnEvidencePicturesPerItem} pictures per item.");
+            throw new InvalidOperationException($"Mỗi dòng hàng chỉ được gửi tối đa {MaxReturnEvidencePicturesPerItem} ảnh.");
 
         var pictureIds = new List<Guid>();
         foreach (var picture in pictures)
         {
             if (!AllowedReturnEvidenceMimeTypes.Contains(picture.MimeType))
-                throw new InvalidOperationException("Return evidence picture type is not supported.");
+                throw new InvalidOperationException("Ảnh hiện trạng chỉ nhận JPG, PNG hoặc WEBP.");
 
             var bytes = DecodeBase64Payload(picture.Base64Data);
             if (bytes.Length == 0 || bytes.Length > MaxReturnEvidencePictureBytes)
-                throw new InvalidOperationException("Return evidence picture size is invalid.");
+                throw new InvalidOperationException("Ảnh hiện trạng không hợp lệ hoặc vượt quá 5MB.");
 
             pictureIds.Add(await pictureAppService.CreatePictureAsync(new CreatePictureAppDto
             {
@@ -723,7 +847,14 @@ public sealed class CustomerPortalAppService(
 
         var commaIndex = base64Data.IndexOf(',');
         var payload = commaIndex >= 0 ? base64Data[(commaIndex + 1)..] : base64Data;
-        return Convert.FromBase64String(payload);
+        try
+        {
+            return Convert.FromBase64String(payload);
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidOperationException("Dữ liệu ảnh hiện trạng không hợp lệ.", ex);
+        }
     }
 
     private static string ResolvePictureExtension(string fileName, string mimeType)
@@ -786,4 +917,9 @@ public sealed class CustomerPortalAppService(
         string Name,
         Guid? CategoryId,
         Guid? PictureId);
+
+    private sealed record DeliveryItemReturnState(
+        decimal ReservedReturnQuantity,
+        decimal PendingPortalReturnQuantity,
+        decimal ReturnableQuantity);
 }

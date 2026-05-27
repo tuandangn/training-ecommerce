@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { apiFetch } from "../api/client";
 import type { ActionResult, DeliveryNoteDetails, DeliveryNoteItem } from "../api/types";
-import { deliveryNoteStatusText, money, shortDate } from "../app/format";
+import { deliveryNoteStatusText, money, quantity, shortDate } from "../app/format";
+import { navigate } from "../app/routes";
 
 type ActiveModal = "received" | "return" | null;
 type ReturnPictureDraft = {
@@ -43,6 +44,11 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
       return;
     }
 
+    if (!note.items.some((item) => getReturnableQuantity(item) > 0)) {
+      setMessage("Phiếu giao này không còn số lượng có thể yêu cầu trả.");
+      return;
+    }
+
     setReturnReason("");
     setReturnMessage("");
     setReturnQuantities(Object.fromEntries(note.items.map((item) => [item.id, "0"])));
@@ -63,8 +69,8 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
       setMessage(result.message ?? "Đã ghi nhận khách đã nhận hàng.");
       setActiveModal(null);
       await reloadNote();
-    } catch {
-      setMessage("Không thể ghi nhận đã nhận hàng lúc này.");
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, "Không thể ghi nhận đã nhận hàng lúc này."));
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +86,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
         requestedQuantity: parseQuantity(returnQuantities[item.id]),
         reason: returnReason,
         evidencePictures: returnPictures[item.id] ?? [],
-        maxQuantity: item.quantity,
+        maxQuantity: getReturnableQuantity(item),
       }))
       .filter((item) => item.requestedQuantity > 0);
 
@@ -90,7 +96,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
     }
 
     if (items.some((item) => item.requestedQuantity > item.maxQuantity)) {
-      setReturnMessage("Số lượng trả không được lớn hơn số lượng đã nhận.");
+      setReturnMessage("Số lượng trả không được lớn hơn số lượng còn có thể trả.");
       return;
     }
 
@@ -98,7 +104,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
     setReturnMessage("");
 
     try {
-      await apiFetch("/api/return-requests", {
+      const created = await apiFetch<{ id: string }>("/api/return-requests", {
         method: "POST",
         body: JSON.stringify({
           deliveryNoteId: note.id,
@@ -117,8 +123,10 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
       });
       setMessage("Đã gửi yêu cầu trả hàng.");
       setActiveModal(null);
-    } catch {
-      setReturnMessage("Không thể gửi yêu cầu trả hàng lúc này.");
+      await reloadNote();
+      navigate(`/return-requests/${created.id}`);
+    } catch (error) {
+      setReturnMessage(getApiErrorMessage(error, "Không thể gửi yêu cầu trả hàng lúc này."));
     } finally {
       setSubmitting(false);
     }
@@ -189,6 +197,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
           <tr>
             <th>Hàng hóa</th>
             <th>Số lượng</th>
+            <th>Còn được trả</th>
             <th>Đơn giá</th>
             <th>Thành tiền</th>
           </tr>
@@ -197,7 +206,13 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
           {note.items.map((item) => (
             <tr key={item.id}>
               <td>{item.productName}</td>
-              <td>{item.quantity}</td>
+              <td>{quantity(item.quantity)}</td>
+              <td>
+                {quantity(getReturnableQuantity(item))}
+                {getReservedReturnQuantity(item) > 0 && (
+                  <div className="page-subtitle">Đã/đang xử lý {quantity(getReservedReturnQuantity(item))}</div>
+                )}
+              </td>
               <td>{money(item.unitPrice)}</td>
               <td>{money(item.subTotal)}</td>
             </tr>
@@ -230,6 +245,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
                 <tr>
                   <th>Hàng hóa</th>
                   <th>Đã nhận</th>
+                  <th>Còn trả được</th>
                   <th>Số lượng trả</th>
                 </tr>
               </thead>
@@ -238,6 +254,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
                   <ReturnItemRow
                     key={item.id}
                     item={item}
+                    maxQuantity={getReturnableQuantity(item)}
                     value={returnQuantities[item.id] ?? "0"}
                     pictures={returnPictures[item.id] ?? []}
                     onChange={(value) =>
@@ -273,6 +290,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
 
 function ReturnItemRow({
   item,
+  maxQuantity,
   value,
   pictures,
   onChange,
@@ -280,6 +298,7 @@ function ReturnItemRow({
   onRemovePicture,
 }: {
   item: DeliveryNoteItem;
+  maxQuantity: number;
   value: string;
   pictures: ReturnPictureDraft[];
   onChange: (value: string) => void;
@@ -290,22 +309,24 @@ function ReturnItemRow({
     <>
       <tr>
         <td>{item.productName}</td>
-        <td>{item.quantity}</td>
+        <td>{quantity(item.quantity)}</td>
+        <td>{quantity(maxQuantity)}</td>
         <td>
           <input
             className="quantity-input"
             inputMode="decimal"
             min="0"
-            max={item.quantity}
+            max={maxQuantity}
             step="0.01"
             type="number"
             value={value}
+            disabled={maxQuantity <= 0}
             onChange={(event) => onChange(event.target.value)}
           />
         </td>
       </tr>
       <tr>
-        <td colSpan={3}>
+        <td colSpan={4}>
           <div className="return-evidence">
             <label className="button">
               Chụp/đính kèm ảnh
@@ -358,6 +379,22 @@ function parseQuantity(value: string | undefined) {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getReturnableQuantity(item: DeliveryNoteItem) {
+  return Math.max(0, item.returnableQuantity ?? item.quantity);
+}
+
+function getReservedReturnQuantity(item: DeliveryNoteItem) {
+  return Math.max(0, (item.reservedReturnQuantity ?? 0) + (item.pendingPortalReturnQuantity ?? 0));
+}
+
+function getApiErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message && !error.message.startsWith("Request failed")) {
+    return error.message;
+  }
+
+  return fallback;
 }
 
 function readReturnPictureDraft(file: File) {

@@ -23,6 +23,7 @@ public sealed class CustomerPortalCommandHandlers(
     IRequestHandler<ConfirmCustomerDeliveryNoteCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerDeliveryFeedbackCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerReturnRequestCommand, CustomerReturnRequestModel>,
+    IRequestHandler<CancelCustomerReturnRequestCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerPaymentIntentCommand, CustomerPaymentIntentModel?>,
     IRequestHandler<CompleteMockCustomerPaymentCommand, CustomerPaymentIntentModel?>
 {
@@ -159,6 +160,12 @@ public sealed class CustomerPortalCommandHandlers(
         }).ConfigureAwait(false);
 
         return new CustomerReturnRequestModel(result.Id, result.DeliveryNoteId, result.Status, result.CreatedOnUtc);
+    }
+
+    public async Task<CustomerActionResultModel> Handle(CancelCustomerReturnRequestCommand request, CancellationToken cancellationToken)
+    {
+        var result = await portalAppService.CancelReturnRequestAsync(RequireCustomerId(), request.ReturnRequestId).ConfigureAwait(false);
+        return new CustomerActionResultModel(result.Success, result.Message);
     }
 
     public async Task<CustomerPaymentIntentModel?> Handle(CreateCustomerPaymentIntentCommand request, CancellationToken cancellationToken)

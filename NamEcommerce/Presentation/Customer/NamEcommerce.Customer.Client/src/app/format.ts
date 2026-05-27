@@ -57,3 +57,24 @@ export function deliveryNoteStatusText(value: number) {
       return statusText(value);
   }
 }
+
+export function returnRequestStatusText(value: number) {
+  switch (value) {
+    case 0:
+      return "Chờ cửa hàng xem xét";
+    case 1:
+      return "Đã chấp nhận";
+    case 2:
+      return "Đã từ chối";
+    case 3:
+      return "Đã tạo phiếu trả";
+    case 4:
+      return "Đã hủy";
+    default:
+      return statusText(value);
+  }
+}
+
+export function quantity(value: number) {
+  return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(value);
+}

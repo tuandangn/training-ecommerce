@@ -345,6 +345,12 @@ textarea {
   padding: 8px 10px;
 }
 
+.quantity-input:disabled {
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
 .return-evidence {
   display: grid;
   gap: 10px;
@@ -360,6 +366,10 @@ textarea {
   gap: 10px;
 }
 
+.return-evidence-list.compact {
+  gap: 6px;
+}
+
 .return-evidence-thumb {
   width: 96px;
   display: grid;
@@ -369,6 +379,14 @@ textarea {
 .return-evidence-thumb img {
   width: 96px;
   height: 96px;
+  object-fit: cover;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.evidence-inline-thumb {
+  width: 48px;
+  height: 48px;
   object-fit: cover;
   border: 1px solid var(--color-border);
   border-radius: 8px;

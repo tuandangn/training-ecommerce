@@ -16,4 +16,6 @@ public sealed record GetCustomerProductCategoriesQuery : IRequest<CustomerProduc
 public sealed record GetCustomerContactQuery : IRequest<CustomerContactModel>;
 public sealed record GetCustomerDeliveryNotesQuery : IRequest<CustomerDeliveryNoteListModel>;
 public sealed record GetCustomerDeliveryNoteDetailsQuery(Guid DeliveryNoteId) : IRequest<CustomerDeliveryNoteDetailsModel?>;
+public sealed record GetCustomerReturnRequestsQuery : IRequest<CustomerReturnRequestListModel>;
+public sealed record GetCustomerReturnRequestDetailsQuery(Guid ReturnRequestId) : IRequest<CustomerReturnRequestDetailsModel?>;
 public sealed record GetCustomerDebtsQuery : IRequest<CustomerDebtSummaryModel>;

@@ -16,6 +16,8 @@ import { OrderRequestDetailsPage } from "../pages/OrderRequestDetailsPage";
 import { OrdersPage } from "../pages/OrdersPage";
 import { OtpVerifyPage } from "../pages/OtpVerifyPage";
 import { PublicDeliveryPage } from "../pages/PublicDeliveryPage";
+import { ReturnRequestDetailsPage } from "../pages/ReturnRequestDetailsPage";
+import { ReturnRequestsPage } from "../pages/ReturnRequestsPage";
 import { SetPasswordPage } from "../pages/SetPasswordPage";
 import { navigate, useRoute } from "./routes";
 
@@ -76,6 +78,7 @@ function AppRoutes() {
           <NavLink href="/app" label="Tổng quan" />
           <NavLink href="/orders" label="Đơn hàng" />
           <NavLink href="/delivery-notes" label="Phiếu giao" />
+          <NavLink href="/return-requests" label="Trả hàng" />
           <NavLink href="/debts" label="Công nợ" />
           <NavLink href="/set-password" label="Mật khẩu" />
           <NavLink href="/contact" label="Liên hệ" />
@@ -113,6 +116,8 @@ function renderPrivatePage(path: string) {
   if (path.startsWith("/orders/")) return <OrderDetailsPage id={path.replace("/orders/", "")} />;
   if (path === "/delivery-notes") return <DeliveryNotesPage />;
   if (path.startsWith("/delivery-notes/")) return <DeliveryNoteDetailsPage id={path.replace("/delivery-notes/", "")} />;
+  if (path === "/return-requests") return <ReturnRequestsPage />;
+  if (path.startsWith("/return-requests/")) return <ReturnRequestDetailsPage id={path.replace("/return-requests/", "")} />;
   if (path === "/debts") return <DebtsPage />;
   if (path === "/payments") return <MockPaymentPage />;
   if (path === "/set-password") return <SetPasswordPage />;

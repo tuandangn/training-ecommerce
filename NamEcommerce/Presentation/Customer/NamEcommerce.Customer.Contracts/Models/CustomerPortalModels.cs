@@ -156,10 +156,64 @@ public sealed record CustomerDeliveryNoteDetailsModel(
     IList<CustomerDeliveryNoteItemModel> Items);
 
 [Serializable]
-public sealed record CustomerDeliveryNoteItemModel(Guid Id, Guid ProductId, string ProductName, decimal Quantity, decimal UnitPrice, decimal SubTotal);
+public sealed record CustomerDeliveryNoteItemModel(
+    Guid Id,
+    Guid ProductId,
+    string ProductName,
+    decimal Quantity,
+    decimal UnitPrice,
+    decimal SubTotal,
+    decimal ReservedReturnQuantity,
+    decimal PendingPortalReturnQuantity,
+    decimal ReturnableQuantity);
 
 [Serializable]
 public sealed record CustomerReturnRequestModel(Guid Id, Guid DeliveryNoteId, int Status, DateTime CreatedOn);
+
+[Serializable]
+public sealed record CustomerReturnRequestListModel(IList<CustomerReturnRequestSummaryModel> Items);
+
+[Serializable]
+public record CustomerReturnRequestSummaryModel(
+    Guid Id,
+    Guid DeliveryNoteId,
+    string? DeliveryNoteCode,
+    int Status,
+    string? Reason,
+    string? AdminNote,
+    DateTime CreatedOn,
+    DateTime? ReviewedOn,
+    Guid? ConvertedCustomerReturnId,
+    decimal TotalRequestedQuantity,
+    int ItemCount);
+
+[Serializable]
+public sealed record CustomerReturnRequestDetailsModel(
+    Guid Id,
+    Guid DeliveryNoteId,
+    string? DeliveryNoteCode,
+    int Status,
+    string? Reason,
+    string? AdminNote,
+    DateTime CreatedOn,
+    DateTime? ReviewedOn,
+    Guid? ConvertedCustomerReturnId,
+    decimal TotalRequestedQuantity,
+    int ItemCount,
+    IList<CustomerReturnRequestItemModel> Items);
+
+[Serializable]
+public sealed record CustomerReturnRequestItemModel(
+    Guid Id,
+    Guid DeliveryNoteItemId,
+    Guid ProductId,
+    string ProductName,
+    decimal RequestedQuantity,
+    string? Reason,
+    IList<CustomerReturnRequestEvidencePictureModel> EvidencePictures);
+
+[Serializable]
+public sealed record CustomerReturnRequestEvidencePictureModel(Guid PictureId, string? PictureUrl, string? FileName);
 
 [Serializable]
 public sealed record CustomerDebtSummaryModel(

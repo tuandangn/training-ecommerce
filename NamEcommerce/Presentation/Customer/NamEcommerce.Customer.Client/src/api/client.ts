@@ -18,7 +18,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`);
+    throw new Error(await readErrorMessage(response));
   }
 
   if (response.status === 204) {
@@ -26,4 +26,25 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   }
 
   return response.json() as Promise<T>;
+}
+
+async function readErrorMessage(response: Response) {
+  const fallback = `Request failed with status ${response.status}`;
+  const contentType = response.headers.get("Content-Type") ?? "";
+
+  if (contentType.includes("application/json") || contentType.includes("+json")) {
+    try {
+      const body = (await response.json()) as { message?: string; title?: string; detail?: string };
+      return body.message || body.detail || body.title || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  try {
+    const text = await response.text();
+    return text || fallback;
+  } catch {
+    return fallback;
+  }
 }

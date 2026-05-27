@@ -22,6 +22,7 @@ public interface ICustomerPortalManager
     Task<IReadOnlyCollection<CustomerReturnRequestDto>> GetReturnRequestsByStatusAsync(CustomerReturnRequestStatus status);
     Task AcceptReturnRequestAsync(Guid id, Guid reviewedByUserId, string? adminNote, DateTime nowUtc);
     Task RejectReturnRequestAsync(Guid id, Guid reviewedByUserId, string? adminNote, DateTime nowUtc);
+    Task CancelReturnRequestAsync(Guid id, DateTime nowUtc);
     Task MarkReturnRequestConvertedAsync(Guid id, Guid customerReturnId, DateTime nowUtc);
 
     Task<CustomerPaymentIntentDto> CreatePaymentIntentAsync(CreateCustomerPaymentIntentDto dto);

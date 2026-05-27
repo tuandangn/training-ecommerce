@@ -36,5 +36,7 @@ public sealed record CreateCustomerReturnRequestItemCommand(
 
 public sealed record CreateCustomerReturnRequestPictureCommand(string FileName, string MimeType, string Base64Data);
 
+public sealed record CancelCustomerReturnRequestCommand(Guid ReturnRequestId) : IRequest<CustomerActionResultModel>;
+
 public sealed record CreateCustomerPaymentIntentCommand(Guid? CustomerDebtId, decimal Amount) : IRequest<CustomerPaymentIntentModel?>;
 public sealed record CompleteMockCustomerPaymentCommand(Guid PaymentIntentId, bool Success) : IRequest<CustomerPaymentIntentModel?>;

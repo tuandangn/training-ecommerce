@@ -174,6 +174,9 @@ public sealed record CustomerDeliveryNoteItemAppDto
     public decimal Quantity { get; init; }
     public decimal UnitPrice { get; init; }
     public decimal SubTotal { get; init; }
+    public decimal ReservedReturnQuantity { get; init; }
+    public decimal PendingPortalReturnQuantity { get; init; }
+    public decimal ReturnableQuantity { get; init; }
 }
 
 [Serializable]
@@ -324,6 +327,48 @@ public sealed record CustomerReturnRequestAppDto
     public required Guid DeliveryNoteId { get; init; }
     public int Status { get; init; }
     public DateTime CreatedOnUtc { get; init; }
+}
+
+[Serializable]
+public record CustomerReturnRequestSummaryAppDto
+{
+    public required Guid Id { get; init; }
+    public required Guid DeliveryNoteId { get; init; }
+    public string? DeliveryNoteCode { get; init; }
+    public int Status { get; init; }
+    public string? Reason { get; init; }
+    public string? AdminNote { get; init; }
+    public DateTime CreatedOnUtc { get; init; }
+    public DateTime? ReviewedOnUtc { get; init; }
+    public Guid? ConvertedCustomerReturnId { get; init; }
+    public decimal TotalRequestedQuantity { get; init; }
+    public int ItemCount { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerReturnRequestDetailsAppDto : CustomerReturnRequestSummaryAppDto
+{
+    public IList<CustomerReturnRequestItemAppDto> Items { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerReturnRequestItemAppDto
+{
+    public required Guid Id { get; init; }
+    public required Guid DeliveryNoteItemId { get; init; }
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public decimal RequestedQuantity { get; init; }
+    public string? Reason { get; init; }
+    public IList<CustomerReturnRequestEvidencePictureAppDto> EvidencePictures { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerReturnRequestEvidencePictureAppDto
+{
+    public required Guid PictureId { get; init; }
+    public string? PictureUrl { get; init; }
+    public string? FileName { get; init; }
 }
 
 [Serializable]

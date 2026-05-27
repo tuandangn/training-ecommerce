@@ -181,6 +181,15 @@ public sealed class CustomerPortalManager(
         await returnRequestRepository.UpdateAsync(request).ConfigureAwait(false);
     }
 
+    public async Task CancelReturnRequestAsync(Guid id, DateTime nowUtc)
+    {
+        var request = await returnRequestRepository.GetByIdAsync(id).ConfigureAwait(false)
+            ?? throw new NamEcommerceDomainException("Error.CustomerPortal.ReturnRequestNotFound", id);
+
+        request.Cancel(nowUtc);
+        await returnRequestRepository.UpdateAsync(request).ConfigureAwait(false);
+    }
+
     public async Task MarkReturnRequestConvertedAsync(Guid id, Guid customerReturnId, DateTime nowUtc)
     {
         var request = await returnRequestRepository.GetByIdAsync(id).ConfigureAwait(false)
