@@ -21,7 +21,7 @@ public sealed class CreateCustomerReturnHandler : IRequestHandler<CreateCustomer
         {
             DeliveryNoteId = request.DeliveryNoteId,
             CustomerId = request.CustomerId,
-            WarehouseId = request.WarehouseId,
+            WarehouseId = null,
             Note = request.Note,
             AdditionalCost = request.AdditionalCost,
             Items = request.Items.Select(i => new CreateCustomerReturnItemAppDto

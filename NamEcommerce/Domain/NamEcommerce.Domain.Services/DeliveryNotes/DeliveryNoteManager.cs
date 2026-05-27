@@ -769,26 +769,36 @@ public sealed class DeliveryNoteManager(
     private Dictionary<Guid, decimal> GetReturnedQuantitiesByOrderItem(Guid orderId, IReadOnlyCollection<Guid> orderItemIds)
     {
         if (orderItemIds.Count == 0)
-            return [];
+            return orderItemIds.ToDictionary(id => id, id => 0m);
 
-        var deliveryNoteItemsById = deliveryNoteReader.DataSource
+        // 1. Chuẩn bị Query lấy các DeliveryNoteItem hợp lệ (chưa thực thi dưới DB - vẫn là IQueryable)
+        var validDeliveryNoteItems = deliveryNoteReader.DataSource
             .Where(note => note.OrderId == orderId)
             .SelectMany(note => note.Items)
             .Where(item => item.OrderItemId != Guid.Empty && orderItemIds.Contains(item.OrderItemId))
-            .Select(item => new { item.Id, item.OrderItemId })
-            .ToDictionary(item => item.Id, item => item.OrderItemId);
+            .Select(item => new { item.Id, item.OrderItemId });
 
-        if (deliveryNoteItemsById.Count == 0)
-            return [];
-
+        // 2. Thực hiện Join và GroupBy dưới DB, sau đó lấy kết quả về RAM dạng Dictionary
         var returnedByOrderItem = customerReturnReader.DataSource
             .Where(returnNote => returnNote.Status != CustomerReturnStatus.Cancelled)
             .SelectMany(returnNote => returnNote.Items)
-            .Where(returnItem => returnItem.DeliveryNoteItemId.HasValue
-                                 && deliveryNoteItemsById.ContainsKey(returnItem.DeliveryNoteItemId.Value))
-            .GroupBy(returnItem => deliveryNoteItemsById[returnItem.DeliveryNoteItemId!.Value])
-            .ToDictionary(group => group.Key, group => group.Sum(returnItem => returnItem.AcceptedQuantity));
+            .Where(returnItem => returnItem.DeliveryNoteItemId.HasValue)
+            // Join trực tiếp 2 Queryable với nhau dưới DB thông qua Id của DeliveryNoteItem
+            .Join(
+                validDeliveryNoteItems,
+                returnItem => returnItem.DeliveryNoteItemId!.Value,
+                dnItem => dnItem.Id,
+                (returnItem, dnItem) => new { dnItem.OrderItemId, returnItem.AcceptedQuantity }
+            )
+            // Group theo OrderItemId để tính tổng
+            .GroupBy(x => x.OrderItemId)
+            // Đến đây EF sẽ sinh ra SQL, chạy dưới DB và trả kết quả về RAM dạng Dictionary
+            .ToDictionary(
+                group => group.Key,
+                group => group.Sum(x => x.AcceptedQuantity)
+            );
 
+        // 3. Đảm bảo tất cả orderItemId truyền vào đều có mặt trong kết quả (nếu không có thì bằng 0)
         foreach (var orderItemId in orderItemIds)
         {
             if (!returnedByOrderItem.ContainsKey(orderItemId))

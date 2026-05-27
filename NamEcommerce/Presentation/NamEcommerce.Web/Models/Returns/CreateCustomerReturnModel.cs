@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
-using NamEcommerce.Web.Contracts.Models.Common;
 using System.ComponentModel.DataAnnotations;
 
 namespace NamEcommerce.Web.Models.Returns;
@@ -20,11 +19,6 @@ public sealed class CreateCustomerReturnModel
     public string? CustomerDisplayPhone { get; set; }
     [ValidateNever]
     public string? CustomerDisplayAddress { get; set; }
-
-    [Display(Name = "Kho nhận hàng trả")]
-    public Guid? WarehouseId { get; set; }
-    [ValidateNever]
-    public EntityOptionListModel? AvailableWarehouses { get; set; }
 
     [Display(Name = "Chi phí phát sinh")]
     public decimal AdditionalCost { get; set; }

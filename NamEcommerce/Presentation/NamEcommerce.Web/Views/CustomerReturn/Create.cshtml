@@ -31,7 +31,7 @@
                             <button type="button" class="btn btn-sm btn-outline-secondary" id="btnLoadFromNote" style="display:none!important">
                                 <i class="bi bi-arrow-repeat me-1"></i>Tải lại
                             </button>
-                            <button type="button" class="btn btn-sm bg-light text-primary" id="btnAddFreeItem" disabled="@(!Model.CustomerId.HasValue)">
+                            <button type="button" class="btn btn-sm bg-light text-primary" id="btnAddFreeItem">
                                 <i class="bi bi-plus-lg me-1"></i>Thêm hàng trả
                             </button>
                         </div>
@@ -88,7 +88,6 @@
                             Chưa có hàng hóa nào được chọn.
                         </div>
                     </div>
-                    <!-- Footer: Chi phí + Tổng -->
                     <div class="content-card-footer py-2">
                         <div class="d-flex justify-content-end align-items-center gap-3">
                             <span class="text-muted small">Tổng giá trị:</span>
@@ -124,6 +123,7 @@
                             <div id="customerPicker" data-id="@Model.CustomerId" data-name="@Model.CustomerDisplayName" 
                                 data-phone="@Model.CustomerDisplayPhone" data-address="@Model.CustomerDisplayAddress"></div>
                             <input type="text" class="visually-hidden" asp-for="CustomerId" id="hiddenCustomerId" />
+                            <div class="form-text fw-medium text-warning d-none" id="customerNoItemsWarning">Khách hàng này không có hàng hóa nào có thể trả.</div>
                             <span asp-validation-for="CustomerId" class="small text-danger"></span>
                         </div>
                         <div class="mb-3">
@@ -160,6 +160,7 @@
     <partial name="_ValidationScriptsPartial" />
     <script type="module">
         import CustomerPicker from '/modules/CustomerPicker.js';
+        import { toast } from '/modules/modals.js';
 
         const customerPickerEl = document.getElementById('customerPicker');
         const hiddenCustomerId = document.getElementById('hiddenCustomerId');
@@ -180,7 +181,7 @@
             hiddenCustomerId.value = e.detail.customer.id;
             hiddenDeliveryNoteId.value = '';
             await loadDeliveryNotes(e.detail.customer.id);
-            document.getElementById('btnAddFreeItem').disabled = false;
+            document.getElementById('customerNoItemsWarning').classList.add('d-none');
         });
 
         customerPickerEl.addEventListener('remove', () => {
@@ -188,7 +189,7 @@
             hiddenDeliveryNoteId.value = '';
             resetDeliveryNoteSelect();
             clearItems();
-            document.getElementById('btnAddFreeItem').disabled = true;
+            document.getElementById('customerNoItemsWarning').classList.add('d-none');
         });
 
         async function loadDeliveryNotes(customerId) {
@@ -268,8 +269,13 @@
                 const res = await fetch(`/CustomerReturn/GetReturnableItems?customerId=${customerId}`);
                 const items = await res.json();
                 clearItems();
-                items
-                    .filter(item => (item.availableQty ?? (item.originalQty - item.alreadyReturnedQty)) > 0)
+                if(!Array.isArray(items) || items.length == 0){
+                    toast('Không thể trả hàng', 'Không tìm thấy hàng đã giao nào để trả cho khách hàng này.', 'warning');
+                    updateFooter();
+                    document.getElementById('customerNoItemsWarning').classList.remove('d-none');
+                    return;
+                }
+                items.filter(item => (item.availableQty ?? (item.originalQty - item.alreadyReturnedQty)) > 0)
                     .forEach(item => addItemRowFromNote(item));
                 updateFooter();
             } catch {
@@ -355,7 +361,7 @@
             const noteId = deliveryNoteSelect.value || hiddenDeliveryNoteId.value;
             const customerId = hiddenCustomerId.value;
             if (!customerId) {
-                alert('Vui lòng chọn khách hàng.');
+                toast('Thông báo', 'Vui lòng chọn khách hàng.', 'info');
                 return;
             }
 

@@ -98,7 +98,6 @@ public sealed class CustomerReturnController : BaseAuthorizedController
         {
             DeliveryNoteId = model.DeliveryNoteId,
             CustomerId = model.CustomerId.Value,
-            WarehouseId = model.WarehouseId,
             AdditionalCost = model.AdditionalCost,
             Note = model.Note,
             Items = returnItems.Select(i => new CreateCustomerReturnItemCommand

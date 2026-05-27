@@ -1,7 +1,6 @@
 using MediatR;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Returns;
-using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Models.Returns;
 
@@ -20,10 +19,7 @@ public sealed class CustomerReturnModelFactory : ICustomerReturnModelFactory
 
     public async Task<CreateCustomerReturnModel> PrepareCreateCustomerReturnModel(CreateCustomerReturnModel? model = null)
     {
-        var warehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
-
         model ??= new CreateCustomerReturnModel();
-        model.AvailableWarehouses = warehouses;
 
         return model;
     }

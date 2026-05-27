@@ -113,8 +113,8 @@
     @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
 }
 
+
 <div class="row g-4">
-    <!-- Cột trái: Thông tin phiếu (col-md-4) -->
     <div class="col-lg-4 order-lg-2">
         <div class="content-card mb-4 h-100">
             <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
@@ -153,7 +153,7 @@
                 {
                     <div class="financial-summary-sidebar mb-4 p-3 rounded-3" style="background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%); border: 1px solid #edf2f9;">
                         <h6 class="fw-bold mb-3 small text-muted text-uppercase">Tóm tắt thanh toán</h6>
-                    
+
                         @if (Model.ShowPrice)
                         {
                             <div class="d-flex justify-content-between mb-2">
@@ -183,7 +183,7 @@
                         }
                     </div>
                 }
-                
+
                 @if (!string.IsNullOrEmpty(Model.Note))
                 {
                     <div class="mb-4">
@@ -191,31 +191,17 @@
                         <div class="text-dark bg-light p-2 rounded border">@Model.Note</div>
                     </div>
                 }
-@*                 <div class="mb-4">
-                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Hiển thị giá</label>
-                    <div>
-                        @if (Model.ShowPrice)
-                        {
-                            <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-eye me-1"></i>Có hiển thị</span>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary bg-opacity-10 text-secondary"><i class="bi bi-eye-slash me-1"></i>Ẩn</span>
-                        }
-                    </div>
-                </div>
- *@
                 @if (Model.Status == 40 && Model.DeliveredOnUtc.HasValue)
                 {
                     <hr class="border-light my-4">
-                    
+
                     <h6 class="fw-bold mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Thông tin nhận hàng</h6>
-                    
+
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted text-uppercase mb-1">Đã giao lúc</label>
                         <div class="text-dark">@Model.DeliveredOnUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
                     </div>
-                    
+
                     @if (!string.IsNullOrEmpty(Model.DeliveryReceiverName))
                     {
                         <div class="mb-3">
@@ -223,14 +209,14 @@
                             <div class="text-dark fw-bold">@Model.DeliveryReceiverName</div>
                         </div>
                     }
-                    
+
                     @if (!string.IsNullOrEmpty(deliveryProofPictureSrc))
                     {
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase mb-2">Bằng chứng giao hàng</label>
                             <div>
                                 <a href="#" data-bs-toggle="modal" data-bs-target="#imageModal">
-                                    <img src="@deliveryProofPictureSrc" class="img-fluid rounded border shadow-sm" style="max-height: 120px; object-fit: cover; width:100%;" alt="Bằng chứng" />
+                                    <img src="@deliveryProofPictureSrc" class="img-fluid rounded border shadow-sm" style="max-height: 120px; object-fit: cover; " alt="Bằng chứng" />
                                 </a>
                             </div>
                         </div>
@@ -241,7 +227,6 @@
     </div>
 
     <div class="col-lg-8 order-lg-1">
-        <!-- Khách trả hàng -->
         <div class="content-card mb-4" id="customerReturnsCard" data-delivery-note-id="@Model.Id">
             <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0 d-flex align-items-center justify-content-between">
                 <h5 class="mb-0 fw-bold"><i class="bi bi-arrow-return-left me-2 text-warning"></i>Khách trả hàng</h5>
@@ -414,13 +399,14 @@
     </div>
 }
 
-<!-- Modal Mark Delivered (Bằng chứng) -->
+
+<!-- Modal Mark Delivered  -->
 <div class="modal fade" id="markDeliveredModal" tabindex="-1" aria-labelledby="markDeliveredModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <form id="markDeliveredForm" method="post" enctype="multipart/form-data">
             <input type="hidden" id="deliveryNoteId" name="deliveryNoteId" value="@Model.Id" />
             <input type="hidden" id="acceptanceItemsJson" name="acceptanceItemsJson" />
-            
+
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold" id="markDeliveredModalLabel">Xác nhận giao hàng thành công</h5>
@@ -431,8 +417,9 @@
                         Nhập số lượng khách nhận thực tế cho từng mặt hàng. Nếu khách không nhận đủ, hệ thống sẽ tự tạo phiếu trả hàng để xử lý kiểm hàng.
                     </div>
                     <div class="mb-3">
-                        <label for="receiverName" class="form-label small fw-bold text-muted text-uppercase mb-2">Tên người nhận (Không bắt buộc)</label>
-                        <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="receiverName" name="receiverName" data-testid="delivery-receiver-name" placeholder="Ví dụ: Anh Tâm">
+                        <label for="receiverName" class="form-label small fw-bold text-muted text-uppercase mb-2">Tên người nhận</label>
+                        <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="receiverName"
+                               name="receiverName" data-testid="delivery-receiver-name" placeholder="Nhập tên người nhận">
                     </div>
                     <div class="table-responsive mb-3">
                         <table class="table table-sm align-middle mb-0">
@@ -442,7 +429,7 @@
                                     <th class="text-end" style="width: 110px;">Số lượng giao</th>
                                     <th class="text-end" style="width: 150px;">Nhận thực tế</th>
                                     <th class="text-end" style="width: 110px;">Trả lại</th>
-                                    <th style="width: 220px;">Lý do trả</th>
+                                    <th style="width: 220px;" class="ps-3">Lý do trả</th>
                                 </tr>
                             </thead>
                             <tbody id="acceptanceTableBody"></tbody>
@@ -450,27 +437,31 @@
                     </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-4">
-                            <label for="agreedCustomerCharge" class="form-label small fw-bold text-muted text-uppercase mb-2">Chi phí thỏa thuận (+/-)</label>
-                            <input type="number" step="0.01" class="form-control form-control-lg rounded-3 fs-6" id="agreedCustomerCharge" name="agreedCustomerCharge" value="0">
+                            <label for="agreedCustomerCharge" class="form-label small fw-bold text-muted text-uppercase mb-2">Chi phí phát sinh</label>
+                            <input class="form-control form-control-lg rounded-3 fs-6" id="agreedCustomerCharge" name="agreedCustomerCharge"
+                                   value="0" data-decimal="currency" placeholder="Nhập chi phí phát sinh (nếu có)" />
                         </div>
                         <div class="col-md-8">
-                            <label for="agreedCustomerChargeReason" class="form-label small fw-bold text-muted text-uppercase mb-2">Lý do chi phí thỏa thuận</label>
-                            <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="agreedCustomerChargeReason" name="agreedCustomerChargeReason" placeholder="Ví dụ: giảm giá do hàng móp vỏ">
+                            <label for="agreedCustomerChargeReason" class="form-label small fw-bold text-muted text-uppercase mb-2">Lý do</label>
+                            <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="agreedCustomerChargeReason" name="agreedCustomerChargeReason"
+                                   placeholder="Nhập lý do phát sinh chi phí" />
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label for="deliveryProofPicture" class="form-label small fw-bold text-muted text-uppercase mb-2">Hình ảnh bằng chứng <span class="text-danger">*</span></label>
+                        <label for="deliveryProofPicture" class="form-label small fw-bold text-muted text-uppercase mb-2">
+                            Hình ảnh khi giao hàng <span class="text-danger">*</span>
+                        </label>
                         <input class="form-control form-control-lg rounded-3 fs-6" type="file" id="deliveryProofPicture" name="pictureFile" data-testid="delivery-proof-file" accept="image/*" capture="environment" required>
-                        <div class="form-text mt-2 mb-0">Ví dụ: Chụp ảnh hàng hóa đã xếp lên cửa hàng, chữ ký người nhận. Bắt buộc chụp/tải ảnh lên!</div>
+                        <div class="form-text mt-2 mb-0">Hình ảnh hiện trạng hàng hóa khi giao cho khách hàng</div>
                     </div>
                     <div class="mt-3 text-center d-none" id="previewContainer">
-                        <img id="imagePreview" src="#" alt="Preview" class="img-fluid rounded-4 shadow-sm" style="max-height: 250px; display: none; object-fit: cover; width: 100%; border: 1px solid var(--bs-border-color);" />
+                        <img id="imagePreview" src="#" alt="Preview" class="img-fluid rounded-4 shadow-sm" style="max-height: 250px; display: none; object-fit: cover; border: 1px solid var(--bs-border-color);" />
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 pb-4 px-4">
                     <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
                     <button type="submit" class="btn btn-success px-4 rounded-3 shadow-sm px-5" id="btnSubmitDelivery" data-testid="delivery-mark-delivered">
-                        <i class="bi bi-camera me-1"></i> Xác nhận Đã giao
+                        <i class="bi bi-camera me-1"></i> Xác nhận
                     </button>
                 </div>
             </div>
@@ -517,7 +508,7 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            
+
             // Confirm
             $('.btn-confirm').click(function(e) {
                 e.preventDefault();
@@ -667,9 +658,9 @@
 
                 $('#acceptanceItemsJson').val(JSON.stringify(acceptanceItems));
                 var formData = new FormData(form);
-                
+
                 var actionUrl = '/DeliveryNote/MarkDelivered';
-                
+
                 var btn = $('#btnSubmitDelivery');
                 var originalText = btn.html();
                 btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang tải ảnh...');
