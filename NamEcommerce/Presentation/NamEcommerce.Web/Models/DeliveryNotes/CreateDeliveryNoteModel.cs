@@ -36,6 +36,9 @@ public sealed class CreateDeliveryNoteModel
     
     [Display(Name = "Hiển thị giá trên phiếu xuất")]
     public bool ShowPrice { get; set; }
+
+    [Display(Name = "Sẽ bù vào lần xuất hàng sau")]
+    public bool CompensateReturnedQuantityInNextDelivery { get; set; }
     
     [Display(Name = "Ghi chú phiếu xuất", Prompt = "Nhập ghi chú...")]
     public string? Note { get; set; }

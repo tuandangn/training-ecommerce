@@ -488,14 +488,9 @@ public sealed class InventoryStockManager : IInventoryStockManager
     }
 
     public async Task<(StockMovementLogDto? OutLog, StockMovementLogDto? InLog)> TransferStockAsync(
-        Guid productId,
-        Guid fromWarehouseId,
-        Guid toWarehouseId,
-        decimal quantity,
-        decimal unitCost,
-        Guid? referenceId,
-        Guid userId,
-        string? note = null)
+        Guid productId, Guid fromWarehouseId, Guid toWarehouseId,
+        decimal quantity, decimal unitCost,
+        Guid? referenceId, Guid userId, string? note = null)
     {
         if (quantity <= 0)
             throw new InvalidStockOperationException("Error.StockQuantityMustBePositive");

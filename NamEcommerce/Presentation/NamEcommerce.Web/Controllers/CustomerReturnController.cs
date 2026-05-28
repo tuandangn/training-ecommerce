@@ -4,6 +4,7 @@ using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Web.Contracts.Commands.Models.Returns;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Models.Returns;
 using NamEcommerce.Web.Services.Returns;
@@ -75,13 +76,59 @@ public sealed class CustomerReturnController : BaseAuthorizedController
             return View(model);
         }
 
+        var returnItems = model.Items
+            .Where(i => i.RequestedQuantity > 0)
+            .ToList();
+
+        var missingProductRows = returnItems
+            .Where(item => !item.ProductId.HasValue && item.DeliveryNoteItemId.HasValue)
+            .ToList();
+        if (missingProductRows.Count > 0)
+        {
+            var missingSourceItemIds = missingProductRows
+                .Select(item => item.DeliveryNoteItemId!.Value)
+                .Distinct()
+                .ToHashSet();
+            var sourceProductByDeliveryItemId = _deliveryNoteDataReader.DataSource
+                .SelectMany(note => note.Items)
+                .Where(item => missingSourceItemIds.Contains(item.Id))
+                .ToDictionary(item => item.Id, item => item.ProductId);
+
+            foreach (var item in missingProductRows)
+            {
+                if (item.DeliveryNoteItemId.HasValue &&
+                    sourceProductByDeliveryItemId.TryGetValue(item.DeliveryNoteItemId.Value, out var productId))
+                {
+                    item.ProductId = productId;
+                }
+            }
+        }
+
+        returnItems = returnItems
+            .Where(i => i.ProductId.HasValue)
+            .ToList();
+
+        if (!returnItems.Any())
+        {
+            AddLocalizedModelError("Error.CustomerReturn.NoItems");
+            model = await _customerReturnModelFactory.PrepareCreateCustomerReturnModel(model);
+            return View(model);
+        }
+
+        if (!model.CustomerId.HasValue)
+        {
+            AddLocalizedModelError("Error.CustomerReturn.CustomerRequired");
+            model = await _customerReturnModelFactory.PrepareCreateCustomerReturnModel(model);
+            return View(model);
+        }
+
         var result = await _mediator.Send(new CreateCustomerReturnCommand
         {
-            DeliveryNoteId = model.DeliveryNoteId!.Value,
-            WarehouseId = model.WarehouseId!.Value,
+            DeliveryNoteId = model.DeliveryNoteId,
+            CustomerId = model.CustomerId.Value,
             AdditionalCost = model.AdditionalCost,
             Note = model.Note,
-            Items = model.Items.Select(i => new CreateCustomerReturnItemCommand
+            Items = returnItems.Select(i => new CreateCustomerReturnItemCommand
             {
                 ProductId = i.ProductId!.Value,
                 DeliveryNoteItemId = i.DeliveryNoteItemId,
@@ -112,6 +159,8 @@ public sealed class CustomerReturnController : BaseAuthorizedController
             NotifyError("Error.CustomerReturn.IsNotFound");
             return RedirectToAction(nameof(List));
         }
+
+        ViewBag.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
         return View(model);
     }
@@ -144,9 +193,12 @@ public sealed class CustomerReturnController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Confirm(Guid id)
+    public async Task<IActionResult> Confirm(Guid id, Guid? warehouseId = null)
     {
-        var result = await _mediator.Send(new ConfirmCustomerReturnCommand { Id = id });
+        if (!warehouseId.HasValue || warehouseId.Value == Guid.Empty)
+            return Json(new { success = false, message = LocalizeError("Error.CustomerReturn.WarehouseRequired") });
+
+        var result = await _mediator.Send(new ConfirmCustomerReturnCommand { Id = id, WarehouseId = warehouseId });
 
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
@@ -194,6 +246,17 @@ public sealed class CustomerReturnController : BaseAuthorizedController
         var items = await _mediator.Send(new GetDeliveryNoteItemsForReturnQuery
         {
             DeliveryNoteId = deliveryNoteId,
+            ExcludeReturnId = excludeReturnId
+        });
+        return Json(items);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetReturnableItems(Guid customerId, Guid? excludeReturnId = null)
+    {
+        var items = await _mediator.Send(new GetReturnableItemsByCustomerQuery
+        {
+            CustomerId = customerId,
             ExcludeReturnId = excludeReturnId
         });
         return Json(items);

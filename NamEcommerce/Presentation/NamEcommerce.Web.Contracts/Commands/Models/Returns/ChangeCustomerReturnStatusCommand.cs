@@ -13,6 +13,7 @@ public sealed class MoveCustomerReturnToInspectingCommand : IRequest<CommonActio
 public sealed class ConfirmCustomerReturnCommand : IRequest<CommonActionResultModel>
 {
     public required Guid Id { get; init; }
+    public Guid? WarehouseId { get; init; }
 }
 
 [Serializable]

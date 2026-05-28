@@ -26,7 +26,7 @@ public sealed record DeliveryNoteDelivered(
     Guid DeliveryNoteId,
     Guid OrderId,
     Guid CustomerId,
-    decimal TotalAmount) : DomainEvent;
+    decimal AmountToCollect) : DomainEvent;
 
 /// <summary>
 /// Phiếu giao hàng bị huỷ.
@@ -46,7 +46,7 @@ public sealed record DirectShipDeliveryConfirmed(
     Guid DeliveryNoteId,
     Guid OrderId,
     Guid CustomerId,
-    decimal TotalAmount) : DomainEvent;
+    decimal AmountToCollect) : DomainEvent;
 
 /// <summary>
 /// Legacy direct-ship event. Flow hiện tại xử lý reject trong DirectShipManager rồi raise <see cref="DeliveryNoteCancelled"/>.

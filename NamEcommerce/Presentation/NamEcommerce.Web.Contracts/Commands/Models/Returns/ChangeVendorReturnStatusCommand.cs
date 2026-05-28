@@ -13,6 +13,7 @@ public sealed class MoveVendorReturnToInspectingCommand : IRequest<CommonActionR
 public sealed class ConfirmVendorReturnCommand : IRequest<CommonActionResultModel>
 {
     public required Guid Id { get; init; }
+    public Guid? WarehouseId { get; init; }
 }
 
 [Serializable]

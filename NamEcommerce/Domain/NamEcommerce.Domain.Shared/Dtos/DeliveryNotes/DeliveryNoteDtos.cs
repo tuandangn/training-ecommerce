@@ -70,6 +70,7 @@ public sealed record CreateDeliveryNoteDto
     public string? WarehouseName { get; init; }
     public required string ShippingAddress { get; init; }
     public bool ShowPrice { get; init; }
+    public bool CompensateReturnedQuantityInNextDelivery { get; init; }
     public string? Note { get; init; }
     public decimal Surcharge { get; init; }
     public string? SurchargeReason { get; init; }
@@ -103,11 +104,29 @@ public sealed record CreateDeliveryNoteItemDto
 }
 
 [Serializable]
+public sealed record DeliveryAcceptanceItemDto
+{
+    public required Guid DeliveryNoteItemId { get; init; }
+    public required decimal AcceptedQuantity { get; init; }
+    public required decimal RejectedQuantity { get; init; }
+    public string? RejectReason { get; init; }
+}
+
+[Serializable]
+public sealed record DeliveryAcceptanceDto
+{
+    public decimal AgreedCustomerCharge { get; init; }
+    public string? AgreedCustomerChargeReason { get; init; }
+    public IList<DeliveryAcceptanceItemDto> Items { get; init; } = [];
+}
+
+[Serializable]
 public sealed record MarkDeliveryNoteDeliveredDto
 {
     public required Guid DeliveryNoteId { get; init; }
     public required Guid PictureId { get; init; }
     public string? ReceiverName { get; init; }
+    public DeliveryAcceptanceDto? Acceptance { get; init; }
 }
 
 [Serializable]
@@ -146,4 +165,6 @@ public sealed record CreateDeliveryNoteForDirectShipDto
     public required decimal Quantity { get; init; }
     public required Guid DirectShipWarehouseId { get; init; }
     public required string ShippingAddress { get; init; }
+    public string? ContactName { get; init; }
+    public string? ContactPhone { get; init; }
 }

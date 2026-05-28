@@ -14,7 +14,12 @@ public interface IDeliveryNoteManager
     
     Task MarkDeliveredAsync(MarkDeliveryNoteDeliveredDto dto);
 
-    Task MarkReceivedByCustomerAsync(Guid id, DateTime receivedAtUtc, string? receiverName, string? note);
+    Task MarkReceivedByCustomerAsync(
+        Guid id,
+        DateTime receivedAtUtc,
+        string? receiverName,
+        string? note,
+        DeliveryAcceptanceDto? acceptance = null);
     
     Task CancelAsync(Guid id);
     

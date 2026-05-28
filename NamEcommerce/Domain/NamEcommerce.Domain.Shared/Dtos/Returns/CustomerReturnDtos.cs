@@ -12,8 +12,8 @@ public sealed record CustomerReturnDto(Guid Id)
 
     public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
-    public required Guid WarehouseId { get; init; }
-    public required string WarehouseName { get; init; }
+    public Guid? WarehouseId { get; init; }
+    public string? WarehouseName { get; init; }
     public string? Note { get; init; }
     public required int Status { get; init; }
     public required DateTime ReturnDate { get; init; }
@@ -24,6 +24,7 @@ public sealed record CustomerReturnDto(Guid Id)
     public DateTime? UpdatedOnUtc { get; init; }
 
     public required decimal AdditionalCost { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
 
     public required IEnumerable<CustomerReturnItemDto> Items { get; init; }
 
@@ -53,28 +54,37 @@ public sealed record CustomerReturnItemDto(Guid Id)
 [Serializable]
 public sealed record CreateCustomerReturnDto
 {
-    public required Guid DeliveryNoteId { get; init; }
-    public required Guid WarehouseId { get; init; }
+    public Guid? DeliveryNoteId { get; init; }
+    public required Guid CustomerId { get; init; }
+    public Guid? WarehouseId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
+    public bool CompensateInNextDelivery { get; init; }
+    public Guid? ExcludeCustomerReturnRequestId { get; init; }
     public required IEnumerable<CreateCustomerReturnItemDto> Items { get; init; }
 
     public void Verify()
     {
+        if (CustomerId == Guid.Empty)
+            throw new ReturnDataIsInvalidException("Error.CustomerReturn.CustomerRequired");
         if (DeliveryNoteId == Guid.Empty)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.DeliveryNoteRequired");
-        if (WarehouseId == Guid.Empty)
+        if (WarehouseId.HasValue && WarehouseId.Value == Guid.Empty)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseRequired");
         if (AdditionalCost < 0)
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.AdditionalCostCannotBeNegative");
-        if (!Items.Any())
+        if (Items is null || !Items.Any())
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.NoItems");
         foreach (var item in Items)
         {
+            if (item.ProductId == Guid.Empty)
+                throw new ReturnDataIsInvalidException("Error.CustomerReturn.ProductRequired");
             if (item.RequestedQuantity <= 0)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.RequestedQuantityMustBePositive");
             if (item.AcceptedQuantity < 0)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.AcceptedQuantityCannotBeNegative");
+            if (item.AcceptedQuantity > item.RequestedQuantity)
+                throw new ReturnDataIsInvalidException("Error.CustomerReturn.AcceptedQuantityExceedsRequested");
             if (item.ReturnUnitPrice < 0)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.ReturnUnitPriceCannotBeNegative");
         }

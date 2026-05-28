@@ -333,7 +333,7 @@
                                                                     data-contact-name="@(alloc.DirectShipContactName ?? "")"
                                                                     data-contact-phone="@(alloc.DirectShipContactPhone ?? "")">
                                                                 <i class="bi bi-pencil-square"></i>
-                                                                <span class="d-none d-lg-inline ms-1">Sửa địa chỉ giao</span>
+                                                                <span class="visually-hidden ms-1">Sửa địa chỉ giao</span>
                                                             </button>
                                                         </td>
                                                     </tr>
@@ -549,7 +549,7 @@
                                                                         </span>
                                                                     </td>
                                                                     <td>
-                                                                        <span class="small">@vendorReturn.WarehouseName</span>
+                                                                        <span class="small">@(string.IsNullOrWhiteSpace(vendorReturn.WarehouseName) ? "Chưa chọn" : vendorReturn.WarehouseName)</span>
                                                                     </td>
                                                                     <td>
                                                                         @item.ProductName
@@ -935,7 +935,7 @@
     var warehouseOptions = Model.AvailableWarehouses.Options.ToList();
 
     <div class="modal fade" id="bulkReceiveModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow rounded-4">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold">

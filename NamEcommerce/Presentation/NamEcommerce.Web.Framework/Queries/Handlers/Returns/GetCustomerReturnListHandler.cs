@@ -32,7 +32,7 @@ public sealed class GetCustomerReturnListHandler : IRequestHandler<GetCustomerRe
             CustomerName = dto.CustomerName,
             DeliveryNoteId = dto.DeliveryNoteId,
             DeliveryNoteCode = dto.DeliveryNoteCode,
-            WarehouseName = dto.WarehouseName,
+            WarehouseName = dto.WarehouseName ?? string.Empty,
             Status = dto.Status,
             ReturnDate = DateTimeHelper.ToLocalTime(dto.ReturnDate),
             TotalAmount = dto.NetRefundAmount,

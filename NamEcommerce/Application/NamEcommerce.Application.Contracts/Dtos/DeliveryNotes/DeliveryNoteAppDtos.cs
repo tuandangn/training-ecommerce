@@ -66,6 +66,7 @@ public sealed record CreateDeliveryNoteAppDto
     public required Guid WarehouseId { get; set; }
     public required string ShippingAddress { get; init; }
     public bool ShowPrice { get; init; }
+    public bool CompensateReturnedQuantityInNextDelivery { get; init; }
     public string? Note { get; init; }
     public decimal Surcharge { get; init; }
     public string? SurchargeReason { get; init; }
@@ -101,11 +102,29 @@ public sealed record CreateDeliveryNoteItemAppDto
 }
 
 [Serializable]
+public sealed record DeliveryAcceptanceItemAppDto
+{
+    public required Guid DeliveryNoteItemId { get; init; }
+    public required decimal AcceptedQuantity { get; init; }
+    public required decimal RejectedQuantity { get; init; }
+    public string? RejectReason { get; init; }
+}
+
+[Serializable]
+public sealed record DeliveryAcceptanceAppDto
+{
+    public decimal AgreedCustomerCharge { get; init; }
+    public string? AgreedCustomerChargeReason { get; init; }
+    public IList<DeliveryAcceptanceItemAppDto> Items { get; init; } = [];
+}
+
+[Serializable]
 public sealed record MarkDeliveryNoteDeliveredAppDto
 {
     public required Guid DeliveryNoteId { get; init; }
     public required Guid PictureId { get; init; }
     public string? ReceiverName { get; init; }
+    public DeliveryAcceptanceAppDto? Acceptance { get; init; }
 }
 
 [Serializable]

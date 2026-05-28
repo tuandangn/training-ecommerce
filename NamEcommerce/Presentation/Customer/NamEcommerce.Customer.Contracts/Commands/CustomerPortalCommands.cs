@@ -20,21 +20,39 @@ public sealed record CreateCustomerOrderRequestItemCommand(Guid ProductId, decim
 
 public sealed record ConfirmCustomerOrderRequestCommand(Guid OrderRequestId) : IRequest<CustomerPortalConversionResultModel>;
 
-public sealed record ConfirmCustomerDeliveryNoteCommand(Guid DeliveryNoteId, string? ReceiverName, string? Note) : IRequest<CustomerActionResultModel>;
+public sealed record ConfirmCustomerDeliveryAcceptanceItemCommand(
+    Guid DeliveryNoteItemId,
+    decimal AcceptedQuantity,
+    decimal RejectedQuantity,
+    string? RejectReason);
+
+public sealed record ConfirmCustomerDeliveryAcceptanceCommand(
+    decimal AgreedCustomerCharge,
+    string? AgreedCustomerChargeReason,
+    IList<ConfirmCustomerDeliveryAcceptanceItemCommand> Items);
+
+public sealed record ConfirmCustomerDeliveryNoteCommand(
+    Guid DeliveryNoteId,
+    string? ReceiverName,
+    string? Note,
+    ConfirmCustomerDeliveryAcceptanceCommand? Acceptance) : IRequest<CustomerActionResultModel>;
 public sealed record CreateCustomerDeliveryFeedbackCommand(Guid DeliveryNoteId, int? Rating, string? Message) : IRequest<CustomerActionResultModel>;
 
 public sealed record CreateCustomerReturnRequestCommand(
-    Guid DeliveryNoteId,
+    Guid? DeliveryNoteId,
     string? Reason,
     IList<CreateCustomerReturnRequestItemCommand> Items) : IRequest<CustomerReturnRequestModel>;
 
 public sealed record CreateCustomerReturnRequestItemCommand(
-    Guid DeliveryNoteItemId,
+    Guid? DeliveryNoteItemId,
+    Guid? ProductId,
     decimal RequestedQuantity,
     string? Reason,
     IList<CreateCustomerReturnRequestPictureCommand>? EvidencePictures = null);
 
 public sealed record CreateCustomerReturnRequestPictureCommand(string FileName, string MimeType, string Base64Data);
+
+public sealed record CancelCustomerReturnRequestCommand(Guid ReturnRequestId) : IRequest<CustomerActionResultModel>;
 
 public sealed record CreateCustomerPaymentIntentCommand(Guid? CustomerDebtId, decimal Amount) : IRequest<CustomerPaymentIntentModel?>;
 public sealed record CompleteMockCustomerPaymentCommand(Guid PaymentIntentId, bool Success) : IRequest<CustomerPaymentIntentModel?>;

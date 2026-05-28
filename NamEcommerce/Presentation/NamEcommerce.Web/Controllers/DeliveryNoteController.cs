@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
@@ -98,6 +99,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 ShippingAddress = model.ShippingAddress,
                 WarehouseId = model.WarehouseId,
                 ShowPrice = model.ShowPrice,
+                CompensateReturnedQuantityInNextDelivery = model.CompensateReturnedQuantityInNextDelivery,
                 Note = model.Note,
                 Surcharge = model.Surcharge,
                 SurchargeReason = model.SurchargeReason,
@@ -201,7 +203,13 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
-    public async Task<IActionResult> MarkDelivered(Guid deliveryNoteId, string? receiverName, IFormFile? pictureFile)
+    public async Task<IActionResult> MarkDelivered(
+        Guid deliveryNoteId,
+        string? receiverName,
+        decimal agreedCustomerCharge,
+        string? agreedCustomerChargeReason,
+        string? acceptanceItemsJson,
+        IFormFile? pictureFile)
     {
         if (pictureFile == null || pictureFile.Length == 0)
         {
@@ -214,10 +222,14 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             await pictureFile.CopyToAsync(memoryStream);
             var fileBytes = memoryStream.ToArray();
 
+            var acceptanceItems = ParseAcceptanceItems(acceptanceItemsJson);
             var result = await _mediator.Send(new MarkDeliveryNoteDeliveredCommand
             {
                 DeliveryNoteId = deliveryNoteId,
                 ReceiverName = receiverName,
+                AgreedCustomerCharge = agreedCustomerCharge,
+                AgreedCustomerChargeReason = agreedCustomerChargeReason,
+                Items = acceptanceItems,
                 PictureData = fileBytes,
                 PictureContentType = pictureFile.ContentType,
                 PictureFileName = pictureFile.FileName
@@ -233,6 +245,24 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         catch (NamEcommerceDomainException ex)
         {
             return Json(new { success = false, message = LocalizeError(ex.ErrorCode, ex.Parameters) });
+        }
+    }
+
+    private static IList<MarkDeliveryNoteDeliveredItemCommand> ParseAcceptanceItems(string? acceptanceItemsJson)
+    {
+        if (string.IsNullOrWhiteSpace(acceptanceItemsJson))
+            return [];
+
+        try
+        {
+            var items = JsonSerializer.Deserialize<List<MarkDeliveryNoteDeliveredItemCommand>>(
+                acceptanceItemsJson,
+                new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            return items ?? [];
+        }
+        catch
+        {
+            return [];
         }
     }
 
@@ -264,7 +294,12 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
         try
         {
-            var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(request.OrderId).ConfigureAwait(false);
+            var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(
+                request.OrderId,
+                new CreateDeliveryNoteModel
+                {
+                    CompensateReturnedQuantityInNextDelivery = request.CompensateReturnedQuantityInNextDelivery
+                }).ConfigureAwait(false);
 
             // Validate that requested quantities don't exceed remaining quantities
             foreach (var selectedItem in request.SelectedItems)
@@ -307,6 +342,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 OrderId = model.OrderId,
                 Note = model.Note,
                 ShowPrice = model.ShowPrice,
+                CompensateReturnedQuantityInNextDelivery = model.CompensateReturnedQuantityInNextDelivery,
                 WarehouseId = request.WarehouseId,
                 ShippingAddress = model.ShippingAddress,
                 Surcharge = request.Surcharge,
@@ -358,6 +394,7 @@ public class CreateFromPreparationRequest
     public Guid OrderId { get; set; }
     public List<SelectedItemModel> SelectedItems { get; set; } = [];
     public bool ShowPrice { get; set; }
+    public bool CompensateReturnedQuantityInNextDelivery { get; set; }
     public Guid WarehouseId { get; set; }
     public string? Note { get; set; }
     public decimal Surcharge { get; set; }

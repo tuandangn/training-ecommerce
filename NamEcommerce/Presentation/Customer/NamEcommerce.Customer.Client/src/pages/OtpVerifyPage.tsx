@@ -4,7 +4,15 @@ import type { CustomerSession } from "../api/types";
 import { navigate } from "../app/routes";
 import { useAuth } from "../auth/useAuth";
 
-export function OtpVerifyPage({ challengeId, mockOtp }: { challengeId: string; mockOtp?: string | null }) {
+export function OtpVerifyPage({
+  challengeId,
+  mockOtp,
+  returnUrl,
+}: {
+  challengeId: string;
+  mockOtp?: string | null;
+  returnUrl?: string | null;
+}) {
   const [otp, setOtp] = useState(mockOtp ?? "");
   const [error, setError] = useState("");
   const { refresh } = useAuth();
@@ -18,7 +26,7 @@ export function OtpVerifyPage({ challengeId, mockOtp }: { challengeId: string; m
         body: JSON.stringify({ challengeId, otp }),
       });
       await refresh();
-      navigate("/app");
+      navigate(safeReturnUrl(returnUrl));
     } catch {
       setError("Mã OTP không hợp lệ.");
     }
@@ -40,4 +48,12 @@ export function OtpVerifyPage({ challengeId, mockOtp }: { challengeId: string; m
       </form>
     </main>
   );
+}
+
+function safeReturnUrl(returnUrl?: string | null) {
+  if (!returnUrl || !returnUrl.startsWith("/") || returnUrl.startsWith("//")) {
+    return "/app";
+  }
+
+  return returnUrl;
 }

@@ -1,134 +1,143 @@
 @model PendingDirectShipDeliveryListModel
 @{
-    ViewData["Title"] = "Giao hàng trực tiếp NCC";
+    ViewData["Title"] = "Hàng giao thẳng";
 }
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title"><i class="bi bi-truck-fast me-2 text-success"></i>Giao hàng trực tiếp NCC</h1>
-        <p class="page-header-subtitle">Danh sách phiếu giao thẳng chờ xác nhận</p>
+@section TitleSection {
+    <h1 class="topbar-page-title"> Hàng giao thẳng</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page"> Hàng giao thẳng</li>
+            </ol>
+        </nav>
+    </div>
+}
+<div class="content-card">
+    <div class="action-toolbar">
+        <form method="get" asp-action="Pending" class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label small">Tìm kiếm</label>
+                <input type="text" name="Keywords" value="@Model.Filter.Keywords" class="form-control"
+                       placeholder="Mã phiếu, tên khách, địa chỉ..." />
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small">Từ ngày</label>
+                <input type="date" name="FromDate" class="form-control" placeholder="Từ ngày"
+                       value="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small">Đến ngày</label>
+                <input type="date" name="ToDate" class="form-control" placeholder="Đến ngày"
+                       value="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="col-12 col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-search me-1"></i>Lọc
+                </button>
+                @if (Context.Request.QueryString.HasValue)
+                {
+                    <a asp-action="Pending" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                }
+            </div>
+        </form>
+    </div>
+    <div class="content-card-body-flush">
+        @if (!Model.Items.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-check2-circle" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p class="mt-2">Không có phiếu nào đang chờ xác nhận.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table data-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Mã phiếu</th>
+                            <th>Đơn hàng</th>
+                            <th><i class="bi bi-person me-1"></i>Khách hàng</th>
+                            <th><i class="bi bi-geo-alt me-1"></i>Địa chỉ</th>
+                            <th>Hàng hóa</th>
+                            <th><i class="bi bi-calendar me-1"></i>Ngày tạo</th>
+                            <th style="width: 180px;" class="text-end pe-4">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Items)
+                        {
+                            <tr data-id="@item.Id" data-code="@item.Code">
+                                <td class="ps-4 fw-semibold">
+                                    <span class="badge bg-success-subtle text-success me-1">
+                                        <i class="bi bi-truck-fast"></i>
+                                    </span>
+                                    @item.Code
+                                </td>
+                                <td>
+                                    @if (item.OrderCode != null)
+                                    {
+                                        <a asp-controller="Order" asp-action="Details" asp-route-id="@item.OrderId"
+                                           class="text-decoration-none">@item.OrderCode</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="fw-medium">@item.CustomerName</div>
+                                    @if (!string.IsNullOrWhiteSpace(item.CustomerPhone))
+                                    {
+                                        <small class="text-muted">@item.CustomerPhone</small>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="text-truncate d-inline-block" style="max-width: 200px;" title="@item.ShippingAddress">
+                                        @item.ShippingAddress
+                                    </span>
+                                </td>
+                                <td>
+                                    @foreach (var product in item.Items)
+                                    {
+                                        <div class="small">
+                                            <span class="fw-medium">@product.ProductName</span>
+                                            <span class="text-muted ms-1">× @product.Quantity.ToString("N0")</span>
+                                        </div>
+                                    }
+                                </td>
+                                <td class="text-muted small">
+                                    @item.CreatedOn.ToString("dd/MM/yyyy HH:mm")
+                                </td>
+                                <td class="text-end pe-4">
+                                    <button type="button" class="btn btn-sm btn-success btn-confirm-delivery" data-testid="directship-confirm-open"
+                                            data-id="@item.Id" data-code="@item.Code">
+                                        <i class="bi bi-check2 me-1"></i>Đã giao
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-reject-delivery"
+                                            data-id="@item.Id" data-code="@item.Code">
+                                        <i class="bi bi-x-lg me-1"></i>Không nhận
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="px-4 pb-3">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Tổng <strong>@Model.Items.Count</strong> phiếu đang chờ xác nhận.
+                </small>
+            </div>
+        }
     </div>
 </div>
 
-<div class="content-card mb-3">
-    <form method="get" asp-action="Pending" class="row g-2 align-items-end">
-        <div class="col-12 col-md-4">
-            <label class="form-label small">Tìm kiếm</label>
-            <input type="text" name="Keywords" value="@Model.Filter.Keywords" class="form-control"
-                   placeholder="Mã phiếu, tên khách, địa chỉ..." />
-        </div>
-        <div class="col-6 col-md-3">
-            <label class="form-label small">Từ ngày</label>
-            <input type="date" name="FromDate" class="form-control"
-                   value="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" />
-        </div>
-        <div class="col-6 col-md-3">
-            <label class="form-label small">Đến ngày</label>
-            <input type="date" name="ToDate" class="form-control"
-                   value="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" />
-        </div>
-        <div class="col-12 col-md-2 d-flex gap-2">
-            <button type="submit" class="btn btn-primary flex-grow-1">
-                <i class="bi bi-search me-1"></i>Lọc
-            </button>
-            <a asp-action="Pending" class="btn btn-outline-secondary">
-                <i class="bi bi-x-lg"></i>
-            </a>
-        </div>
-    </form>
-</div>
-
-<div class="content-card">
-    @if (!Model.Items.Any())
-    {
-        <div class="text-center py-5 text-muted">
-            <i class="bi bi-check2-circle" style="font-size: 3rem; opacity: 0.3;"></i>
-            <p class="mt-2">Không có phiếu nào đang chờ xác nhận.</p>
-        </div>
-    }
-    else
-    {
-        <div class="table-responsive">
-            <table class="table data-table">
-                <thead>
-                    <tr>
-                        <th class="ps-4">Mã phiếu</th>
-                        <th>Đơn hàng</th>
-                        <th><i class="bi bi-person me-1"></i>Khách hàng</th>
-                        <th><i class="bi bi-geo-alt me-1"></i>Địa chỉ giao thẳng</th>
-                        <th>Hàng hóa</th>
-                        <th><i class="bi bi-calendar me-1"></i>Ngày tạo</th>
-                        <th style="width: 180px;" class="text-end pe-4">Thao tác</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model.Items)
-                    {
-                        <tr data-id="@item.Id" data-code="@item.Code">
-                            <td class="ps-4 fw-semibold">
-                                <span class="badge bg-success-subtle text-success me-1">
-                                    <i class="bi bi-truck-fast"></i>
-                                </span>
-                                @item.Code
-                            </td>
-                            <td>
-                                @if (item.OrderCode != null)
-                                {
-                                    <a asp-controller="Order" asp-action="Details" asp-route-id="@item.OrderId"
-                                       class="text-decoration-none">@item.OrderCode</a>
-                                }
-                                else
-                                {
-                                    <span class="text-muted">—</span>
-                                }
-                            </td>
-                            <td>
-                                <div class="fw-medium">@item.CustomerName</div>
-                                @if (!string.IsNullOrWhiteSpace(item.CustomerPhone))
-                                {
-                                    <small class="text-muted">@item.CustomerPhone</small>
-                                }
-                            </td>
-                            <td>
-                                <span class="text-truncate d-inline-block" style="max-width: 200px;" title="@item.ShippingAddress">
-                                    @item.ShippingAddress
-                                </span>
-                            </td>
-                            <td>
-                                @foreach (var product in item.Items)
-                                {
-                                    <div class="small">
-                                        <span class="fw-medium">@product.ProductName</span>
-                                        <span class="text-muted ms-1">× @product.Quantity.ToString("N0")</span>
-                                    </div>
-                                }
-                            </td>
-                            <td class="text-muted small">
-                                @item.CreatedOn.ToString("dd/MM/yyyy HH:mm")
-                            </td>
-                            <td class="text-end pe-4">
-                                <button type="button" class="btn btn-sm btn-success btn-confirm-delivery" data-testid="directship-confirm-open"
-                                        data-id="@item.Id" data-code="@item.Code">
-                                    <i class="bi bi-check2 me-1"></i>Xác nhận
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-danger btn-reject-delivery"
-                                        data-id="@item.Id" data-code="@item.Code">
-                                    <i class="bi bi-x-lg me-1"></i>Từ chối
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        <div class="px-4 pb-3">
-            <small class="text-muted">
-                <i class="bi bi-info-circle me-1"></i>
-                Tổng <strong>@Model.Items.Count</strong> phiếu đang chờ xác nhận.
-            </small>
-        </div>
-    }
-</div>
 
 <!-- Modal Confirm -->
 <div class="modal fade" id="modalConfirm" tabindex="-1" aria-hidden="true">
@@ -170,7 +179,7 @@
         <div class="modal-content">
             <div class="modal-header border-0 pb-0">
                 <h5 class="modal-title">
-                    <i class="bi bi-x-circle text-danger me-2"></i>Từ chối giao hàng
+                    <i class="bi bi-x-circle text-danger me-2"></i>Từ chối nhận hàng
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
@@ -178,7 +187,7 @@
                 <div class="alert alert-warning d-flex align-items-start gap-2 mb-3">
                     <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
                     <div>
-                        Hàng sẽ được chuyển từ kho ảo Direct-Ship Transit về <strong>kho bạn chọn</strong> với giá vốn theo đơn nhập.
+                        Hàng sẽ được chuyển về <strong>kho bạn chọn</strong> với giá vốn theo đơn nhập.
                         Thao tác này không thể hoàn tác.
                     </div>
                 </div>
@@ -197,14 +206,14 @@
                 <div class="mb-0">
                     <label class="form-label">Lý do từ chối <span class="text-danger">*</span></label>
                     <textarea id="rejectReason" class="form-control" rows="3"
-                              placeholder="Nhập lý do từ chối (bắt buộc)..."></textarea>
+                              placeholder="Nhập lý do từ chối"></textarea>
                     <div id="rejectReasonError" class="invalid-feedback">Lý do từ chối là bắt buộc.</div>
                 </div>
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
                 <button type="button" class="btn btn-danger" id="btnRejectSubmit">
-                    <i class="bi bi-x-lg me-1"></i>Từ chối &amp; chuyển kho
+                    <i class="bi bi-x-lg me-1"></i>Từ chối &amp; chuyển về kho
                 </button>
             </div>
         </div>
@@ -212,138 +221,140 @@
 </div>
 
 @section Scripts {
-<script>
-(function () {
-    let pendingId = null;
-    const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirm'));
-    const modalReject = new bootstrap.Modal(document.getElementById('modalReject'));
+    <script type="module">
+        (function () {
+            let pendingId = null;
+            const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirm'));
+            const modalReject = new bootstrap.Modal(document.getElementById('modalReject'));
 
-    document.querySelectorAll('.btn-confirm-delivery').forEach(btn => {
-        btn.addEventListener('click', () => {
-            pendingId = btn.dataset.id;
-            document.getElementById('confirmDnCode').textContent = 'Phiếu: ' + btn.dataset.code;
-            document.getElementById('confirmNote').value = '';
-            document.getElementById('confirmDate').value = new Date().toISOString().slice(0, 10);
-            modalConfirm.show();
-        });
-    });
-
-    document.querySelectorAll('.btn-reject-delivery').forEach(btn => {
-        btn.addEventListener('click', () => {
-            pendingId = btn.dataset.id;
-            document.getElementById('rejectDnCode').textContent = 'Phiếu: ' + btn.dataset.code;
-            document.getElementById('rejectReturnWarehouseId').value = '';
-            document.getElementById('rejectReturnWarehouseId').classList.remove('is-invalid');
-            document.getElementById('rejectReason').value = '';
-            document.getElementById('rejectReason').classList.remove('is-invalid');
-            modalReject.show();
-        });
-    });
-
-    document.getElementById('btnConfirmSubmit').addEventListener('click', async () => {
-        if (!pendingId) return;
-
-        const dateVal = document.getElementById('confirmDate').value;
-        const note = document.getElementById('confirmNote').value.trim();
-        const btn = document.getElementById('btnConfirmSubmit');
-
-        btn.disabled = true;
-        try {
-            const res = await fetch('@Url.Action("ConfirmDelivery")', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    deliveryNoteId: pendingId,
-                    confirmedDate: dateVal ? new Date(dateVal).toISOString() : null,
-                    note: note || null
-                })
+            document.querySelectorAll('.btn-confirm-delivery').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.id;
+                    if (!id) return;
+                    window.location.href = '/DeliveryNote/Details/' + id;
+                });
             });
-            const data = await res.json();
-            modalConfirm.hide();
-            if (data.success) {
-                removeRow(pendingId);
-                showToast(data.message, 'success');
-            } else {
-                showToast(data.message, 'danger');
-            }
-        } finally {
-            btn.disabled = false;
-            pendingId = null;
-        }
-    });
 
-    document.getElementById('btnRejectSubmit').addEventListener('click', async () => {
-        if (!pendingId) return;
-
-        const returnWarehouseId = document.getElementById('rejectReturnWarehouseId').value;
-        const reason = document.getElementById('rejectReason').value.trim();
-        if (!returnWarehouseId) {
-            document.getElementById('rejectReturnWarehouseId').classList.add('is-invalid');
-            return;
-        }
-        document.getElementById('rejectReturnWarehouseId').classList.remove('is-invalid');
-
-        if (!reason) {
-            document.getElementById('rejectReason').classList.add('is-invalid');
-            return;
-        }
-        document.getElementById('rejectReason').classList.remove('is-invalid');
-
-        const btn = document.getElementById('btnRejectSubmit');
-        btn.disabled = true;
-        try {
-            const res = await fetch('@Url.Action("RejectDelivery")', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ deliveryNoteId: pendingId, returnWarehouseId, reason })
+            document.querySelectorAll('.btn-reject-delivery').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    pendingId = btn.dataset.id;
+                    document.getElementById('rejectDnCode').textContent = 'Phiếu: ' + btn.dataset.code;
+                    document.getElementById('rejectReturnWarehouseId').value = '';
+                    document.getElementById('rejectReturnWarehouseId').classList.remove('is-invalid');
+                    document.getElementById('rejectReason').value = '';
+                    document.getElementById('rejectReason').classList.remove('is-invalid');
+                    modalReject.show();
+                });
             });
-            const data = await res.json();
-            modalReject.hide();
-            if (data.success) {
-                removeRow(pendingId);
-                showToast(data.message, 'success');
-            } else {
-                showToast(data.message, 'danger');
+
+            document.getElementById('btnConfirmSubmit').addEventListener('click', async () => {
+                if (!pendingId) return;
+
+                const dateVal = document.getElementById('confirmDate').value;
+                const note = document.getElementById('confirmNote').value.trim();
+                const btn = document.getElementById('btnConfirmSubmit');
+
+                btn.disabled = true;
+                try {
+                    const res = await fetch('@Url.Action("ConfirmDelivery")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            deliveryNoteId: pendingId,
+                            confirmedDate: dateVal ? new Date(dateVal).toISOString() : null,
+                            note: note || null
+                        })
+                    });
+                    const data = await res.json();
+                    modalConfirm.hide();
+                    if (data.success) {
+                        removeRow(pendingId);
+                        showToast(data.message, 'success');
+                    } else {
+                        showToast(data.message, 'danger');
+                    }
+                } finally {
+                    btn.disabled = false;
+                    pendingId = null;
+                }
+            });
+
+            document.getElementById('btnRejectSubmit').addEventListener('click', async () => {
+                if (!pendingId) return;
+
+                const returnWarehouseId = document.getElementById('rejectReturnWarehouseId').value;
+                const reason = document.getElementById('rejectReason').value.trim();
+                if (!returnWarehouseId) {
+                    document.getElementById('rejectReturnWarehouseId').classList.add('is-invalid');
+                    return;
+                }
+                document.getElementById('rejectReturnWarehouseId').classList.remove('is-invalid');
+
+                if (!reason) {
+                    document.getElementById('rejectReason').classList.add('is-invalid');
+                    return;
+                }
+                document.getElementById('rejectReason').classList.remove('is-invalid');
+
+                if(!confirm('Xác nhận từ chối nhận hàng. Thao tác này sẽ không thể hoàn tác. Bạn muốn tiếp tục?')) return;
+
+                showPageLoading();
+                const btn = document.getElementById('btnRejectSubmit');
+                btn.disabled = true;
+                try {
+                    const res = await fetch('@Url.Action("RejectDelivery")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ deliveryNoteId: pendingId, returnWarehouseId, reason })
+                    });
+                    const data = await res.json();
+                    modalReject.hide();
+                    if (data.success) {
+                        removeRow(pendingId);
+                        showToast(data.message, 'success');
+                    } else {
+                        showToast(data.message, 'danger');
+                    }
+                } finally {
+                    hidePageLoading();
+                    btn.disabled = false;
+                    pendingId = null;
+                }
+            });
+
+            function removeRow(id) {
+                const row = document.querySelector(`tr[data-id="${id}"]`);
+                if (row) {
+                    row.style.transition = 'opacity 0.3s';
+                    row.style.opacity = '0';
+                    setTimeout(() => row.remove(), 300);
+                }
             }
-        } finally {
-            btn.disabled = false;
-            pendingId = null;
-        }
-    });
 
-    function removeRow(id) {
-        const row = document.querySelector(`tr[data-id="${id}"]`);
-        if (row) {
-            row.style.transition = 'opacity 0.3s';
-            row.style.opacity = '0';
-            setTimeout(() => row.remove(), 300);
-        }
-    }
+            function showToast(message, type) {
+                const container = document.getElementById('toast-container') || createToastContainer();
+                const id = 'toast-' + Date.now();
+                const html = `
+                    <div id="${id}" class="toast align-items-center text-bg-${type} border-0" role="alert">
+                        <div class="d-flex">
+                            <div class="toast-body">${message}</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+                const toastEl = document.getElementById(id);
+                new bootstrap.Toast(toastEl, { delay: 3000 }).show();
+                toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+            }
 
-    function showToast(message, type) {
-        const container = document.getElementById('toast-container') || createToastContainer();
-        const id = 'toast-' + Date.now();
-        const html = `
-            <div id="${id}" class="toast align-items-center text-bg-${type} border-0" role="alert">
-                <div class="d-flex">
-                    <div class="toast-body">${message}</div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                </div>
-            </div>`;
-        container.insertAdjacentHTML('beforeend', html);
-        const toastEl = document.getElementById(id);
-        new bootstrap.Toast(toastEl, { delay: 3000 }).show();
-        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-    }
-
-    function createToastContainer() {
-        const el = document.createElement('div');
-        el.id = 'toast-container';
-        el.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-        el.style.zIndex = '9999';
-        document.body.appendChild(el);
-        return el;
-    }
-})();
-</script>
+            function createToastContainer() {
+                const el = document.createElement('div');
+                el.id = 'toast-container';
+                el.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+                el.style.zIndex = '9999';
+                document.body.appendChild(el);
+                return el;
+            }
+        })();
+    </script>
 }

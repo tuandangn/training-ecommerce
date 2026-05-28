@@ -99,6 +99,7 @@ public sealed record CustomerPortalReturnRequestAdminAppDto
     public string? DeliveryNoteCode { get; init; }
     public int Status { get; init; }
     public string? Reason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
     public string? AdminNote { get; init; }
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? ReviewedOnUtc { get; init; }
@@ -114,8 +115,17 @@ public sealed record CustomerPortalReturnRequestItemAdminAppDto
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
     public decimal RequestedQuantity { get; init; }
+    public decimal? OriginalUnitPrice { get; init; }
     public string? Reason { get; init; }
     public IList<CustomerPortalReturnRequestEvidencePictureAdminAppDto> EvidencePictures { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerPortalReturnConversionItemAppDto
+{
+    public required Guid RequestItemId { get; init; }
+    public required decimal AcceptedQuantity { get; init; }
+    public required decimal ReturnUnitPrice { get; init; }
 }
 
 [Serializable]

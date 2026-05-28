@@ -312,6 +312,66 @@
   <data name="Error.DeliveryNoteCreateFailed" xml:space="preserve">
     <value>Có lỗi xảy ra khi tạo phiếu xuất kho.</value>
   </data>
+  <data name="Error.CustomerReturn.DeliveryNoteRequired" xml:space="preserve">
+    <value>Vui lòng chọn phiếu giao hàng.</value>
+  </data>
+  <data name="Error.CustomerReturn.CustomerRequired" xml:space="preserve">
+    <value>Vui lòng chọn khách hàng.</value>
+  </data>
+  <data name="Error.CustomerReturn.WarehouseRequired" xml:space="preserve">
+    <value>Vui lòng chọn kho nhận hàng trả.</value>
+  </data>
+  <data name="Error.CustomerReturn.AdditionalCostCannotBeNegative" xml:space="preserve">
+    <value>Chi phí trả hàng không được âm.</value>
+  </data>
+  <data name="Error.CustomerReturn.NoItems" xml:space="preserve">
+    <value>Vui lòng chọn ít nhất một mặt hàng cần trả.</value>
+  </data>
+  <data name="Error.CustomerReturn.RequestedQuantityMustBePositive" xml:space="preserve">
+    <value>Số lượng khách yêu cầu trả phải lớn hơn 0.</value>
+  </data>
+  <data name="Error.CustomerReturn.AcceptedQuantityCannotBeNegative" xml:space="preserve">
+    <value>Số lượng chấp nhận trả không được âm.</value>
+  </data>
+  <data name="Error.CustomerReturn.AcceptedQuantityExceedsRequested" xml:space="preserve">
+    <value>Số lượng chấp nhận trả không được vượt quá số lượng khách yêu cầu.</value>
+  </data>
+  <data name="Error.CustomerReturn.ReturnUnitPriceCannotBeNegative" xml:space="preserve">
+    <value>Đơn giá trả không được âm.</value>
+  </data>
+  <data name="Error.CustomerReturn.WarehouseNotFound" xml:space="preserve">
+    <value>Không tìm thấy kho nhận hàng trả.</value>
+  </data>
+  <data name="Error.CustomerReturn.DeliveryNoteMustBeDelivered" xml:space="preserve">
+    <value>Phiếu giao hàng cần hoàn tất trước khi tạo phiếu trả hàng.</value>
+  </data>
+  <data name="Error.CustomerReturn.DeliveryNoteItemRequired" xml:space="preserve">
+    <value>Hàng trả phải thuộc hàng đã giao cho khách.</value>
+  </data>
+  <data name="Error.CustomerReturn.DeliveryNoteNotOwnedByCustomer" xml:space="preserve">
+    <value>Phiếu giao hàng không thuộc khách hàng đã chọn.</value>
+  </data>
+  <data name="Error.CustomerReturn.NoDeliveredItems" xml:space="preserve">
+    <value>Khách hàng chưa có hàng đã giao để trả.</value>
+  </data>
+  <data name="Error.CustomerReturn.ProductNotDelivered" xml:space="preserve">
+    <value>Sản phẩm chưa được giao cho khách hàng này.</value>
+  </data>
+  <data name="Error.CustomerReturn.ProductRequired" xml:space="preserve">
+    <value>Vui lòng chọn sản phẩm cần trả.</value>
+  </data>
+  <data name="Error.CustomerReturn.ProductNotFound" xml:space="preserve">
+    <value>Không tìm thấy sản phẩm trong phiếu trả hàng.</value>
+  </data>
+  <data name="Error.CustomerReturn.NotFound" xml:space="preserve">
+    <value>Không tìm thấy phiếu trả hàng.</value>
+  </data>
+  <data name="Error.CustomerReturn.IsNotFound" xml:space="preserve">
+    <value>Không tìm thấy phiếu trả hàng.</value>
+  </data>
+  <data name="Error.CustomerReturn.ExceedsDeliveredQuantity" xml:space="preserve">
+    <value>Số lượng trả vượt quá số lượng còn được phép trả.</value>
+  </data>
   <data name="Error.OrderIsNotFound" xml:space="preserve">
     <value>Đơn hàng không tồn tại.</value>
   </data>

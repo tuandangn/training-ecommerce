@@ -278,7 +278,7 @@ export default class OrderController {
                 return false;
             var quantityRaw = DecimalFields.stripFormatting(inputQuantity.value, 2)
             return DecimalFields.isValidDecimal(inputQuantity, quantityRaw);
-        }, () => inputUnitPriceChangeDebounced.cancel());
+        });
         var inputUnitPriceChangeDebounced = debounce((e) => {
             const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
             const newUnitPrice = parseNumber(DecimalFields.stripFormatting(inputUnitPrice.value, 0), 0);
@@ -288,10 +288,13 @@ export default class OrderController {
                 return false;
             var unitPriceRaw = DecimalFields.stripFormatting(inputUnitPrice.value)
             return DecimalFields.isValidDecimal(inputUnitPrice, unitPriceRaw);
-        }, () => inputQtyChangeDebounced.cancel());
+        });
         
         inputQuantity.addEventListener('input', inputQtyChangeDebounced);
+        inputQuantity.addEventListener('focusin', () => inputUnitPriceChangeDebounced.cancel());
+
         inputUnitPrice.addEventListener('input', inputUnitPriceChangeDebounced);
+        inputUnitPrice.addEventListener('focusin', () => inputQtyChangeDebounced.cancel());
 
         return row;
     }

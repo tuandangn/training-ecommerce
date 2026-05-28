@@ -18,7 +18,7 @@
         </div>
     </div>
     <div class="d-flex gap-2">
-        <a asp-action="Print" asp-route-customerId="@Model.CustomerId" target="_blank" class="btn btn-outline-secondary shadow-sm border">
+        <a asp-action="Print" asp-route-id="@Model.CustomerId" target="_blank" class="btn btn-outline-secondary shadow-sm border">
             <i class="bi bi-printer me-1"></i> In sao kê
         </a>
         @if (Model.TotalRemainingAmount > 0)
@@ -107,7 +107,7 @@
                         <i class="bi bi-receipt me-1"></i>Đơn: <a asp-controller="Order" asp-action="Details" asp-route-id="@debt.OrderId" class="text-primary text-decoration-none fw-medium">@debt.OrderCode</a>
                     </span>
                     <span>
-                        <i class="bi bi-box-seam me-1"></i>Xuất: <span class="fw-medium text-dark">@debt.DeliveryNoteCode</span>
+                        <i class="bi bi-box-seam me-1"></i>Xuất: <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@debt.DeliveryNoteId" class="fw-medium text-decoration-none text-primary">@debt.DeliveryNoteCode</a>
                     </span>
                     <span class="text-muted">@debt.CreatedOnUtc.ToString(ViewConstants.DefaultDateFormat)</span>
                 </div>

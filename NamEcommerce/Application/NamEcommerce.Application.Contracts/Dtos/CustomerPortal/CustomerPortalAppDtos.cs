@@ -174,6 +174,27 @@ public sealed record CustomerDeliveryNoteItemAppDto
     public decimal Quantity { get; init; }
     public decimal UnitPrice { get; init; }
     public decimal SubTotal { get; init; }
+    public decimal ReservedReturnQuantity { get; init; }
+    public decimal PendingPortalReturnQuantity { get; init; }
+    public decimal ReturnableQuantity { get; init; }
+}
+
+[Serializable]
+public sealed record ConfirmCustomerDeliveryAcceptanceItemAppDto
+{
+    public required Guid DeliveryNoteItemId { get; init; }
+    public decimal AcceptedQuantity { get; init; }
+    public decimal RejectedQuantity { get; init; }
+    public string? RejectReason { get; init; }
+}
+
+[Serializable]
+public sealed record ConfirmCustomerDeliveryAcceptanceAppDto
+{
+    public decimal AgreedCustomerCharge { get; init; }
+    public string? AgreedCustomerChargeReason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
+    public IList<ConfirmCustomerDeliveryAcceptanceItemAppDto> Items { get; init; } = [];
 }
 
 [Serializable]
@@ -181,6 +202,7 @@ public sealed record ConfirmCustomerDeliveryNoteAppDto
 {
     public string? ReceiverName { get; init; }
     public string? Note { get; init; }
+    public ConfirmCustomerDeliveryAcceptanceAppDto? Acceptance { get; init; }
 }
 
 [Serializable]
@@ -295,18 +317,32 @@ public sealed record CustomerOrderRequestDefaultsAppDto
 [Serializable]
 public sealed record CreateCustomerReturnRequestAppDto
 {
-    public required Guid DeliveryNoteId { get; init; }
+    public Guid? DeliveryNoteId { get; init; }
     public string? Reason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
     public IList<CreateCustomerReturnRequestItemAppDto> Items { get; init; } = [];
 }
 
 [Serializable]
 public sealed record CreateCustomerReturnRequestItemAppDto
 {
-    public required Guid DeliveryNoteItemId { get; init; }
+    public Guid? DeliveryNoteItemId { get; init; }
+    public Guid? ProductId { get; init; }
     public required decimal RequestedQuantity { get; init; }
     public string? Reason { get; init; }
     public IList<CreateCustomerReturnRequestPictureAppDto> EvidencePictures { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerReturnableItemAppDto
+{
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public required string Unit { get; init; }
+    public decimal DeliveredQuantity { get; init; }
+    public decimal ReservedReturnQuantity { get; init; }
+    public decimal ReturnableQuantity { get; init; }
+    public decimal LatestUnitPrice { get; init; }
 }
 
 [Serializable]
@@ -324,6 +360,50 @@ public sealed record CustomerReturnRequestAppDto
     public required Guid DeliveryNoteId { get; init; }
     public int Status { get; init; }
     public DateTime CreatedOnUtc { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
+}
+
+[Serializable]
+public record CustomerReturnRequestSummaryAppDto
+{
+    public required Guid Id { get; init; }
+    public required Guid DeliveryNoteId { get; init; }
+    public string? DeliveryNoteCode { get; init; }
+    public int Status { get; init; }
+    public string? Reason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
+    public string? AdminNote { get; init; }
+    public DateTime CreatedOnUtc { get; init; }
+    public DateTime? ReviewedOnUtc { get; init; }
+    public Guid? ConvertedCustomerReturnId { get; init; }
+    public decimal TotalRequestedQuantity { get; init; }
+    public int ItemCount { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerReturnRequestDetailsAppDto : CustomerReturnRequestSummaryAppDto
+{
+    public IList<CustomerReturnRequestItemAppDto> Items { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerReturnRequestItemAppDto
+{
+    public required Guid Id { get; init; }
+    public required Guid DeliveryNoteItemId { get; init; }
+    public required Guid ProductId { get; init; }
+    public required string ProductName { get; init; }
+    public decimal RequestedQuantity { get; init; }
+    public string? Reason { get; init; }
+    public IList<CustomerReturnRequestEvidencePictureAppDto> EvidencePictures { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerReturnRequestEvidencePictureAppDto
+{
+    public required Guid PictureId { get; init; }
+    public string? PictureUrl { get; init; }
+    public string? FileName { get; init; }
 }
 
 [Serializable]

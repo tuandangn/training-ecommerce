@@ -23,6 +23,9 @@ public sealed class CustomerPortalQueryHandlers(
     IRequestHandler<GetCustomerContactQuery, CustomerContactModel>,
     IRequestHandler<GetCustomerDeliveryNotesQuery, CustomerDeliveryNoteListModel>,
     IRequestHandler<GetCustomerDeliveryNoteDetailsQuery, CustomerDeliveryNoteDetailsModel?>,
+    IRequestHandler<GetCustomerReturnableItemsQuery, CustomerReturnableItemListModel>,
+    IRequestHandler<GetCustomerReturnRequestsQuery, CustomerReturnRequestListModel>,
+    IRequestHandler<GetCustomerReturnRequestDetailsQuery, CustomerReturnRequestDetailsModel?>,
     IRequestHandler<GetCustomerDebtsQuery, CustomerDebtSummaryModel>
 {
     public async Task<PublicDeliveryNoteModel?> Handle(GetPublicDeliveryNoteQuery request, CancellationToken cancellationToken)
@@ -151,7 +154,41 @@ public sealed class CustomerPortalQueryHandlers(
                 note.DeliveryConfirmationStatus,
                 note.CreatedOnUtc,
                 note.DeliveredOnUtc,
-                note.Items.Select(item => new CustomerDeliveryNoteItemModel(item.Id, item.ProductId, item.ProductName, item.Quantity, item.UnitPrice, item.SubTotal)).ToList());
+                note.Items.Select(item => new CustomerDeliveryNoteItemModel(
+                    item.Id,
+                    item.ProductId,
+                    item.ProductName,
+                    item.Quantity,
+                    item.UnitPrice,
+                    item.SubTotal,
+                    item.ReservedReturnQuantity,
+                    item.PendingPortalReturnQuantity,
+                    item.ReturnableQuantity)).ToList());
+    }
+
+    public async Task<CustomerReturnableItemListModel> Handle(GetCustomerReturnableItemsQuery request, CancellationToken cancellationToken)
+    {
+        var items = await portalAppService.GetReturnableItemsAsync(RequireCustomerId()).ConfigureAwait(false);
+        return new CustomerReturnableItemListModel(items.Select(item => new CustomerReturnableItemModel(
+            item.ProductId,
+            item.ProductName,
+            item.Unit,
+            item.DeliveredQuantity,
+            item.ReservedReturnQuantity,
+            item.ReturnableQuantity,
+            item.LatestUnitPrice)).ToList());
+    }
+
+    public async Task<CustomerReturnRequestListModel> Handle(GetCustomerReturnRequestsQuery request, CancellationToken cancellationToken)
+    {
+        var requests = await portalAppService.GetReturnRequestsAsync(RequireCustomerId()).ConfigureAwait(false);
+        return new CustomerReturnRequestListModel(requests.Select(MapReturnRequestSummary).ToList());
+    }
+
+    public async Task<CustomerReturnRequestDetailsModel?> Handle(GetCustomerReturnRequestDetailsQuery request, CancellationToken cancellationToken)
+    {
+        var returnRequest = await portalAppService.GetReturnRequestDetailsAsync(RequireCustomerId(), request.ReturnRequestId).ConfigureAwait(false);
+        return returnRequest is null ? null : MapReturnRequestDetails(returnRequest);
     }
 
     public async Task<CustomerDebtSummaryModel> Handle(GetCustomerDebtsQuery request, CancellationToken cancellationToken)
@@ -203,6 +240,49 @@ public sealed class CustomerPortalQueryHandlers(
 
     private static CustomerDeliveryNoteSummaryModel MapDeliveryNote(Application.Contracts.Dtos.CustomerPortal.CustomerDeliveryNoteSummaryAppDto note)
         => new(note.Id, note.Code, note.OrderCode, note.Status, note.DeliveryConfirmationStatus, note.CreatedOnUtc, note.DeliveredOnUtc);
+
+    private static CustomerReturnRequestSummaryModel MapReturnRequestSummary(CustomerReturnRequestSummaryAppDto request)
+        => new(
+            request.Id,
+            request.DeliveryNoteId,
+            request.DeliveryNoteCode,
+            request.Status,
+            request.Reason,
+            request.AdminNote,
+            request.CreatedOnUtc,
+            request.ReviewedOnUtc,
+            request.ConvertedCustomerReturnId,
+            request.TotalRequestedQuantity,
+            request.ItemCount);
+
+    private static CustomerReturnRequestDetailsModel MapReturnRequestDetails(CustomerReturnRequestDetailsAppDto request)
+        => new(
+            request.Id,
+            request.DeliveryNoteId,
+            request.DeliveryNoteCode,
+            request.Status,
+            request.Reason,
+            request.AdminNote,
+            request.CreatedOnUtc,
+            request.ReviewedOnUtc,
+            request.ConvertedCustomerReturnId,
+            request.TotalRequestedQuantity,
+            request.ItemCount,
+            request.Items.Select(MapReturnRequestItem).ToList());
+
+    private static CustomerReturnRequestItemModel MapReturnRequestItem(CustomerReturnRequestItemAppDto item)
+        => new(
+            item.Id,
+            item.DeliveryNoteItemId,
+            item.ProductId,
+            item.ProductName,
+            item.RequestedQuantity,
+            item.Reason,
+            item.EvidencePictures.Select(picture => new CustomerReturnRequestEvidencePictureModel(
+                    picture.PictureId,
+                    picture.PictureUrl,
+                    picture.FileName))
+                .ToList());
 
     private static CustomerDebtSummaryModel MapDebtSummary(Application.Contracts.Dtos.CustomerPortal.CustomerDebtSummaryPortalAppDto summary)
         => new(

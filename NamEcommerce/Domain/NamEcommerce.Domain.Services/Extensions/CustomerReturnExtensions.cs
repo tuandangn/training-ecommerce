@@ -20,6 +20,7 @@ public static class CustomerReturnExtensions
             ReturnDate = customerReturn.ReturnDate,
             ConfirmedOnUtc = customerReturn.ConfirmedOnUtc,
             AdditionalCost = customerReturn.AdditionalCost,
+            CompensateInNextDelivery = customerReturn.CompensateInNextDelivery,
             GeneratedGoodsReceiptId = customerReturn.GeneratedGoodsReceiptId,
             CreatedByUserId = customerReturn.CreatedByUserId,
             CreatedOnUtc = customerReturn.CreatedOnUtc,

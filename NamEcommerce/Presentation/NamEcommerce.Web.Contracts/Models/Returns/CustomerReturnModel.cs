@@ -11,8 +11,8 @@ public sealed class CustomerReturnModel
 
     public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
-    public required Guid WarehouseId { get; init; }
-    public required string WarehouseName { get; init; }
+    public Guid? WarehouseId { get; init; }
+    public string? WarehouseName { get; init; }
     public string? Note { get; init; }
 
     /// <summary>Giá trị int của <c>CustomerReturnStatus</c>.</summary>

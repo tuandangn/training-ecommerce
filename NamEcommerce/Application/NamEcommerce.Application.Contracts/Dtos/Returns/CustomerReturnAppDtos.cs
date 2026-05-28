@@ -17,14 +17,15 @@ public sealed record CustomerReturnAppDto(Guid Id)
     public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
 
-    public required Guid WarehouseId { get; init; }
-    public required string WarehouseName { get; init; }
+    public Guid? WarehouseId { get; init; }
+    public string? WarehouseName { get; init; }
 
     public Guid? CreatedByUserId { get; init; }
     public required DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
 
     public required IEnumerable<CustomerReturnItemAppDto> Items { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
 
     public decimal NetRefundAmount => Math.Max(0, Items.Sum(i => i.AcceptedTotal) - AdditionalCost);
 }
@@ -51,22 +52,31 @@ public sealed record CustomerReturnItemAppDto(Guid Id)
 [Serializable]
 public sealed record CreateCustomerReturnAppDto
 {
-    public required Guid DeliveryNoteId { get; init; }
-    public required Guid WarehouseId { get; init; }
+    public Guid? DeliveryNoteId { get; init; }
+    public required Guid CustomerId { get; init; }
+    public Guid? WarehouseId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
+    public bool CompensateInNextDelivery { get; init; }
+    public Guid? ExcludeCustomerReturnRequestId { get; init; }
     public required IEnumerable<CreateCustomerReturnItemAppDto> Items { get; init; }
 
     public (bool valid, string? errorMessage) Validate()
     {
+        if (CustomerId == Guid.Empty)
+            return (false, "Error.CustomerReturn.CustomerRequired");
         if (DeliveryNoteId == Guid.Empty)
             return (false, "Error.CustomerReturn.DeliveryNoteRequired");
-        if (WarehouseId == Guid.Empty)
+        if (WarehouseId.HasValue && WarehouseId.Value == Guid.Empty)
             return (false, "Error.CustomerReturn.WarehouseRequired");
         if (AdditionalCost < 0)
             return (false, "Error.CustomerReturn.AdditionalCostCannotBeNegative");
-        if (!Items.Any())
+        if (Items is null || !Items.Any())
             return (false, "Error.CustomerReturn.NoItems");
+        if (Items.Any(item => item.ProductId == Guid.Empty))
+            return (false, "Error.CustomerReturn.ProductRequired");
+        if (Items.Any(item => item.AcceptedQuantity > item.RequestedQuantity))
+            return (false, "Error.CustomerReturn.AcceptedQuantityExceedsRequested");
         return (true, null);
     }
 }

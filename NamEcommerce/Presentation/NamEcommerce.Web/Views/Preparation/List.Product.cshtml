@@ -1,168 +1,219 @@
 @using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
 @model ProductPreparationListModel
 
-<div data-responsive-list data-list-key="preparation-product-list">
-<div class="content-card mb-4 p-2">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-2 px-2">
-            <span class="small text-muted text-uppercase fw-bold"><i class="bi bi-funnel me-1"></i>Chế độ hiển thị</span>
-        </div>
-        <partial name="_ResponsiveListToolbar" />
-        <div class="btn-group" role="group">
-            <a asp-action="List" asp-route-grouped="false" class="btn btn-outline-primary">
-                <i class="bi bi-person-lines-fill me-1"></i>
-                Theo khách hàng
-            </a>
-            <a asp-action="List" asp-route-grouped="true" class="btn btn-primary active">
-                <i class="bi bi-box-seam me-1"></i>
-                Theo hàng hóa
-            </a>
-        </div>
-    </div>
-</div>
-
-@if (Model.Any())
-{
-    <div class="responsive-list-panel" data-list-view-panel="list">
-    @foreach (var preparationItem in Model)
-    {
-        var remainingNeeded = preparationItem.TotalQuantity - preparationItem.DeliveredQuantity;
-        var hasStockShortage = remainingNeeded > preparationItem.StockQuantityAvailable;
-        var shortageQuantity = hasStockShortage ? remainingNeeded - preparationItem.StockQuantityAvailable : 0m;
-
-        <div class="content-card mb-4 overflow-hidden">
-            <div class="card-header bg-light border-bottom-0 py-3 px-4 d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold">
-                    <i class="bi bi-box-seam me-2 text-primary"></i>@preparationItem.ProductName
-                </h5>
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                    <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">
-                        Đã giao: @preparationItem.DeliveredQuantity.DisplayQuantity() / @preparationItem.TotalQuantity.DisplayQuantity()
-                    </span>
-                    <span class="badge @(hasStockShortage ? "bg-danger" : "bg-info text-dark") px-3 py-2 fs-6 rounded-pill" title="Tồn kho khả dụng">
-                        <i class="bi bi-box-seam me-1"></i> Tồn kho: @preparationItem.StockQuantityAvailable.DisplayQuantity()
-                    </span>
-                    @if (preparationItem.EarliestShippingDate.HasValue && preparationItem.EarliestShippingDate.Value != default)
-                    {
-                        var isGroupOverdue = preparationItem.EarliestShippingDate.Value.Date <= DateTime.UtcNow.Date;
-                        <span class="small @(isGroupOverdue ? "text-danger fw-bold" : "text-muted")">
-                            <i class="bi bi-calendar-event me-1"></i>Giao sớm nhất: @preparationItem.EarliestShippingDate.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat)
-                        </span>
-                    }
-                    @if (hasStockShortage)
-                    {
-                        <button class="btn btn-sm btn-warning btnQuickCreatePurchaseOrder"
-                                data-product-id="@preparationItem.ProductId"
-                                data-product-name="@preparationItem.ProductName"
-                                data-shortage-quantity="@shortageQuantity"
-                                title="Tồn kho không đủ — tạo đơn nhập hàng nhanh">
-                            <i class="bi bi-cart-plus me-1"></i>Tạo đơn nhập
-                        </button>
-                    }
+<div>
+    <div class="content-card" data-responsive-list data-list-key="preparation-product-list">
+        <div class="action-toolbar">
+            <button id="btnCreateDeliveryNote" class="btn btn-primary" disabled>
+                <i class="bi bi-file-earmark-plus me-1"></i>
+                Tạo phiếu xuất (<span id="selectedCount">0</span>)
+            </button>
+            <div class="d-flex align-items-center gap-2">
+                <div class="btn-group" role="group">
+                    <a asp-action="List" asp-route-grouped="false" class="btn border">
+                        <i class="bi bi-person-lines-fill me-1"></i>
+                        Theo khách hàng
+                    </a>
+                    <a asp-action="List" asp-route-grouped="true" class="btn btn-light active">
+                        <i class="bi bi-box-seam me-1"></i>
+                        Theo hàng hóa
+                    </a>
                 </div>
+                <partial name="_ResponsiveListToolbar" />
             </div>
-            
-            <div class="table-responsive">
-                <table class="table data-table mb-0">
-                    <thead>
-                        <tr>
-                            <th style="width:40px;" class="text-center"><input type="checkbox" class="select-all-prep-group" /></th>
-                            <th class="ps-4">Khách hàng</th>
-                            <th class="text-end">Số lượng</th>
-                            <th class="text-center d-none d-sm-table-cell">Ngày dự kiến</th>
-                            <th class="d-none d-md-table-cell">Mã đơn</th>
-                            <th class="text-center" style="width: 140px;">Trạng thái</th>
-                            <th class="text-end pe-4" style="width: 120px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var detail in preparationItem.CustomerDetails)
-                        {
-                            var detailRowClass = detail.IsDelivered ? "table-success opacity-75" : "";
-                            var isDetailOverdue = detail.ExpectedShippingDate.HasValue && detail.ExpectedShippingDate.Value.Date <= DateTime.Now.Date && !detail.IsDelivered;
-                            
-                            <tr class="@detailRowClass" id="row-@detail.OrderItemId">
-                                <td class="align-middle text-center" style="width:40px;">
-                                    <input type="checkbox" class="select-prep-item" 
-                                           data-order-id="@detail.OrderId" 
-                                           data-order-code="@detail.OrderCode"
-                                           data-order-item-id="@detail.OrderItemId"
-                                           data-quantity="@detail.Quantity"
-                                           data-delivered-quantity="@detail.DeliveredQuantity"
-                                           data-product-name="@preparationItem.ProductName"
-                                           data-stock="@preparationItem.StockQuantityAvailable"
-                                           data-unit-price="@detail.UnitPrice" />
-                                </td>
-                                <td class="ps-4">
-                                    <div class="fw-bold text-dark">
-                                        <i class="bi bi-person text-muted me-1"></i>@detail.CustomerName
-                                    </div>
-                                    @if (!string.IsNullOrEmpty(detail.CustomerPhone))
+        </div>
+        <div class="content-card-body-flush">
+            @if (Model.Any())
+            {
+                <div class="responsive-list-panel" data-list-view-panel="list">
+                    @foreach (var preparationItem in Model)
+                    {
+                        var remainingNeeded = preparationItem.TotalQuantity - preparationItem.DeliveredQuantity;
+                        var hasStockShortage = remainingNeeded > preparationItem.StockQuantityAvailable;
+                        var shortageQuantity = hasStockShortage ? remainingNeeded - preparationItem.StockQuantityAvailable : 0m;
+
+                        <div class="content-card-body-flush mb-4 overflow-hidden">
+                            <div class="card-header bg-light border-bottom-0 py-3 px-4 d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0 fw-bold">
+                                    @preparationItem.ProductName
+                                </h5>
+                                <div class="d-flex align-items-center gap-3 flex-wrap">
+                                    <span class="badge bg-primary px-3 py-2 fs-6 rounded-pill">
+                                        Đã giao: @preparationItem.DeliveredQuantity.DisplayQuantity() / @preparationItem.TotalQuantity.DisplayQuantity()
+                                    </span>
+                                    <span class="badge @(hasStockShortage ? "bg-danger" : "bg-info text-dark") px-3 py-2 fs-6 rounded-pill" title="Tồn kho khả dụng">
+                                        <i class="bi bi-box-seam me-1"></i> Tồn kho: @preparationItem.StockQuantityAvailable.DisplayQuantity()
+                                    </span>
+                                    @if (preparationItem.EarliestShippingDate.HasValue && preparationItem.EarliestShippingDate.Value != default)
                                     {
-                                        <a href="tel:@detail.CustomerPhone" class="text-muted small text-decoration-none">
-                                            <i class="bi bi-telephone ms-1 me-1"></i>@detail.CustomerPhone
-                                        </a>
-                                    }
-                                </td>
-                                <td class="text-end fw-bold fs-6">
-                                    <span class="text-muted small">@detail.DeliveredQuantity.DisplayQuantity() /</span> @detail.Quantity.DisplayQuantity()
-                                </td>
-                                <td class="text-center d-none d-sm-table-cell">
-                                    @if (detail.ExpectedShippingDate.HasValue)
-                                    {
-                                        <span class="@(isDetailOverdue ? "text-danger fw-bold" : "text-muted")">
-                                            @if (isDetailOverdue)
-                                            {
-                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                            }
-                                            @detail.ExpectedShippingDate.Value.ToString(ViewConstants.DefaultDateFormat)
+                                        var isGroupOverdue = preparationItem.EarliestShippingDate.Value.Date <= DateTime.UtcNow.Date;
+                                        <span class="small @(isGroupOverdue ? "text-danger fw-bold" : "text-muted")">
+                                            <i class="bi bi-calendar-event me-1"></i>Giao sớm nhất: @preparationItem.EarliestShippingDate.Value.ToLocalTime().ToString(ViewConstants.DefaultDateFormat)
                                         </span>
                                     }
-                                    else
+                                    @if (hasStockShortage)
                                     {
-                                        <span class="text-muted">—</span>
+                                        <button class="btn btn-sm btn-warning btnQuickCreatePurchaseOrder"
+                                                data-product-id="@preparationItem.ProductId"
+                                                data-product-name="@preparationItem.ProductName"
+                                                data-shortage-quantity="@shortageQuantity"
+                                                title="Tồn kho không đủ — tạo đơn nhập hàng nhanh">
+                                            <i class="bi bi-cart-plus me-1"></i>Tạo đơn nhập
+                                        </button>
                                     }
-                                </td>
-                                <td class="d-none d-md-table-cell">
-                                    <div class="d-flex flex-column gap-1">
-                                        <a asp-controller="Order" asp-action="Details" asp-route-id="@detail.OrderId"
-                                           class="text-primary fw-bold text-decoration-none">
-                                            @detail.OrderCode
-                                        </a>
-                                        @if (detail.DeliveryNoteLinks.Any())
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table data-table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:40px;" class="text-center"><input type="checkbox" class="select-all-prep-group" /></th>
+                                            <th class="ps-4">Khách hàng</th>
+                                            <th class="text-end">Số lượng</th>
+                                            <th class="text-center d-none d-sm-table-cell">Ngày dự kiến</th>
+                                            <th class="d-none d-md-table-cell">Mã đơn</th>
+                                            <th class="text-center" style="width: 140px;">Trạng thái</th>
+                                            <th class="text-end pe-4" style="width: 120px;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var detail in preparationItem.CustomerDetails)
                                         {
-                                            <div class="dropdown">
-                                                <button class="btn btn-xs btn-outline-info dropdown-toggle py-0 px-2 small" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.75rem;">
-                                                    <i class="bi bi-file-earmark-text me-1"></i>PXK (@detail.DeliveryNoteLinks.Count)
-                                                </button>
-                                                <ul class="dropdown-menu shadow-sm border-0 py-1" style="min-width: 180px;">
-                                                    @foreach (var link in detail.DeliveryNoteLinks)
+                                            var detailRowClass = detail.IsDelivered ? "table-success opacity-75" : "";
+                                            var isDetailOverdue = detail.ExpectedShippingDate.HasValue && detail.ExpectedShippingDate.Value.Date <= DateTime.Now.Date && !detail.IsDelivered;
+
+                                            <tr class="@detailRowClass" id="row-@detail.OrderItemId">
+                                                <td class="align-middle text-center" style="width:40px;">
+                                                    <input type="checkbox" class="select-prep-item"
+                                                           data-order-id="@detail.OrderId"
+                                                           data-order-code="@detail.OrderCode"
+                                                           data-order-item-id="@detail.OrderItemId"
+                                                           data-quantity="@detail.Quantity"
+                                                           data-delivered-quantity="@detail.DeliveredQuantity"
+                                                           data-product-name="@preparationItem.ProductName"
+                                                           data-stock="@preparationItem.StockQuantityAvailable"
+                                                           data-unit-price="@detail.UnitPrice" />
+                                                </td>
+                                                <td class="ps-4">
+                                                    <div class="fw-bold text-dark">
+                                                        @detail.CustomerName
+                                                    </div>
+                                                    @if (!string.IsNullOrEmpty(detail.CustomerPhone))
                                                     {
-                                                        var statusTuple = (DeliveryNoteStatus) link.Status switch
-                                                        {
-                                                            DeliveryNoteStatus.Draft => ("secondary", "Bản nháp"),
-                                                            DeliveryNoteStatus.Confirmed => ("info text-white", "Đã xác nhận"),
-                                                            DeliveryNoteStatus.Delivering => ("warning", "Đang giao"),
-                                                            DeliveryNoteStatus.Delivered => ("success", "Đã giao"),
-                                                            DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy"),
-                                                            _ => ("secondary", "Không rõ")
-                                                        };
-                                                        <li>
-                                                            <a class="dropdown-item d-flex align-items-center justify-content-between gap-2 py-2 px-3" asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@link.Id">
-                                                                <div class="flex-grow-1">
-                                                                    <div class="small fw-medium">@link.Code</div>
-                                                                    <div class="small text-muted" style="font-size: 0.75rem;">@link.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
-                                                                </div>
-                                                                <span class="badge bg-@statusTuple.Item1" style="font-size: 0.65rem;">@statusTuple.Item2</span>
-                                                            </a>
-                                                        </li>
+                                                        <a href="tel:@detail.CustomerPhone" class="text-muted small text-decoration-none">
+                                                            @detail.CustomerPhone
+                                                        </a>
                                                     }
-                                                </ul>
-                                            </div>
+                                                </td>
+                                                <td class="text-end fw-bold fs-6">
+                                                    <span class="text-muted small">@detail.DeliveredQuantity.DisplayQuantity() /</span> @detail.Quantity.DisplayQuantity()
+                                                </td>
+                                                <td class="text-center d-none d-sm-table-cell">
+                                                    @if (detail.ExpectedShippingDate.HasValue)
+                                                    {
+                                                        <span class="@(isDetailOverdue ? "text-danger fw-bold" : "text-muted")">
+                                                            @if (isDetailOverdue)
+                                                            {
+                                                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                                            }
+                                                            @detail.ExpectedShippingDate.Value.ToString(ViewConstants.DefaultDateFormat)
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">—</span>
+                                                    }
+                                                </td>
+                                                <td class="d-none d-md-table-cell">
+                                                    <div class="d-flex flex-column gap-1">
+                                                        <a asp-controller="Order" asp-action="Details" asp-route-id="@detail.OrderId"
+                                                           class="text-primary fw-bold text-decoration-none">
+                                                            @detail.OrderCode
+                                                        </a>
+                                                        @if (detail.DeliveryNoteLinks.Any())
+                                                        {
+                                                            <div class="dropdown">
+                                                                <button class="btn btn-xs btn-outline-info dropdown-toggle py-0 px-2 small" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="font-size: 0.75rem;">
+                                                                    <i class="bi bi-file-earmark-text me-1"></i>PXK (@detail.DeliveryNoteLinks.Count)
+                                                                </button>
+                                                                <ul class="dropdown-menu shadow-sm border-0 py-1" style="min-width: 180px;">
+                                                                    @foreach (var link in detail.DeliveryNoteLinks)
+                                                                    {
+                                                                        var statusTuple = (DeliveryNoteStatus)link.Status switch
+                                                                        {
+                                                                            DeliveryNoteStatus.Draft => ("secondary", "Bản nháp"),
+                                                                            DeliveryNoteStatus.Confirmed => ("info text-white", "Đã xác nhận"),
+                                                                            DeliveryNoteStatus.Delivering => ("warning", "Đang giao"),
+                                                                            DeliveryNoteStatus.Delivered => ("success", "Đã giao"),
+                                                                            DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy"),
+                                                                            _ => ("secondary", "Không rõ")
+                                                                        };
+                                                                        <li>
+                                                                            <a class="dropdown-item d-flex align-items-center justify-content-between gap-2 py-2 px-3" asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@link.Id">
+                                                                                <div class="flex-grow-1">
+                                                                                    <div class="small fw-medium">@link.Code</div>
+                                                                                    <div class="small text-muted" style="font-size: 0.75rem;">@link.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                                                                                </div>
+                                                                                <span class="badge bg-@statusTuple.Item1" style="font-size: 0.65rem;">@statusTuple.Item2</span>
+                                                                            </a>
+                                                                        </li>
+                                                                    }
+                                                                </ul>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </td>
+                                                <td class="text-center status-cell">
+                                                    @if (detail.IsDelivered)
+                                                    {
+                                                        <span class="status-badge success">
+                                                            <i class="bi bi-check-circle-fill"></i>Đã giao
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="status-badge warning">
+                                                            <i class="bi bi-clock"></i>Chờ giao
+                                                        </span>
+                                                    }
+                                                </td>
+                                                <td class="text-end pe-4 align-middle">
+                                                </td>
+                                            </tr>
                                         }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="responsive-list-panel responsive-list-grid" data-list-view-panel="grid" hidden>
+                    @foreach (var preparationItem in Model)
+                    {
+                        var remainingNeeded = preparationItem.TotalQuantity - preparationItem.DeliveredQuantity;
+                        var hasStockShortage = remainingNeeded > preparationItem.StockQuantityAvailable;
+                        var shortageQuantity = hasStockShortage ? remainingNeeded - preparationItem.StockQuantityAvailable : 0m;
+
+                        foreach (var detail in preparationItem.CustomerDetails)
+                        {
+                            var isDetailOverdue = detail.ExpectedShippingDate.HasValue && detail.ExpectedShippingDate.Value.Date <= DateTime.Now.Date && !detail.IsDelivered;
+                            <article class="list-card">
+                                <div class="list-card-header">
+                                    <div class="d-flex align-items-start gap-2 min-w-0">
+                                        <input type="checkbox" class="form-check-input mt-1 select-prep-item"
+                                               aria-label="Chọn hàng chuẩn bị"
+                                               data-order-id="@detail.OrderId"
+                                               data-order-code="@detail.OrderCode"
+                                               data-order-item-id="@detail.OrderItemId"
+                                               data-quantity="@detail.Quantity"
+                                               data-delivered-quantity="@detail.DeliveredQuantity"
+                                               data-product-name="@preparationItem.ProductName"
+                                               data-stock="@preparationItem.StockQuantityAvailable"
+                                               data-unit-price="@detail.UnitPrice" />
+                                        <span class="list-card-title">@preparationItem.ProductName</span>
                                     </div>
-                                </td>
-                                <td class="text-center status-cell">
                                     @if (detail.IsDelivered)
                                     {
                                         <span class="status-badge success">
@@ -175,154 +226,107 @@
                                             <i class="bi bi-clock"></i>Chờ giao
                                         </span>
                                     }
-                                </td>
-                                <td class="text-end pe-4 align-middle">
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    }
-    </div>
+                                </div>
 
-    <div class="responsive-list-panel responsive-list-grid" data-list-view-panel="grid" hidden>
-        @foreach (var preparationItem in Model)
-        {
-            var remainingNeeded = preparationItem.TotalQuantity - preparationItem.DeliveredQuantity;
-            var hasStockShortage = remainingNeeded > preparationItem.StockQuantityAvailable;
-            var shortageQuantity = hasStockShortage ? remainingNeeded - preparationItem.StockQuantityAvailable : 0m;
-
-            foreach (var detail in preparationItem.CustomerDetails)
-            {
-                var isDetailOverdue = detail.ExpectedShippingDate.HasValue && detail.ExpectedShippingDate.Value.Date <= DateTime.Now.Date && !detail.IsDelivered;
-                <article class="list-card">
-                    <div class="list-card-header">
-                        <div class="d-flex align-items-start gap-2 min-w-0">
-                            <input type="checkbox" class="form-check-input mt-1 select-prep-item"
-                                   aria-label="Chọn hàng chuẩn bị"
-                                   data-order-id="@detail.OrderId"
-                                   data-order-code="@detail.OrderCode"
-                                   data-order-item-id="@detail.OrderItemId"
-                                   data-quantity="@detail.Quantity"
-                                   data-delivered-quantity="@detail.DeliveredQuantity"
-                                   data-product-name="@preparationItem.ProductName"
-                                   data-stock="@preparationItem.StockQuantityAvailable"
-                                   data-unit-price="@detail.UnitPrice" />
-                            <span class="list-card-title">@preparationItem.ProductName</span>
-                        </div>
-                        @if (detail.IsDelivered)
-                        {
-                            <span class="status-badge success">
-                                <i class="bi bi-check-circle-fill"></i>Đã giao
-                            </span>
-                        }
-                        else
-                        {
-                            <span class="status-badge warning">
-                                <i class="bi bi-clock"></i>Chờ giao
-                            </span>
-                        }
-                    </div>
-
-                    <div class="list-card-fields">
-                        <div class="list-card-field">
-                            <span class="list-card-label">Khách hàng</span>
-                            <span class="list-card-value">@detail.CustomerName</span>
-                        </div>
-                        @if (!string.IsNullOrEmpty(detail.CustomerPhone))
-                        {
-                            <div class="list-card-field">
-                                <span class="list-card-label">Điện thoại</span>
-                                <a href="tel:@detail.CustomerPhone" class="list-card-value text-decoration-none">@detail.CustomerPhone</a>
-                            </div>
-                        }
-                        <div class="list-card-field">
-                            <span class="list-card-label">Số lượng</span>
-                            <span class="list-card-value"><span class="text-muted">@detail.DeliveredQuantity.DisplayQuantity() /</span> @detail.Quantity.DisplayQuantity()</span>
-                        </div>
-                        <div class="list-card-field">
-                            <span class="list-card-label">Tồn kho</span>
-                            <span class="list-card-value @(hasStockShortage ? "text-danger" : "")">@preparationItem.StockQuantityAvailable.DisplayQuantity()</span>
-                        </div>
-                        <div class="list-card-field">
-                            <span class="list-card-label">Ngày dự kiến</span>
-                            <span class="list-card-value @(isDetailOverdue ? "text-danger" : "")">
-                                @if (detail.ExpectedShippingDate.HasValue)
-                                {
-                                    @detail.ExpectedShippingDate.Value.ToString(ViewConstants.DefaultDateFormat)
-                                }
-                                else
-                                {
-                                    <span class="text-muted">-</span>
-                                }
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="list-card-actions">
-                        <a asp-controller="Order" asp-action="Details" asp-route-id="@detail.OrderId" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-receipt"></i>@detail.OrderCode
-                        </a>
-                        @if (detail.DeliveryNoteLinks.Any())
-                        {
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="bi bi-file-earmark-text"></i>PXK (@detail.DeliveryNoteLinks.Count)
-                                </button>
-                                <ul class="dropdown-menu shadow-sm border-0 py-1">
-                                    @foreach (var link in detail.DeliveryNoteLinks)
+                                <div class="list-card-fields">
+                                    <div class="list-card-field">
+                                        <span class="list-card-label">Khách hàng</span>
+                                        <span class="list-card-value">@detail.CustomerName</span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(detail.CustomerPhone))
                                     {
-                                        var statusTuple = (DeliveryNoteStatus) link.Status switch
-                                        {
-                                            DeliveryNoteStatus.Draft => ("secondary", "Bản nháp"),
-                                            DeliveryNoteStatus.Confirmed => ("info text-white", "Đã xác nhận"),
-                                            DeliveryNoteStatus.Delivering => ("warning", "Đang giao"),
-                                            DeliveryNoteStatus.Delivered => ("success", "Đã giao"),
-                                            DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy"),
-                                            _ => ("secondary", "Không rõ")
-                                        };
-                                        <li>
-                                            <a class="dropdown-item d-flex align-items-center justify-content-between gap-2 py-2 px-3" asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@link.Id">
-                                                <span class="small fw-medium">@link.Code</span>
-                                                <span class="badge bg-@statusTuple.Item1" style="font-size: 0.65rem;">@statusTuple.Item2</span>
-                                            </a>
-                                        </li>
+                                        <div class="list-card-field">
+                                            <span class="list-card-label">Điện thoại</span>
+                                            <a href="tel:@detail.CustomerPhone" class="list-card-value text-decoration-none">@detail.CustomerPhone</a>
+                                        </div>
                                     }
-                                </ul>
-                            </div>
-                        }
-                        @if (hasStockShortage)
-                        {
-                            <button class="btn btn-sm btn-warning btnQuickCreatePurchaseOrder"
-                                    data-product-id="@preparationItem.ProductId"
-                                    data-product-name="@preparationItem.ProductName"
-                                    data-shortage-quantity="@shortageQuantity">
-                                <i class="bi bi-cart-plus"></i>Nhập hàng
-                            </button>
-                        }
-                    </div>
-                </article>
-            }
-        }
-    </div>
+                                    <div class="list-card-field">
+                                        <span class="list-card-label">Số lượng</span>
+                                        <span class="list-card-value"><span class="text-muted">@detail.DeliveredQuantity.DisplayQuantity() /</span> @detail.Quantity.DisplayQuantity()</span>
+                                    </div>
+                                    <div class="list-card-field">
+                                        <span class="list-card-label">Tồn kho</span>
+                                        <span class="list-card-value @(hasStockShortage ? "text-danger" : "")">@preparationItem.StockQuantityAvailable.DisplayQuantity()</span>
+                                    </div>
+                                    <div class="list-card-field">
+                                        <span class="list-card-label">Ngày dự kiến</span>
+                                        <span class="list-card-value @(isDetailOverdue ? "text-danger" : "")">
+                                            @if (detail.ExpectedShippingDate.HasValue)
+                                            {
+                                                @detail.ExpectedShippingDate.Value.ToString(ViewConstants.DefaultDateFormat)
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </span>
+                                    </div>
+                                </div>
 
-    @if (Model.Items.Pagination.TotalCount > 0)
-    {
-        <div class="content-card">
-            <partial name="_Pager" model="Model.Items.Pagination" />
-        </div>
-    }
-}
-else
-{
-    <div class="content-card p-5">
-        <div class="empty-state">
-            <div class="empty-icon"><i class="bi bi-box-seam"></i></div>
-            <h5>Không có dữ liệu</h5>
-            <p>Không tìm thấy hàng hóa nào cần chuẩn bị.</p>
+                                <div class="list-card-actions justify-content-between">
+                                    <a asp-controller="Order" asp-action="Details" asp-route-id="@detail.OrderId" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-receipt"></i>@detail.OrderCode
+                                    </a>
+                                    @if (detail.DeliveryNoteLinks.Any())
+                                    {
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="bi bi-file-earmark-text"></i>PXK (@detail.DeliveryNoteLinks.Count)
+                                            </button>
+                                            <ul class="dropdown-menu shadow-sm border-0 py-1">
+                                                @foreach (var link in detail.DeliveryNoteLinks)
+                                                {
+                                                    var statusTuple = (DeliveryNoteStatus)link.Status switch
+                                                    {
+                                                        DeliveryNoteStatus.Draft => ("secondary", "Bản nháp"),
+                                                        DeliveryNoteStatus.Confirmed => ("info text-white", "Đã xác nhận"),
+                                                        DeliveryNoteStatus.Delivering => ("warning", "Đang giao"),
+                                                        DeliveryNoteStatus.Delivered => ("success", "Đã giao"),
+                                                        DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy"),
+                                                        _ => ("secondary", "Không rõ")
+                                                    };
+                                                    <li>
+                                                        <a class="dropdown-item d-flex align-items-center justify-content-between gap-2 py-2 px-3" asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@link.Id">
+                                                            <span class="small fw-medium">@link.Code</span>
+                                                            <span class="badge bg-@statusTuple.Item1" style="font-size: 0.65rem;">@statusTuple.Item2</span>
+                                                        </a>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
+                                    @if (hasStockShortage)
+                                    {
+                                        <button class="btn btn-sm btn-warning text-light btnQuickCreatePurchaseOrder"
+                                                data-product-id="@preparationItem.ProductId"
+                                                data-product-name="@preparationItem.ProductName"
+                                                data-shortage-quantity="@shortageQuantity">
+                                            <i class="bi bi-cart-plus"></i>Nhập hàng
+                                        </button>
+                                    }
+                                </div>
+                            </article>
+                        }
+                    }
+                </div>
+
+                @if (Model.Items.Pagination.TotalCount > 0)
+                {
+                    <div class="content-card-body-flush">
+                        <partial name="_Pager" model="Model.Items.Pagination" />
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="content-card-body-flush p-5">
+                    <div class="empty-state">
+                        <div class="empty-icon"><i class="bi bi-box-seam"></i></div>
+                        <h5>Không có dữ liệu</h5>
+                        <p>Không tìm thấy hàng hóa nào cần chuẩn bị.</p>
+                    </div>
+                </div>
+            }
         </div>
     </div>
-}
 </div>

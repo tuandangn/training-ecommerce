@@ -1,17 +1,17 @@
 @model CreateCustomerReturnModel
 @{
-    ViewData[ViewConstants.PageTitle] = "Tạo phiếu trả hàng khách";
+    ViewData[ViewConstants.PageTitle] = "Tạo phiếu trả hàng";
 }
 @section TitleSection {
     <h1 class="topbar-page-title">
         Thêm mới
-        <span class="text-muted">Phiếu trả hàng khách</span>
+        <span class="text-muted">Phiếu trả hàng</span>
     </h1>
     <div class="topbar-page-subtitle">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
-                <li class="breadcrumb-item"><a asp-action="List" asp-controller="CustomerReturn" class="text-decoration-none">Trả hàng khách hàng</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="CustomerReturn" class="text-decoration-none">Khách trả hàng</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
             </ol>
         </nav>
@@ -21,7 +21,6 @@
 <div>
     <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible"></div>
     <form method="post" id="createCustomerReturnForm" asp-antiforgery="true">
-        <input type="hidden" asp-for="CustomerId" id="hiddenCustomerId" />
         <input type="hidden" asp-for="DeliveryNoteId" id="hiddenDeliveryNoteId" />
         <div class="row g-3">
             <div class="col-lg-8 order-1 order-lg-0">
@@ -30,10 +29,10 @@
                         <h5>Danh sách hàng trả</h5>
                         <div class="d-flex gap-2">
                             <button type="button" class="btn btn-sm btn-outline-secondary" id="btnLoadFromNote" style="display:none!important">
-                                <i class="bi bi-arrow-repeat me-1"></i>Load từ phiếu xuất
+                                <i class="bi bi-arrow-repeat me-1"></i>Tải lại
                             </button>
                             <button type="button" class="btn btn-sm bg-light text-primary" id="btnAddFreeItem">
-                                <i class="bi bi-plus-lg me-1"></i>Thêm hàng
+                                <i class="bi bi-plus-lg me-1"></i>Thêm hàng trả
                             </button>
                         </div>
                     </div>
@@ -42,15 +41,11 @@
                             <table class="table data-table mb-0" id="returnItemsTable">
                                 <thead>
                                     <tr>
-                                        <th class="ps-3" style="min-width:160px">Hàng hóa</th>
-                                        <th class="text-center" style="width:60px">ĐVT</th>
-                                        <th class="text-end" style="width:80px">Đã giao</th>
-                                        <th class="text-end" style="width:80px">Đã trả</th>
-                                        <th class="text-end" style="width:80px">Còn lại</th>
-                                        <th class="text-end" style="width:100px">SL trả</th>
-                                        <th class="text-end" style="width:110px">Đ.Giá gốc</th>
-                                        <th class="text-end" style="width:115px">Đ.Giá trả</th>
-                                        <th class="text-end" style="width:115px">Thành tiền</th>
+                                        <th class="ps-3" style="min-width:260px">Hàng hóa</th>
+                                        <th class="text-end" style="width:120px">Đang giữ</th>
+                                        <th class="text-end" style="width:120px">Trả lại</th>
+                                        <th class="text-end" style="width:130px">Đơn giá</th>
+                                        <th class="text-end" style="width:130px">Thành tiền</th>
                                         <th style="width:36px"></th>
                                     </tr>
                                 </thead>
@@ -65,17 +60,11 @@
                                                 <input type="hidden" name="Items[@i].DeliveryNoteItemId" value="@item.DeliveryNoteItemId" />
                                                 <input type="hidden" name="Items[@i].OriginalUnitPrice" value="@item.OriginalUnitPrice" class="item-orig-price" />
                                             </td>
-                                            <td class="text-center text-muted small"></td>
-                                            <td class="text-end text-muted small">—</td>
-                                            <td class="text-end text-muted small">—</td>
                                             <td class="text-end text-muted small">—</td>
                                             <td class="text-end">
                                                 <input name="Items[@i].RequestedQuantity" value="@item.RequestedQuantity.DisplayQuantity()"
                                                        class="form-control form-control-sm text-end item-req-qty"
                                                        data-decimal="quantity" min="0.001" placeholder="0" />
-                                            </td>
-                                            <td class="text-end text-muted small">
-                                                @(item.OriginalUnitPrice.HasValue ? item.OriginalUnitPrice.Value.DisplayCurrency() : "—")
                                             </td>
                                             <td class="text-end">
                                                 <input name="Items[@i].ReturnUnitPrice" value="@item.ReturnUnitPrice.DisplayCurrency()"
@@ -95,15 +84,13 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div id="noItemsMessage" class="py-4 text-center text-muted"
-                             style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
-                            Chọn khách hàng và phiếu xuất, hoặc nhấn "+ Thêm hàng" để tạo tự do.
+                        <div id="noItemsMessage" class="py-4 text-center text-muted" style="@(Model.Items.Count == 0 ? "display:block" : "display:none")">
+                            Chưa có hàng hóa nào được chọn.
                         </div>
                     </div>
-                    <!-- Footer: Chi phí + Tổng -->
                     <div class="content-card-footer py-2">
                         <div class="d-flex justify-content-end align-items-center gap-3">
-                            <span class="text-muted small">Tổng giá trị trả:</span>
+                            <span class="text-muted small">Tổng giá trị:</span>
                             <span id="totalReturnValue" class="fw-semibold text-primary">0 ₫</span>
                         </div>
                         <div class="d-flex justify-content-end align-items-center gap-3 mt-1">
@@ -119,7 +106,7 @@
                         <a asp-action="List" class="btn btn-link text-decoration-none">
                             <span class="text-muted small">Trở về</span>
                         </a>
-                        <button type="submit" class="btn btn-primary d-lg-none">Tạo phiếu</button>
+                        <button type="submit" class="btn btn-primary">Tạo phiếu</button>
                     </div>
                 </div>
             </div>
@@ -133,46 +120,29 @@
                             <label class="form-label small fw-bold text-muted text-uppercase d-block">
                                 Khách hàng <span class="text-danger">*</span>
                             </label>
-                            <div id="customerPicker"
-                                 data-id="@Model.CustomerId"
-                                 data-name="@Model.CustomerDisplayName"
-                                 data-phone="@Model.CustomerDisplayPhone" data-address="@Model.CustomerDisplayAddress"></div>
+                            <div id="customerPicker" data-id="@Model.CustomerId" data-name="@Model.CustomerDisplayName" 
+                                data-phone="@Model.CustomerDisplayPhone" data-address="@Model.CustomerDisplayAddress"></div>
+                            <input type="text" class="visually-hidden" asp-for="CustomerId" id="hiddenCustomerId" />
+                            <div class="form-text fw-medium text-warning d-none" id="customerNoItemsWarning">Khách hàng này không có hàng hóa nào có thể trả.</div>
                             <span asp-validation-for="CustomerId" class="small text-danger"></span>
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase d-block">
-                                Phiếu xuất kho
-                                <span class="badge bg-secondary-subtle text-secondary border ms-1" style="font-size:.65rem;">tuỳ chọn</span>
+                                Phiếu giao hàng
                             </label>
                             <select id="deliveryNoteSelect" class="form-select" disabled>
-                                <option value="">(Chọn khách hàng trước)</option>
+                                <option value="">(Không chọn)</option>
                             </select>
-                            <div class="form-text">Để trống nếu tạo phiếu trả tự do (không từ phiếu xuất).</div>
-                        </div>
-                        <div class="mb-3">
-                            <label asp-for="WarehouseId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <select asp-for="WarehouseId" class="form-select">
-                                <option value="">(Chọn kho nhận)</option>
-                                @if (Model.AvailableWarehouses is not null)
-                                {
-                                    foreach (var warehouse in Model.AvailableWarehouses)
-                                    {
-                                        <option value="@warehouse.Id" selected="@(Model.WarehouseId == warehouse.Id)">@warehouse.Name</option>
-                                    }
-                                }
-                            </select>
-                            <span asp-validation-for="WarehouseId" class="small text-danger"></span>
                         </div>
                         <div class="mb-3">
                             <label asp-for="AdditionalCost" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <input asp-for="AdditionalCost" id="additionalCostInput"
                                    class="form-control" data-decimal="currency" min="0" placeholder="0"
                                    value="@Model.AdditionalCost.DisplayCurrency()" />
-                            <div class="form-text">Vận chuyển, bồi thường... sẽ trừ vào tổng hoàn.</div>
                         </div>
                         <div class="mb-0">
                             <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
-                            <textarea asp-for="Note" class="form-control" rows="3" placeholder="Lý do trả hàng, ghi chú..."></textarea>
+                            <textarea asp-for="Note" class="form-control" rows="3" placeholder="Lý do trả hàng..."></textarea>
                         </div>
                     </div>
                     <div class="content-card-footer d-none d-lg-block">
@@ -190,12 +160,12 @@
     <partial name="_ValidationScriptsPartial" />
     <script type="module">
         import CustomerPicker from '/modules/CustomerPicker.js';
+        import { toast } from '/modules/modals.js';
 
         const customerPickerEl = document.getElementById('customerPicker');
         const hiddenCustomerId = document.getElementById('hiddenCustomerId');
         const hiddenDeliveryNoteId = document.getElementById('hiddenDeliveryNoteId');
         const deliveryNoteSelect = document.getElementById('deliveryNoteSelect');
-        const warehouseSelect = document.getElementById('@Html.IdFor(m => m.WarehouseId)');
 
         const customerPicker = new CustomerPicker(customerPickerEl);
 
@@ -211,6 +181,7 @@
             hiddenCustomerId.value = e.detail.customer.id;
             hiddenDeliveryNoteId.value = '';
             await loadDeliveryNotes(e.detail.customer.id);
+            document.getElementById('customerNoItemsWarning').classList.add('d-none');
         });
 
         customerPickerEl.addEventListener('remove', () => {
@@ -218,6 +189,7 @@
             hiddenDeliveryNoteId.value = '';
             resetDeliveryNoteSelect();
             clearItems();
+            document.getElementById('customerNoItemsWarning').classList.add('d-none');
         });
 
         async function loadDeliveryNotes(customerId) {
@@ -228,12 +200,10 @@
                 const res = await fetch(`/CustomerReturn/GetDeliveryNotes?customerId=${customerId}`);
                 const notes = await res.json();
 
-                deliveryNoteSelect.innerHTML = '<option value="">(Không chọn — trả tự do)</option>';
+                deliveryNoteSelect.innerHTML = '<option value="">(Không chọn)</option>';
                 notes.forEach(n => {
                     const opt = document.createElement('option');
                     opt.value = n.id;
-                    opt.dataset.warehouseId = n.warehouseId;
-                    opt.dataset.warehouseName = n.warehouseName;
                     const date = new Date(n.deliveredOn).toLocaleDateString('vi-VN');
                     opt.textContent = `${n.code} — ${date}`;
                     deliveryNoteSelect.appendChild(opt);
@@ -247,8 +217,6 @@
                 if (noteToSelect && selectedOption) {
                     deliveryNoteSelect.value = noteToSelect;
                     hiddenDeliveryNoteId.value = noteToSelect;
-                    if (selectedOption.dataset.warehouseId)
-                        warehouseSelect.value = selectedOption.dataset.warehouseId;
                     updateLoadBtn(true);
                     await loadItemsFromNote(noteToSelect);
                 }
@@ -266,12 +234,9 @@
             const noteId = deliveryNoteSelect.value;
             hiddenDeliveryNoteId.value = noteId;
 
-            const selectedOption = deliveryNoteSelect.querySelector(`option[value="${noteId}"]`);
-            if (selectedOption.dataset.warehouseId)
-                warehouseSelect.value = selectedOption.dataset.warehouseId;
-
             if (!noteId) {
                 updateLoadBtn(false);
+                clearItems();
                 return;
             }
 
@@ -284,16 +249,37 @@
             btn.style.setProperty('display', show ? 'inline-flex' : 'none', 'important');
         }
 
-        // ── Load items từ phiếu xuất ─────────────────────────────────────────────
+        // ── Load items từ phiếu giao / hàng đã giao ─────────────────────────────
         async function loadItemsFromNote(noteId) {
             try {
                 const res = await fetch(`/CustomerReturn/GetDeliveryNoteItems?deliveryNoteId=${noteId}`);
                 const items = await res.json();
                 clearItems();
-                items.forEach(item => addItemRowFromNote(item));
+                items
+                    .filter(item => (item.availableQty ?? (item.originalQty - item.alreadyReturnedQty)) > 0)
+                    .forEach(item => addItemRowFromNote(item));
                 updateFooter();
             } catch {
-                alert('Không thể tải danh sách hàng từ phiếu xuất.');
+                alert('Không thể tải danh sách hàng từ phiếu giao.');
+            }
+        }
+
+        async function loadItemsByCustomer(customerId) {
+            try {
+                const res = await fetch(`/CustomerReturn/GetReturnableItems?customerId=${customerId}`);
+                const items = await res.json();
+                clearItems();
+                if(!Array.isArray(items) || items.length == 0){
+                    toast('Không thể trả hàng', 'Không tìm thấy hàng đã giao nào để trả cho khách hàng này.', 'warning');
+                    updateFooter();
+                    document.getElementById('customerNoItemsWarning').classList.remove('d-none');
+                    return;
+                }
+                items.filter(item => (item.availableQty ?? (item.originalQty - item.alreadyReturnedQty)) > 0)
+                    .forEach(item => addItemRowFromNote(item));
+                updateFooter();
+            } catch {
+                alert('Không thể tải danh sách hàng đã giao của khách hàng.');
             }
         }
 
@@ -309,6 +295,7 @@
 
         function clearItems() {
             tbody.innerHTML = '';
+            rowIndex = 0;
             updateEmptyState();
         }
 
@@ -316,16 +303,17 @@
             noMsg.style.display = tbody.rows.length === 0 ? 'block' : 'none';
         }
 
-        function fmtCurrency(val) {
-            return Number(val || 0).toLocaleString('vi-VN') + ' ₫';
+        function fmtCurrency(val, symbol) {
+            if(symbol)
+                return DecimalFields.formatCurrencyWithSymbol(val);
+            return DecimalFields.formatCurrency(val);
         }
 
         function fmtQty(val) {
-            const n = Number(val || 0);
-            return n % 1 === 0 ? n.toLocaleString('vi-VN') : n.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+            return DecimalFields.formatQuantity(val);
         }
 
-        /** Thêm row từ AJAX phiếu xuất (có AvailableQty, UnitPrice làm gợi ý) */
+        /** Thêm row từ AJAX hàng có thể trả (có AvailableQty, UnitPrice làm gợi ý) */
         function addItemRowFromNote(item) {
             const i = rowIndex++;
             const origPrice = item.unitPrice || 0;
@@ -334,72 +322,56 @@
             tr.innerHTML = `
                 <td class="ps-3">
                     <div class="fw-medium">${item.productName}</div>
+                    <div class="text-muted small">Đã giao ${fmtQty(item.originalQty)} ${item.unit || ''} · đã giữ/trả ${fmtQty(item.alreadyReturnedQty)}</div>
                     <input type="hidden" name="Items[${i}].ProductId" value="${item.productId}" />
                     <input type="hidden" name="Items[${i}].DeliveryNoteItemId" value="${item.sourceItemId ?? ''}" />
                     <input type="hidden" name="Items[${i}].OriginalUnitPrice" value="${origPrice}" class="item-orig-price" />
                 </td>
-                <td class="text-center text-muted small">${item.unit}</td>
-                <td class="text-end text-muted small">${fmtQty(item.originalQty)}</td>
-                <td class="text-end text-muted small">${fmtQty(item.alreadyReturnedQty)}</td>
                 <td class="text-end text-muted small fw-medium ${available > 0 ? 'text-success' : 'text-danger'}">${fmtQty(available)}</td>
                 <td class="text-end">
-                    <input name="Items[${i}].RequestedQuantity" value="${available > 0 ? available : ''}"
+                    <input name="Items[${i}].RequestedQuantity" value="${fmtQty(available)}"
                            class="form-control form-control-sm text-end item-req-qty"
-                           data-decimal="quantity" min="0.001" max="${available}" placeholder="0" />
+                           data-decimal="quantity" max="${available}" placeholder="0" data-val="true"
+                    data-val-required="Vui lòng nhập số lượng."
+                    data-val-range="Số lượng phải lớn hơn 0."
+                    data-val-range-min="0.001" data-val-range-max="${available}"
+                    data-val-number="Số lượng không đúng."/>
                 </td>
-                <td class="text-end text-muted small">${origPrice > 0 ? fmtCurrency(origPrice) : '—'}</td>
                 <td class="text-end">
-                    <input name="Items[${i}].ReturnUnitPrice" value="${origPrice}"
+                    <input name="Items[${i}].ReturnUnitPrice" value="${fmtCurrency(origPrice)}"
                            class="form-control form-control-sm text-end item-return-price"
-                           data-decimal="currency" min="0" placeholder="0" />
+                           data-decimal="currency" min="0" placeholder="0" data-val="true" data-val-required="Vui lòng nhập đơn giá"
+                    data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1" data-val-range-max="${origPrice}"
+                    data-val-number="Đơn giá phải là số"   />
                 </td>
-                <td class="text-end item-subtotal text-muted small">—</td>
+                <td class="text-end item-subtotal text-muted small">
+                    ${fmtCurrency(origPrice * available, true)}
+                </td>
                 <td class="pe-2">
                     <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>`;
             tbody.appendChild(tr);
+        DecimalFields.autoWrap(tr);
             updateEmptyState();
         }
 
-        /** Thêm row tự do (không từ phiếu xuất) */
-        function addFreeItemRow(productId = '', productName = 'Hàng hóa mới') {
-            const i = rowIndex++;
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="ps-3">
-                    <input name="Items[${i}].ProductId" value="${productId}"
-                           class="form-control form-control-sm item-product-id" placeholder="ProductId..." />
-                    <input type="hidden" name="Items[${i}].DeliveryNoteItemId" value="" />
-                    <input type="hidden" name="Items[${i}].OriginalUnitPrice" value="" class="item-orig-price" />
-                </td>
-                <td class="text-center text-muted small">—</td>
-                <td class="text-end text-muted small">—</td>
-                <td class="text-end text-muted small">—</td>
-                <td class="text-end text-muted small">—</td>
-                <td class="text-end">
-                    <input name="Items[${i}].RequestedQuantity" value=""
-                           class="form-control form-control-sm text-end item-req-qty"
-                           data-decimal="quantity" min="0.001" placeholder="0" />
-                </td>
-                <td class="text-end text-muted small">—</td>
-                <td class="text-end">
-                    <input name="Items[${i}].ReturnUnitPrice" value=""
-                           class="form-control form-control-sm text-end item-return-price"
-                           data-decimal="currency" min="0" placeholder="0" />
-                </td>
-                <td class="text-end item-subtotal text-muted small">—</td>
-                <td class="pe-2">
-                    <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </td>`;
-            tbody.appendChild(tr);
-            updateEmptyState();
-        }
+        document.getElementById('btnAddFreeItem').addEventListener('click', async () => {
+            const noteId = deliveryNoteSelect.value || hiddenDeliveryNoteId.value;
+            const customerId = hiddenCustomerId.value;
+            if (!customerId) {
+                toast('Thông báo', 'Vui lòng chọn khách hàng.', 'info');
+                return;
+            }
 
-        document.getElementById('btnAddFreeItem').addEventListener('click', () => addFreeItemRow());
+            if (!noteId) {
+                await loadItemsByCustomer(customerId);
+                return;
+            }
+
+            await loadItemsFromNote(noteId);
+        });
 
         // Xóa item
         tbody.addEventListener('click', e => {
@@ -411,14 +383,38 @@
             }
         });
 
+        function renumberRows() {
+            Array.from(tbody.querySelectorAll('tr')).forEach((row, index) => {
+                row.querySelectorAll('[name^="Items["]').forEach(input => {
+                    input.name = input.name.replace(/Items\[\d+\]/, `Items[${index}]`);
+                });
+            });
+            rowIndex = tbody.rows.length;
+        }
+
+        document.getElementById('createCustomerReturnForm').addEventListener('submit', function(e) {
+            renumberRows();
+
+            if (tbody.rows.length === 0) {
+                e.preventDefault();
+                alert('Vui lòng thêm ít nhất một hàng đã giao.');
+                return;
+            }
+
+            if (window.jQuery && typeof $(this).valid === 'function' && !$(this).valid()) {
+                e.preventDefault();
+                return;
+            }
+        });
+
         // Recalculate khi thay đổi giá / số lượng
         tbody.addEventListener('input', e => {
             if (e.target.matches('.item-req-qty, .item-return-price')) {
                 const row = e.target.closest('tr');
-                const qty = parseDecimal(row.querySelector('.item-req-qty')?.value);
+                const qty = parseQuantity(row.querySelector('.item-req-qty')?.value);
                 const price = parseDecimal(row.querySelector('.item-return-price')?.value);
                 const sub = row.querySelector('.item-subtotal');
-                if (sub) sub.textContent = fmtCurrency(qty * price);
+                if (sub) sub.textContent = fmtCurrency(qty * price, true);
                 updateFooter();
             }
         });
@@ -428,13 +424,17 @@
 
         function parseDecimal(str) {
             if (!str) return 0;
-            return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+            return parseFloat(DecimalFields.stripFormatting(str));
+        }
+        function parseQuantity(str) {
+            if (!str) return 0;
+            return parseFloat(DecimalFields.stripFormatting(str, 2));
         }
 
         function updateFooter() {
             let total = 0;
             tbody.querySelectorAll('tr').forEach(row => {
-                const qty = parseDecimal(row.querySelector('.item-req-qty')?.value);
+                const qty = parseQuantity(row.querySelector('.item-req-qty')?.value);
                 const price = parseDecimal(row.querySelector('.item-return-price')?.value);
                 total += qty * price;
             });
@@ -442,9 +442,9 @@
             const addCost = parseDecimal(additionalCostInput.value);
             const net = Math.max(0, total - addCost);
 
-            document.getElementById('totalReturnValue').textContent = fmtCurrency(total);
-            document.getElementById('additionalCostDisplay').textContent = fmtCurrency(addCost);
-            document.getElementById('netRefundAmount').textContent = fmtCurrency(net);
+            document.getElementById('totalReturnValue').textContent = fmtCurrency(total, true);
+            document.getElementById('additionalCostDisplay').textContent = fmtCurrency(addCost, true);
+            document.getElementById('netRefundAmount').textContent = fmtCurrency(net, true);
         }
 
         additionalCostInput.addEventListener('input', updateFooter);

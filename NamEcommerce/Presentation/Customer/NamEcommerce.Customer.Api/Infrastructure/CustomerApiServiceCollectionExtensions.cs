@@ -41,8 +41,8 @@ using NamEcommerce.Domain.Shared.Services.Security;
 using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Customer.Framework.Commands.Handlers;
 using NamEcommerce.Customer.Framework.Services;
-using NamEcommerce.Application.Contracts.Inventory;
-using NamEcommerce.Application.Services.Inventory;
+using NamEcommerce.Application.Services.Returns;
+using NamEcommerce.Application.Contracts.Returns;
 
 namespace NamEcommerce.Customer.Api.Infrastructure;
 
@@ -56,6 +56,7 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.AddSingleton(BuildCustomerPortalSecurityOptions(configuration));
         services.AddSingleton(BuildCustomerPortalStoreOptions(configuration));
+        services.AddSingleton(BuildCustomerPortalAuthCookieOptions(configuration));
         services.AddCustomerPortalDataProtection(configuration);
         services.Configure<ForwardedHeadersOptions>(options =>
         {
@@ -144,6 +145,7 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddScoped<IWarehouseAppService, WarehouseAppService>();
         services.AddScoped<IPictureAppService, PictureAppService>();
         services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
+        services.AddScoped<ICustomerReturnAppService, CustomerReturnAppService>();
         services.AddScoped<IOrderAppService, OrderAppService>();
         services.AddScoped<ICustomerPortalAuthAppService, CustomerPortalAuthAppService>();
         services.AddScoped<ICustomerPortalAppService, CustomerPortalAppService>();
@@ -174,6 +176,13 @@ internal static class CustomerApiServiceCollectionExtensions
     {
         var options = new CustomerPortalStoreOptions();
         configuration.GetSection(CustomerPortalStoreOptions.SectionName).Bind(options);
+        return options;
+    }
+
+    private static CustomerPortalAuthCookieOptions BuildCustomerPortalAuthCookieOptions(IConfiguration configuration)
+    {
+        var options = new CustomerPortalAuthCookieOptions();
+        configuration.GetSection(CustomerPortalAuthCookieOptions.SectionName).Bind(options);
         return options;
     }
 

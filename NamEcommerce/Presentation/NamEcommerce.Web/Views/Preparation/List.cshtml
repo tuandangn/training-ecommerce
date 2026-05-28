@@ -7,23 +7,20 @@
         _ => null
     };
 }
-
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Chuẩn bị hàng</h1>
-        <p class="page-header-subtitle">Danh sách hàng hóa cần chuẩn bị từ đơn hàng chưa khóa</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">Chuẩn bị hàng</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Order" class="text-decoration-none">Đơn bán</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Chuẩn bị hàng</li>
+            </ol>
+        </nav>
     </div>
-</div>
+}
 
 <div id="alertArea"></div>
-
-<div class="mb-3">
-    <button id="btnCreateDeliveryNote" class="btn btn-primary" disabled>
-        <i class="bi bi-file-earmark-plus me-1"></i>
-        Tạo phiếu xuất (<span id="selectedCount">0</span>)
-    </button>
-</div>
-
 @switch (Model)
 {
     case ProductPreparationListModel:
@@ -107,7 +104,7 @@
 
 <!-- Create Delivery Notes Modal -->
 <div class="modal fade" id="createDeliveryNotesModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header border-bottom-0 pb-0">
                 <h5 class="modal-title fw-bold">Tạo phiếu xuất kho</h5>
@@ -147,6 +144,12 @@
                                     <input class="form-check-input ms-0" type="checkbox" id="showPrice" name="showPrice" role="switch" />
                                     <label class="form-check-label ms-2 fw-medium" for="showPrice">
                                         Hiển thị giá trên phiếu
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch p-3 bg-light rounded-3 mt-2">
+                                    <input class="form-check-input ms-0" type="checkbox" id="compensateReturnedQuantityInNextDelivery" name="compensateReturnedQuantityInNextDelivery" role="switch" />
+                                    <label class="form-check-label ms-2 fw-medium" for="compensateReturnedQuantityInNextDelivery">
+                                        Sẽ bù vào lần xuất hàng sau
                                     </label>
                                 </div>
                             </div>
@@ -416,6 +419,7 @@
 
                 const btn = $('#btnSubmitDeliveryNotes');
                 const showPrice = $('#showPrice').is(':checked');
+                const compensateReturnedQuantityInNextDelivery = $('#compensateReturnedQuantityInNextDelivery').is(':checked');
                 const note = $('#note').val().trim();
                 const warehouseId = $('#warehouseId').val();
                 const surchargeTotal = parseFloat($modalSurcharge.val()) || 0;
@@ -478,6 +482,7 @@
                                     orderId: orderId,
                                     selectedItems: selectedItems,
                                     showPrice: showPrice,
+                                    compensateReturnedQuantityInNextDelivery: compensateReturnedQuantityInNextDelivery,
                                     warehouseId: warehouseId,
                                     note: note,
                                     surcharge: orderSurcharge,
@@ -616,7 +621,7 @@
                     if (response.success) {
                         const poUrl = '@Url.Action("Details", "PurchaseOrder")' + '/' + response.purchaseOrderId;
                         toast('Thành công',
-                            `Đã tạo đơn nhập hàng. <a href="${poUrl}" class="alert-link">Xem đơn nhập</a>`,
+                            `Tạo đơn nhập hàng thành công.`,
                             'success');
                     } else {
                         showAlert('danger', response.message || 'Không thể tạo đơn nhập hàng.');

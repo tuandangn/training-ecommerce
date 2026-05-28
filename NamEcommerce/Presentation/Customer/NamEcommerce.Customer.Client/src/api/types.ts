@@ -181,6 +181,61 @@ export type DeliveryNoteItem = {
   quantity: number;
   unitPrice: number;
   subTotal: number;
+  reservedReturnQuantity: number;
+  pendingPortalReturnQuantity: number;
+  returnableQuantity: number;
+};
+
+export type ReturnRequestList = {
+  items: ReturnRequestSummary[];
+};
+
+export type ReturnableItemList = {
+  items: ReturnableItem[];
+};
+
+export type ReturnableItem = {
+  productId: string;
+  productName: string;
+  unit: string;
+  deliveredQuantity: number;
+  reservedReturnQuantity: number;
+  returnableQuantity: number;
+  latestUnitPrice: number;
+};
+
+export type ReturnRequestSummary = {
+  id: string;
+  deliveryNoteId: string;
+  deliveryNoteCode?: string | null;
+  status: number;
+  reason?: string | null;
+  adminNote?: string | null;
+  createdOn: string;
+  reviewedOn?: string | null;
+  convertedCustomerReturnId?: string | null;
+  totalRequestedQuantity: number;
+  itemCount: number;
+};
+
+export type ReturnRequestDetails = ReturnRequestSummary & {
+  items: ReturnRequestItem[];
+};
+
+export type ReturnRequestItem = {
+  id: string;
+  deliveryNoteItemId: string;
+  productId: string;
+  productName: string;
+  requestedQuantity: number;
+  reason?: string | null;
+  evidencePictures: ReturnRequestEvidencePicture[];
+};
+
+export type ReturnRequestEvidencePicture = {
+  pictureId: string;
+  pictureUrl?: string | null;
+  fileName?: string | null;
 };
 
 export type DebtSummary = {

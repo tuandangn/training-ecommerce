@@ -31,6 +31,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
             OrderId = dto.OrderId,
             ShippingAddress = dto.ShippingAddress,
             ShowPrice = dto.ShowPrice,
+            CompensateReturnedQuantityInNextDelivery = dto.CompensateReturnedQuantityInNextDelivery,
             Note = dto.Note,
             WarehouseId = dto.WarehouseId,
             WarehouseName = warehouse.Name,
@@ -89,7 +90,21 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
             {
                 DeliveryNoteId = dto.DeliveryNoteId,
                 PictureId = dto.PictureId,
-                ReceiverName = dto.ReceiverName
+                ReceiverName = dto.ReceiverName,
+                Acceptance = dto.Acceptance is null
+                    ? null
+                    : new DeliveryAcceptanceDto
+                    {
+                        AgreedCustomerCharge = dto.Acceptance.AgreedCustomerCharge,
+                        AgreedCustomerChargeReason = dto.Acceptance.AgreedCustomerChargeReason,
+                        Items = dto.Acceptance.Items.Select(item => new DeliveryAcceptanceItemDto
+                        {
+                            DeliveryNoteItemId = item.DeliveryNoteItemId,
+                            AcceptedQuantity = item.AcceptedQuantity,
+                            RejectedQuantity = item.RejectedQuantity,
+                            RejectReason = item.RejectReason
+                        }).ToList()
+                    }
             }).ConfigureAwait(false);
 
             return new MarkDeliveryNoteDeliveredResultAppDto

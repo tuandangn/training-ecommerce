@@ -23,6 +23,7 @@ public sealed class CustomerPortalCommandHandlers(
     IRequestHandler<ConfirmCustomerDeliveryNoteCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerDeliveryFeedbackCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerReturnRequestCommand, CustomerReturnRequestModel>,
+    IRequestHandler<CancelCustomerReturnRequestCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerPaymentIntentCommand, CustomerPaymentIntentModel?>,
     IRequestHandler<CompleteMockCustomerPaymentCommand, CustomerPaymentIntentModel?>
 {
@@ -118,7 +119,23 @@ public sealed class CustomerPortalCommandHandlers(
         var result = await portalAppService.ConfirmDeliveryNoteAsync(RequireCustomerId(), request.DeliveryNoteId, new ConfirmCustomerDeliveryNoteAppDto
         {
             ReceiverName = request.ReceiverName,
-            Note = request.Note
+            Note = request.Note,
+            Acceptance = request.Acceptance is null
+                ? null
+                : new ConfirmCustomerDeliveryAcceptanceAppDto
+                {
+                    AgreedCustomerCharge = request.Acceptance.AgreedCustomerCharge,
+                    AgreedCustomerChargeReason = request.Acceptance.AgreedCustomerChargeReason,
+                    Items = request.Acceptance.Items
+                        .Select(item => new ConfirmCustomerDeliveryAcceptanceItemAppDto
+                        {
+                            DeliveryNoteItemId = item.DeliveryNoteItemId,
+                            AcceptedQuantity = item.AcceptedQuantity,
+                            RejectedQuantity = item.RejectedQuantity,
+                            RejectReason = item.RejectReason
+                        })
+                        .ToList()
+                }
         }).ConfigureAwait(false);
 
         return new CustomerActionResultModel(result.Success, result.Message);
@@ -145,6 +162,7 @@ public sealed class CustomerPortalCommandHandlers(
             Items = request.Items.Select(item => new CreateCustomerReturnRequestItemAppDto
             {
                 DeliveryNoteItemId = item.DeliveryNoteItemId,
+                ProductId = item.ProductId,
                 RequestedQuantity = item.RequestedQuantity,
                 Reason = item.Reason,
                 EvidencePictures = item.EvidencePictures?
@@ -159,6 +177,12 @@ public sealed class CustomerPortalCommandHandlers(
         }).ConfigureAwait(false);
 
         return new CustomerReturnRequestModel(result.Id, result.DeliveryNoteId, result.Status, result.CreatedOnUtc);
+    }
+
+    public async Task<CustomerActionResultModel> Handle(CancelCustomerReturnRequestCommand request, CancellationToken cancellationToken)
+    {
+        var result = await portalAppService.CancelReturnRequestAsync(RequireCustomerId(), request.ReturnRequestId).ConfigureAwait(false);
+        return new CustomerActionResultModel(result.Success, result.Message);
     }
 
     public async Task<CustomerPaymentIntentModel?> Handle(CreateCustomerPaymentIntentCommand request, CancellationToken cancellationToken)

@@ -13,8 +13,9 @@ public sealed record CustomerReturn : AppAggregateEntity
     internal CustomerReturn(string code,
         Guid deliveryNoteId, string deliveryNoteCode,
         Guid customerId, string customerName,
-        Guid warehouseId, string warehouseName,
+        Guid? warehouseId, string? warehouseName,
         string? note, decimal additionalCost,
+        bool compensateInNextDelivery,
         Guid? createdByUserId) : base(Guid.NewGuid())
     {
         Code = code;
@@ -26,6 +27,7 @@ public sealed record CustomerReturn : AppAggregateEntity
         WarehouseName = warehouseName;
         Note = note;
         AdditionalCost = additionalCost;
+        CompensateInNextDelivery = compensateInNextDelivery;
         CreatedByUserId = createdByUserId;
         Status = CustomerReturnStatus.Draft;
         ReturnDate = DateTime.UtcNow;
@@ -37,6 +39,7 @@ public sealed record CustomerReturn : AppAggregateEntity
     public string? Note { get; internal set; }
     public CustomerReturnStatus Status { get; private set; }
     public decimal AdditionalCost { get; private set; }
+    public bool CompensateInNextDelivery { get; private set; }
     public DateTime? ConfirmedOnUtc { get; private set; }
 
     public Guid DeliveryNoteId { get; private set; }
@@ -45,8 +48,8 @@ public sealed record CustomerReturn : AppAggregateEntity
     public Guid CustomerId { get; private set; }
     public string CustomerName { get; private set; } = string.Empty;
 
-    public Guid WarehouseId { get; private set; }
-    public string WarehouseName { get; private set; } = string.Empty;
+    public Guid? WarehouseId { get; private set; }
+    public string? WarehouseName { get; private set; }
 
     public Guid? GeneratedGoodsReceiptId { get; internal set; }
 
@@ -84,6 +87,16 @@ public sealed record CustomerReturn : AppAggregateEntity
         UpdatedOnUtc = DateTime.UtcNow;
     }
 
+    internal void SetWarehouse(Guid warehouseId, string warehouseName)
+    {
+        if (warehouseId == Guid.Empty)
+            throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseRequired");
+
+        WarehouseId = warehouseId;
+        WarehouseName = warehouseName;
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
+
     internal void Confirm()
     {
         if (Status != CustomerReturnStatus.Inspecting)
@@ -91,12 +104,14 @@ public sealed record CustomerReturn : AppAggregateEntity
 
         if (!_items.Any())
             throw new ReturnDataIsInvalidException("Error.CustomerReturn.NoItems");
+        if (!WarehouseId.HasValue || WarehouseId.Value == Guid.Empty)
+            throw new ReturnDataIsInvalidException("Error.CustomerReturn.WarehouseRequired");
 
         Status = CustomerReturnStatus.Confirmed;
         ConfirmedOnUtc = DateTime.UtcNow;
         UpdatedOnUtc = DateTime.UtcNow;
 
-        RaiseDomainEvent(new CustomerReturnConfirmed(Id, DeliveryNoteId, CustomerId, WarehouseId));
+        RaiseDomainEvent(new CustomerReturnConfirmed(Id, DeliveryNoteId, CustomerId, WarehouseId.Value));
     }
 
     internal void Cancel()

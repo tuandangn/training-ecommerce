@@ -9,6 +9,8 @@ public interface IProductReservationManager
 
     Task<decimal> GetReservedForOrderAsync(Guid productId, Guid orderId);
 
+    Task<decimal> GetReleasedByReferenceAsync(Guid productId, Guid orderId, ProductReservationReason reason, Guid referenceId);
+
     Task<ProductReservationDto?> GetByProductIdAsync(Guid productId);
 
     Task ReserveAsync(Guid productId, decimal quantity, Guid orderId, ProductReservationReason reason, Guid? referenceId = null);

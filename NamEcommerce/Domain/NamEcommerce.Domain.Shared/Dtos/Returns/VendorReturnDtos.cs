@@ -54,7 +54,7 @@ public sealed record CreateVendorReturnDto
 {
     public required Guid VendorId { get; init; }
     public Guid? GoodsReceiptId { get; init; }
-    public required Guid WarehouseId { get; init; }
+    public Guid? WarehouseId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
     public required IEnumerable<CreateVendorReturnItemDto> Items { get; init; }
@@ -63,7 +63,7 @@ public sealed record CreateVendorReturnDto
     {
         if (VendorId == Guid.Empty)
             throw new ReturnDataIsInvalidException("Error.VendorReturn.VendorRequired");
-        if (WarehouseId == Guid.Empty)
+        if (WarehouseId.HasValue && WarehouseId.Value == Guid.Empty)
             throw new ReturnDataIsInvalidException("Error.VendorReturn.WarehouseRequired");
         if (AdditionalCost < 0)
             throw new ReturnDataIsInvalidException("Error.VendorReturn.AdditionalCostCannotBeNegative");

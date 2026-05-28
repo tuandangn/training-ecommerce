@@ -1379,7 +1379,6 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
     gap: 1rem;
     padding: 1rem;
-    background: var(--gray-50);
 }
 
     .responsive-list-grid > .empty-state {

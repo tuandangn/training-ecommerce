@@ -9,6 +9,7 @@ public sealed class CreateDeliveryNoteCommand : IRequest<CreateDeliveryNoteResul
     public string ShippingAddress { get; set; } = string.Empty;
     public Guid WarehouseId { get; set; }
     public bool ShowPrice { get; set; }
+    public bool CompensateReturnedQuantityInNextDelivery { get; set; }
     public string? Note { get; set; }
     public decimal Surcharge { get; set; }
     public string? SurchargeReason { get; set; }

@@ -31,7 +31,7 @@ public sealed class GetVendorReturnListHandler : IRequestHandler<GetVendorReturn
         {
             Code = dto.Code,
             VendorName = dto.VendorName,
-            WarehouseName = dto.WarehouseName,
+            WarehouseName = string.IsNullOrWhiteSpace(dto.WarehouseName) ? "Chua chon" : dto.WarehouseName,
             Status = dto.Status,
             ReturnDate = DateTimeHelper.ToLocalTime(dto.ReturnDate),
             TotalAmount = dto.NetRecoveryAmount,

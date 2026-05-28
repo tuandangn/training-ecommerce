@@ -51,6 +51,7 @@ public sealed record CustomerDebtItemModel
 {
     public required Guid Id { get; init; }
     public required string Code { get; init; }
+    public required Guid DeliveryNoteId { get; init; }
     public required string DeliveryNoteCode { get; init; }
     public required string OrderCode { get; init; }
     public required Guid OrderId { get; init; }

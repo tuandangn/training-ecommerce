@@ -119,7 +119,11 @@ public sealed class CustomerPortalManager(
     {
         dto.Verify();
 
-        var request = new CustomerReturnRequest(dto.CustomerId, dto.DeliveryNoteId, dto.Reason);
+        var request = new CustomerReturnRequest(
+            dto.CustomerId,
+            dto.DeliveryNoteId,
+            dto.Reason,
+            dto.CompensateInNextDelivery);
         foreach (var item in dto.Items)
             request.AddItem(
                 item.DeliveryNoteItemId,
@@ -178,6 +182,15 @@ public sealed class CustomerPortalManager(
             ?? throw new NamEcommerceDomainException("Error.CustomerPortal.ReturnRequestNotFound", id);
 
         request.Reject(reviewedByUserId, adminNote, nowUtc);
+        await returnRequestRepository.UpdateAsync(request).ConfigureAwait(false);
+    }
+
+    public async Task CancelReturnRequestAsync(Guid id, DateTime nowUtc)
+    {
+        var request = await returnRequestRepository.GetByIdAsync(id).ConfigureAwait(false)
+            ?? throw new NamEcommerceDomainException("Error.CustomerPortal.ReturnRequestNotFound", id);
+
+        request.Cancel(nowUtc);
         await returnRequestRepository.UpdateAsync(request).ConfigureAwait(false);
     }
 
@@ -322,6 +335,7 @@ public sealed class CustomerPortalManager(
             DeliveryNoteId = request.DeliveryNoteId,
             Status = request.Status,
             Reason = request.Reason,
+            CompensateInNextDelivery = request.CompensateInNextDelivery,
             AdminNote = request.AdminNote,
             CreatedOnUtc = request.CreatedOnUtc,
             ReviewedOnUtc = request.ReviewedOnUtc,

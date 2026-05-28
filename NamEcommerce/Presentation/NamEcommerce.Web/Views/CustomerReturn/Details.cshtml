@@ -1,7 +1,9 @@
 @using NamEcommerce.Domain.Shared.Enums.Returns
+@using NamEcommerce.Web.Contracts.Models.Common
 @model NamEcommerce.Web.Contracts.Models.Returns.CustomerReturnModel
 @{
     ViewData[ViewConstants.PageTitle] = $"Phiếu trả hàng - {Model.Code}";
+    var warehouses = (ViewBag.AvailableWarehouses as EntityOptionListModel)?.Options ?? [];
 
     var status = (CustomerReturnStatus)Model.Status;
     var (badgeClass, badgeText) = status switch
@@ -110,7 +112,7 @@
                     }
                     @if (status == CustomerReturnStatus.Inspecting)
                     {
-                        <button type="button" class="btn btn-sm btn-outline-success btn-confirm" data-id="@Model.Id">
+                        <button type="button" class="btn btn-sm btn-outline-success btn-confirm" data-id="@Model.Id" data-bs-toggle="modal" data-bs-target="#confirmReturnModal">
                             <i class="bi bi-check-circle me-1"></i>Xác nhận trả hàng
                         </button>
                     }
@@ -193,7 +195,7 @@
                         <dd class="fw-semibold"><i class="bi bi-person-fill me-1 text-primary"></i>@Model.CustomerName</dd>
                     </div>
                     <div class="receipt-info-row">
-                        <dt>Phiếu xuất</dt>
+                        <dt>Nguồn giao</dt>
                         <dd>
                             <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@Model.DeliveryNoteId"
                                class="text-decoration-none fw-semibold">
@@ -203,7 +205,7 @@
                     </div>
                     <div class="receipt-info-row">
                         <dt>Kho nhận</dt>
-                        <dd class="text-muted"><i class="bi bi-building me-1"></i>@Model.WarehouseName</dd>
+                        <dd class="text-muted"><i class="bi bi-building me-1"></i>@(string.IsNullOrWhiteSpace(Model.WarehouseName) ? "Chưa chọn" : Model.WarehouseName)</dd>
                     </div>
                 </dl>
             </div>
@@ -225,6 +227,36 @@
                 </div>
             </div>
         }
+    </div>
+</div>
+
+<!-- Modal: Chọn kho xác nhận -->
+<div class="modal fade" id="confirmReturnModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Xác nhận trả hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body py-3">
+                <div class="mb-0">
+                    <label class="form-label small fw-medium text-muted" for="confirmWarehouseId">Kho nhận hàng trả về <span class="text-danger">*</span></label>
+                    <select class="form-select" id="confirmWarehouseId">
+                        <option value="">(Chọn kho)</option>
+                        @foreach (var warehouse in warehouses)
+                        {
+                            <option value="@warehouse.Id" selected="@(Model.WarehouseId == warehouse.Id)">@warehouse.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-3">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" id="btnConfirmReturn" class="btn btn-success">
+                    <i class="bi bi-check-circle me-1"></i>Xác nhận
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -260,60 +292,92 @@
 </div>
 
 @section Styles {
-<style>
-    .receipt-info-list { margin: 0; }
-    .receipt-info-row {
-        display: flex;
-        align-items: baseline;
-        padding: .6rem 1.25rem;
-        border-bottom: 1px solid var(--bs-border-color-translucent);
-        gap: .75rem;
-    }
-    .receipt-info-row:last-child { border-bottom: none; }
-    .receipt-info-row dt {
-        font-size: .75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: .03em;
-        color: var(--bs-secondary);
-        width: 72px;
-        flex-shrink: 0;
-    }
-    .receipt-info-row dd { margin: 0; font-size: .875rem; }
-</style>
+    <style>
+        .receipt-info-list {
+            margin: 0;
+        }
+
+        .receipt-info-row {
+            display: flex;
+            align-items: baseline;
+            padding: .6rem 1.25rem;
+            border-bottom: 1px solid var(--bs-border-color-translucent);
+            gap: .75rem;
+        }
+
+            .receipt-info-row:last-child {
+                border-bottom: none;
+            }
+
+            .receipt-info-row dt {
+                font-size: .75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: .03em;
+                color: var(--bs-secondary);
+                width: 72px;
+                flex-shrink: 0;
+            }
+
+            .receipt-info-row dd {
+                margin: 0;
+                font-size: .875rem;
+            }
+    </style>
 }
 
 @section Scripts {
     <script type="module">
-        import { toast } from "/modules/modals.js";
+        import { toast, confirm } from "/modules/modals.js";
 
         const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
         const returnId = '@Model.Id';
 
         // ── Chuyển sang kiểm tra ────────────────────────────────────────────
         document.querySelector('.btn-move-inspecting')?.addEventListener('click', async () => {
-            if (!confirm('Xác nhận chuyển phiếu sang trạng thái Đang kiểm tra?')) return;
+            if (!await confirm('Kiểm tra hàng hóa', 'Xác nhận đang kiểm tra hàng hóa?')) return;
             const fd = new FormData();
             fd.append('id', returnId);
             fd.append('__RequestVerificationToken', antiForgeryToken);
             try {
+                showPageLoading();
                 const res = await fetch('@Url.Action("MoveToInspecting")', { method: 'POST', body: fd }).then(r => r.json());
-                if (res.success) location.reload();
-                else toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
-            } catch { toast('Lỗi', 'Lỗi kết nối. Vui lòng thử lại.', 'danger'); }
+                if (res.success) {
+                    location.reload();
+                }
+                else{
+                    hidePageLoading();
+                    toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
+                }
+            } catch {
+                hidePageLoading();
+                toast('Lỗi', 'Lỗi kết nối. Vui lòng thử lại.', 'danger');
+            }
         });
 
         // ── Xác nhận trả hàng ───────────────────────────────────────────────
-        document.querySelector('.btn-confirm')?.addEventListener('click', async () => {
-            if (!confirm('Xác nhận phiếu trả hàng? Hệ thống sẽ tự động tạo phiếu nhập kho và giảm công nợ khách hàng.')) return;
+        document.getElementById('btnConfirmReturn')?.addEventListener('click', async () => {
+            const warehouseId = document.getElementById('confirmWarehouseId')?.value;
+            if (!warehouseId) {
+                toast('Lỗi', 'Vui lòng chọn kho nhận hàng trả về.', 'danger');
+                return;
+            }
             const fd = new FormData();
             fd.append('id', returnId);
+            fd.append('warehouseId', warehouseId);
             fd.append('__RequestVerificationToken', antiForgeryToken);
             try {
+                showPageLoading();
                 const res = await fetch('@Url.Action("Confirm")', { method: 'POST', body: fd }).then(r => r.json());
                 if (res.success) location.reload();
-                else toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
-            } catch { toast('Lỗi', 'Lỗi kết nối. Vui lòng thử lại.', 'danger'); }
+                else{
+                    hidePageLoading();
+                    toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
+                }
+            } catch {
+                hidePageLoading();
+                toast('Lỗi', 'Lỗi kết nối. Vui lòng thử lại.', 'danger');
+            }
         });
 
         // ── Lưu thông tin ───────────────────────────────────────────────────
@@ -326,10 +390,18 @@
             fd.append('note', document.getElementById('editNote').value);
             fd.append('__RequestVerificationToken', antiForgeryToken);
             try {
+                showPageLoading();
                 const res = await fetch('@Url.Action("Update")', { method: 'POST', body: fd }).then(r => r.json());
                 if (res.success) location.reload();
-                else { errEl.textContent = res.message || 'Cập nhật thất bại.'; errEl.classList.remove('d-none'); }
-            } catch { errEl.textContent = 'Lỗi kết nối. Vui lòng thử lại.'; errEl.classList.remove('d-none'); }
+                else {
+                    hidePageLoading();
+                    errEl.textContent = res.message || 'Cập nhật thất bại.'; errEl.classList.remove('d-none');
+                }
+            } catch {
+                hidePageLoading();
+                errEl.textContent = 'Lỗi kết nối. Vui lòng thử lại.';
+                errEl.classList.remove('d-none'); 
+            }
         });
     </script>
 }

@@ -66,7 +66,13 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             StatusName = GetStatusName((DeliveryNoteStatus)deliveryNote.Status),
             WarehouseId = deliveryNote.WarehouseId,
             CreatedOnUtc = deliveryNote.CreatedOnUtc,
-            DeliveredOnUtc = deliveryNote.DeliveredOnUtc
+            DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
+            Items = deliveryNote.Items.Select(item => new DeliveryNoteListItemProductModel
+            {
+                Id = item.Id,
+                ProductName = item.ProductName,
+                Quantity = item.Quantity
+            }).ToList()
         }).ToList();
 
         foreach (var deliveryNote in deliveryNotes)
@@ -98,6 +104,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             ShowPrice = false, // Default is hide price
             Items = []
         };
+        var includeReturnedCompensation = model.CompensateReturnedQuantityInNextDelivery;
         model.OrderCode = order.Code;
         //*TODO*
         model.PlacedOn = DateTimeHelper.ToLocalTime(order.CreatedOnUtc);
@@ -111,6 +118,27 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
         var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
+        var activeDeliveryNotes = deliveryNotes
+            .Where(note => note.Status != (int)DeliveryNoteStatus.Cancelled)
+            .ToList();
+        var returnedByDeliveryNoteItemId = new Dictionary<Guid, decimal>();
+        foreach (var deliveryNote in activeDeliveryNotes)
+        {
+            var returnedByItem = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
+            {
+                DeliveryNoteId = deliveryNote.Id
+            }).ConfigureAwait(false);
+
+            foreach (var noteItem in deliveryNote.Items.Where(item => item.OrderItemId != Guid.Empty))
+            {
+                if (!returnedByItem.TryGetValue(noteItem.Id, out var summary))
+                    continue;
+
+                var returnedQuantity = Math.Max(0m, summary.ConfirmedQuantity + summary.PendingQuantity);
+                returnedByDeliveryNoteItemId[noteItem.Id] = Math.Min(noteItem.Quantity, returnedQuantity);
+            }
+        }
+
         var orderItemIds = order.Items.Select(item => item.Id).ToList();
         var directShipOutstandingQuantities = (await _directShipAppService
                 .GetDirectShipAllocationsForOrderAsync(orderItemIds)
@@ -123,13 +151,20 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 
         foreach (var orderItem in order.Items)
         {
-            var deliveredQty = deliveryNotes
-                .Where(deliveryNote => deliveryNote.Status != (int)DeliveryNoteStatus.Cancelled)
-                .SelectMany(n => n.Items)
-                .Where(i => i.OrderItemId == orderItem.Id)
-                .Sum(i => i.Quantity);
+            var deliveredQuantity = activeDeliveryNotes
+                .SelectMany(note => note.Items)
+                .Where(item => item.OrderItemId == orderItem.Id)
+                .Sum(item => item.Quantity);
+            var returnedQuantity = activeDeliveryNotes
+                .SelectMany(note => note.Items)
+                .Where(item => item.OrderItemId == orderItem.Id)
+                .Sum(item => returnedByDeliveryNoteItemId.GetValueOrDefault(item.Id));
+            var netDeliveredQuantity = Math.Max(0m, deliveredQuantity - returnedQuantity);
+            var deliveredQtyForRemaining = includeReturnedCompensation
+                ? netDeliveredQuantity
+                : deliveredQuantity;
             var directShipOutstandingQty = directShipOutstandingQuantities.GetValueOrDefault(orderItem.Id);
-            var remainingQty = orderItem.Quantity - deliveredQty - directShipOutstandingQty;
+            var remainingQty = orderItem.Quantity - deliveredQtyForRemaining - directShipOutstandingQty;
             if (remainingQty > 0)
             {
                 var existingItem = model.Items.FirstOrDefault(item => item.OrderItemId == orderItem.Id);
@@ -142,7 +177,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 };
                 itemModel.ProductName = orderItem.ProductName ?? string.Empty;
                 itemModel.OrderedQuantity = orderItem.Quantity;
-                itemModel.PreviouslyDeliveredQuantity = deliveredQty;
+                itemModel.PreviouslyDeliveredQuantity = deliveredQtyForRemaining;
                 itemModel.UnitPrice = orderItem.UnitPrice;
 
                 if (existingItem is null)

@@ -174,7 +174,7 @@
                        asp-route-goodsReceiptId="@Model.Id"
                        asp-route-vendorId="@Model.VendorId"
                        asp-route-vendorName="@Model.VendorName"
-                       asp-route-goodsReceiptCode="@Model.CreatedOn.ToString("dd/MM/yyyy")"
+                       asp-route-goodsReceiptCode="@Model.Code"
                        class="btn btn-sm btn-outline-warning">
                         <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
                     </a>
@@ -183,7 +183,7 @@
                 {
                     <a asp-controller="VendorReturn" asp-action="Create"
                        asp-route-goodsReceiptId="@Model.Id"
-                       asp-route-goodsReceiptCode="@Model.CreatedOn.ToString("dd/MM/yyyy")"
+                       asp-route-goodsReceiptCode="@Model.Code"
                        class="btn btn-sm btn-outline-warning">
                         <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
                     </a>
