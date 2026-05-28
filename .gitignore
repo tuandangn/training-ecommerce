@@ -470,6 +470,7 @@ $RECYCLE.BIN/
 .skill-extract/
 .superpowers/
 .trash/
+.understand-anything/
 **/appsettings.Production.json
 **/appsettings.Development.json
 **/appsettings.E2E.json
