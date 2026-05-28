@@ -122,4 +122,10 @@ public sealed class InventoryCostingAppService : IInventoryCostingAppService
         if (scope != InventoryValuationScope.Product)
             throw new InvalidInventoryCostingOperationException("Error.InventoryCosting.ProductWarehouseScopeNotSupported");
     }
+
+    public async Task<decimal> GetCurrentProductCostPriceAsync(Guid productId)
+    {
+        var summary = await _inventoryCostingManager.GetCurrentCostSummaryAsync(productId).ConfigureAwait(false);
+        return summary.AverageCost;
+    }
 }

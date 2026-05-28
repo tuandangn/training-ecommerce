@@ -40,9 +40,9 @@ public sealed class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery,
 
         model.VendorIds = product.Vendors.Select(v => v.VendorId).ToList();
 
-        if (product.Pictures.Any())
+        foreach (var pictureId in product.Pictures)
         {
-            var pictureInfo = await _pictureAppService.GetBase64PictureByIdAsync(product.Pictures.First()).ConfigureAwait(false);
+            var pictureInfo = await _pictureAppService.GetBase64PictureByIdAsync(pictureId).ConfigureAwait(false);
             if (pictureInfo is not null)
             {
                 model.ImageFile = new Base64ImageModel
@@ -51,6 +51,7 @@ public sealed class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery,
                     Extension = pictureInfo.Extension,
                     FileName = pictureInfo.FileName
                 };
+                break;
             }
         }
 

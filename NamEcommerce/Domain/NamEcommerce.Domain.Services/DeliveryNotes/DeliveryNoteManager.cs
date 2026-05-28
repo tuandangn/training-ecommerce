@@ -27,7 +27,6 @@ using NamEcommerce.Domain.Shared.Services.Returns;
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
 
 public sealed class DeliveryNoteManager(
-    IDbContext dbContext,
     IRepository<DeliveryNote> deliveryNoteRepository,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<Order> orderReader,
@@ -206,12 +205,8 @@ public sealed class DeliveryNoteManager(
         }
     }
 
-    public async Task MarkReceivedByCustomerAsync(
-        Guid id,
-        DateTime receivedAtUtc,
-        string? receiverName,
-        string? note,
-        DeliveryAcceptanceDto? acceptance = null)
+    public async Task MarkReceivedByCustomerAsync(Guid id, DateTime receivedAtUtc, string? receiverName,
+        string? note, DeliveryAcceptanceDto? acceptance = null)
     {
         var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (deliveryNote is null)
@@ -487,7 +482,8 @@ public sealed class DeliveryNoteManager(
         return deliveryNote is null ? null : MapToDto(deliveryNote);
     }
 
-    public async Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize, string? keywords, Guid? orderId, IEnumerable<DeliveryNoteStatus>? status)
+    public async Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize, 
+        string? keywords, Guid? orderId, IEnumerable<DeliveryNoteStatus>? status)
     {
         var query = deliveryNoteReader.DataSource;
 
@@ -579,8 +575,7 @@ public sealed class DeliveryNoteManager(
     }
 
     private async Task CreateCustomerReturnFromRejectedAcceptanceAsync(
-        DeliveryNote deliveryNote,
-        DeliveryAcceptanceResolution acceptance)
+        DeliveryNote deliveryNote, DeliveryAcceptanceResolution acceptance)
     {
         var rejectedLines = acceptance.Lines
             .Where(line => line.RejectedQuantity > 0)

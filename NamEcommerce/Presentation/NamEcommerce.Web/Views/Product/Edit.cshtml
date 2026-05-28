@@ -103,7 +103,7 @@
                                 </div>
                                 <div class="col-12 col-md-6 col-lg-4">
                                     <label asp-for="CostPrice" class="form-label"></label>
-                                    @Html.EditorFor(m => m.CostPrice, new { disabled = true })
+                                    <input asp-for="CostPrice" class="form-control" disabled value="@Model.CostPrice.DisplayCurrency()" data-decimal="currency"/>
                                     <span asp-validation-for="CostPrice" class="text-danger small"></span>
                                 </div>
                                 <div class="col-12 col-md-6 col-lg-4">

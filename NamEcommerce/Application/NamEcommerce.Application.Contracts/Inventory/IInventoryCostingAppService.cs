@@ -7,4 +7,5 @@ public interface IInventoryCostingAppService
     Task<InventoryCostingPolicyAppDto> GetActivePolicyAsync();
     Task<InventoryCostingPolicyAppDto> UpdatePolicyAsync(UpdateInventoryCostingPolicyAppDto dto);
     Task<Guid> RebuildAllAsync(RebuildInventoryCostingAppDto dto);
+    Task<decimal> GetCurrentProductCostPriceAsync(Guid productId);
 }
