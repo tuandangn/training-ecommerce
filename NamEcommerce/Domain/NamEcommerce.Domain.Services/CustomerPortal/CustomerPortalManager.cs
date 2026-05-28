@@ -119,7 +119,11 @@ public sealed class CustomerPortalManager(
     {
         dto.Verify();
 
-        var request = new CustomerReturnRequest(dto.CustomerId, dto.DeliveryNoteId, dto.Reason);
+        var request = new CustomerReturnRequest(
+            dto.CustomerId,
+            dto.DeliveryNoteId,
+            dto.Reason,
+            dto.CompensateInNextDelivery);
         foreach (var item in dto.Items)
             request.AddItem(
                 item.DeliveryNoteItemId,
@@ -331,6 +335,7 @@ public sealed class CustomerPortalManager(
             DeliveryNoteId = request.DeliveryNoteId,
             Status = request.Status,
             Reason = request.Reason,
+            CompensateInNextDelivery = request.CompensateInNextDelivery,
             AdminNote = request.AdminNote,
             CreatedOnUtc = request.CreatedOnUtc,
             ReviewedOnUtc = request.ReviewedOnUtc,

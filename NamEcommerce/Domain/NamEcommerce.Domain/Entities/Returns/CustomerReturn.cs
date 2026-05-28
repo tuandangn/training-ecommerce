@@ -15,6 +15,7 @@ public sealed record CustomerReturn : AppAggregateEntity
         Guid customerId, string customerName,
         Guid? warehouseId, string? warehouseName,
         string? note, decimal additionalCost,
+        bool compensateInNextDelivery,
         Guid? createdByUserId) : base(Guid.NewGuid())
     {
         Code = code;
@@ -26,6 +27,7 @@ public sealed record CustomerReturn : AppAggregateEntity
         WarehouseName = warehouseName;
         Note = note;
         AdditionalCost = additionalCost;
+        CompensateInNextDelivery = compensateInNextDelivery;
         CreatedByUserId = createdByUserId;
         Status = CustomerReturnStatus.Draft;
         ReturnDate = DateTime.UtcNow;
@@ -37,6 +39,7 @@ public sealed record CustomerReturn : AppAggregateEntity
     public string? Note { get; internal set; }
     public CustomerReturnStatus Status { get; private set; }
     public decimal AdditionalCost { get; private set; }
+    public bool CompensateInNextDelivery { get; private set; }
     public DateTime? ConfirmedOnUtc { get; private set; }
 
     public Guid DeliveryNoteId { get; private set; }

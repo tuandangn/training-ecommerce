@@ -10,7 +10,7 @@ const MESSAGE_CATALOG: Record<string, string> = {
   "Error.DeliveryAcceptance.InvalidItem": "Dòng hàng xác nhận không hợp lệ.",
   "Error.DeliveryAcceptance.NegativeQuantity": "Số lượng xác nhận không hợp lệ.",
   "Error.DeliveryAcceptance.QuantityMismatch": "Số lượng xác nhận không khớp số lượng giao.",
-  "Error.DeliveryAcceptance.RejectReasonRequired": "Vui lòng nhập lý do trả hàng cho toàn phiếu.",
+  "Error.DeliveryAcceptance.RejectReasonRequired": "Vui lòng nhập lý do trả hàng.",
   "Msg.CustomerPortal.DeliveryConfirmedWithReturnRequest": "Đã ghi nhận khách đã nhận hàng và tạo yêu cầu trả hàng.",
   "Msg.CustomerPortal.DeliveryConfirmed": "Đã ghi nhận khách đã nhận hàng.",
   "Msg.CustomerPortal.FeedbackSaved": "Đã ghi nhận phản hồi.",

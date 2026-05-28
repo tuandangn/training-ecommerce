@@ -131,6 +131,7 @@ public sealed class CustomerReturnManager(
             warehouseName: warehouse?.Name,
             note: dto.Note,
             additionalCost: dto.AdditionalCost,
+            compensateInNextDelivery: dto.CompensateInNextDelivery,
             createdByUserId: currentUser?.Id);
 
         foreach (var itemDto in normalizedItems)

@@ -10,11 +10,12 @@ public sealed record CustomerReturnRequest : AppAggregateEntity
 
     private CustomerReturnRequest() : base(Guid.NewGuid()) { }
 
-    internal CustomerReturnRequest(Guid customerId, Guid deliveryNoteId, string? reason) : base(Guid.NewGuid())
+    internal CustomerReturnRequest(Guid customerId, Guid deliveryNoteId, string? reason, bool compensateInNextDelivery) : base(Guid.NewGuid())
     {
         CustomerId = customerId;
         DeliveryNoteId = deliveryNoteId;
         Reason = reason;
+        CompensateInNextDelivery = compensateInNextDelivery;
         Status = CustomerReturnRequestStatus.PendingReview;
         CreatedOnUtc = DateTime.UtcNow;
     }
@@ -23,6 +24,7 @@ public sealed record CustomerReturnRequest : AppAggregateEntity
     public Guid DeliveryNoteId { get; private set; }
     public CustomerReturnRequestStatus Status { get; private set; }
     public string? Reason { get; private set; }
+    public bool CompensateInNextDelivery { get; private set; }
     public string? AdminNote { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? ReviewedOnUtc { get; private set; }

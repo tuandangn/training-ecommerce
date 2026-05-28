@@ -25,6 +25,7 @@ public sealed record CustomerReturnAppDto(Guid Id)
     public DateTime? UpdatedOnUtc { get; init; }
 
     public required IEnumerable<CustomerReturnItemAppDto> Items { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
 
     public decimal NetRefundAmount => Math.Max(0, Items.Sum(i => i.AcceptedTotal) - AdditionalCost);
 }
@@ -56,6 +57,7 @@ public sealed record CreateCustomerReturnAppDto
     public Guid? WarehouseId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
+    public bool CompensateInNextDelivery { get; init; }
     public Guid? ExcludeCustomerReturnRequestId { get; init; }
     public required IEnumerable<CreateCustomerReturnItemAppDto> Items { get; init; }
 

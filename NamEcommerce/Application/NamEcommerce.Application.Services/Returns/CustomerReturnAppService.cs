@@ -42,6 +42,7 @@ public sealed class CustomerReturnAppService(
                 WarehouseId = dto.WarehouseId,
                 Note = dto.Note,
                 AdditionalCost = dto.AdditionalCost,
+                CompensateInNextDelivery = dto.CompensateInNextDelivery,
                 ExcludeCustomerReturnRequestId = dto.ExcludeCustomerReturnRequestId,
                 Items = dto.Items.Select(i => new CreateCustomerReturnItemDto
                 {

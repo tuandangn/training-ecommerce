@@ -20,6 +20,7 @@ public static class CustomerReturnAppExtensions
             ReturnDate = dto.ReturnDate,
             ConfirmedOnUtc = dto.ConfirmedOnUtc,
             AdditionalCost = dto.AdditionalCost,
+            CompensateInNextDelivery = dto.CompensateInNextDelivery,
             GeneratedGoodsReceiptId = dto.GeneratedGoodsReceiptId,
             CreatedByUserId = dto.CreatedByUserId,
             CreatedOnUtc = dto.CreatedOnUtc,

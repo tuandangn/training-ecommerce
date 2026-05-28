@@ -536,6 +536,7 @@ public sealed class CustomerPortalAppService(
             {
                 DeliveryNoteId = deliveryNote.Id,
                 Reason = returnReason,
+                CompensateInNextDelivery = dto.Acceptance?.CompensateInNextDelivery ?? false,
                 Items = rejectedItems.Select(item => new CreateCustomerReturnRequestItemAppDto
                 {
                     DeliveryNoteItemId = item.DeliveryNoteItemId,
@@ -674,6 +675,7 @@ public sealed class CustomerPortalAppService(
             CustomerId = customerId,
             DeliveryNoteId = representativeDeliveryNoteId,
             Reason = dto.Reason,
+            CompensateInNextDelivery = dto.CompensateInNextDelivery,
             Items = requestItems
         };
 
@@ -683,7 +685,8 @@ public sealed class CustomerPortalAppService(
             Id = created.Id,
             DeliveryNoteId = created.DeliveryNoteId,
             Status = (int)created.Status,
-            CreatedOnUtc = created.CreatedOnUtc
+            CreatedOnUtc = created.CreatedOnUtc,
+            CompensateInNextDelivery = created.CompensateInNextDelivery
         };
     }
 

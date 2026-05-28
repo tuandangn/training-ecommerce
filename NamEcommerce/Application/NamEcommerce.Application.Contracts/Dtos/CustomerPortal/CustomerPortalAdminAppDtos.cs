@@ -99,6 +99,7 @@ public sealed record CustomerPortalReturnRequestAdminAppDto
     public string? DeliveryNoteCode { get; init; }
     public int Status { get; init; }
     public string? Reason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
     public string? AdminNote { get; init; }
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? ReviewedOnUtc { get; init; }

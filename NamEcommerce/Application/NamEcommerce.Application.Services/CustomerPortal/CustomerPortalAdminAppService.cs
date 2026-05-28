@@ -379,6 +379,7 @@ public sealed class CustomerPortalAdminAppService(
             CustomerId = request.CustomerId,
             WarehouseId = warehouseId,
             AdditionalCost = additionalCost,
+            CompensateInNextDelivery = request.CompensateInNextDelivery,
             ExcludeCustomerReturnRequestId = request.Id,
             Note = BuildConvertedReturnNote(request, adminNote),
             Items = returnItems
@@ -550,6 +551,7 @@ public sealed class CustomerPortalAdminAppService(
             DeliveryNoteCode = deliveryNote?.Code,
             Status = (int)request.Status,
             Reason = request.Reason,
+            CompensateInNextDelivery = request.CompensateInNextDelivery,
             AdminNote = request.AdminNote,
             CreatedOnUtc = request.CreatedOnUtc,
             ReviewedOnUtc = request.ReviewedOnUtc,

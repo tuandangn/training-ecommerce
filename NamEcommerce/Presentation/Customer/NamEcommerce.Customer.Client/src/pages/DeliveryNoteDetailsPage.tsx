@@ -92,7 +92,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
         });
 
         if (acceptanceItems.some((item) => item.rejectedQuantity > 0) && !confirmRejectReason.trim()) {
-            setMessage("Vui lòng nhập lý do trả hàng cho toàn phiếu.");
+            setMessage("Vui lòng nhập lý do trả hàng.");
             return;
         }
 

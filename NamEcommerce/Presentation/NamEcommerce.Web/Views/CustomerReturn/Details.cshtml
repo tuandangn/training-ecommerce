@@ -362,7 +362,6 @@
                 toast('Lỗi', 'Vui lòng chọn kho nhận hàng trả về.', 'danger');
                 return;
             }
-            if (!await confirm('Xác nhận trả hàng', 'Hàng hóa sẽ được nhập kho và giảm công nợ khách hàng.')) return;
             const fd = new FormData();
             fd.append('id', returnId);
             fd.append('warehouseId', warehouseId);

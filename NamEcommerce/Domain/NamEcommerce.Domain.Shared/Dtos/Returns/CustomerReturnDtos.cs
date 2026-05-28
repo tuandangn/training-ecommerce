@@ -24,6 +24,7 @@ public sealed record CustomerReturnDto(Guid Id)
     public DateTime? UpdatedOnUtc { get; init; }
 
     public required decimal AdditionalCost { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
 
     public required IEnumerable<CustomerReturnItemDto> Items { get; init; }
 
@@ -58,6 +59,7 @@ public sealed record CreateCustomerReturnDto
     public Guid? WarehouseId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
+    public bool CompensateInNextDelivery { get; init; }
     public Guid? ExcludeCustomerReturnRequestId { get; init; }
     public required IEnumerable<CreateCustomerReturnItemDto> Items { get; init; }
 

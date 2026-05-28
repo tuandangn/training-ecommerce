@@ -28,6 +28,7 @@ public sealed class CustomerReturnMapping : IEntityTypeConfiguration<CustomerRet
         builder.Property(r => r.ConfirmedOnUtc).IsRequired(false);
 
         builder.Property(r => r.AdditionalCost).IsRequired().HasColumnType("decimal(18,4)").HasDefaultValue(0m);
+        builder.Property(r => r.CompensateInNextDelivery).IsRequired().HasDefaultValue(false);
 
         builder.Property(r => r.GeneratedGoodsReceiptId).IsRequired(false);
 

@@ -264,6 +264,7 @@ public sealed record CreateCustomerReturnRequestDto
     public required Guid CustomerId { get; init; }
     public required Guid DeliveryNoteId { get; init; }
     public string? Reason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
     public required IList<CreateCustomerReturnRequestItemDto> Items { get; init; } = [];
 
     public void Verify()
@@ -301,6 +302,7 @@ public sealed record CustomerReturnRequestDto(Guid Id)
     public required Guid DeliveryNoteId { get; init; }
     public required CustomerReturnRequestStatus Status { get; init; }
     public string? Reason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
     public string? AdminNote { get; init; }
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? ReviewedOnUtc { get; init; }

@@ -193,6 +193,7 @@ public sealed record ConfirmCustomerDeliveryAcceptanceAppDto
 {
     public decimal AgreedCustomerCharge { get; init; }
     public string? AgreedCustomerChargeReason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
     public IList<ConfirmCustomerDeliveryAcceptanceItemAppDto> Items { get; init; } = [];
 }
 
@@ -318,6 +319,7 @@ public sealed record CreateCustomerReturnRequestAppDto
 {
     public Guid? DeliveryNoteId { get; init; }
     public string? Reason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
     public IList<CreateCustomerReturnRequestItemAppDto> Items { get; init; } = [];
 }
 
@@ -358,6 +360,7 @@ public sealed record CustomerReturnRequestAppDto
     public required Guid DeliveryNoteId { get; init; }
     public int Status { get; init; }
     public DateTime CreatedOnUtc { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
 }
 
 [Serializable]
@@ -368,6 +371,7 @@ public record CustomerReturnRequestSummaryAppDto
     public string? DeliveryNoteCode { get; init; }
     public int Status { get; init; }
     public string? Reason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
     public string? AdminNote { get; init; }
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? ReviewedOnUtc { get; init; }

@@ -13,6 +13,7 @@ public sealed class CustomerReturnRequestMapping : IEntityTypeConfiguration<Cust
         builder.Property(request => request.DeliveryNoteId).IsRequired();
         builder.Property(request => request.Status).HasConversion<int>().IsRequired();
         builder.Property(request => request.Reason).HasMaxLength(2000).IsRequired(false);
+        builder.Property(request => request.CompensateInNextDelivery).IsRequired().HasDefaultValue(false);
         builder.Property(request => request.AdminNote).HasMaxLength(2000).IsRequired(false);
         builder.Property(request => request.CreatedOnUtc).IsRequired();
         builder.Property(request => request.ReviewedOnUtc).IsRequired(false);
