@@ -18,6 +18,7 @@ public sealed class GetCustomerDebtDetailsHandler(ICustomerDebtAppService debtAp
         {
             Id = d.Id,
             Code = d.Code,
+            DeliveryNoteId = d.DeliveryNoteId,
             DeliveryNoteCode = d.DeliveryNoteCode,
             OrderCode = d.OrderCode,
             OrderId = d.OrderId,

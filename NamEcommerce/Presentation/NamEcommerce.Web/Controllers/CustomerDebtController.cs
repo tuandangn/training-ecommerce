@@ -33,9 +33,9 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
         return View(model);
     }
 
-    public async Task<IActionResult> Print(Guid customerId)
+    public async Task<IActionResult> Print(Guid id)
     {
-        var model = await _mediator.Send(new GetCustomerDebtDetailsQuery { CustomerId = customerId }).ConfigureAwait(false);
+        var model = await _mediator.Send(new GetCustomerDebtDetailsQuery { CustomerId = id }).ConfigureAwait(false);
         if (model == null) return NotFound();
         return View(model);
     }
