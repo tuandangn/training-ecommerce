@@ -59,6 +59,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             CustomerName = deliveryNote.CustomerName,
             CustomerPhone = deliveryNote.CustomerPhone,
             ShippingAddress = deliveryNote.ShippingAddress,
+            IsDirectShip = deliveryNote.IsDirectShip,
             OrderId = deliveryNote.OrderId,
             OrderCode = deliveryNote.OrderCode ?? string.Empty,
             TotalAmount = deliveryNote.TotalAmount,
@@ -86,7 +87,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         var model = new DeliveryNoteListModel
         {
             Keywords = searchModel.Keywords,
-            Data = data
+            Data = data,
+            AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false)
         };
 
         return model;
@@ -251,8 +253,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             }).ToList()
         };
 
-        var warehouseDetails = await _warehouseAppService.GetWarehouseByIdAsync(deliveryNote.WarehouseId).ConfigureAwait(false);
-        model.WarehouseName = warehouseDetails?.Name;
+        model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        model.WarehouseName = model.AvailableWarehouses?.Options.FirstOrDefault(warehouse => warehouse.Id == deliveryNote.WarehouseId)?.Name;
 
         if (deliveryNote.DeliveryProofPictureId.HasValue)
         {

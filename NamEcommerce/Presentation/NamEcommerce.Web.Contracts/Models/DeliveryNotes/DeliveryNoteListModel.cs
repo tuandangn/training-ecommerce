@@ -12,7 +12,8 @@ public sealed class DeliveryNoteSearchModel
 public sealed class DeliveryNoteListModel
 {
     public string? Keywords { get; set; }
-    
+    public EntityOptionListModel? AvailableWarehouses { get; set; }
+
     public required IPagedDataModel<DeliveryNoteListItemModel> Data { get; init; }
 }
 
@@ -25,6 +26,8 @@ public sealed record DeliveryNoteListItemModel
 
     public Guid WarehouseId { get; init; }
     public string? WarehouseName { get; set; }
+
+    public required bool IsDirectShip { get; set; }
 
     public required Guid OrderId { get; set; }
     public required string OrderCode { get; set; }

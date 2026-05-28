@@ -633,9 +633,7 @@ public sealed class DeliveryNoteManager(
         return $"Khi nhận hàng từ phiếu {deliveryNote.Code}, khách hàng trả về: {rejectedSummary}. Chi phí phát sinh: {acceptance.AgreedCustomerCharge:#,##0.##}{chargeReason}.";
     }
 
-    private static DeliveryAcceptanceResolution ResolveDeliveryAcceptance(
-        DeliveryNote deliveryNote,
-        DeliveryAcceptanceDto? acceptance)
+    private static DeliveryAcceptanceResolution ResolveDeliveryAcceptance(DeliveryNote deliveryNote, DeliveryAcceptanceDto? acceptance)
     {
         var requestedByItemId = new Dictionary<Guid, DeliveryAcceptanceItemDto>();
         if (acceptance?.Items is not null)

@@ -5,16 +5,6 @@
 @{
     ViewData["Title"] = "Phiếu xuất kho";
     var query = Model.Keywords ?? "";
-    var acceptanceItemsJson = JsonSerializer.Serialize(Model.Data.Items.Select(note => new
-    {
-        id = note.Id,
-        items = note.Items.Select(item => new
-        {
-            id = item.Id,
-            productName = item.ProductName,
-            quantity = item.Quantity
-        })
-    }));
 }
 
 <div class="page-header">
@@ -31,137 +21,173 @@
         </div>
         <partial name="_ResponsiveListToolbar" />
     </div>
-    
+
     <div class="responsive-list-panel" data-list-view-panel="list">
         <div class="table-responsive">
-        <table class="table data-table">
-            <thead>
-                <tr>
-                    <th class="ps-4">Mã PXK</th>
-                    <th class="text-center">Đơn hàng</th>
-                    <th>
-                        <i class="bi bi-person me-1"></i>
-                        Khách hàng
-                    </th>
-                    <th class="d-none d-lg-table-cell">
-                        <i class="bi bi-geo-alt me-1"></i>
-                        Địa chỉ giao
-                    </th>
-                    <th class="text-center" style="width: 140px;">
-                        Trạng thái
-                    </th>
-                    <th class="d-none d-md-table-cell">
-                        <i class="bi bi-calendar me-1"></i>
-                        Ngày tạo
-                    </th>
-                    <th style="width: 100px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Data.Items.Any())
-                {
-                    foreach (var deliveryNote in Model.Data.Items)
+            <table class="table data-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Mã PXK</th>
+                        <th class="text-center">Đơn hàng</th>
+                        <th>
+                            <i class="bi bi-person me-1"></i>
+                            Khách hàng
+                        </th>
+                        <th class="d-none d-lg-table-cell">
+                            <i class="bi bi-geo-alt me-1"></i>
+                            Địa chỉ giao
+                        </th>
+                        <th class="text-center" style="width: 140px;">
+                            Trạng thái
+                        </th>
+                        <th class="d-none d-md-table-cell">
+                            <i class="bi bi-calendar me-1"></i>
+                            Ngày tạo
+                        </th>
+                        <th style="width: 100px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Data.Items.Any())
                     {
-                        var statusTuple = deliveryNote.Status switch
+                        foreach (var deliveryNote in Model.Data.Items)
                         {
-                            10 => ("bg-secondary text-light", "Bản nháp", "bi-pencil"),
-                            20 => ("bg-info text-light", "Đã xác nhận", "bi-check-all"),
-                            30 => ("bg-warning text-dark", "Đang giao", "bi-truck"),
-                            40 => ("bg-success text-light", "Đã giao", "bi-check-circle-fill"),
-                            50 => ("bg-danger text-light", "Đã hủy", "bi-x-circle"),
-                            _ => ("bg-secondary text-light", "Không rõ", "bi-question-circle")
-                        };
+                            var statusTuple = deliveryNote.Status switch
+                            {
+                                10 => ("bg-secondary text-light", "Bản nháp", "bi-pencil"),
+                                20 => ("bg-info text-light", "Đã xác nhận", "bi-check-all"),
+                                30 => ("bg-warning text-dark", "Đang giao", "bi-truck"),
+                                40 => ("bg-success text-light", "Đã giao", "bi-check-circle-fill"),
+                                50 => ("bg-danger text-light", "Đã hủy", "bi-x-circle"),
+                                _ => ("bg-secondary text-light", "Không rõ", "bi-question-circle")
+                            };
 
-                        <tr>
-                            <td class="ps-4">
-                                <a asp-action="Details" asp-route-id="@deliveryNote.Id" class="text-decoration-none fw-bold">
-                                    @HighlighHelper.Highlight(deliveryNote.Code, query)
-                                </a>
-                            </td>
-                            <td class="text-center fw-medium">
-                                <a asp-action="Details" asp-controller="Order" asp-route-id="@deliveryNote.OrderId" class="text-decoration-none">
-                                    @deliveryNote.OrderCode
-                                </a>
-                            </td>
-                            <td>
-                                <div class="fw-bold">
-                                    @HighlighHelper.Highlight(deliveryNote.CustomerName ?? "", query)
-                                </div>
-                                @if (!string.IsNullOrEmpty(deliveryNote.CustomerPhone))
-                                {
-                                    <a href="tel:@deliveryNote.CustomerPhone" class="small text-muted text-decoration-none">
-                                        @HighlighHelper.Highlight(deliveryNote.CustomerPhone ?? "", query)
+                            <tr>
+                                <td class="ps-4">
+                                    <a asp-action="Details" asp-route-id="@deliveryNote.Id" class="text-decoration-none fw-bold">
+                                        @HighlighHelper.Highlight(deliveryNote.Code, query)
                                     </a>
-                                }
-                                <div class="d-md-none mt-1">
-                                    <small class="text-muted d-block">
-                                        <i class="bi bi-calendar me-1"></i>@deliveryNote.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
-                                    </small>
-                                </div>
-                            </td>
-                            <td class="d-none d-lg-table-cell">
-                                <span class="d-inline-block text-truncate" style="max-width: 250px;" title="@deliveryNote.ShippingAddress">
-                                    @deliveryNote.ShippingAddress
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                <span class="status-badge @statusTuple.Item1 w-100">
-                                    <i class="bi @statusTuple.Item3 me-1"></i>@deliveryNote.StatusName
-                                </span>
-                                @if (deliveryNote.Status == 40 && deliveryNote.DeliveredOnUtc.HasValue)
-                                {
-                                    <div class="small text-muted mt-1 fst-italic">@deliveryNote.DeliveredOnUtc.Value.ToLocalTime().ToString("dd/MM HH:mm")</div>
-                                }
-                            </td>
-                            <td class="d-none d-md-table-cell text-muted">@deliveryNote.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                            <td>
-                                <div class="dropdown position-static text-end pe-3">
-                                    <button class="btn btn-sm btn-outline-secondary" type="button" id="dropdownMenuButton-@deliveryNote.Id" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
-                                        <i class="bi bi-three-dots"></i>
-                                    </button>
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="dropdownMenuButton-@deliveryNote.Id">
-                                        <li><a class="dropdown-item py-2" asp-action="Details" asp-route-id="@deliveryNote.Id"><i class="bi bi-info-circle me-2 text-primary"></i>Chi tiết</a></li>
-                                        <li><a class="dropdown-item py-2" asp-action="Print" asp-route-id="@deliveryNote.Id" target="_blank"><i class="bi bi-printer me-2 text-secondary"></i>In phiếu (2 bản)</a></li>
-                                        @if (deliveryNote.Status == (int)DeliveryNoteStatus.Draft)
-                                        {
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item py-2 text-primary btn-confirm fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-check-all me-2"></i>Xác nhận xuất</a></li>
-                                        }
-                                        @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed)
-                                        {
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item py-2 text-warning btn-delivering fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-truck me-2"></i>Bắt đầu đi giao</a></li>
-                                        }
-                                        @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering)
-                                        {
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item py-2 text-success btn-delivered fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-check-circle-fill me-2"></i>Xác nhận Đã giao</a></li>
-                                        }
-                                        @if (deliveryNote.Status != (int)DeliveryNoteStatus.Delivered && deliveryNote.Status != (int)DeliveryNoteStatus.Cancelled)
-                                        {
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li><a class="dropdown-item py-2 text-danger btn-cancel fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-x-circle me-2"></i>Hủy phiếu</a></li>
-                                        }
-                                    </ul>
+                                </td>
+                                <td class="text-center fw-medium">
+                                    <a asp-action="Details" asp-controller="Order" asp-route-id="@deliveryNote.OrderId" class="text-decoration-none">
+                                        @deliveryNote.OrderCode
+                                    </a>
+                                </td>
+                                <td>
+                                    <div class="fw-bold">
+                                        @HighlighHelper.Highlight(deliveryNote.CustomerName ?? "", query)
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(deliveryNote.CustomerPhone))
+                                    {
+                                        <a href="tel:@deliveryNote.CustomerPhone" class="small text-muted text-decoration-none">
+                                            @HighlighHelper.Highlight(deliveryNote.CustomerPhone ?? "", query)
+                                        </a>
+                                    }
+                                    <div class="d-md-none mt-1">
+                                        <small class="text-muted d-block">
+                                            <i class="bi bi-calendar me-1"></i>@deliveryNote.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                        </small>
+                                    </div>
+                                </td>
+                                <td class="d-none d-lg-table-cell">
+                                    <span class="d-inline-block text-truncate" style="max-width: 250px;" title="@deliveryNote.ShippingAddress">
+                                        @deliveryNote.ShippingAddress
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="status-badge @statusTuple.Item1 w-100">
+                                        <i class="bi @statusTuple.Item3 me-1"></i>@deliveryNote.StatusName
+                                    </span>
+                                    @if (deliveryNote.Status == 40 && deliveryNote.DeliveredOnUtc.HasValue)
+                                    {
+                                        <div class="small text-muted mt-1 fst-italic">@deliveryNote.DeliveredOnUtc.Value.ToLocalTime().ToString("dd/MM HH:mm")</div>
+                                    }
+                                </td>
+                                <td class="d-none d-md-table-cell text-muted">@deliveryNote.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <div class="dropdown position-static text-end pe-3">
+                                        <button class="btn btn-sm btn-outline-secondary" type="button" id="dropdownMenuButton-@deliveryNote.Id" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
+                                            <i class="bi bi-three-dots"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="dropdownMenuButton-@deliveryNote.Id">
+                                            <li>
+                                                <a class="dropdown-item py-2" asp-action="Details" asp-route-id="@deliveryNote.Id">
+                                                    <i class="bi bi-info-circle me-1 text-primary"></i>Chi tiết
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item py-2" asp-action="Print" asp-route-id="@deliveryNote.Id" target="_blank">
+                                                    <i class="bi bi-printer me-1 text-secondary"></i>In phiếu
+                                                </a>
+                                            </li>
+                                            @if (!deliveryNote.IsDirectShip && deliveryNote.Status == (int)DeliveryNoteStatus.Draft)
+                                            {
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item py-2 text-primary btn-confirm fw-medium" href="#" data-id="@deliveryNote.Id">
+                                                        <i class="bi bi-check-all me-1"></i>Xuất hàng
+                                                    </a>
+                                                </li>
+                                            }
+                                            @if (!deliveryNote.IsDirectShip && deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed)
+                                            {
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item py-2 text-secondary btn-delivering fw-medium" href="#" data-id="@deliveryNote.Id">
+                                                        <i class="bi bi-truck me-1"></i>Đang giao
+                                                    </a>
+                                                </li>
+                                            }
+                                            @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering)
+                                            {
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <a class="dropdown-item py-2 text-success btn-delivered fw-medium" href="#" data-id="@deliveryNote.Id">
+                                                        <i class="bi bi-check-circle-fill me-1"></i>Đã giao
+                                                    </a>
+                                                </li>
+                                            }
+                                            @if (deliveryNote.Status != (int)DeliveryNoteStatus.Delivered && deliveryNote.Status != (int)DeliveryNoteStatus.Cancelled)
+                                            {
+                                                if (deliveryNote.IsDirectShip)
+                                                {
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item py-2 text-danger btn-customer-reject fw-medium" href="#" data-id="@deliveryNote.Id">
+                                                            <i class="bi bi-person-fill-x me-1"></i>Hủy phiếu
+                                                        </a>
+                                                    </li>
+                                                }
+                                                else
+                                                {
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <a class="dropdown-item py-2 text-danger btn-cancel fw-medium" href="#" data-id="@deliveryNote.Id">
+                                                            <i class="bi bi-x-circle me-1"></i>Hủy phiếu
+                                                        </a>
+                                                    </li>
+                                                }
+                                            }
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7">
+                                <div class="empty-state">
+                                    <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+                                    <h5>Không tìm thấy phiếu xuất kho nào</h5>
+                                    <p>Thử thay đổi từ khóa tìm kiếm hoặc tạo phiếu mới từ đơn hàng.</p>
                                 </div>
                             </td>
                         </tr>
                     }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="7">
-                            <div class="empty-state">
-                                <div class="empty-icon"><i class="bi bi-inbox"></i></div>
-                                <h5>Không tìm thấy phiếu xuất kho nào</h5>
-                                <p>Thử thay đổi từ khóa tìm kiếm hoặc tạo phiếu mới từ đơn hàng.</p>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -224,35 +250,51 @@
                             </div>
                         }
                     </div>
-                    <div class="list-card-actions">
-                        <div class="dropdown position-static">
-                            <button class="btn btn-sm btn-outline-secondary" type="button" id="gridDropdownMenuButton-@deliveryNote.Id" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="window">
-                                <i class="bi bi-three-dots"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="gridDropdownMenuButton-@deliveryNote.Id">
-                                <li><a class="dropdown-item py-2" asp-action="Details" asp-route-id="@deliveryNote.Id"><i class="bi bi-info-circle me-2 text-primary"></i>Chi tiết</a></li>
-                                <li><a class="dropdown-item py-2" asp-action="Print" asp-route-id="@deliveryNote.Id" target="_blank"><i class="bi bi-printer me-2 text-secondary"></i>In phiếu (2 bản)</a></li>
-                                @if (deliveryNote.Status == (int)DeliveryNoteStatus.Draft)
+                    <div class="list-card-actions justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <a class="btn btn-sm btn-light" asp-action="Details" asp-route-id="@deliveryNote.Id">
+                                <i class="bi bi-info-circle me-1 text-primary"></i>
+                                <span class="visually-hidden">Chi tiết</span>
+                            </a>
+                            <a class="btn btn-sm btn-light" asp-action="Print" asp-route-id="@deliveryNote.Id" target="_blank">
+                                <i class="bi bi-printer me-1 text-secondary"></i>
+                                <span class="visually-hidden">In phiếu</span>
+                            </a>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            @if (!deliveryNote.IsDirectShip && deliveryNote.Status == (int)DeliveryNoteStatus.Draft)
+                            {
+                                <a class="btn btn-sm btn-primary btn-confirm fw-medium" href="#" data-id="@deliveryNote.Id">
+                                    <i class="bi bi-check-all me-1"></i>Xuất hàng
+                                </a>
+                            }
+                            @if (!deliveryNote.IsDirectShip && deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed)
+                            {
+                                <a class="btn btn-sm btn-secondary btn-delivering fw-medium" href="#" data-id="@deliveryNote.Id">
+                                    <i class="bi bi-truck me-1"></i>Đang giao
+                                </a>
+                            }
+                            @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering)
+                            {
+                                <a class="btn btn-sm btn-success btn-delivered fw-medium" href="#" data-id="@deliveryNote.Id">
+                                    <i class="bi bi-check-circle-fill me-1"></i>Đã giao
+                                </a>
+                            }
+                            @if (deliveryNote.Status != (int)DeliveryNoteStatus.Delivered && deliveryNote.Status != (int)DeliveryNoteStatus.Cancelled)
+                            {
+                                if (deliveryNote.IsDirectShip)
                                 {
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item py-2 text-primary btn-confirm fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-check-all me-2"></i>Xác nhận xuất</a></li>
+                                    <a class="btn btn-sm btn-danger btn-customer-reject fw-medium" href="#" data-id="@deliveryNote.Id" data-code="@deliveryNote.Code">
+                                        <i class="bi bi-person-fill-x me-1"></i>Từ chối
+                                    </a>
                                 }
-                                @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed)
+                                else
                                 {
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item py-2 text-warning btn-delivering fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-truck me-2"></i>Bắt đầu đi giao</a></li>
+                                    <a class="btn btn-sm btn-danger btn-cancel fw-medium" href="#" data-id="@deliveryNote.Id">
+                                        <i class="bi bi-x-circle me-1"></i>Hủy phiếu
+                                    </a>
                                 }
-                                @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering)
-                                {
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item py-2 text-success btn-delivered fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-check-circle-fill me-2"></i>Xác nhận Đã giao</a></li>
-                                }
-                                @if (deliveryNote.Status != (int)DeliveryNoteStatus.Delivered && deliveryNote.Status != (int)DeliveryNoteStatus.Cancelled)
-                                {
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item py-2 text-danger btn-cancel fw-medium" href="#" data-id="@deliveryNote.Id"><i class="bi bi-x-circle me-2"></i>Hủy phiếu</a></li>
-                                }
-                            </ul>
+                            }
                         </div>
                     </div>
                 </article>
@@ -291,289 +333,59 @@
     }
 </div>
 
-<!-- Modal Mark Delivered (Bằng chứng) -->
-<div class="modal fade" id="markDeliveredModal" tabindex="-1" aria-labelledby="markDeliveredModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <form id="markDeliveredForm" method="post" enctype="multipart/form-data">
-            @Html.AntiForgeryToken()
-            <input type="hidden" id="deliveryNoteId" name="deliveryNoteId" />
-            <input type="hidden" id="acceptanceItemsJson" name="acceptanceItemsJson" />
-            
-            <div class="modal-content border-0 shadow rounded-4">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" id="markDeliveredModalLabel">Xác nhận giao hàng thành công</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body py-4">
-                    <div class="alert alert-info border-0 rounded-3 mb-4">
-                        Phiếu xuất này đã được giao đến tay khách hàng. Hãy chụp ảnh để xác nhận.
-                    </div>
-                    <div class="mb-3">
-                        <label for="receiverName" class="form-label small fw-bold text-muted text-uppercase mb-2">Tên người nhận (Không bắt buộc)</label>
-                        <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="receiverName" name="receiverName" placeholder="Ví dụ: Anh Tâm">
-                    </div>
-                    <div class="table-responsive mb-3">
-                        <table class="table table-sm align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Hàng hóa</th>
-                                    <th class="text-end" style="width: 110px;">Số lượng giao</th>
-                                    <th class="text-end" style="width: 150px;">Nhận thực tế</th>
-                                    <th class="text-end" style="width: 110px;">Trả lại</th>
-                                </tr>
-                            </thead>
-                            <tbody id="acceptanceTableBody"></tbody>
-                        </table>
-                    </div>
-                    <div class="mb-3">
-                        <label for="rejectReason" class="form-label small fw-bold text-muted text-uppercase mb-2">Lý do trả hàng</label>
-                        <textarea class="form-control rounded-3 fs-6" id="rejectReason" rows="2"
-                                  placeholder="Nhập 1 lý do chung cho toàn bộ số lượng trả lại"></textarea>
-                    </div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label for="agreedCustomerCharge" class="form-label small fw-bold text-muted text-uppercase mb-2">Chi phí phát sinh</label>
-                            <input class="form-control form-control-lg rounded-3 fs-6" id="agreedCustomerCharge" name="agreedCustomerCharge"
-                                   value="0" data-decimal="currency" placeholder="Nhập chi phí phát sinh (nếu có)" />
-                        </div>
-                        <div class="col-md-8">
-                            <label for="agreedCustomerChargeReason" class="form-label small fw-bold text-muted text-uppercase mb-2">Lý do</label>
-                            <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="agreedCustomerChargeReason" name="agreedCustomerChargeReason"
-                                   placeholder="Nhập lý do phát sinh chi phí" />
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="deliveryProofPicture" class="form-label small fw-bold text-muted text-uppercase mb-2">Hình ảnh bằng chứng <span class="text-danger">*</span></label>
-                        <input class="form-control form-control-lg rounded-3 fs-6" type="file" id="deliveryProofPicture" name="pictureFile" accept="image/*" capture="environment" required>
-                        <div class="form-text mt-2 mb-0">Ví dụ: Chụp ảnh hàng hóa đã xếp lên cửa hàng, chữ ký người nhận. Bắt buộc chụp/tải ảnh lên!</div>
-                    </div>
-                    <div class="mt-3 text-center d-none" id="previewContainer">
-                        <img id="imagePreview" src="#" alt="Preview" class="img-fluid rounded-4 shadow-sm" style="max-height: 250px; display: none; object-fit: cover; width: 100%; border: 1px solid var(--bs-border-color);" />
-                    </div>
-                </div>
-                <div class="modal-footer border-0 pt-0 pb-4 px-4">
-                    <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-success px-4 rounded-3 shadow-sm px-5" id="btnSubmitDelivery">
-                        <i class="bi bi-camera me-1"></i> Xác nhận Đã giao
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
+@if (Model.Data.Any(note => note.Status == (int)DeliveryNoteStatus.Confirmed || note.Status == (int)DeliveryNoteStatus.Delivering))
+{
+    <partial name="_DeliveryNote.ConfirmDelivered" />
+    <partial name="_DeliveryNote.ConfirmReject" model="@Model.AvailableWarehouses" />
+
+}
 
 @section Scripts {
-    <script>
+    <partial name="_ValidationScriptsPartial" />
+    <script type="module">
+        import DeliverNoteController from '/modules/DeliveryNoteController.js';
+
         $(document).ready(function () {
-            
+            const deliveryNoteController = new DeliverNoteController({ hidePageLoadOnRequestEnd: false });
+
             // Confirm
-            $('.btn-confirm').click(function(e) {
+            $('.btn-confirm').click(async function(e) {
                 e.preventDefault();
                 var id = $(this).data('id');
-                if (confirm('Xác nhận phiếu xuất kho này?')) {
-                    postAction('/DeliveryNote/Confirm/' + id);
-                }
+                var result = await deliveryNoteController.confirm(id);
+                if (result?.success)
+                    location.reload();
             });
 
             // Mark Delivering
-            $('.btn-delivering').click(function(e) {
+            $('.btn-delivering').click(async function(e) {
                 e.preventDefault();
                 var id = $(this).data('id');
-                postAction('/DeliveryNote/MarkDelivering/' + id);
+                var result = await deliveryNoteController.delivering(id);
+                if (result?.success)
+                    location.reload();
             });
 
             // Cancel
-            $('.btn-cancel').click(function(e) {
+            $('.btn-cancel').click(async function(e) {
                 e.preventDefault();
                 var id = $(this).data('id');
-                if (confirm('Bạn có chắc chắn muốn hủy phiếu xuất này?')) {
-                    postAction('/DeliveryNote/Cancel/' + id);
-                }
+                var result = await deliveryNoteController.cancel(id);
+                if (result?.success)
+                    location.reload();
             });
 
-            // Mark Delivered Flow
-            const deliveryItemsSource = @Html.Raw(acceptanceItemsJson);
-            const deliveryItemsByNote = {};
-            for (const sourceItem of deliveryItemsSource) {
-                deliveryItemsByNote[String(sourceItem.id)] = (sourceItem.items || []).map(item => ({
-                    id: item.id,
-                    productName: item.productName,
-                    quantity: Number(item.quantity || 0)
-                }));
-            }
-
-            var markDeliveredModal = new bootstrap.Modal(document.getElementById('markDeliveredModal'));
+            $('.btn-customer-reject').click(function(e) {
+                e.preventDefault();
+                const {id, code, warehouse } = $(this).data();
+                deliveryNoteController.beginRejectWorkflow('rejectDeliveryNoteModal').setData(id, code, warehouse);
+            });
 
             $('.btn-delivered').click(function(e) {
                 e.preventDefault();
                 var id = String($(this).data('id'));
-                $('#deliveryNoteId').val(id);
-                $('#receiverName').val('');
-                $('#rejectReason').val('');
-                $('#agreedCustomerCharge').val('0');
-                $('#agreedCustomerChargeReason').val('');
-                $('#deliveryProofPicture').val('');
-                $('#previewContainer').addClass('d-none');
-                $('#imagePreview').hide().attr('src', '#');
-                buildAcceptanceRows(id);
-                markDeliveredModal.show();
+                deliveryNoteController.beginDeliveredWorkflow('markDeliveredModal').setId(id);
             });
-
-            function escapeHtml(value) {
-                return String(value ?? '').replace(/[&<>"']/g, char => ({
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#039;'
-                }[char]));
-            }
-
-            function buildAcceptanceRows(deliveryNoteId) {
-                const deliveryItems = deliveryItemsByNote[String(deliveryNoteId)] || [];
-                const rowsHtml = deliveryItems.map(item => {
-                    const deliveredQty = Number(item.quantity || 0);
-                    return `
-                        <tr data-item-id="${item.id}" data-delivered-qty="${deliveredQty}">
-                            <td>${escapeHtml(item.productName)}</td>
-                            <td class="text-end">${deliveredQty.toLocaleString('vi-VN')}</td>
-                            <td>
-                                <input type="number" step="0.01" min="0" max="${deliveredQty}" class="form-control form-control-sm text-end accepted-qty" value="${deliveredQty}">
-                            </td>
-                            <td class="text-end rejected-qty text-danger fw-semibold">0</td>
-                        </tr>`;
-                }).join('');
-                $('#acceptanceTableBody').html(rowsHtml);
-            }
-
-            function updateRejectedQuantity($row) {
-                const deliveredQty = Number($row.data('delivered-qty') || 0);
-                let acceptedQty = Number($row.find('.accepted-qty').val() || 0);
-                if (!Number.isFinite(acceptedQty)) acceptedQty = 0;
-                if (acceptedQty < 0) acceptedQty = 0;
-                if (acceptedQty > deliveredQty) acceptedQty = deliveredQty;
-                $row.find('.accepted-qty').val(acceptedQty);
-
-                const rejectedQty = Math.max(0, deliveredQty - acceptedQty);
-                $row.find('.rejected-qty').text(rejectedQty.toLocaleString('vi-VN'));
-            }
-
-            $('#acceptanceTableBody').on('input', '.accepted-qty', function() {
-                updateRejectedQuantity($(this).closest('tr'));
-            });
-
-            function buildAcceptancePayload() {
-                const items = [];
-                let hasRejectedItems = false;
-                const rejectReason = String($('#rejectReason').val() || '').trim();
-
-                $('#acceptanceTableBody tr').each(function() {
-                    const $row = $(this);
-                    const itemId = String($row.data('item-id'));
-                    const deliveredQty = Number($row.data('delivered-qty') || 0);
-                    const acceptedQty = Number($row.find('.accepted-qty').val() || 0);
-                    const normalizedAcceptedQty = Math.max(0, Math.min(deliveredQty, acceptedQty));
-                    const rejectedQty = Math.max(0, deliveredQty - normalizedAcceptedQty);
-                    if (rejectedQty > 0) hasRejectedItems = true;
-
-                    items.push({
-                        deliveryNoteItemId: itemId,
-                        acceptedQuantity: normalizedAcceptedQty,
-                        rejectedQuantity: rejectedQty,
-                        rejectReason: rejectedQty > 0 ? rejectReason : null
-                    });
-                });
-
-                if (hasRejectedItems && !rejectReason) {
-                    alert('Vui lòng nhập lý do trả hàng.');
-                    return null;
-                }
-
-                return items;
-            }
-
-            // Image Preview inside Modal
-            $("#deliveryProofPicture").change(function () {
-                var input = this;
-                if (input.files && input.files[0]) {
-                    var reader = new FileReader();
-
-                    reader.onload = function (e) {
-                        $('#previewContainer').removeClass('d-none');
-                        $('#imagePreview').attr('src', e.target.result).show();
-                    }
-
-                    reader.readAsDataURL(input.files[0]);
-                } else {
-                    $('#previewContainer').addClass('d-none');
-                    $('#imagePreview').hide();
-                }
-            });
-
-            // Form Submit for Delivery Proof
-            $('#markDeliveredForm').submit(function(e) {
-                e.preventDefault();
-                var form = $(this)[0];
-                var acceptanceItems = buildAcceptancePayload();
-                if (!acceptanceItems) {
-                    return;
-                }
-
-                $('#acceptanceItemsJson').val(JSON.stringify(acceptanceItems));
-                var formData = new FormData(form);
-                
-                var actionUrl = '/DeliveryNote/MarkDelivered';
-                
-                var btn = $('#btnSubmitDelivery');
-                var originalText = btn.html();
-                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang tải ảnh...');
-
-                $.ajax({
-                    url: actionUrl,
-                    type: 'POST',
-                    data: formData,
-                    processData: false, // important
-                    contentType: false, // important
-                    headers: {
-                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    success: function(res) {
-                        if (res.success) {
-                            alert(res.message);
-                            location.reload();
-                        } else {
-                            alert("Lỗi: " + res.message);
-                            btn.prop('disabled', false).html(originalText);
-                        }
-                    },
-                    error: function(err) {
-                        alert('Có lỗi hệ thống xảy ra.');
-                        console.error(err);
-                        btn.prop('disabled', false).html(originalText);
-                    }
-                });
-            });
-
-            function postAction(url) {
-                $.ajax({
-                    url: url,
-                    type: 'POST',
-                    data: {
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    success: function(res) {
-                        if (res.success) {
-                            location.reload();
-                        } else {
-                            alert(res.message);
-                        }
-                    },
-                    error: function(err) {
-                        alert("Lỗi hệ thống.");
-                        console.error(err);
-                    }
-                });
-            }
         });
     </script>
 }

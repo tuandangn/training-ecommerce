@@ -1,24 +1,21 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
-using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
-using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Models.DirectShipDelivery;
 
 namespace NamEcommerce.Web.Controllers;
 
 public sealed class DirectShipDeliveryController(
-    IMediator mediator,
-    IDirectShipAppService directShipAppService,
-    IWarehouseAppService warehouseAppService) : BaseAuthorizedController
+    IMediator mediator, IDirectShipAppService directShipAppService) : BaseAuthorizedController
 {
     public IActionResult Index() => RedirectToAction(nameof(Pending));
 
     public async Task<IActionResult> Pending(DirectShipDeliveryFilterModel filter)
     {
-        var items = await directShipAppService.GetPendingDeliveriesAsync(new PendingDirectShipFilterAppDto
+        var deliveryNotes = await directShipAppService.GetPendingDeliveriesAsync(new PendingDirectShipFilterAppDto
         {
             Keywords = filter.Keywords,
             FromDateUtc = filter.FromDate.HasValue ? filter.FromDate.Value.ToUniversalTime() : null,
@@ -28,24 +25,25 @@ public sealed class DirectShipDeliveryController(
         var model = new PendingDirectShipDeliveryListModel
         {
             Filter = filter,
-            Items = items.Select(d => new PendingDirectShipDeliveryModel
+            Items = deliveryNotes.Select(deliveryNote => new PendingDirectShipDeliveryModel
             {
-                Id = d.Id,
-                Code = d.Code,
-                OrderId = d.OrderId,
-                OrderCode = d.OrderCode,
-                CustomerName = d.CustomerName,
-                CustomerPhone = d.CustomerPhone,
-                ShippingAddress = d.ShippingAddress,
-                CreatedOn = d.CreatedOnUtc.ToLocalTime(),
-                Items = d.Items.Select(i => new PendingDirectShipDeliveryItemModel
+                Id = deliveryNote.Id,
+                WarehouseId = deliveryNote.WarehouseId,
+                Code = deliveryNote.Code,
+                OrderId = deliveryNote.OrderId,
+                OrderCode = deliveryNote.OrderCode,
+                CustomerName = deliveryNote.CustomerName,
+                CustomerPhone = deliveryNote.CustomerPhone,
+                ShippingAddress = deliveryNote.ShippingAddress,
+                CreatedOn = deliveryNote.CreatedOnUtc.ToLocalTime(),
+                Items = deliveryNote.Items.Select(i => new PendingDirectShipDeliveryItemModel
                 {
                     ProductName = i.ProductName,
                     Quantity = i.Quantity,
                     UnitPrice = i.UnitPrice
                 }).ToList()
             }).ToList(),
-            ReturnWarehouseOptions = await GetReturnWarehouseOptionsAsync().ConfigureAwait(false)
+            ReturnWarehouseOptions = await mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false)
         };
 
         return View(model);
@@ -75,7 +73,7 @@ public sealed class DirectShipDeliveryController(
     }
 
     [HttpPost]
-    public async Task<IActionResult> RejectDelivery([FromBody] RejectDirectShipDeliveryRequest request)
+    public async Task<IActionResult> RejectDelivery(RejectDirectShipDeliveryRequest request)
     {
         if (request.DeliveryNoteId == Guid.Empty)
             return Json(new { success = false, message = "ID phiếu không hợp lệ." });
@@ -118,20 +116,6 @@ public sealed class DirectShipDeliveryController(
             return Json(new { success = true });
 
         return Json(new { success = false, message = result.ErrorMessage });
-    }
-
-    private async Task<IList<DirectShipReturnWarehouseOptionModel>> GetReturnWarehouseOptionsAsync()
-    {
-        var warehouses = await warehouseAppService.GetWarehousesAsync(0, int.MaxValue).ConfigureAwait(false);
-        return warehouses
-            .Where(w => w.IsActive && w.WarehouseType == (int)WarehouseType.Physical)
-            .OrderBy(w => w.Name)
-            .Select(w => new DirectShipReturnWarehouseOptionModel
-            {
-                Id = w.Id,
-                Name = w.Name
-            })
-            .ToList();
     }
 }
 

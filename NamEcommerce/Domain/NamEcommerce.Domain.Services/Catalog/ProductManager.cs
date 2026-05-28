@@ -204,9 +204,6 @@ public sealed class ProductManager : IProductManager
         if (product is null)
             throw new ProductIsNotFoundException(dto.Id);
 
-        var oldUnitPrice = product.UnitPrice;
-        var oldCostPrice = product.CostPrice;
-
         product.ShortDesc = dto.ShortDesc;
         product.UpdatedOnUtc = DateTime.UtcNow;
 

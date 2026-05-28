@@ -196,59 +196,65 @@ public sealed class DirectShipManager(
     public Task<IList<DeliveryNoteDto>> GetPendingDeliveriesAsync(
         string? keywords, DateTime? fromDateUtc, DateTime? toDateUtc, CancellationToken ct = default)
     {
-        var query = deliveryNoteReader.DataSource
-            .Where(d => d.SourceType == DeliveryNoteSourceType.DirectShipToCustomer
-                     && d.Status == DeliveryNoteStatus.Confirmed);
-
-        if (!string.IsNullOrWhiteSpace(keywords))
+        return Task.Run(async () =>
         {
-            var kw = keywords.Trim().ToLower();
-            query = query.Where(d =>
-                d.Code.ToLower().Contains(kw) ||
-                d.CustomerInfo.FullName.Value.ToLower().Contains(kw) ||
-                d.ShippingAddress.Value.ToLower().Contains(kw));
-        }
+            var query = deliveryNoteReader.DataSource
+                .Where(d => d.SourceType == DeliveryNoteSourceType.DirectShipToCustomer
+                         && d.Status == DeliveryNoteStatus.Confirmed);
 
-        if (fromDateUtc.HasValue)
-            query = query.Where(d => d.CreatedOnUtc >= fromDateUtc.Value);
+            if (!string.IsNullOrWhiteSpace(keywords))
+            {
+                var kw = keywords.Trim().ToLower();
+                query = query.Where(d =>
+                    d.Code.ToLower().Contains(kw) ||
+                    d.CustomerInfo.FullName.Value.ToLower().Contains(kw) ||
+                    d.ShippingAddress.Value.ToLower().Contains(kw));
+            }
 
-        if (toDateUtc.HasValue)
-            query = query.Where(d => d.CreatedOnUtc <= toDateUtc.Value);
+            if (fromDateUtc.HasValue)
+                query = query.Where(d => d.CreatedOnUtc >= fromDateUtc.Value);
 
-        var results = query
-            .OrderByDescending(d => d.CreatedOnUtc)
-            .ToList();
+            if (toDateUtc.HasValue)
+                query = query.Where(d => d.CreatedOnUtc <= toDateUtc.Value);
 
-        IList<DeliveryNoteDto> dtos = results.Select(MapDeliveryNote).ToList();
+            var results = query
+                .OrderByDescending(d => d.CreatedOnUtc)
+                .ToList();
 
-        return Task.FromResult(dtos);
+            IList<DeliveryNoteDto> dtos = results.Select(MapDeliveryNote).ToList();
+
+            return dtos;
+        });
     }
 
     public Task<IList<DirectShipAllocationStatusDto>> GetDirectShipAllocationsForOrderItemsAsync(
         IReadOnlyList<Guid> orderItemIds, CancellationToken ct = default)
     {
-        var deliveryNotesByOrderItem = GetDirectShipDeliveryNotesByOrderItem(orderItemIds);
+        return Task.Run(async () =>
+        {
+            var deliveryNotesByOrderItem = GetDirectShipDeliveryNotesByOrderItem(orderItemIds);
 
-        IList<DirectShipAllocationStatusDto> results = allocationReader.DataSource
-            .Where(a => a.IsDirectShip && orderItemIds.Contains(a.OrderItemId))
-            .ToList()
-            .Select(a =>
-            {
-                deliveryNotesByOrderItem.TryGetValue(a.OrderItemId, out var deliveryNote);
-                return new DirectShipAllocationStatusDto
+            IList<DirectShipAllocationStatusDto> results = allocationReader.DataSource
+                .Where(a => a.IsDirectShip && orderItemIds.Contains(a.OrderItemId))
+                .ToList()
+                .Select(a =>
                 {
-                    AllocationId = a.Id,
-                    OrderItemId = a.OrderItemId,
-                    Status = (int)a.Status,
-                    DeliveryStatus = deliveryNote is null ? null : (int)deliveryNote.Status,
-                    DeliveryNoteId = deliveryNote?.Id,
-                    DeliveryNoteCode = deliveryNote?.Code,
-                    AllocatedQuantity = a.AllocatedQuantity,
-                    ReceivedQuantity = a.ReceivedQuantity
-                };
-            })
-            .ToList();
-        return Task.FromResult(results);
+                    deliveryNotesByOrderItem.TryGetValue(a.OrderItemId, out var deliveryNote);
+                    return new DirectShipAllocationStatusDto
+                    {
+                        AllocationId = a.Id,
+                        OrderItemId = a.OrderItemId,
+                        Status = (int)a.Status,
+                        DeliveryStatus = deliveryNote is null ? null : (int)deliveryNote.Status,
+                        DeliveryNoteId = deliveryNote?.Id,
+                        DeliveryNoteCode = deliveryNote?.Code,
+                        AllocatedQuantity = a.AllocatedQuantity,
+                        ReceivedQuantity = a.ReceivedQuantity
+                    };
+                })
+                .ToList();
+            return results;
+        });
     }
 
     public Task<IList<DirectShipAllocationForPoItemDto>> GetDirectShipAllocationsForPoItemsAsync(

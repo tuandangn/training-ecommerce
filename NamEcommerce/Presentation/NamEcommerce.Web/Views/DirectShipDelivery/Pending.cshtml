@@ -119,8 +119,8 @@
                                         <i class="bi bi-check2 me-1"></i>Đã giao
                                     </button>
                                     <button type="button" class="btn btn-sm btn-outline-danger btn-reject-delivery"
-                                            data-id="@item.Id" data-code="@item.Code">
-                                        <i class="bi bi-x-lg me-1"></i>Không nhận
+                                            data-id="@item.Id" data-code="@item.Code" data-warehouse="@item.WarehouseId">
+                                        <i class="bi bi-person-fill-x me-1"></i>Từ chối
                                     </button>
                                 </td>
                             </tr>
@@ -138,223 +138,31 @@
     </div>
 </div>
 
-
-<!-- Modal Confirm -->
-<div class="modal fade" id="modalConfirm" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title">
-                    <i class="bi bi-check2-circle text-success me-2"></i>Xác nhận giao hàng
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted mb-3">Xác nhận khách đã nhận hàng giao thẳng từ NCC.</p>
-                <div id="confirmDnCode" class="mb-3 text-muted small"></div>
-                <div class="mb-3">
-                    <label class="form-label">Ngày xác nhận</label>
-                    <input type="date" id="confirmDate" class="form-control"
-                           value="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                </div>
-                <div class="mb-0">
-                    <label class="form-label">Ghi chú <small class="text-muted">(tùy chọn)</small></label>
-                    <textarea id="confirmNote" class="form-control" rows="3"
-                              placeholder="Ghi chú xác nhận..."></textarea>
-                </div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-success" id="btnConfirmSubmit" data-testid="directship-confirm-submit">
-                    <i class="bi bi-check2 me-1"></i>Xác nhận đã nhận hàng
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Reject -->
-<div class="modal fade" id="modalReject" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title">
-                    <i class="bi bi-x-circle text-danger me-2"></i>Từ chối nhận hàng
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-warning d-flex align-items-start gap-2 mb-3">
-                    <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
-                    <div>
-                        Hàng sẽ được chuyển về <strong>kho bạn chọn</strong> với giá vốn theo đơn nhập.
-                        Thao tác này không thể hoàn tác.
-                    </div>
-                </div>
-                <div id="rejectDnCode" class="mb-3 text-muted small"></div>
-                <div class="mb-3">
-                    <label class="form-label">Kho nhận hàng trả về <span class="text-danger">*</span></label>
-                    <select id="rejectReturnWarehouseId" class="form-select">
-                        <option value="">-- Chọn kho nhận hàng --</option>
-                        @foreach (var warehouse in Model.ReturnWarehouseOptions)
-                        {
-                            <option value="@warehouse.Id">@warehouse.Name</option>
-                        }
-                    </select>
-                    <div id="rejectReturnWarehouseError" class="invalid-feedback">Vui lòng chọn kho nhận hàng trả về.</div>
-                </div>
-                <div class="mb-0">
-                    <label class="form-label">Lý do từ chối <span class="text-danger">*</span></label>
-                    <textarea id="rejectReason" class="form-control" rows="3"
-                              placeholder="Nhập lý do từ chối"></textarea>
-                    <div id="rejectReasonError" class="invalid-feedback">Lý do từ chối là bắt buộc.</div>
-                </div>
-            </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-danger" id="btnRejectSubmit">
-                    <i class="bi bi-x-lg me-1"></i>Từ chối &amp; chuyển về kho
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<partial name="_DeliveryNote.ConfirmDelivered" />
+<partial name="_DeliveryNote.ConfirmReject" model="Model.ReturnWarehouseOptions" />
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
     <script type="module">
+        import DeliverNoteController from '/modules/DeliveryNoteController.js';
+
         (function () {
-            let pendingId = null;
-            const modalConfirm = new bootstrap.Modal(document.getElementById('modalConfirm'));
-            const modalReject = new bootstrap.Modal(document.getElementById('modalReject'));
+            const deliveryNoteController = new DeliverNoteController({ hidePageLoadOnRequestEnd: false });
 
             document.querySelectorAll('.btn-confirm-delivery').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const id = btn.dataset.id;
                     if (!id) return;
-                    window.location.href = '/DeliveryNote/Details/' + id;
+                    deliveryNoteController.beginDeliveredWorkflow('markDeliveredModal').setId(id);
                 });
             });
 
             document.querySelectorAll('.btn-reject-delivery').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    pendingId = btn.dataset.id;
-                    document.getElementById('rejectDnCode').textContent = 'Phiếu: ' + btn.dataset.code;
-                    document.getElementById('rejectReturnWarehouseId').value = '';
-                    document.getElementById('rejectReturnWarehouseId').classList.remove('is-invalid');
-                    document.getElementById('rejectReason').value = '';
-                    document.getElementById('rejectReason').classList.remove('is-invalid');
-                    modalReject.show();
+                    const {id, code, warehouse } = btn.dataset;
+                    deliveryNoteController.beginRejectWorkflow('rejectDeliveryNoteModal').setData(id, code, warehouse);
                 });
             });
-
-            document.getElementById('btnConfirmSubmit').addEventListener('click', async () => {
-                if (!pendingId) return;
-
-                const dateVal = document.getElementById('confirmDate').value;
-                const note = document.getElementById('confirmNote').value.trim();
-                const btn = document.getElementById('btnConfirmSubmit');
-
-                btn.disabled = true;
-                try {
-                    const res = await fetch('@Url.Action("ConfirmDelivery")', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            deliveryNoteId: pendingId,
-                            confirmedDate: dateVal ? new Date(dateVal).toISOString() : null,
-                            note: note || null
-                        })
-                    });
-                    const data = await res.json();
-                    modalConfirm.hide();
-                    if (data.success) {
-                        removeRow(pendingId);
-                        showToast(data.message, 'success');
-                    } else {
-                        showToast(data.message, 'danger');
-                    }
-                } finally {
-                    btn.disabled = false;
-                    pendingId = null;
-                }
-            });
-
-            document.getElementById('btnRejectSubmit').addEventListener('click', async () => {
-                if (!pendingId) return;
-
-                const returnWarehouseId = document.getElementById('rejectReturnWarehouseId').value;
-                const reason = document.getElementById('rejectReason').value.trim();
-                if (!returnWarehouseId) {
-                    document.getElementById('rejectReturnWarehouseId').classList.add('is-invalid');
-                    return;
-                }
-                document.getElementById('rejectReturnWarehouseId').classList.remove('is-invalid');
-
-                if (!reason) {
-                    document.getElementById('rejectReason').classList.add('is-invalid');
-                    return;
-                }
-                document.getElementById('rejectReason').classList.remove('is-invalid');
-
-                if(!confirm('Xác nhận từ chối nhận hàng. Thao tác này sẽ không thể hoàn tác. Bạn muốn tiếp tục?')) return;
-
-                showPageLoading();
-                const btn = document.getElementById('btnRejectSubmit');
-                btn.disabled = true;
-                try {
-                    const res = await fetch('@Url.Action("RejectDelivery")', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ deliveryNoteId: pendingId, returnWarehouseId, reason })
-                    });
-                    const data = await res.json();
-                    modalReject.hide();
-                    if (data.success) {
-                        removeRow(pendingId);
-                        showToast(data.message, 'success');
-                    } else {
-                        showToast(data.message, 'danger');
-                    }
-                } finally {
-                    hidePageLoading();
-                    btn.disabled = false;
-                    pendingId = null;
-                }
-            });
-
-            function removeRow(id) {
-                const row = document.querySelector(`tr[data-id="${id}"]`);
-                if (row) {
-                    row.style.transition = 'opacity 0.3s';
-                    row.style.opacity = '0';
-                    setTimeout(() => row.remove(), 300);
-                }
-            }
-
-            function showToast(message, type) {
-                const container = document.getElementById('toast-container') || createToastContainer();
-                const id = 'toast-' + Date.now();
-                const html = `
-                    <div id="${id}" class="toast align-items-center text-bg-${type} border-0" role="alert">
-                        <div class="d-flex">
-                            <div class="toast-body">${message}</div>
-                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                        </div>
-                    </div>`;
-                container.insertAdjacentHTML('beforeend', html);
-                const toastEl = document.getElementById(id);
-                new bootstrap.Toast(toastEl, { delay: 3000 }).show();
-                toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-            }
-
-            function createToastContainer() {
-                const el = document.createElement('div');
-                el.id = 'toast-container';
-                el.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-                el.style.zIndex = '9999';
-                document.body.appendChild(el);
-                return el;
-            }
         })();
     </script>
 }

@@ -12,6 +12,7 @@ public sealed record PendingDirectShipDeliveryItemAppDto
 public sealed record PendingDirectShipDeliveryAppDto
 {
     public required Guid Id { get; init; }
+    public required Guid WarehouseId { get; set; }
     public required string Code { get; init; }
     public required Guid OrderId { get; init; }
     public string? OrderCode { get; init; }

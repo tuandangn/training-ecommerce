@@ -1556,7 +1556,7 @@
                 if (modalQtyInput) {
 					modalQtyInput.addEventListener('change', function () {
 						const val = (window.DecimalFields && typeof DecimalFields.stripFormatting === 'function')
-							? parseFloat(DecimalFields.stripFormatting(this.value, true)) || 0
+							? parseFloat(DecimalFields.stripFormatting(this.value, 2)) || 0
 							: parseFloat((this.value || '').replace(/[^0-9.]/g, '')) || 0;
 						const panel = document.getElementById('oversupplyWarningPanel');
 						if (val > itemRemainingQty && itemRemainingQty > 0) {
@@ -1575,7 +1575,7 @@
                 if (receiveItemForm) {
                 receiveItemForm.addEventListener('submit', function (e) {
                 const val = (window.DecimalFields && typeof DecimalFields.stripFormatting === 'function')
-                    ? parseFloat(DecimalFields.stripFormatting(document.getElementById('modalReceivedQty').value, true)) || 0
+                    ? parseFloat(DecimalFields.stripFormatting(document.getElementById('modalReceivedQty').value, 2)) || 0
                     : parseFloat((document.getElementById('modalReceivedQty').value || '').replace(/[^0-9.]/g, '')) || 0;
                 if (val > itemRemainingQty && itemRemainingQty > 0) {
                 const choice = document.querySelector('input[name="oversupplyChoice"]:checked')?.value;
@@ -1620,7 +1620,7 @@
                 if (!sellingPriceInput || !warningBox) return;
                 // Currency format trên UI là "3.400.000" (dấu chấm phân cách nghìn) — không có phần thập phân.
                 const stripped = (window.DecimalFields && typeof DecimalFields.stripFormatting === 'function')
-                    ? DecimalFields.stripFormatting(sellingPriceInput.value, false)
+                    ? DecimalFields.stripFormatting(sellingPriceInput.value)
                     : (sellingPriceInput.value || '').toString().replace(/[^0-9]/g, '');
                 const unitCost = parseFloat(sellingPriceInput.getAttribute('data-unit-cost')) || 0;
                 const sellingPrice = parseFloat(stripped);

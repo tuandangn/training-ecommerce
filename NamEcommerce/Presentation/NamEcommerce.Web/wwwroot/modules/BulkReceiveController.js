@@ -404,7 +404,7 @@ export default class BulkReceiveController {
     #parseCurrency(value) {
         if (!value) return 0;
         const stripped = window.DecimalFields?.stripFormatting
-            ? DecimalFields.stripFormatting(String(value), false)
+            ? DecimalFields.stripFormatting(String(value))
             : String(value).replace(/[^0-9]/g, '');
         const n = parseFloat(stripped);
         return isNaN(n) ? 0 : n;
