@@ -510,14 +510,16 @@
 </div>
 
 @section Scripts {
-    <script>
+    <script type="module">
+        import { confirm } from '/modules/modals.js';
+
         $(document).ready(function () {
 
             // Confirm
-            $('.btn-confirm').click(function(e) {
+            $('.btn-confirm').click(async function(e) {
                 e.preventDefault();
                 var id = $(this).data('id');
-                if (confirm('Xác nhận phiếu xuất kho này?')) {
+                if (await confirm('Xuất kho', 'Xác nhận hàng hóa đã xuất kho?')) {
                     postAction('/DeliveryNote/Confirm/' + id);
                 }
             });
@@ -530,10 +532,10 @@
             });
 
             // Cancel
-            $('.btn-cancel').click(function(e) {
+            $('.btn-cancel').click(async function(e) {
                 e.preventDefault();
                 var id = $(this).data('id');
-                if (confirm('Bạn có chắc chắn muốn hủy phiếu xuất này?')) {
+                if (await confirm('Hủy phiếu xuất', 'Bạn có chắc chắn muốn hủy phiếu xuất này?')) {
                     postAction('/DeliveryNote/Cancel/' + id);
                 }
             });
@@ -661,6 +663,8 @@
                 var originalText = btn.html();
                 btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang tải ảnh...');
 
+                showPageLoading();
+
                 $.ajax({
                     url: actionUrl,
                     type: 'POST',
@@ -672,14 +676,16 @@
                     },
                     success: function(res) {
                         if (res.success) {
-                            alert(res.message);
+                            //alert(res.message);
                             location.reload();
                         } else {
+                            hidePageLoading();
                             alert("Lỗi: " + res.message);
                             btn.prop('disabled', false).html(originalText);
                         }
                     },
                     error: function(err) {
+                        hidePageLoading();
                         alert('Có lỗi hệ thống xảy ra.');
                         console.error(err);
                         btn.prop('disabled', false).html(originalText);
@@ -688,6 +694,7 @@
             });
 
             function postAction(url) {
+                showPageLoading();
                 $.ajax({
                     url: url,
                     type: 'POST',
@@ -698,6 +705,7 @@
                         if (res.success) {
                             location.reload();
                         } else {
+                            hidePageLoading();
                             if (res.shortageItems && res.shortageItems.length) {
                                 showShortageModal(res);
                                 return;
@@ -706,6 +714,7 @@
                         }
                     },
                     error: function(err) {
+                        hidePageLoading();
                         alert("Lỗi hệ thống.");
                         console.error(err);
                     }

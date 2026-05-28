@@ -229,6 +229,15 @@
                             Hiển thị giá trên phiếu
                         </label>
                     </div>
+                    <div class="form-check form-switch mt-3 mb-0 p-3 bg-light rounded border">
+                        <input class="form-check-input ms-0" type="checkbox" asp-for="CompensateReturnedQuantityInNextDelivery" role="switch" id="compensateReturnedSwitch">
+                        <label class="form-check-label ms-2 fw-medium" asp-for="CompensateReturnedQuantityInNextDelivery" for="compensateReturnedSwitch">
+                            Sẽ bù vào lần xuất hàng sau
+                        </label>
+                        <div class="small text-muted mt-2">
+                            Bật tùy chọn này nếu muốn bù số lượng khách trả lại trong các lần giao tiếp theo.
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

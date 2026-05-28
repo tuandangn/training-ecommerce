@@ -99,6 +99,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 ShippingAddress = model.ShippingAddress,
                 WarehouseId = model.WarehouseId,
                 ShowPrice = model.ShowPrice,
+                CompensateReturnedQuantityInNextDelivery = model.CompensateReturnedQuantityInNextDelivery,
                 Note = model.Note,
                 Surcharge = model.Surcharge,
                 SurchargeReason = model.SurchargeReason,
@@ -293,7 +294,12 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
         try
         {
-            var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(request.OrderId).ConfigureAwait(false);
+            var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(
+                request.OrderId,
+                new CreateDeliveryNoteModel
+                {
+                    CompensateReturnedQuantityInNextDelivery = request.CompensateReturnedQuantityInNextDelivery
+                }).ConfigureAwait(false);
 
             // Validate that requested quantities don't exceed remaining quantities
             foreach (var selectedItem in request.SelectedItems)
@@ -336,6 +342,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 OrderId = model.OrderId,
                 Note = model.Note,
                 ShowPrice = model.ShowPrice,
+                CompensateReturnedQuantityInNextDelivery = model.CompensateReturnedQuantityInNextDelivery,
                 WarehouseId = request.WarehouseId,
                 ShippingAddress = model.ShippingAddress,
                 Surcharge = request.Surcharge,
@@ -387,6 +394,7 @@ public class CreateFromPreparationRequest
     public Guid OrderId { get; set; }
     public List<SelectedItemModel> SelectedItems { get; set; } = [];
     public bool ShowPrice { get; set; }
+    public bool CompensateReturnedQuantityInNextDelivery { get; set; }
     public Guid WarehouseId { get; set; }
     public string? Note { get; set; }
     public decimal Surcharge { get; set; }

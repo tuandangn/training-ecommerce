@@ -292,47 +292,67 @@
 </div>
 
 @section Styles {
-<style>
-    .receipt-info-list { margin: 0; }
-    .receipt-info-row {
-        display: flex;
-        align-items: baseline;
-        padding: .6rem 1.25rem;
-        border-bottom: 1px solid var(--bs-border-color-translucent);
-        gap: .75rem;
-    }
-    .receipt-info-row:last-child { border-bottom: none; }
-    .receipt-info-row dt {
-        font-size: .75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: .03em;
-        color: var(--bs-secondary);
-        width: 72px;
-        flex-shrink: 0;
-    }
-    .receipt-info-row dd { margin: 0; font-size: .875rem; }
-</style>
+    <style>
+        .receipt-info-list {
+            margin: 0;
+        }
+
+        .receipt-info-row {
+            display: flex;
+            align-items: baseline;
+            padding: .6rem 1.25rem;
+            border-bottom: 1px solid var(--bs-border-color-translucent);
+            gap: .75rem;
+        }
+
+            .receipt-info-row:last-child {
+                border-bottom: none;
+            }
+
+            .receipt-info-row dt {
+                font-size: .75rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: .03em;
+                color: var(--bs-secondary);
+                width: 72px;
+                flex-shrink: 0;
+            }
+
+            .receipt-info-row dd {
+                margin: 0;
+                font-size: .875rem;
+            }
+    </style>
 }
 
 @section Scripts {
     <script type="module">
-        import { toast } from "/modules/modals.js";
+        import { toast, confirm } from "/modules/modals.js";
 
         const antiForgeryToken = document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
         const returnId = '@Model.Id';
 
         // ── Chuyển sang kiểm tra ────────────────────────────────────────────
         document.querySelector('.btn-move-inspecting')?.addEventListener('click', async () => {
-            if (!confirm('Xác nhận chuyển phiếu sang trạng thái Đang kiểm tra?')) return;
+            if (!await confirm('Kiểm tra hàng hóa', 'Xác nhận đang kiểm tra hàng hóa?')) return;
             const fd = new FormData();
             fd.append('id', returnId);
             fd.append('__RequestVerificationToken', antiForgeryToken);
             try {
+                showPageLoading();
                 const res = await fetch('@Url.Action("MoveToInspecting")', { method: 'POST', body: fd }).then(r => r.json());
-                if (res.success) location.reload();
-                else toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
-            } catch { toast('Lỗi', 'Lỗi kết nối. Vui lòng thử lại.', 'danger'); }
+                if (res.success) {
+                    location.reload();
+                }
+                else{
+                    hidePageLoading();
+                    toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
+                }
+            } catch {
+                hidePageLoading();
+                toast('Lỗi', 'Lỗi kết nối. Vui lòng thử lại.', 'danger');
+            }
         });
 
         // ── Xác nhận trả hàng ───────────────────────────────────────────────
@@ -342,16 +362,23 @@
                 toast('Lỗi', 'Vui lòng chọn kho nhận hàng trả về.', 'danger');
                 return;
             }
-            if (!confirm('Xác nhận phiếu trả hàng? Hệ thống sẽ tự động tạo phiếu nhập kho và giảm công nợ khách hàng.')) return;
+            if (!await confirm('Xác nhận trả hàng', 'Hàng hóa sẽ được nhập kho và giảm công nợ khách hàng.')) return;
             const fd = new FormData();
             fd.append('id', returnId);
             fd.append('warehouseId', warehouseId);
             fd.append('__RequestVerificationToken', antiForgeryToken);
             try {
+                showPageLoading();
                 const res = await fetch('@Url.Action("Confirm")', { method: 'POST', body: fd }).then(r => r.json());
                 if (res.success) location.reload();
-                else toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
-            } catch { toast('Lỗi', 'Lỗi kết nối. Vui lòng thử lại.', 'danger'); }
+                else{
+                    hidePageLoading();
+                    toast('Lỗi', res.message || 'Thao tác thất bại.', 'danger');
+                }
+            } catch {
+                hidePageLoading();
+                toast('Lỗi', 'Lỗi kết nối. Vui lòng thử lại.', 'danger');
+            }
         });
 
         // ── Lưu thông tin ───────────────────────────────────────────────────
@@ -364,10 +391,18 @@
             fd.append('note', document.getElementById('editNote').value);
             fd.append('__RequestVerificationToken', antiForgeryToken);
             try {
+                showPageLoading();
                 const res = await fetch('@Url.Action("Update")', { method: 'POST', body: fd }).then(r => r.json());
                 if (res.success) location.reload();
-                else { errEl.textContent = res.message || 'Cập nhật thất bại.'; errEl.classList.remove('d-none'); }
-            } catch { errEl.textContent = 'Lỗi kết nối. Vui lòng thử lại.'; errEl.classList.remove('d-none'); }
+                else {
+                    hidePageLoading();
+                    errEl.textContent = res.message || 'Cập nhật thất bại.'; errEl.classList.remove('d-none');
+                }
+            } catch {
+                hidePageLoading();
+                errEl.textContent = 'Lỗi kết nối. Vui lòng thử lại.';
+                errEl.classList.remove('d-none'); 
+            }
         });
     </script>
 }

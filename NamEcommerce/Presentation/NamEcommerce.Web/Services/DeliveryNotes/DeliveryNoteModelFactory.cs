@@ -104,6 +104,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             ShowPrice = false, // Default is hide price
             Items = []
         };
+        var includeReturnedCompensation = model.CompensateReturnedQuantityInNextDelivery;
         model.OrderCode = order.Code;
         //*TODO*
         model.PlacedOn = DateTimeHelper.ToLocalTime(order.CreatedOnUtc);
@@ -150,12 +151,20 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 
         foreach (var orderItem in order.Items)
         {
-            var deliveredQty = activeDeliveryNotes
+            var deliveredQuantity = activeDeliveryNotes
                 .SelectMany(note => note.Items)
                 .Where(item => item.OrderItemId == orderItem.Id)
-                .Sum(item => Math.Max(0m, item.Quantity - returnedByDeliveryNoteItemId.GetValueOrDefault(item.Id)));
+                .Sum(item => item.Quantity);
+            var returnedQuantity = activeDeliveryNotes
+                .SelectMany(note => note.Items)
+                .Where(item => item.OrderItemId == orderItem.Id)
+                .Sum(item => returnedByDeliveryNoteItemId.GetValueOrDefault(item.Id));
+            var netDeliveredQuantity = Math.Max(0m, deliveredQuantity - returnedQuantity);
+            var deliveredQtyForRemaining = includeReturnedCompensation
+                ? netDeliveredQuantity
+                : deliveredQuantity;
             var directShipOutstandingQty = directShipOutstandingQuantities.GetValueOrDefault(orderItem.Id);
-            var remainingQty = orderItem.Quantity - deliveredQty - directShipOutstandingQty;
+            var remainingQty = orderItem.Quantity - deliveredQtyForRemaining - directShipOutstandingQty;
             if (remainingQty > 0)
             {
                 var existingItem = model.Items.FirstOrDefault(item => item.OrderItemId == orderItem.Id);
@@ -168,7 +177,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 };
                 itemModel.ProductName = orderItem.ProductName ?? string.Empty;
                 itemModel.OrderedQuantity = orderItem.Quantity;
-                itemModel.PreviouslyDeliveredQuantity = deliveredQty;
+                itemModel.PreviouslyDeliveredQuantity = deliveredQtyForRemaining;
                 itemModel.UnitPrice = orderItem.UnitPrice;
 
                 if (existingItem is null)

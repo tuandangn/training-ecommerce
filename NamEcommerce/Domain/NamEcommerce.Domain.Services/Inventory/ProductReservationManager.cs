@@ -31,6 +31,15 @@ public sealed class ProductReservationManager : IProductReservationManager
             .Where(entry => entry.ProductId == productId && entry.OrderId == orderId)
             .Sum(entry => entry.QuantityDelta));
 
+    public Task<decimal> GetReleasedByReferenceAsync(Guid productId, Guid orderId, ProductReservationReason reason, Guid referenceId)
+        => Task.FromResult(Math.Abs(_dataReader.DataSource
+            .Where(entry => entry.ProductId == productId
+                && entry.OrderId == orderId
+                && entry.Reason == reason
+                && entry.ReferenceId == referenceId
+                && entry.QuantityDelta < 0)
+            .Sum(entry => entry.QuantityDelta)));
+
     public Task<ProductReservationDto?> GetByProductIdAsync(Guid productId)
     {
         var entries = _dataReader.DataSource

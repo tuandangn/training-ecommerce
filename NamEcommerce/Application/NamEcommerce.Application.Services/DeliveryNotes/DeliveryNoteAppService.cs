@@ -31,6 +31,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
             OrderId = dto.OrderId,
             ShippingAddress = dto.ShippingAddress,
             ShowPrice = dto.ShowPrice,
+            CompensateReturnedQuantityInNextDelivery = dto.CompensateReturnedQuantityInNextDelivery,
             Note = dto.Note,
             WarehouseId = dto.WarehouseId,
             WarehouseName = warehouse.Name,

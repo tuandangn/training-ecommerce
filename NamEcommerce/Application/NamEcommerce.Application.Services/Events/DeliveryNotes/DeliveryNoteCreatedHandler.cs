@@ -5,7 +5,6 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
-using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Application.Services.Events.DeliveryNotes;
@@ -38,15 +37,12 @@ public sealed class DeliveryNoteCreatedHandler(IEntityDataReader<DeliveryNote> d
             {
                 foreach (var group in productGroups)
                 {
-                    var releasingQuantity = group.Quantity;
                     var reservedQuantity = await productReservationManager.GetReservedForOrderAsync(group.ProductId, order.Id).ConfigureAwait(false);
-                    if (reservedQuantity < releasingQuantity)
-                        throw new InvalidStockOperationException("Error.CannotReleaseMoreThanReserved", reservedQuantity, releasingQuantity);
-                }
+                    var releasingQuantity = Math.Min(group.Quantity, reservedQuantity);
+                    if (releasingQuantity <= 0)
+                        continue;
 
-                foreach (var group in productGroups)
-                {
-                    await productReservationManager.ReleaseAsync(group.ProductId, group.Quantity, order.Id, ProductReservationReason.DeliveryNoteCreated, deliveryNote.Id)
+                    await productReservationManager.ReleaseAsync(group.ProductId, releasingQuantity, order.Id, ProductReservationReason.DeliveryNoteCreated, deliveryNote.Id)
                         .ConfigureAwait(false);
                 }
             }

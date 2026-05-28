@@ -77,7 +77,35 @@ public sealed class CustomerReturnController : BaseAuthorizedController
         }
 
         var returnItems = model.Items
-            .Where(i => i.ProductId.HasValue && i.RequestedQuantity > 0)
+            .Where(i => i.RequestedQuantity > 0)
+            .ToList();
+
+        var missingProductRows = returnItems
+            .Where(item => !item.ProductId.HasValue && item.DeliveryNoteItemId.HasValue)
+            .ToList();
+        if (missingProductRows.Count > 0)
+        {
+            var missingSourceItemIds = missingProductRows
+                .Select(item => item.DeliveryNoteItemId!.Value)
+                .Distinct()
+                .ToHashSet();
+            var sourceProductByDeliveryItemId = _deliveryNoteDataReader.DataSource
+                .SelectMany(note => note.Items)
+                .Where(item => missingSourceItemIds.Contains(item.Id))
+                .ToDictionary(item => item.Id, item => item.ProductId);
+
+            foreach (var item in missingProductRows)
+            {
+                if (item.DeliveryNoteItemId.HasValue &&
+                    sourceProductByDeliveryItemId.TryGetValue(item.DeliveryNoteItemId.Value, out var productId))
+                {
+                    item.ProductId = productId;
+                }
+            }
+        }
+
+        returnItems = returnItems
+            .Where(i => i.ProductId.HasValue)
             .ToList();
 
         if (!returnItems.Any())

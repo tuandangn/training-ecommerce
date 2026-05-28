@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using NamEcommerce.Domain.Entities.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Web.Contracts.Commands.Models.Returns;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
@@ -12,11 +14,16 @@ public sealed class VendorReturnController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;
     private readonly IVendorReturnModelFactory _vendorReturnModelFactory;
+    private readonly IEntityDataReader<GoodsReceipt> _goodsReceiptDataReader;
 
-    public VendorReturnController(IMediator mediator, IVendorReturnModelFactory vendorReturnModelFactory)
+    public VendorReturnController(
+        IMediator mediator,
+        IVendorReturnModelFactory vendorReturnModelFactory,
+        IEntityDataReader<GoodsReceipt> goodsReceiptDataReader)
     {
         _mediator = mediator;
         _vendorReturnModelFactory = vendorReturnModelFactory;
+        _goodsReceiptDataReader = goodsReceiptDataReader;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));
@@ -63,7 +70,35 @@ public sealed class VendorReturnController : BaseAuthorizedController
         }
 
         var returnItems = model.Items
-            .Where(i => i.ProductId.HasValue && i.RequestedQuantity > 0)
+            .Where(i => i.RequestedQuantity > 0)
+            .ToList();
+
+        var missingProductRows = returnItems
+            .Where(item => !item.ProductId.HasValue && item.GoodsReceiptItemId.HasValue)
+            .ToList();
+        if (missingProductRows.Count > 0)
+        {
+            var missingSourceItemIds = missingProductRows
+                .Select(item => item.GoodsReceiptItemId!.Value)
+                .Distinct()
+                .ToHashSet();
+            var sourceProductByGoodsReceiptItemId = _goodsReceiptDataReader.DataSource
+                .SelectMany(receipt => receipt.Items)
+                .Where(item => missingSourceItemIds.Contains(item.Id))
+                .ToDictionary(item => item.Id, item => item.ProductId);
+
+            foreach (var item in missingProductRows)
+            {
+                if (item.GoodsReceiptItemId.HasValue &&
+                    sourceProductByGoodsReceiptItemId.TryGetValue(item.GoodsReceiptItemId.Value, out var productId))
+                {
+                    item.ProductId = productId;
+                }
+            }
+        }
+
+        returnItems = returnItems
+            .Where(i => i.ProductId.HasValue)
             .ToList();
 
         if (!returnItems.Any())

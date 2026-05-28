@@ -66,6 +66,7 @@ public sealed record CreateDeliveryNoteAppDto
     public required Guid WarehouseId { get; set; }
     public required string ShippingAddress { get; init; }
     public bool ShowPrice { get; init; }
+    public bool CompensateReturnedQuantityInNextDelivery { get; init; }
     public string? Note { get; init; }
     public decimal Surcharge { get; init; }
     public string? SurchargeReason { get; init; }

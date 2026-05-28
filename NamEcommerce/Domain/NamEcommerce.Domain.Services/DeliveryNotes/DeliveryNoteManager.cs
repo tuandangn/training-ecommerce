@@ -66,12 +66,19 @@ public sealed class DeliveryNoteManager(
             .GroupBy(item => item.OrderItemId)
             .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
 
-        EnsureQuantitiesCanBeDelivered(order, requestedQuantitiesByOrderItem);
+        EnsureQuantitiesCanBeDelivered(order, requestedQuantitiesByOrderItem, dto.CompensateReturnedQuantityInNextDelivery);
 
         var itemsByProduct = dto.Items
             .GroupBy(item => orderItemsById[item.OrderItemId].ProductId)
             .Select(g => new { ProductId = g.Key, Quantity = g.Sum(item => item.Quantity) })
             .ToList();
+
+        foreach (var item in itemsByProduct)
+        {
+            var reservedQuantity = await productReservationManager.GetReservedForOrderAsync(item.ProductId, order.Id).ConfigureAwait(false);
+            if (!dto.CompensateReturnedQuantityInNextDelivery && reservedQuantity < item.Quantity)
+                throw new InvalidStockOperationException("Error.CannotReleaseMoreThanReserved", reservedQuantity, item.Quantity);
+        }
 
         foreach (var item in itemsByProduct)
         {
@@ -280,7 +287,7 @@ public sealed class DeliveryNoteManager(
         EnsureQuantitiesCanBeDelivered(order, new Dictionary<Guid, decimal>
         {
             [orderItem.Id] = dto.Quantity
-        });
+        }, includeReturnedCompensation: false);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
         string contactName = string.IsNullOrWhiteSpace(dto.ContactName)
@@ -400,9 +407,18 @@ public sealed class DeliveryNoteManager(
             {
                 foreach (var item in itemsByProduct)
                 {
+                    var releasedQuantity = await productReservationManager.GetReleasedByReferenceAsync(
+                        item.ProductId,
+                        deliveryNote.OrderId,
+                        ProductReservationReason.DeliveryNoteCreated,
+                        deliveryNote.Id).ConfigureAwait(false);
+                    var quantityToReserve = Math.Min(item.Quantity, releasedQuantity);
+                    if (quantityToReserve <= 0)
+                        continue;
+
                     await productReservationManager.ReserveAsync(
                         item.ProductId,
-                        item.Quantity,
+                        quantityToReserve,
                         deliveryNote.OrderId,
                         ProductReservationReason.DeliveryNoteCancelled,
                         deliveryNote.Id).ConfigureAwait(false);
@@ -697,11 +713,17 @@ public sealed class DeliveryNoteManager(
         }
     }
 
-    private void EnsureQuantitiesCanBeDelivered(Order order, IReadOnlyDictionary<Guid, decimal> requestedQuantitiesByOrderItem)
+    private void EnsureQuantitiesCanBeDelivered(
+        Order order,
+        IReadOnlyDictionary<Guid, decimal> requestedQuantitiesByOrderItem,
+        bool includeReturnedCompensation)
     {
         var orderItemsById = order.OrderItems.ToDictionary(item => item.Id);
         var requestedOrderItemIds = requestedQuantitiesByOrderItem.Keys.ToList();
-        var activeDeliveryQuantitiesByOrderItem = GetActiveDeliveryQuantitiesByOrderItem(order.Id, requestedOrderItemIds);
+        var activeDeliveryQuantitiesByOrderItem = GetActiveDeliveryQuantitiesByOrderItem(
+            order.Id,
+            requestedOrderItemIds,
+            includeReturnedCompensation);
         var directShipOutstandingQuantitiesByOrderItem = GetDirectShipOutstandingQuantitiesByOrderItem(requestedOrderItemIds);
 
         foreach (var (orderItemId, requestedQuantity) in requestedQuantitiesByOrderItem)
@@ -722,7 +744,10 @@ public sealed class DeliveryNoteManager(
         }
     }
 
-    private Dictionary<Guid, decimal> GetActiveDeliveryQuantitiesByOrderItem(Guid orderId, IReadOnlyCollection<Guid> orderItemIds)
+    private Dictionary<Guid, decimal> GetActiveDeliveryQuantitiesByOrderItem(
+        Guid orderId,
+        IReadOnlyCollection<Guid> orderItemIds,
+        bool includeReturnedCompensation)
     {
         if (orderItemIds.Count == 0)
             return [];
@@ -733,6 +758,17 @@ public sealed class DeliveryNoteManager(
             .Where(item => orderItemIds.Contains(item.OrderItemId))
             .GroupBy(item => item.OrderItemId)
             .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
+
+        if (!includeReturnedCompensation)
+        {
+            foreach (var orderItemId in orderItemIds)
+            {
+                if (!deliveredByOrderItem.ContainsKey(orderItemId))
+                    deliveredByOrderItem[orderItemId] = 0m;
+            }
+
+            return deliveredByOrderItem;
+        }
 
         var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderId, orderItemIds);
         foreach (var orderItemId in orderItemIds)

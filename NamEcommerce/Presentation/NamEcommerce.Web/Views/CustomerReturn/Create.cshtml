@@ -393,12 +393,17 @@
         }
 
         document.getElementById('createCustomerReturnForm').addEventListener('submit', function(e) {
-            if(!$(this).valid())
-                return;
             renumberRows();
+
             if (tbody.rows.length === 0) {
                 e.preventDefault();
                 alert('Vui lòng thêm ít nhất một hàng đã giao.');
+                return;
+            }
+
+            if (window.jQuery && typeof $(this).valid === 'function' && !$(this).valid()) {
+                e.preventDefault();
+                return;
             }
         });
 

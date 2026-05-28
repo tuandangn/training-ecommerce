@@ -33,6 +33,7 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
             ShippingAddress = request.ShippingAddress,
             WarehouseId = request.WarehouseId,
             ShowPrice = request.ShowPrice,
+            CompensateReturnedQuantityInNextDelivery = request.CompensateReturnedQuantityInNextDelivery,
             Note = request.Note,
             AmountToCollect = request.AmountToCollect,
             Surcharge = request.Surcharge,

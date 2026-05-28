@@ -143,7 +143,7 @@ public sealed class CustomerPortalAppService(
             .Where(product => productIds.Contains(product.Id))
             .ToDictionary(product => product.Id);
         if (products.Count != productIds.Count)
-            throw new InvalidOperationException("Order request contains unknown products.");
+            throw new InvalidOperationException("Error.CustomerPortal.OrderRequest.UnknownProducts");
         var latestPrices = GetLatestPurchasedPrices(customerId, productIds);
 
         var domainDto = new CreateCustomerOrderRequestDto
@@ -194,13 +194,13 @@ public sealed class CustomerPortalAppService(
     {
         var request = await customerPortalManager.GetOrderRequestByIdAsync(orderRequestId).ConfigureAwait(false);
         if (request is null || request.CustomerId != customerId)
-            return CustomerPortalConversionResultAppDto.Fail("Không tìm thấy yêu cầu đặt hàng.");
+            return CustomerPortalConversionResultAppDto.Fail("Error.CustomerPortal.OrderRequest.NotFound");
 
         if (request.Status is not CustomerOrderRequestStatus.Approved)
-            return CustomerPortalConversionResultAppDto.Fail("Yêu cầu đặt hàng chưa được cửa hàng duyệt.");
+            return CustomerPortalConversionResultAppDto.Fail("Error.CustomerPortal.OrderRequest.NotApproved");
 
         if (!IsOrderRequestPriced(request))
-            return CustomerPortalConversionResultAppDto.Fail("Yêu cầu đặt hàng chưa được báo giá đầy đủ.");
+            return CustomerPortalConversionResultAppDto.Fail("Error.CustomerPortal.OrderRequest.NotFullyPriced");
 
         var createDto = new CreateOrderAppDto
         {
@@ -222,10 +222,10 @@ public sealed class CustomerPortalAppService(
 
         var result = await orderAppService.CreateOrderAsync(createDto).ConfigureAwait(false);
         if (!result.Success || !result.CreatedId.HasValue)
-            return CustomerPortalConversionResultAppDto.Fail(result.ErrorMessage ?? "Không tạo được đơn hàng.");
+            return CustomerPortalConversionResultAppDto.Fail(result.ErrorMessage ?? "Error.CustomerPortal.OrderRequest.CreateOrderFailed");
 
         await customerPortalManager.MarkOrderRequestConvertedAsync(request.Id, result.CreatedId.Value, DateTime.UtcNow).ConfigureAwait(false);
-        return CustomerPortalConversionResultAppDto.Ok(result.CreatedId.Value, "Đã xác nhận báo giá và tạo đơn hàng.");
+        return CustomerPortalConversionResultAppDto.Ok(result.CreatedId.Value, "Msg.CustomerPortal.OrderRequest.ConfirmedAndOrderCreated");
     }
 
     public Task<CustomerOrderRequestDefaultsAppDto> GetOrderRequestDefaultsAsync(Guid customerId)
@@ -466,7 +466,7 @@ public sealed class CustomerPortalAppService(
     {
         var deliveryNote = deliveryNoteReader.DataSource.FirstOrDefault(note => note.Id == deliveryNoteId && note.CustomerId == customerId);
         if (deliveryNote is null)
-            return CustomerActionResultAppDto.Fail("Không tìm thấy phiếu giao hàng.");
+            return CustomerActionResultAppDto.Fail("Error.DeliveryNoteNotFound");
 
         var deliveryItemsById = deliveryNote.Items.ToDictionary(item => item.Id);
         var requestItemsByDeliveryItemId = new Dictionary<Guid, ConfirmCustomerDeliveryAcceptanceItemAppDto>();
@@ -478,7 +478,7 @@ public sealed class CustomerPortalAppService(
                     !deliveryItemsById.ContainsKey(requestItem.DeliveryNoteItemId) ||
                     !requestItemsByDeliveryItemId.TryAdd(requestItem.DeliveryNoteItemId, requestItem))
                 {
-                    return CustomerActionResultAppDto.Fail("Dòng hàng xác nhận không hợp lệ.");
+                    return CustomerActionResultAppDto.Fail("Error.DeliveryAcceptance.InvalidItem");
                 }
             }
         }
@@ -492,11 +492,11 @@ public sealed class CustomerPortalAppService(
             var acceptedQuantity = requestItem.AcceptedQuantity;
             var rejectedQuantity = requestItem.RejectedQuantity;
             if (acceptedQuantity < 0 || rejectedQuantity < 0)
-                return CustomerActionResultAppDto.Fail("Số lượng xác nhận không hợp lệ.");
+                return CustomerActionResultAppDto.Fail("Error.DeliveryAcceptance.NegativeQuantity");
 
             var totalQuantity = acceptedQuantity + rejectedQuantity;
             if (Math.Abs(totalQuantity - deliveryItem.Quantity) > 0.0001m)
-                return CustomerActionResultAppDto.Fail("Số lượng xác nhận không khớp số lượng giao.");
+                return CustomerActionResultAppDto.Fail("Error.DeliveryAcceptance.QuantityMismatch");
 
             if (rejectedQuantity > 0)
             {
@@ -510,7 +510,7 @@ public sealed class CustomerPortalAppService(
             .FirstOrDefault(reason => !string.IsNullOrWhiteSpace(reason));
 
         if (rejectedItems.Count > 0 && string.IsNullOrWhiteSpace(returnReason))
-            return CustomerActionResultAppDto.Fail("Vui lòng nhập lý do trả hàng cho toàn phiếu.");
+            return CustomerActionResultAppDto.Fail("Error.DeliveryAcceptance.RejectReasonRequired");
 
         await deliveryNoteManager.MarkReceivedByCustomerAsync(
             deliveryNote.Id,
@@ -556,15 +556,15 @@ public sealed class CustomerPortalAppService(
 
         return CustomerActionResultAppDto.Ok(
             rejectedItems.Count > 0
-                ? "Đã ghi nhận khách đã nhận hàng và tạo yêu cầu trả hàng."
-                : "Đã ghi nhận khách đã nhận hàng.");
+                ? "Msg.CustomerPortal.DeliveryConfirmedWithReturnRequest"
+                : "Msg.CustomerPortal.DeliveryConfirmed");
     }
 
     public async Task<CustomerActionResultAppDto> CreateDeliveryFeedbackAsync(Guid customerId, CreateCustomerDeliveryFeedbackAppDto dto)
     {
         var ownsDeliveryNote = deliveryNoteReader.DataSource.Any(note => note.Id == dto.DeliveryNoteId && note.CustomerId == customerId);
         if (!ownsDeliveryNote)
-            return CustomerActionResultAppDto.Fail("Không tìm thấy phiếu giao hàng.");
+            return CustomerActionResultAppDto.Fail("Error.DeliveryNoteNotFound");
 
         await customerPortalManager.CreateDeliveryFeedbackAsync(new CreateCustomerDeliveryFeedbackDto
         {
@@ -574,7 +574,7 @@ public sealed class CustomerPortalAppService(
             Message = dto.Message
         }).ConfigureAwait(false);
 
-        return CustomerActionResultAppDto.Ok("Đã ghi nhận phản hồi.");
+        return CustomerActionResultAppDto.Ok("Msg.CustomerPortal.FeedbackSaved");
     }
 
     public async Task<IReadOnlyCollection<CustomerReturnableItemAppDto>> GetReturnableItemsAsync(Guid customerId)
@@ -598,11 +598,11 @@ public sealed class CustomerPortalAppService(
     public async Task<CustomerReturnRequestAppDto> CreateReturnRequestAsync(Guid customerId, CreateCustomerReturnRequestAppDto dto)
     {
         if (dto.Items.Count == 0)
-            throw new InvalidOperationException("Yêu cầu trả hàng cần có ít nhất một dòng hàng.");
+            throw new InvalidOperationException("Error.CustomerPortal.ReturnRequest.NoItems");
 
         var deliveryNotes = GetDeliveredNotesForReturnRequest(customerId, dto.DeliveryNoteId);
         if (deliveryNotes.Count == 0)
-            throw new InvalidOperationException("Không tìm thấy hàng đã giao có thể trả.");
+            throw new InvalidOperationException("Error.CustomerPortal.ReturnRequest.NoDeliveredItems");
 
         var sourcesByItemId = deliveryNotes
             .SelectMany(note => note.Items.Select(item => new ReturnRequestSourceItem(note, item)))
@@ -613,7 +613,7 @@ public sealed class CustomerPortalAppService(
         foreach (var item in dto.Items)
         {
             if (item.RequestedQuantity <= 0)
-                throw new InvalidOperationException("Dòng hàng trả không hợp lệ.");
+                throw new InvalidOperationException("Error.CustomerPortal.ReturnRequest.InvalidItem");
 
             var pictureIds = await CreateReturnEvidencePicturesAsync(item.EvidencePictures).ConfigureAwait(false);
             if (item.DeliveryNoteItemId.HasValue)
@@ -621,7 +621,7 @@ public sealed class CustomerPortalAppService(
                 if (!sourcesByItemId.TryGetValue(item.DeliveryNoteItemId.Value, out var source) ||
                     (item.ProductId.HasValue && source.Item.ProductId != item.ProductId.Value))
                 {
-                    throw new InvalidOperationException("Dòng hàng trả không hợp lệ.");
+                    throw new InvalidOperationException("Error.CustomerPortal.ReturnRequest.InvalidItem");
                 }
 
                 var returnStates = await GetDeliveryItemReturnStatesAsync(customerId, source.DeliveryNote.Id).ConfigureAwait(false);
@@ -629,7 +629,7 @@ public sealed class CustomerPortalAppService(
                 var returnableQuantity = (returnStates.GetValueOrDefault(source.Item.Id)?.ReturnableQuantity ?? 0m)
                     - localRequestedQuantity;
                 if (item.RequestedQuantity > returnableQuantity)
-                    throw new InvalidOperationException("Số lượng trả vượt quá số lượng còn có thể trả.");
+                    throw new InvalidOperationException("Error.CustomerPortal.ReturnRequest.QuantityExceedsReturnable");
 
                 requestItems.Add(new CreateCustomerReturnRequestItemDto
                 {
@@ -645,7 +645,7 @@ public sealed class CustomerPortalAppService(
             }
 
             if (!item.ProductId.HasValue || item.ProductId.Value == Guid.Empty)
-                throw new InvalidOperationException("Dòng hàng trả không hợp lệ.");
+                throw new InvalidOperationException("Error.CustomerPortal.ReturnRequest.InvalidItem");
 
             var allocatedItems = await AllocateReturnRequestProductAsync(
                 customerId,
@@ -659,7 +659,7 @@ public sealed class CustomerPortalAppService(
         }
 
         if (requestItems.Count == 0)
-            throw new InvalidOperationException("Yêu cầu trả hàng cần có ít nhất một dòng hàng.");
+            throw new InvalidOperationException("Error.CustomerPortal.ReturnRequest.NoItems");
 
         var representativeDeliveryNoteId = dto.DeliveryNoteId
             ?? requestItems
@@ -667,7 +667,7 @@ public sealed class CustomerPortalAppService(
                 .FirstOrDefault(id => id.HasValue)
             ?? Guid.Empty;
         if (representativeDeliveryNoteId == Guid.Empty)
-            throw new InvalidOperationException("Không tìm thấy hàng đã giao có thể trả.");
+            throw new InvalidOperationException("Error.CustomerPortal.ReturnRequest.NoDeliveredItems");
 
         var request = new CreateCustomerReturnRequestDto
         {
@@ -714,18 +714,18 @@ public sealed class CustomerPortalAppService(
     {
         var request = await customerPortalManager.GetReturnRequestByIdAsync(returnRequestId).ConfigureAwait(false);
         if (request is null || request.CustomerId != customerId)
-            return CustomerActionResultAppDto.Fail("Không tìm thấy yêu cầu trả hàng.");
+            return CustomerActionResultAppDto.Fail("Error.CustomerPortal.ReturnRequest.NotFound");
         if (request.Status != CustomerReturnRequestStatus.PendingReview)
-            return CustomerActionResultAppDto.Fail("Chỉ có thể hủy yêu cầu trả hàng đang chờ xem xét.");
+            return CustomerActionResultAppDto.Fail("Error.CustomerPortal.ReturnRequest.OnlyPendingCanCancel");
 
         try
         {
             await customerPortalManager.CancelReturnRequestAsync(returnRequestId, DateTime.UtcNow).ConfigureAwait(false);
-            return CustomerActionResultAppDto.Ok("Đã hủy yêu cầu trả hàng.");
+            return CustomerActionResultAppDto.Ok("Msg.CustomerPortal.ReturnRequest.Cancelled");
         }
         catch (InvalidOperationException)
         {
-            return CustomerActionResultAppDto.Fail("Không thể hủy yêu cầu trả hàng ở trạng thái hiện tại.");
+            return CustomerActionResultAppDto.Fail("Error.CustomerPortal.ReturnRequest.CannotCancelCurrentState");
         }
     }
 
@@ -916,12 +916,12 @@ public sealed class CustomerPortalAppService(
         {
             var deliveryNote = deliveryNoteReader.DataSource.FirstOrDefault(note => note.Id == deliveryNoteId.Value && note.CustomerId == customerId);
             if (deliveryNote is null)
-                throw new InvalidOperationException("Không tìm thấy phiếu giao hàng.");
+                throw new InvalidOperationException("Error.DeliveryNoteNotFound");
             if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
-                throw new InvalidOperationException("Chỉ có thể yêu cầu trả hàng sau khi phiếu giao đã hoàn tất giao hàng.");
+                throw new InvalidOperationException("Error.CustomerPortal.ReturnRequest.DeliveryNoteNotDelivered");
             if (deliveryNote.SourceType != DeliveryNoteSourceType.ToCustomer &&
                 deliveryNote.SourceType != DeliveryNoteSourceType.DirectShipToCustomer)
-                throw new InvalidOperationException("Phiếu giao hàng không hợp lệ để trả hàng.");
+                throw new InvalidOperationException("Error.CustomerPortal.ReturnRequest.InvalidDeliveryNoteForReturn");
 
             return [deliveryNote];
         }
@@ -952,7 +952,7 @@ public sealed class CustomerPortalAppService(
             .ToList();
 
         if (sources.Count == 0)
-            throw new InvalidOperationException("Sản phẩm này chưa có trong các hàng đã giao.");
+            throw new InvalidOperationException("Error.CustomerPortal.ReturnRequest.ProductNotDelivered");
 
         var remainingQuantity = requestedQuantity;
         var result = new List<CreateCustomerReturnRequestItemDto>();
@@ -983,7 +983,7 @@ public sealed class CustomerPortalAppService(
         }
 
         if (remainingQuantity > 0)
-            throw new InvalidOperationException("Số lượng trả vượt quá số lượng còn có thể trả.");
+            throw new InvalidOperationException("Error.CustomerPortal.ReturnRequest.QuantityExceedsReturnable");
 
         return result;
     }
@@ -1017,17 +1017,17 @@ public sealed class CustomerPortalAppService(
     private async Task<IList<Guid>> CreateReturnEvidencePicturesAsync(ICollection<CreateCustomerReturnRequestPictureAppDto> pictures)
     {
         if (pictures.Count > MaxReturnEvidencePicturesPerItem)
-            throw new InvalidOperationException($"Mỗi dòng hàng chỉ được gửi tối đa {MaxReturnEvidencePicturesPerItem} ảnh.");
+            throw new InvalidOperationException("Error.CustomerPortal.ReturnEvidence.TooManyPictures");
 
         var pictureIds = new List<Guid>();
         foreach (var picture in pictures)
         {
             if (!AllowedReturnEvidenceMimeTypes.Contains(picture.MimeType))
-                throw new InvalidOperationException("Ảnh hiện trạng chỉ nhận JPG, PNG hoặc WEBP.");
+                throw new InvalidOperationException("Error.CustomerPortal.ReturnEvidence.InvalidMimeType");
 
             var bytes = DecodeBase64Payload(picture.Base64Data);
             if (bytes.Length == 0 || bytes.Length > MaxReturnEvidencePictureBytes)
-                throw new InvalidOperationException("Ảnh hiện trạng không hợp lệ hoặc vượt quá 5MB.");
+                throw new InvalidOperationException("Error.CustomerPortal.ReturnEvidence.InvalidSize");
 
             pictureIds.Add(await pictureAppService.CreatePictureAsync(new CreatePictureAppDto
             {
@@ -1054,7 +1054,7 @@ public sealed class CustomerPortalAppService(
         }
         catch (FormatException ex)
         {
-            throw new InvalidOperationException("Dữ liệu ảnh hiện trạng không hợp lệ.", ex);
+            throw new InvalidOperationException("Error.CustomerPortal.ReturnEvidence.InvalidBase64", ex);
         }
     }
 
