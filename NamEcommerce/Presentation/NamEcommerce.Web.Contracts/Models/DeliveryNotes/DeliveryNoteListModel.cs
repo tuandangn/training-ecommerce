@@ -5,8 +5,8 @@ namespace NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 public sealed class DeliveryNoteSearchModel
 {
     public string? Keywords { get; set; }
-    public int PageIndex { get; set; } = 1;
-    public int PageSize { get; set; } = 15;
+    public int? PageNumber { get; set; }
+    public int? PageSize { get; set; }
 }
 
 public sealed class DeliveryNoteListModel
