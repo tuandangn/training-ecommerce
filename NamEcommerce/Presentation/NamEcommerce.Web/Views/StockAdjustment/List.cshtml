@@ -16,75 +16,71 @@
 }
 <div class="content-card" data-responsive-list data-list-key="stock-adjustment-list">
     <div class="action-toolbar">
-        <div class="d-flex gap-2 align-items-center flex-wrap">
-        </div>
-        <div class="d-flex align-items-center justify-content-end gap-2 flex-wrap">
-            <partial name="_ResponsiveListToolbar" />
-            <a asp-action="Create" class="btn btn-primary">
-                <i class="bi bi-plus-lg me-1"></i> Tạo phiếu kiểm kê
-            </a>
-        </div>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Tạo phiếu kiểm kê
+        </a>
+        <partial name="_ResponsiveListToolbar" />
     </div>
     <div class="content-card-body-flush">
         <div class="responsive-list-panel" data-list-view-panel="list">
             <div class="table-responsive">
-            <table class="table data-table">
-                <thead>
-                    <tr>
-                        <th class="ps-4" style="width:160px">Mã phiếu</th>
-                        <th>Kho hàng</th>
-                        <th class="text-center" style="width:100px">Số mặt hàng</th>
-                        <th class="text-center" style="width:130px">Trạng thái</th>
-                        <th class="text-center" style="width:120px">Ngày tạo</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (Model.TotalCount > 0)
-                    {
-                        @foreach (var item in Model.Items)
+                <table class="table data-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="width:160px">Mã phiếu</th>
+                            <th>Kho hàng</th>
+                            <th class="text-center" style="width:100px">Số mặt hàng</th>
+                            <th class="text-center" style="width:130px">Trạng thái</th>
+                            <th class="text-center" style="width:120px">Ngày tạo</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.TotalCount > 0)
                         {
-                            <tr class="align-middle">
-                                <td class="ps-4">
-                                    <a asp-action="Details" asp-route-id="@item.Id"
-                                       class="fw-semibold text-decoration-none">
-                                        @item.Code
-                                    </a>
-                                </td>
-                                <td class="text-muted small">@item.WarehouseName</td>
-                                <td class="text-center text-muted">@item.ItemCount</td>
-                                <td class="text-center">
-                                    @{
-                                        var (badgeClass, badgeText) = (StockAdjustmentStatus)item.Status switch
-                                        {
-                                            StockAdjustmentStatus.Draft => ("bg-secondary", "Bản nháp"),
-                                            StockAdjustmentStatus.Approved => ("bg-success", "Đã duyệt"),
-                                            StockAdjustmentStatus.Cancelled => ("bg-danger", "Đã huỷ"),
-                                            _ => ("bg-secondary", "—")
-                                        };
-                                    }
-                                    <span class="badge @badgeClass">@badgeText</span>
-                                </td>
-                                <td class="text-center text-muted small">@item.CreatedOnUtc.ToString(ViewConstants.DefaultDateFormat)</td>
-                                <td class="text-end pe-3">
-                                    <a class="btn btn-sm btn-light text-primary"
-                                       asp-action="Details" asp-route-id="@item.Id">Xem</a>
+                            @foreach (var item in Model.Items)
+                            {
+                                <tr class="align-middle">
+                                    <td class="ps-4">
+                                        <a asp-action="Details" asp-route-id="@item.Id"
+                                           class="fw-semibold text-decoration-none">
+                                            @item.Code
+                                        </a>
+                                    </td>
+                                    <td class="text-muted small">@item.WarehouseName</td>
+                                    <td class="text-center text-muted">@item.ItemCount</td>
+                                    <td class="text-center">
+                                        @{
+                                            var (badgeClass, badgeText) = (StockAdjustmentStatus)item.Status switch
+                                            {
+                                                StockAdjustmentStatus.Draft => ("bg-secondary", "Bản nháp"),
+                                                StockAdjustmentStatus.Approved => ("bg-success", "Đã duyệt"),
+                                                StockAdjustmentStatus.Cancelled => ("bg-danger", "Đã huỷ"),
+                                                _ => ("bg-secondary", "—")
+                                            };
+                                        }
+                                        <span class="badge @badgeClass">@badgeText</span>
+                                    </td>
+                                    <td class="text-center text-muted small">@item.CreatedOnUtc.ToString(ViewConstants.DefaultDateFormat)</td>
+                                    <td class="text-end pe-3">
+                                        <a class="btn btn-sm btn-light text-primary"
+                                           asp-action="Details" asp-route-id="@item.Id">Xem</a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6">
+                                    <div class="empty-state">
+                                        <span class="text-muted">Chưa có phiếu kiểm kê nào</span>
+                                    </div>
                                 </td>
                             </tr>
                         }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="6">
-                                <div class="empty-state">
-                                    <span class="text-muted">Chưa có phiếu kiểm kê nào</span>
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
             </div>
         </div>
 

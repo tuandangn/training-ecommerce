@@ -28,16 +28,8 @@
 }
 
 <div class="shortage-order-page">
-    <div class="shortage-workspace-header">
-        <div>
-            <h2>Hàng cần nhập</h2>
-            <div class="shortage-workspace-subtitle">
-                @allItems.Count mặt hàng thiếu · @relatedOrders.Count đơn liên quan · Ước tính @estimatedTotal.DisplayCurrencyWithSymbol()
-            </div>
-        </div>
-        <button type="button" class="shortage-more-button" aria-label="Tùy chọn">
-            <i class="bi bi-three-dots"></i>
-        </button>
+    <div class="alert alert-warning flex-grow-1 fw-medium">
+        @allItems.Count mặt hàng thiếu · @relatedOrders.Count đơn liên quan · Ước tính @estimatedTotal.DisplayCurrencyWithSymbol()
     </div>
 
     @if (Model.OrderId.HasValue || Model.DeliveryNoteId.HasValue || Model.ProductId.HasValue)
@@ -85,20 +77,26 @@
     }
 
     <div class="shortage-page-filters">
-        <select id="vendorFilter" class="form-select shortage-page-select">
-            <option value="">NCC: Tất cả</option>
-            @foreach (var group in validGroups)
-            {
-                <option value="@group.VendorId">@group.VendorName</option>
-            }
-        </select>
-        <select id="productFilter" class="form-select shortage-page-select">
-            <option value="">Mặt hàng: Tất cả</option>
-            @foreach (var product in allItems.GroupBy(item => item.ProductId).Select(group => group.First()).OrderBy(item => item.ProductName))
-            {
-                <option value="@product.ProductId">@product.ProductName</option>
-            }
-        </select>
+        <div class="row g-2">
+            <div class="col-sm-6">
+                <select id="vendorFilter" class="form-select shortage-page-select">
+                    <option value="">NCC: Tất cả</option>
+                    @foreach (var group in validGroups)
+                    {
+                        <option value="@group.VendorId">@group.VendorName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-6">
+                <select id="productFilter" class="form-select shortage-page-select">
+                    <option value="">Mặt hàng: Tất cả</option>
+                    @foreach (var product in allItems.GroupBy(item => item.ProductId).Select(group => group.First()).OrderBy(item => item.ProductName))
+                    {
+                        <option value="@product.ProductId">@product.ProductName</option>
+                    }
+                </select>
+            </div>
+        </div>
     </div>
 
     <div id="createShortageResult" class="alert alert-success d-none"></div>
@@ -125,7 +123,7 @@
                 .Select(suggestion => suggestion.LastPurchaseDate!.Value)
                 .DefaultIfEmpty()
                 .Max();
-           var groupHasPrimary = group.Items.Any(groupItem => groupItem.IsFromPrimaryOrder);
+            var groupHasPrimary = group.Items.Any(groupItem => groupItem.IsFromPrimaryOrder);
 
             <div class="shortage-order-card shortage-group" data-vendor-id="@group.VendorId" data-vendor-name="@group.VendorName">
                 <div class="shortage-order-card-header">
@@ -193,134 +191,136 @@
 
                         foreach (var item in sectionItems)
                         {
-                        var unitName = string.IsNullOrWhiteSpace(item.UnitMeasurementName) ? "sp" : item.UnitMeasurementName!;
-                        var currentSuggestion = item.SupplierSuggestions.FirstOrDefault(suggestion => suggestion.VendorId == group.VendorId);
-                        var lastPrice = currentSuggestion?.LastUnitPrice ?? item.UnitCost;
-                        var lastPurchaseText = currentSuggestion?.LastPurchaseDate?.ToString("dd/MM");
-                        var itemTotal = item.QuantityToOrder * item.UnitCost;
-                        var suggestionsJson = System.Text.Json.JsonSerializer.Serialize(
-                            item.SupplierSuggestions.Select(s => new
-                            {
-                                vendorId = s.VendorId,
-                                vendorName = s.VendorName,
-                                lastUnitPrice = s.LastUnitPrice,
-                                lastPurchaseDate = s.LastPurchaseDate.HasValue
-                                    ? s.LastPurchaseDate.Value.ToString("dd/MM")
-                                    : null
-                            }));
+                            var unitName = string.IsNullOrWhiteSpace(item.UnitMeasurementName) ? "sp" : item.UnitMeasurementName!;
+                            var currentSuggestion = item.SupplierSuggestions.FirstOrDefault(suggestion => suggestion.VendorId == group.VendorId);
+                            var lastPrice = currentSuggestion?.LastUnitPrice ?? item.UnitCost;
+                            var lastPurchaseText = currentSuggestion?.LastPurchaseDate?.ToString("dd/MM");
+                            var itemTotal = item.QuantityToOrder * item.UnitCost;
+                            var suggestionsJson = System.Text.Json.JsonSerializer.Serialize(
+                                item.SupplierSuggestions.Select(s => new
+                                {
+                                    vendorId = s.VendorId,
+                                    vendorName = s.VendorName,
+                                    lastUnitPrice = s.LastUnitPrice,
+                                    lastPurchaseDate = s.LastPurchaseDate.HasValue
+                                        ? s.LastPurchaseDate.Value.ToString("dd/MM")
+                                        : null
+                                }));
 
-                        <div class="shortage-order-item @(item.IsFromPrimaryOrder ? "" : "shortage-item-secondary")"
-                             data-order-item-id="@item.OrderItemId"
-                             data-order-id="@item.OrderId"
-                             data-order-code="@item.OrderCode"
-                             data-product-id="@item.ProductId"
-                             data-product-name="@item.ProductName"
-                             data-unit-name="@unitName"
-                             data-shortage-quantity='@item.ShortageQuantity.ToString("0.####", CultureInfo.InvariantCulture)'
-                             data-is-primary="@(item.IsFromPrimaryOrder ? "true" : "false")"
-                             data-customer-name="@(item.CustomerName ?? "")"
-                             data-customer-phone="@(item.CustomerPhone ?? "")"
-                             data-customer-address="@(item.CustomerAddress ?? "")"
-                             data-suggestions="@suggestionsJson">
-                            <div class="shortage-item-check">
-                                <input type="checkbox" class="form-check-input item-check" @(item.IsFromPrimaryOrder ? "checked" : "") />
-                            </div>
-                            <div class="shortage-item-main">
-                                <div class="shortage-item-topline">
-                                    <div>
-                                        <div class="shortage-item-name">@item.ProductName</div>
-                                        <div class="shortage-item-meta">
-                                            Tồn @item.AvailableQuantity.DisplayQuantity() @unitName · Cần thêm @item.ShortageQuantity.DisplayQuantity() @unitName
-                                            <span class="shortage-item-lastprice">@if (lastPrice > 0)
-                                            {
-                                                <text> · Giá lần trước @lastPrice.DisplayCurrency()</text>
-                                                if (!string.IsNullOrWhiteSpace(lastPurchaseText))
+                            <div class="shortage-order-item @(item.IsFromPrimaryOrder ? "" : "shortage-item-secondary")"
+                                 data-order-item-id="@item.OrderItemId"
+                                 data-order-id="@item.OrderId"
+                                 data-order-code="@item.OrderCode"
+                                 data-product-id="@item.ProductId"
+                                 data-product-name="@item.ProductName"
+                                 data-unit-name="@unitName"
+                                 data-shortage-quantity='@item.ShortageQuantity.ToString("0.####", CultureInfo.InvariantCulture)'
+                                 data-is-primary="@(item.IsFromPrimaryOrder ? "true" : "false")"
+                                 data-customer-name="@(item.CustomerName ?? "")"
+                                 data-customer-phone="@(item.CustomerPhone ?? "")"
+                                 data-customer-address="@(item.CustomerAddress ?? "")"
+                                 data-suggestions="@suggestionsJson">
+                                <div class="shortage-item-check">
+                                    <input type="checkbox" class="form-check-input item-check" @(item.IsFromPrimaryOrder ? "checked" : "") />
+                                </div>
+                                <div class="shortage-item-main">
+                                    <div class="shortage-item-topline">
+                                        <div>
+                                            <div class="shortage-item-name">@item.ProductName</div>
+                                            <div class="shortage-item-meta">
+                                                Tồn @item.AvailableQuantity.DisplayQuantity() @unitName · Cần thêm @item.ShortageQuantity.DisplayQuantity() @unitName
+                                                <span class="shortage-item-lastprice">
+                                                    @if (lastPrice > 0)
+                                                    {
+                                                        <text> · Giá lần trước @lastPrice.DisplayCurrency()</text>
+                                                        if (!string.IsNullOrWhiteSpace(lastPurchaseText))
+                                                        {
+                                                            <text> (@lastPurchaseText)</text>
+                                                        }
+                                                    }
+                                                </span>
+                                            </div>
+                                            <div class="shortage-item-orders">
+                                                Cho đơn: @item.OrderCode (@item.ShortageQuantity.DisplayQuantity() @unitName)
+                                                @if (item.AllocatedFromPurchaseOrders.Any())
                                                 {
-                                                    <text> (@lastPurchaseText)</text>
+                                                    <span> · </span>
+                                                    foreach (var allocation in item.AllocatedFromPurchaseOrders.Take(2))
+                                                    {
+                                                        <a asp-controller="PurchaseOrder" asp-action="Details" asp-route-id="@allocation.PurchaseOrderId">
+                                                            @allocation.PurchaseOrderCode
+                                                        </a>
+                                                    }
                                                 }
-                                            }</span>
+                                            </div>
                                         </div>
-                                        <div class="shortage-item-orders">
-                                            Cho đơn: @item.OrderCode (@item.ShortageQuantity.DisplayQuantity() @unitName)
-                                            @if (item.AllocatedFromPurchaseOrders.Any())
-                                            {
-                                                <span> · </span>
-                                                foreach (var allocation in item.AllocatedFromPurchaseOrders.Take(2))
-                                                {
-                                                    <a asp-controller="PurchaseOrder" asp-action="Details" asp-route-id="@allocation.PurchaseOrderId">
-                                                        @allocation.PurchaseOrderCode
-                                                    </a>
-                                                }
-                                            }
-                                        </div>
+                                        <div class="shortage-item-total item-total">@itemTotal.DisplayCurrencyWithSymbol()</div>
                                     </div>
-                                    <div class="shortage-item-total item-total">@itemTotal.DisplayCurrencyWithSymbol()</div>
-                                </div>
 
-                                <div class="shortage-item-inputs">
-                                    <label>
-                                        <span>SL:</span>
-                                        <input type="number"
-                                               class="form-control quantity-to-order"
-                                               min="0"
-                                               step="any"
-                                               value="@item.QuantityToOrder.ToString("0.##", CultureInfo.InvariantCulture)" />
-                                        <span>@unitName</span>
-                                    </label>
-                                    <span class="shortage-input-separator">×</span>
-                                    <label>
-                                        <span>Giá:</span>
-                                        <input type="number"
-                                               class="form-control unit-cost"
-                                               min="0"
-                                               step="any"
-                                               value="@item.UnitCost.ToString("0.##", CultureInfo.InvariantCulture)" />
-                                        <span>đ</span>
-                                    </label>
-                                    @if (item.SupplierSuggestions.Count > 1)
-                                    {
-                                        <label class="shortage-item-vendor-field">
-                                            <span>NCC:</span>
-                                            <select class="form-select form-select-sm item-vendor">
-                                                @foreach (var suggestion in item.SupplierSuggestions)
-                                                {
-                                                    <option value="@suggestion.VendorId"
-                                                            selected="@(suggestion.VendorId == group.VendorId)">
-                                                        @suggestion.VendorName
-                                                    </option>
-                                                }
-                                            </select>
+                                    <div class="shortage-item-inputs">
+                                        <label>
+                                            <span>SL:</span>
+                                            <input type="number"
+                                                   class="form-control quantity-to-order"
+                                                   min="0"
+                                                   step="any"
+                                                   value="@item.QuantityToOrder.ToString("0.##", CultureInfo.InvariantCulture)" />
+                                            <span>@unitName</span>
                                         </label>
-                                    }
-                                </div>
-                                <div class="shortage-direct-ship-toggle">
-                                    <label class="shortage-ds-check-label">
-                                        <input type="checkbox" class="form-check-input direct-ship-check" />
-                                        <i class="bi bi-truck-flatbed shortage-ds-icon"></i>
-                                        <span>Giao thẳng tới khách</span>
-                                    </label>
-                                    <span class="badge bg-success shortage-ds-badge d-none"><i class="bi bi-truck-fast me-1"></i>Giao thẳng</span>
-                                </div>
-                                <div class="shortage-direct-ship-form d-none">
-                                    <label class="shortage-ds-field">
-                                        <span>Địa chỉ giao:</span>
-                                        <input type="text" class="form-control ds-address" placeholder="Địa chỉ giao hàng" maxlength="500" />
-                                    </label>
-                                    <label class="shortage-ds-field">
-                                        <span>Liên hệ:</span>
-                                        <input type="text" class="form-control ds-contact-name" placeholder="Tên người nhận" maxlength="200" />
-                                    </label>
-                                    <label class="shortage-ds-field">
-                                        <span>Điện thoại:</span>
-                                        <input type="text" class="form-control ds-contact-phone" placeholder="SĐT người nhận" maxlength="50" />
-                                    </label>
-                                    <label class="shortage-ds-field shortage-ds-priority-field">
-                                        <span>Ưu tiên:</span>
-                                        <input type="number" class="form-control ds-priority" min="0" step="1" value="0" />
-                                    </label>
+                                        <span class="shortage-input-separator">×</span>
+                                        <label>
+                                            <span>Giá:</span>
+                                            <input type="number"
+                                                   class="form-control unit-cost"
+                                                   min="0"
+                                                   step="any"
+                                                   value="@item.UnitCost.ToString("0.##", CultureInfo.InvariantCulture)" />
+                                            <span>đ</span>
+                                        </label>
+                                        @if (item.SupplierSuggestions.Count > 1)
+                                        {
+                                            <label class="shortage-item-vendor-field">
+                                                <span>NCC:</span>
+                                                <select class="form-select form-select-sm item-vendor">
+                                                    @foreach (var suggestion in item.SupplierSuggestions)
+                                                    {
+                                                        <option value="@suggestion.VendorId"
+                                                                selected="@(suggestion.VendorId == group.VendorId)">
+                                                            @suggestion.VendorName
+                                                        </option>
+                                                    }
+                                                </select>
+                                            </label>
+                                        }
+                                    </div>
+                                    <div class="shortage-direct-ship-toggle">
+                                        <label class="shortage-ds-check-label">
+                                            <input type="checkbox" class="form-check-input direct-ship-check" />
+                                            <i class="bi bi-truck-flatbed shortage-ds-icon"></i>
+                                            <span>Giao thẳng tới khách</span>
+                                        </label>
+                                        <span class="badge bg-success shortage-ds-badge d-none"><i class="bi bi-truck-fast me-1"></i>Giao thẳng</span>
+                                    </div>
+                                    <div class="shortage-direct-ship-form d-none">
+                                        <label class="shortage-ds-field">
+                                            <span>Địa chỉ giao:</span>
+                                            <input type="text" class="form-control ds-address" placeholder="Địa chỉ giao hàng" maxlength="500" />
+                                        </label>
+                                        <label class="shortage-ds-field">
+                                            <span>Liên hệ:</span>
+                                            <input type="text" class="form-control ds-contact-name" placeholder="Tên người nhận" maxlength="200" />
+                                        </label>
+                                        <label class="shortage-ds-field">
+                                            <span>Điện thoại:</span>
+                                            <input type="text" class="form-control ds-contact-phone" placeholder="SĐT người nhận" maxlength="50" />
+                                        </label>
+                                        <label class="shortage-ds-field shortage-ds-priority-field">
+                                            <span>Ưu tiên:</span>
+                                            <input type="number" class="form-control ds-priority" min="0" step="1" value="0" />
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
                         }
                     }
                 </div>
@@ -783,14 +783,14 @@
                                     <i class="bi bi-check-circle-fill fs-4 me-3"></i>
                                     <div>Đã xử lý thành công <strong>${result.items.length}</strong> đơn nhập hàng từ danh sách hàng thiếu.</div>
                                 </div>`;
-                    
+
                     const vendorIds = [...new Set(result.items.map(po => String(po.vendorId).toLowerCase()))];
-                    
+
                     vendorIds.forEach(vid => {
                         const vendorPos = result.items.filter(po => equalsId(po.vendorId, vid));
                         const poLines = lines.filter(l => equalsId(l.vendorId, vid));
                         const vendorName = poLines.length > 0 ? poLines[0].vendorName : 'Nhà cung cấp';
-                        
+
                         html += `
                         <div class="card mb-3 border-0 shadow-sm">
                             <div class="card-header bg-white border-bottom-0 pt-3 pb-2 d-flex justify-content-between align-items-center">
@@ -812,7 +812,7 @@
                         </div>
                         `;
                     });
-                    
+
                     sessionStorage.setItem('shortageCreatedHtml', html);
                     if (typeof showPageLoading === 'function') {
                         showPageLoading();
@@ -826,10 +826,10 @@
             function renderActionRow({ actionType, label, details, quantity, maxQuantity, checked, poId, poItemId, isNew, statusBadge }) {
                 const maxAttr = maxQuantity ? `max="${formatInputNumber(maxQuantity)}"` : '';
                 const rowClass = isNew ? 'table-primary bg-opacity-10' : '';
-                const actionIcon = isNew ? '<i class="bi bi-plus-circle text-primary me-2"></i>' : 
-                                   actionType === 'AllocateFromExisting' ? '<i class="bi bi-box-seam text-success me-2"></i>' : 
+                const actionIcon = isNew ? '<i class="bi bi-plus-circle text-primary me-2"></i>' :
+                                   actionType === 'AllocateFromExisting' ? '<i class="bi bi-box-seam text-success me-2"></i>' :
                                    '<i class="bi bi-diagram-3 text-warning me-2"></i>';
-                                   
+
                 return `
                     <tr class="po-action-row ${rowClass}">
                         <td class="text-center align-middle">
@@ -873,7 +873,7 @@
                         const quantity = Math.min(Math.max(remaining, 0), item.availableForAllocation);
                         const checked = quantity > 0;
                         if (checked) remaining -= quantity;
-                        
+
                         const statusBadge = `<span class="badge ${escapeHtml(po.statusClass || 'bg-secondary')}">${escapeHtml(po.statusName || '')}</span>`;
 
                         return renderActionRow({

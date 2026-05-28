@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using NamEcommerce.Data.Contracts;
+using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.GoodsReceipts;
 using NamEcommerce.Domain.Entities.Inventory;
@@ -29,7 +31,7 @@ public sealed class DirectShipManager(
     IEntityDataReader<Order> orderReader,
     IEntityDataReader<Warehouse> warehouseReader,
     IDeliveryNoteManager deliveryNoteManager,
-    IInventoryStockManager stockManager,
+    IInventoryStockManager inventoryStockManager,
     IInventoryCostingManager inventoryCostingManager) : IDirectShipManager
 {
     public async Task MarkAllocationAsDirectShipAsync(
@@ -327,6 +329,7 @@ public sealed class DirectShipManager(
 
         foreach (var item in deliveryNote.Items)
         {
+            await inventoryStockManager.ReleaseReservedStockAsync(item.ProductId, deliveryNote.WarehouseId, item.Quantity, deliveryNote.Id, userId);
             await TransferStockWithCostAsync(
                 item.ProductId,
                 deliveryNote.WarehouseId,
@@ -365,7 +368,7 @@ public sealed class DirectShipManager(
 
         var costSummary = await inventoryCostingManager.GetCurrentCostSummaryAsync(productId).ConfigureAwait(false);
 
-        await stockManager.TransferStockAsync(
+        await inventoryStockManager.TransferStockAsync(
             productId,
             fromWarehouseId,
             toWarehouseId,

@@ -312,19 +312,19 @@
             </div>
         </form>
         <div class="d-flex align-items-center gap-2">
-            <div class="btn-group shadow-sm" role="group" aria-label="Chọn cách gom tồn kho">
+            <div class="btn-group" role="group" aria-label="Chọn cách gom tồn kho">
                 <a asp-action="StockList"
                    asp-route-keywords="@query"
                    asp-route-includeDs="@Model.IncludeDirectTransit"
                    asp-route-groupByProduct="false"
-                   class="btn @(Model.GroupByProduct ? "btn-outline-secondary" : "btn-primary")">
+                   class="btn @(Model.GroupByProduct ? "border" : "btn-light")">
                     Theo kho
                 </a>
                 <a asp-action="StockList"
                    asp-route-keywords="@query"
                    asp-route-includeDs="@Model.IncludeDirectTransit"
                    asp-route-groupByProduct="true"
-                   class="btn @(Model.GroupByProduct ? "btn-primary" : "btn-outline-secondary")">
+                   class="btn @(Model.GroupByProduct ? "btn-light" : "border")">
                     Theo hàng hóa
                 </a>
             </div>

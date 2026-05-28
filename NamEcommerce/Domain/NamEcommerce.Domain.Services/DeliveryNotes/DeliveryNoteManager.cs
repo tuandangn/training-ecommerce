@@ -355,6 +355,10 @@ public sealed class DeliveryNoteManager(
 
         deliveryNote.RejectDirectShipDelivery(reason);
         await deliveryNoteRepository.UpdateAsync(deliveryNote, ct).ConfigureAwait(false);
+        foreach (var item in deliveryNote.Items)
+        {
+            await productReservationManager.ReserveAsync(item.ProductId, item.Quantity, deliveryNote.OrderId, ProductReservationReason.DeliveryNoteCancelled, deliveryNote.Id).ConfigureAwait(false);
+        }
     }
 
     public async Task CancelAsync(Guid id)
