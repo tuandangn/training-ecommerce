@@ -630,12 +630,12 @@ public sealed class DeliveryNoteManager(
         }));
 
         if (acceptance.AgreedCustomerCharge == 0)
-            return $"Tạo tự động từ xác nhận giao hàng {deliveryNote.Code}. Khách trả: {rejectedSummary}.";
+            return $"Khi nhận hàng từ phiếu {deliveryNote.Code}, khách hàng trả về: {rejectedSummary}.";
 
         var chargeReason = string.IsNullOrWhiteSpace(acceptance.AgreedCustomerChargeReason)
             ? string.Empty
             : $" ({acceptance.AgreedCustomerChargeReason!.Trim()})";
-        return $"Tạo tự động từ xác nhận giao hàng {deliveryNote.Code}. Khách trả: {rejectedSummary}. Chi phí thỏa thuận: {acceptance.AgreedCustomerCharge:#,##0.##}{chargeReason}.";
+        return $"Khi nhận hàng từ phiếu {deliveryNote.Code}, khách hàng trả về: {rejectedSummary}. Chi phí phát sinh: {acceptance.AgreedCustomerCharge:#,##0.##}{chargeReason}.";
     }
 
     private static DeliveryAcceptanceResolution ResolveDeliveryAcceptance(
