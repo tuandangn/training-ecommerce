@@ -119,8 +119,7 @@ public sealed class DirectShipAppService(
         }).ToList();
     }
 
-    public async Task<IList<DirectShipAllocationForPoItemAppDto>> GetDirectShipAllocationsForPoItemsAsync(
-        IReadOnlyList<Guid> purchaseOrderItemIds)
+    public async Task<IList<DirectShipAllocationForPoItemAppDto>> GetDirectShipAllocationsForPoItemsAsync(IReadOnlyList<Guid> purchaseOrderItemIds)
     {
         var items = await directShipManager.GetDirectShipAllocationsForPoItemsAsync(purchaseOrderItemIds)
             .ConfigureAwait(false);

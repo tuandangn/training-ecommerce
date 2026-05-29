@@ -13,11 +13,6 @@
                     <div class="alert alert-info border-0 rounded-3 mb-4">
                         Nhập số lượng khách nhận thực tế cho từng mặt hàng. Nếu khách không nhận đủ, hệ thống sẽ tự tạo phiếu trả hàng để xử lý kiểm hàng.
                     </div>
-                    <div class="mb-3">
-                        <label for="receiverName" class="form-label small fw-bold text-muted text-uppercase mb-2">Tên người nhận</label>
-                        <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="receiverName"
-                               name="receiverName" data-testid="delivery-receiver-name" placeholder="Nhập tên người nhận">
-                    </div>
                     <div class="table-responsive mb-3">
                         <table class="table table-sm align-middle mb-0">
                             <thead>
@@ -32,12 +27,15 @@
                         </table>
                     </div>
                     <div class="mb-3">
+                        <label for="receiverName" class="form-label small fw-bold text-muted text-uppercase mb-2">Tên người nhận</label>
+                        <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="receiverName" name="receiverName" data-testid="delivery-receiver-name" placeholder="Nhập tên người nhận">
+                    </div>
+                    <div class="mb-3 d-none">
                         <label for="rejectReason" class="form-label small fw-bold text-muted text-uppercase mb-2">Lý do trả hàng</label>
-                        <textarea class="form-control rounded-3 fs-6" id="rejectReason" rows="2"
-                                  placeholder="Nhập lý do trả hàng"></textarea>
+                        <textarea class="form-control rounded-3 fs-6" id="rejectReason" rows="2" placeholder="Nhập lý do trả hàng"></textarea>
                     </div>
                     <div class="row g-3 mb-3">
-                        <div class="col-md-4">
+                        <div class="col-md-5">
                             <label for="agreedCustomerCharge" class="form-label small fw-bold text-muted text-uppercase mb-2">Chi phí phát sinh</label>
                             <input class="form-control form-control-lg rounded-3 fs-6" id="agreedCustomerCharge" name="agreedCustomerCharge"
                                    value="0" data-decimal="currency" placeholder="Nhập chi phí phát sinh"
@@ -45,7 +43,7 @@
                                    data-val-number="Chi phí phải là số" />
                             <span class="small text-danger field-validation-valid" data-valmsg-for="agreedCustomerCharge" data-valmsg-replace="true"></span>
                         </div>
-                        <div class="col-md-8">
+                        <div class="col-md-7">
                             <label for="agreedCustomerChargeReason" class="form-label small fw-bold text-muted text-uppercase mb-2">Lý do</label>
                             <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="agreedCustomerChargeReason" name="agreedCustomerChargeReason"
                                    placeholder="Nhập lý do phát sinh chi phí" />

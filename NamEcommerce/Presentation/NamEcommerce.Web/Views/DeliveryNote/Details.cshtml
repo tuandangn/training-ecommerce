@@ -110,7 +110,7 @@
     @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
 }
 
-<div class="row g-4">
+<div class="row g-3">
     <div class="col-lg-4 order-lg-2">
         <div class="content-card mb-4 h-100">
             <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
@@ -223,41 +223,7 @@
     </div>
 
     <div class="col-lg-8 order-lg-1">
-        <div class="content-card mb-4" id="customerReturnsCard" data-delivery-note-id="@Model.Id">
-            <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0 d-flex align-items-center justify-content-between">
-                <h5 class="mb-0 fw-bold"><i class="bi bi-arrow-return-left me-2 text-warning"></i>Khách trả hàng</h5>
-                <a asp-controller="CustomerReturn" asp-action="Create"
-                   asp-route-deliveryNoteId="@Model.Id"
-                   asp-route-customerId="@Model.CustomerId"
-                   class="btn btn-sm btn-outline-warning">
-                    <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
-                </a>
-            </div>
-            <div class="card-body p-0">
-                <div id="customerReturnsLoading" class="px-4 py-3 text-center text-muted small">
-                    <span class="spinner-border spinner-border-sm me-1"></span>Đang tải...
-                </div>
-                <div id="customerReturnsEmpty" class="d-none px-4 py-3 text-center text-muted small fst-italic">
-                    — Chưa có phiếu trả hàng nào liên kết
-                </div>
-                <div id="customerReturnsList" class="d-none">
-                    <table class="table data-table mb-0">
-                        <thead>
-                            <tr>
-                                <th class="ps-4">Mã phiếu</th>
-                                <th>Ngày trả</th>
-                                <th class="text-center">Trạng thái</th>
-                                <th class="text-end">Số mặt hàng</th>
-                                <th class="text-end pe-4">Tổng giá trị</th>
-                            </tr>
-                        </thead>
-                        <tbody id="customerReturnsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="content-card h-100 d-flex flex-column">
+        <div class="content-card mb-3 d-flex flex-column">
             <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
                 <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Danh sách hàng hóa</h5>
             </div>
@@ -370,6 +336,39 @@
                                 </tr>
                             }
                         </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="content-card" id="customerReturnsCard" data-delivery-note-id="@Model.Id">
+            <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0 d-flex align-items-center justify-content-between">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-arrow-return-left me-2 text-warning"></i>Khách trả hàng</h5>
+                <a asp-controller="CustomerReturn" asp-action="Create"
+                   asp-route-deliveryNoteId="@Model.Id"
+                   asp-route-customerId="@Model.CustomerId"
+                   class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div id="customerReturnsLoading" class="px-4 py-3 text-center text-muted small">
+                    <span class="spinner-border spinner-border-sm me-1"></span>Đang tải...
+                </div>
+                <div id="customerReturnsEmpty" class="d-none px-4 py-3 text-center text-muted small fst-italic">
+                    — Chưa có phiếu trả hàng nào liên kết
+                </div>
+                <div id="customerReturnsList" class="d-none">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Mã phiếu</th>
+                                <th>Ngày trả</th>
+                                <th class="text-center">Trạng thái</th>
+                                <th class="text-end">Số mặt hàng</th>
+                                <th class="text-end pe-4">Tổng giá trị</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerReturnsTableBody"></tbody>
                     </table>
                 </div>
             </div>

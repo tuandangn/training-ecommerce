@@ -241,12 +241,14 @@ export default class DeliveryNoteController {
 
             const rejectedQty = Math.max(0, deliveredQty - acceptedQty);
             $row.find('.rejected-qty').text(DecimalFields.formatQuantity(rejectedQty));
+            $('#rejectReason').closest('div').toggleClass('d-none', rejectedQty <= 0);
         }
     }
 
     #resetDeliveredControls() {
         $('#receiverName').val('');
         $('#rejectReason').val('');
+        $('#rejectReason').closest('div').addClass('d-none');
         $('#agreedCustomerCharge').val('0');
         $('#agreedCustomerChargeReason').val('');
         $('#deliveryProofPicture').val('');

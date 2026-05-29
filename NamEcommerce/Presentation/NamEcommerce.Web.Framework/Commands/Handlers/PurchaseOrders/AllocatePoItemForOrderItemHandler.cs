@@ -6,12 +6,12 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.PurchaseOrders;
 
-public sealed class AllocatePoItemToOrderHandler(IPurchaseOrderAppService purchaseOrderAppService)
-    : IRequestHandler<AllocatePoItemToOrderCommand, CommonActionResultModel>
+public sealed class AllocatePoItemForOrderItemHandler(IPurchaseOrderAppService purchaseOrderAppService)
+    : IRequestHandler<AllocatePoItemForOrderItemCommand, CommonActionResultModel>
 {
-    public async Task<CommonActionResultModel> Handle(AllocatePoItemToOrderCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(AllocatePoItemForOrderItemCommand request, CancellationToken cancellationToken)
     {
-        var result = await purchaseOrderAppService.AllocatePoItemToOrderAsync(new AllocatePoItemToOrderAppDto
+        var result = await purchaseOrderAppService.AllocatePoItemForOrderItemAsync(new AllocatePoItemForOrderItemAppDto
         {
             PurchaseOrderId = request.PurchaseOrderId,
             PurchaseOrderItemId = request.PurchaseOrderItemId,

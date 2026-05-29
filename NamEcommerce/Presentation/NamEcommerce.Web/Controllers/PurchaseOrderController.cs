@@ -500,7 +500,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         if (request is null || request.PurchaseOrderItemId == Guid.Empty || request.OrderItemId == Guid.Empty || request.Quantity <= 0)
             return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
 
-        var result = await _mediator.Send(new AllocatePoItemToOrderCommand
+        var result = await _mediator.Send(new AllocatePoItemForOrderItemCommand
         {
             PurchaseOrderId = request.PurchaseOrderId,
             PurchaseOrderItemId = request.PurchaseOrderItemId,
@@ -512,6 +512,16 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             DirectShipContactPhone = request.DirectShipContactPhone
         }).ConfigureAwait(false);
 
+        if (!result.Success)
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+
+        return Json(new { success = true });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ReleaseAllocationsForPurchaseOrderItem([FromBody] ReleaseAllocationsOfPurchaseOrderItemCommand command)
+    {
+        var result = await _mediator.Send(command).ConfigureAwait(false);
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 

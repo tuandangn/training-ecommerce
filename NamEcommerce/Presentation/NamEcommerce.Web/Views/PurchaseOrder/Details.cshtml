@@ -201,7 +201,7 @@
                                                         @item.TotalCost.DisplayCurrency()
                                                     </span>
                                                 </td>
-                                                @if (Model.Info.CanAddItems || (Model.Info.CanReceiveGoods && item.RemainingQuantity > 0) || Model.CanAllocateItems)
+                                                @if (Model.Info.CanAddItems || (Model.Info.CanReceiveGoods && item.RemainingQuantity > 0) || Model.CanAllocateItems || hasAllocations)
                                                 {
                                                     <td class="text-center">
                                                         <div>
@@ -215,7 +215,7 @@
                                     <button class="dropdown-item" data-testid="po-receive-item-open" data-bs-toggle="modal" data-bs-target="#receiveItemModal"
                                                                                 data-item-id="@item.Id" data-item-name="@item.ProductName" data-item-remaining="@item.RemainingQuantity"
                                                                                 data-item-unit-cost="@item.UnitCost" data-item-unit-price="@item.CurrentUnitPrice" data-unit="@item.UnitMeasurement">
-                                                                            <i class="bi bi-truck"></i>
+                                                                            <i class="bi bi-truck me-1"></i>
                                                                             Nhận hàng
                                                                         </button>
                                                                     </li>
@@ -223,10 +223,20 @@
                                                                 @if (Model.CanAllocateItems)
                                                                 {
                                                                     <li>
-                                    <button class="dropdown-item btn-allocate-to-order" data-testid="po-allocate-open" data-purchase-id="@Model.Info.Id"
+                                                                        <button class="dropdown-item btn-allocate-to-order" data-testid="po-allocate-open" data-purchase-id="@Model.Info.Id"
                                                                                 data-item-id="@item.Id" data-item-name="@item.ProductName">
-                                                                            <i class="bi bi-diagram-3 me-2"></i>
-                                                                            Phân bổ cho đơn hàng
+                                                                            <i class="bi bi-diagram-3 me-1"></i>
+                                                                            Phân bổ đơn hàng
+                                                                        </button>
+                                                                    </li>
+                                                                }
+                                                                @if (hasAllocations)
+                                                                {
+                                                                    <li>
+                                                                        <button class="dropdown-item btn-release-allocate" data-purchase-id="@Model.Info.Id"
+                                                                                data-item-id="@item.Id" data-item-name="@item.ProductName">
+                                                                            <i class="bi bi-x-octagon me-1"></i>
+                                                                            Hủy phân bổ
                                                                         </button>
                                                                     </li>
                                                                 }
@@ -236,7 +246,7 @@
                                                                         <button class="dropdown-item btnRemoveItem" data-id="@item.Id"
                                                                                 disabled="@(Model.Info.Items.Count <= 1)"
                                                                                 data-purchaseorder="@Model.Info.Id" data-name="@item.ProductName">
-                                                                            <i class="bi bi-trash me-2 text-danger"></i>
+                                                                            <i class="bi bi-trash me-1 text-danger"></i>
                                                                             Xóa bỏ
                                                                         </button>
                                                                     </li>
@@ -1133,11 +1143,11 @@
                             <table class="table table-sm table-hover align-middle mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Đơn hàng</th>
-                                        <th>Khách hàng</th>
-                                        <th class="text-end">SL đặt</th>
-                                        <th class="text-end">Khả dụng</th>
-                                        <th class="text-end">SL phân bổ</th>
+                                        <th class="ps-2">Đơn hàng</th>
+                                        <th class="ps-2">Khách hàng</th>
+                                        <th class="text-end pe-2">SL đặt</th>
+                                        <th class="text-end pe-2">Khả dụng</th>
+                                        <th class="text-end pe-2">SL phân bổ</th>
                                     </tr>
                                 </thead>
                                 <tbody id="allocateOrderItemsBody"></tbody>
@@ -1989,15 +1999,15 @@
                                     tr.dataset.customerPhone = item.customerPhone || '';
                                     tr.dataset.customerName = item.customerName || '';
                                     tr.innerHTML = `
-                                        <td><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
-                                        <td class="text-muted small">${escHtml(item.customerName)}</td>
-                                        <td class="text-end">${fmtQty(item.totalQuantity)}</td>
-                                        <td class="text-end text-success fw-semibold">${fmtQty(item.availableToAllocate)}</td>
-                                        <td class="text-end">
-                                            <input type="text" class="form-control form-control-sm text-end allocate-qty-input no-additional-element no-hint"
-                                                   data-decimal="quantity"
-                                                   value="${fmtQty(item.availableToAllocate)}"
-                                                   style="width:90px;display:inline-block" />
+                                        <td class="ps-2"><span class="fw-semibold">${escHtml(item.orderCode)}</span></td>
+                                        <td class="text-muted small ps-2">${escHtml(item.customerName)}</td>
+                                        <td class="text-end pe-2">${fmtQty(item.totalQuantity)}</td>
+                                        <td class="text-end text-success fw-semibold pe-2">${fmtQty(item.availableToAllocate)}</td>
+                                        <td class="pe-2">
+                                            <div class="d-flex align-items-center justify-content-end">
+                                                <input type="text" class="form-control form-control-sm text-end allocate-qty-input no-additional-element no-hint"
+                                                       data-decimal="quantity" value="${fmtQty(item.availableToAllocate)}" style="width:90px;display:inline-block" />
+                                           </div>
                                         </td>`;
                                     tbody.appendChild(tr);
                                     window.DecimalFields?.autoWrap?.(tr);
@@ -2109,4 +2119,32 @@
                 })();
                 </script>
             }
+    @if(Model.AllocationsPerItem.Values.Any(allocations => allocations.Count > 0))
+    {
+        <script type="module">
+            import { apiPost } from '/modules/ajax-helper.js';
+            import { confirm } from '/modules/modals.js';
+
+            document.addEventListener('DOMContentLoaded', () => {
+                document.querySelectorAll('.btn-release-allocate').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const { purchaseId, itemId} = btn.dataset;
+                        if (!purchaseId || !itemId) return;
+                        if (!await confirm('Hủy phân bổ', 'Bạn có chắc chắn muốn hủy phân bổ này?')) return;
+                        btn.disabled = true;
+                        const originalHtml = btn.innerHTML;
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang hủy...';
+                        showPageLoading();
+                        const result = await apiPost('/PurchaseOrder/ReleaseAllocationsForPurchaseOrderItem', { purchaseOrderId: purchaseId, purchaseOrderItemId: itemId });
+                        if (result.success) {
+                            location.reload();
+                            return;
+                        }
+                        btn.disabled = false;
+                        btn.innerHTML = originalHtml;
+                    });
+                });
+            });
+        </script>
+    }
         }
