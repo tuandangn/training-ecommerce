@@ -32,6 +32,7 @@ public sealed record EditProductModel
 
     [Display(Name = "Giá vốn")]
     [UIHint("Currency")]
+    [ValidateNever]
     public decimal CostPrice { get; set; }
 
     [Display(Name = "Giá bán")]

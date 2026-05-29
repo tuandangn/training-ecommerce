@@ -83,7 +83,7 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
 
         if (hasDirectShip)
         {
-            var allocationResult = await _sender.Send(new AllocatePoItemToOrderCommand
+            var allocationResult = await _sender.Send(new AllocatePoItemForOrderItemCommand
             {
                 PurchaseOrderId = request.PurchaseOrderId,
                 PurchaseOrderItemId = request.PurchaseOrderItemId,

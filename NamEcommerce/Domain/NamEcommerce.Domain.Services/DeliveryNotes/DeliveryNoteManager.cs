@@ -27,7 +27,6 @@ using NamEcommerce.Domain.Shared.Services.Returns;
 namespace NamEcommerce.Domain.Services.DeliveryNotes;
 
 public sealed class DeliveryNoteManager(
-    IDbContext dbContext,
     IRepository<DeliveryNote> deliveryNoteRepository,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IEntityDataReader<Order> orderReader,
@@ -206,12 +205,8 @@ public sealed class DeliveryNoteManager(
         }
     }
 
-    public async Task MarkReceivedByCustomerAsync(
-        Guid id,
-        DateTime receivedAtUtc,
-        string? receiverName,
-        string? note,
-        DeliveryAcceptanceDto? acceptance = null)
+    public async Task MarkReceivedByCustomerAsync(Guid id, DateTime receivedAtUtc, string? receiverName,
+        string? note, DeliveryAcceptanceDto? acceptance = null)
     {
         var deliveryNote = await deliveryNoteRepository.GetByIdAsync(id).ConfigureAwait(false);
         if (deliveryNote is null)
@@ -487,7 +482,8 @@ public sealed class DeliveryNoteManager(
         return deliveryNote is null ? null : MapToDto(deliveryNote);
     }
 
-    public async Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize, string? keywords, Guid? orderId, IEnumerable<DeliveryNoteStatus>? status)
+    public async Task<IPagedDataDto<DeliveryNoteDto>> GetDeliveryNotesAsync(int pageIndex, int pageSize, 
+        string? keywords, Guid? orderId, IEnumerable<DeliveryNoteStatus>? status)
     {
         var query = deliveryNoteReader.DataSource;
 
@@ -579,8 +575,7 @@ public sealed class DeliveryNoteManager(
     }
 
     private async Task CreateCustomerReturnFromRejectedAcceptanceAsync(
-        DeliveryNote deliveryNote,
-        DeliveryAcceptanceResolution acceptance)
+        DeliveryNote deliveryNote, DeliveryAcceptanceResolution acceptance)
     {
         var rejectedLines = acceptance.Lines
             .Where(line => line.RejectedQuantity > 0)
@@ -630,17 +625,15 @@ public sealed class DeliveryNoteManager(
         }));
 
         if (acceptance.AgreedCustomerCharge == 0)
-            return $"Tạo tự động từ xác nhận giao hàng {deliveryNote.Code}. Khách trả: {rejectedSummary}.";
+            return $"Khi nhận hàng từ phiếu {deliveryNote.Code}, khách hàng trả về: {rejectedSummary}.";
 
         var chargeReason = string.IsNullOrWhiteSpace(acceptance.AgreedCustomerChargeReason)
             ? string.Empty
             : $" ({acceptance.AgreedCustomerChargeReason!.Trim()})";
-        return $"Tạo tự động từ xác nhận giao hàng {deliveryNote.Code}. Khách trả: {rejectedSummary}. Chi phí thỏa thuận: {acceptance.AgreedCustomerCharge:#,##0.##}{chargeReason}.";
+        return $"Khi nhận hàng từ phiếu {deliveryNote.Code}, khách hàng trả về: {rejectedSummary}. Chi phí phát sinh: {acceptance.AgreedCustomerCharge:#,##0.##}{chargeReason}.";
     }
 
-    private static DeliveryAcceptanceResolution ResolveDeliveryAcceptance(
-        DeliveryNote deliveryNote,
-        DeliveryAcceptanceDto? acceptance)
+    private static DeliveryAcceptanceResolution ResolveDeliveryAcceptance(DeliveryNote deliveryNote, DeliveryAcceptanceDto? acceptance)
     {
         var requestedByItemId = new Dictionary<Guid, DeliveryAcceptanceItemDto>();
         if (acceptance?.Items is not null)

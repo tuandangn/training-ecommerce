@@ -14,6 +14,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Web.Models.DeliveryNotes;
 using NamEcommerce.Web.Framework.Services;
+using NamEcommerce.Web.Contracts.Configurations;
 
 namespace NamEcommerce.Web.Services.DeliveryNotes;
 
@@ -26,6 +27,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
     private readonly IWarehouseAppService _warehouseAppService;
     private readonly IWebHelper _webHelper;
     private readonly IMediator _mediator;
+    private readonly AppConfig _appConfig;
 
     public DeliveryNoteModelFactory(
         IDeliveryNoteAppService deliveryNoteAppService,
@@ -34,7 +36,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         IPictureAppService pictureAppService,
         IWarehouseAppService warehouseAppService,
         IWebHelper webHelper,
-        IMediator mediator)
+        IMediator mediator,
+        AppConfig appConfig)
     {
         _deliveryNoteAppService = deliveryNoteAppService;
         _orderAppService = orderAppService;
@@ -43,14 +46,21 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         _warehouseAppService = warehouseAppService;
         _webHelper = webHelper;
         _mediator = mediator;
+        _appConfig = appConfig;
     }
 
     public async Task<DeliveryNoteListModel> PrepareDeliveryNoteListModelAsync(DeliveryNoteSearchModel searchModel)
     {
+        var pageNumber = searchModel?.PageNumber ?? 1;
+        var pageSize = searchModel?.PageSize ?? 0;
+        if (pageNumber <= 0) pageNumber = 1;
+        if (pageSize <= 0) pageSize = _appConfig.DefaultPageSize;
+        if (_appConfig.PageSizeOptions.Contains(pageSize)) pageSize = _appConfig.DefaultPageSize;
+
         var pagedData = await _deliveryNoteAppService.GetListAsync(
             searchModel.Keywords,
-            searchModel.PageIndex - 1,
-            searchModel.PageSize).ConfigureAwait(false);
+            pageNumber - 1,
+            pageSize).ConfigureAwait(false);
 
         var deliveryNotes = pagedData.Items.Select(deliveryNote => new DeliveryNoteListItemModel
         {
@@ -59,6 +69,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             CustomerName = deliveryNote.CustomerName,
             CustomerPhone = deliveryNote.CustomerPhone,
             ShippingAddress = deliveryNote.ShippingAddress,
+            IsDirectShip = deliveryNote.IsDirectShip,
             OrderId = deliveryNote.OrderId,
             OrderCode = deliveryNote.OrderCode ?? string.Empty,
             TotalAmount = deliveryNote.TotalAmount,
@@ -81,12 +92,13 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             deliveryNote.WarehouseName = warehouse?.Name;
         }
 
-        var data = PagedDataModel.Create(deliveryNotes, searchModel.PageIndex, searchModel.PageSize, pagedData.Pagination.TotalCount);
+        var data = PagedDataModel.Create(deliveryNotes, pagedData.Pagination.PageIndex, pagedData.Pagination.PageSize, pagedData.Pagination.TotalCount);
 
         var model = new DeliveryNoteListModel
         {
             Keywords = searchModel.Keywords,
-            Data = data
+            Data = data,
+            AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false)
         };
 
         return model;
@@ -251,8 +263,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             }).ToList()
         };
 
-        var warehouseDetails = await _warehouseAppService.GetWarehouseByIdAsync(deliveryNote.WarehouseId).ConfigureAwait(false);
-        model.WarehouseName = warehouseDetails?.Name;
+        model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        model.WarehouseName = model.AvailableWarehouses?.Options.FirstOrDefault(warehouse => warehouse.Id == deliveryNote.WarehouseId)?.Name;
 
         if (deliveryNote.DeliveryProofPictureId.HasValue)
         {

@@ -6,6 +6,7 @@ using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
 using NamEcommerce.Domain.Shared.Services.Catalog;
+using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Media;
 
 namespace NamEcommerce.Application.Services.Catalog;
@@ -16,14 +17,17 @@ public sealed class ProductAppService : IProductAppService
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
     private readonly IPictureManager _pictureManager;
+    private readonly IInventoryCostingManager _inventoryCostingManager;
 
     public ProductAppService(IProductManager productManager, IEntityDataReader<Product> productDataReader,
-        IPictureManager pictureManager, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader)
+        IPictureManager pictureManager, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
+        IInventoryCostingManager inventoryCostingManager)
     {
         _productManager = productManager;
         _productDataReader = productDataReader;
         _pictureManager = pictureManager;
         _unitMeasurementDataReader = unitMeasurementDataReader;
+        _inventoryCostingManager = inventoryCostingManager;
     }
 
     public async Task<CreateProductResultAppDto> CreateProductAsync(CreateProductAppDto dto)
@@ -225,7 +229,7 @@ public sealed class ProductAppService : IProductAppService
         {
             await _productManager.UpdateProductPriceAsync(new UpdateProductPriceDto(product.Id)
             {
-                UnitCost = product.CostPrice,
+                UnitCost = (await _inventoryCostingManager.GetCurrentCostSummaryAsync(product.Id).ConfigureAwait(false)).AverageCost,
                 UnitPrice = dto.NewUnitPrice.Value,
                 ChangePriceReason = dto.ChangePriceReason
             }).ConfigureAwait(false);

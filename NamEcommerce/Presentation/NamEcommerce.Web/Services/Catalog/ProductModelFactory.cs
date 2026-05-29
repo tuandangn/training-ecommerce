@@ -1,4 +1,5 @@
 using MediatR;
+using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -11,11 +12,13 @@ public sealed class ProductModelFactory : IProductModelFactory
 {
     private readonly IMediator _mediator;
     private readonly AppConfig _appConfig;
+    private readonly IInventoryCostingAppService _inventoryCostingAppService;
 
-    public ProductModelFactory(IMediator mediator, AppConfig appConfig)
+    public ProductModelFactory(IMediator mediator, AppConfig appConfig, IInventoryCostingAppService inventoryCostingAppService)
     {
         _mediator = mediator;
         _appConfig = appConfig;
+        _inventoryCostingAppService = inventoryCostingAppService;
     }
 
     public async Task<CreateProductModel> PrepareCreateProductModel(CreateProductModel? oldModel = null)
@@ -67,9 +70,9 @@ public sealed class ProductModelFactory : IProductModelFactory
             AvailableVendors = vendorOptions,
             DisplayOrder = product.DisplayOrder,
             UnitPrice = product.UnitPrice,
-            CostPrice = product.CostPrice,
             ImageFile = product.ImageFile ?? new()
         };
+        model.CostPrice = await _inventoryCostingAppService.GetCurrentProductCostPriceAsync(id).ConfigureAwait(false);
         if (oldModel is not null)
         {
             model.AvailableCategories = categoryOptions;

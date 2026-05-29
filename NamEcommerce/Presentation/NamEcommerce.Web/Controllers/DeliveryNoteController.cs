@@ -1,13 +1,15 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
+using NamEcommerce.Web.Contracts.Queries.Models.Returns;
+using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.DeliveryNotes;
 using NamEcommerce.Web.Services.CustomerPortal;
 using NamEcommerce.Web.Services.DeliveryNotes;
+using System.Text.Json;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -173,12 +175,10 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         }).ConfigureAwait(false);
 
         if (result.Success)
-            return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
+            return Json(new { success = true });
 
-        return Json(new
+        return this.JsonError(LocalizeError(result.ErrorMessage!), data: new
         {
-            success = false,
-            message = LocalizeError(result.ErrorMessage!),
             shortageItems = result.ShortageItems,
             aggregationUrl = Url.Action("ShortageAggregation", "PurchaseOrder", new { deliveryNoteId = id })
         });
@@ -187,67 +187,79 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [HttpPost]
     public async Task<IActionResult> MarkDelivering(Guid id)
     {
-        try
-        {
-            await _mediator.Send(new MarkDeliveringDeliveryNoteCommand
-            {
-                DeliveryNoteId = id
-            }).ConfigureAwait(false);
+        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id).ConfigureAwait(false);
+        if (deliveryNote is null)
+            return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
 
-            return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
-        }
-        catch (NamEcommerceDomainException ex)
+        await _mediator.Send(new MarkDeliveringDeliveryNoteCommand
         {
-            return Json(new { success = false, message = LocalizeError(ex.ErrorCode, ex.Parameters) });
-        }
+            DeliveryNoteId = id
+        }).ConfigureAwait(false);
+
+        return this.JsonOk();
     }
 
     [HttpPost]
     public async Task<IActionResult> MarkDelivered(
-        Guid deliveryNoteId,
-        string? receiverName,
-        decimal agreedCustomerCharge,
-        string? agreedCustomerChargeReason,
-        string? acceptanceItemsJson,
-        IFormFile? pictureFile)
+        Guid deliveryNoteId, string? receiverName, decimal agreedCustomerCharge,
+        string? agreedCustomerChargeReason, string? acceptanceItemsJson, IFormFile? pictureFile)
     {
+        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(deliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
+
         if (pictureFile == null || pictureFile.Length == 0)
+            return this.JsonError(message: LocalizeError("Error.DeliveryProofRequired"));
+
+        using var memoryStream = new MemoryStream();
+        await pictureFile.CopyToAsync(memoryStream);
+        var fileBytes = memoryStream.ToArray();
+
+        var acceptanceItems = ParseAcceptanceItems(acceptanceItemsJson);
+        var result = await _mediator.Send(new MarkDeliveryNoteDeliveredCommand
         {
-            return Json(new { success = false, message = LocalizeError("Error.DeliveryProofRequired") });
-        }
+            DeliveryNoteId = deliveryNoteId,
+            ReceiverName = receiverName,
+            AgreedCustomerCharge = agreedCustomerCharge,
+            AgreedCustomerChargeReason = agreedCustomerChargeReason,
+            Items = acceptanceItems,
+            PictureData = fileBytes,
+            PictureContentType = pictureFile.ContentType,
+            PictureFileName = pictureFile.FileName
+        });
 
-        try
-        {
-            using var memoryStream = new MemoryStream();
-            await pictureFile.CopyToAsync(memoryStream);
-            var fileBytes = memoryStream.ToArray();
+        if (result.Success)
+            return this.JsonOk();
 
-            var acceptanceItems = ParseAcceptanceItems(acceptanceItemsJson);
-            var result = await _mediator.Send(new MarkDeliveryNoteDeliveredCommand
-            {
-                DeliveryNoteId = deliveryNoteId,
-                ReceiverName = receiverName,
-                AgreedCustomerCharge = agreedCustomerCharge,
-                AgreedCustomerChargeReason = agreedCustomerChargeReason,
-                Items = acceptanceItems,
-                PictureData = fileBytes,
-                PictureContentType = pictureFile.ContentType,
-                PictureFileName = pictureFile.FileName
-            });
-
-            if (result.Success)
-            {
-                return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
-            }
-
-            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
-        }
-        catch (NamEcommerceDomainException ex)
-        {
-            return Json(new { success = false, message = LocalizeError(ex.ErrorCode, ex.Parameters) });
-        }
+        return this.JsonError(LocalizeError(result.ErrorMessage!));
     }
 
+    public async Task<IActionResult> GetAcceptantItems(Guid id)
+    {
+        var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id).ConfigureAwait(false);
+        if (deliveryNote is null)
+            return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
+
+        var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
+        {
+            DeliveryNoteId = id
+        }).ConfigureAwait(false);
+        var items = deliveryNote.Items.Select(i =>
+        {
+            returnedQuantities.TryGetValue(i.Id, out var summary);
+            return new DeliveryNoteItemModel
+            {
+                Id = i.Id,
+                ProductName = i.ProductName,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice,
+                SubTotal = i.SubTotal,
+                ReturnedQuantity = summary?.ConfirmedQuantity ?? 0m,
+                PendingReturnQuantity = summary?.PendingQuantity ?? 0m
+            };
+        }).ToList();
+        return this.JsonOk(items);
+    }
     private static IList<MarkDeliveryNoteDeliveredItemCommand> ParseAcceptanceItems(string? acceptanceItemsJson)
     {
         if (string.IsNullOrWhiteSpace(acceptanceItemsJson))
@@ -389,6 +401,8 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 }
 
+#region Helper classes
+
 public class CreateFromPreparationRequest
 {
     public Guid OrderId { get; set; }
@@ -407,3 +421,5 @@ public class SelectedItemModel
     public Guid OrderItemId { get; set; }
     public decimal Quantity { get; set; }
 }
+
+#endregion 

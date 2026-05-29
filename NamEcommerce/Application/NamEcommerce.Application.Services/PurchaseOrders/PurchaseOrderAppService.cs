@@ -825,7 +825,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         return Task.FromResult<IList<PurchaseOrderItemAllocationForPoItemAppDto>>(result);
     }
 
-    public async Task<CommonActionResultDto> AllocatePoItemToOrderAsync(AllocatePoItemToOrderAppDto dto)
+    public async Task<CommonActionResultDto> AllocatePoItemForOrderItemAsync(AllocatePoItemForOrderItemAppDto dto)
     {
         try
         {
@@ -839,6 +839,26 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                         ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(dto.DirectShipContactName, dto.DirectShipContactPhone, dto.DirectShipAddress)
                         : null
                 })
+                .ConfigureAwait(false);
+
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
+        }
+        catch (Exception)
+        {
+            return CommonActionResultDto.CreateError("Error.UnexpectedError");
+        }
+    }
+
+    public async Task<CommonActionResultDto> ReleasePoItemAllocationForOrderItemAsync(ReleaseAllocationsOfPurchaseOrderItemAppDto dto)
+    {
+        try
+        {
+            await _purchaseOrderAllocationManager
+                .ReleaseAllocationsOfPurchaseOrderItemAsync((dto.PurchaseOrderId, dto.PurchaseOrderItemId))
                 .ConfigureAwait(false);
 
             return CommonActionResultDto.CreateSuccess();

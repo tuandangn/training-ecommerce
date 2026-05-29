@@ -391,6 +391,18 @@
         });
     }
 
+    function getFormData(form) {
+        if (!form || !(form instanceof HTMLFormElement))
+            throw new Error('Form is required');
+        const formData = new FormData(form);
+        const decimalFields = form.querySelectorAll('.decimal-input');
+        for (const decimalField of decimalFields) {
+            const decimals = Number(decimalField.dataset.decimals) ?? 0;
+            formData.set(decimalField.name, DecimalFields.stripFormatting(decimalField.value, decimals))
+        }
+        return formData;
+    }
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initDecimalFields);
     } else {
@@ -408,7 +420,8 @@
         formatCurrency: formatCurrency,
         formatCurrencyWithSymbol: formatCurrencyWithSymbol,
         formatQuantity: formatQuantity,
-        stripFormatting: stripFormatting
+        stripFormatting: stripFormatting,
+        getFormData: getFormData
     };
 
 })(window);

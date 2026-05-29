@@ -147,7 +147,7 @@ public sealed record PurchaseOrderItemAllocationForPoItemAppDto
 }
 
 [Serializable]
-public sealed record AllocatePoItemToOrderAppDto
+public sealed record AllocatePoItemForOrderItemAppDto
 {
     public required Guid PurchaseOrderId { get; set; }
     public required Guid PurchaseOrderItemId { get; init; }
@@ -157,6 +157,13 @@ public sealed record AllocatePoItemToOrderAppDto
     public string? DirectShipAddress { get; init; }
     public string? DirectShipContactName { get; init; }
     public string? DirectShipContactPhone { get; init; }
+}
+
+[Serializable]
+public sealed record ReleaseAllocationsOfPurchaseOrderItemAppDto
+{
+    public required Guid PurchaseOrderId { get; set; }
+    public required Guid PurchaseOrderItemId { get; init; }
 }
 
 [Serializable]

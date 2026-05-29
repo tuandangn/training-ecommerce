@@ -1,3 +1,4 @@
+using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.Inventory;
 
 namespace NamEcommerce.Web.Contracts.Models.DeliveryNotes;
@@ -15,9 +16,11 @@ public sealed class DeliveryNoteDetailsModel
     public string? CustomerPhone { get; set; }
     public string? CustomerAddress { get; set; }
     public string ShippingAddress { get; set; } = string.Empty;
+
     public Guid WarehouseId { get; set; }
     public string? WarehouseName { get; set; }
-    
+    public EntityOptionListModel? AvailableWarehouses { get; set; }
+
     public bool ShowPrice { get; set; }
     public string? Note { get; set; }
     

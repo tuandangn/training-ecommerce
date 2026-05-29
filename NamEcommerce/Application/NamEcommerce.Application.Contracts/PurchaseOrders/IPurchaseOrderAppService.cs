@@ -9,15 +9,21 @@ public interface IPurchaseOrderAppService
     Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status);
 
     Task<PurchaseOrderAppDto?> GetPurchaseOrderByIdAsync(Guid id);
+
     Task<PurchaseOrderAppDto?> GetPurchaseOrderByCodeAsync(string code);
 
     Task<CreatePurchaseOrderResultAppDto> CreatePurchaseOrderAsync(CreatePurchaseOrderAppDto dto);
+
     Task<UpdatePurchaseOrderResultAppDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderAppDto dto);
 
     Task<CommonActionResultDto> SubmitsPurchaseOrderAsync(Guid id);
+
     Task<CommonActionResultDto> CancelPurchaseOrderAsync(Guid id);
+
     Task<CommonActionResultDto> ClosePartialPurchaseOrderAsync(Guid id, string reason);
+
     Task<CommonActionResultDto> ApprovePurchaseOrderAsync(Guid id);
+
     Task<CommonActionResultDto> ChangeStatusAsync(Guid purchaseOrderId, int newStatus);
 
     Task<CommonActionResultDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemAppDto dto);
@@ -39,10 +45,14 @@ public interface IPurchaseOrderAppService
     Task<IList<OrderAllocatedPurchaseOrderAppDto>> GetAllocatedPurchaseOrdersForOrderAsync(Guid orderId);
 
     Task<IList<EligibleOrderItemForAllocationAppDto>> GetEligibleOrderItemsForPoItemAsync(Guid purchaseOrderItemId);
+
     Task<IList<PurchaseOrderItemAllocationForPoItemAppDto>> GetAllocationsForPurchaseOrderItemsAsync(IReadOnlyList<Guid> purchaseOrderItemIds);
+
     Task<decimal> GetMaxAllocationQuantityForOrderItemAsync(Guid orderId, Guid orderItemId);
 
-    Task<CommonActionResultDto> AllocatePoItemToOrderAsync(AllocatePoItemToOrderAppDto dto);
+    Task<CommonActionResultDto> AllocatePoItemForOrderItemAsync(AllocatePoItemForOrderItemAppDto dto);
+
+    Task<CommonActionResultDto> ReleasePoItemAllocationForOrderItemAsync(ReleaseAllocationsOfPurchaseOrderItemAppDto dto);
 
     Task<string> NextPurchaseOrderCodeAsync();
 }

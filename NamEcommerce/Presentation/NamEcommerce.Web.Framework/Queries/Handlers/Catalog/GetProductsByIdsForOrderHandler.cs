@@ -51,11 +51,12 @@ public sealed class GetProductsByIdsForOrderHandler : IRequestHandler<GetProduct
                 CurrentUnitPrice = productInfo.UnitPrice
             };
 
-            if (productInfo.Pictures.Any())
+            foreach (var pictureId in productInfo.Pictures)
             {
-                var pictureId = productInfo.Pictures.First();
                 var base64PictureInfo = await _pictureAppService.GetBase64PictureByIdAsync(pictureId).ConfigureAwait(false);
+                if (base64PictureInfo is null) continue;
                 productModel.PictureUrl = base64PictureInfo?.Base64Value;
+                break;
             }
 
             var stockInfo = await _mediator.Send(new GetProductStockInfoQuery(productInfo.Id, default), cancellationToken).ConfigureAwait(false);

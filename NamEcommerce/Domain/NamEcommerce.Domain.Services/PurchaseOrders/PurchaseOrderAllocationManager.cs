@@ -167,20 +167,7 @@ public sealed class PurchaseOrderAllocationManager(
         var allocations = await GetAllocationsOfPurchaseOrderItem(purchaseOrderItemId)
             .ConfigureAwait(false);
 
-        foreach (var allocation in allocations)
-        {
-            if (allocation.ReceivedQuantity == 0)
-            {
-                await allocationRepository.DeleteAsync(allocation).ConfigureAwait(false);
-                continue;
-            }
-
-            if (allocation.AllocatedQuantity > allocation.ReceivedQuantity)
-            {
-                allocation.ReduceAllocationToReceived();
-                await allocationRepository.UpdateAsync(allocation).ConfigureAwait(false);
-            }
-        }
+        await ReleaseAllocations(allocations).ConfigureAwait(false);
     }
 
     public async Task ReleaseAllocationsForOrderAsync(Guid orderId)
@@ -208,6 +195,11 @@ public sealed class PurchaseOrderAllocationManager(
             .ToListAsync()
             .ConfigureAwait(false);
 
+        await ReleaseAllocations(allocations).ConfigureAwait(false);
+    }
+
+    private async Task ReleaseAllocations(IEnumerable<PurchaseOrderItemAllocation> allocations)
+    {
         foreach (var allocation in allocations)
         {
             if (allocation.ReceivedQuantity == 0)
@@ -215,7 +207,6 @@ public sealed class PurchaseOrderAllocationManager(
                 await allocationRepository.DeleteAsync(allocation).ConfigureAwait(false);
                 continue;
             }
-
             if (allocation.AllocatedQuantity > allocation.ReceivedQuantity)
             {
                 allocation.ReduceAllocationToReceived();

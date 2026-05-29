@@ -1,15 +1,14 @@
-@using System.Text.Json
-@model NamEcommerce.Web.Contracts.Models.DeliveryNotes.DeliveryNoteDetailsModel
+@model DeliveryNoteDetailsModel
 @{
     ViewData["Title"] = "Chi tiết phiếu xuất kho " + Model.Code;
 
     var statusTuple = Model.Status switch
     {
-        10 => ("secondary", "Bản nháp", "bi-pencil"),
-        20 => ("info text-white", "Đã xác nhận", "bi-check-all"),
-        30 => ("warning", "Đang giao", "bi-truck"),
-        40 => ("success", "Đã giao", "bi-check-circle-fill"),
-        50 => ("danger", "Đã hủy", "bi-x-circle"),
+        (int)DeliveryNoteStatus.Draft => ("secondary", "Bản nháp", "bi-pencil"),
+        (int)DeliveryNoteStatus.Confirmed => ("info text-white", "Đã xác nhận", "bi-check-all"),
+        (int)DeliveryNoteStatus.Delivering => ("warning", "Đang giao", "bi-truck"),
+        (int)DeliveryNoteStatus.Delivered => ("success", "Đã giao", "bi-check-circle-fill"),
+        (int)DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy", "bi-x-circle"),
         _ => ("secondary", "Không rõ", "bi-question-circle")
     };
     var isDirectShip = Model.SourceType == (int)DeliveryNoteSourceType.DirectShipToCustomer;
@@ -18,20 +17,12 @@
         : Model.DeliveryProofPictureUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
             ? Model.DeliveryProofPictureUrl
             : $"data:image/jpeg;base64,{Model.DeliveryProofPictureUrl}";
-    var acceptanceItemsJson = JsonSerializer.Serialize(Model.Items.Select(item => new
-    {
-        id = item.Id,
-        productName = item.ProductName,
-        quantity = item.Quantity
-    }));
 }
-
-@Html.AntiForgeryToken()
 
 @if (isDirectShip)
 {
     <div class="alert alert-info d-flex align-items-center gap-2 mb-3" role="alert">
-        <i class="bi bi-truck-flatbed fs-5"></i>
+        <i class="bi bi-truck fs-5"></i>
         <div>
             <strong>Phiếu giao thẳng tới khách</strong>
             @{
@@ -59,41 +50,47 @@
         </p>
     </div>
     <div class="d-flex gap-2">
-        @if (!isDirectShip && Model.Status == 10)
+        @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Draft)
         {
             <button type="button" class="btn btn-outline-primary btn-confirm" data-testid="delivery-confirm" data-id="@Model.Id">
-                <i class="bi bi-check-all me-1"></i> Xác nhận xuất
+                <i class="bi bi-check-all me-1"></i>Xuất hàng
             </button>
         }
-        @if (!isDirectShip && Model.Status == 20)
+        @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Confirmed)
         {
-            <button type="button" class="btn btn-outline-warning btn-delivering" data-testid="delivery-mark-delivering" data-id="@Model.Id">
-                <i class="bi bi-truck me-1"></i> Bắt đầu đi giao
+            <button type="button" class="btn btn-outline-secondary btn-delivering" data-testid="delivery-mark-delivering" data-id="@Model.Id">
+                <i class="bi bi-truck me-1"></i>Đang giao
             </button>
         }
-        @if (Model.Status == 30 || Model.Status == 20)
+        @if (Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.Confirmed)
         {
             <button type="button" class="btn btn-outline-success btn-delivered" data-testid="delivery-mark-delivered-open" data-id="@Model.Id">
-                <i class="bi bi-check-circle-fill me-1"></i> Xác nhận Đã giao
+                <i class="bi bi-check-circle-fill me-1"></i>Đã giao
             </button>
         }
-        @if (!isDirectShip && Model.Status != 40 && Model.Status != 50)
+        @if (Model.Status != (int)DeliveryNoteStatus.Delivered && Model.Status != (int)DeliveryNoteStatus.Cancelled)
         {
-            <button type="button" class="btn btn-outline-danger btn-cancel" data-id="@Model.Id">
-                <i class="bi bi-x-circle me-1"></i> Hủy phiếu
-            </button>
+            if (isDirectShip)
+            {
+                <button type="button" class="btn btn-outline-danger btn-customer-reject" data-id="@Model.Id" data-code="@Model.Code">
+                    <i class="bi bi-person-fill-x me-1"></i>Từ chối
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-outline-danger btn-cancel" data-id="@Model.Id">
+                    <i class="bi bi-x-circle me-1"></i>Hủy phiếu
+                </button>
+            }
         }
-        <div class="vr mx-1"></div>
-
+        <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-primary d-flex align-items-center">
+            <i class="bi bi-printer me-2"></i> In phiếu
+        </a>
         <a asp-controller="CustomerReturn" asp-action="Create"
            asp-route-deliveryNoteId="@Model.Id"
            asp-route-customerId="@Model.CustomerId"
            class="btn btn-outline-secondary d-flex align-items-center">
             <i class="bi bi-arrow-return-left me-2"></i> Tạo phiếu trả
-        </a>
-
-        <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-primary d-flex align-items-center">
-            <i class="bi bi-printer me-2"></i> In phiếu
         </a>
     </div>
 </div>
@@ -113,8 +110,7 @@
     @await Html.PartialAsync("_ShortageNotice", Model.ShortageInfo, shortageNoticeViewData)
 }
 
-
-<div class="row g-4">
+<div class="row g-3">
     <div class="col-lg-4 order-lg-2">
         <div class="content-card mb-4 h-100">
             <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
@@ -134,7 +130,7 @@
 
                 <div class="mb-4">
                     <label class="form-label small fw-bold text-muted text-uppercase mb-1">Ngày lập</label>
-                    <div class="text-dark">@Model.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                    <div class="text-dark">@Model.CreatedOnUtc.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
                 </div>
 
                 <div class="mb-4">
@@ -158,7 +154,7 @@
                         {
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted small">Tiền hàng:</span>
-                                <span class="fw-bold small">@Model.TotalAmount.ToString("N0")đ</span>
+                                <span class="fw-bold small">@Model.TotalAmount.DisplayCurrencyWithSymbol()</span>
                             </div>
                         }
                         @if (Model.Surcharge > 0)
@@ -166,7 +162,7 @@
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted small">Phụ phí:</span>
                                 <div class="text-end">
-                                    <span class="fw-bold small">@Model.Surcharge.ToString("N0")đ</span>
+                                    <span class="fw-bold small">@Model.Surcharge.DisplayCurrencyWithSymbol()</span>
                                     @if (!string.IsNullOrEmpty(Model.SurchargeReason))
                                     {
                                         <div class="text-muted x-small">(@Model.SurchargeReason)</div>
@@ -178,7 +174,7 @@
                         {
                             <div class="d-flex justify-content-between mt-3 pt-3 border-top">
                                 <span class="text-primary fw-bold small">TỔNG THU:</span>
-                                <span class="text-primary fw-bold fs-5">@Model.AmountToCollect.ToString("N0")đ</span>
+                                <span class="text-primary fw-bold fs-5">@Model.AmountToCollect.DisplayCurrencyWithSymbol()</span>
                             </div>
                         }
                     </div>
@@ -199,7 +195,7 @@
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted text-uppercase mb-1">Đã giao lúc</label>
-                        <div class="text-dark">@Model.DeliveredOnUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                        <div class="text-dark">@Model.DeliveredOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
                     </div>
 
                     @if (!string.IsNullOrEmpty(Model.DeliveryReceiverName))
@@ -227,41 +223,7 @@
     </div>
 
     <div class="col-lg-8 order-lg-1">
-        <div class="content-card mb-4" id="customerReturnsCard" data-delivery-note-id="@Model.Id">
-            <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0 d-flex align-items-center justify-content-between">
-                <h5 class="mb-0 fw-bold"><i class="bi bi-arrow-return-left me-2 text-warning"></i>Khách trả hàng</h5>
-                <a asp-controller="CustomerReturn" asp-action="Create"
-                   asp-route-deliveryNoteId="@Model.Id"
-                   asp-route-customerId="@Model.CustomerId"
-                   class="btn btn-sm btn-outline-warning">
-                    <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
-                </a>
-            </div>
-            <div class="card-body p-0">
-                <div id="customerReturnsLoading" class="px-4 py-3 text-center text-muted small">
-                    <span class="spinner-border spinner-border-sm me-1"></span>Đang tải...
-                </div>
-                <div id="customerReturnsEmpty" class="d-none px-4 py-3 text-center text-muted small fst-italic">
-                    — Chưa có phiếu trả hàng nào liên kết
-                </div>
-                <div id="customerReturnsList" class="d-none">
-                    <table class="table data-table mb-0">
-                        <thead>
-                            <tr>
-                                <th class="ps-4">Mã phiếu</th>
-                                <th>Ngày trả</th>
-                                <th class="text-center">Trạng thái</th>
-                                <th class="text-end">Số mặt hàng</th>
-                                <th class="text-end pe-4">Tổng giá trị</th>
-                            </tr>
-                        </thead>
-                        <tbody id="customerReturnsTableBody"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="content-card h-100 d-flex flex-column">
+        <div class="content-card mb-3 d-flex flex-column">
             <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0">
                 <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Danh sách hàng hóa</h5>
             </div>
@@ -296,7 +258,7 @@
                                     <tr>
                                         <td class="ps-4">@(idx++)</td>
                                         <td class="fw-medium text-dark">@item.ProductName</td>
-                                        <td class="text-end fw-bold">@item.Quantity.ToString("N2")</td>
+                                        <td class="text-end fw-bold">@item.Quantity.DisplayQuantity()</td>
                                         @if (hasReturned)
                                         {
                                             <td class="text-end">
@@ -309,19 +271,19 @@
                                                     if (item.ReturnedQuantity >= item.Quantity)
                                                     {
                                                         <span class="status-badge danger small" data-bs-toggle="tooltip" title="Toàn bộ đã trả">
-                                                            <i class="bi bi-arrow-return-left"></i> @item.ReturnedQuantity.ToString("N2")
+                                                            <i class="bi bi-arrow-return-left"></i> @item.ReturnedQuantity.DisplayQuantity()
                                                         </span>
                                                     }
                                                     else if (item.ReturnedQuantity > 0)
                                                     {
                                                         <span class="status-badge warning small" data-bs-toggle="tooltip" title="Đã trả một phần">
-                                                            @item.ReturnedQuantity.ToString("N2")
+                                                            @item.ReturnedQuantity.DisplayQuantity()
                                                         </span>
                                                     }
                                                     if (item.PendingReturnQuantity > 0)
                                                     {
                                                         <div class="small text-info mt-1" data-bs-toggle="tooltip" title="Đang chờ xác nhận (Draft/Inspecting)">
-                                                            <i class="bi bi-hourglass-split"></i> @item.PendingReturnQuantity.ToString("N2")
+                                                            <i class="bi bi-hourglass-split"></i> @item.PendingReturnQuantity.DisplayQuantity()
                                                         </div>
                                                     }
                                                 }
@@ -329,8 +291,8 @@
                                         }
                                         @if (Model.ShowPrice)
                                         {
-                                            <td class="text-end text-muted">@item.UnitPrice.ToString("N0") <span class="small">đ</span></td>
-                                            <td class="text-end pe-4 fw-bold text-primary">@item.SubTotal.ToString("N0") <span class="small">đ</span></td>
+                                            <td class="text-end text-muted">@item.UnitPrice.DisplayCurrencyWithSymbol()</td>
+                                            <td class="text-end pe-4 fw-bold text-primary">@item.SubTotal.DisplayCurrencyWithSymbol()</td>
                                         }
                                     </tr>
                                 }
@@ -341,7 +303,7 @@
                                 {
                                     <tr class="bg-light border-top">
                                         <td colspan="@summaryLabelColspan" class="text-end py-2 text-dark small">TỔNG TIỀN HÀNG:</td>
-                                        <td class="text-end pe-4 py-2 fw-bold">@Model.TotalAmount.ToString("N0") <span class="small">đ</span></td>
+                                        <td class="text-end pe-4 py-2 fw-bold">@Model.TotalAmount.DisplayCurrencyWithSymbol()</td>
                                     </tr>
                                 }
                                 @if (Model.Surcharge > 0)
@@ -354,14 +316,14 @@
                                                 <div class="text-muted fw-normal x-small mt-1">(@Model.SurchargeReason)</div>
                                             }
                                         </td>
-                                        <td class="text-end pe-4 py-2 fw-bold">@Model.Surcharge.ToString("N0") <span class="small">đ</span></td>
+                                        <td class="text-end pe-4 py-2 fw-bold">@Model.Surcharge.DisplayCurrencyWithSymbol()</td>
                                     </tr>
                                 }
                                 @if (Model.AmountToCollect > 0)
                                 {
                                     <tr class="fw-bold bg-light border-top border-2">
                                         <td colspan="@summaryLabelColspan" class="text-end py-3 text-dark">SỐ TIỀN PHẢI THU:</td>
-                                        <td class="text-end pe-4 py-3 fs-5 text-primary">@Model.AmountToCollect.ToString("N0") <span class="small">đ</span></td>
+                                        <td class="text-end pe-4 py-3 fs-5 text-primary">@Model.AmountToCollect.DisplayCurrencyWithSymbol()</td>
                                     </tr>
                                 }
                             }
@@ -374,6 +336,39 @@
                                 </tr>
                             }
                         </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="content-card" id="customerReturnsCard" data-delivery-note-id="@Model.Id">
+            <div class="card-header bg-white border-bottom-0 pt-4 px-4 pb-0 d-flex align-items-center justify-content-between">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-arrow-return-left me-2 text-warning"></i>Khách trả hàng</h5>
+                <a asp-controller="CustomerReturn" asp-action="Create"
+                   asp-route-deliveryNoteId="@Model.Id"
+                   asp-route-customerId="@Model.CustomerId"
+                   class="btn btn-sm btn-outline-warning">
+                    <i class="bi bi-plus-lg me-1"></i>Tạo phiếu trả
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div id="customerReturnsLoading" class="px-4 py-3 text-center text-muted small">
+                    <span class="spinner-border spinner-border-sm me-1"></span>Đang tải...
+                </div>
+                <div id="customerReturnsEmpty" class="d-none px-4 py-3 text-center text-muted small fst-italic">
+                    — Chưa có phiếu trả hàng nào liên kết
+                </div>
+                <div id="customerReturnsList" class="d-none">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-4">Mã phiếu</th>
+                                <th>Ngày trả</th>
+                                <th class="text-center">Trạng thái</th>
+                                <th class="text-end">Số mặt hàng</th>
+                                <th class="text-end pe-4">Tổng giá trị</th>
+                            </tr>
+                        </thead>
+                        <tbody id="customerReturnsTableBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -399,79 +394,12 @@
     </div>
 }
 
+@if (Model.Status == (int)DeliveryNoteStatus.Confirmed || Model.Status == (int)DeliveryNoteStatus.Delivering)
+{
+    <partial name="_DeliveryNote.ConfirmDelivered" />
+    <partial name="_DeliveryNote.ConfirmReject" model="Model.AvailableWarehouses" />
 
-<!-- Modal Mark Delivered  -->
-<div class="modal fade" id="markDeliveredModal" tabindex="-1" aria-labelledby="markDeliveredModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <form id="markDeliveredForm" method="post" enctype="multipart/form-data">
-            <input type="hidden" id="deliveryNoteId" name="deliveryNoteId" value="@Model.Id" />
-            <input type="hidden" id="acceptanceItemsJson" name="acceptanceItemsJson" />
-
-            <div class="modal-content border-0 shadow rounded-4">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold" id="markDeliveredModalLabel">Xác nhận giao hàng thành công</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body py-4">
-                    <div class="alert alert-info border-0 rounded-3 mb-4">
-                        Nhập số lượng khách nhận thực tế cho từng mặt hàng. Nếu khách không nhận đủ, hệ thống sẽ tự tạo phiếu trả hàng để xử lý kiểm hàng.
-                    </div>
-                    <div class="mb-3">
-                        <label for="receiverName" class="form-label small fw-bold text-muted text-uppercase mb-2">Tên người nhận</label>
-                        <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="receiverName"
-                               name="receiverName" data-testid="delivery-receiver-name" placeholder="Nhập tên người nhận">
-                    </div>
-                    <div class="table-responsive mb-3">
-                        <table class="table table-sm align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Hàng hóa</th>
-                                    <th class="text-end" style="width: 110px;">Số lượng giao</th>
-                                    <th class="text-end" style="width: 150px;">Nhận thực tế</th>
-                                    <th class="text-end" style="width: 110px;">Trả lại</th>
-                                </tr>
-                            </thead>
-                            <tbody id="acceptanceTableBody"></tbody>
-                        </table>
-                    </div>
-                    <div class="mb-3">
-                        <label for="rejectReason" class="form-label small fw-bold text-muted text-uppercase mb-2">Lý do trả hàng</label>
-                        <textarea class="form-control rounded-3 fs-6" id="rejectReason" rows="2"
-                                  placeholder="Nhập 1 lý do chung cho toàn bộ số lượng trả lại"></textarea>
-                    </div>
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-4">
-                            <label for="agreedCustomerCharge" class="form-label small fw-bold text-muted text-uppercase mb-2">Chi phí phát sinh</label>
-                            <input class="form-control form-control-lg rounded-3 fs-6" id="agreedCustomerCharge" name="agreedCustomerCharge"
-                                   value="0" data-decimal="currency" placeholder="Nhập chi phí phát sinh (nếu có)" />
-                        </div>
-                        <div class="col-md-8">
-                            <label for="agreedCustomerChargeReason" class="form-label small fw-bold text-muted text-uppercase mb-2">Lý do</label>
-                            <input type="text" class="form-control form-control-lg rounded-3 fs-6" id="agreedCustomerChargeReason" name="agreedCustomerChargeReason"
-                                   placeholder="Nhập lý do phát sinh chi phí" />
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="deliveryProofPicture" class="form-label small fw-bold text-muted text-uppercase mb-2">
-                            Hình ảnh khi giao hàng <span class="text-danger">*</span>
-                        </label>
-                        <input class="form-control form-control-lg rounded-3 fs-6" type="file" id="deliveryProofPicture" name="pictureFile" data-testid="delivery-proof-file" accept="image/*" capture="environment" required>
-                        <div class="form-text mt-2 mb-0">Hình ảnh hiện trạng hàng hóa khi giao cho khách hàng</div>
-                    </div>
-                    <div class="mt-3 text-center d-none" id="previewContainer">
-                        <img id="imagePreview" src="#" alt="Preview" class="img-fluid rounded-4 shadow-sm" style="max-height: 250px; display: none; object-fit: cover; border: 1px solid var(--bs-border-color);" />
-                    </div>
-                </div>
-                <div class="modal-footer border-0 pt-0 pb-4 px-4">
-                    <button type="button" class="btn btn-light px-4 rounded-3" data-bs-dismiss="modal">Đóng</button>
-                    <button type="submit" class="btn btn-success px-4 rounded-3 shadow-sm px-5" id="btnSubmitDelivery" data-testid="delivery-mark-delivered">
-                        <i class="bi bi-camera me-1"></i> Xác nhận
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
+}
 
 <div class="modal fade" id="shortageModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -494,7 +422,7 @@
                     {
                         <div class="shortage-modal-item">
                             <span class="fw-semibold text-dark">@item.ProductName</span>
-                            <strong class="shortage-danger">@item.ShortageQuantity.ToString("#,##0.##")</strong>
+                            <strong class="shortage-danger">@item.ShortageQuantity.DisplayQuantity()</strong>
                         </div>
                     }
                 </div>
@@ -510,216 +438,55 @@
 </div>
 
 @section Scripts {
-    <script type="module">
-        import { confirm } from '/modules/modals.js';
+    <partial name="_ValidationScriptsPartial" />
+    <script type="module" defer>
+        import DeliveryNoteController from '/modules/DeliveryNoteController.js';
+
+        const deliveryNoteController = new DeliveryNoteController({ hidePageLoadOnRequestEnd: false });
 
         $(document).ready(function () {
-
             // Confirm
             $('.btn-confirm').click(async function(e) {
                 e.preventDefault();
                 var id = $(this).data('id');
-                if (await confirm('Xuất kho', 'Xác nhận hàng hóa đã xuất kho?')) {
-                    postAction('/DeliveryNote/Confirm/' + id);
-                }
+                var result = await deliveryNoteController.confirm(id);
+                if (result?.success)
+                    location.reload();
+                else if (result && result.shortageItems && result.shortageItems.length)
+                    showShortageModal(result);
             });
 
             // Mark Delivering
-            $('.btn-delivering').click(function(e) {
+            $('.btn-delivering').click(async function(e) {
                 e.preventDefault();
                 var id = $(this).data('id');
-                postAction('/DeliveryNote/MarkDelivering/' + id);
+                var result = await deliveryNoteController.delivering(id);
+                if (result?.success)
+                    location.reload();
             });
 
             // Cancel
             $('.btn-cancel').click(async function(e) {
                 e.preventDefault();
                 var id = $(this).data('id');
-                if (await confirm('Hủy phiếu xuất', 'Bạn có chắc chắn muốn hủy phiếu xuất này?')) {
-                    postAction('/DeliveryNote/Cancel/' + id);
-                }
+                var result = await deliveryNoteController.cancel(id);
+                if (result?.success)
+                    location.reload();
             });
+
+            $('.btn-customer-reject').click(async function(e) {
+                e.preventDefault();
+                var {id, code} = this.dataset;
+                deliveryNoteController.beginRejectWorkflow('rejectDeliveryNoteModal').setData(id, code);
+            });
+
 
             // Mark Delivered Flow
-            const deliveryItems = @Html.Raw(acceptanceItemsJson);
-
             $('.btn-delivered').click(function(e) {
                 e.preventDefault();
-                $('#receiverName').val('');
-                $('#rejectReason').val('');
-                $('#agreedCustomerCharge').val('0');
-                $('#agreedCustomerChargeReason').val('');
-                $('#deliveryProofPicture').val('');
-                $('#previewContainer').addClass('d-none');
-                $('#imagePreview').hide();
-                buildAcceptanceRows();
-                $('#markDeliveredModal').modal('show');
+                deliveryNoteController.beginDeliveredWorkflow('markDeliveredModal').setId('@Model.Id');
             });
 
-            function escapeHtml(value) {
-                return String(value ?? '').replace(/[&<>"']/g, char => ({
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#039;'
-                }[char]));
-            }
-
-            function buildAcceptanceRows() {
-                const rowsHtml = deliveryItems.map(item => {
-                    const deliveredQty = Number(item.quantity || 0);
-                    return `
-                        <tr data-item-id="${item.id}" data-delivered-qty="${deliveredQty}">
-                            <td>${escapeHtml(item.productName)}</td>
-                            <td class="text-end">${deliveredQty.toLocaleString('vi-VN')}</td>
-                            <td>
-                                <input type="number" step="0.01" min="0" max="${deliveredQty}" class="form-control form-control-sm text-end accepted-qty" value="${deliveredQty}">
-                            </td>
-                            <td class="text-end rejected-qty text-danger fw-semibold">0</td>
-                        </tr>`;
-                }).join('');
-                $('#acceptanceTableBody').html(rowsHtml);
-            }
-
-            function updateRejectedQuantity($row) {
-                const deliveredQty = Number($row.data('delivered-qty') || 0);
-                let acceptedQty = Number($row.find('.accepted-qty').val() || 0);
-                if (!Number.isFinite(acceptedQty)) acceptedQty = 0;
-                if (acceptedQty < 0) acceptedQty = 0;
-                if (acceptedQty > deliveredQty) acceptedQty = deliveredQty;
-                $row.find('.accepted-qty').val(acceptedQty);
-
-                const rejectedQty = Math.max(0, deliveredQty - acceptedQty);
-                $row.find('.rejected-qty').text(rejectedQty.toLocaleString('vi-VN'));
-            }
-
-            $('#acceptanceTableBody').on('input', '.accepted-qty', function() {
-                updateRejectedQuantity($(this).closest('tr'));
-            });
-
-            function buildAcceptancePayload() {
-                const items = [];
-                let hasRejectedItems = false;
-                const rejectReason = String($('#rejectReason').val() || '').trim();
-                $('#acceptanceTableBody tr').each(function() {
-                    const $row = $(this);
-                    const itemId = String($row.data('item-id'));
-                    const deliveredQty = Number($row.data('delivered-qty') || 0);
-                    const acceptedQty = Number($row.find('.accepted-qty').val() || 0);
-                    const normalizedAcceptedQty = Math.max(0, Math.min(deliveredQty, acceptedQty));
-                    const rejectedQty = Math.max(0, deliveredQty - normalizedAcceptedQty);
-                    if (rejectedQty > 0) hasRejectedItems = true;
-
-                    items.push({
-                        deliveryNoteItemId: itemId,
-                        acceptedQuantity: normalizedAcceptedQty,
-                        rejectedQuantity: rejectedQty,
-                        rejectReason: rejectedQty > 0 ? rejectReason : null
-                    });
-                });
-
-                if (hasRejectedItems && !rejectReason) {
-                    alert('Vui lòng nhập lý do trả hàng.');
-                    return null;
-                }
-
-                return items;
-            }
-
-            // Image Preview inside Modal
-            $("#deliveryProofPicture").change(function () {
-                var input = this;
-                if (input.files && input.files[0]) {
-                    var reader = new FileReader();
-
-                    reader.onload = function (e) {
-                        $('#previewContainer').removeClass('d-none');
-                        $('#imagePreview').attr('src', e.target.result).show();
-                    }
-
-                    reader.readAsDataURL(input.files[0]);
-                } else {
-                    $('#previewContainer').addClass('d-none');
-                    $('#imagePreview').hide();
-                }
-            });
-
-            // Form Submit for Delivery Proof
-            $('#markDeliveredForm').submit(function(e) {
-                e.preventDefault();
-                var form = $(this)[0];
-                var acceptanceItems = buildAcceptancePayload();
-                if (!acceptanceItems) {
-                    return;
-                }
-
-                $('#acceptanceItemsJson').val(JSON.stringify(acceptanceItems));
-                var formData = new FormData(form);
-
-                var actionUrl = '/DeliveryNote/MarkDelivered';
-
-                var btn = $('#btnSubmitDelivery');
-                var originalText = btn.html();
-                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang tải ảnh...');
-
-                showPageLoading();
-
-                $.ajax({
-                    url: actionUrl,
-                    type: 'POST',
-                    data: formData,
-                    processData: false, // important
-                    contentType: false, // important
-                    headers: {
-                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    success: function(res) {
-                        if (res.success) {
-                            //alert(res.message);
-                            location.reload();
-                        } else {
-                            hidePageLoading();
-                            alert("Lỗi: " + res.message);
-                            btn.prop('disabled', false).html(originalText);
-                        }
-                    },
-                    error: function(err) {
-                        hidePageLoading();
-                        alert('Có lỗi hệ thống xảy ra.');
-                        console.error(err);
-                        btn.prop('disabled', false).html(originalText);
-                    }
-                });
-            });
-
-            function postAction(url) {
-                showPageLoading();
-                $.ajax({
-                    url: url,
-                    type: 'POST',
-                    data: {
-                        __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
-                    },
-                    success: function(res) {
-                        if (res.success) {
-                            location.reload();
-                        } else {
-                            hidePageLoading();
-                            if (res.shortageItems && res.shortageItems.length) {
-                                showShortageModal(res);
-                                return;
-                            }
-                            alert(res.message);
-                        }
-                    },
-                    error: function(err) {
-                        hidePageLoading();
-                        alert("Lỗi hệ thống.");
-                        console.error(err);
-                    }
-                });
-            }
 
             // ── Tải danh sách phiếu trả hàng ────────────────────────────────
             function showShortageModal(res) {
@@ -759,6 +526,7 @@
                             return;
                         }
                         returns.forEach(function(ret) {
+                            console.log(ret);
                             var tr = document.createElement('tr');
                             tr.innerHTML =
                                 '<td class="ps-4"><a href="/CustomerReturn/Details/' + ret.id + '" class="fw-medium text-decoration-none">' + ret.code + '</a></td>' +
@@ -776,6 +544,14 @@
                         emptyEl.classList.remove('d-none');
                     });
             })();
+
+            async function updateDecimalFields(form, formData) {
+                const decimalFields = form.querySelectorAll('.decimal-input');
+                for (const decimalField of decimalFields) {
+                    const decimals = Number(decimalField.dataset.decimals) ?? 0;
+                    formData.set(decimalField.name, DecimalFields.stripFormatting(decimalField.value, decimals))
+                }
+            }
         });
     </script>
 }

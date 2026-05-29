@@ -1,0 +1,62 @@
+﻿@model EntityOptionListModel
+<div class="modal fade" id="rejectDeliveryNoteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="deliveryRejectForm" asp-action="RejectDelivery" asp-controller="DirectShipDelivery" method="post">
+                <input type="hidden" id="deliveryNoteId" name="deliveryNoteId" value="" />
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title">
+                        <i class="bi bi-x-circle text-danger me-2"></i>Từ chối nhận hàng
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning d-flex align-items-start gap-2 mb-3">
+                        <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+                        <div>
+                            Hàng sẽ được chuyển về <strong>kho bạn chọn</strong> với giá vốn theo đơn nhập.
+                            Thao tác này không thể hoàn tác.
+                        </div>
+                    </div>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm align-middle caption-top mb-0">
+                            <caption>
+                                <span id="rejectDnCode" class="p-2 bg-success text-light badge"></span>
+                            </caption>
+                            <thead>
+                                <tr>
+                                    <th>Hàng hóa</th>
+                                    <th class="text-end pe-3" style="width: 110px;">Số lượng</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rejectTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Kho nhận hàng trả về <span class="text-danger">*</span></label>
+                        <select id="rejectReturnWarehouseId" class="form-select" name="returnWarehouseId" data-val="true" data-val-required="Vui lòng chọn kho nhận hàng trả về.">
+                            <option value="">-- Chọn kho nhận hàng --</option>
+                            @foreach (var warehouse in Model)
+                            {
+                                <option value="@warehouse.Id">@warehouse.Name</option>
+                            }
+                        </select>
+                        <span class="small text-danger field-validation-valid" data-valmsg-for="returnWarehouseId" data-valmsg-replace="true"></span>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label">Lý do từ chối <span class="text-danger">*</span></label>
+                        <textarea id="rejectReason" class="form-control" rows="3" placeholder="Nhập lý do từ chối"
+                                  name="reason" data-val="true" data-val-required="Vui lòng nhập lý do từ chối."></textarea>
+                        <span class="small text-danger field-validation-valid" data-valmsg-for="reason" data-valmsg-replace="true"></span>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger" id="btnRejectSubmit">
+                        <i class="bi bi-x-lg me-1"></i>Xác nhận từ chối
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

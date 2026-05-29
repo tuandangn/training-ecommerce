@@ -55,11 +55,13 @@ public sealed class GetProductListHandler(
                 productModel.CategoryBreadcrumb = categoryBreadcrumbs[productCategory.CategoryId];
             }
 
-            if (product.Pictures.Any())
+            foreach (var pictureId in product.Pictures)
             {
-                var pictureId = product.Pictures.First();
                 var base64PictureInfo = await pictureAppService.GetBase64PictureByIdAsync(pictureId).ConfigureAwait(false);
+                if (base64PictureInfo is null)
+                    continue;
                 productModel.PictureUrl = base64PictureInfo?.Base64Value;
+                break;
             }
 
             var productVendors = vendors.Where(v => product.Vendors.Any(pv => pv.VendorId == v.Id));

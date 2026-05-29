@@ -1,3 +1,5 @@
+using NamEcommerce.Web.Contracts.Models.Common;
+
 namespace NamEcommerce.Web.Models.DirectShipDelivery;
 
 public sealed class DirectShipDeliveryFilterModel
@@ -17,6 +19,7 @@ public sealed class PendingDirectShipDeliveryItemModel
 public sealed class PendingDirectShipDeliveryModel
 {
     public required Guid Id { get; init; }
+    public required Guid WarehouseId { get; init; }
     public required string Code { get; init; }
     public required Guid OrderId { get; init; }
     public string? OrderCode { get; init; }
@@ -31,11 +34,6 @@ public sealed class PendingDirectShipDeliveryListModel
 {
     public required DirectShipDeliveryFilterModel Filter { get; init; }
     public required IList<PendingDirectShipDeliveryModel> Items { get; init; }
-    public IList<DirectShipReturnWarehouseOptionModel> ReturnWarehouseOptions { get; init; } = [];
+    public EntityOptionListModel? ReturnWarehouseOptions { get; init; }
 }
 
-public sealed class DirectShipReturnWarehouseOptionModel
-{
-    public required Guid Id { get; init; }
-    public required string Name { get; init; }
-}

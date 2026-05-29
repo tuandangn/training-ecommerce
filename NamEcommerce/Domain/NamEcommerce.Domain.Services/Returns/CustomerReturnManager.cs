@@ -411,8 +411,9 @@ public sealed class CustomerReturnManager(
                 throw new DeliveryNoteNotFoundException(deliveryNoteId.Value);
             if (deliveryNote.CustomerId != customerId)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.DeliveryNoteNotOwnedByCustomer", deliveryNote.Code);
-            if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
-                throw new ReturnDataIsInvalidException("Error.CustomerReturn.DeliveryNoteMustBeDelivered", deliveryNote.Code);
+            //*TODO*
+            //if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
+            //    throw new ReturnDataIsInvalidException("Error.CustomerReturn.DeliveryNoteMustBeDelivered", deliveryNote.Code);
             if (deliveryNote.SourceType != DeliveryNoteSourceType.ToCustomer &&
                 deliveryNote.SourceType != DeliveryNoteSourceType.DirectShipToCustomer)
                 throw new ReturnDataIsInvalidException("Error.CustomerReturn.DeliveryNoteMustBeDelivered", deliveryNote.Code);

@@ -78,13 +78,13 @@ public sealed class DirectShipAppService(
 
     public async Task<IList<PendingDirectShipDeliveryAppDto>> GetPendingDeliveriesAsync(PendingDirectShipFilterAppDto filter)
     {
-        var items = await directShipManager.GetPendingDeliveriesAsync(
-            filter.Keywords, filter.FromDateUtc, filter.ToDateUtc)
+        var items = await directShipManager.GetPendingDeliveriesAsync(filter.Keywords, filter.FromDateUtc, filter.ToDateUtc)
             .ConfigureAwait(false);
 
         return items.Select(d => new PendingDirectShipDeliveryAppDto
         {
             Id = d.Id,
+            WarehouseId = d.WarehouseId,
             Code = d.Code,
             OrderId = d.OrderId,
             OrderCode = d.OrderCode,
@@ -119,8 +119,7 @@ public sealed class DirectShipAppService(
         }).ToList();
     }
 
-    public async Task<IList<DirectShipAllocationForPoItemAppDto>> GetDirectShipAllocationsForPoItemsAsync(
-        IReadOnlyList<Guid> purchaseOrderItemIds)
+    public async Task<IList<DirectShipAllocationForPoItemAppDto>> GetDirectShipAllocationsForPoItemsAsync(IReadOnlyList<Guid> purchaseOrderItemIds)
     {
         var items = await directShipManager.GetDirectShipAllocationsForPoItemsAsync(purchaseOrderItemIds)
             .ConfigureAwait(false);
