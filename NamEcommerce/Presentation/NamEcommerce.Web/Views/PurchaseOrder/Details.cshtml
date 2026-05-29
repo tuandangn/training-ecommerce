@@ -960,9 +960,9 @@
                                                             <text>{
                                                                         "id": "@item.Id",
                                                                         "name": @Json.Serialize(item.ProductName),
-                                                                        "remaining": @item.RemainingQuantity.ToString("#"),
-                                                                        "unitCost": @item.UnitCost.ToString("#"),
-                                                                        "dsRemaining": @itemDsRemaining.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                                                                        "remaining": @item.RemainingQuantity.ToString("#0"),
+                                                                        "unitCost": @item.UnitCost.ToString("#0"),
+                                                                        "dsRemaining": @itemDsRemaining.ToString("#0")
                                                                     }@(idx < remainingItems.Count - 1 ? "," : "")</text>
                                                         }
                                                     ],
@@ -989,11 +989,11 @@
                                     <table class="table table-sm align-middle mb-0" id="bulkReceiveTable">
                                         <thead class="text-muted small text-uppercase">
                                             <tr>
-                                                <th class="ps-0">Hàng hóa</th>
-                                                <th style="width: 22%">Kho nhận</th>
-                                                <th class="text-end" style="width: 14%">Số lượng</th>
-                                                <th class="text-end" style="width: 18%">Giá vốn thực tế</th>
-                                                <th class="text-end pe-0" style="width: 1%"></th>
+                                                <th class="ps-2">Hàng hóa</th>
+                                                <th class="text-end pe-2">Số lượng</th>
+                                                <th class="text-end pe-3">Giá vốn thực tế</th>
+                                                <th class="ps-2">Kho nhận</th>
+                                                <th class="text-end pe-2"></th>
                                             </tr>
                                         </thead>
                                         <tbody id="bulkReceiveTableBody"></tbody>

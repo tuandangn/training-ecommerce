@@ -1858,7 +1858,6 @@ body {
 }
 
     .form-control:focus, .form-select:focus {
-        border-color: var(--primary);
         box-shadow: 0 0 0 3px rgba(79,70,229,.12);
     }
 

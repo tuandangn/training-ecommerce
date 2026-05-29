@@ -172,6 +172,7 @@ export default class BulkReceiveController {
         if (!this.#tbody) return;
         const idx = this.#rowSeq++;
         const tr = document.createElement('tr');
+        tr.classList.add('align-top');
         tr.dataset.rowIndex = String(idx);
 
         const itemOptions = this.#items.map(it =>
@@ -188,7 +189,7 @@ export default class BulkReceiveController {
             : '';
 
         tr.innerHTML = `
-            <td class="ps-0">
+            <td class="ps-2">
                 <select name="Items[${idx}].ItemId"
                         class="form-select form-select-sm bulk-row-item">
                     <option value="">-- Chọn hàng hóa --</option>
@@ -196,23 +197,24 @@ export default class BulkReceiveController {
                 </select>
                 <div class="small text-muted mt-1 bulk-row-hint"></div>
             </td>
-            <td>
-                <select name="Items[${idx}].WarehouseId"
-                        class="form-select form-select-sm bulk-row-warehouse">
-                    ${warehouseOptions}
-                </select>
-            </td>
-            <td class="text-end">
+            <td class="text-end pe-2">
                 <input name="Items[${idx}].Quantity"
                        class="form-control form-control-sm text-end bulk-row-qty no-additional-element no-hint"
                        data-decimal="quantity" value="${escapeHtml(qtyValue)}" placeholder="0" />
             </td>
-            <td class="text-end">
+            <td class="text-end pe-2">
                 <input name="Items[${idx}].ActualUnitCost"
                        class="form-control form-control-sm text-end bulk-row-cost no-additional-element no-hint"
-                       data-decimal="currency" value="" placeholder="giá PO" title="Để trống = dùng giá PO" />
+                       data-decimal="currency" value="" placeholder="Cập nhật giá vốn" title="Nhập nếu giá vốn khác giá trong đơn nhập" />
             </td>
-            <td class="text-end pe-0" style="white-space:nowrap">
+            <td class="ps-2">
+                <select name="Items[${idx}].WarehouseId"
+                        class="form-select form-select-sm bulk-row-warehouse">
+                    ${warehouseOptions}
+                </select>
+                <div class="ps-2 pt-1 text-muted small fw-medium direct-ship-warehouse d-none">Giao trực tiếp</div>
+            </td>
+            <td class="text-end pe-2" style="white-space:nowrap">
                 <button type="button" class="btn btn-link btn-sm text-secondary p-0 me-1 bulk-row-ds-toggle" title="Giao thẳng cho khách hàng">
                     <i class="bi bi-send"></i>
                 </button>
@@ -360,8 +362,9 @@ export default class BulkReceiveController {
         if (!tr) return;
         const idx = tr.dataset.rowIndex;
         const dsTr = this.#tbody?.querySelector(`[data-ds-row-for="${idx}"]`);
-        const warehouseTd = tr.querySelector('.bulk-row-warehouse')?.closest('td');
+        const warehouseTd = tr.querySelector('.bulk-row-warehouse');
         if (!warehouseTd) return;
+        const directShipWarehouse = tr.querySelector('.direct-ship-warehouse');
         const select = tr.querySelector('.bulk-row-item');
         const item = this.#itemsById.get(select?.value);
         const dsRem = item?.dsRemaining ?? 0;
@@ -370,6 +373,7 @@ export default class BulkReceiveController {
         const isDsPanelOpen = dsTr && !dsTr.classList.contains('d-none');
         const hide = dsRem > 0 ? qty <= dsRem : isDsPanelOpen;
         warehouseTd.classList.toggle('d-none', hide);
+        directShipWarehouse.classList.toggle('d-none', !hide);
     }
 
     #refreshRowHint(tr) {
