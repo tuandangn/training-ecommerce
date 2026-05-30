@@ -479,8 +479,6 @@ NamEcommerce/.vscode/
 
 *.skill
 TodoList.md
-CLAUDE.md
-AGENTS.md
 
 #unload project
 NamEcommerce/Application/NamEcommerce.Application.Miscellaneous/
