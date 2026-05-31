@@ -202,7 +202,7 @@
                                                         @item.TotalCost.DisplayCurrency()
                                                     </span>
                                                 </td>
-                                                @if (Model.Info.CanAddItems || (Model.Info.CanReceiveGoods && item.RemainingQuantity > 0) || Model.CanAllocateItems || hasAllocations)
+                                                @if (Model.Info.CanAddItems || (Model.Info.CanReceiveGoods && item.RemainingQuantity > 0) || Model.CanAllocateItems || hasReceivingAllocations)
                                                 {
                                                     <td class="text-center">
                                                         <div>

@@ -346,10 +346,10 @@
                                 <tr>
                                     <th class="ps-4 py-3 col-product">Sản phẩm</th>
                                     <th class="text-end py-3">Giá vốn</th>
-                                    <th class="py-3">Theo kho</th>
-                                    <th class="text-end py-3">Thực tế</th>
+                                    <th class="py-3">Trong kho</th>
+                                    <th class="text-end py-3">Thực có</th>
                                     <th class="text-end py-3">Chờ giao</th>
-                                    <th class="text-end py-3">Sẵn có</th>
+                                    <th class="text-end py-3">Sẵn bán</th>
                                     <th class="py-3">Cập nhật</th>
                                     <th class="text-end pe-4 py-3">Thao tác</th>
                                 </tr>
@@ -443,11 +443,11 @@
                                 <tr>
                                     <th class="ps-4 py-3 col-product">Sản phẩm</th>
                                     <th class="text-end py-3">Giá vốn</th>
-                                    <th class="text-end py-3">Đã đặt</th>
+                                    <th class="text-end py-3">Đặt hàng</th>
                                     <th class="py-3">Kho</th>
-                                    <th class="text-end py-3">Thực tế</th>
+                                    <th class="text-end py-3">Thực có</th>
                                     <th class="text-end py-3">Chờ giao</th>
-                                    <th class="text-end py-3">Sẵn có</th>
+                                    <th class="text-end py-3">Sẵn bán</th>
                                     <th class="py-3" style="min-width: 200px;">Khả dụng</th>
                                     <th class="text-end pe-4 py-3">Thao tác</th>
                                 </tr>
@@ -585,7 +585,7 @@
 
                                     <div class="row g-0 mb-3 bg-light rounded-4 p-3 border border-light">
                                         <div class="col-4 border-end border-white text-center">
-                                            <div class="small text-muted mb-1">Thực tế</div>
+                                            <div class="small text-muted mb-1">Thực có</div>
                                             <div class="fw-bold fs-5">@item.QuantityOnHand.DisplayQuantity()</div>
                                         </div>
                                         <div class="col-4 border-end border-white text-center">
@@ -593,7 +593,7 @@
                                             <div class="fw-bold fs-5 text-warning">@item.QuantityReserved.DisplayQuantity()</div>
                                         </div>
                                         <div class="col-4 text-center">
-                                            <div class="small text-muted mb-1">Sẵn có</div>
+                                            <div class="small text-muted mb-1">Sẵn bán</div>
                                             <div class="fw-bold fs-5 text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</div>
                                         </div>
                                     </div>
@@ -657,7 +657,7 @@
                                 <div class="card-body px-4 pt-0">
                                     <div class="row g-0 mb-4 bg-light rounded-4 p-3 border border-light">
                                         <div class="col-4 border-end border-white text-center">
-                                            <div class="small text-muted mb-1">Thực tế</div>
+                                            <div class="small text-muted mb-1">Thực có</div>
                                             <div class="fw-bold fs-5">@item.QuantityOnHand.DisplayQuantity()</div>
                                         </div>
                                         <div class="col-4 border-end border-white text-center">
@@ -665,7 +665,7 @@
                                             <div class="fw-bold fs-5 text-warning">@item.QuantityReserved.DisplayQuantity()</div>
                                         </div>
                                         <div class="col-4 text-center">
-                                            <div class="small text-muted mb-1">Sẵn có</div>
+                                            <div class="small text-muted mb-1">Sẵn bán</div>
                                             <div class="fw-bold fs-5 text-@stockHealth">@item.QuantityAvailable.DisplayQuantity()</div>
                                         </div>
                                     </div>

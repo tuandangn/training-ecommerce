@@ -5,17 +5,15 @@
     <div class="content-card" data-responsive-list data-list-key="preparation-product-list">
         <div class="action-toolbar">
             <button id="btnCreateDeliveryNote" class="btn btn-primary" disabled>
-                <i class="bi bi-file-earmark-plus me-1"></i>
+                <i class="bi bi-plus-lg me-1"></i>
                 Tạo phiếu xuất (<span id="selectedCount">0</span>)
             </button>
             <div class="d-flex align-items-center gap-2">
                 <div class="btn-group" role="group">
                     <a asp-action="List" asp-route-grouped="false" class="btn border">
-                        <i class="bi bi-person-lines-fill me-1"></i>
                         Theo khách hàng
                     </a>
                     <a asp-action="List" asp-route-grouped="true" class="btn btn-light active">
-                        <i class="bi bi-box-seam me-1"></i>
                         Theo hàng hóa
                     </a>
                 </div>
