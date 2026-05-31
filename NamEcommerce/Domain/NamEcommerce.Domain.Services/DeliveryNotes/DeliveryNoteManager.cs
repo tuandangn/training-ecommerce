@@ -174,7 +174,7 @@ public sealed class DeliveryNoteManager(
         deliveryNote.AmountToCollect = acceptance.AmountToCollect;
 
         // 1. Mark DeliveryNote Delivered — raise DeliveryNoteDelivered event
-        deliveryNote.MarkDelivered(dto.PictureId, dto.ReceiverName);
+        deliveryNote.MarkDelivered(dto.PictureIds, dto.ReceiverName);
 
         // Save entity (display cost + status) → interceptor fires event → DeliveryNoteDeliveredStockHandler dispatches stock/cost.
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
@@ -198,7 +198,7 @@ public sealed class DeliveryNoteManager(
                     {
                         OrderId = order.Id,
                         OrderItemId = orderItem.Id,
-                        PictureId = dto.PictureId
+                        PictureId = dto.PictureIds.Count > 0 ? dto.PictureIds[0] : Guid.Empty
                     }).ConfigureAwait(false);
                 }
             }

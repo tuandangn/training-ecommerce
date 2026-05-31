@@ -202,18 +202,14 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     public async Task<IActionResult> MarkDelivered(
         Guid deliveryNoteId, string? receiverName, decimal agreedCustomerCharge,
         string? agreedCustomerChargeReason, bool compensateInNextDelivery,
-        string? acceptanceItemsJson, IFormFile? pictureFile)
+        string? acceptanceItemsJson, [FromForm] IList<Guid>? pictureIds)
     {
         var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(deliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null)
             return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
 
-        if (pictureFile == null || pictureFile.Length == 0)
+        if (pictureIds is null || pictureIds.Count == 0)
             return this.JsonError(message: LocalizeError("Error.DeliveryProofRequired"));
-
-        using var memoryStream = new MemoryStream();
-        await pictureFile.CopyToAsync(memoryStream);
-        var fileBytes = memoryStream.ToArray();
 
         var acceptanceItems = ParseAcceptanceItems(acceptanceItemsJson);
         var result = await _mediator.Send(new MarkDeliveryNoteDeliveredCommand
@@ -224,9 +220,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             AgreedCustomerChargeReason = agreedCustomerChargeReason,
             CompensateInNextDelivery = compensateInNextDelivery,
             Items = acceptanceItems,
-            PictureData = fileBytes,
-            PictureContentType = pictureFile.ContentType,
-            PictureFileName = pictureFile.FileName
+            PictureIds = pictureIds
         });
 
         if (result.Success)

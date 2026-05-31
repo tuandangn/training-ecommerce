@@ -1,4 +1,5 @@
 using NamEcommerce.Domain.Entities.DeliveryNotes;
+using System.Linq;
 using NamEcommerce.Domain.Metadata;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Values;
@@ -66,6 +67,16 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         
         builder.Property(d => d.DeliveredOnUtc).IsRequired(false);
         builder.Property(d => d.DeliveryProofPictureId).IsRequired(false);
+        builder.Property(d => d.DeliveryProofPictureIds)
+            .HasConversion(
+                v => string.Join(',', v),
+                v => string.IsNullOrEmpty(v)
+                    ? (IReadOnlyCollection<Guid>)Array.Empty<Guid>()
+                    : v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                       .Select(Guid.Parse).ToList().AsReadOnly())
+            .HasColumnName("DeliveryProofPictureIds")
+            .HasColumnType("nvarchar(max)")
+            .IsRequired(false);
         builder.Property(d => d.DeliveryReceiverName).HasMaxLength(255).IsRequired(false);
         
         builder.Property(d => d.IsDirectShip).IsRequired().HasDefaultValue(false);

@@ -1417,6 +1417,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<Guid?>("DeliveryProofPictureId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("DeliveryProofPictureIds")
+                        .HasColumnName("DeliveryProofPictureIds")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("DeliveryReceiverName")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");

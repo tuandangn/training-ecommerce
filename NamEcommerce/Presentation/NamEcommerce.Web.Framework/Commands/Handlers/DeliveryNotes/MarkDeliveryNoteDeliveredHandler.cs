@@ -1,42 +1,22 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
-using NamEcommerce.Application.Contracts.Dtos.Media;
-using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.DeliveryNotes;
 
-public sealed class MarkDeliveryNoteDeliveredHandler : IRequestHandler<MarkDeliveryNoteDeliveredCommand, MarkDeliveryNoteDeliveredResult>
+public sealed class MarkDeliveryNoteDeliveredHandler(IDeliveryNoteAppService deliveryNoteAppService)
+    : IRequestHandler<MarkDeliveryNoteDeliveredCommand, MarkDeliveryNoteDeliveredResult>
 {
-    private readonly IDeliveryNoteAppService _deliveryNoteAppService;
-    private readonly IPictureAppService _pictureAppService;
-
-    public MarkDeliveryNoteDeliveredHandler(
-        IDeliveryNoteAppService deliveryNoteAppService,
-        IPictureAppService pictureAppService)
-    {
-        _deliveryNoteAppService = deliveryNoteAppService;
-        _pictureAppService = pictureAppService;
-    }
-
     public async Task<MarkDeliveryNoteDeliveredResult> Handle(MarkDeliveryNoteDeliveredCommand request, CancellationToken cancellationToken)
     {
-        if (request.PictureData == null || request.PictureData.Length == 0)
-            return new MarkDeliveryNoteDeliveredResult(false, "Vui lòng chụp ảnh bằng chứng giao hàng.");
+        if (request.PictureIds.Count == 0)
+            return new MarkDeliveryNoteDeliveredResult(false, "Vui lòng tải lên ít nhất 1 hình ảnh bằng chứng giao hàng.");
 
-        var pictureId = await _pictureAppService.CreatePictureAsync(new CreatePictureAppDto
-        {
-            Data = request.PictureData,
-            MimeType = request.PictureContentType ?? "image/jpeg",
-            Extension = ".jpg",
-            FileName = request.PictureFileName ?? "delivery_proof.jpg"
-        }).ConfigureAwait(false);
-
-        var appResult = await _deliveryNoteAppService.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredAppDto
+        var appResult = await deliveryNoteAppService.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredAppDto
         {
             DeliveryNoteId = request.DeliveryNoteId,
-            PictureId = pictureId,
+            PictureIds = request.PictureIds.ToList().AsReadOnly(),
             ReceiverName = request.ReceiverName,
             Acceptance = new DeliveryAcceptanceAppDto
             {

@@ -1,4 +1,5 @@
 using NamEcommerce.Domain.Metadata;
+using System.Linq;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
@@ -92,6 +93,8 @@ public sealed record DeliveryNote : AppAggregateEntity
 
     public DateTime? DeliveredOnUtc { get; private set; }
     public Guid? DeliveryProofPictureId { get; private set; }
+    // Comma-separated Guids stored via EF value converter; FirstOrDefault = DeliveryProofPictureId
+    public IReadOnlyCollection<Guid> DeliveryProofPictureIds { get; private set; } = [];
     public string? DeliveryReceiverName { get; private set; }
     
     public DateTime CreatedOnUtc { get; private set; }
@@ -143,17 +146,18 @@ public sealed record DeliveryNote : AppAggregateEntity
         RaiseDomainEvent(new DeliveryNoteDelivering(Id));
     }
 
-    internal void MarkDelivered(Guid pictureId, string? receiverName)
+    internal void MarkDelivered(IReadOnlyList<Guid> pictureIds, string? receiverName)
     {
         if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
 
-        if (pictureId == Guid.Empty)
+        if (pictureIds is null || pictureIds.Count == 0 || pictureIds[0] == Guid.Empty)
             throw new DeliveryProofRequiredException();
 
         Status = DeliveryNoteStatus.Delivered;
         DeliveredOnUtc = DateTime.UtcNow;
-        DeliveryProofPictureId = pictureId;
+        DeliveryProofPictureId = pictureIds[0];
+        DeliveryProofPictureIds = pictureIds.ToList().AsReadOnly();
         DeliveryReceiverName = receiverName;
         UpdatedOnUtc = DateTime.UtcNow;
 

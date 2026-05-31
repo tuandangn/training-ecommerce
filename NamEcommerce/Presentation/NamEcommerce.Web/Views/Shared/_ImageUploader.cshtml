@@ -1,0 +1,50 @@
+@model NamEcommerce.Web.Models.Common.ImageUploaderModel
+@{
+    var existingIdsStr = string.Join(',', Model.ExistingPictureIds);
+    var sentinelId = $"img-uploader-val-{Model.FieldName.Replace("[","").Replace("]","").Replace(".","_")}";
+}
+
+@if (!string.IsNullOrEmpty(Model.Label))
+{
+    <label class="form-label small fw-bold text-muted text-uppercase mb-2">
+        @Model.Label
+        @if (Model.Required) { <span class="text-danger">*</span> }
+    </label>
+}
+@if (!string.IsNullOrEmpty(Model.HintText))
+{
+    <div class="text-muted small mb-2">@Model.HintText</div>
+}
+
+<div class="img-uploader-wrapper">
+    <div data-image-uploader
+         data-field-name="@Model.FieldName"
+         data-max-files="@Model.MaxFiles"
+         data-required="@Model.Required.ToString().ToLowerInvariant()"
+         data-existing-ids="@existingIdsStr">
+    </div>
+</div>
+
+@if (Model.Required)
+{
+    <input type="hidden"
+           id="@sentinelId"
+           data-img-uploader-sentinel="@Model.FieldName"
+           data-val="true"
+           data-val-required="@Model.RequiredMessage"
+           value="@(Model.ExistingPictureIds.Count > 0 ? "1" : "")" />
+    <span class="small text-danger field-validation-valid"
+          data-valmsg-for="@sentinelId"
+          data-valmsg-replace="true"></span>
+}
+
+<span class="small text-danger field-validation-valid"
+      data-valmsg-for="@Model.FieldName"
+      data-valmsg-replace="true"></span>
+
+@section Scripts {
+    <script type="module">
+        import { initImageUploaders } from '/modules/image-uploader.js';
+        initImageUploaders(document.currentScript?.closest('form') ?? document);
+    </script>
+}

@@ -28,11 +28,7 @@ public sealed class ProductModelFactory : IProductModelFactory
         var vendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
         var warehouseOptions = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
 
-        var model = oldModel ?? new CreateProductModel
-        {
-            DisplayOrder = 1,
-            ImageFile = new()
-        };
+        var model = oldModel ?? new CreateProductModel { DisplayOrder = 1 };
         model.AvailableCategories = categoryOptions;
         model.AvailableUnitMeasurements = unitMeasurementOptions;
         model.AvailableVendors = vendorOptions;

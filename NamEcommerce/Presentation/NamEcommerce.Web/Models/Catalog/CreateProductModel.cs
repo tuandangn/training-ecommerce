@@ -34,8 +34,7 @@ public sealed class CreateProductModel
     [Display(Name = "Thứ tự hiển thị")]
     public int DisplayOrder { get; set; }
 
-    [Display(Name = "Hình ảnh")]
-    public Base64ImageModel? ImageFile { get; set; }
+    public Guid? PictureId { get; set; }
 
     // Tồn kho ban đầu
     [ValidateNever]

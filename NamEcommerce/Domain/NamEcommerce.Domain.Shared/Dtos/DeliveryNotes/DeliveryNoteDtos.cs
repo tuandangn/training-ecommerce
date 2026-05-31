@@ -127,7 +127,7 @@ public sealed record DeliveryAcceptanceDto
 public sealed record MarkDeliveryNoteDeliveredDto
 {
     public required Guid DeliveryNoteId { get; init; }
-    public required Guid PictureId { get; init; }
+    public required IReadOnlyList<Guid> PictureIds { get; init; }
     public string? ReceiverName { get; init; }
     public DeliveryAcceptanceDto? Acceptance { get; init; }
 }

@@ -46,20 +46,6 @@ public sealed class ProductController : BaseAuthorizedController
             return View(model);
         }
 
-        var imageFileInfo = model.ImageFile != null ? new FileInfoModel
-        {
-            Data = model.ImageFile.GetData() ?? [],
-            MimeType = model.ImageFile.GetMimeType() ?? string.Empty,
-            Extension = model.ImageFile.Extension,
-            FileName = model.ImageFile.FileName
-        } : null;
-        if (imageFileInfo is not null && imageFileInfo.Data.Length > _appConfig.UploadFileMaxSizeInBytes)
-        {
-            ModelState.AddModelError(string.Empty, LocalizeError("Msg.ImageSizeLimit", (int)Math.Floor(_appConfig.UploadFileMaxSizeInBytes / 1024m / 1024)));
-            model = await _productModelFactory.PrepareCreateProductModel(model);
-            return View(model);
-        }
-
         var createProductCommand = new CreateProductCommand
         {
             Name = model.Name!,
@@ -68,7 +54,7 @@ public sealed class ProductController : BaseAuthorizedController
             VendorIds = model.VendorIds,
             UnitMeasurementId = model.UnitMeasurementId,
             DisplayOrder = model.DisplayOrder,
-            ImageFile = imageFileInfo
+            PictureId = model.PictureId
         };
         if (model.HasExistingStockQuantity)
         {

@@ -1,6 +1,5 @@
 using MediatR;
 using NamEcommerce.Web.Contracts.Models.Catalog;
-using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 
@@ -13,7 +12,7 @@ public sealed class CreateProductCommand : IRequest<CreateProductResultModel>
     public IList<Guid> VendorIds { get; set; } = [];
     public Guid? UnitMeasurementId { get; set; }
     public int DisplayOrder { get; set; }
-    public FileInfoModel? ImageFile { get; set; }
+    public Guid? PictureId { get; set; }
     public decimal? UnitPrice { get; set; }
 
     // Tồn kho đầu kỳ — nếu có sẽ tạo GoodsReceipt (OpeningBalance), không thể hoàn tác

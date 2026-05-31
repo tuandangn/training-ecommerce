@@ -190,26 +190,21 @@ export default class DeliveryNoteController {
     }
 
     #deliveredModalEvents() {
-        const self = this;
-        this.#deliveredContainer.addEventListener('hidden.bs.modal', () => this.#resetDeliveredControls());
-
-        // Image Preview inside Modal
-        $("#deliveryProofPicture").change(function () {
-            var input = this;
-            if (input.files && input.files[0]) {
-                var reader = new FileReader();
-
-                reader.onload = function (e) {
-                    $('#previewContainer').removeClass('d-none');
-                    $('#imagePreview').attr('src', e.target.result).show();
-                }
-
-                reader.readAsDataURL(input.files[0]);
-                self.#deliveredContainer.querySelector('[data-valmsg-for="pictureFile"]').textContent = '';
-            } else {
-                $('#previewContainer').addClass('d-none');
-                $('#imagePreview').hide();
+        this.#deliveredContainer.addEventListener('hidden.bs.modal', () => {
+            // Destroy uploader so it re-inits fresh on next open
+            const uploaderEl = this.#deliveredContainer.querySelector('[data-image-uploader]');
+            if (uploaderEl?._imageUploader) {
+                uploaderEl._imageUploader.destroy();
+                delete uploaderEl._imageUploader;
             }
+            this.#resetDeliveredControls();
+        });
+
+        this.#deliveredContainer.addEventListener('shown.bs.modal', () => {
+            // Re-init image uploader each time modal opens
+            import('/modules/image-uploader.js').then(({ initImageUploaders }) => {
+                initImageUploaders(this.#deliveredContainer);
+            });
         });
 
         // Form Submit for Delivery Proof
@@ -273,9 +268,6 @@ export default class DeliveryNoteController {
         $('#compensateInNextDeliveryContainer').addClass('d-none');
         $('#agreedCustomerCharge').val('0');
         $('#agreedCustomerChargeReason').val('');
-        $('#deliveryProofPicture').val('');
-        $('#previewContainer').addClass('d-none');
-        $('#imagePreview').hide();
         $('#acceptanceTableBody').html('');
         $('#acceptanceItemsJson').val('');
     }

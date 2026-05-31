@@ -1,7 +1,6 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
 using NamEcommerce.Application.Contracts.Dtos.Catalog;
-using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Catalog;
 
@@ -22,13 +21,7 @@ public sealed class CreateProductHandler(IProductAppService productAppService)
                 ? [new ProductCategoryAppDto(request.CategoryId.Value, request.DisplayOrder)]
                 : [],
             Vendors = request.VendorIds?.Select(id => new ProductVendorAppDto(id, 0)) ?? [],
-            ImageFile = request.ImageFile is not null ? new FileInfoAppDto
-            {
-                Data = request.ImageFile.Data,
-                MimeType = request.ImageFile.MimeType,
-                Extension = request.ImageFile.Extension,
-                FileName = request.ImageFile.FileName
-            } : null,
+            Pictures = request.PictureId.HasValue ? [request.PictureId.Value] : [],
             InitialStocks = request.ProductStocks?
                 .Where(s => s.Quantity > 0)
                 .Select(s => new InitialStockAppDto

@@ -13,9 +13,7 @@ public sealed class MarkDeliveryNoteDeliveredCommand : IRequest<MarkDeliveryNote
     public bool CompensateInNextDelivery { get; init; }
     public IList<MarkDeliveryNoteDeliveredItemCommand> Items { get; init; } = [];
     
-    public byte[]? PictureData { get; init; }
-    public string? PictureContentType { get; init; }
-    public string? PictureFileName { get; init; }
+    public IList<Guid> PictureIds { get; init; } = [];
 }
 
 public sealed class MarkDeliveryNoteDeliveredItemCommand

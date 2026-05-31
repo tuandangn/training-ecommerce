@@ -89,7 +89,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
             await _deliveryNoteManager.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredDto
             {
                 DeliveryNoteId = dto.DeliveryNoteId,
-                PictureId = dto.PictureId,
+                PictureIds = dto.PictureIds,
                 ReceiverName = dto.ReceiverName,
                 Acceptance = dto.Acceptance is null
                     ? null
