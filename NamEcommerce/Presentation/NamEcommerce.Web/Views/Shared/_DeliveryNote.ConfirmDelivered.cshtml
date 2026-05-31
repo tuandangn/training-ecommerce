@@ -1,4 +1,4 @@
-﻿<div class="modal fade" id="markDeliveredModal" tabindex="-1" aria-labelledby="markDeliveredModalLabel" aria-hidden="true">
+<div class="modal fade" id="markDeliveredModal" tabindex="-1" aria-labelledby="markDeliveredModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <form id="markDeliveredForm" asp-action="MarkDelivered" asp-controller="DeliveryNote" method="post" enctype="multipart/form-data">
             <input type="hidden" id="deliveryNoteId" name="deliveryNoteId" value="" />
@@ -34,6 +34,15 @@
                         <label for="rejectReason" class="form-label small fw-bold text-muted text-uppercase mb-2">Lý do trả hàng</label>
                         <textarea class="form-control rounded-3 fs-6" id="rejectReason" rows="2" placeholder="Nhập lý do trả hàng"></textarea>
                     </div>
+                    <div class="form-check form-switch mb-3 p-3 bg-light rounded-3 border d-none" id="compensateInNextDeliveryContainer">
+                        <input class="form-check-input ms-0" type="checkbox" id="compensateInNextDelivery" name="compensateInNextDelivery" value="true" role="switch" />
+                        <label class="form-check-label ms-2 fw-medium" for="compensateInNextDelivery">
+                            Bù số lượng trả lại vào lần giao sau
+                        </label>
+                        <div class="small text-muted mt-2">
+                            Dùng khi khách vẫn muốn nhận bù phần hàng không nhận trong lần giao tiếp theo.
+                        </div>
+                    </div>
                     <div class="row g-3 mb-3">
                         <div class="col-md-5">
                             <label for="agreedCustomerCharge" class="form-label small fw-bold text-muted text-uppercase mb-2">Chi phí phát sinh</label>
@@ -54,7 +63,7 @@
                             <span class="fw-bold text-muted text-uppercase">Hình ảnh khi giao hàng</span> <span class="text-danger">*</span>
                             <span class="d-block text-muted fw-normal">Hình ảnh hiện trạng hàng hóa khi giao cho khách hàng</span>
                         </label>
-                        <input class="form-control form-control-lg rounded-3 fs-6" type="file" id="deliveryProofPicture" 
+                        <input class="form-control form-control-lg rounded-3 fs-6" type="file" id="deliveryProofPicture"
                             name="pictureFile" data-testid="delivery-proof-file" accept="image/*"
                             data-val="true" data-val-required="Vui lòng tải lên hình ảnh khi giao hàng"/>
                         <span class="small text-danger field-validation-valid" data-valmsg-for="pictureFile" data-valmsg-replace="true"></span>

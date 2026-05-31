@@ -627,6 +627,12 @@
   <data name="Error.ShippingAddressRequired" xml:space="preserve">
     <value>Địa chỉ giao hàng là bắt buộc.</value>
   </data>
+  <data name="Error.DirectShipContactPhoneRequired" xml:space="preserve">
+    <value>Số điện thoại nhận hàng giao thẳng là bắt buộc.</value>
+  </data>
+  <data name="Error.DirectShipAddressRequired" xml:space="preserve">
+    <value>Địa chỉ giao hàng giao thẳng là bắt buộc.</value>
+  </data>
   <data name="Error.DeliveryNoteItemsRequired" xml:space="preserve">
     <value>Phiếu giao hàng phải có ít nhất một mặt hàng.</value>
   </data>

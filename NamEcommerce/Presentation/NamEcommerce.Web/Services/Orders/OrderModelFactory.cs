@@ -21,6 +21,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.Customers;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.Orders;
 
@@ -163,8 +164,14 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 DeliveredOn = dn.DeliveredOnUtc?.ToLocalTime()
             };
 
+            var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
+            {
+                DeliveryNoteId = dn.Id
+            }).ConfigureAwait(false);
+
             foreach (var item in dn.Items)
             {
+                returnedQuantities.TryGetValue(item.Id, out var returnSummary);
                 dnModel.Items.Add(new OrderDetailsModel.DeliveryNoteItemModel
                 {
                     OrderItemId = item.OrderItemId,
@@ -172,7 +179,10 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     Quantity = item.Quantity,
                     UnitPrice = item.UnitPrice,
                     SubTotal = item.SubTotal,
-                    CostAtDispatch = item.CostAtDispatch
+                    CostAtDispatch = item.CostAtDispatch,
+                    ConfirmedReturnQuantity = returnSummary?.ConfirmedQuantity ?? 0m,
+                    PendingReturnQuantity = returnSummary?.PendingQuantity ?? 0m,
+                    CompensatedReturnQuantity = returnSummary?.ActiveCompensatedQuantity ?? 0m
                 });
             }
 
@@ -431,6 +441,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     ShortageQuantity = shortageItem?.ShortageQuantity ?? 0,
                     IssuedQuantity = item.GetDeliveredQuantity(validNotes),
                     DeliveredQuantity = item.GetDeliveredToCustomerQuantity(validNotes),
+                    CompensatedReturnQuantity = item.GetCompensatedReturnQuantity(validNotes),
                     DirectShipQuantity = directShipAllocations.Sum(allocation => allocation.AllocatedQuantity),
                     DirectShipReceivedQuantity = directShipAllocations.Sum(allocation => allocation.ReceivedQuantity),
                     DirectShipStatusText = GetDirectShipStatusText(directShipAllocations),
@@ -490,6 +501,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     CreatedOn = deliveryNote.CreatedOn,
                     DeliveredOn = deliveryNote.DeliveredOn,
                     TotalQuantity = deliveryNote.Items.Sum(item => item.Quantity),
+                    CompensatedReturnQuantity = deliveryNote.Items.Sum(item => item.CompensatedReturnQuantity),
                     TotalAmount = deliveryNote.Items.Sum(item => item.SubTotal)
                 })
                 .ToList()

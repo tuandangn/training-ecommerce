@@ -471,6 +471,8 @@ $RECYCLE.BIN/
 .superpowers/
 .trash/
 .understand-anything/
+.playwright-mcp/
+plans/
 **/appsettings.Production.json
 **/appsettings.Development.json
 **/appsettings.E2E.json
@@ -479,8 +481,6 @@ NamEcommerce/.vscode/
 
 *.skill
 TodoList.md
-CLAUDE.md
-AGENTS.md
 
 #unload project
 NamEcommerce/Application/NamEcommerce.Application.Miscellaneous/

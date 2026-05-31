@@ -22,6 +22,7 @@ public sealed class CustomerReturnModel
 
     /// <summary>Chi phí phát sinh khi nhận hàng trả (vận chuyển, bồi thường...).</summary>
     public required decimal AdditionalCost { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
 
     public Guid? GeneratedGoodsReceiptId { get; init; }
 
@@ -32,6 +33,7 @@ public sealed class CustomerReturnModel
 
     /// <summary>Số tiền hoàn khách = Σ(AcceptedQty × ReturnUnitPrice) − AdditionalCost (floor 0).</summary>
     public decimal NetRefundAmount => Math.Max(0, Items.Sum(i => i.AcceptedTotal) - AdditionalCost);
+    public decimal CompensatedQuantity => CompensateInNextDelivery ? Items.Sum(i => i.AcceptedQuantity) : 0m;
 
     [Serializable]
     public sealed record ItemModel(Guid Id)

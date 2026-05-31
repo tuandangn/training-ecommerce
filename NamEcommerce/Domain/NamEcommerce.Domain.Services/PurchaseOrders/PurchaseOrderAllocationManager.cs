@@ -79,7 +79,7 @@ public sealed class PurchaseOrderAllocationManager(
         if (purchaseOrderItemReceivedQuantity < 0)
             throw new ArgumentOutOfRangeException(nameof(purchaseOrderItemReceivedQuantity));
 
-        var allocations = await GetAllocationsOfPurchaseOrderItem((Guid.Empty, purchaseOrderItemId)).ConfigureAwait(false);
+        var allocations = await GetAllocationsOfPurchaseOrderItem((Guid.Empty, purchaseOrderItemId), true).ConfigureAwait(false);
         allocations = allocations.Where(allocation => allocation.Status != AllocationStatus.Cancelled)
                 .OrderByDescending(allocation => allocation.IsDirectShip)
                 .ThenByDescending(allocation => allocation.DirectShipPriority)
@@ -110,18 +110,19 @@ public sealed class PurchaseOrderAllocationManager(
                 continue;
 
             var receivedForAllocation = Math.Min(remainingAllocation, quantityToDistribute);
-            allocation.IncreaseReceived(receivedForAllocation);
-            await allocationRepository.UpdateAsync(allocation).ConfigureAwait(false);
+            var trackedAllocation = await GetTrackedAllocationAsync(allocation.Id).ConfigureAwait(false);
+            trackedAllocation.IncreaseReceived(receivedForAllocation);
+            await allocationRepository.UpdateAsync(trackedAllocation).ConfigureAwait(false);
 
             var receipt = new AllocationReceiptDto
             {
-                AllocationId = allocation.Id,
-                OrderItemId = allocation.OrderItemId,
+                AllocationId = trackedAllocation.Id,
+                OrderItemId = trackedAllocation.OrderItemId,
                 Quantity = receivedForAllocation,
-                IsDirectShip = allocation.IsDirectShip,
-                DirectShipAddress = allocation.DirectShipAddress
+                IsDirectShip = trackedAllocation.IsDirectShip,
+                DirectShipAddress = trackedAllocation.DirectShipAddress
             };
-            if (allocation.IsDirectShip)
+            if (trackedAllocation.IsDirectShip)
                 directShipReceipts.Add(receipt);
             else
                 warehouseReceipts.Add(receipt);
@@ -439,8 +440,9 @@ public sealed class PurchaseOrderAllocationManager(
                 break;
 
             var reduceQuantity = Math.Min(allocation.ReceivedQuantity, quantityToReduce);
-            allocation.ReduceReceived(reduceQuantity);
-            await allocationRepository.UpdateAsync(allocation).ConfigureAwait(false);
+            var trackedAllocation = await GetTrackedAllocationAsync(allocation.Id).ConfigureAwait(false);
+            trackedAllocation.ReduceReceived(reduceQuantity);
+            await allocationRepository.UpdateAsync(trackedAllocation).ConfigureAwait(false);
 
             quantityToReduce -= reduceQuantity;
         }
@@ -452,7 +454,7 @@ public sealed class PurchaseOrderAllocationManager(
     {
         var matchedNewAllocations = _newPurchaseOrderItemAllocations.Where(allocation => allocation.PurchaseOrderItemId == purchaseOrderItemId.SecondaryId).ToList();
 
-        if (_purchaseOrderItemAllocationMap.TryGetValue(purchaseOrderItemId.SecondaryId, out var allocations))
+        if (!ignoreUpdateCache && _purchaseOrderItemAllocationMap.TryGetValue(purchaseOrderItemId.SecondaryId, out var allocations))
             return returnResult(allocations);
 
         allocations = await allocationReader.DataSource
@@ -467,4 +469,8 @@ public sealed class PurchaseOrderAllocationManager(
             => items.Where(allocation => !matchedNewAllocations.Any(newAllocation => newAllocation.Id == allocation.Id))
                 .Concat(matchedNewAllocations).ToList();
     }
+
+    private async Task<PurchaseOrderItemAllocation> GetTrackedAllocationAsync(Guid allocationId)
+        => await allocationRepository.GetByIdAsync(allocationId).ConfigureAwait(false)
+            ?? throw new PurchaseOrderItemAllocationIsNotFoundException(allocationId);
 }

@@ -257,7 +257,7 @@ export default class BulkReceiveController {
                                 <input type="text" name="Items[${idx}].DirectShipContactName" class="form-control form-control-sm bulk-ds-contact-name" placeholder="Tên người nhận" />
                             </div>
                             <div class="col-6">
-                                <input type="text" name="Items[${idx}].DirectShipContactPhone" class="form-control form-control-sm bulk-ds-contact-phone" placeholder="Số điện thoại" />
+                                <input type="text" name="Items[${idx}].DirectShipContactPhone" class="form-control form-control-sm bulk-ds-contact-phone" placeholder="Số điện thoại *" />
                             </div>
                         </div>
                     </div>
@@ -511,10 +511,15 @@ export default class BulkReceiveController {
         let dsValid = true;
         this.#tbody?.querySelectorAll('.bulk-ds-row:not(.d-none)').forEach(dsTr => {
             const orderItemId = dsTr.querySelector('.bulk-ds-order-item-id')?.value;
+            const phone = dsTr.querySelector('.bulk-ds-contact-phone')?.value?.trim();
             const address = dsTr.querySelector('.bulk-ds-address-input')?.value?.trim();
             const errorBox = dsTr.querySelector('.bulk-ds-error');
             if (!orderItemId) {
                 errorBox.textContent = 'Vui lòng chọn đơn hàng để giao thẳng.';
+                errorBox.classList.remove('d-none');
+                dsValid = false;
+            } else if (!phone) {
+                errorBox.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
                 errorBox.classList.remove('d-none');
                 dsValid = false;
             } else if (!address) {

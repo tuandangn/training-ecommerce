@@ -1,0 +1,223 @@
+- generic [ref=e1]:
+  - link "Bỏ qua menu" [ref=e2] [cursor=pointer]:
+    - /url: "#mainContent"
+  - generic [ref=e3]:
+    - complementary "Điều hướng chính" [ref=e4]:
+      - link " VLXD Tuấn Khôi Quản lý bán hàng" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: 
+        - generic [ref=e8]:
+          - generic [ref=e9]: VLXD Tuấn Khôi
+          - generic [ref=e10]: Quản lý bán hàng
+      - navigation "Menu chính" [ref=e11]:
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link " Dashboard" [ref=e14] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e15]: 
+              - text: Dashboard
+          - listitem [ref=e16]:
+            - link " Bán hàng" [expanded] [ref=e17] [cursor=pointer]:
+              - /url: "#collapseSales"
+              - generic [ref=e18]: 
+              - text: Bán hàng
+            - list [ref=e20]:
+              - listitem [ref=e21]:
+                - link "Đơn hàng" [ref=e22] [cursor=pointer]:
+                  - /url: /Order/List
+              - listitem [ref=e23]:
+                - link "Chuẩn bị hàng" [ref=e24] [cursor=pointer]:
+                  - /url: /Preparation/List
+              - listitem [ref=e25]:
+                - link "Khách trả hàng" [ref=e26] [cursor=pointer]:
+                  - /url: /CustomerReturn/List
+              - listitem [ref=e27]:
+                - link "Khách hàng" [ref=e28] [cursor=pointer]:
+                  - /url: /Customer/List
+          - listitem [ref=e29]:
+            - link " Nhập hàng" [ref=e30] [cursor=pointer]:
+              - /url: "#collapsePurchases"
+              - generic [ref=e31]: 
+              - text: Nhập hàng
+          - listitem [ref=e32]:
+            - link " Tồn kho" [ref=e33] [cursor=pointer]:
+              - /url: "#collapseInventory"
+              - generic [ref=e34]: 
+              - text: Tồn kho
+          - listitem [ref=e35]:
+            - link " Công nợ" [ref=e36] [cursor=pointer]:
+              - /url: "#collapseDebt"
+              - generic [ref=e37]: 
+              - text: Công nợ
+          - listitem [ref=e38]:
+            - link " Hàng hóa" [ref=e39] [cursor=pointer]:
+              - /url: "#collapseCatalog"
+              - generic [ref=e40]: 
+              - text: Hàng hóa
+          - listitem [ref=e41]:
+            - link " Cổng khách hàng" [ref=e42] [cursor=pointer]:
+              - /url: "#collapseCustomerPortal"
+              - generic [ref=e43]: 
+              - text: Cổng khách hàng
+    - generic [ref=e44]:
+      - banner [ref=e45]:
+        - text: 
+        - generic [ref=e46]:
+          - heading "Đơn bán DB-2605-002 Đang xử lý" [level=1] [ref=e47]:
+            - text: Đơn bán DB-2605-002
+            - generic [ref=e49]: Đang xử lý
+          - navigation "breadcrumb" [ref=e51]:
+            - list [ref=e52]:
+              - listitem [ref=e53]:
+                - link "Trang chủ" [ref=e54] [cursor=pointer]:
+                  - /url: /
+              - listitem [ref=e55]:
+                - text: /
+                - link "Đơn bán" [ref=e56] [cursor=pointer]:
+                  - /url: /Order/List
+              - listitem [ref=e57]: / Đơn bán DB-2605-002
+        - button "TĐ" [ref=e60] [cursor=pointer]:
+          - generic [ref=e61]: TĐ
+      - main [ref=e63]:
+        - tablist "Quy trình đơn hàng" [ref=e65]:
+          - tab " Đặt hàng 1 mặt hàng" [ref=e66] [cursor=pointer]:
+            - generic [ref=e68]: 
+            - generic [ref=e69]:
+              - generic [ref=e70]: Đặt hàng
+              - generic [ref=e71]: 1 mặt hàng
+          - tab " Chuẩn bị hàng  Đang xử lý" [active] [selected] [ref=e72] [cursor=pointer]:
+            - generic [ref=e74]: 
+            - generic [ref=e75]:
+              - generic [ref=e76]:
+                - text: Chuẩn bị hàng
+                - generic [ref=e77]: 
+              - generic [ref=e78]: Đang xử lý
+          - tab " Giao hàng Giao một phần" [ref=e79] [cursor=pointer]:
+            - generic [ref=e81]: 
+            - generic [ref=e82]:
+              - generic [ref=e83]: Giao hàng
+              - generic [ref=e84]: Giao một phần
+          - tab " Kết sổ Đang xử lý" [ref=e85] [cursor=pointer]:
+            - generic [ref=e87]: 
+            - generic [ref=e88]:
+              - generic [ref=e89]: Kết sổ
+              - generic [ref=e90]: Đang xử lý
+        - generic [ref=e91]:
+          - generic [ref=e92]:
+            - text:        
+            - tabpanel [ref=e185]:
+              - generic [ref=e186]:
+                - generic [ref=e187]:
+                  - generic [ref=e188]:
+                    - heading "Chuẩn bị hàng" [level=5] [ref=e189]
+                    - generic [ref=e190]: Tồn kho, hàng thiếu, giao thẳng và đơn nhập liên quan
+                  - link " Nhập hàng" [ref=e192] [cursor=pointer]:
+                    - /url: /PurchaseOrder/ShortageAggregation?orderId=4c0b8ce8-98a8-44e9-8244-0c6c66640060
+                    - generic [ref=e193]: 
+                    - text: Nhập hàng
+                - generic [ref=e194]:
+                  - generic [ref=e195]:
+                    - generic [ref=e196]:
+                      - generic [ref=e197]:
+                        - generic [ref=e199]: 
+                        - generic [ref=e201]: Đơn hàng có 1 mặt hàng chưa đủ tồn kho. Cần nhập thêm hàng từ nhà cung cấp trước khi giao đủ cho khách.
+                      - button " Xem hàng thiếu" [ref=e202] [cursor=pointer]:
+                        - generic [ref=e203]: 
+                        - text: Xem hàng thiếu
+                    - text:  
+                  - table [ref=e205]:
+                    - rowgroup [ref=e206]:
+                      - row "Hàng hóa SL đặt Tồn kho SL thiếu Đã xuất Đã giao Giao thẳng Giá vốn" [ref=e207]:
+                        - columnheader "Hàng hóa" [ref=e208]
+                        - columnheader "SL đặt" [ref=e209]
+                        - columnheader "Tồn kho" [ref=e210]
+                        - columnheader "SL thiếu" [ref=e211]
+                        - columnheader "Đã xuất" [ref=e212]
+                        - columnheader "Đã giao" [ref=e213]
+                        - columnheader "Giao thẳng" [ref=e214]
+                        - columnheader "Giá vốn" [ref=e215]
+                    - rowgroup [ref=e216]:
+                      - row "Cát sông (xây) DN-2605-002 6 0 2 4 3  Bù lần sau 1 0 / 4 Đã phân bổ giao thẳng 0 ₫" [ref=e217]:
+                        - cell "Cát sông (xây) DN-2605-002" [ref=e218]:
+                          - generic [ref=e219]: Cát sông (xây)
+                          - generic [ref=e220]: DN-2605-002
+                        - cell "6" [ref=e221]
+                        - cell "0" [ref=e222]
+                        - cell "2" [ref=e223]
+                        - cell "4" [ref=e224]
+                        - cell "3  Bù lần sau 1" [ref=e225]:
+                          - generic [ref=e226]: "3"
+                          - generic [ref=e227]:
+                            - generic [ref=e228]: 
+                            - text: Bù lần sau 1
+                        - cell "0 / 4 Đã phân bổ giao thẳng" [ref=e229]:
+                          - generic [ref=e230]: 0 / 4
+                          - generic [ref=e231]: Đã phân bổ giao thẳng
+                        - cell "0 ₫" [ref=e232]
+                  - generic [ref=e233]: Đơn nhập liên quan
+                  - table [ref=e235]:
+                    - rowgroup [ref=e236]:
+                      - row "Đơn nhập Nhà cung cấp Hàng hóa Đã nhận / Phân bổ Trạng thái Ngày đặt" [ref=e237]:
+                        - columnheader "Đơn nhập" [ref=e238]
+                        - columnheader "Nhà cung cấp" [ref=e239]
+                        - columnheader "Hàng hóa" [ref=e240]
+                        - columnheader "Đã nhận / Phân bổ" [ref=e241]
+                        - columnheader "Trạng thái" [ref=e242]
+                        - columnheader "Ngày đặt" [ref=e243]
+                    - rowgroup [ref=e244]:
+                      - row "DN-2605-002 Xe ben Hổ Cát sông (xây) 0 / 4 Hoàn tất 31/05/2026" [ref=e245]:
+                        - cell "DN-2605-002" [ref=e246]:
+                          - link "DN-2605-002" [ref=e247] [cursor=pointer]:
+                            - /url: /PurchaseOrder/Details/8559a57e-f707-47ae-bd2d-e68a8f0cf747
+                        - cell "Xe ben Hổ" [ref=e248]
+                        - cell "Cát sông (xây)" [ref=e249]
+                        - cell "0 / 4" [ref=e250]
+                        - cell "Hoàn tất" [ref=e251]:
+                          - generic [ref=e252]: Hoàn tất
+                        - cell "31/05/2026" [ref=e253]
+            - text:        
+          - complementary [ref=e133]:
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - heading "Timeline" [level=5] [ref=e136]
+                - generic [ref=e137]: Giao một phần
+              - list [ref=e139]:
+                - listitem [ref=e140]:
+                  - generic [ref=e142]: 
+                  - generic [ref=e143]:
+                    - time [ref=e144]: 31/05/2026 14:13
+                    - strong [ref=e145]: Khách hàng đặt hàng
+                    - generic [ref=e146]: Hùng Cường - 1 mặt hàng
+                - listitem [ref=e147]:
+                  - generic [ref=e149]: 
+                  - generic [ref=e150]:
+                    - time [ref=e151]: 31/05/2026 14:13
+                    - strong [ref=e152]: Tạo đơn nhập
+                    - generic [ref=e153]: DN-2605-002 - Xe ben Hổ - Hoàn tất
+                - listitem [ref=e154]:
+                  - generic [ref=e156]: 
+                  - generic [ref=e157]:
+                    - time [ref=e158]: 31/05/2026 14:14
+                    - strong [ref=e159]: Nhận hàng từ đơn nhập
+                    - generic [ref=e160]: PN-2605-002 - DN-2605-002
+                - listitem [ref=e161]:
+                  - generic [ref=e163]: 
+                  - generic [ref=e164]:
+                    - time [ref=e165]: 31/05/2026 14:14
+                    - strong [ref=e166]: Tạo phiếu giao
+                    - generic [ref=e167]: PX-2605-001 - Đã giao
+                - listitem [ref=e168]:
+                  - generic [ref=e170]: 
+                  - generic [ref=e171]:
+                    - time [ref=e172]: 31/05/2026 14:15
+                    - strong [ref=e173]: Giao xong
+                    - generic [ref=e174]: PX-2605-001
+                - listitem [ref=e175]:
+                  - generic [ref=e177]: 
+                  - generic [ref=e178]:
+                    - time [ref=e179]: 31/05/2026 14:15
+                    - strong [ref=e180]: Ghi nhận công nợ
+                    - generic [ref=e181]: CN-KH-2605-001 - 1.890.000 ₫ còn lại
+        - text:            
+      - contentinfo [ref=e182]:
+        - generic [ref=e183]: © 2026 VLXD Tuấn Khôi — Hệ thống quản lý bán hàng

@@ -627,6 +627,12 @@
   <data name="Error.ShippingAddressRequired" xml:space="preserve">
     <value>Shipping address is required.</value>
   </data>
+  <data name="Error.DirectShipContactPhoneRequired" xml:space="preserve">
+    <value>Direct-ship contact phone is required.</value>
+  </data>
+  <data name="Error.DirectShipAddressRequired" xml:space="preserve">
+    <value>Direct-ship address is required.</value>
+  </data>
   <data name="Error.DeliveryNoteItemsRequired" xml:space="preserve">
     <value>At least one item is required for the delivery note.</value>
   </data>

@@ -10,6 +10,7 @@ public sealed class CreateCustomerReturnCommand : IRequest<CreateCustomerReturnR
     public required Guid CustomerId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
+    public bool CompensateInNextDelivery { get; init; }
     public IList<CreateCustomerReturnItemCommand> Items { get; init; } = [];
 }
 

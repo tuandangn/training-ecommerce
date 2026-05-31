@@ -61,7 +61,7 @@ public sealed record OrderDetailsModel
                 var totalDeliveredQty = DeliveryNotes
                     .SelectMany(dn => dn.Items)
                     .Where(dni => dni.OrderItemId == item.Id)
-                    .Sum(dni => dni.Quantity);
+                    .Sum(dni => Math.Max(0m, dni.Quantity - dni.CompensatedReturnQuantity));
 
                 if (totalDeliveredQty < item.Quantity)
                     return false;
@@ -143,7 +143,15 @@ public sealed record OrderDetailsModel
                 .Where(dn => dn.Status == (int)DeliveryNoteStatus.Delivered)
                 .SelectMany(dn => dn.Items)
                 .Where(dni => dni.OrderItemId == Id)
-                .Sum(dni => dni.Quantity);
+                .Sum(dni => Math.Max(0m, dni.Quantity - dni.CompensatedReturnQuantity));
+        }
+
+        public decimal GetCompensatedReturnQuantity(IList<DeliveryNoteBasicModel> deliveryNotes)
+        {
+            return deliveryNotes
+                .SelectMany(dn => dn.Items)
+                .Where(dni => dni.OrderItemId == Id)
+                .Sum(dni => dni.CompensatedReturnQuantity);
         }
     }
 
@@ -171,6 +179,9 @@ public sealed record OrderDetailsModel
         public required decimal SubTotal { get; init; }
         public decimal? CostAtDispatch { get; init; }
         public decimal? TotalCost => CostAtDispatch.HasValue ? CostAtDispatch.Value * Quantity : null;
+        public decimal ConfirmedReturnQuantity { get; init; }
+        public decimal PendingReturnQuantity { get; init; }
+        public decimal CompensatedReturnQuantity { get; init; }
     }
 
     [Serializable]
@@ -215,6 +226,7 @@ public sealed record OrderDetailsModel
         public decimal ShortageQuantity { get; init; }
         public decimal IssuedQuantity { get; init; }
         public decimal DeliveredQuantity { get; init; }
+        public decimal CompensatedReturnQuantity { get; init; }
         public decimal DirectShipQuantity { get; init; }
         public decimal DirectShipReceivedQuantity { get; init; }
         public string DirectShipStatusText { get; init; } = string.Empty;
@@ -260,6 +272,7 @@ public sealed record OrderDetailsModel
         public DateTime CreatedOn { get; init; }
         public DateTime? DeliveredOn { get; init; }
         public decimal TotalQuantity { get; init; }
+        public decimal CompensatedReturnQuantity { get; init; }
         public decimal TotalAmount { get; init; }
     }
 

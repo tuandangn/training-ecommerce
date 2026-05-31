@@ -21,6 +21,7 @@ export function NewReturnRequestPage() {
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [pictures, setPictures] = useState<Record<string, ReturnPictureDraft[]>>({});
   const [reason, setReason] = useState("");
+  const [compensateInNextDelivery, setCompensateInNextDelivery] = useState(false);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -65,6 +66,7 @@ export function NewReturnRequestPage() {
         method: "POST",
         body: JSON.stringify({
           reason,
+          compensateInNextDelivery,
           items: selectedItems.map(({ productId, requestedQuantity, evidencePictures }) => ({
             productId,
             requestedQuantity,
@@ -167,6 +169,15 @@ export function NewReturnRequestPage() {
           <label>Lý do</label>
           <textarea value={reason} onChange={(event) => setReason(event.target.value)} />
         </div>
+
+        <label className="checkbox-field">
+          <input
+            type="checkbox"
+            checked={compensateInNextDelivery}
+            onChange={(event) => setCompensateInNextDelivery(event.target.checked)}
+          />
+          <span>Bù số lượng trả lại vào lần giao sau</span>
+        </label>
 
         <div className="modal-actions">
           <button className="button" type="button" onClick={() => navigate("/return-requests")}>

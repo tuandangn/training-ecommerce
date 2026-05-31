@@ -210,6 +210,7 @@ export type ReturnRequestSummary = {
   deliveryNoteCode?: string | null;
   status: number;
   reason?: string | null;
+  compensateInNextDelivery: boolean;
   adminNote?: string | null;
   createdOn: string;
   reviewedOn?: string | null;

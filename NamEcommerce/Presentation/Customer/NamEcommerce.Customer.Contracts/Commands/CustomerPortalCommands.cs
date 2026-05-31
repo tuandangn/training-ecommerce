@@ -29,6 +29,7 @@ public sealed record ConfirmCustomerDeliveryAcceptanceItemCommand(
 public sealed record ConfirmCustomerDeliveryAcceptanceCommand(
     decimal AgreedCustomerCharge,
     string? AgreedCustomerChargeReason,
+    bool CompensateInNextDelivery,
     IList<ConfirmCustomerDeliveryAcceptanceItemCommand> Items);
 
 public sealed record ConfirmCustomerDeliveryNoteCommand(
@@ -41,6 +42,7 @@ public sealed record CreateCustomerDeliveryFeedbackCommand(Guid DeliveryNoteId, 
 public sealed record CreateCustomerReturnRequestCommand(
     Guid? DeliveryNoteId,
     string? Reason,
+    bool CompensateInNextDelivery,
     IList<CreateCustomerReturnRequestItemCommand> Items) : IRequest<CustomerReturnRequestModel>;
 
 public sealed record CreateCustomerReturnRequestItemCommand(

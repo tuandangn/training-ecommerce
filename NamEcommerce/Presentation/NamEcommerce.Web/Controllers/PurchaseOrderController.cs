@@ -9,6 +9,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Application.Contracts.Orders;
 using Microsoft.Extensions.Localization;
+using NamEcommerce.Web.Extensions;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -66,14 +67,9 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     {
         var result = await _mediator.Send(command).ConfigureAwait(false);
         if (!result.Success)
-            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+            return this.JsonError(LocalizeError(result.ErrorMessage!));
 
-        return Json(new
-        {
-            success = true,
-            items = result.Items,
-            message = Localizer["Msg.PurchaseOrders.CreateSuccess", result.Items.Count].Value
-        });
+        return this.JsonOk(result.Items, Localizer["Msg.PurchaseOrders.CreateSuccess", result.Items.Count].Value);
     }
 
     [HttpPost]

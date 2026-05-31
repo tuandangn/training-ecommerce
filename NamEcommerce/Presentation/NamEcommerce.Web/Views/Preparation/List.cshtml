@@ -146,7 +146,7 @@
                                         Hiển thị giá trên phiếu
                                     </label>
                                 </div>
-                                <div class="form-check form-switch p-3 bg-light rounded-3 mt-2">
+                                <div class="form-check form-switch p-3 bg-light rounded-3 mt-2 d-none">
                                     <input class="form-check-input ms-0" type="checkbox" id="compensateReturnedQuantityInNextDelivery" name="compensateReturnedQuantityInNextDelivery" role="switch" />
                                     <label class="form-check-label ms-2 fw-medium" for="compensateReturnedQuantityInNextDelivery">
                                         Sẽ bù vào lần xuất hàng sau
@@ -419,7 +419,6 @@
 
                 const btn = $('#btnSubmitDeliveryNotes');
                 const showPrice = $('#showPrice').is(':checked');
-                const compensateReturnedQuantityInNextDelivery = $('#compensateReturnedQuantityInNextDelivery').is(':checked');
                 const note = $('#note').val().trim();
                 const warehouseId = $('#warehouseId').val();
                 const surchargeTotal = parseFloat($modalSurcharge.val()) || 0;
@@ -482,7 +481,6 @@
                                     orderId: orderId,
                                     selectedItems: selectedItems,
                                     showPrice: showPrice,
-                                    compensateReturnedQuantityInNextDelivery: compensateReturnedQuantityInNextDelivery,
                                     warehouseId: warehouseId,
                                     note: note,
                                     surcharge: orderSurcharge,

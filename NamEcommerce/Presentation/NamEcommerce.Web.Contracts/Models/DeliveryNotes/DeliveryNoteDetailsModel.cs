@@ -60,4 +60,5 @@ public sealed class DeliveryNoteItemModel
 
     /// <summary>Số đang giữ trong VR Draft/Inspecting.</summary>
     public decimal PendingReturnQuantity { get; set; }
+    public decimal CompensatedReturnQuantity { get; set; }
 }

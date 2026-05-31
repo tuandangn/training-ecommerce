@@ -829,13 +829,21 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     {
         try
         {
+            var hasDirectShipInfo = !string.IsNullOrWhiteSpace(dto.DirectShipAddress)
+                || !string.IsNullOrWhiteSpace(dto.DirectShipContactName)
+                || !string.IsNullOrWhiteSpace(dto.DirectShipContactPhone);
+            if (hasDirectShipInfo && string.IsNullOrWhiteSpace(dto.DirectShipContactPhone))
+                return CommonActionResultDto.CreateError("Error.DirectShipContactPhoneRequired");
+            if (hasDirectShipInfo && string.IsNullOrWhiteSpace(dto.DirectShipAddress))
+                return CommonActionResultDto.CreateError("Error.DirectShipAddressRequired");
+
             var allocation = await _purchaseOrderAllocationManager
                 .AllocatePurchaseOrderItemForOrder(new AllocatePurchaseOrderItemForOrder
                 {
                     PurchaseOrderItemId = (dto.PurchaseOrderId, dto.PurchaseOrderItemId),
                     OrderItemId = (dto.OrderId, dto.OrderItemId),
                     AllocationQuantity = dto.Quantity,
-                    DirectShipInfo = !string.IsNullOrEmpty(dto.DirectShipContactPhone) 
+                    DirectShipInfo = hasDirectShipInfo
                         ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(dto.DirectShipContactName, dto.DirectShipContactPhone, dto.DirectShipAddress)
                         : null
                 })

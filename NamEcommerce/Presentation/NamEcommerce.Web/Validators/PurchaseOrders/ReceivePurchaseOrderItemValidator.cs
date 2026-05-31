@@ -21,5 +21,24 @@ public sealed class ReceivePurchaseOrderItemValidator : AbstractValidator<Receiv
         RuleFor(m => m.SellingPrice!.Value)
             .GreaterThanOrEqualTo(0).WithMessage(m => localizer["Error.Invalid", localizer["Label.UnitPrice"]])
             .When(m => m.SellingPrice.HasValue);
+
+        When(HasDirectShipRequest, () =>
+        {
+            RuleFor(m => m.DirectShipOrderId)
+                .NotEmpty().WithMessage(m => localizer["Error.OrderRequired"]);
+
+            RuleFor(m => m.DirectShipOrderItemId)
+                .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Product"]]);
+
+            RuleFor(m => m.DirectShipContactPhone)
+                .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Phone"]]);
+
+            RuleFor(m => m.DirectShipAddress)
+                .NotEmpty().WithMessage(m => localizer["Error.Required", localizer["Label.Address"]]);
+        });
     }
+
+    private static bool HasDirectShipRequest(ReceivePurchaseOrderItemModel model)
+        => model.DirectShipOrderId.HasValue
+           || model.DirectShipOrderItemId.HasValue;
 }

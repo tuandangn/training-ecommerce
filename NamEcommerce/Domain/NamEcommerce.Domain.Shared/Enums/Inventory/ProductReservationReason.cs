@@ -13,5 +13,6 @@ public enum ProductReservationReason
     DeliveryNoteConfirmed = 9,
     DeliveryNoteCancelled = 10,
     DeliveryNoteCreated = 11,
+    CustomerReturnCompensation = 12,
     MigrationBackfill = 99
 }

@@ -24,6 +24,7 @@ public sealed class CreateCustomerReturnHandler : IRequestHandler<CreateCustomer
             WarehouseId = null,
             Note = request.Note,
             AdditionalCost = request.AdditionalCost,
+            CompensateInNextDelivery = request.CompensateInNextDelivery,
             Items = request.Items.Select(i => new CreateCustomerReturnItemAppDto
             {
                 ProductId = i.ProductId,

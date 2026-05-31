@@ -63,7 +63,15 @@
                                             <span>@(note.WarehouseName ?? "Kho")</span>
                                         }
                                     </td>
-                                    <td class="text-end">@note.TotalQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">
+                                        <div>@note.TotalQuantity.DisplayQuantity()</div>
+                                        @if (note.CompensatedReturnQuantity > 0)
+                                        {
+                                            <div class="small text-warning">
+                                                <i class="bi bi-arrow-repeat"></i> Bù @note.CompensatedReturnQuantity.DisplayQuantity()
+                                            </div>
+                                        }
+                                    </td>
                                     <td class="text-end">@note.TotalAmount.DisplayCurrencyWithSymbol()</td>
                                     <td><span class="status-badge @note.StatusClass">@note.StatusText</span></td>
                                     <td class="text-end">@note.CreatedOn.ToString(ViewConstants.DefaultDateFormat)</td>

@@ -1,0 +1,175 @@
+- generic [active] [ref=e1]:
+  - link "Bỏ qua menu" [ref=e2] [cursor=pointer]:
+    - /url: "#mainContent"
+  - generic [ref=e3]:
+    - complementary "Điều hướng chính" [ref=e4]:
+      - link " VLXD Tuấn Khôi Quản lý bán hàng" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: 
+        - generic [ref=e8]:
+          - generic [ref=e9]: VLXD Tuấn Khôi
+          - generic [ref=e10]: Quản lý bán hàng
+      - navigation "Menu chính" [ref=e11]:
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link " Dashboard" [ref=e14] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e15]: 
+              - text: Dashboard
+          - listitem [ref=e16]:
+            - link " Bán hàng" [ref=e17] [cursor=pointer]:
+              - /url: "#collapseSales"
+              - generic [ref=e18]: 
+              - text: Bán hàng
+          - listitem [ref=e19]:
+            - link " Nhập hàng" [ref=e20] [cursor=pointer]:
+              - /url: "#collapsePurchases"
+              - generic [ref=e21]: 
+              - text: Nhập hàng
+          - listitem [ref=e22]:
+            - link " Tồn kho" [expanded] [ref=e23] [cursor=pointer]:
+              - /url: "#collapseInventory"
+              - generic [ref=e24]: 
+              - text: Tồn kho
+            - list [ref=e26]:
+              - listitem [ref=e27]:
+                - link "Tồn kho" [ref=e28] [cursor=pointer]:
+                  - /url: /Inventory/StockList
+              - listitem [ref=e29]:
+                - link "Xuất kho" [ref=e30] [cursor=pointer]:
+                  - /url: /DeliveryNote/List
+              - listitem [ref=e31]:
+                - link "Nhập kho" [ref=e32] [cursor=pointer]:
+                  - /url: /GoodsReceipt/List
+              - listitem [ref=e33]:
+                - link "Kiểm kê" [ref=e34] [cursor=pointer]:
+                  - /url: /StockAdjustment/List
+          - listitem [ref=e35]:
+            - link " Công nợ" [ref=e36] [cursor=pointer]:
+              - /url: "#collapseDebt"
+              - generic [ref=e37]: 
+              - text: Công nợ
+          - listitem [ref=e38]:
+            - link " Hàng hóa" [ref=e39] [cursor=pointer]:
+              - /url: "#collapseCatalog"
+              - generic [ref=e40]: 
+              - text: Hàng hóa
+          - listitem [ref=e41]:
+            - link " Cổng khách hàng" [ref=e42] [cursor=pointer]:
+              - /url: "#collapseCustomerPortal"
+              - generic [ref=e43]: 
+              - text: Cổng khách hàng
+    - generic [ref=e44]:
+      - banner [ref=e45]:
+        - text: 
+        - generic [ref=e46]:
+          - heading "Tạo phiếu xuất Đơn hàng DB-2605-002" [level=1] [ref=e47]
+          - navigation "breadcrumb" [ref=e49]:
+            - list [ref=e50]:
+              - listitem [ref=e51]:
+                - link "Trang chủ" [ref=e52] [cursor=pointer]:
+                  - /url: /
+              - listitem [ref=e53]:
+                - text: /
+                - link "Phiếu xuất kho" [ref=e54] [cursor=pointer]:
+                  - /url: /DeliveryNote/List
+              - listitem [ref=e55]: / Tạo mới
+        - button "TĐ" [ref=e58] [cursor=pointer]:
+          - generic [ref=e59]: TĐ
+      - main [ref=e61]:
+        - generic [ref=e63]:
+          - generic [ref=e65]:
+            - generic [ref=e67]:
+              - heading "Chi tiết phiếu xuất hàng" [level=5] [ref=e68]
+              - generic [ref=e69]: Thông tin khách hàng và hàng hóa xuất
+            - generic [ref=e71]:
+              - generic [ref=e72]:
+                - generic [ref=e73]: Đơn hàng
+                - generic [ref=e74]: DB-2605-002
+                - generic [ref=e75]: Ngày đặt 31/05/2026
+                - generic [ref=e76]: Chưa hẹn ngày
+              - generic [ref=e77]:
+                - generic [ref=e78]: Khách hàng
+                - generic [ref=e79]: Hùng Cường
+                - link "0972791277" [ref=e80] [cursor=pointer]:
+                  - /url: tel:0972791277
+                - generic [ref=e81]:
+                  - text: Chùa Phước Lập Xã Tân Phú Tỉnh Đồng Nai
+                  - link "" [ref=e82] [cursor=pointer]:
+                    - /url: https://www.google.com/maps/search/Ch%C3%B9a%20Ph%C6%B0%E1%BB%9Bc%20L%E1%BA%ADp%20X%C3%A3%20T%C3%A2n%20Ph%C3%BA%20T%E1%BB%89nh%20%C4%90%E1%BB%93ng%20Nai
+                    - generic [ref=e83]: 
+              - generic [ref=e84]:
+                - generic [ref=e85]: Ghi chú
+                - generic [ref=e86]: Không có ghi chú
+            - table [ref=e89]:
+              - rowgroup [ref=e90]:
+                - row "Mặt hàng Đã đặt Đã giao SL xuất đợt này" [ref=e91]:
+                  - columnheader [ref=e92]:
+                    - checkbox [checked] [ref=e93]
+                  - columnheader "Mặt hàng" [ref=e94]
+                  - columnheader "Đã đặt" [ref=e95]
+                  - columnheader "Đã giao" [ref=e96]
+                  - columnheader "SL xuất đợt này" [ref=e97]
+              - rowgroup [ref=e98]:
+                - row " Hàng hóa đã giao đủ Tất cả hàng hóa trong đơn này đã được xuất và giao đầy đủ." [ref=e99]:
+                  - cell " Hàng hóa đã giao đủ Tất cả hàng hóa trong đơn này đã được xuất và giao đầy đủ." [ref=e100]:
+                    - generic [ref=e101]:
+                      - generic [ref=e103]: 
+                      - heading "Hàng hóa đã giao đủ" [level=5] [ref=e104]
+                      - paragraph [ref=e105]: Tất cả hàng hóa trong đơn này đã được xuất và giao đầy đủ.
+            - generic [ref=e106]:
+              - link " Quay lại Đơn hàng" [ref=e107] [cursor=pointer]:
+                - /url: /Order/Details/4c0b8ce8-98a8-44e9-8244-0c6c66640060
+                - generic [ref=e108]: 
+                - text: Quay lại Đơn hàng
+              - button " Tạo phiếu xuất" [disabled]:
+                - generic: 
+                - text: Tạo phiếu xuất
+          - generic [ref=e109]:
+            - generic [ref=e110]:
+              - heading " Thông tin phiếu" [level=5] [ref=e112]:
+                - generic [ref=e113]: 
+                - text: Thông tin phiếu
+              - generic [ref=e114]:
+                - generic [ref=e115]:
+                  - generic [ref=e116]: Địa chỉ giao hàng (*)
+                  - textbox "Địa chỉ giao hàng (*)" [ref=e117]:
+                    - /placeholder: Nhập địa chỉ giao hàng
+                    - text: Chùa Phước Lập Xã Tân Phú Tỉnh Đồng Nai
+                - generic [ref=e118]:
+                  - generic [ref=e119]: Kho xuất hàng (*)
+                  - combobox "Kho xuất hàng (*)" [ref=e120]:
+                    - option "-- Chọn kho xuất --" [selected]
+                    - option "Kho Tuyến Vân"
+                    - option "VLXD Tuấn Khôi"
+                - generic [ref=e121]:
+                  - generic [ref=e122]: Ghi chú phiếu xuất
+                  - textbox "Ghi chú phiếu xuất" [ref=e123]:
+                    - /placeholder: Nhập ghi chú...
+            - generic [ref=e124]:
+              - heading " Tổng kết thanh toán" [level=5] [ref=e126]:
+                - generic [ref=e127]: 
+                - text: Tổng kết thanh toán
+              - generic [ref=e128]:
+                - generic [ref=e129]:
+                  - generic [ref=e130]:
+                    - generic [ref=e131]: Phụ phí
+                    - generic [ref=e132]:
+                      - textbox "Phụ phí" [ref=e133]:
+                        - /placeholder: "0"
+                        - text: "0"
+                      - generic [ref=e134]: đ
+                  - generic [ref=e135]:
+                    - generic [ref=e136]: Lý do
+                    - textbox "Lý do" [ref=e137]:
+                      - /placeholder: "Lý do thu phụ phí (ví dụ: phí vận chuyển xa, phí bốc xếp...)"
+                - generic [ref=e138]:
+                  - generic [ref=e139]: Số tiền phải thu
+                  - generic [ref=e140]:
+                    - textbox "Số tiền phải thu" [ref=e141]: "0"
+                    - generic [ref=e142]: đ
+                - generic [ref=e143]:
+                  - switch "Hiển thị giá trên phiếu" [ref=e144]
+                  - generic [ref=e145]: Hiển thị giá trên phiếu
+      - contentinfo [ref=e146]:
+        - generic [ref=e147]: © 2026 VLXD Tuấn Khôi — Hệ thống quản lý bán hàng

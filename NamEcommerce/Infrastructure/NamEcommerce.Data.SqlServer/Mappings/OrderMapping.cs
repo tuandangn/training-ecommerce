@@ -38,7 +38,6 @@ public sealed class OrderMapping : IEntityTypeConfiguration<Order>
         builder.Property(o => o.CreatedByUsername).HasMaxLength(1000);
 
         builder.HasOne<Customer>().WithMany().HasForeignKey(o => o.CustomerId);
-        builder.HasMany(o => o.OrderItems).WithOne().HasForeignKey(oi => oi.OrderId);
 
         builder.ComplexProperty(o => o.CustomerInfo, customerInfoBuilder =>
         {
@@ -62,6 +61,8 @@ public sealed class OrderMapping : IEntityTypeConfiguration<Order>
                 .IsRequired();
         });
 
+        builder.HasMany(o => o.OrderItems).WithOne().HasForeignKey(oi => oi.OrderId);
         builder.Navigation(o => o.OrderItems).AutoInclude();
+        builder.Metadata.FindNavigation(nameof(Order.OrderItems))?.SetPropertyAccessMode(PropertyAccessMode.Field);
     }
 }

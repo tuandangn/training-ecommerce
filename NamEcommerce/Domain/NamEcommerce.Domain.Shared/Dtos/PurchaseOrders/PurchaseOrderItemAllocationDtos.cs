@@ -44,8 +44,8 @@ public sealed record AllocatePurchaseOrderItemForOrder
 
         public void Verify()
         {
-            if (string.IsNullOrEmpty(ContactPhone))
-                throw new DirectShipDataIsInvalidException("Error.DirectShipDataIsInvalid", "Label.ContactPhone");
+            if (string.IsNullOrWhiteSpace(ContactPhone))
+                throw new DirectShipDataIsInvalidException("Error.DirectShipContactPhoneRequired");
         }
     }
 }
