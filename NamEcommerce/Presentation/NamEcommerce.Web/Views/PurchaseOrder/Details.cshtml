@@ -143,6 +143,7 @@
                                         {
                                             var item = Model.Info.Items[i];
                                             var hasAllocations = Model.AllocationsPerItem.TryGetValue(item.Id, out var allocations) && allocations.Count > 0;
+                                            var hasReceivingAllocations = allocations?.Count > 0 && allocations.Any(allocation => allocation.AllocatedQuantity - allocation.ReceivedQuantity > 0);
                                             var allocatedQuantity = hasAllocations ? allocations!.Sum(allocation => allocation.AllocatedQuantity) : 0m;
                                             <tr id="row-@i" data-item-id="@item.Id">
                                                 <td class="ps-3">
@@ -230,7 +231,7 @@
                                                                         </button>
                                                                     </li>
                                                                 }
-                                                                @if (hasAllocations)
+                                                                @if (hasReceivingAllocations)
                                                                 {
                                                                     <li>
                                                                         <button class="dropdown-item btn-release-allocate" data-purchase-id="@Model.Info.Id"

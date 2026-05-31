@@ -32,7 +32,6 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
     public decimal ReceivedQuantity { get; private set; }
     public AllocationStatus Status { get; private set; }
 
-    // Direct-ship fields
     public bool IsDirectShip { get; private set; }
     public string? DirectShipAddress { get; private set; }
     public string? DirectShipContactName { get; private set; }
