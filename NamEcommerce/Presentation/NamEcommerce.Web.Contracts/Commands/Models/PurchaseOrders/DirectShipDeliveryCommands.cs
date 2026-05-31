@@ -25,3 +25,12 @@ public sealed class UpdateDirectShipAddressCommand : IRequest<CommonActionResult
     public string? NewContactPhone { get; init; }
     public string? Reason { get; init; }
 }
+
+public sealed class MarkAllocationAsDirectShipCommand : IRequest<CommonActionResultModel>
+{
+    public required Guid AllocationId { get; init; }
+    public required string Address { get; init; }
+    public string? ContactName { get; init; }
+    public string? ContactPhone { get; init; }
+    public int Priority { get; init; }
+}

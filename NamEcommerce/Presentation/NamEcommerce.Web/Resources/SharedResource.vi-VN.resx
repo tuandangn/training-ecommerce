@@ -906,4 +906,43 @@
   <data name="Error.WarehouseIsNotSuitableException" xml:space="preserve">
     <value>Kho hàng không thích hợp.</value>
   </data>
+  <data name="Error.DirectShipAllocationNoRemainingQuantity" xml:space="preserve">
+    <value>Phân bổ đã nhận đủ, không thể chuyển sang giao thẳng.</value>
+  </data>
+  <data name="Error.UnexpectedError" xml:space="preserve">
+    <value>Có lỗi xảy ra. Vui lòng thử lại.</value>
+  </data>
+  <data name="Error.Network" xml:space="preserve">
+    <value>Lỗi kết nối. Vui lòng thử lại.</value>
+  </data>
+  <data name="Common.Processing" xml:space="preserve">
+    <value>Đang xử lý...</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.Action" xml:space="preserve">
+    <value>Chuyển sang giao thẳng</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.Title" xml:space="preserve">
+    <value>Chuyển phân bổ sang giao thẳng</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.HelpText" xml:space="preserve">
+    <value>Phần hàng còn lại của phân bổ này sẽ được giao thẳng khi nhận hàng.</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.Address" xml:space="preserve">
+    <value>Địa chỉ giao hàng</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.ContactName" xml:space="preserve">
+    <value>Người nhận</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.ContactPhone" xml:space="preserve">
+    <value>Điện thoại</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.Submit" xml:space="preserve">
+    <value>Xác nhận giao thẳng</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.OrderPrefix" xml:space="preserve">
+    <value>Đơn bán</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.CustomerPrefix" xml:space="preserve">
+    <value>Khách</value>
+  </data>
 </root>

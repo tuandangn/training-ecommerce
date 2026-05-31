@@ -289,7 +289,22 @@
                                                         </td>
                                                         @if (Model.Info.CanAddItems || (Model.Info.CanReceiveGoods && item.RemainingQuantity > 0) || Model.CanAllocateItems || Model.DirectShipAllocationsPerItem.Count > 0 || Model.AllocationsPerItem.Count > 0)
                                                         {
-                                                            <td></td>
+                                                            var allocationRemaining = allocation.AllocatedQuantity - allocation.ReceivedQuantity;
+                                                            <td class="py-1 text-center">
+                                                                @if (!allocation.IsDirectShip && allocationRemaining > 0)
+                                                                {
+                                                                    <button class="btn btn-sm btn-outline-primary py-0 px-2 btnMarkAllocationDirectShip"
+                                                                            type="button"
+                                                                            data-allocation-id="@allocation.AllocationId"
+                                                                            data-order-code="@allocation.OrderCode"
+                                                                            data-customer-name="@(allocation.CustomerName ?? "")"
+                                                                            data-customer-phone="@(allocation.CustomerPhone ?? "")"
+                                                                            data-shipping-address="@(allocation.ShippingAddress ?? "")">
+                                                                        <i class="bi bi-send"></i>
+                                                                        <span class="visually-hidden ms-1">@L["PurchaseOrder.MarkDirectShip.Action"]</span>
+                                                                    </button>
+                                                                }
+                                                            </td>
                                                         }
                                                     </tr>
                                                 }
@@ -1120,6 +1135,46 @@
             </div>
         </div>
 
+        <div class="modal fade" id="markDirectShipModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <div class="modal-header border-0 pb-0">
+                        <div>
+                            <h5 class="modal-title fw-bold">@L["PurchaseOrder.MarkDirectShip.Title"]</h5>
+                            <p class="text-muted small mb-0" id="markDsOrderSummary"></p>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-4">
+                        <input type="hidden" id="markDsAllocationId" />
+                        <div class="alert alert-info border-0 small">
+                            <i class="bi bi-info-circle me-1"></i>
+                            @L["PurchaseOrder.MarkDirectShip.HelpText"]
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.Address"] <span class="text-danger">*</span></label>
+                            <textarea id="markDsAddress" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.ContactName"]</label>
+                            <input id="markDsContactName" type="text" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.ContactPhone"] <span class="text-danger">*</span></label>
+                            <input id="markDsContactPhone" type="text" class="form-control" />
+                        </div>
+                        <div id="markDsErrorBanner" class="alert alert-danger border-0 small d-none"></div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 pb-4">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@L["Btn.Close"]</button>
+                        <button type="button" class="btn btn-primary" id="btnMarkDirectShip">
+                            <i class="bi bi-send me-1"></i> @L["PurchaseOrder.MarkDirectShip.Submit"]
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         @if (Model.CanAllocateItems)
         {
         <div class="modal fade" id="allocateToOrderModal" tabindex="-1" aria-hidden="true">
@@ -1287,6 +1342,83 @@
                         if (data.success) successBanner.classList.remove('d-none');
                         else { errorBanner.textContent = data.message || 'Có lỗi xảy ra.'; errorBanner.classList.remove('d-none'); }
                     } catch { errorBanner.textContent = 'Lỗi kết nối.'; errorBanner.classList.remove('d-none'); }
+                });
+
+                const markDirectShipText = {
+                    addressRequired: @Json.Serialize(L["Error.DirectShipAddressRequired"].Value),
+                    phoneRequired: @Json.Serialize(L["Error.DirectShipContactPhoneRequired"].Value),
+                    unexpected: @Json.Serialize(L["Error.UnexpectedError"].Value),
+                    network: @Json.Serialize(L["Error.Network"].Value),
+                    saving: @Json.Serialize(L["Common.Processing"].Value),
+                    submit: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.Submit"].Value),
+                    orderPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.OrderPrefix"].Value),
+                    customerPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.CustomerPrefix"].Value)
+                };
+
+                document.querySelectorAll('.btnMarkAllocationDirectShip').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        document.getElementById('markDsAllocationId').value = this.dataset.allocationId || '';
+                        document.getElementById('markDsAddress').value = this.dataset.shippingAddress || '';
+                        document.getElementById('markDsContactName').value = this.dataset.customerName || '';
+                        document.getElementById('markDsContactPhone').value = this.dataset.customerPhone || '';
+                        document.getElementById('markDsErrorBanner').classList.add('d-none');
+                        document.getElementById('markDsErrorBanner').textContent = '';
+                        const summaryParts = [];
+                        if (this.dataset.orderCode) summaryParts.push(`${markDirectShipText.orderPrefix}: ${this.dataset.orderCode}`);
+                        if (this.dataset.customerName) summaryParts.push(`${markDirectShipText.customerPrefix}: ${this.dataset.customerName}`);
+                        document.getElementById('markDsOrderSummary').textContent = summaryParts.join(' · ');
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('markDirectShipModal')).show();
+                    });
+                });
+
+                document.getElementById('btnMarkDirectShip')?.addEventListener('click', async function() {
+                    const allocationId = document.getElementById('markDsAllocationId')?.value;
+                    const address = document.getElementById('markDsAddress').value.trim();
+                    const contactName = document.getElementById('markDsContactName').value.trim();
+                    const contactPhone = document.getElementById('markDsContactPhone').value.trim();
+                    const errorBanner = document.getElementById('markDsErrorBanner');
+                    errorBanner.classList.add('d-none');
+                    errorBanner.textContent = '';
+                    if (!address) {
+                        errorBanner.textContent = markDirectShipText.addressRequired;
+                        errorBanner.classList.remove('d-none');
+                        return;
+                    }
+                    if (!contactPhone) {
+                        errorBanner.textContent = markDirectShipText.phoneRequired;
+                        errorBanner.classList.remove('d-none');
+                        return;
+                    }
+
+                    const originalHtml = this.innerHTML;
+                    this.disabled = true;
+                    this.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${markDirectShipText.saving}`;
+                    try {
+                        const resp = await fetch('/PurchaseOrder/MarkAllocationAsDirectShip', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
+                            body: JSON.stringify({
+                                allocationId,
+                                address,
+                                contactName: contactName || null,
+                                contactPhone,
+                                priority: 0
+                            })
+                        });
+                        const data = await resp.json();
+                        if (data.success) {
+                            location.reload();
+                            return;
+                        }
+                        errorBanner.textContent = data.message || markDirectShipText.unexpected;
+                        errorBanner.classList.remove('d-none');
+                    } catch {
+                        errorBanner.textContent = markDirectShipText.network;
+                        errorBanner.classList.remove('d-none');
+                    } finally {
+                        this.disabled = false;
+                        this.innerHTML = originalHtml || `<i class="bi bi-send me-1"></i> ${markDirectShipText.submit}`;
+                    }
                 });
             </script>
 

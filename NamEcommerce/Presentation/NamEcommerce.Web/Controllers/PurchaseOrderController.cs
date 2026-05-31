@@ -523,4 +523,22 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
         return Json(new { success = true });
     }
+
+    [HttpPost]
+    public async Task<IActionResult> MarkAllocationAsDirectShip([FromBody] MarkAllocationAsDirectShipCommand command)
+    {
+        if (command is null
+            || command.AllocationId == Guid.Empty
+            || string.IsNullOrWhiteSpace(command.Address)
+            || string.IsNullOrWhiteSpace(command.ContactPhone))
+        {
+            return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
+        }
+
+        var result = await _mediator.Send(command).ConfigureAwait(false);
+        if (!result.Success)
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+
+        return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
+    }
 }

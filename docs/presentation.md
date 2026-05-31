@@ -66,6 +66,8 @@ public class XyzController : BaseAuthorizedController   // hoặc BaseController
 
 ## View Models + Validators (Fluent Validation)
 
+Hãy áp dụng Hệ màu/Font từ DESIGN.md kết hợp với Tư duy bố cục và Kỷ luật chống slop của SKILL.md.
+
 ```csharp
 // NamEcommerce.Web/Models/{Module}/XyzModels.cs
 public sealed class CreateXyzModel

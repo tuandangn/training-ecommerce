@@ -45,6 +45,9 @@ public sealed class PurchaseOrderDetailsModel
         public Guid OrderId { get; init; }
         public Guid OrderItemId { get; init; }
         public string OrderCode { get; init; } = string.Empty;
+        public string? CustomerName { get; init; }
+        public string? CustomerPhone { get; init; }
+        public string? ShippingAddress { get; init; }
         public decimal AllocatedQuantity { get; init; }
         public decimal ReceivedQuantity { get; init; }
         public int Status { get; init; }

@@ -4,6 +4,7 @@ using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
@@ -35,13 +36,15 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     private readonly IEntityDataReader<PurchaseOrderItemAllocation> _purchaseOrderItemAllocationDataReader;
     private readonly IEntityDataReader<DeliveryNote> _deliveryNoteDataReader;
     private readonly IEntityDataReader<Order> _orderDataReader;
+    private readonly IEntityDataReader<Customer> _customerDataReader;
 
     public PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
         IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
         IEntityDataReader<PurchaseOrderItemAllocation> purchaseOrderItemAllocationDataReader, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IEntityDataReader<Vendor> vendorDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader,
         IEntityDataReader<Product> productDataReader, IDirectShipManager directShipManager,
-        IEntityDataReader<DeliveryNote> deliveryNoteDataReader, IEntityDataReader<Order> orderDataReader)
+        IEntityDataReader<DeliveryNote> deliveryNoteDataReader, IEntityDataReader<Order> orderDataReader,
+        IEntityDataReader<Customer> customerDataReader)
     {
         _purchaseOrderManager = purchaseOrderManager;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
@@ -54,6 +57,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         _purchaseOrderItemAllocationDataReader = purchaseOrderItemAllocationDataReader;
         _deliveryNoteDataReader = deliveryNoteDataReader;
         _orderDataReader = orderDataReader;
+        _customerDataReader = customerDataReader;
     }
 
     public async Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status)
@@ -802,11 +806,17 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 .Select(item => new { Order = order, Item = item }))
             .ToDictionary(x => x.Item.Id);
 
+        var customerIds = orderItems.Values.Select(x => x.Order.CustomerId).Distinct().ToList();
+        var customers = _customerDataReader.DataSource
+            .Where(customer => customerIds.Contains(customer.Id))
+            .ToDictionary(customer => customer.Id);
+
         var result = allocations
             .Where(allocation => orderItems.ContainsKey(allocation.OrderItemId))
             .Select(allocation =>
             {
                 var orderItem = orderItems[allocation.OrderItemId];
+                customers.TryGetValue(orderItem.Order.CustomerId, out var customer);
                 return new PurchaseOrderItemAllocationForPoItemAppDto
                 {
                     AllocationId = allocation.Id,
@@ -814,6 +824,9 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                     OrderId = orderItem.Order.Id,
                     OrderItemId = allocation.OrderItemId,
                     OrderCode = orderItem.Order.Code,
+                    CustomerName = customer?.FullName,
+                    CustomerPhone = customer?.PhoneNumber,
+                    ShippingAddress = orderItem.Order.ShippingAddress,
                     AllocatedQuantity = allocation.AllocatedQuantity,
                     ReceivedQuantity = allocation.ReceivedQuantity,
                     Status = (int)allocation.Status,

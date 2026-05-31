@@ -40,6 +40,8 @@ public sealed class DirectShipManager(
     {
         var allocation = await allocationReader.GetByIdAsync(allocationId)
             ?? throw new PurchaseOrderItemAllocationIsNotFoundException(allocationId);
+        if (allocation.ReceivedQuantity >= allocation.AllocatedQuantity)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.DirectShipAllocationNoRemainingQuantity");
 
         allocation.SetDirectShip(address, contactName, contactPhone, priority);
         await allocationRepository.UpdateAsync(allocation, ct).ConfigureAwait(false);
