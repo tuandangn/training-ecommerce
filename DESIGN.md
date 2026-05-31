@@ -1,3 +1,5 @@
+[ROLE: Định nghĩa Hệ màu, Font, và Linh hồn của Thương hiệu]
+
 # Web App UI/UX Design System & Guidelines
 
 Mục đích của tài liệu này là cung cấp các nguyên tắc thiết kế, hệ thống design token và quy chuẩn giao diện hiện đại (Modern Web App) để AI tuân thủ tuyệt đối khi xây dựng Components, Pages và Layouts.

@@ -54,6 +54,11 @@ try/catch is acceptable only for external I/O (HTTP, file system, DB) or when ca
 
 ---
 
+## Design
+Khi làm việc với UI/UX hãy áp dụng Hệ màu/Font từ DESIGN.md kết hợp với Tư duy bố cục và Kỷ luật chống slop của SKILL.md.
+
+---
+
 ## Quick rules (ONLY for simple tash)
 
 **Entity:** `sealed record`, constructor `internal`, properties `public ... { get; private set; }`, change state methods accessibility is `internal`
