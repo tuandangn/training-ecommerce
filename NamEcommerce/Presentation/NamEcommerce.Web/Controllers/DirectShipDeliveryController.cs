@@ -98,6 +98,26 @@ public sealed class DirectShipDeliveryController(
     }
 
     [HttpPost]
+    public async Task<IActionResult> MarkAsDirectShip([FromBody] MarkAllocationAsDirectShipRequest request)
+    {
+        if (request.AllocationId == Guid.Empty || string.IsNullOrWhiteSpace(request.Address))
+            return Json(new { success = false, message = "Dữ liệu không hợp lệ." });
+
+        var result = await mediator.Send(new MarkAllocationAsDirectShipCommand
+        {
+            AllocationId = request.AllocationId,
+            Address = request.Address,
+            ContactName = request.ContactName,
+            ContactPhone = request.ContactPhone
+        }).ConfigureAwait(false);
+
+        if (result.Success)
+            return Json(new { success = true });
+
+        return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+    }
+
+    [HttpPost]
     public async Task<IActionResult> UpdateAddress([FromBody] UpdateDirectShipAddressRequest request)
     {
         if (request.AllocationId == Guid.Empty || string.IsNullOrWhiteSpace(request.NewAddress))
@@ -140,4 +160,12 @@ public sealed class UpdateDirectShipAddressRequest
     public string? NewContactName { get; set; }
     public string? NewContactPhone { get; set; }
     public string? Reason { get; set; }
+}
+
+public sealed class MarkAllocationAsDirectShipRequest
+{
+    public Guid AllocationId { get; set; }
+    public required string Address { get; set; }
+    public string? ContactName { get; set; }
+    public string? ContactPhone { get; set; }
 }

@@ -358,6 +358,47 @@ public sealed class PurchaseOrderAllocationManager(
             .ToList();
     }
 
+    public Task<IList<NonDirectShipAllocationDto>> GetNonDirectShipAllocationsForPoItemAsync(Guid purchaseOrderItemId)
+    {
+        var allocations = allocationReader.DataSource
+            .Where(a => a.PurchaseOrderItemId == purchaseOrderItemId
+                && !a.IsDirectShip
+                && a.Status != AllocationStatus.Cancelled
+                && a.AllocatedQuantity > a.ReceivedQuantity)
+            .ToList();
+        if (allocations.Count == 0)
+            return Task.FromResult<IList<NonDirectShipAllocationDto>>([]);
+
+        var orderItemIds = allocations.Select(a => a.OrderItemId).ToHashSet();
+        var orderItems = orderReader.DataSource
+            .SelectMany(order => order.OrderItems
+                .Where(item => orderItemIds.Contains(item.Id))
+                .Select(item => new { Order = order, Item = item }))
+            .ToDictionary(x => x.Item.Id);
+
+        var result = allocations
+            .Where(a => orderItems.ContainsKey(a.OrderItemId))
+            .Select(a =>
+            {
+                var ctx = orderItems[a.OrderItemId];
+                return new NonDirectShipAllocationDto
+                {
+                    AllocationId = a.Id,
+                    OrderId = ctx.Order.Id,
+                    OrderItemId = a.OrderItemId,
+                    OrderCode = ctx.Order.Code,
+                    CustomerName = ctx.Order.CustomerInfo.FullName,
+                    CustomerPhone = ctx.Order.CustomerInfo.PhoneNumber,
+                    ShippingAddress = ctx.Order.ShippingAddress,
+                    AllocatedQuantity = a.AllocatedQuantity,
+                    RemainingQuantity = Math.Max(0m, a.AllocatedQuantity - a.ReceivedQuantity)
+                };
+            })
+            .ToList();
+
+        return Task.FromResult<IList<NonDirectShipAllocationDto>>(result);
+    }
+
     private (PurchaseOrder, PurchaseOrderItem) EnsurePurchaseOrderItemExists(SecondaryItemId purchaseOrderItemId)
     {
         var purchaseOrder = purchaseOrderReader.DataSource

@@ -24,4 +24,5 @@ public sealed class BulkReceiveLineCommand
     public string? DirectShipAddress { get; init; }
     public string? DirectShipContactName { get; init; }
     public string? DirectShipContactPhone { get; init; }
+    public Guid? DirectShipExistingAllocationId { get; init; }
 }

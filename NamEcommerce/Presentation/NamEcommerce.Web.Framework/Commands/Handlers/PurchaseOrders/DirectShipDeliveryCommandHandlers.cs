@@ -55,3 +55,21 @@ public sealed class UpdateDirectShipAddressHandler(IDirectShipAppService directS
         return new CommonActionResultModel { Success = result.Success, ErrorMessage = result.ErrorMessage };
     }
 }
+
+public sealed class MarkAllocationAsDirectShipHandler(IDirectShipAppService directShipAppService)
+    : IRequestHandler<MarkAllocationAsDirectShipCommand, CommonActionResultModel>
+{
+    public async Task<CommonActionResultModel> Handle(MarkAllocationAsDirectShipCommand request, CancellationToken cancellationToken)
+    {
+        var result = await directShipAppService.MarkAllocationAsDirectShipAsync(new MarkAllocationAsDirectShipAppDto
+        {
+            AllocationId = request.AllocationId,
+            Address = request.Address,
+            ContactName = request.ContactName,
+            ContactPhone = request.ContactPhone,
+            Priority = 0
+        }).ConfigureAwait(false);
+
+        return new CommonActionResultModel { Success = result.Success, ErrorMessage = result.ErrorMessage };
+    }
+}

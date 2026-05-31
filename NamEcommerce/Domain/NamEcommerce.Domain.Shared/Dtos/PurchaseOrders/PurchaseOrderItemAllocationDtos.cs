@@ -66,6 +66,20 @@ public sealed record EligibleOrderItemForAllocationDto
 }
 
 [Serializable]
+public sealed record NonDirectShipAllocationDto
+{
+    public required Guid AllocationId { get; init; }
+    public required Guid OrderId { get; init; }
+    public required Guid OrderItemId { get; init; }
+    public required string OrderCode { get; init; }
+    public required string CustomerName { get; init; }
+    public required decimal AllocatedQuantity { get; init; }
+    public required decimal RemainingQuantity { get; init; }
+    public string? CustomerPhone { get; init; }
+    public string? ShippingAddress { get; init; }
+}
+
+[Serializable]
 public sealed record AllocationReceiptDto
 {
     public required Guid AllocationId { get; init; }

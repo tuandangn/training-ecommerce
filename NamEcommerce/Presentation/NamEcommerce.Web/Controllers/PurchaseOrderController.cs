@@ -490,6 +490,28 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         }));
     }
 
+    [HttpGet]
+    public async Task<IActionResult> NonDirectShipAllocations(Guid purchaseOrderItemId)
+    {
+        if (purchaseOrderItemId == Guid.Empty)
+            return Json(Array.Empty<object>());
+
+        var allocations = await _purchaseOrderAppService.GetNonDirectShipAllocationsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+
+        return Json(allocations.Select(a => new
+        {
+            allocationId = a.AllocationId,
+            orderId = a.OrderId,
+            orderItemId = a.OrderItemId,
+            orderCode = a.OrderCode,
+            customerName = a.CustomerName,
+            customerPhone = a.CustomerPhone,
+            shippingAddress = a.ShippingAddress,
+            allocatedQty = a.AllocatedQuantity,
+            remainingQty = a.RemainingQuantity
+        }));
+    }
+
     [HttpPost]
     public async Task<IActionResult> AllocateToOrder([FromBody] AllocateToOrderRequestModel request)
     {
