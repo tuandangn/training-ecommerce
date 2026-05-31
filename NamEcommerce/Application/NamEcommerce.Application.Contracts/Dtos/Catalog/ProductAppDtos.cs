@@ -29,11 +29,20 @@ public sealed record ProductAppDto(Guid Id) : BaseProductAppDto
 }
 
 [Serializable]
+public sealed record InitialStockAppDto
+{
+    public required Guid WarehouseId { get; init; }
+    public required decimal Quantity { get; init; }
+    public required decimal UnitCost { get; init; }
+}
+
+[Serializable]
 public sealed record CreateProductAppDto : BaseProductAppDto
 {
     public FileInfoAppDto? ImageFile { get; set; }
     public decimal CostPrice { get; set; }
     public decimal UnitPrice { get; set; }
+    public IList<InitialStockAppDto> InitialStocks { get; init; } = [];
 
     public override (bool valid, string? errorMessage) Validate()
     {
@@ -41,6 +50,11 @@ public sealed record CreateProductAppDto : BaseProductAppDto
             return (false, "Error.ProductCostPriceCannotBeNegative");
         if (UnitPrice < 0)
             return (false, "Error.ProductUnitPriceCannotBeNegative");
+        foreach (var s in InitialStocks)
+        {
+            if (s.Quantity > 0 && s.UnitCost <= 0)
+                return (false, "Error.OpeningInventory.UnitCostMustBePositive");
+        }
 
         return base.Validate();
     }

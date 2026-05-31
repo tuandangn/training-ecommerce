@@ -54,5 +54,6 @@ public sealed class CreateProductModel
         public Guid WarehouseId { get; set; }
         public string WarehouseName { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
+        public decimal UnitCost { get; set; }
     }
 }

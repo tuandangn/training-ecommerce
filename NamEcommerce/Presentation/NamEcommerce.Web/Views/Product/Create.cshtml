@@ -115,9 +115,13 @@
                     </div>
                 </div>
                 <div class="tab-pane fade" id="inventory" role="tabpanel">
-                    <div class="alert alert-info d-flex align-items-center gap-2 mb-3">
-                        <i class="bi bi-info-circle-fill fs-5"></i>
-                        <span>Nhập số lượng ban đầu cho từng kho (tùy chọn). Hệ thống sẽ tự tạo <strong>Phiếu kiểm kê (PKK)</strong> và duyệt ngay.</span>
+                    <div class="alert alert-warning d-flex align-items-start gap-2 mb-3">
+                        <i class="bi bi-exclamation-triangle-fill fs-5 mt-1"></i>
+                        <div>
+                            Nhập số lượng và <strong>giá vốn đơn vị</strong> tồn kho đầu kỳ cho từng kho.
+                            Hệ thống sẽ tạo <strong>Phiếu nhập đầu kỳ</strong> và ghi nhận giá vốn ngay lập tức.
+                            <span class="text-danger fw-medium">Không thể hoàn tác sau khi lưu.</span>
+                        </div>
                     </div>
                     @if (Model.ProductInventory?.ProductStocks is { Count: > 0 })
                     {
@@ -125,8 +129,9 @@
                             <table class="table data-table mb-0">
                                 <thead>
                                     <tr>
-                                        <th class="ps-3" style="width:60%">Kho hàng</th>
-                                        <th class="text-end" style="width:40%">Số lượng ban đầu</th>
+                                        <th class="ps-3" style="width:40%">Kho hàng</th>
+                                        <th class="text-end" style="width:25%">Số lượng ban đầu</th>
+                                        <th class="text-end pe-3" style="width:35%">Giá vốn đơn vị (đ) <span class="text-danger">*</span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -141,16 +146,28 @@
                                                        value="@stock.WarehouseName" />
                                                 <span class="fw-medium">@stock.WarehouseName</span>
                                             </td>
-                                            <td class="text-end pe-3" style="max-width:180px;">
+                                            <td class="text-end" style="max-width:150px;">
                                                 <input name="ProductInventory.ProductStocks[@i].Quantity"
                                                        value="@stock.Quantity" data-decimal="quantity"
-                                                       class="form-control form-control-sm text-end"
-                                                       placeholder="Nhập số lượng" />
+                                                       class="form-control form-control-sm text-end stock-qty-input"
+                                                       data-index="@i"
+                                                       placeholder="0" />
+                                            </td>
+                                            <td class="text-end pe-3" style="max-width:180px;">
+                                                <input name="ProductInventory.ProductStocks[@i].UnitCost"
+                                                       value="@(stock.UnitCost > 0 ? stock.UnitCost.ToString() : "")"
+                                                       data-decimal="currency"
+                                                       class="form-control form-control-sm text-end stock-cost-input"
+                                                       data-index="@i"
+                                                       placeholder="Bắt buộc nếu có SL" />
                                             </td>
                                         </tr>
                                     }
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="text-muted small mt-2">
+                            <i class="bi bi-info-circle me-1"></i>Giá vốn đơn vị bắt buộc khi có số lượng. Dùng để tính COGS chính xác cho các đơn bán từ tồn kho này.
                         </div>
                     }
                     else
@@ -181,4 +198,106 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script defer>
+    (function () {
+        const form = document.querySelector('form');
+        const submitBtn = document.querySelector('button[type="submit"]');
+
+        // Client-side: bắt buộc UnitCost > 0 nếu Quantity > 0
+        form.addEventListener('submit', function (e) {
+            const rows = document.querySelectorAll('tbody tr');
+            let hasStock = false;
+            let costMissing = false;
+
+            rows.forEach(function (row) {
+                const qtyInput = row.querySelector('.stock-qty-input');
+                const costInput = row.querySelector('.stock-cost-input');
+                if (!qtyInput || !costInput) return;
+
+                const qty = parseFloat(qtyInput.value.replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+                const cost = parseFloat(costInput.value.replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+
+                if (qty > 0) {
+                    hasStock = true;
+                    if (cost <= 0) costMissing = true;
+                }
+            });
+
+            if (costMissing) {
+                e.preventDefault();
+                e.stopPropagation();
+                alert('Vui lòng nhập giá vốn đơn vị cho tất cả kho có số lượng tồn kho đầu kỳ.');
+                return;
+            }
+
+            if (hasStock && !form.dataset.confirmed) {
+                e.preventDefault();
+
+                const tbody = document.getElementById('confirmStockBody');
+                tbody.innerHTML = '';
+                let totalValue = 0;
+
+                rows.forEach(function (row) {
+                    const qtyInput = row.querySelector('.stock-qty-input');
+                    const costInput = row.querySelector('.stock-cost-input');
+                    const nameEl = row.querySelector('span.fw-medium');
+                    if (!qtyInput || !costInput) return;
+
+                    const qty = parseFloat(qtyInput.value.replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+                    const cost = parseFloat(costInput.value.replace(/[^\d.,-]/g, '').replace(',', '.')) || 0;
+                    if (qty <= 0) return;
+
+                    const value = qty * cost;
+                    totalValue += value;
+                    const fmt = n => n.toLocaleString('vi-VN');
+                    tbody.insertAdjacentHTML('beforeend',
+                        `<tr><td>${nameEl?.textContent?.trim() ?? ''}</td><td class="text-end">${fmt(qty)}</td><td class="text-end">${fmt(cost)} đ</td><td class="text-end fw-medium">${fmt(value)} đ</td></tr>`);
+                });
+
+                document.getElementById('confirmTotalValue').textContent = totalValue.toLocaleString('vi-VN') + ' đ';
+                new bootstrap.Modal(document.getElementById('confirmOpeningModal')).show();
+            }
+        });
+
+        document.getElementById('btnConfirmOpening')?.addEventListener('click', function () {
+            form.dataset.confirmed = '1';
+            bootstrap.Modal.getInstance(document.getElementById('confirmOpeningModal'))?.hide();
+            submitBtn.click();
+        });
+    })();
+    </script>
 }
+
+<!-- Modal xác nhận tồn kho đầu kỳ -->
+<div class="modal fade" id="confirmOpeningModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Xác nhận tồn kho đầu kỳ</h5>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Sau khi xác nhận, hệ thống sẽ tạo phiếu nhập đầu kỳ và ghi nhận giá vốn. <strong class="text-danger">Thao tác này không thể hoàn tác.</strong></p>
+                <div class="table-responsive mb-2">
+                    <table class="table table-sm align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Kho hàng</th>
+                                <th class="text-end">Số lượng</th>
+                                <th class="text-end">Giá vốn/đv</th>
+                                <th class="text-end">Giá trị</th>
+                            </tr>
+                        </thead>
+                        <tbody id="confirmStockBody"></tbody>
+                    </table>
+                </div>
+                <div class="text-end fw-bold">Tổng giá trị: <span id="confirmTotalValue" class="text-primary"></span></div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Quay lại kiểm tra</button>
+                <button type="button" class="btn btn-danger px-4" id="btnConfirmOpening">
+                    <i class="bi bi-check-lg me-1"></i>Tôi hiểu, xác nhận
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

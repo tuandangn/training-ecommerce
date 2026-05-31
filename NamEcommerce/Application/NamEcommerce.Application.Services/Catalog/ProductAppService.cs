@@ -5,7 +5,9 @@ using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Catalog;
+using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Catalog;
+using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Media;
 
@@ -18,16 +20,18 @@ public sealed class ProductAppService : IProductAppService
     private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
     private readonly IPictureManager _pictureManager;
     private readonly IInventoryCostingManager _inventoryCostingManager;
+    private readonly IGoodsReceiptManager _goodsReceiptManager;
 
     public ProductAppService(IProductManager productManager, IEntityDataReader<Product> productDataReader,
         IPictureManager pictureManager, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
-        IInventoryCostingManager inventoryCostingManager)
+        IInventoryCostingManager inventoryCostingManager, IGoodsReceiptManager goodsReceiptManager)
     {
         _productManager = productManager;
         _productDataReader = productDataReader;
         _pictureManager = pictureManager;
         _unitMeasurementDataReader = unitMeasurementDataReader;
         _inventoryCostingManager = inventoryCostingManager;
+        _goodsReceiptManager = goodsReceiptManager;
     }
 
     public async Task<CreateProductResultAppDto> CreateProductAsync(CreateProductAppDto dto)
@@ -92,6 +96,17 @@ public sealed class ProductAppService : IProductAppService
             Pictures = pictureId.HasValue ? [pictureId.Value] : []
         };
         var creationResult = await _productManager.CreateProductAsync(createProductDto).ConfigureAwait(false);
+
+        foreach (var stock in dto.InitialStocks.Where(s => s.Quantity > 0))
+        {
+            await _goodsReceiptManager.CreateForOpeningInventoryAsync(new CreateOpeningInventoryReceiptDto
+            {
+                ProductId = creationResult.CreatedId,
+                WarehouseId = stock.WarehouseId,
+                Quantity = stock.Quantity,
+                UnitCost = stock.UnitCost
+            }).ConfigureAwait(false);
+        }
 
         return new CreateProductResultAppDto
         {

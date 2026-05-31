@@ -16,8 +16,8 @@ public sealed class CreateProductCommand : IRequest<CreateProductResultModel>
     public FileInfoModel? ImageFile { get; set; }
     public decimal? UnitPrice { get; set; }
 
-    // Tồn kho ban đầu — nếu có sẽ tự tạo + duyệt StockAdjustmentNote
+    // Tồn kho đầu kỳ — nếu có sẽ tạo GoodsReceipt (OpeningBalance), không thể hoàn tác
     public IEnumerable<ProductStockModel>? ProductStocks { get; set; }
 
-    public sealed record ProductStockModel(Guid WarehouseId, decimal Quantity);
+    public sealed record ProductStockModel(Guid WarehouseId, decimal Quantity, decimal UnitCost);
 }

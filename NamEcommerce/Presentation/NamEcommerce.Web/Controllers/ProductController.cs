@@ -74,7 +74,7 @@ public sealed class ProductController : BaseAuthorizedController
         {
             createProductCommand.ProductStocks = model.ProductInventory!.ProductStocks
                 .Where(stock => stock.Quantity > 0)
-                .Select(stock => new CreateProductCommand.ProductStockModel(stock.WarehouseId, stock.Quantity));
+                .Select(stock => new CreateProductCommand.ProductStockModel(stock.WarehouseId, stock.Quantity, stock.UnitCost));
         }
 
         var createProductResult = await _mediator.Send(createProductCommand);

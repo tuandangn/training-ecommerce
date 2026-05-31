@@ -33,6 +33,12 @@ public interface IGoodsReceiptManager
     /// </summary>
     Task<Guid> CreateFromCustomerReturnAsync(CreateGoodsReceiptFromCustomerReturnDto dto);
 
+    /// <summary>
+    /// Tạo phiếu nhập tồn kho đầu kỳ (SourceType=OpeningBalance) khi tạo sản phẩm mới.
+    /// UnitCost bắt buộc &gt; 0. Phiếu này không thể hủy, xóa, hoặc tạo trả NCC.
+    /// </summary>
+    Task<CreateGoodsReceiptResultDto> CreateForOpeningInventoryAsync(CreateOpeningInventoryReceiptDto dto);
+
     Task SetGoodsReceiptItemUnitCostAsync(SetGoodsReceiptItemUnitCostDto dto);
     Task<SetGoodsReceiptVendorResultDto> SetGoodsReceiptVendorAsync(SetGoodsReceiptVendorDto dto);
 
