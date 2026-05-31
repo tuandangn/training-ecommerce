@@ -328,7 +328,7 @@
                                             </label>
                                             <label class="shortage-ds-field">
                                                 <span>Điện thoại:</span>
-                                                <input type="text" class="form-control ds-contact-phone" placeholder="SĐT người nhận"
+                                                <input type="text" class="form-control ds-contact-phone" placeholder="SĐT người nhận *"
                                                        name="ds@(item.OrderItemId)_contactPhone"
                                                        data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}"
                                                        data-val="true" data-val-required="Vui lòng nhập số điện thoại" />
@@ -656,6 +656,9 @@
                         if (itemTotalEl) itemTotalEl.textContent = formatMoney(rowTotal);
 
                         row.classList.toggle('is-not-selected', !checked);
+                        ['input', 'select', 'textarea'].forEach(tag =>
+                            row.querySelectorAll(tag).forEach(control => control.disabled = !checked)
+                        );
                         if (checked && !rowHidden && !groupHidden) {
                             groupTotal += rowTotal;
                             groupSelectedItems++;
@@ -730,9 +733,9 @@
                         const shortageQuantity = parseDecimal(row.dataset.shortageQuantity);
                         const allocationQuantity = Math.min(quantity, shortageQuantity > 0 ? shortageQuantity : quantity);
                         const directShip = isDirectShip && allocationQuantity > 0 && dsForm ? {
-                            address: dsForm.querySelector('.ds-address')?.value || '',
-                            contactName: dsForm.querySelector('.ds-contact-name')?.value || null,
-                            contactPhone: dsForm.querySelector('.ds-contact-phone')?.value || null,
+                            address: dsForm.querySelector('.ds-address')?.value?.trim() || '',
+                            contactName: dsForm.querySelector('.ds-contact-name')?.value?.trim() || null,
+                            contactPhone: dsForm.querySelector('.ds-contact-phone')?.value?.trim() || null,
                             priority: parseInt(dsForm.querySelector('.ds-priority')?.value || '0', 10) || 0
                         } : null;
 
@@ -756,6 +759,30 @@
                         };
                     })
                     .filter(line => line.quantity > 0));
+            }
+
+            function validateDirectShipLines(lines) {
+                for (const line of lines) {
+                    if (!line.directShip) continue;
+
+                    const phoneInput = line.row.querySelector('.ds-contact-phone');
+                    const phone = phoneInput?.value?.trim() || '';
+                    if (!phone) {
+                        alert('Vui lòng nhập số điện thoại nhận hàng giao thẳng.');
+                        phoneInput?.focus();
+                        return false;
+                    }
+
+                    const addressInput = line.row.querySelector('.ds-address');
+                    const address = addressInput?.value?.trim() || '';
+                    if (!address) {
+                        alert('Vui lòng nhập địa chỉ giao hàng.');
+                        addressInput?.focus();
+                        return false;
+                    }
+                }
+
+                return true;
             }
 
             function buildPayloadForLines(lines, actionResolver) {
@@ -1126,6 +1153,7 @@
 
                 const lines = getSelectedLines();
                 if (lines.length === 0) return;
+                if (!validateDirectShipLines(lines)) return;
 
                 const vendorIds = [...new Set(lines.map(line => line.vendorId).filter(Boolean))];
                 const productIds = [...new Set(lines.map(line => line.productId).filter(Boolean))];

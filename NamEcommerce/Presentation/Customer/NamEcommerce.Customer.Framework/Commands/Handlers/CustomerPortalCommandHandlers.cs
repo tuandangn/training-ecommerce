@@ -126,6 +126,7 @@ public sealed class CustomerPortalCommandHandlers(
                 {
                     AgreedCustomerCharge = request.Acceptance.AgreedCustomerCharge,
                     AgreedCustomerChargeReason = request.Acceptance.AgreedCustomerChargeReason,
+                    CompensateInNextDelivery = request.Acceptance.CompensateInNextDelivery,
                     Items = request.Acceptance.Items
                         .Select(item => new ConfirmCustomerDeliveryAcceptanceItemAppDto
                         {
@@ -159,6 +160,7 @@ public sealed class CustomerPortalCommandHandlers(
         {
             DeliveryNoteId = request.DeliveryNoteId,
             Reason = request.Reason,
+            CompensateInNextDelivery = request.CompensateInNextDelivery,
             Items = request.Items.Select(item => new CreateCustomerReturnRequestItemAppDto
             {
                 DeliveryNoteItemId = item.DeliveryNoteItemId,
@@ -176,7 +178,7 @@ public sealed class CustomerPortalCommandHandlers(
             }).ToList()
         }).ConfigureAwait(false);
 
-        return new CustomerReturnRequestModel(result.Id, result.DeliveryNoteId, result.Status, result.CreatedOnUtc);
+        return new CustomerReturnRequestModel(result.Id, result.DeliveryNoteId, result.Status, result.CreatedOnUtc, result.CompensateInNextDelivery);
     }
 
     public async Task<CustomerActionResultModel> Handle(CancelCustomerReturnRequestCommand request, CancellationToken cancellationToken)

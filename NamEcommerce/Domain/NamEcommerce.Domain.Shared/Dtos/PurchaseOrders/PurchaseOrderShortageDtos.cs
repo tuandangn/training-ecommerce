@@ -76,6 +76,10 @@ public sealed record CreatePoFromShortageItemDto
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemAllocationQuantityExceedsAvailable");
         if (UnitCost < 0)
             throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemUnitCostCannotBeNegative");
+        if (DirectShipInfo is not null && string.IsNullOrWhiteSpace(DirectShipInfo.ContactPhone))
+            throw new PurchaseOrderItemDataIsInvalidException("Error.DirectShipContactPhoneRequired");
+        if (DirectShipInfo is not null && string.IsNullOrWhiteSpace(DirectShipInfo.Address))
+            throw new PurchaseOrderItemDataIsInvalidException("Error.DirectShipAddressRequired");
     }
 }
 

@@ -85,6 +85,12 @@
             <h6 class="fw-bold mb-3">Lý do khách gửi</h6>
             <div>@(!string.IsNullOrWhiteSpace(Model.Reason) ? Model.Reason : "—")</div>
         </div>
+        @if (Model.CompensateInNextDelivery)
+        {
+            <div class="alert alert-info border-0 rounded-3 mb-4">
+                Khách muốn bù số lượng trả lại vào lần giao sau.
+            </div>
+        }
         @if (status == CustomerReturnRequestStatus.PendingReview)
         {
             <div class="content-card p-4">

@@ -101,7 +101,6 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 ShippingAddress = model.ShippingAddress,
                 WarehouseId = model.WarehouseId,
                 ShowPrice = model.ShowPrice,
-                CompensateReturnedQuantityInNextDelivery = model.CompensateReturnedQuantityInNextDelivery,
                 Note = model.Note,
                 Surcharge = model.Surcharge,
                 SurchargeReason = model.SurchargeReason,
@@ -202,7 +201,8 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [HttpPost]
     public async Task<IActionResult> MarkDelivered(
         Guid deliveryNoteId, string? receiverName, decimal agreedCustomerCharge,
-        string? agreedCustomerChargeReason, string? acceptanceItemsJson, IFormFile? pictureFile)
+        string? agreedCustomerChargeReason, bool compensateInNextDelivery,
+        string? acceptanceItemsJson, IFormFile? pictureFile)
     {
         var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(deliveryNoteId).ConfigureAwait(false);
         if (deliveryNote is null)
@@ -222,6 +222,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             ReceiverName = receiverName,
             AgreedCustomerCharge = agreedCustomerCharge,
             AgreedCustomerChargeReason = agreedCustomerChargeReason,
+            CompensateInNextDelivery = compensateInNextDelivery,
             Items = acceptanceItems,
             PictureData = fileBytes,
             PictureContentType = pictureFile.ContentType,
@@ -255,7 +256,8 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 UnitPrice = i.UnitPrice,
                 SubTotal = i.SubTotal,
                 ReturnedQuantity = summary?.ConfirmedQuantity ?? 0m,
-                PendingReturnQuantity = summary?.PendingQuantity ?? 0m
+                PendingReturnQuantity = summary?.PendingQuantity ?? 0m,
+                CompensatedReturnQuantity = summary?.ActiveCompensatedQuantity ?? 0m
             };
         }).ToList();
         return this.JsonOk(items);
@@ -306,12 +308,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
         try
         {
-            var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(
-                request.OrderId,
-                new CreateDeliveryNoteModel
-                {
-                    CompensateReturnedQuantityInNextDelivery = request.CompensateReturnedQuantityInNextDelivery
-                }).ConfigureAwait(false);
+            var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(request.OrderId).ConfigureAwait(false);
 
             // Validate that requested quantities don't exceed remaining quantities
             foreach (var selectedItem in request.SelectedItems)
@@ -354,7 +351,6 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 OrderId = model.OrderId,
                 Note = model.Note,
                 ShowPrice = model.ShowPrice,
-                CompensateReturnedQuantityInNextDelivery = model.CompensateReturnedQuantityInNextDelivery,
                 WarehouseId = request.WarehouseId,
                 ShippingAddress = model.ShippingAddress,
                 Surcharge = request.Surcharge,

@@ -77,7 +77,15 @@
                                         </span>
                                     </td>
                                     <td class="text-end">@item.IssuedQuantity.DisplayQuantity()</td>
-                                    <td class="text-end">@item.DeliveredQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">
+                                        <div>@item.DeliveredQuantity.DisplayQuantity()</div>
+                                        @if (item.CompensatedReturnQuantity > 0)
+                                        {
+                                            <div class="small text-warning">
+                                                <i class="bi bi-arrow-repeat"></i> Bù lần sau @item.CompensatedReturnQuantity.DisplayQuantity()
+                                            </div>
+                                        }
+                                    </td>
                                     <td class="text-end">
                                         @if (item.DirectShipQuantity > 0)
                                         {

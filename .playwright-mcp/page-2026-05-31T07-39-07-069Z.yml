@@ -1,0 +1,229 @@
+- generic [active] [ref=e1]:
+  - link "Bỏ qua menu" [ref=e2] [cursor=pointer]:
+    - /url: "#mainContent"
+  - generic [ref=e3]:
+    - complementary "Điều hướng chính" [ref=e4]:
+      - link " VLXD Tuấn Khôi Quản lý bán hàng" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: 
+        - generic [ref=e8]:
+          - generic [ref=e9]: VLXD Tuấn Khôi
+          - generic [ref=e10]: Quản lý bán hàng
+      - navigation "Menu chính" [ref=e11]:
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link " Dashboard" [ref=e14] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e15]: 
+              - text: Dashboard
+          - listitem [ref=e16]:
+            - link " Bán hàng" [ref=e17] [cursor=pointer]:
+              - /url: "#collapseSales"
+              - generic [ref=e18]: 
+              - text: Bán hàng
+          - listitem [ref=e19]:
+            - link " Nhập hàng" [ref=e20] [cursor=pointer]:
+              - /url: "#collapsePurchases"
+              - generic [ref=e21]: 
+              - text: Nhập hàng
+          - listitem [ref=e22]:
+            - link " Tồn kho" [ref=e23] [cursor=pointer]:
+              - /url: "#collapseInventory"
+              - generic [ref=e24]: 
+              - text: Tồn kho
+          - listitem [ref=e25]:
+            - link " Công nợ" [ref=e26] [cursor=pointer]:
+              - /url: "#collapseDebt"
+              - generic [ref=e27]: 
+              - text: Công nợ
+          - listitem [ref=e28]:
+            - link " Hàng hóa" [ref=e29] [cursor=pointer]:
+              - /url: "#collapseCatalog"
+              - generic [ref=e30]: 
+              - text: Hàng hóa
+          - listitem [ref=e31]:
+            - link " Cổng khách hàng" [ref=e32] [cursor=pointer]:
+              - /url: "#collapseCustomerPortal"
+              - generic [ref=e33]: 
+              - text: Cổng khách hàng
+    - generic [ref=e34]:
+      - banner [ref=e35]:
+        - text: 
+        - heading "Dashboard" [level=1] [ref=e37]
+        - button "TĐ" [ref=e40] [cursor=pointer]:
+          - generic [ref=e41]: TĐ
+      - main [ref=e43]:
+        - generic [ref=e44]:
+          - generic [ref=e45]:
+            - generic [ref=e48]:
+              - generic [ref=e50]: 
+              - generic [ref=e51]:
+                - generic [ref=e52]: Doanh số ngày
+                - generic [ref=e53]: 0 ₫
+            - generic [ref=e56]:
+              - generic [ref=e58]: 
+              - generic [ref=e59]:
+                - generic [ref=e60]: Doanh số tháng
+                - generic [ref=e61]: 0 ₫
+            - generic [ref=e64]:
+              - generic [ref=e66]: 
+              - generic [ref=e67]:
+                - generic [ref=e68]: Doanh số quý
+                - generic [ref=e69]: 0 ₫
+            - generic [ref=e72]:
+              - generic [ref=e74]: 
+              - generic [ref=e75]:
+                - generic [ref=e76]: Doanh số năm
+                - generic [ref=e77]: 0 ₫
+          - generic [ref=e78]:
+            - generic [ref=e81]:
+              - generic [ref=e83]: 
+              - generic [ref=e84]:
+                - generic [ref=e85]: Lợi nhuận ngày
+                - generic [ref=e86]: 0 ₫
+            - generic [ref=e89]:
+              - generic [ref=e91]: 
+              - generic [ref=e92]:
+                - generic [ref=e93]: Lợi nhuận tháng
+                - generic [ref=e94]: 0 ₫
+            - generic [ref=e97]:
+              - generic [ref=e99]: 
+              - generic [ref=e100]:
+                - generic [ref=e101]: Lợi nhuận quý
+                - generic [ref=e102]: 0 ₫
+            - generic [ref=e105]:
+              - generic [ref=e107]: 
+              - generic [ref=e108]:
+                - generic [ref=e109]: Lợi nhuận năm
+                - generic [ref=e110]: 0 ₫
+          - generic [ref=e111]:
+            - generic [ref=e114]:
+              - generic [ref=e115]:
+                - heading "Doanh thu 30 ngày" [level=2] [ref=e116]
+                - paragraph [ref=e117]: Theo ngày, kèm đường lợi nhuận gộp để đối chiếu.
+              - generic [ref=e118]: 
+            - generic [ref=e123]:
+              - generic [ref=e124]:
+                - heading "Cơ cấu lợi nhuận tháng" [level=2] [ref=e125]
+                - paragraph [ref=e126]: Giá vốn, lãi gộp và chi phí vận hành.
+              - generic [ref=e127]: 
+          - generic [ref=e130]:
+            - generic [ref=e132]:
+              - generic [ref=e133]:
+                - generic [ref=e134]:
+                  - heading "5 đơn bán cần xử lý" [level=2] [ref=e135]
+                  - paragraph [ref=e136]: Đơn còn hàng chưa giao xong.
+                - link "Xem đơn bán" [ref=e137] [cursor=pointer]:
+                  - /url: /Order/List
+                  - generic [ref=e138]: 
+              - table [ref=e140]:
+                - rowgroup [ref=e141]:
+                  - row "Đơn Khách hàng Tổng tiền Còn Hẹn giao" [ref=e142]:
+                    - columnheader "Đơn" [ref=e143]
+                    - columnheader "Khách hàng" [ref=e144]
+                    - columnheader "Tổng tiền" [ref=e145]
+                    - columnheader "Còn" [ref=e146]
+                    - columnheader "Hẹn giao" [ref=e147]
+                - rowgroup [ref=e148]:
+                  - row "DB-2605-001 31/05/2026 Hào Văn Khang 8.800.000 ₫ 1 -" [ref=e149]:
+                    - cell "DB-2605-001 31/05/2026" [ref=e150]:
+                      - link "DB-2605-001" [ref=e151] [cursor=pointer]:
+                        - /url: /Order/Details/254021b8-0dfd-4513-a7b1-911c06e8fa1a
+                      - generic [ref=e152]: 31/05/2026
+                    - cell "Hào Văn Khang" [ref=e153]
+                    - cell "8.800.000 ₫" [ref=e154]
+                    - cell "1" [ref=e155]:
+                      - generic [ref=e156]: "1"
+                    - cell "-" [ref=e157]
+                  - row "DB-2605-002 31/05/2026 Hùng Cường 3.780.000 ₫ 1 -" [ref=e158]:
+                    - cell "DB-2605-002 31/05/2026" [ref=e159]:
+                      - link "DB-2605-002" [ref=e160] [cursor=pointer]:
+                        - /url: /Order/Details/4c0b8ce8-98a8-44e9-8244-0c6c66640060
+                      - generic [ref=e161]: 31/05/2026
+                    - cell "Hùng Cường" [ref=e162]
+                    - cell "3.780.000 ₫" [ref=e163]
+                    - cell "1" [ref=e164]:
+                      - generic [ref=e165]: "1"
+                    - cell "-" [ref=e166]
+            - generic [ref=e168]:
+              - generic [ref=e169]:
+                - generic [ref=e170]:
+                  - heading "5 đơn nhập cần xử lý" [level=2] [ref=e171]
+                  - paragraph [ref=e172]: Đơn nhập chưa nhận đủ hàng.
+                - link "Xem đơn nhập" [ref=e173] [cursor=pointer]:
+                  - /url: /PurchaseOrder/List
+                  - generic [ref=e174]: 
+              - table [ref=e176]:
+                - rowgroup [ref=e177]:
+                  - row "Đơn NCC Tổng tiền Còn nhập Hẹn nhận" [ref=e178]:
+                    - columnheader "Đơn" [ref=e179]
+                    - columnheader "NCC" [ref=e180]
+                    - columnheader "Tổng tiền" [ref=e181]
+                    - columnheader "Còn nhập" [ref=e182]
+                    - columnheader "Hẹn nhận" [ref=e183]
+                - rowgroup [ref=e184]:
+                  - row "DN-2605-001 31/05/2026 NPP Hoàng Diễm 8.600.000 ₫ 50 -" [ref=e185]:
+                    - cell "DN-2605-001 31/05/2026" [ref=e186]:
+                      - link "DN-2605-001" [ref=e187] [cursor=pointer]:
+                        - /url: /PurchaseOrder/Details/c773bc00-1878-4a91-b55a-a3e59dbe4429
+                      - generic [ref=e188]: 31/05/2026
+                    - cell "NPP Hoàng Diễm" [ref=e189]
+                    - cell "8.600.000 ₫" [ref=e190]
+                    - cell "50" [ref=e191]
+                    - cell "-" [ref=e192]
+          - generic [ref=e193]:
+            - generic [ref=e195]:
+              - generic [ref=e196]:
+                - generic [ref=e197]:
+                  - heading "Top 5 khách hàng công nợ" [level=2] [ref=e198]
+                  - paragraph [ref=e199]: Sắp theo số tiền còn phải thu.
+                - generic [ref=e200]: 
+              - table [ref=e202]:
+                - rowgroup [ref=e203]:
+                  - row "Khách hàng Còn nợ" [ref=e204]:
+                    - columnheader "Khách hàng" [ref=e205]
+                    - columnheader "Còn nợ" [ref=e206]
+                - rowgroup [ref=e207]:
+                  - row "Hùng Cường 1.890.000 ₫" [ref=e208]:
+                    - cell "Hùng Cường" [ref=e209]
+                    - cell "1.890.000 ₫" [ref=e210]
+            - generic [ref=e212]:
+              - generic [ref=e213]:
+                - generic [ref=e214]:
+                  - heading "Top 5 NCC công nợ" [level=2] [ref=e215]
+                  - paragraph [ref=e216]: Sắp theo số tiền còn phải trả.
+                - generic [ref=e217]: 
+              - table [ref=e219]:
+                - rowgroup [ref=e220]:
+                  - row "Nhà cung cấp Còn nợ" [ref=e221]:
+                    - columnheader "Nhà cung cấp" [ref=e222]
+                    - columnheader "Còn nợ" [ref=e223]
+                - rowgroup [ref=e224]:
+                  - row "NPP Hoàng Diễm 4.300.000 ₫" [ref=e225]:
+                    - cell "NPP Hoàng Diễm" [ref=e226]
+                    - cell "4.300.000 ₫" [ref=e227]
+                  - row "Xe ben Hổ 2.160.000 ₫" [ref=e228]:
+                    - cell "Xe ben Hổ" [ref=e229]
+                    - cell "2.160.000 ₫" [ref=e230]
+          - generic [ref=e231]:
+            - generic [ref=e232]:
+              - generic [ref=e233]:
+                - heading "10 hàng tồn thấp" [level=2] [ref=e234]
+                - paragraph [ref=e235]: Lọc theo tồn hiện tại nhỏ hơn hoặc bằng mức đặt hàng lại.
+              - link "Xem tồn kho" [ref=e236] [cursor=pointer]:
+                - /url: /Inventory/StockList
+                - generic [ref=e237]: 
+            - table [ref=e239]:
+              - rowgroup [ref=e240]:
+                - row "Hàng hóa Kho Tồn Giữ Khả dụng Stock / ReorderLevel" [ref=e241]:
+                  - columnheader "Hàng hóa" [ref=e242]
+                  - columnheader "Kho" [ref=e243]
+                  - columnheader "Tồn" [ref=e244]
+                  - columnheader "Giữ" [ref=e245]
+                  - columnheader "Khả dụng" [ref=e246]
+                  - columnheader "Stock / ReorderLevel" [ref=e247]
+              - rowgroup [ref=e248]:
+                - row "Chưa có hàng nào dưới mức tồn cảnh báo." [ref=e249]:
+                  - cell "Chưa có hàng nào dưới mức tồn cảnh báo." [ref=e250]
+      - contentinfo [ref=e251]:
+        - generic [ref=e252]: © 2026 VLXD Tuấn Khôi — Hệ thống quản lý bán hàng

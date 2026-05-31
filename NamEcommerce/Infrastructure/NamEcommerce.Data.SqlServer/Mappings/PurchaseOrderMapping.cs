@@ -1,5 +1,3 @@
-using NamEcommerce.Domain.Entities.PurchaseOrders;
-
 namespace NamEcommerce.Data.SqlServer.Mappings;
 
 public sealed class PurchaseOrderMapping : IEntityTypeConfiguration<PurchaseOrder>
@@ -38,7 +36,7 @@ public sealed class PurchaseOrderMapping : IEntityTypeConfiguration<PurchaseOrde
             .WithOne()
             .HasForeignKey(i => i.PurchaseOrderId)
             .OnDelete(DeleteBehavior.Cascade);
-
         builder.Navigation(p => p.Items).AutoInclude();
+        builder.Metadata.FindNavigation(nameof(PurchaseOrder.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
     }
 }

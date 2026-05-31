@@ -1073,7 +1073,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
                     PurchaseOrderItemId = (purchaseOrderItem.PurchaseOrderId, purchaseOrderItem.Id),
                     OrderItemId = source.OrderItemId,
                     AllocationQuantity = allocationQuantity,
-                    DirectShipInfo = source.DirectShipInfo is not null && !string.IsNullOrEmpty(source.DirectShipInfo.ContactPhone)
+                    DirectShipInfo = source.DirectShipInfo is not null
                         ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(source.DirectShipInfo.ContactName, source.DirectShipInfo.ContactPhone, source.DirectShipInfo.Address)
                         {
                             Priority = source.DirectShipInfo.Priority

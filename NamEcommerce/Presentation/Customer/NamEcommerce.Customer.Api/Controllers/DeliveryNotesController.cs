@@ -32,6 +32,7 @@ public sealed class DeliveryNotesController(IMediator mediator) : ControllerBase
                 : new ConfirmCustomerDeliveryAcceptanceCommand(
                     request.Acceptance.AgreedCustomerCharge,
                     request.Acceptance.AgreedCustomerChargeReason,
+                    request.Acceptance.CompensateInNextDelivery,
                     request.Acceptance.Items.Select(item => new ConfirmCustomerDeliveryAcceptanceItemCommand(
                         item.DeliveryNoteItemId,
                         item.AcceptedQuantity,
@@ -56,6 +57,7 @@ public sealed class DeliveryNotesController(IMediator mediator) : ControllerBase
     public sealed record ConfirmDeliveryNoteAcceptanceRequest(
         decimal AgreedCustomerCharge,
         string? AgreedCustomerChargeReason,
+        bool CompensateInNextDelivery,
         IList<ConfirmDeliveryNoteAcceptanceItemRequest> Items);
 
     public sealed record ConfirmDeliveryNoteRequest(

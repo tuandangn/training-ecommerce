@@ -5,11 +5,11 @@ namespace NamEcommerce.Data.SqlServer;
 
 public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where TEntity : AppAggregateEntity
 {
-    private readonly NamEcommerceEfDbContext _dbContext;
+    private readonly IDbContext _dbContext;
 
-    public EntityDataReader(NamEcommerceEfDbContext db) => _dbContext = db;
+    public EntityDataReader(IDbContext db) => _dbContext = db;
 
-    public IQueryable<TEntity> DataSource => _dbContext.Set<TEntity>().AsNoTracking();
+    public IQueryable<TEntity> DataSource => _dbContext.GetDataSource<TEntity>().AsNoTracking();
 
     public IQueryable<TEntity> ApplySpecification(ISpecification<TEntity> spec)
     {
@@ -32,7 +32,7 @@ public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where
     public async Task<bool> AnyAsync(ISpecification<TEntity> spec)
         => await DataSource.AnyAsync(spec.Criteria);
 
-    public IQueryable<TEntity> SecuredDataSource => _dbContext.Set<TEntity>().IgnoreQueryFilters().AsNoTracking();
+    public IQueryable<TEntity> SecuredDataSource => ((NamEcommerceEfDbContext)_dbContext).Set<TEntity>().IgnoreQueryFilters().AsNoTracking();
 
     public Task<IEnumerable<TEntity>> GetAllAsync()
         => _dbContext.GetDataAsync<TEntity>();

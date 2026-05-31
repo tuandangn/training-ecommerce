@@ -907,7 +907,7 @@
                                         </div>
                                         <div class="col-6">
                                             <input type="text" name="DirectShipContactPhone" id="modalDsContactPhone"
-                                                   class="form-control form-control-sm" placeholder="Số điện thoại" />
+                                                   class="form-control form-control-sm" placeholder="Số điện thoại *" />
                                         </div>
                                     </div>
                                 </div>
@@ -1100,7 +1100,7 @@
                             <input id="editDsContactName" type="text" class="form-control" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase">Điện thoại</label>
+                            <label class="form-label small fw-bold text-muted text-uppercase">Điện thoại <span class="text-danger">*</span></label>
                             <input id="editDsContactPhone" type="text" class="form-control" />
                         </div>
                         <div id="editDsSuccessBanner" class="alert alert-warning border-0 d-none">
@@ -1171,7 +1171,7 @@
                                         <input type="text" class="form-control form-control-sm" id="allocateDsContact" placeholder="Tên người nhận" />
                                     </div>
                                     <div class="col-6">
-                                        <input type="text" class="form-control form-control-sm" id="allocateDsPhone" placeholder="Số điện thoại" />
+                                        <input type="text" class="form-control form-control-sm" id="allocateDsPhone" placeholder="Số điện thoại *" />
                                     </div>
                                 </div>
                             </div>
@@ -1265,6 +1265,12 @@
                         errorBanner.classList.remove('d-none');
                         return;
                     }
+                    const newContactPhone = document.getElementById('editDsContactPhone').value.trim();
+                    if (!newContactPhone) {
+                        errorBanner.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
+                        errorBanner.classList.remove('d-none');
+                        return;
+                    }
                     try {
                         const resp = await fetch('/DirectShipDelivery/UpdateAddress', {
                             method: 'POST',
@@ -1273,7 +1279,7 @@
                                 allocationId,
                                 newAddress,
                                 newContactName: document.getElementById('editDsContactName').value.trim() || null,
-                                newContactPhone: document.getElementById('editDsContactPhone').value.trim() || null
+                                newContactPhone
                             })
                         });
                         const data = await resp.json();
@@ -1607,13 +1613,19 @@
                     errorBox.classList.remove('d-none');
                     return;
                 }
+                const currentPhone = document.getElementById('modalDsContactPhone').value.trim();
+                if (!currentPhone) {
+                    e.preventDefault();
+                    errorBox.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
+                    errorBox.classList.remove('d-none');
+                    return;
+                }
                 if (!dsAddress) {
                     e.preventDefault();
                     errorBox.textContent = 'Vui lòng nhập địa chỉ giao hàng.';
                     errorBox.classList.remove('d-none');
                     return;
                 }
-                const currentPhone = document.getElementById('modalDsContactPhone').value.trim();
                 if (receiveOriginalPhone && currentPhone !== receiveOriginalPhone) {
                     if (!confirm(`Số điện thoại liên lạc đã thay đổi từ "${receiveOriginalPhone}" thành "${currentPhone}". Xác nhận tiếp tục?`)) {
                         e.preventDefault();
@@ -2062,13 +2074,18 @@
 
                         const isDs = document.getElementById('allocateIsDirectShip').checked;
                         const address = document.getElementById('allocateDsAddress').value.trim();
+                        const currentPhone = document.getElementById('allocateDsPhone').value.trim();
+                        if (isDs && !currentPhone) {
+                            errEl.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
+                            errEl.classList.remove('d-none');
+                            return;
+                        }
                         if (isDs && !address) {
                             errEl.textContent = 'Vui lòng nhập địa chỉ giao hàng.';
                             errEl.classList.remove('d-none');
                             return;
                         }
 
-                        const currentPhone = document.getElementById('allocateDsPhone').value.trim();
                         if (isDs && originalPhone && currentPhone !== originalPhone) {
                             if (!confirm(`Số điện thoại liên lạc đã thay đổi từ "${originalPhone}" thành "${currentPhone}". Xác nhận tiếp tục?`)) {
                                 return;

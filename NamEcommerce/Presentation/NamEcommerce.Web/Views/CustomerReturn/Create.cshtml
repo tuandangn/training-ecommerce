@@ -140,6 +140,12 @@
                                    class="form-control" data-decimal="currency" min="0" placeholder="0"
                                    value="@Model.AdditionalCost.DisplayCurrency()" />
                         </div>
+                        <div class="form-check form-switch mb-3 p-3 bg-light rounded border">
+                            <input class="form-check-input ms-0" type="checkbox" asp-for="CompensateInNextDelivery" role="switch" id="compensateInNextDeliverySwitch">
+                            <label class="form-check-label ms-2 fw-medium" asp-for="CompensateInNextDelivery" for="compensateInNextDeliverySwitch">
+                                Bù số lượng trả lại vào lần giao sau
+                            </label>
+                        </div>
                         <div class="mb-0">
                             <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <textarea asp-for="Note" class="form-control" rows="3" placeholder="Lý do trả hàng..."></textarea>

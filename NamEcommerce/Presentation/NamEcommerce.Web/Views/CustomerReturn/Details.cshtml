@@ -32,6 +32,22 @@
     </div>
 }
 
+@if (Model.CompensateInNextDelivery)
+{
+    <div class="alert alert-warning border-0 rounded-3 mb-3">
+        <i class="bi bi-arrow-repeat me-1"></i>
+        @Model.CompensatedQuantity.DisplayQuantity() hàng trả được bù vào lần giao sau.
+        @if (status == CustomerReturnStatus.Draft)
+        {
+            <span>Phiếu còn là bản nháp; chuyển sang kiểm tra để giữ số lượng bù, chưa nhập kho.</span>
+        }
+        else if (status != CustomerReturnStatus.Confirmed)
+        {
+            <span>Phiếu đang chờ kiểm/xác nhận, chưa nhập kho.</span>
+        }
+    </div>
+}
+
 <div class="row g-3">
     <!-- Cột trái: danh sách hàng trả -->
     <div class="col-lg-8 order-1 order-lg-0">
@@ -43,7 +59,7 @@
                         @Model.Items.Count mặt hàng
                     </span>
                 </h5>
-                <span class="fw-semibold text-success">@Model.NetRefundAmount.DisplayCurrency()</span>
+                <span class="fw-bold text-success">@Model.NetRefundAmount.DisplayCurrencyWithSymbol()</span>
             </div>
             <div class="content-card-body-flush">
                 <div class="table-responsive">
@@ -149,6 +165,19 @@
                     <div class="receipt-info-row">
                         <dt>Trạng thái</dt>
                         <dd><span class="badge @badgeClass">@badgeText</span></dd>
+                    </div>
+                    <div class="receipt-info-row">
+                        <dt>Bù hàng</dt>
+                        <dd>
+                            @if (Model.CompensateInNextDelivery)
+                            {
+                                <span class="text-warning fw-semibold">@Model.CompensatedQuantity.DisplayQuantity()</span>
+                            }
+                            else
+                            {
+                                <span class="text-muted">Không</span>
+                            }
+                        </dd>
                     </div>
                     <div class="receipt-info-row">
                         <dt>Ngày trả</dt>

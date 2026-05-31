@@ -339,7 +339,7 @@ public sealed class ShortageAggregationAppService(
                         PurchaseOrderItemId = bucket.PurchaseOrderItemId,
                         OrderItemId = item.OrderItemId,
                         AllocationQuantity = allocationQuantity,
-                        DirectShipInfo = item.DirectShipInfo is not null && !string.IsNullOrEmpty(item.DirectShipInfo.ContactPhone)
+                        DirectShipInfo = item.DirectShipInfo is not null
                             ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(item.DirectShipInfo.ContactName, item.DirectShipInfo.ContactPhone, item.DirectShipInfo.Address)
                             {
                                 Priority = item.DirectShipInfo.Priority
@@ -426,7 +426,7 @@ public sealed class ShortageAggregationAppService(
                                         PurchaseOrderItemId = (action.PurchaseOrderId.Value, action.PurchaseOrderItemId.Value),
                                         OrderItemId = (item.OrderId, item.OrderItemId),
                                         AllocationQuantity = actionAllocationQuantity,
-                                        DirectShipInfo = item.DirectShipInfo is not null && !string.IsNullOrEmpty(item.DirectShipInfo.ContactPhone)
+                                        DirectShipInfo = item.DirectShipInfo is not null
                                             ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(item.DirectShipInfo.ContactName, item.DirectShipInfo.ContactPhone, item.DirectShipInfo.Address)
                                             {
                                                 Priority = item.DirectShipInfo.Priority

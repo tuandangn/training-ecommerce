@@ -127,6 +127,7 @@ public sealed class CustomerReturnController : BaseAuthorizedController
             DeliveryNoteId = model.DeliveryNoteId,
             CustomerId = model.CustomerId.Value,
             AdditionalCost = model.AdditionalCost,
+            CompensateInNextDelivery = model.CompensateInNextDelivery,
             Note = model.Note,
             Items = returnItems.Select(i => new CreateCustomerReturnItemCommand
             {

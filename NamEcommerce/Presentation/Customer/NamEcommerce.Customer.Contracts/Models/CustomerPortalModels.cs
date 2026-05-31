@@ -168,7 +168,7 @@ public sealed record CustomerDeliveryNoteItemModel(
     decimal ReturnableQuantity);
 
 [Serializable]
-public sealed record CustomerReturnRequestModel(Guid Id, Guid DeliveryNoteId, int Status, DateTime CreatedOn);
+public sealed record CustomerReturnRequestModel(Guid Id, Guid DeliveryNoteId, int Status, DateTime CreatedOn, bool CompensateInNextDelivery);
 
 [Serializable]
 public sealed record CustomerReturnableItemListModel(IList<CustomerReturnableItemModel> Items);
@@ -193,6 +193,7 @@ public record CustomerReturnRequestSummaryModel(
     string? DeliveryNoteCode,
     int Status,
     string? Reason,
+    bool CompensateInNextDelivery,
     string? AdminNote,
     DateTime CreatedOn,
     DateTime? ReviewedOn,
@@ -207,6 +208,7 @@ public sealed record CustomerReturnRequestDetailsModel(
     string? DeliveryNoteCode,
     int Status,
     string? Reason,
+    bool CompensateInNextDelivery,
     string? AdminNote,
     DateTime CreatedOn,
     DateTime? ReviewedOn,

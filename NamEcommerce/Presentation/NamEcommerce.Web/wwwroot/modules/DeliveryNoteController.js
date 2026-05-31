@@ -182,6 +182,9 @@ export default class DeliveryNoteController {
             window.NotificationCenter.warning('Vui lòng nhập lý do trả hàng.');
             return null;
         }
+        if (!hasRejectedItems) {
+            $('#compensateInNextDelivery').prop('checked', false);
+        }
 
         return items;
     }
@@ -241,7 +244,24 @@ export default class DeliveryNoteController {
 
             const rejectedQty = Math.max(0, deliveredQty - acceptedQty);
             $row.find('.rejected-qty').text(DecimalFields.formatQuantity(rejectedQty));
-            $('#rejectReason').closest('div').toggleClass('d-none', rejectedQty <= 0);
+            updateReturnControls();
+        }
+
+        function updateReturnControls() {
+            let hasRejectedItems = false;
+            $('#acceptanceTableBody tr').each(function () {
+                const $row = $(this);
+                const deliveredQty = Number($row.data('delivered-qty') || 0);
+                let acceptedQty = parseFloat(DecimalFields.stripFormatting($row.find('.accepted-qty').val(), 2));
+                if (!acceptedQty) acceptedQty = 0;
+                if (Math.max(0, deliveredQty - acceptedQty) > 0) hasRejectedItems = true;
+            });
+
+            $('#rejectReason').closest('div').toggleClass('d-none', !hasRejectedItems);
+            $('#compensateInNextDeliveryContainer').toggleClass('d-none', !hasRejectedItems);
+            if (!hasRejectedItems) {
+                $('#compensateInNextDelivery').prop('checked', false);
+            }
         }
     }
 
@@ -249,6 +269,8 @@ export default class DeliveryNoteController {
         $('#receiverName').val('');
         $('#rejectReason').val('');
         $('#rejectReason').closest('div').addClass('d-none');
+        $('#compensateInNextDelivery').prop('checked', false);
+        $('#compensateInNextDeliveryContainer').addClass('d-none');
         $('#agreedCustomerCharge').val('0');
         $('#agreedCustomerChargeReason').val('');
         $('#deliveryProofPicture').val('');

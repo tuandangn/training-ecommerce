@@ -34,6 +34,8 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
     const [confirmChargeReason, setConfirmChargeReason] = useState("");
     const [confirmAcceptedQuantities, setConfirmAcceptedQuantities] = useState<Record<string, string>>({});
     const [confirmRejectReason, setConfirmRejectReason] = useState("");
+    const [confirmCompensateInNextDelivery, setConfirmCompensateInNextDelivery] = useState(false);
+    const [returnCompensateInNextDelivery, setReturnCompensateInNextDelivery] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
@@ -53,6 +55,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
         setConfirmChargeReason("");
         setConfirmAcceptedQuantities(Object.fromEntries(note.items.map((item) => [item.id, String(item.quantity)])));
         setConfirmRejectReason("");
+        setConfirmCompensateInNextDelivery(false);
         setActiveModal("received");
     }
 
@@ -72,6 +75,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
         setReturnMessage("");
         setReturnQuantities(Object.fromEntries(note.items.map((item) => [item.id, "0"])));
         setReturnPictures({});
+        setReturnCompensateInNextDelivery(false);
         setActiveModal("return");
     }
 
@@ -91,7 +95,8 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
             };
         });
 
-        if (acceptanceItems.some((item) => item.rejectedQuantity > 0) && !confirmRejectReason.trim()) {
+        const hasRejectedItems = acceptanceItems.some((item) => item.rejectedQuantity > 0);
+        if (hasRejectedItems && !confirmRejectReason.trim()) {
             setMessage("Vui lòng nhập lý do trả hàng.");
             return;
         }
@@ -110,6 +115,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
                     acceptance: {
                         agreedCustomerCharge,
                         agreedCustomerChargeReason: confirmChargeReason.trim() || null,
+                        compensateInNextDelivery: hasRejectedItems && confirmCompensateInNextDelivery,
                         items: acceptanceItems,
                     },
                 }),
@@ -157,6 +163,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
                 body: JSON.stringify({
                     deliveryNoteId: note.id,
                     reason: returnReason,
+                    compensateInNextDelivery: returnCompensateInNextDelivery,
                     items: items.map(({ deliveryNoteItemId, requestedQuantity, reason, evidencePictures }) => ({
                         deliveryNoteItemId,
                         requestedQuantity,
@@ -215,6 +222,10 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
     if (!note) return <div>Đang tải...</div>;
 
     const receivedConfirmed = note.deliveryConfirmationStatus === DELIVERY_CONFIRMATION_CONFIRMED;
+    const confirmHasRejectedItems = activeModal === "received" && note.items.some((item) => {
+        const acceptedQuantity = Math.max(0, Math.min(item.quantity, parseQuantity(confirmAcceptedQuantities[item.id])));
+        return Math.max(0, item.quantity - acceptedQuantity) > 0;
+    });
 
     return (
         <section className="stack">
@@ -316,6 +327,16 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
                             <label>Lý do trả hàng</label>
                             <textarea value={confirmRejectReason} onChange={(event) => setConfirmRejectReason(event.target.value)} />
                         </div>
+                        {confirmHasRejectedItems && (
+                            <label className="checkbox-field">
+                                <input
+                                    type="checkbox"
+                                    checked={confirmCompensateInNextDelivery}
+                                    onChange={(event) => setConfirmCompensateInNextDelivery(event.target.checked)}
+                                />
+                                <span>Bù số lượng trả lại vào lần giao sau</span>
+                            </label>
+                        )}
                         <div className="field">
                             <label>Người nhận</label>
                             <input value={receiverName} onChange={(event) => setReceiverName(event.target.value)} />
@@ -384,6 +405,14 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
                             <label>Lý do</label>
                             <textarea value={returnReason} onChange={(event) => setReturnReason(event.target.value)} />
                         </div>
+                        <label className="checkbox-field">
+                            <input
+                                type="checkbox"
+                                checked={returnCompensateInNextDelivery}
+                                onChange={(event) => setReturnCompensateInNextDelivery(event.target.checked)}
+                            />
+                            <span>Bù số lượng trả lại vào lần giao sau</span>
+                        </label>
                         <div className="modal-actions">
                             <button className="button" type="button" onClick={() => setActiveModal(null)}>
                                 Hủy

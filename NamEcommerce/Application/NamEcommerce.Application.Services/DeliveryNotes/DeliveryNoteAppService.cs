@@ -97,6 +97,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
                     {
                         AgreedCustomerCharge = dto.Acceptance.AgreedCustomerCharge,
                         AgreedCustomerChargeReason = dto.Acceptance.AgreedCustomerChargeReason,
+                        CompensateInNextDelivery = dto.Acceptance.CompensateInNextDelivery,
                         Items = dto.Acceptance.Items.Select(item => new DeliveryAcceptanceItemDto
                         {
                             DeliveryNoteItemId = item.DeliveryNoteItemId,

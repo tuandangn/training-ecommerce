@@ -81,12 +81,10 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.Property(d => d.CreatedOnUtc).IsRequired();
         builder.Property(d => d.UpdatedOnUtc).IsRequired(false);
 
-        // One-to-many relationship with items
-        builder.Metadata.FindNavigation(nameof(DeliveryNote.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(d => d.Items).WithOne().HasForeignKey(i => i.DeliveryNoteId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(d => d.Items).AutoInclude();
+        builder.Metadata.FindNavigation(nameof(DeliveryNote.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
 
-        // Ignore computed property
         builder.Ignore(d => d.TotalAmount);
     }
 }

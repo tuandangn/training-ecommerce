@@ -42,6 +42,7 @@ public sealed class MarkDeliveryNoteDeliveredHandler : IRequestHandler<MarkDeliv
             {
                 AgreedCustomerCharge = request.AgreedCustomerCharge,
                 AgreedCustomerChargeReason = request.AgreedCustomerChargeReason,
+                CompensateInNextDelivery = request.CompensateInNextDelivery,
                 Items = request.Items.Select(item => new DeliveryAcceptanceItemAppDto
                 {
                     DeliveryNoteItemId = item.DeliveryNoteItemId,

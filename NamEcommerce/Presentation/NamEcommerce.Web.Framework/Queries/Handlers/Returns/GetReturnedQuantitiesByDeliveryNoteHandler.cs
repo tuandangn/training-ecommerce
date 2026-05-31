@@ -47,14 +47,16 @@ public sealed class GetReturnedQuantitiesByDeliveryNoteHandler
 
         var dict = items
             .Where(r => r.Status != CancelledStatus)
-            .SelectMany(r => r.Items.Select(i => new { r.Status, Item = i }))
+            .SelectMany(r => r.Items.Select(i => new { r.Status, r.CompensateInNextDelivery, Item = i }))
             .Where(x => x.Item.DeliveryNoteItemId.HasValue && deliveryNoteItemIds.Contains(x.Item.DeliveryNoteItemId.Value))
             .GroupBy(x => x.Item.DeliveryNoteItemId!.Value)
             .ToDictionary(
                 g => g.Key,
                 g => new ReturnedQuantitySummary(
                     ConfirmedQuantity: g.Where(x => x.Status == ConfirmedStatus).Sum(x => x.Item.AcceptedQuantity),
-                    PendingQuantity: g.Where(x => x.Status == DraftStatus || x.Status == InspectingStatus).Sum(x => x.Item.RequestedQuantity)
+                    PendingQuantity: g.Where(x => x.Status == DraftStatus || x.Status == InspectingStatus).Sum(x => x.Item.RequestedQuantity),
+                    ConfirmedCompensatedQuantity: g.Where(x => x.Status == ConfirmedStatus && x.CompensateInNextDelivery).Sum(x => x.Item.AcceptedQuantity),
+                    ActiveCompensatedQuantity: g.Where(x => x.CompensateInNextDelivery && x.Status != DraftStatus).Sum(x => x.Item.AcceptedQuantity)
                 ));
 
         var portalRequests = await _customerPortalAdminAppService.GetReturnRequestsAsync().ConfigureAwait(false);
@@ -70,7 +72,9 @@ public sealed class GetReturnedQuantitiesByDeliveryNoteHandler
             dict.TryGetValue(deliveryNoteItemId, out var summary);
             dict[deliveryNoteItemId] = new ReturnedQuantitySummary(
                 summary?.ConfirmedQuantity ?? 0m,
-                (summary?.PendingQuantity ?? 0m) + pendingQuantity);
+                (summary?.PendingQuantity ?? 0m) + pendingQuantity,
+                summary?.ConfirmedCompensatedQuantity ?? 0m,
+                summary?.ActiveCompensatedQuantity ?? 0m);
         }
 
         return dict;

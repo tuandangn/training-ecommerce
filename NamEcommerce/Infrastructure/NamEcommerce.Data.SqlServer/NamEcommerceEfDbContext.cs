@@ -73,7 +73,6 @@ public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
 
     async Task<TEntity> IDbContext.UpdateAsync<TEntity>(TEntity entity, CancellationToken cancellationToken)
     {
-        Update(entity);
         await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return entity;
     }

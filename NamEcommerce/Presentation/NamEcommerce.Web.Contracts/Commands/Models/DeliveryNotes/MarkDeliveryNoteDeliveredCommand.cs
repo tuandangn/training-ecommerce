@@ -10,6 +10,7 @@ public sealed class MarkDeliveryNoteDeliveredCommand : IRequest<MarkDeliveryNote
     public string? ReceiverName { get; init; }
     public decimal AgreedCustomerCharge { get; init; }
     public string? AgreedCustomerChargeReason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
     public IList<MarkDeliveryNoteDeliveredItemCommand> Items { get; init; } = [];
     
     public byte[]? PictureData { get; init; }

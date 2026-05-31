@@ -116,7 +116,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             ShowPrice = false, // Default is hide price
             Items = []
         };
-        var includeReturnedCompensation = model.CompensateReturnedQuantityInNextDelivery;
+        model.OrderId = order.Id;
         model.OrderCode = order.Code;
         //*TODO*
         model.PlacedOn = DateTimeHelper.ToLocalTime(order.CreatedOnUtc);
@@ -146,7 +146,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 if (!returnedByItem.TryGetValue(noteItem.Id, out var summary))
                     continue;
 
-                var returnedQuantity = Math.Max(0m, summary.ConfirmedQuantity + summary.PendingQuantity);
+                var returnedQuantity = Math.Max(0m, summary.ActiveCompensatedQuantity);
                 returnedByDeliveryNoteItemId[noteItem.Id] = Math.Min(noteItem.Quantity, returnedQuantity);
             }
         }
@@ -172,9 +172,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 .Where(item => item.OrderItemId == orderItem.Id)
                 .Sum(item => returnedByDeliveryNoteItemId.GetValueOrDefault(item.Id));
             var netDeliveredQuantity = Math.Max(0m, deliveredQuantity - returnedQuantity);
-            var deliveredQtyForRemaining = includeReturnedCompensation
-                ? netDeliveredQuantity
-                : deliveredQuantity;
+            var deliveredQtyForRemaining = netDeliveredQuantity;
             var directShipOutstandingQty = directShipOutstandingQuantities.GetValueOrDefault(orderItem.Id);
             var remainingQty = orderItem.Quantity - deliveredQtyForRemaining - directShipOutstandingQty;
             if (remainingQty > 0)
@@ -189,7 +187,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 };
                 itemModel.ProductName = orderItem.ProductName ?? string.Empty;
                 itemModel.OrderedQuantity = orderItem.Quantity;
-                itemModel.PreviouslyDeliveredQuantity = deliveredQtyForRemaining;
+                itemModel.PreviouslyDeliveredQuantity = deliveredQuantity;
                 itemModel.UnitPrice = orderItem.UnitPrice;
 
                 if (existingItem is null)
@@ -258,7 +256,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                     UnitPrice = i.UnitPrice,
                     SubTotal = i.SubTotal,
                     ReturnedQuantity = summary?.ConfirmedQuantity ?? 0m,
-                    PendingReturnQuantity = summary?.PendingQuantity ?? 0m
+                    PendingReturnQuantity = summary?.PendingQuantity ?? 0m,
+                    CompensatedReturnQuantity = summary?.ActiveCompensatedQuantity ?? 0m
                 };
             }).ToList()
         };

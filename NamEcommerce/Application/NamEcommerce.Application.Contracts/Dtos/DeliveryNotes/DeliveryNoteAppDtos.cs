@@ -115,6 +115,7 @@ public sealed record DeliveryAcceptanceAppDto
 {
     public decimal AgreedCustomerCharge { get; init; }
     public string? AgreedCustomerChargeReason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
     public IList<DeliveryAcceptanceItemAppDto> Items { get; init; } = [];
 }
 

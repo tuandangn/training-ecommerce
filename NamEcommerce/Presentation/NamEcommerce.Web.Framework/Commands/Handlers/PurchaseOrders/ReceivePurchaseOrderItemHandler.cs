@@ -27,9 +27,21 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
     public async Task<ReceivePurchaseOrderItemResultModel> Handle(ReceivePurchaseOrderItemCommand request, CancellationToken cancellationToken)
     {
         var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
-        var hasDirectShip = request.DirectShipOrderId.HasValue && request.DirectShipOrderItemId.HasValue
-            && request.DirectShipOrderItemId.Value != Guid.Empty
-            && !string.IsNullOrWhiteSpace(request.DirectShipAddress);
+        var directShipRequested = request.DirectShipOrderId.HasValue
+            || request.DirectShipOrderItemId.HasValue;
+        if (directShipRequested)
+        {
+            if (!request.DirectShipOrderId.HasValue || request.DirectShipOrderId.Value == Guid.Empty)
+                return new ReceivePurchaseOrderItemResultModel { Success = false, ErrorMessage = "Error.OrderRequired" };
+            if (!request.DirectShipOrderItemId.HasValue || request.DirectShipOrderItemId.Value == Guid.Empty)
+                return new ReceivePurchaseOrderItemResultModel { Success = false, ErrorMessage = "Error.OrderItemIsNotFound" };
+            if (string.IsNullOrWhiteSpace(request.DirectShipContactPhone))
+                return new ReceivePurchaseOrderItemResultModel { Success = false, ErrorMessage = "Error.DirectShipContactPhoneRequired" };
+            if (string.IsNullOrWhiteSpace(request.DirectShipAddress))
+                return new ReceivePurchaseOrderItemResultModel { Success = false, ErrorMessage = "Error.DirectShipAddressRequired" };
+        }
+
+        var hasDirectShip = directShipRequested;
 
         Guid? warehouseId = request.WarehouseId;
         var maxAllocationQuantityForOrderItem = 0m;

@@ -1,0 +1,178 @@
+- generic [active] [ref=e1]:
+  - link "Bỏ qua menu" [ref=e2] [cursor=pointer]:
+    - /url: "#mainContent"
+  - generic [ref=e3]:
+    - complementary "Điều hướng chính" [ref=e4]:
+      - link " VLXD Tuấn Khôi Quản lý bán hàng" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: 
+        - generic [ref=e8]:
+          - generic [ref=e9]: VLXD Tuấn Khôi
+          - generic [ref=e10]: Quản lý bán hàng
+      - navigation "Menu chính" [ref=e11]:
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link " Dashboard" [ref=e14] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e15]: 
+              - text: Dashboard
+          - listitem [ref=e16]:
+            - link " Bán hàng" [expanded] [ref=e17] [cursor=pointer]:
+              - /url: "#collapseSales"
+              - generic [ref=e18]: 
+              - text: Bán hàng
+            - list [ref=e20]:
+              - listitem [ref=e21]:
+                - link "Đơn hàng" [ref=e22] [cursor=pointer]:
+                  - /url: /Order/List
+              - listitem [ref=e23]:
+                - link "Chuẩn bị hàng" [ref=e24] [cursor=pointer]:
+                  - /url: /Preparation/List
+              - listitem [ref=e25]:
+                - link "Khách trả hàng" [ref=e26] [cursor=pointer]:
+                  - /url: /CustomerReturn/List
+              - listitem [ref=e27]:
+                - link "Khách hàng" [ref=e28] [cursor=pointer]:
+                  - /url: /Customer/List
+          - listitem [ref=e29]:
+            - link " Nhập hàng" [ref=e30] [cursor=pointer]:
+              - /url: "#collapsePurchases"
+              - generic [ref=e31]: 
+              - text: Nhập hàng
+          - listitem [ref=e32]:
+            - link " Tồn kho" [ref=e33] [cursor=pointer]:
+              - /url: "#collapseInventory"
+              - generic [ref=e34]: 
+              - text: Tồn kho
+          - listitem [ref=e35]:
+            - link " Công nợ" [ref=e36] [cursor=pointer]:
+              - /url: "#collapseDebt"
+              - generic [ref=e37]: 
+              - text: Công nợ
+          - listitem [ref=e38]:
+            - link " Hàng hóa" [ref=e39] [cursor=pointer]:
+              - /url: "#collapseCatalog"
+              - generic [ref=e40]: 
+              - text: Hàng hóa
+          - listitem [ref=e41]:
+            - link " Cổng khách hàng" [ref=e42] [cursor=pointer]:
+              - /url: "#collapseCustomerPortal"
+              - generic [ref=e43]: 
+              - text: Cổng khách hàng
+    - generic [ref=e44]:
+      - banner [ref=e45]:
+        - text: 
+        - generic [ref=e46]:
+          - heading "TKH-20260531-001 Bản nháp" [level=1] [ref=e47]:
+            - text: TKH-20260531-001
+            - generic [ref=e48]: Bản nháp
+          - navigation "breadcrumb" [ref=e50]:
+            - list [ref=e51]:
+              - listitem [ref=e52]:
+                - link "Trang chủ" [ref=e53] [cursor=pointer]:
+                  - /url: /
+              - listitem [ref=e54]:
+                - text: /
+                - link "Trả hàng khách hàng" [ref=e55] [cursor=pointer]:
+                  - /url: /CustomerReturn/List
+              - listitem [ref=e56]: / TKH-20260531-001
+        - button "TĐ" [ref=e59] [cursor=pointer]:
+          - generic [ref=e60]: TĐ
+      - main [ref=e62]:
+        - generic [ref=e63]:
+          - generic [ref=e64]: 
+          - text: 1 hàng trả được bù vào lần giao sau. Phiếu đang chờ kiểm/xác nhận, chưa nhập kho.
+        - generic [ref=e65]:
+          - generic [ref=e67]:
+            - generic [ref=e68]:
+              - heading "Danh sách hàng trả 1 mặt hàng" [level=5] [ref=e69]:
+                - text: Danh sách hàng trả
+                - generic [ref=e70]: 1 mặt hàng
+              - generic [ref=e71]: 630.000 ₫
+            - table [ref=e74]:
+              - rowgroup [ref=e75]:
+                - row "Hàng hóa SL yêu cầu SL chấp nhận Đ.Giá gốc Đ.Giá trả Thành tiền" [ref=e76]:
+                  - columnheader "Hàng hóa" [ref=e77]
+                  - columnheader "SL yêu cầu" [ref=e78]
+                  - columnheader "SL chấp nhận" [ref=e79]
+                  - columnheader "Đ.Giá gốc" [ref=e80]
+                  - columnheader "Đ.Giá trả" [ref=e81]
+                  - columnheader "Thành tiền" [ref=e82]
+              - rowgroup [ref=e83]:
+                - row "Cát sông (xây)  Từ phiếu xuất 1 1 630.000 ₫ 630.000 ₫ 630.000 ₫" [ref=e84]:
+                  - cell "Cát sông (xây)  Từ phiếu xuất" [ref=e85]:
+                    - generic [ref=e86]: Cát sông (xây)
+                    - generic [ref=e87]:
+                      - generic [ref=e88]: 
+                      - text: Từ phiếu xuất
+                  - cell "1" [ref=e89]
+                  - cell "1" [ref=e90]
+                  - cell "630.000 ₫" [ref=e91]
+                  - cell "630.000 ₫" [ref=e92]
+                  - cell "630.000 ₫" [ref=e93]
+              - rowgroup [ref=e94]:
+                - row "Tổng giá trị trả 630.000 ₫" [ref=e95]:
+                  - cell "Tổng giá trị trả" [ref=e96]
+                  - cell "630.000 ₫" [ref=e97]
+                - row "Tổng hoàn khách 630.000 ₫" [ref=e98]:
+                  - cell "Tổng hoàn khách" [ref=e99]
+                  - cell "630.000 ₫" [ref=e100]
+            - generic [ref=e101]:
+              - link " Trở về" [ref=e102] [cursor=pointer]:
+                - /url: /CustomerReturn/List
+                - generic [ref=e103]: 
+                - text: Trở về
+              - generic [ref=e104]:
+                - button " Chuyển sang kiểm tra" [ref=e105] [cursor=pointer]:
+                  - generic [ref=e106]: 
+                  - text: Chuyển sang kiểm tra
+                - button " Huỷ phiếu" [ref=e108] [cursor=pointer]:
+                  - generic [ref=e109]: 
+                  - text: Huỷ phiếu
+          - generic [ref=e110]:
+            - generic [ref=e111]:
+              - generic [ref=e112]:
+                - heading "Thông tin phiếu" [level=5] [ref=e113]
+                - button " Sửa" [ref=e114] [cursor=pointer]:
+                  - generic [ref=e115]: 
+                  - text: Sửa
+              - generic [ref=e117]:
+                - generic [ref=e118]:
+                  - term [ref=e119]: Trạng thái
+                  - definition [ref=e120]:
+                    - generic [ref=e121]: Bản nháp
+                - generic [ref=e122]:
+                  - term [ref=e123]: Bù hàng
+                  - definition [ref=e124]: "1"
+                - generic [ref=e125]:
+                  - term [ref=e126]: Ngày trả
+                  - definition [ref=e127]: 31/05/2026
+                - generic [ref=e128]:
+                  - term [ref=e129]: Ghi chú
+                  - definition [ref=e130]: "Khi nhận hàng từ phiếu PX-2605-001, khách hàng trả về: Cát sông (xây): 1 (Cát quá xấu)."
+                - generic [ref=e131]:
+                  - term [ref=e132]: Tạo lúc
+                  - definition [ref=e133]: 31/05/2026 02:15
+            - generic [ref=e134]:
+              - heading "Khách hàng" [level=5] [ref=e136]
+              - generic [ref=e138]:
+                - generic [ref=e139]:
+                  - term [ref=e140]: Khách
+                  - definition [ref=e141]:
+                    - generic [ref=e142]: 
+                    - text: Hùng Cường
+                - generic [ref=e143]:
+                  - term [ref=e144]: Nguồn giao
+                  - definition [ref=e145]:
+                    - link " PX-2605-001" [ref=e146] [cursor=pointer]:
+                      - /url: /DeliveryNote/Details/9a771b5f-4240-4eba-91a6-6ff4db019554
+                      - generic [ref=e147]: 
+                      - text: PX-2605-001
+                - generic [ref=e148]:
+                  - term [ref=e149]: Kho nhận
+                  - definition [ref=e150]:
+                    - generic [ref=e151]: 
+                    - text: Chưa chọn
+        - text:  
+      - contentinfo [ref=e152]:
+        - generic [ref=e153]: © 2026 VLXD Tuấn Khôi — Hệ thống quản lý bán hàng

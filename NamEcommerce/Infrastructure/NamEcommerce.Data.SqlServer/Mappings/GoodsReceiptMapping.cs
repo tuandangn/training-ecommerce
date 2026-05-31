@@ -66,11 +66,11 @@ public sealed class GoodsReceiptMapping : IEntityTypeConfiguration<GoodsReceipt>
                     : System.Text.Json.JsonSerializer.Deserialize<IList<Guid>>(v, (System.Text.Json.JsonSerializerOptions?)null)
                       ?? new List<Guid>());
 
-        builder.Metadata.FindNavigation(nameof(GoodsReceipt.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(g => g.Items)
             .WithOne()
             .HasForeignKey(i => i.GoodsReceiptId)
             .OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(g => g.Items).AutoInclude();
+        builder.Metadata.FindNavigation(nameof(GoodsReceipt.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
     }
 }

@@ -122,7 +122,7 @@ public sealed class CreatePurchaseOrdersFromShortageHandler(IShortageAggregation
                     AllocationQuantity = item.AllocationQuantity,
                     UnitCost = item.UnitCost,
                     Note = item.Note,
-                    DirectShipInfo = item.DirectShipInfo is { } ds && !string.IsNullOrWhiteSpace(ds.Address)
+                    DirectShipInfo = item.DirectShipInfo is { } ds
                         ? new DirectShipInfoAppDto { Address = ds.Address, ContactName = ds.ContactName, ContactPhone = ds.ContactPhone, Priority = ds.Priority }
                         : null,
                     Actions = item.Actions.Select(action => new CreatePoFromShortageActionAppDto
