@@ -73,7 +73,16 @@ try/catch is acceptable only for external I/O (HTTP, file system, DB) or when ca
 - Working with Domain layer → read `docs/domain.md`
 - Working with Application layer → read `docs/application.md`
 - Working with Presentation layer → read `docs/presentation.md`
+- New module / improvement feature plan → MUST HAVE USER COMMITED PLAN + IMPLEMENTATION (with TodoList)
 - Create new module → read `.claude/checklist.md` + 3 layer docs
+
+---
+
+## Where read or save documentation?
+
+- Implemented modules/features → `docs/{Module}/
+- New modules/features plan: `plans/{Module}/plan_{short_desc}.md`
+- New modules/features implementation: `plans/{Module}/implement_{short_desc}.md`
 
 ---
 

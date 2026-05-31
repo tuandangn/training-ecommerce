@@ -1,6 +1,6 @@
-# Modules — Danh sách và Relationships
+# Modules — Listing and Relationships
 
-## Modules hiện có
+## Existing Modules
 
 ### Catalog
 - **Category** — danh mục sản phẩm, có cây thư mục (ParentId)
