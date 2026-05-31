@@ -1,5 +1,6 @@
 import { confirm, toast } from "/modules/modals.js";
 import { apiPost } from "/modules/ajax-helper.js";
+import DeliveryNoteController from "/modules/DeliveryNoteController.js";
 import PromiseModal from "/modules/PromiseModal.js";
 import ProductPicker from "/modules/ProductPicker.js";
 
@@ -27,6 +28,41 @@ async function submitFormAsync(form) {
             document.querySelectorAll('[data-workflow-panel]').forEach((panel) => {
                 panel.classList.toggle('active', panel.dataset.workflowPanel === target);
             });
+        });
+    });
+
+    const deliveryNoteController = new DeliveryNoteController();
+    document.querySelectorAll('[data-delivery-action]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const id = button.dataset.deliveryId;
+            const action = button.dataset.deliveryAction;
+            if (!id || !action) return;
+
+            try {
+                let result;
+                if (action === 'confirm') {
+                    result = await deliveryNoteController.confirm(id);
+                } else if (action === 'delivering') {
+                    result = await deliveryNoteController.delivering(id);
+                } else if (action === 'cancel') {
+                    result = await deliveryNoteController.cancel(id);
+                } else if (action === 'delivered') {
+                    await deliveryNoteController.beginDeliveredWorkflow('markDeliveredModal').setId(id);
+                    return;
+                } else if (action === 'reject') {
+                    await deliveryNoteController
+                        .beginRejectWorkflow('rejectDeliveryNoteModal')
+                        .setData(id, button.dataset.deliveryCode || '', button.dataset.deliveryWarehouseId || '');
+                    return;
+                }
+
+                if (result?.success) {
+                    location.reload();
+                }
+            } catch (err) {
+                hidePageLoading();
+                toast('Lỗi', 'Không thể cập nhật phiếu giao.', 'error');
+            }
         });
     });
 

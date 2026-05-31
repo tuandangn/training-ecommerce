@@ -11,10 +11,9 @@
         <div class="content-card-header">
             <div>
                 <h5>Giao hàng <span class="status-badge @Model.DeliveryWorkflow.StatusClass">@Model.DeliveryWorkflow.StatusText</span></h5>
-                <div class="text-muted small">Phiếu xuất kho, tiến độ giao và trạng thái từng phiếu</div>
+                <div class="text-muted small">Tổng hợp xuất kho, giao hàng, phụ phí và trả hàng</div>
             </div>
             <div class="d-flex flex-wrap align-items-center gap-2">
-                
                 @if (canCreateDelivery)
                 {
                     <a asp-controller="DeliveryNote" asp-action="Create" asp-route-orderId="@Model.Id" class="btn btn-sm btn-link text-dark text-decoration-none" data-testid="order-create-delivery">
@@ -24,6 +23,49 @@
             </div>
         </div>
         <div class="content-card-body">
+            @if (Model.DeliveryWorkflow.Items.Count > 0)
+            {
+                <div class="workflow-section-title mt-0">Hàng hóa giao</div>
+                <div class="table-responsive mb-3">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Hàng hóa</th>
+                                <th class="text-end">SL đặt</th>
+                                <th class="text-end">Tồn kho</th>
+                                <th class="text-end">Đã xuất</th>
+                                <th class="text-end">Đã giao</th>
+                                <th class="text-end">Giao thẳng</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.DeliveryWorkflow.Items)
+                            {
+                                <tr>
+                                    <td class="fw-600 text-dark">@item.ProductName</td>
+                                    <td class="text-end">@item.OrderedQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">@item.AvailableQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">@item.IssuedQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">@item.DeliveredQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">
+                                        @if (item.DirectShipQuantity > 0)
+                                        {
+                                            <div class="fw-600">@item.DirectShipReceivedQuantity.DisplayQuantity() / @item.DirectShipQuantity.DisplayQuantity()</div>
+                                            <div class="small text-muted">@item.DirectShipStatusText</div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Không</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <div class="workflow-section-title">Phiếu giao</div>
             @if (Model.DeliveryWorkflow.Notes.Count == 0)
             {
                 <div class="empty-state">
@@ -34,7 +76,7 @@
             }
             else
             {
-                <div class="table-responsive">
+                <div class="table-responsive mb-3">
                     <table class="table data-table mb-0">
                         <thead>
                             <tr>
@@ -45,14 +87,23 @@
                                 <th>Trạng thái</th>
                                 <th class="text-end">Ngày tạo</th>
                                 <th class="text-end">Ngày giao xong</th>
-                                <th class="text-end"></th>
+                                <th class="text-end">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var note in Model.DeliveryWorkflow.Notes)
                             {
+                                var canConfirm = !note.IsDirectShip && note.Status == (int)DeliveryNoteStatus.Draft;
+                                var canDelivering = !note.IsDirectShip && note.Status == (int)DeliveryNoteStatus.Confirmed;
+                                var canDelivered = note.Status == (int)DeliveryNoteStatus.Confirmed || note.Status == (int)DeliveryNoteStatus.Delivering;
+                                var canReject = note.IsDirectShip && note.Status != (int)DeliveryNoteStatus.Delivered && note.Status != (int)DeliveryNoteStatus.Cancelled;
+                                var canCancel = !note.IsDirectShip && note.Status != (int)DeliveryNoteStatus.Delivered && note.Status != (int)DeliveryNoteStatus.Cancelled;
                                 <tr>
-                                    <td class="fw-600">@note.Code</td>
+                                    <td>
+                                        <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@note.DeliveryNoteId" class="fw-600 text-decoration-none">
+                                            @note.Code
+                                        </a>
+                                    </td>
                                     <td>
                                         @if (note.IsDirectShip)
                                         {
@@ -77,10 +128,87 @@
                                     <td class="text-end">@note.CreatedOn.ToString(ViewConstants.DefaultDateFormat)</td>
                                     <td class="text-end">@(note.DeliveredOn?.ToString(ViewConstants.DefaultDateFormat) ?? "-")</td>
                                     <td class="text-end">
-                                        <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@note.DeliveryNoteId" class="btn-table-action" data-testid="order-open-delivery" title="Theo dõi phiếu giao">
-                                            <i class="bi bi-arrow-right"></i>
+                                        <div class="delivery-quick-actions">
+                                            @if (canConfirm)
+                                            {
+                                                <button type="button" class="btn-table-action" data-delivery-action="confirm" data-delivery-id="@note.DeliveryNoteId" title="Xuất hàng">
+                                                    <i class="bi bi-check-all"></i>
+                                                </button>
+                                            }
+                                            @if (canDelivering)
+                                            {
+                                                <button type="button" class="btn-table-action" data-delivery-action="delivering" data-delivery-id="@note.DeliveryNoteId" title="Đang giao">
+                                                    <i class="bi bi-truck"></i>
+                                                </button>
+                                            }
+                                            @if (canDelivered)
+                                            {
+                                                <button type="button" class="btn-table-action" data-delivery-action="delivered" data-delivery-id="@note.DeliveryNoteId" title="Xác nhận đã giao">
+                                                    <i class="bi bi-check-circle-fill"></i>
+                                                </button>
+                                            }
+                                            @if (canReject)
+                                            {
+                                                <button type="button" class="btn-table-action danger" data-delivery-action="reject" data-delivery-id="@note.DeliveryNoteId" data-delivery-code="@note.Code" data-delivery-warehouse-id="@note.WarehouseId" title="Từ chối">
+                                                    <i class="bi bi-person-fill-x"></i>
+                                                </button>
+                                            }
+                                            @if (canCancel)
+                                            {
+                                                <button type="button" class="btn-table-action danger" data-delivery-action="cancel" data-delivery-id="@note.DeliveryNoteId" title="Hủy phiếu">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                            }
+                                            <button type="button" class="btn-table-action" data-bs-toggle="modal" data-bs-target="#deliveryJourney_@note.DeliveryNoteId.ToString("N")" title="Xem quá trình giao">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <div class="workflow-section-title">Khách trả hàng</div>
+            @if (Model.DeliveryWorkflow.Returns.Count == 0)
+            {
+                <div class="workflow-soft-empty">
+                    <i class="bi bi-arrow-return-left"></i>
+                    <span>Chưa có phiếu khách trả hàng liên quan tới đơn này.</span>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Phiếu trả</th>
+                                <th>Phiếu giao</th>
+                                <th>Trạng thái</th>
+                                <th class="text-end">Giá trị trả</th>
+                                <th class="text-end">Phụ phí</th>
+                                <th class="text-end">Hoàn khách</th>
+                                <th class="text-end">Ngày trả</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var customerReturn in Model.DeliveryWorkflow.Returns)
+                            {
+                                <tr>
+                                    <td>
+                                        <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@customerReturn.Id" class="fw-600 text-decoration-none">
+                                            @customerReturn.Code
                                         </a>
                                     </td>
+                                    <td>@customerReturn.DeliveryNoteCode</td>
+                                    <td><span class="status-badge @customerReturn.StatusClass">@customerReturn.StatusText</span></td>
+                                    <td class="text-end">@customerReturn.GrossRefundAmount.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end">@customerReturn.AdditionalCost.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end fw-bold">@customerReturn.NetRefundAmount.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end">@customerReturn.ReturnDate.ToString(ViewConstants.DefaultDateFormat)</td>
                                 </tr>
                             }
                         </tbody>
@@ -89,4 +217,147 @@
             }
         </div>
     </div>
+
+    @foreach (var note in Model.DeliveryWorkflow.Notes)
+    {
+        var proofImageSrc = ToImageSrc(note.DeliveryProofPictureUrl);
+        var relatedReturns = Model.DeliveryWorkflow.Returns
+            .Where(customerReturn => customerReturn.DeliveryNoteId == note.DeliveryNoteId)
+            .ToList();
+        <div class="modal fade" id="deliveryJourney_@note.DeliveryNoteId.ToString("N")" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <div class="modal-header border-0 pb-0">
+                        <div>
+                            <h5 class="modal-title fw-bold">@note.Code</h5>
+                            <div class="small text-muted">Quá trình giao hàng và trả hàng liên quan</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="workflow-metric-grid mb-3">
+                            <div class="workflow-metric">
+                                <span>Trạng thái</span>
+                                <strong>@note.StatusText</strong>
+                            </div>
+                            <div class="workflow-metric">
+                                <span>Người nhận</span>
+                                <strong>@(note.DeliveryReceiverName ?? "-")</strong>
+                            </div>
+                            <div class="workflow-metric">
+                                <span>Số cần thu</span>
+                                <strong>@note.AmountToCollect.DisplayCurrencyWithSymbol()</strong>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-lg-7">
+                                <div class="workflow-section-title mt-0">Hàng hóa</div>
+                                <div class="table-responsive mb-3">
+                                    <table class="table data-table mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Hàng hóa</th>
+                                                <th class="text-end">SL xuất</th>
+                                                <th class="text-end">Đơn giá</th>
+                                                <th class="text-end">Thành tiền</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var item in note.Items)
+                                            {
+                                                <tr>
+                                                    <td>@item.ProductName</td>
+                                                    <td class="text-end">@item.Quantity.DisplayQuantity()</td>
+                                                    <td class="text-end">@item.UnitPrice.DisplayCurrencyWithSymbol()</td>
+                                                    <td class="text-end fw-600">@item.SubTotal.DisplayCurrencyWithSymbol()</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div class="workflow-section-title">Phụ phí và ghi chú</div>
+                                <div class="order-delivery-note-grid mb-3">
+                                    <div>
+                                        <span>Phụ phí phiếu giao</span>
+                                        <strong>@note.Surcharge.DisplayCurrencyWithSymbol()</strong>
+                                        @if (!string.IsNullOrWhiteSpace(note.SurchargeReason))
+                                        {
+                                            <small>@note.SurchargeReason</small>
+                                        }
+                                    </div>
+                                    <div>
+                                        <span>Ghi chú giao hàng</span>
+                                        <strong>@(note.Note ?? "-")</strong>
+                                    </div>
+                                    <div>
+                                        <span>Lý do từ chối/hủy</span>
+                                        <strong>@(note.ConfirmedNote ?? "-")</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-5">
+                                <div class="workflow-section-title mt-0">Hình ảnh giao hàng</div>
+                                @if (string.IsNullOrWhiteSpace(proofImageSrc))
+                                {
+                                    <div class="workflow-soft-empty mb-3">
+                                        <i class="bi bi-image"></i>
+                                        <span>Chưa có hình ảnh giao hàng.</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <img src="@proofImageSrc" class="img-fluid rounded border shadow-sm mb-3" alt="Hình ảnh giao hàng @note.Code" />
+                                }
+
+                                <div class="workflow-section-title">Phiếu trả liên quan</div>
+                                @if (relatedReturns.Count == 0)
+                                {
+                                    <div class="workflow-soft-empty">
+                                        <i class="bi bi-arrow-return-left"></i>
+                                        <span>Chưa có phiếu trả.</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="delivery-return-stack">
+                                        @foreach (var customerReturn in relatedReturns)
+                                        {
+                                            <div class="delivery-return-item">
+                                                <div class="d-flex justify-content-between gap-2">
+                                                    <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@customerReturn.Id" class="fw-600 text-decoration-none">@customerReturn.Code</a>
+                                                    <span class="status-badge @customerReturn.StatusClass">@customerReturn.StatusText</span>
+                                                </div>
+                                                <div class="small text-muted mt-1">
+                                                    Hoàn khách @customerReturn.NetRefundAmount.DisplayCurrencyWithSymbol()
+                                                    · Phụ phí @customerReturn.AdditionalCost.DisplayCurrencyWithSymbol()
+                                                </div>
+                                                @if (!string.IsNullOrWhiteSpace(customerReturn.Note))
+                                                {
+                                                    <div class="small mt-1">@customerReturn.Note</div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </section>
+
+@functions {
+    private static string? ToImageSrc(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        return value.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
+            ? value
+            : $"data:image/jpeg;base64,{value}";
+    }
+}

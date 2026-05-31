@@ -9,7 +9,7 @@
         <div class="content-card-header">
             <div>
                 <h5>Kết sổ</h5>
-                <div class="text-muted small">Chi phí phát sinh, công nợ, giá vốn và lời lãi</div>
+                <div class="text-muted small">Chi phí phát sinh, công nợ, giá vốn, trả hàng và lãi lỗ</div>
             </div>
             <div class="d-flex flex-wrap gap-2">
                 <button type="button" class="btn btn-sm btn-link text-dark text-decoration-none" data-bs-toggle="modal" data-bs-target="#orderExpenseModal">
@@ -65,6 +65,67 @@
                 <div class="alert alert-warning small mb-3">
                     <i class="bi bi-info-circle me-1"></i>
                     Lợi nhuận có thể chưa chốt vì còn dòng xuất hàng chưa có giá vốn.
+                </div>
+            }
+
+            <div class="workflow-section-title">Tài chính trả hàng</div>
+            @if (Model.Settlement.Returns.Count == 0)
+            {
+                <div class="workflow-soft-empty mb-3">
+                    <i class="bi bi-arrow-return-left"></i>
+                    <span>Chưa có phiếu trả hàng đã xác nhận.</span>
+                </div>
+            }
+            else
+            {
+                <div class="workflow-metric-grid mb-3">
+                    <div class="workflow-metric">
+                        <span>Giá trị hàng trả</span>
+                        <strong>@Model.Settlement.ReturnGrossAmount.DisplayCurrencyWithSymbol()</strong>
+                    </div>
+                    <div class="workflow-metric">
+                        <span>Phụ phí trả hàng</span>
+                        <strong>@Model.Settlement.ReturnAdditionalCost.DisplayCurrencyWithSymbol()</strong>
+                    </div>
+                    <div class="workflow-metric">
+                        <span>Hoàn khách ròng</span>
+                        <strong>@Model.Settlement.ReturnNetRefundAmount.DisplayCurrencyWithSymbol()</strong>
+                    </div>
+                    <div class="workflow-metric">
+                        <span>SL bù giao sau</span>
+                        <strong>@Model.Settlement.ReturnCompensatedQuantity.DisplayQuantity()</strong>
+                    </div>
+                </div>
+                <div class="table-responsive mb-3">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Phiếu trả</th>
+                                <th>Phiếu giao</th>
+                                <th>Trạng thái</th>
+                                <th class="text-end">Giá trị trả</th>
+                                <th class="text-end">Phụ phí</th>
+                                <th class="text-end">Hoàn khách</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var customerReturn in Model.Settlement.Returns)
+                            {
+                                <tr>
+                                    <td>
+                                        <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@customerReturn.Id" class="fw-600 text-decoration-none">
+                                            @customerReturn.Code
+                                        </a>
+                                    </td>
+                                    <td>@customerReturn.DeliveryNoteCode</td>
+                                    <td><span class="status-badge @customerReturn.StatusClass">@customerReturn.StatusText</span></td>
+                                    <td class="text-end">@customerReturn.GrossRefundAmount.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end">@customerReturn.AdditionalCost.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end fw-bold">@customerReturn.NetRefundAmount.DisplayCurrencyWithSymbol()</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
             }
 

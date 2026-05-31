@@ -393,7 +393,7 @@ export default class DeliveryNoteController {
 
     #resetRejectControls() {
         this.#rejectContainer.querySelector('#rejectDnCode').textContent = this.#rejectState.code ? 'Phiếu: ' + this.#rejectState.code : '';
-        const option = this.#rejectContainer.querySelector(`#rejectWarehouseId option[value="${this.#rejectState.warehouse}"]`);
+        const option = this.#rejectContainer.querySelector(`#rejectReturnWarehouseId option[value="${this.#rejectState.warehouse}"]`);
         if(option)
             this.#rejectContainer.querySelector('#rejectReturnWarehouseId').value = this.#rejectState.warehouse;
         else

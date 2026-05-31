@@ -351,6 +351,19 @@
     </div>
 }
 
+@if (Model.DeliveryWorkflow.Notes.Any(note => note.Status == (int)DeliveryNoteStatus.Confirmed || note.Status == (int)DeliveryNoteStatus.Delivering))
+{
+    <partial name="_DeliveryNote.ConfirmDelivered" />
+}
+
+@if (Model.AvailableWarehouses is not null
+    && Model.DeliveryWorkflow.Notes.Any(note => note.IsDirectShip
+        && note.Status != (int)DeliveryNoteStatus.Delivered
+        && note.Status != (int)DeliveryNoteStatus.Cancelled))
+{
+    <partial name="_DeliveryNote.ConfirmReject" model="Model.AvailableWarehouses" />
+}
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="~/modules/OrderDetails.js" type="module"></script>

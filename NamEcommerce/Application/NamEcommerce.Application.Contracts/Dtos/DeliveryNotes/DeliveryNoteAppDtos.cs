@@ -28,6 +28,8 @@ public sealed record DeliveryNoteAppDto
     public int SourceType { get; init; }
     public bool IsDirectShip { get; init; }
     public int DeliveryConfirmationStatus { get; init; }
+    public DateTime? ConfirmedAtUtc { get; init; }
+    public string? ConfirmedNote { get; init; }
 
     public DateTime? DeliveredOnUtc { get; init; }
     public Guid? DeliveryProofPictureId { get; init; }

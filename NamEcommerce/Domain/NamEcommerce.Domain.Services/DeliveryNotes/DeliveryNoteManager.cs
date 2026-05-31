@@ -891,6 +891,8 @@ public sealed class DeliveryNoteManager(
             SourceType = deliveryNote.SourceType,
             IsDirectShip = deliveryNote.IsDirectShip,
             DeliveryConfirmationStatus = deliveryNote.DeliveryConfirmationStatus,
+            ConfirmedAtUtc = deliveryNote.ConfirmedAtUtc,
+            ConfirmedNote = deliveryNote.ConfirmedNote,
             DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
             DeliveryProofPictureId = deliveryNote.DeliveryProofPictureId,
             DeliveryReceiverName = deliveryNote.DeliveryReceiverName,
