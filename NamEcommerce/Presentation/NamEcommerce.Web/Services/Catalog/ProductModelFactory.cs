@@ -99,6 +99,8 @@ public sealed class ProductModelFactory : IProductModelFactory
             PageIndex = pageNumber - 1,
             PageSize = pageSize
         }).ConfigureAwait(false);
+        model.CategoryId = searchModel?.Cid;
+        model.AvailableCategories = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
 
         return model;
     }

@@ -6,6 +6,11 @@ namespace NamEcommerce.Web.Contracts.Models.Catalog;
 public sealed class ProductListModel
 {
     public string? Keywords { get; set; }
+    public Guid? CategoryId { get; set; }
+    public EntityOptionListModel AvailableCategories { get; set; } = new()
+    {
+        Options = []
+    };
 
     public required IPagedDataModel<ProductItemModel> Data { get; init; }
 

@@ -1,5 +1,6 @@
 @model ProductSearchModel
 <form method="get" class="d-flex flex-wrap align-items-center gap-2 w-100">
+    <input type="hidden" asp-for="Cid" />
     <div class="search-input-group flex-grow-1" style="min-width: 200px; max-width: 320px;">
         <div class="input-group">
             <span class="input-group-text bg-white border-end-0">
@@ -13,7 +14,7 @@
     </button>
     @if (!string.IsNullOrEmpty(Model.Q))
     {
-        <a asp-action="List" class="btn btn-outline-secondary px-3" title="Bỏ lọc">
+        <a asp-action="List" asp-route-cid="@Model.Cid" class="btn btn-outline-secondary px-3" title="Bỏ lọc">
             <i class="bi bi-x-lg"></i>
         </a>
     }

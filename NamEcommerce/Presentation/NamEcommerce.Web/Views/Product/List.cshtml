@@ -18,10 +18,28 @@
 <div class="content-card" data-responsive-list data-list-key="product-list">
     <div class="action-toolbar">
         <div class="search-group">
-            <partial name="_Search" model="@(new ProductSearchModel { Q = Model.Keywords })" />
+            <partial name="_Search" model="@(new ProductSearchModel { Q = Model.Keywords, Cid = Model.CategoryId })" />
         </div>
         <partial name="_ResponsiveListToolbar" />
     </div>
+    @if (Model.AvailableCategories.Any())
+    {
+        <div class="product-category-filter">
+            <ul class="nav nav-tabs product-category-tabs" aria-label="Lọc nhanh theo danh mục sản phẩm">
+                <li class="nav-item">
+                    <a asp-action="List" asp-route-q="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-cid=""
+                       class="nav-link @(Model.CategoryId.HasValue ? "" : "active")">Tất cả</a>
+                </li>
+                @foreach (var category in Model.AvailableCategories)
+                {
+                    <li class="nav-item">
+                        <a asp-action="List" asp-route-q="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-cid="@category.Id"
+                           class="nav-link @(category.Id == Model.CategoryId ? "active" : "")" title="@category.Name">@category.Name</a>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
     <div class="responsive-list-panel" data-list-view-panel="list">
         <div class="table-responsive">
         <table class="table data-table">
@@ -217,6 +235,55 @@
 @foreach (var item in Model.Data)
 {
     <partial name="_DeleteForm" model="@item.Id" />
+}
+
+@section Styles {
+    <style>
+        .product-category-filter {
+            max-width: 100%;
+            overflow: hidden;
+            background: #fff;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .product-category-tabs {
+            border-bottom: 0;
+            padding: 0 1.25rem 0.25rem;
+            scrollbar-width: thin;
+            scrollbar-color: var(--gray-300) transparent;
+        }
+
+            .product-category-tabs::-webkit-scrollbar {
+                display: block;
+                height: 0.375rem;
+            }
+
+            .product-category-tabs::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            .product-category-tabs::-webkit-scrollbar-thumb {
+                background: var(--gray-300);
+                border-radius: 999px;
+            }
+
+            .product-category-tabs .nav-link {
+                max-width: 18rem;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+        @@media (max-width: 575.98px) {
+            .product-category-tabs {
+                padding-right: 0.875rem;
+                padding-left: 0.875rem;
+            }
+
+                .product-category-tabs .nav-link {
+                    max-width: 13rem;
+                }
+        }
+    </style>
 }
 
 @section Scripts {
