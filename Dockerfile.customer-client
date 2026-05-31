@@ -10,8 +10,8 @@ RUN npm ci
 COPY NamEcommerce/Presentation/Customer/NamEcommerce.Customer.Client/ .
 
 # API URL sẽ được truyền vào lúc build
-ARG VITE_API_URL=https://api.dangvy.com
-ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_CUSTOMER_API_URL=https://api.dangvy.com
+ENV VITE_CUSTOMER_API_URL=$VITE_CUSTOMER_API_URL
 
 RUN npm run build
 

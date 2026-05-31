@@ -289,19 +289,14 @@
                                                         </td>
                                                         @if (Model.Info.CanAddItems || (Model.Info.CanReceiveGoods && item.RemainingQuantity > 0) || Model.CanAllocateItems || Model.DirectShipAllocationsPerItem.Count > 0 || Model.AllocationsPerItem.Count > 0)
                                                         {
-                                                            var allocationRemaining = allocation.AllocatedQuantity - allocation.ReceivedQuantity;
-                                                            <td class="py-1 text-center">
-                                                                @if (!allocation.IsDirectShip && allocationRemaining > 0)
+                                                            <td class="py-1 text-end">
+                                                                @if (Model.Info.CanReceiveGoods && !allocation.IsDirectShip && allocation.Status != 2 && allocation.Status != 5)
                                                                 {
-                                                                    <button class="btn btn-sm btn-outline-primary py-0 px-2 btnMarkAllocationDirectShip"
-                                                                            type="button"
+                                                                    <button type="button" class="btn btn-outline-primary btn-sm py-0 px-1"
+                                                                            data-bs-toggle="modal" data-bs-target="#markDsModal"
                                                                             data-allocation-id="@allocation.AllocationId"
-                                                                            data-order-code="@allocation.OrderCode"
-                                                                            data-customer-name="@(allocation.CustomerName ?? "")"
-                                                                            data-customer-phone="@(allocation.CustomerPhone ?? "")"
-                                                                            data-shipping-address="@(allocation.ShippingAddress ?? "")">
-                                                                        <i class="bi bi-send"></i>
-                                                                        <span class="visually-hidden ms-1">@L["PurchaseOrder.MarkDirectShip.Action"]</span>
+                                                                            data-order-code="@allocation.OrderCode">
+                                                                        <i class="bi bi-send me-1"></i>Giao thẳng
                                                                     </button>
                                                                 }
                                                             </td>
@@ -813,6 +808,7 @@
                         <input type="hidden" name="OversupplyAction" id="modalOversupplyAction" value="" />
                         <input type="hidden" name="DirectShipOrderId" id="modalDsOrderId" value="" />
                         <input type="hidden" name="DirectShipOrderItemId" id="modalDsOrderItemId" value="" />
+                        <input type="hidden" name="DirectShipExistingAllocationId" id="modalDsExistingAllocationId" value="" />
 
                         <div class="alert alert-info border-0 mb-4">
                             <div class="small fw-bold">
@@ -1246,6 +1242,45 @@
         </div>
         }
 
+    @if (Model.Info.CanReceiveGoods)
+    {
+    <div class="modal fade" id="markDsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-send me-2 text-primary"></i>Chuyển sang Giao thẳng
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Phân bổ cho đơn: <strong id="markDsOrderCode"></strong></p>
+                    <input type="hidden" id="markDsAllocationId" />
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Địa chỉ giao hàng <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="markDsAddress" placeholder="Nhập địa chỉ giao hàng" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="markDsPhone" placeholder="Nhập số điện thoại" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Tên người nhận</label>
+                        <input type="text" class="form-control" id="markDsContactName" placeholder="Nhập tên người nhận (tùy chọn)" />
+                    </div>
+                    <div class="alert alert-danger d-none mt-2" id="markDsError"></div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary" id="btnMarkDsSubmit">
+                        <i class="bi bi-check-lg me-1"></i>Xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+
         @section Styles {
             <style>
                 .po-items-popover-content .popover-body {
@@ -1586,6 +1621,7 @@
                         document.getElementById('modalSellingPriceSection')?.classList.remove('d-none');
                         document.getElementById('modalDsOrderItemId').value = '';
                         document.getElementById('modalDsOrderId').value = '';
+                        document.getElementById('modalDsExistingAllocationId').value = '';
                         document.getElementById('modalDsAddressInput').value = '';
                         document.getElementById('modalDsContactName').value = '';
                         document.getElementById('modalDsContactPhone').value = '';
@@ -1618,6 +1654,7 @@
                             currentDsCustomerName = null;
                             document.getElementById('modalDsOrderItemId').value = '';
                             document.getElementById('modalDsOrderId').value = '';
+                            document.getElementById('modalDsExistingAllocationId').value = '';
                             receiveOriginalPhone = '';
                         }
 						syncWarehouseVisibility();
@@ -1649,49 +1686,85 @@
                     fields.classList.add('d-none');
                     errorBox.classList.add('d-none');
                     try {
-                        const resp = await fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${poItemId}`, { signal });
-                        if (!resp.ok) throw new Error('Lỗi tải dữ liệu');
-                        const data = await resp.json();
+                        const [resp1, resp2] = await Promise.all([
+                            fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${poItemId}`, { signal }),
+                            fetch(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderItemId=${poItemId}`, { signal })
+                        ]);
+                        if (!resp1.ok || !resp2.ok) throw new Error('Lỗi tải dữ liệu');
+                        const [eligible, nonDs] = await Promise.all([resp1.json(), resp2.json()]);
                         loading.classList.add('d-none');
-                        if (!data || !data.length) {
+                        if ((!eligible || !eligible.length) && (!nonDs || !nonDs.length)) {
                             empty.classList.remove('d-none');
                             return;
                         }
                         items.innerHTML = '';
-                        data.forEach(function(order) {
-                            const btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.className = 'list-group-item list-group-item-action py-2 px-3';
-                            btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <span class="fw-semibold">${order.orderCode}</span>
-                                    <span class="text-muted ms-2 small">${order.customerName}</span>
-                                </div>
-                                <span class="badge bg-secondary ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate) + currentUnitMeasurement}</span>
-                            </div>`;
-                            btn.dataset.shippingAddress = order.shippingAddress || '';
-                            btn.dataset.customerPhone = order.customerPhone || '';
-                            btn.dataset.customerName = order.customerName || '';
-                            btn.addEventListener('click', function() {
-                                document.querySelectorAll('#modalDsOrderItems .list-group-item').forEach(el => el.classList.remove('active'));
-                                btn.classList.add('active');
-                                document.getElementById('modalDsOrderId').value = order.orderId;
-                                document.getElementById('modalDsOrderItemId').value = order.orderItemId;
-                                document.getElementById('modalDsSelectedOrder').textContent =
-                                    `Đơn hàng: ${order.orderCode} · Khách: ${order.customerName} · Có thể nhận: ${order.availableToAllocate}`;
-                                document.getElementById('modalDsAddressInput').value = btn.dataset.shippingAddress;
-                                document.getElementById('modalDsContactName').value = btn.dataset.customerName;
-                                document.getElementById('modalDsContactPhone').value = btn.dataset.customerPhone;
-                                receiveOriginalPhone = btn.dataset.customerPhone;
-                                fields.classList.remove('d-none');
-                                currentDsAvailableQty = parseFloat(DecimalFields.stripFormatting(String(order.availableToAllocate), 2)) || 0;
-                                currentDsCustomerName = btn.dataset.customerName || order.orderCode;
-                                syncWarehouseVisibility();
-                                toggleDirectShipCheckbox();
-                                updateDistributionPreview();
+
+                        function selectDsItem(availableQty, shippingAddress, customerName, customerPhone) {
+                            document.querySelectorAll('#modalDsOrderItems .list-group-item-action').forEach(el => el.classList.remove('active'));
+                            document.getElementById('modalDsAddressInput').value = shippingAddress;
+                            document.getElementById('modalDsContactName').value = customerName;
+                            document.getElementById('modalDsContactPhone').value = customerPhone;
+                            receiveOriginalPhone = customerPhone;
+                            fields.classList.remove('d-none');
+                            currentDsAvailableQty = parseFloat(DecimalFields.stripFormatting(String(availableQty), 2)) || 0;
+                            currentDsCustomerName = customerName;
+                            syncWarehouseVisibility();
+                            toggleDirectShipCheckbox();
+                            updateDistributionPreview();
+                        }
+
+                        if (eligible && eligible.length) {
+                            const hdr = document.createElement('div');
+                            hdr.className = 'list-group-item list-group-item-light text-muted small fw-semibold py-1 px-3 border-0';
+                            hdr.textContent = 'Tạo phân bổ mới + Giao thẳng';
+                            items.appendChild(hdr);
+                            eligible.forEach(function(order) {
+                                const btn = document.createElement('button');
+                                btn.type = 'button';
+                                btn.className = 'list-group-item list-group-item-action py-2 px-3';
+                                btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
+                                    <div><span class="fw-semibold">${order.orderCode}</span><span class="text-muted ms-2 small">${order.customerName}</span></div>
+                                    <span class="badge bg-success ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate) + currentUnitMeasurement}</span>
+                                </div>`;
+                                btn.addEventListener('click', function() {
+                                    btn.classList.add('active');
+                                    document.getElementById('modalDsOrderId').value = order.orderId;
+                                    document.getElementById('modalDsOrderItemId').value = order.orderItemId;
+                                    document.getElementById('modalDsExistingAllocationId').value = '';
+                                    document.getElementById('modalDsSelectedOrder').textContent =
+                                        `Đơn hàng: ${order.orderCode} · Khách: ${order.customerName} · Có thể nhận: ${order.availableToAllocate}`;
+                                    selectDsItem(order.availableToAllocate, order.shippingAddress || '', order.customerName || '', order.customerPhone || '');
+                                });
+                                items.appendChild(btn);
                             });
-                            items.appendChild(btn);
-                        });
+                        }
+
+                        if (nonDs && nonDs.length) {
+                            const hdr = document.createElement('div');
+                            hdr.className = 'list-group-item list-group-item-light text-muted small fw-semibold py-1 px-3 border-0';
+                            hdr.textContent = 'Nâng cấp giao thẳng (phân bổ hiện có)';
+                            items.appendChild(hdr);
+                            nonDs.forEach(function(alloc) {
+                                const btn = document.createElement('button');
+                                btn.type = 'button';
+                                btn.className = 'list-group-item list-group-item-action py-2 px-3';
+                                btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
+                                    <div><span class="fw-semibold">${alloc.orderCode}</span><span class="text-muted ms-2 small">${alloc.customerName}</span></div>
+                                    <span class="badge bg-warning text-dark ms-2">Còn ${DecimalFields.formatQuantity(alloc.remainingQty) + currentUnitMeasurement}</span>
+                                </div>`;
+                                btn.addEventListener('click', function() {
+                                    btn.classList.add('active');
+                                    document.getElementById('modalDsExistingAllocationId').value = alloc.allocationId;
+                                    document.getElementById('modalDsOrderId').value = '';
+                                    document.getElementById('modalDsOrderItemId').value = '';
+                                    document.getElementById('modalDsSelectedOrder').textContent =
+                                        `Nâng cấp: ${alloc.orderCode} · Khách: ${alloc.customerName} · Còn: ${alloc.remainingQty}`;
+                                    selectDsItem(alloc.remainingQty, alloc.shippingAddress || '', alloc.customerName || '', alloc.customerPhone || '');
+                                });
+                                items.appendChild(btn);
+                            });
+                        }
+
                         list.classList.remove('d-none');
                     } catch (err) {
                         if (err.name === 'AbortError') return;
@@ -1738,9 +1811,10 @@
                 const dsToggle = document.getElementById('modalDsToggle');
                 if (dsToggle && dsToggle.checked) {
                 const dsOrderItemId = document.getElementById('modalDsOrderItemId').value;
+                const dsExistingAllocationId = document.getElementById('modalDsExistingAllocationId').value;
                 const dsAddress = document.getElementById('modalDsAddressInput').value.trim();
                 const errorBox = document.getElementById('modalDsError');
-                if (!dsOrderItemId) {
+                if (!dsOrderItemId && !dsExistingAllocationId) {
                     e.preventDefault();
                     errorBox.textContent = 'Vui lòng chọn đơn hàng để giao thẳng.';
                     errorBox.classList.remove('d-none');
@@ -2296,5 +2370,58 @@
                 });
             });
         </script>
+
+    @if (Model.Info.CanReceiveGoods)
+    {
+        <script>
+            (function () {
+                const markDsModal = document.getElementById('markDsModal');
+                if (!markDsModal) return;
+                markDsModal.addEventListener('show.bs.modal', function (e) {
+                    const btn = e.relatedTarget;
+                    document.getElementById('markDsAllocationId').value = btn.dataset.allocationId;
+                    document.getElementById('markDsOrderCode').textContent = btn.dataset.orderCode;
+                    document.getElementById('markDsAddress').value = '';
+                    document.getElementById('markDsPhone').value = '';
+                    document.getElementById('markDsContactName').value = '';
+                    document.getElementById('markDsError').classList.add('d-none');
+                });
+
+                document.getElementById('btnMarkDsSubmit')?.addEventListener('click', async function () {
+                    const allocationId = document.getElementById('markDsAllocationId').value;
+                    const address = document.getElementById('markDsAddress').value.trim();
+                    const phone = document.getElementById('markDsPhone').value.trim();
+                    const contactName = document.getElementById('markDsContactName').value.trim();
+                    const errEl = document.getElementById('markDsError');
+                    errEl.classList.add('d-none');
+
+                    if (!address) { errEl.textContent = 'Vui lòng nhập địa chỉ giao hàng.'; errEl.classList.remove('d-none'); return; }
+                    if (!phone) { errEl.textContent = 'Vui lòng nhập số điện thoại.'; errEl.classList.remove('d-none'); return; }
+
+                    const btn = this;
+                    btn.disabled = true;
+                    try {
+                        const resp = await fetch('/DirectShipDelivery/MarkAsDirectShip', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
+                            body: JSON.stringify({ allocationId, address, contactName, contactPhone: phone })
+                        });
+                        const data = await resp.json();
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            errEl.textContent = data.message || 'Có lỗi xảy ra.';
+                            errEl.classList.remove('d-none');
+                        }
+                    } catch {
+                        errEl.textContent = 'Có lỗi xảy ra.';
+                        errEl.classList.remove('d-none');
+                    } finally {
+                        btn.disabled = false;
+                    }
+                });
+            })();
+        </script>
     }
-        }
+    }
+}

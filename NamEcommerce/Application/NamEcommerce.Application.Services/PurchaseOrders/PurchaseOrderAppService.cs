@@ -785,6 +785,32 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         }).ToList();
     }
 
+    public async Task<IList<NonDirectShipAllocationForPoItemAppDto>> GetNonDirectShipAllocationsForPoItemAsync(Guid purchaseOrderItemId)
+    {
+        var domainDtos = await _purchaseOrderAllocationManager.GetNonDirectShipAllocationsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+        return domainDtos.Select(d => new NonDirectShipAllocationForPoItemAppDto
+        {
+            AllocationId = d.AllocationId,
+            OrderId = d.OrderId,
+            OrderItemId = d.OrderItemId,
+            OrderCode = d.OrderCode,
+            CustomerName = d.CustomerName,
+            CustomerPhone = d.CustomerPhone,
+            ShippingAddress = d.ShippingAddress,
+            AllocatedQuantity = d.AllocatedQuantity,
+            RemainingQuantity = d.RemainingQuantity
+        }).ToList();
+    }
+
+    public Task<decimal> GetAllocationRemainingQuantityAsync(Guid allocationId)
+    {
+        var allocation = _purchaseOrderItemAllocationDataReader.DataSource
+            .FirstOrDefault(a => a.Id == allocationId);
+        if (allocation is null)
+            return Task.FromResult(0m);
+        return Task.FromResult(Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
+    }
+
     public Task<IList<PurchaseOrderItemAllocationForPoItemAppDto>> GetAllocationsForPurchaseOrderItemsAsync(IReadOnlyList<Guid> purchaseOrderItemIds)
     {
         if (purchaseOrderItemIds.Count == 0)
