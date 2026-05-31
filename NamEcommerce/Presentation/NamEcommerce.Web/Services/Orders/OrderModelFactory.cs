@@ -4,16 +4,19 @@ using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Finance;
 using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
+using NamEcommerce.Application.Contracts.Dtos.Returns;
 using NamEcommerce.Application.Contracts.Finance;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
-using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
+using NamEcommerce.Application.Contracts.Returns;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Finance;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
+using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
@@ -33,29 +36,32 @@ public sealed class OrderModelFactory : IOrderModelFactory
     private readonly IMediator _mediator;
     private readonly IDeliveryNoteAppService _deliveryNoteAppService;
     private readonly IDirectShipAppService _directShipAppService;
-    private readonly IWarehouseAppService _warehouseAppService;
     private readonly ICustomerDebtAppService _customerDebtAppService;
     private readonly IExpenseAppService _expenseAppService;
     private readonly IGoodsReceiptAppService _goodsReceiptAppService;
+    private readonly ICustomerReturnAppService _customerReturnAppService;
+    private readonly IPictureAppService _pictureAppService;
 
     public OrderModelFactory(
         AppConfig appConfig,
         IMediator mediator,
         IDeliveryNoteAppService deliveryNoteAppService,
         IDirectShipAppService directShipAppService,
-        IWarehouseAppService warehouseAppService,
         ICustomerDebtAppService customerDebtAppService,
         IExpenseAppService expenseAppService,
-        IGoodsReceiptAppService goodsReceiptAppService)
+        IGoodsReceiptAppService goodsReceiptAppService,
+        ICustomerReturnAppService customerReturnAppService,
+        IPictureAppService pictureAppService)
     {
         _appConfig = appConfig;
         _mediator = mediator;
         _deliveryNoteAppService = deliveryNoteAppService;
         _directShipAppService = directShipAppService;
-        _warehouseAppService = warehouseAppService;
         _customerDebtAppService = customerDebtAppService;
         _expenseAppService = expenseAppService;
         _goodsReceiptAppService = goodsReceiptAppService;
+        _customerReturnAppService = customerReturnAppService;
+        _pictureAppService = pictureAppService;
     }
 
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
@@ -150,8 +156,6 @@ public sealed class OrderModelFactory : IOrderModelFactory
         var deliveryNotes = await _deliveryNoteAppService.GetByOrderIdAsync(orderId).ConfigureAwait(false);
         foreach (var dn in deliveryNotes)
         {
-            if (dn.Status == (int)DeliveryNoteStatus.Cancelled)
-                continue;
             var dnModel = new OrderDetailsModel.DeliveryNoteBasicModel
             {
                 Id = dn.Id,
@@ -159,9 +163,21 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 Status = dn.Status,
                 SourceType = dn.SourceType,
                 IsDirectShip = dn.IsDirectShip,
+                DeliveryConfirmationStatus = dn.DeliveryConfirmationStatus,
+                WarehouseId = dn.WarehouseId,
                 WarehouseName = dn.WarehouseName,
                 CreatedOn = dn.CreatedOnUtc.ToLocalTime(),
-                DeliveredOn = dn.DeliveredOnUtc?.ToLocalTime()
+                UpdatedOn = dn.UpdatedOnUtc?.ToLocalTime(),
+                DeliveredOn = dn.DeliveredOnUtc?.ToLocalTime(),
+                ConfirmedAt = dn.ConfirmedAtUtc?.ToLocalTime(),
+                ConfirmedNote = dn.ConfirmedNote,
+                DeliveryProofPictureId = dn.DeliveryProofPictureId,
+                DeliveryReceiverName = dn.DeliveryReceiverName,
+                Note = dn.Note,
+                TotalAmount = dn.TotalAmount,
+                Surcharge = dn.Surcharge,
+                SurchargeReason = dn.SurchargeReason,
+                AmountToCollect = dn.AmountToCollect
             };
 
             var returnedQuantities = await _mediator.Send(new GetReturnedQuantitiesByDeliveryNoteQuery
@@ -188,6 +204,9 @@ public sealed class OrderModelFactory : IOrderModelFactory
 
             model.DeliveryNotes.Add(dnModel);
         }
+
+        await PrepareDeliveryProofPicturesAsync(model).ConfigureAwait(false);
+        model.CustomerReturns = await GetCustomerReturnsForDeliveryNotesAsync(model.DeliveryNotes).ConfigureAwait(false);
 
         model.ShortageInfo = await _mediator.Send(new GetOrderShortageInfoQuery
         {
@@ -231,7 +250,15 @@ public sealed class OrderModelFactory : IOrderModelFactory
         model.FullyReceivedDirectShipCount = model.DirectShipAllocations.Count(a =>
             a.ReceivedQuantity > 0 &&
             (!a.DeliveryStatus.HasValue || a.DeliveryStatus == (int)DeliveryNoteStatus.Confirmed));
-        model.ReturnWarehouseOptions = await GetReturnWarehouseOptionsAsync().ConfigureAwait(false);
+        model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        model.ReturnWarehouseOptions = model.AvailableWarehouses
+            .OrderBy(warehouse => warehouse.Name)
+            .Select(warehouse => new OrderDetailsModel.ReturnWarehouseOptionModel
+            {
+                Id = warehouse.Id,
+                Name = warehouse.Name
+            })
+            .ToList();
         await PrepareWorkflowAsync(model).ConfigureAwait(false);
 
         return model;
@@ -256,15 +283,69 @@ public sealed class OrderModelFactory : IOrderModelFactory
         return model;
     }
 
-    private async Task<IList<OrderDetailsModel.ReturnWarehouseOptionModel>> GetReturnWarehouseOptionsAsync()
+    private async Task PrepareDeliveryProofPicturesAsync(OrderDetailsModel model)
     {
-        var warehouses = await _warehouseAppService.GetWarehousesAsync(0, int.MaxValue).ConfigureAwait(false);
-        return warehouses
-            .OrderBy(w => w.Name)
-            .Select(w => new OrderDetailsModel.ReturnWarehouseOptionModel
+        foreach (var deliveryNote in model.DeliveryNotes.Where(note => note.DeliveryProofPictureId.HasValue))
+        {
+            var picture = await _pictureAppService
+                .GetBase64PictureByIdAsync(deliveryNote.DeliveryProofPictureId!.Value)
+                .ConfigureAwait(false);
+            deliveryNote.DeliveryProofPictureUrl = picture?.Base64Value;
+        }
+    }
+
+    private async Task<IList<OrderDetailsModel.CustomerReturnProgressModel>> GetCustomerReturnsForDeliveryNotesAsync(
+        IEnumerable<OrderDetailsModel.DeliveryNoteBasicModel> deliveryNotes)
+    {
+        var deliveryNoteIds = deliveryNotes.Select(note => note.Id).Distinct().ToList();
+        if (deliveryNoteIds.Count == 0)
+            return [];
+
+        var returns = new List<CustomerReturnAppDto>();
+        foreach (var deliveryNoteId in deliveryNoteIds)
+        {
+            var (_, items) = await _customerReturnAppService.GetListAsync(
+                customerId: null,
+                deliveryNoteId: deliveryNoteId,
+                status: null,
+                pageIndex: 0,
+                pageSize: int.MaxValue).ConfigureAwait(false);
+            returns.AddRange(items);
+        }
+
+        return returns
+            .GroupBy(customerReturn => customerReturn.Id)
+            .Select(group => group.First())
+            .OrderBy(customerReturn => customerReturn.ReturnDate)
+            .Select(customerReturn => new OrderDetailsModel.CustomerReturnProgressModel
             {
-                Id = w.Id,
-                Name = w.Name
+                Id = customerReturn.Id,
+                Code = customerReturn.Code,
+                DeliveryNoteId = customerReturn.DeliveryNoteId,
+                DeliveryNoteCode = customerReturn.DeliveryNoteCode,
+                Status = customerReturn.Status,
+                StatusText = GetCustomerReturnStatusText((CustomerReturnStatus)customerReturn.Status),
+                StatusClass = GetCustomerReturnStatusClass((CustomerReturnStatus)customerReturn.Status),
+                ReturnDate = customerReturn.ReturnDate.ToLocalTime(),
+                ConfirmedOn = customerReturn.ConfirmedOnUtc?.ToLocalTime(),
+                CreatedOn = customerReturn.CreatedOnUtc.ToLocalTime(),
+                UpdatedOn = customerReturn.UpdatedOnUtc?.ToLocalTime(),
+                AdditionalCost = customerReturn.AdditionalCost,
+                GrossRefundAmount = customerReturn.Items.Sum(item => item.AcceptedTotal),
+                NetRefundAmount = customerReturn.NetRefundAmount,
+                CompensateInNextDelivery = customerReturn.CompensateInNextDelivery,
+                CompensatedQuantity = customerReturn.CompensateInNextDelivery
+                    ? customerReturn.Items.Sum(item => item.AcceptedQuantity)
+                    : 0m,
+                Note = customerReturn.Note,
+                Items = customerReturn.Items.Select(item => new OrderDetailsModel.CustomerReturnItemProgressModel
+                {
+                    ProductName = item.ProductName,
+                    RequestedQuantity = item.RequestedQuantity,
+                    AcceptedQuantity = item.AcceptedQuantity,
+                    ReturnUnitPrice = item.ReturnUnitPrice,
+                    AcceptedTotal = item.AcceptedTotal
+                }).ToList()
             })
             .ToList();
     }
@@ -418,6 +499,9 @@ public sealed class OrderModelFactory : IOrderModelFactory
         var validNotes = model.DeliveryNotes
             .Where(deliveryNote => deliveryNote.Status != (int)DeliveryNoteStatus.Cancelled)
             .ToList();
+        var issuedNotes = validNotes
+            .Where(deliveryNote => deliveryNote.Status != (int)DeliveryNoteStatus.Draft)
+            .ToList();
         var purchaseRows = BuildPreparationPurchaseOrderRows(model);
 
         return new OrderDetailsModel.PreparationModel
@@ -439,7 +523,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     OrderedQuantity = item.Quantity,
                     AvailableQuantity = Math.Max(0, item.ProductAvailableQty ?? shortageItem?.AvailableQuantity ?? 0),
                     ShortageQuantity = shortageItem?.ShortageQuantity ?? 0,
-                    IssuedQuantity = item.GetDeliveredQuantity(validNotes),
+                    IssuedQuantity = item.GetDeliveredQuantity(issuedNotes),
                     DeliveredQuantity = item.GetDeliveredToCustomerQuantity(validNotes),
                     CompensatedReturnQuantity = item.GetCompensatedReturnQuantity(validNotes),
                     DirectShipQuantity = directShipAllocations.Sum(allocation => allocation.AllocatedQuantity),
@@ -483,28 +567,69 @@ public sealed class OrderModelFactory : IOrderModelFactory
         OrderDetailsModel model,
         OrderDetailsModel.OrderDeliverySummaryStatus deliveryStatus)
     {
+        var validNotes = model.DeliveryNotes
+            .Where(deliveryNote => deliveryNote.Status != (int)DeliveryNoteStatus.Cancelled)
+            .ToList();
+        var issuedNotes = validNotes
+            .Where(deliveryNote => deliveryNote.Status != (int)DeliveryNoteStatus.Draft)
+            .ToList();
+
         return new OrderDetailsModel.DeliveryWorkflowModel
         {
             Status = deliveryStatus,
             StatusText = GetDeliverySummaryText(deliveryStatus),
             StatusClass = GetDeliverySummaryClass(deliveryStatus),
+            Items = model.Items.Select(item =>
+            {
+                var shortageItem = model.ShortageInfo.Items.FirstOrDefault(shortage => shortage.OrderItemId == item.Id);
+                var directShipAllocations = model.DirectShipAllocations
+                    .Where(allocation => allocation.OrderItemId == item.Id)
+                    .ToList();
+
+                return new OrderDetailsModel.DeliveryItemProgressModel
+                {
+                    OrderItemId = item.Id,
+                    ProductName = item.ProductName ?? string.Empty,
+                    OrderedQuantity = item.Quantity,
+                    AvailableQuantity = Math.Max(0, item.ProductAvailableQty ?? shortageItem?.AvailableQuantity ?? 0),
+                    IssuedQuantity = item.GetDeliveredQuantity(issuedNotes),
+                    DeliveredQuantity = item.GetDeliveredToCustomerQuantity(validNotes),
+                    DirectShipQuantity = directShipAllocations.Sum(allocation => allocation.AllocatedQuantity),
+                    DirectShipReceivedQuantity = directShipAllocations.Sum(allocation => allocation.ReceivedQuantity),
+                    DirectShipStatusText = GetDirectShipStatusText(directShipAllocations)
+                };
+            }).ToList(),
             Notes = model.DeliveryNotes
                 .OrderBy(deliveryNote => deliveryNote.CreatedOn)
                 .Select(deliveryNote => new OrderDetailsModel.DeliveryProgressModel
                 {
                     DeliveryNoteId = deliveryNote.Id,
                     Code = deliveryNote.Code,
+                    Status = deliveryNote.Status,
                     StatusText = GetDeliveryNoteStatusText((DeliveryNoteStatus)deliveryNote.Status),
                     StatusClass = GetDeliveryNoteStatusClass((DeliveryNoteStatus)deliveryNote.Status),
                     IsDirectShip = deliveryNote.IsDirectShip,
+                    DeliveryConfirmationStatus = deliveryNote.DeliveryConfirmationStatus,
+                    WarehouseId = deliveryNote.WarehouseId,
                     WarehouseName = deliveryNote.WarehouseName,
+                    Note = deliveryNote.Note,
                     CreatedOn = deliveryNote.CreatedOn,
+                    UpdatedOn = deliveryNote.UpdatedOn,
                     DeliveredOn = deliveryNote.DeliveredOn,
+                    ConfirmedAt = deliveryNote.ConfirmedAt,
+                    ConfirmedNote = deliveryNote.ConfirmedNote,
+                    DeliveryProofPictureUrl = deliveryNote.DeliveryProofPictureUrl,
+                    DeliveryReceiverName = deliveryNote.DeliveryReceiverName,
                     TotalQuantity = deliveryNote.Items.Sum(item => item.Quantity),
                     CompensatedReturnQuantity = deliveryNote.Items.Sum(item => item.CompensatedReturnQuantity),
-                    TotalAmount = deliveryNote.Items.Sum(item => item.SubTotal)
+                    TotalAmount = deliveryNote.TotalAmount,
+                    Surcharge = deliveryNote.Surcharge,
+                    SurchargeReason = deliveryNote.SurchargeReason,
+                    AmountToCollect = deliveryNote.AmountToCollect,
+                    Items = deliveryNote.Items
                 })
-                .ToList()
+                .ToList(),
+            Returns = model.CustomerReturns
         };
     }
 
@@ -564,17 +689,44 @@ public sealed class OrderModelFactory : IOrderModelFactory
             .Sum(info => info.deliveredQty * info.UnitPrice);
         var totalCost = costRows.Sum(row => row.TotalCost ?? 0);
         var totalExpenses = expenseRows.Sum(row => row.Amount);
+        var confirmedReturns = model.CustomerReturns
+            .Where(customerReturn => customerReturn.Status == (int)CustomerReturnStatus.Confirmed)
+            .OrderBy(customerReturn => customerReturn.ReturnDate)
+            .ToList();
+        var returnRows = confirmedReturns
+            .Select(customerReturn => new OrderDetailsModel.SettlementReturnModel
+            {
+                Id = customerReturn.Id,
+                Code = customerReturn.Code,
+                DeliveryNoteCode = customerReturn.DeliveryNoteCode,
+                StatusText = customerReturn.StatusText,
+                StatusClass = customerReturn.StatusClass,
+                GrossRefundAmount = customerReturn.GrossRefundAmount,
+                AdditionalCost = customerReturn.AdditionalCost,
+                NetRefundAmount = customerReturn.NetRefundAmount,
+                CompensatedQuantity = customerReturn.CompensatedQuantity,
+                ReturnDate = customerReturn.ReturnDate
+            })
+            .ToList();
+        var returnGrossAmount = returnRows.Sum(row => row.GrossRefundAmount);
+        var returnAdditionalCost = returnRows.Sum(row => row.AdditionalCost);
+        var returnNetRefundAmount = returnRows.Sum(row => row.NetRefundAmount);
 
         return new OrderDetailsModel.SettlementModel
         {
             Revenue = revenue,
             TotalCost = totalCost,
             TotalExpenses = totalExpenses,
-            Profit = revenue - totalCost - totalExpenses,
+            ReturnGrossAmount = returnGrossAmount,
+            ReturnAdditionalCost = returnAdditionalCost,
+            ReturnNetRefundAmount = returnNetRefundAmount,
+            ReturnCompensatedQuantity = returnRows.Sum(row => row.CompensatedQuantity),
+            Profit = revenue - totalCost - totalExpenses - returnNetRefundAmount - returnAdditionalCost,
             IsProfitFinal = costRows.Count > 0 && costRows.All(row => row.UnitCost.HasValue),
             Debts = debtRows,
             Expenses = expenseRows,
-            Costs = costRows
+            Costs = costRows,
+            Returns = returnRows
         };
     }
 
@@ -630,25 +782,106 @@ public sealed class OrderModelFactory : IOrderModelFactory
 
         foreach (var deliveryNote in model.DeliveryNotes)
         {
+            var status = (DeliveryNoteStatus)deliveryNote.Status;
             timeline.Add(new OrderDetailsModel.TimelineEventModel
             {
                 OccurredOn = deliveryNote.CreatedOn,
                 Title = "Tạo phiếu giao",
-                Description = $"{deliveryNote.Code} - {GetDeliveryNoteStatusText((DeliveryNoteStatus)deliveryNote.Status)}",
+                Description = $"{deliveryNote.Code} - {GetDeliveryNoteStatusText(status)}",
                 Icon = "bi-truck",
-                Tone = GetDeliveryNoteStatusClass((DeliveryNoteStatus)deliveryNote.Status),
+                Tone = GetDeliveryNoteStatusClass(status),
                 Stage = OrderDetailsModel.WorkflowStage.Delivery
             });
+
+            if (status == DeliveryNoteStatus.Confirmed)
+            {
+                timeline.Add(new OrderDetailsModel.TimelineEventModel
+                {
+                    OccurredOn = deliveryNote.UpdatedOn ?? deliveryNote.CreatedOn,
+                    Title = "Xác nhận xuất hàng",
+                    Description = deliveryNote.Code,
+                    Icon = "bi-check-all",
+                    Tone = "info",
+                    Stage = OrderDetailsModel.WorkflowStage.Delivery
+                });
+            }
+            else if (status == DeliveryNoteStatus.Delivering)
+            {
+                timeline.Add(new OrderDetailsModel.TimelineEventModel
+                {
+                    OccurredOn = deliveryNote.UpdatedOn ?? deliveryNote.CreatedOn,
+                    Title = "Đang giao",
+                    Description = deliveryNote.Code,
+                    Icon = "bi-truck",
+                    Tone = "warning",
+                    Stage = OrderDetailsModel.WorkflowStage.Delivery
+                });
+            }
+            else if (status == DeliveryNoteStatus.Cancelled)
+            {
+                var isRejected = deliveryNote.DeliveryConfirmationStatus == (int)DeliveryConfirmationStatus.Rejected;
+                timeline.Add(new OrderDetailsModel.TimelineEventModel
+                {
+                    OccurredOn = deliveryNote.UpdatedOn ?? deliveryNote.CreatedOn,
+                    Title = isRejected ? "Khách từ chối nhận hàng" : "Hủy phiếu giao",
+                    Description = string.IsNullOrWhiteSpace(deliveryNote.ConfirmedNote)
+                        ? deliveryNote.Code
+                        : $"{deliveryNote.Code} - {deliveryNote.ConfirmedNote}",
+                    Icon = isRejected ? "bi-person-fill-x" : "bi-x-circle",
+                    Tone = "danger",
+                    Stage = OrderDetailsModel.WorkflowStage.Delivery
+                });
+            }
 
             if (deliveryNote.DeliveredOn.HasValue)
             {
                 timeline.Add(new OrderDetailsModel.TimelineEventModel
                 {
                     OccurredOn = deliveryNote.DeliveredOn.Value,
-                    Title = "Giao xong",
-                    Description = deliveryNote.Code,
+                    Title = "Xác nhận đã giao",
+                    Description = string.IsNullOrWhiteSpace(deliveryNote.DeliveryReceiverName)
+                        ? deliveryNote.Code
+                        : $"{deliveryNote.Code} - {deliveryNote.DeliveryReceiverName}",
                     Icon = "bi-check-circle",
                     Tone = "success",
+                    Stage = OrderDetailsModel.WorkflowStage.Delivery
+                });
+            }
+        }
+
+        foreach (var customerReturn in model.CustomerReturns)
+        {
+            timeline.Add(new OrderDetailsModel.TimelineEventModel
+            {
+                OccurredOn = customerReturn.ReturnDate,
+                Title = "Khách trả hàng",
+                Description = $"{customerReturn.Code} - {customerReturn.DeliveryNoteCode} - {customerReturn.StatusText}",
+                Icon = "bi-arrow-return-left",
+                Tone = customerReturn.StatusClass,
+                Stage = OrderDetailsModel.WorkflowStage.Delivery
+            });
+
+            if (customerReturn.ConfirmedOn.HasValue)
+            {
+                timeline.Add(new OrderDetailsModel.TimelineEventModel
+                {
+                    OccurredOn = customerReturn.ConfirmedOn.Value,
+                    Title = "Xác nhận phiếu trả",
+                    Description = $"{customerReturn.Code} - hoàn {customerReturn.NetRefundAmount.DisplayCurrencyWithSymbol()}",
+                    Icon = "bi-clipboard2-check",
+                    Tone = "success",
+                    Stage = OrderDetailsModel.WorkflowStage.Settlement
+                });
+            }
+            else if (customerReturn.Status == (int)CustomerReturnStatus.Cancelled)
+            {
+                timeline.Add(new OrderDetailsModel.TimelineEventModel
+                {
+                    OccurredOn = customerReturn.UpdatedOn ?? customerReturn.ReturnDate,
+                    Title = "Hủy phiếu trả",
+                    Description = customerReturn.Code,
+                    Icon = "bi-x-circle",
+                    Tone = "danger",
                     Stage = OrderDetailsModel.WorkflowStage.Delivery
                 });
             }
@@ -749,6 +982,26 @@ public sealed class OrderModelFactory : IOrderModelFactory
             DeliveryNoteStatus.Delivering => "warning",
             DeliveryNoteStatus.Delivered => "success",
             DeliveryNoteStatus.Cancelled => "danger",
+            _ => "secondary"
+        };
+
+    private static string GetCustomerReturnStatusText(CustomerReturnStatus status)
+        => status switch
+        {
+            CustomerReturnStatus.Draft => "Bản nháp",
+            CustomerReturnStatus.Inspecting => "Đang kiểm hàng",
+            CustomerReturnStatus.Confirmed => "Đã xác nhận",
+            CustomerReturnStatus.Cancelled => "Đã hủy",
+            _ => status.ToString()
+        };
+
+    private static string GetCustomerReturnStatusClass(CustomerReturnStatus status)
+        => status switch
+        {
+            CustomerReturnStatus.Draft => "secondary",
+            CustomerReturnStatus.Inspecting => "warning",
+            CustomerReturnStatus.Confirmed => "success",
+            CustomerReturnStatus.Cancelled => "danger",
             _ => "secondary"
         };
 

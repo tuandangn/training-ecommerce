@@ -2186,6 +2186,50 @@ body {
     color: var(--gray-500);
 }
 
+.delivery-quick-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+    white-space: nowrap;
+}
+
+.order-delivery-note-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.order-delivery-note-grid > div,
+.delivery-return-item {
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: var(--gray-50);
+    padding: 0.75rem;
+    min-width: 0;
+}
+
+.order-delivery-note-grid span,
+.order-delivery-note-grid small {
+    display: block;
+    color: var(--gray-500);
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+.order-delivery-note-grid strong {
+    display: block;
+    color: var(--gray-900);
+    font-size: 0.9rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.delivery-return-stack {
+    display: grid;
+    gap: 0.65rem;
+}
+
 .workflow-timeline-item.primary .workflow-timeline-icon {
     background: var(--primary-light);
     color: var(--primary);
@@ -2243,7 +2287,8 @@ body {
 @media (max-width: 991.98px) {
     .order-workflow-layout,
     .order-workflow-info-grid,
-    .workflow-metric-grid {
+    .workflow-metric-grid,
+    .order-delivery-note-grid {
         grid-template-columns: 1fr;
     }
 
