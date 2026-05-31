@@ -256,7 +256,8 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             DirectShipOrderItemId = model.DirectShipOrderItemId,
             DirectShipAddress = model.DirectShipAddress,
             DirectShipContactName = model.DirectShipContactName,
-            DirectShipContactPhone = model.DirectShipContactPhone
+            DirectShipContactPhone = model.DirectShipContactPhone,
+            DirectShipExistingAllocationId = model.DirectShipExistingAllocationId
         });
 
         if (!result.Success)
@@ -297,7 +298,8 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 DirectShipOrderItemId = line.DirectShipOrderItemId,
                 DirectShipAddress = line.DirectShipAddress,
                 DirectShipContactName = line.DirectShipContactName,
-                DirectShipContactPhone = line.DirectShipContactPhone
+                DirectShipContactPhone = line.DirectShipContactPhone,
+                DirectShipExistingAllocationId = line.DirectShipExistingAllocationId
             })
             .ToList();
 

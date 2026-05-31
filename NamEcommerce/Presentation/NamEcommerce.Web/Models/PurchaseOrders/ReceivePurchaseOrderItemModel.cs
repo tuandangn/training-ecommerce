@@ -48,4 +48,6 @@ public sealed class ReceivePurchaseOrderItemModel
     public string? DirectShipAddress { get; set; }
     public string? DirectShipContactName { get; set; }
     public string? DirectShipContactPhone { get; set; }
+    // Optional upgrade: if set, upgrades an existing non-DS allocation to DS
+    public Guid? DirectShipExistingAllocationId { get; set; }
 }
