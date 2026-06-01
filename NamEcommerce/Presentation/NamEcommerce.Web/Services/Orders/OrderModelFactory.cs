@@ -4,9 +4,11 @@ using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Finance;
 using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
+using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Finance;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
 using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -37,6 +39,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
     private readonly ICustomerDebtAppService _customerDebtAppService;
     private readonly IExpenseAppService _expenseAppService;
     private readonly IGoodsReceiptAppService _goodsReceiptAppService;
+    private readonly IOrderAuditAppService _orderAuditAppService;
 
     public OrderModelFactory(
         AppConfig appConfig,
@@ -46,7 +49,8 @@ public sealed class OrderModelFactory : IOrderModelFactory
         IWarehouseAppService warehouseAppService,
         ICustomerDebtAppService customerDebtAppService,
         IExpenseAppService expenseAppService,
-        IGoodsReceiptAppService goodsReceiptAppService)
+        IGoodsReceiptAppService goodsReceiptAppService,
+        IOrderAuditAppService orderAuditAppService)
     {
         _appConfig = appConfig;
         _mediator = mediator;
@@ -56,6 +60,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
         _customerDebtAppService = customerDebtAppService;
         _expenseAppService = expenseAppService;
         _goodsReceiptAppService = goodsReceiptAppService;
+        _orderAuditAppService = orderAuditAppService;
     }
 
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
@@ -277,13 +282,14 @@ public sealed class OrderModelFactory : IOrderModelFactory
         var customerDebts = await _customerDebtAppService.GetDebtsByCustomerIdAsync(model.CustomerId).ConfigureAwait(false);
         var orderDebts = customerDebts?.Debts.Where(debt => debt.OrderId == model.Id).ToList() ?? [];
         var expenses = await _expenseAppService.GetExpensesByOrderIdAsync(model.Id).ConfigureAwait(false);
+        var itemChangeAudits = await _orderAuditAppService.GetOrderItemChangeAuditsAsync(model.Id).ConfigureAwait(false);
 
         model.CanCompleteOrder = model.CanCompleteOrder && deliveryStatus == OrderDetailsModel.OrderDeliverySummaryStatus.Delivered;
         model.Workflow = BuildWorkflow(model, deliveryStatus, activeStage);
         model.Preparation = BuildPreparation(model);
         model.DeliveryWorkflow = BuildDeliveryWorkflow(model, deliveryStatus);
         model.Settlement = BuildSettlement(model, orderDebts, expenses);
-        model.Timeline = BuildTimeline(model, relatedReceipts, orderDebts);
+        model.Timeline = BuildTimeline(model, relatedReceipts, orderDebts, itemChangeAudits);
     }
 
     private async Task<IDictionary<Guid, IList<GoodsReceiptAppDto>>> GetRelatedGoodsReceiptsAsync(OrderDetailsModel model)
@@ -502,7 +508,8 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     DeliveredOn = deliveryNote.DeliveredOn,
                     TotalQuantity = deliveryNote.Items.Sum(item => item.Quantity),
                     CompensatedReturnQuantity = deliveryNote.Items.Sum(item => item.CompensatedReturnQuantity),
-                    TotalAmount = deliveryNote.Items.Sum(item => item.SubTotal)
+                    ReturnedQuantity = deliveryNote.Items.Sum(item =>
+                        item.ConfirmedReturnQuantity + item.PendingReturnQuantity + item.CompensatedReturnQuantity)
                 })
                 .ToList()
         };
@@ -581,7 +588,8 @@ public sealed class OrderModelFactory : IOrderModelFactory
     private static IList<OrderDetailsModel.TimelineEventModel> BuildTimeline(
         OrderDetailsModel model,
         IDictionary<Guid, IList<GoodsReceiptAppDto>> relatedReceipts,
-        IEnumerable<CustomerDebtAppDto> debts)
+        IEnumerable<CustomerDebtAppDto> debts,
+        IEnumerable<OrderItemChangeAuditAppDto> itemChangeAudits)
     {
         var timeline = new List<OrderDetailsModel.TimelineEventModel>
         {
@@ -595,6 +603,19 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 Stage = OrderDetailsModel.WorkflowStage.Order
             }
         };
+
+        foreach (var audit in itemChangeAudits)
+        {
+            timeline.Add(new OrderDetailsModel.TimelineEventModel
+            {
+                OccurredOn = audit.CreatedOnUtc.ToLocalTime(),
+                Title = GetOrderItemChangeTitle(audit),
+                Description = GetOrderItemChangeDescription(audit),
+                Icon = GetOrderItemChangeIcon(audit),
+                Tone = GetOrderItemChangeTone(audit),
+                Stage = OrderDetailsModel.WorkflowStage.Order
+            });
+        }
 
         if (model.AllocatedPurchaseOrders?.Items.Count > 0)
         {
@@ -709,6 +730,65 @@ public sealed class OrderModelFactory : IOrderModelFactory
             .OrderBy(item => item.OccurredOn)
             .ToList();
     }
+
+    private static string GetOrderItemChangeTitle(OrderItemChangeAuditAppDto audit)
+        => (OrderItemChangeAuditAction)audit.Action switch
+        {
+            OrderItemChangeAuditAction.Added => "Thêm hàng hóa",
+            OrderItemChangeAuditAction.Updated => "Sửa hàng hóa",
+            OrderItemChangeAuditAction.Removed => "Bớt hàng hóa",
+            _ => "Cập nhật hàng hóa"
+        };
+
+    private static string GetOrderItemChangeDescription(OrderItemChangeAuditAppDto audit)
+    {
+        var productName = string.IsNullOrWhiteSpace(audit.ProductName) ? "Hàng hóa" : audit.ProductName;
+        return (OrderItemChangeAuditAction)audit.Action switch
+        {
+            OrderItemChangeAuditAction.Added =>
+                $"{productName} - thêm {FormatQuantity(audit.NewQuantity)}, đơn giá {FormatCurrency(audit.NewUnitPrice)}",
+            OrderItemChangeAuditAction.Updated =>
+                $"{productName} - {GetUpdatedOrderItemChangeText(audit)}",
+            OrderItemChangeAuditAction.Removed =>
+                $"{productName} - bớt {FormatQuantity(audit.OldQuantity)}, đơn giá {FormatCurrency(audit.OldUnitPrice)}",
+            _ => productName
+        };
+    }
+
+    private static string GetUpdatedOrderItemChangeText(OrderItemChangeAuditAppDto audit)
+    {
+        var changes = new List<string>();
+        if (audit.OldQuantity != audit.NewQuantity)
+            changes.Add($"SL {FormatQuantity(audit.OldQuantity)} -> {FormatQuantity(audit.NewQuantity)}");
+        if (audit.OldUnitPrice != audit.NewUnitPrice)
+            changes.Add($"Giá {FormatCurrency(audit.OldUnitPrice)} -> {FormatCurrency(audit.NewUnitPrice)}");
+
+        return changes.Count == 0 ? "không đổi số lượng/đơn giá" : string.Join(", ", changes);
+    }
+
+    private static string GetOrderItemChangeIcon(OrderItemChangeAuditAppDto audit)
+        => (OrderItemChangeAuditAction)audit.Action switch
+        {
+            OrderItemChangeAuditAction.Added => "bi-plus-circle",
+            OrderItemChangeAuditAction.Updated => "bi-pencil-square",
+            OrderItemChangeAuditAction.Removed => "bi-dash-circle",
+            _ => "bi-pencil"
+        };
+
+    private static string GetOrderItemChangeTone(OrderItemChangeAuditAppDto audit)
+        => (OrderItemChangeAuditAction)audit.Action switch
+        {
+            OrderItemChangeAuditAction.Added => "success",
+            OrderItemChangeAuditAction.Updated => "warning",
+            OrderItemChangeAuditAction.Removed => "danger",
+            _ => "secondary"
+        };
+
+    private static string FormatQuantity(decimal? value)
+        => value.HasValue ? value.Value.DisplayQuantity() : "-";
+
+    private static string FormatCurrency(decimal? value)
+        => value.HasValue ? value.Value.DisplayCurrencyWithSymbol() : "-";
 
     private static string GetDeliverySummaryText(OrderDetailsModel.OrderDeliverySummaryStatus status)
         => status switch

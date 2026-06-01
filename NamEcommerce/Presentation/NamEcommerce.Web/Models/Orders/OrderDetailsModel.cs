@@ -231,6 +231,8 @@ public sealed record OrderDetailsModel
         public decimal DirectShipReceivedQuantity { get; init; }
         public string DirectShipStatusText { get; init; } = string.Empty;
         public decimal? UnitCost { get; init; }
+        public decimal RemainingDeliveryQuantity => Math.Max(0, OrderedQuantity - DeliveredQuantity);
+        public bool IsFullyDelivered => OrderedQuantity > 0 && RemainingDeliveryQuantity == 0;
         public IList<PreparationPurchaseOrderModel> RelatedPurchaseOrders { get; set; } = [];
     }
 
@@ -273,7 +275,7 @@ public sealed record OrderDetailsModel
         public DateTime? DeliveredOn { get; init; }
         public decimal TotalQuantity { get; init; }
         public decimal CompensatedReturnQuantity { get; init; }
-        public decimal TotalAmount { get; init; }
+        public decimal ReturnedQuantity { get; init; }
     }
 
     [Serializable]

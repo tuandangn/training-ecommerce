@@ -41,7 +41,7 @@
                                 <th>Phiếu giao</th>
                                 <th>Nguồn</th>
                                 <th class="text-end">SL xuất</th>
-                                <th class="text-end">Giá trị</th>
+                                <th class="text-end">Trả lại</th>
                                 <th>Trạng thái</th>
                                 <th class="text-end">Ngày tạo</th>
                                 <th class="text-end">Ngày giao xong</th>
@@ -72,7 +72,16 @@
                                             </div>
                                         }
                                     </td>
-                                    <td class="text-end">@note.TotalAmount.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end">
+                                        @if (note.ReturnedQuantity > 0)
+                                        {
+                                            <span class="text-warning fw-600">@note.ReturnedQuantity.DisplayQuantity()</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
                                     <td><span class="status-badge @note.StatusClass">@note.StatusText</span></td>
                                     <td class="text-end">@note.CreatedOn.ToString(ViewConstants.DefaultDateFormat)</td>
                                     <td class="text-end">@(note.DeliveredOn?.ToString(ViewConstants.DefaultDateFormat) ?? "-")</td>

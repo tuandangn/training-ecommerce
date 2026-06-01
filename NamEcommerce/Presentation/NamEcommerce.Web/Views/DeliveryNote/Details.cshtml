@@ -17,6 +17,9 @@
         : Model.DeliveryProofPictureUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
             ? Model.DeliveryProofPictureUrl
             : $"data:image/jpeg;base64,{Model.DeliveryProofPictureUrl}";
+    var hasDeliveryCompletionInfo = Model.DeliveredOnUtc.HasValue
+        || !string.IsNullOrWhiteSpace(Model.DeliveryReceiverName)
+        || !string.IsNullOrWhiteSpace(deliveryProofPictureSrc);
 }
 
 @if (isDirectShip)
@@ -143,9 +146,21 @@
                     <div class="text-dark">@Model.ShippingAddress</div>
                 </div>
 
+                @if (Model.Surcharge > 0)
+                {
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Phụ phí</label>
+                        <div class="fw-bold text-dark">@Model.Surcharge.DisplayCurrencyWithSymbol()</div>
+                        @if (!string.IsNullOrWhiteSpace(Model.SurchargeReason))
+                        {
+                            <div class="text-muted small">@Model.SurchargeReason</div>
+                        }
+                    </div>
+                }
+
                 <hr class="border-light my-4">
 
-                @if (Model.ShowPrice || Model.AmountToCollect > 0 || Model.Surcharge > 0)
+                @if (Model.ShowPrice || Model.AmountToCollect > 0)
                 {
                     <div class="financial-summary-sidebar mb-4 p-3 rounded-3" style="background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%); border: 1px solid #edf2f9;">
                         <h6 class="fw-bold mb-3 small text-muted text-uppercase">Tóm tắt thanh toán</h6>
@@ -155,19 +170,6 @@
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted small">Tiền hàng:</span>
                                 <span class="fw-bold small">@Model.TotalAmount.DisplayCurrencyWithSymbol()</span>
-                            </div>
-                        }
-                        @if (Model.Surcharge > 0)
-                        {
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted small">Phụ phí:</span>
-                                <div class="text-end">
-                                    <span class="fw-bold small">@Model.Surcharge.DisplayCurrencyWithSymbol()</span>
-                                    @if (!string.IsNullOrEmpty(Model.SurchargeReason))
-                                    {
-                                        <div class="text-muted x-small">(@Model.SurchargeReason)</div>
-                                    }
-                                </div>
                             </div>
                         }
                         @if (Model.AmountToCollect > 0)
@@ -187,16 +189,19 @@
                         <div class="text-dark bg-light p-2 rounded border">@Model.Note</div>
                     </div>
                 }
-                @if (Model.Status == 40 && Model.DeliveredOnUtc.HasValue)
+                @if (hasDeliveryCompletionInfo)
                 {
                     <hr class="border-light my-4">
 
                     <h6 class="fw-bold mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Thông tin nhận hàng</h6>
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Đã giao lúc</label>
-                        <div class="text-dark">@Model.DeliveredOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
-                    </div>
+                    @if (Model.DeliveredOnUtc.HasValue)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Đã giao lúc</label>
+                            <div class="text-dark">@Model.DeliveredOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                        </div>
+                    }
 
                     @if (!string.IsNullOrEmpty(Model.DeliveryReceiverName))
                     {

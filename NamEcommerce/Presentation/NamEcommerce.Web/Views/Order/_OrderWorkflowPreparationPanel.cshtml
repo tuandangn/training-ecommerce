@@ -52,6 +52,7 @@
                                 <th class="text-end">SL thiếu</th>
                                 <th class="text-end">Đã xuất</th>
                                 <th class="text-end">Đã giao</th>
+                                <th class="text-end">Giao đủ</th>
                                 <th class="text-end">Giao thẳng</th>
                                 <th class="text-end">Giá vốn</th>
                             </tr>
@@ -70,7 +71,16 @@
                                         }
                                     </td>
                                     <td class="text-end">@item.OrderedQuantity.DisplayQuantity()</td>
-                                    <td class="text-end">@item.AvailableQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">
+                                        @if (!item.IsFullyDelivered && item.ShortageQuantity > 0)
+                                        {
+                                            @item.AvailableQuantity.DisplayQuantity()
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
                                     <td class="text-end">
                                         <span class="@(item.ShortageQuantity > 0 ? "text-danger fw-bold" : "text-success fw-600")">
                                             @item.ShortageQuantity.DisplayQuantity()
@@ -84,6 +94,18 @@
                                             <div class="small text-warning">
                                                 <i class="bi bi-arrow-repeat"></i> Bù lần sau @item.CompensatedReturnQuantity.DisplayQuantity()
                                             </div>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (item.IsFullyDelivered)
+                                        {
+                                            <span class="text-success" title="Đã giao đủ">
+                                                <i class="bi bi-check-circle-fill"></i>
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Còn @item.RemainingDeliveryQuantity.DisplayQuantity()</span>
                                         }
                                     </td>
                                     <td class="text-end">
