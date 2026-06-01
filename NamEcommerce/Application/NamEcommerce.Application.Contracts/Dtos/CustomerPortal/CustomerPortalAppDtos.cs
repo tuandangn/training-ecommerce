@@ -66,6 +66,7 @@ public sealed record CustomerOtpRequestAppDto
     public required string DeliveryToken { get; init; }
     public string? RequestedIp { get; init; }
     public string? RequestedUserAgent { get; init; }
+    public CustomerPortalLocationAppDto? Location { get; init; }
 }
 
 [Serializable]
@@ -88,6 +89,16 @@ public sealed record CustomerOtpVerifyAppDto
     public required string Otp { get; init; }
     public string? RequestedIp { get; init; }
     public string? RequestedUserAgent { get; init; }
+    public CustomerPortalLocationAppDto? Location { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerPortalLocationAppDto
+{
+    public required double Latitude { get; init; }
+    public required double Longitude { get; init; }
+    public double? AccuracyMeters { get; init; }
+    public DateTime? CapturedOnUtc { get; init; }
 }
 
 [Serializable]
@@ -206,6 +217,7 @@ public sealed record ConfirmCustomerDeliveryNoteAppDto
     public string? ReceiverName { get; init; }
     public string? Note { get; init; }
     public ConfirmCustomerDeliveryAcceptanceAppDto? Acceptance { get; init; }
+    public CustomerPortalLocationAppDto? Location { get; init; }
 }
 
 [Serializable]

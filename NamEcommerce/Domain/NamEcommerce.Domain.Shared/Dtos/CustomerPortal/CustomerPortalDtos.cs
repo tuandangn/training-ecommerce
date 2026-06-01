@@ -12,8 +12,23 @@ public sealed record CustomerPortalAccountDto(Guid Id)
     public required CustomerPortalAccountStatus Status { get; init; }
     public DateTime? PasswordSetOnUtc { get; init; }
     public DateTime? LastLoginOnUtc { get; init; }
+    public double? LastKnownLatitude { get; init; }
+    public double? LastKnownLongitude { get; init; }
+    public double? LastKnownLocationAccuracyMeters { get; init; }
+    public DateTime? LastKnownLocationCapturedOnUtc { get; init; }
+    public string? LastKnownLocationSource { get; init; }
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
+}
+
+[Serializable]
+public sealed record UpdateCustomerPortalLocationDto
+{
+    public required double Latitude { get; init; }
+    public required double Longitude { get; init; }
+    public double? AccuracyMeters { get; init; }
+    public required string Source { get; init; }
+    public required DateTime CapturedOnUtc { get; init; }
 }
 
 [Serializable]

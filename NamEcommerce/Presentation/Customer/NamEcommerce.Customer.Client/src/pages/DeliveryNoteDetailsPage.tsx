@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from "react";
 import { apiFetch } from "../api/client";
 import type { ActionResult, DeliveryNoteDetails, DeliveryNoteItem } from "../api/types";
 import { deliveryNoteStatusText, money, quantity, shortDate } from "../app/format";
+import { getCurrentCustomerLocation } from "../app/geolocation";
 import { navigate } from "../app/routes";
 import { useAuth } from "../auth/useAuth";
 
@@ -112,6 +113,7 @@ export function DeliveryNoteDetailsPage({ id }: { id: string }) {
                 body: JSON.stringify({
                     receiverName: receiverName.trim() || null,
                     note: null,
+                    location: await getCurrentCustomerLocation(),
                     acceptance: {
                         agreedCustomerCharge,
                         agreedCustomerChargeReason: confirmChargeReason.trim() || null,

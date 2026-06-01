@@ -19,5 +19,10 @@ public sealed class CustomerPortalAccountMapping : IEntityTypeConfiguration<Cust
         builder.Property(account => account.UpdatedOnUtc).IsRequired(false);
         builder.Property(account => account.PasswordSetOnUtc).IsRequired(false);
         builder.Property(account => account.LastLoginOnUtc).IsRequired(false);
+        builder.Property(account => account.LastKnownLatitude).IsRequired(false);
+        builder.Property(account => account.LastKnownLongitude).IsRequired(false);
+        builder.Property(account => account.LastKnownLocationAccuracyMeters).IsRequired(false);
+        builder.Property(account => account.LastKnownLocationCapturedOnUtc).IsRequired(false);
+        builder.Property(account => account.LastKnownLocationSource).HasMaxLength(50);
     }
 }

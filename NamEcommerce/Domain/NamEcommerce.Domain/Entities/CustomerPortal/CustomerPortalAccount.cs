@@ -21,6 +21,11 @@ public sealed record CustomerPortalAccount : AppAggregateEntity
     public CustomerPortalAccountStatus Status { get; private set; }
     public DateTime? PasswordSetOnUtc { get; private set; }
     public DateTime? LastLoginOnUtc { get; private set; }
+    public double? LastKnownLatitude { get; private set; }
+    public double? LastKnownLongitude { get; private set; }
+    public double? LastKnownLocationAccuracyMeters { get; private set; }
+    public DateTime? LastKnownLocationCapturedOnUtc { get; private set; }
+    public string? LastKnownLocationSource { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
@@ -43,6 +48,16 @@ public sealed record CustomerPortalAccount : AppAggregateEntity
     {
         LastLoginOnUtc = DateTime.UtcNow;
         UpdatedOnUtc = DateTime.UtcNow;
+    }
+
+    internal void UpdateLastKnownLocation(double latitude, double longitude, double? accuracyMeters, string source, DateTime capturedOnUtc)
+    {
+        LastKnownLatitude = latitude;
+        LastKnownLongitude = longitude;
+        LastKnownLocationAccuracyMeters = accuracyMeters;
+        LastKnownLocationCapturedOnUtc = capturedOnUtc;
+        LastKnownLocationSource = source;
+        UpdatedOnUtc = capturedOnUtc;
     }
 
     internal void Block()

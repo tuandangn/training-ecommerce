@@ -489,6 +489,11 @@ public sealed class CustomerPortalAdminAppService(
             HasPassword = !string.IsNullOrWhiteSpace(account.PasswordHash),
             PasswordSetOnUtc = account.PasswordSetOnUtc,
             LastLoginOnUtc = account.LastLoginOnUtc,
+            LastKnownLatitude = account.LastKnownLatitude,
+            LastKnownLongitude = account.LastKnownLongitude,
+            LastKnownLocationAccuracyMeters = account.LastKnownLocationAccuracyMeters,
+            LastKnownLocationCapturedOnUtc = account.LastKnownLocationCapturedOnUtc,
+            LastKnownLocationSource = account.LastKnownLocationSource,
             CreatedOnUtc = account.CreatedOnUtc,
             UpdatedOnUtc = account.UpdatedOnUtc
         };
@@ -504,6 +509,11 @@ public sealed class CustomerPortalAdminAppService(
             HasPassword = !string.IsNullOrWhiteSpace(account.PasswordHash),
             PasswordSetOnUtc = account.PasswordSetOnUtc,
             LastLoginOnUtc = account.LastLoginOnUtc,
+            LastKnownLatitude = account.LastKnownLatitude,
+            LastKnownLongitude = account.LastKnownLongitude,
+            LastKnownLocationAccuracyMeters = account.LastKnownLocationAccuracyMeters,
+            LastKnownLocationCapturedOnUtc = account.LastKnownLocationCapturedOnUtc,
+            LastKnownLocationSource = account.LastKnownLocationSource,
             CreatedOnUtc = account.CreatedOnUtc,
             UpdatedOnUtc = account.UpdatedOnUtc
         };

@@ -4,6 +4,7 @@ import type { ContactInfo, OtpRequestResult, PublicDeliveryNote } from "../api/t
 import { navigate } from "../app/routes";
 import { deliveryNoteStatusText, shortDate } from "../app/format";
 import { useAuth } from "../auth/useAuth";
+import { getCurrentCustomerLocation } from "../app/geolocation";
 
 export function PublicDeliveryPage({ token }: { token: string }) {
   const [note, setNote] = useState<PublicDeliveryNote | null>(null);
@@ -29,7 +30,7 @@ export function PublicDeliveryPage({ token }: { token: string }) {
 
     const result = await apiFetch<OtpRequestResult>("/api/auth/otp/request", {
       method: "POST",
-      body: JSON.stringify({ deliveryToken: token }),
+      body: JSON.stringify({ deliveryToken: token, location: await getCurrentCustomerLocation() }),
     });
 
     if (result.success && result.requiresOtp === false) {

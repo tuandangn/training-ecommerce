@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { apiFetch } from "../api/client";
 import type { CustomerSession } from "../api/types";
 import { navigate } from "../app/routes";
+import { getCurrentCustomerLocation } from "../app/geolocation";
 import { useAuth } from "../auth/useAuth";
 
 export function OtpVerifyPage({
@@ -23,7 +24,7 @@ export function OtpVerifyPage({
     try {
       await apiFetch<CustomerSession>("/api/auth/otp/verify", {
         method: "POST",
-        body: JSON.stringify({ challengeId, otp }),
+        body: JSON.stringify({ challengeId, otp, location: await getCurrentCustomerLocation() }),
       });
       await refresh();
       navigate(safeReturnUrl(returnUrl));
