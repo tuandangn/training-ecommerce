@@ -31,7 +31,15 @@ public sealed record CustomerSessionModel(
 public sealed record CustomerLoginResultModel(bool Success, string? Message, string? SessionToken, CustomerSessionModel? Session);
 
 [Serializable]
-public sealed record CustomerOtpRequestResultModel(bool Success, string? Message, Guid? ChallengeId, string? MaskedDestination, string? MockOtp);
+public sealed record CustomerOtpRequestResultModel(
+    bool Success,
+    string? Message,
+    bool RequiresOtp,
+    Guid? ChallengeId,
+    string? MaskedDestination,
+    string? MockOtp,
+    CustomerSessionModel? Session = null,
+    [property: System.Text.Json.Serialization.JsonIgnore] string? SessionToken = null);
 
 [Serializable]
 public sealed record CustomerOrderListModel(IList<CustomerOrderSummaryModel> Items);

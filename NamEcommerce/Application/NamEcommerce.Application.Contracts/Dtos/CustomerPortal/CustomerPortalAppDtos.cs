@@ -73,9 +73,12 @@ public sealed record CustomerOtpRequestResultAppDto
 {
     public required bool Success { get; init; }
     public string? Message { get; init; }
+    public bool RequiresOtp { get; init; } = true;
     public Guid? ChallengeId { get; init; }
     public string? MaskedDestination { get; init; }
     public string? MockOtp { get; init; }
+    public string? SessionToken { get; init; }
+    public CustomerSessionAppDto? Session { get; init; }
 }
 
 [Serializable]

@@ -13,6 +13,16 @@
 </div>
 
 <div class="row g-3 mb-4">
+    <div class="col-12 col-lg-3">
+        <a asp-action="Settings" class="text-decoration-none">
+            <div class="content-card p-3 h-100">
+                <div class="text-muted small text-uppercase fw-bold">Xác thực OTP</div>
+                <div class="fs-5 fw-bold @(Model.Settings.OtpEnabled ? "text-success" : "text-warning")">
+                    @(Model.Settings.OtpEnabled ? "Đang bật" : "Đang tắt")
+                </div>
+            </div>
+        </a>
+    </div>
     <div class="col-6 col-lg-3">
         <a asp-action="Accounts" class="text-decoration-none">
             <div class="content-card p-3 h-100">

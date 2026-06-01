@@ -45,12 +45,26 @@ public sealed class CustomerPortalAdminAppService(
     public async Task<CustomerPortalAdminOverviewAppDto> GetOverviewAsync()
         => new()
         {
+            Settings = await GetSettingsAsync().ConfigureAwait(false),
             Accounts = (await GetAccountsAsync().ConfigureAwait(false)).Take(10).ToList(),
             RecentSecurityEvents = (await GetSecurityEventsAsync(take: 10).ConfigureAwait(false)).ToList(),
             PendingOrderRequests = (await GetOrderRequestsAsync((int)CustomerOrderRequestStatus.PendingApproval).ConfigureAwait(false)).Take(10).ToList(),
             PendingReturnRequests = (await GetReturnRequestsAsync((int)CustomerReturnRequestStatus.PendingReview).ConfigureAwait(false)).Take(10).ToList(),
             PendingPaymentIntents = (await GetPaymentIntentsAsync((int)CustomerPaymentIntentStatus.SucceededPendingReconciliation).ConfigureAwait(false)).Take(10).ToList()
         };
+
+    public async Task<CustomerPortalSettingsAdminAppDto> GetSettingsAsync()
+        => MapSettings(await securityManager.GetSettingsAsync().ConfigureAwait(false));
+
+    public async Task<CustomerActionResultAppDto> UpdateSettingsAsync(UpdateCustomerPortalSettingsAdminAppDto dto)
+    {
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        await securityManager.UpdateSettingsAsync(dto.OtpEnabled, currentUser?.Id, DateTime.UtcNow).ConfigureAwait(false);
+
+        return CustomerActionResultAppDto.Ok(dto.OtpEnabled
+            ? "Đã bật xác thực OTP cho Customer Portal."
+            : "Đã tắt xác thực OTP cho Customer Portal.");
+    }
 
     public Task<IReadOnlyCollection<CustomerPortalAccountAdminAppDto>> GetAccountsAsync()
     {
@@ -492,6 +506,14 @@ public sealed class CustomerPortalAdminAppService(
             LastLoginOnUtc = account.LastLoginOnUtc,
             CreatedOnUtc = account.CreatedOnUtc,
             UpdatedOnUtc = account.UpdatedOnUtc
+        };
+
+    private static CustomerPortalSettingsAdminAppDto MapSettings(CustomerPortalSettingsDto settings)
+        => new()
+        {
+            OtpEnabled = settings.OtpEnabled,
+            UpdatedOnUtc = settings.UpdatedOnUtc,
+            UpdatedByUserId = settings.UpdatedByUserId
         };
 
     private static CustomerPortalSecurityEventAdminAppDto MapSecurityEvent(CustomerSecurityEvent securityEvent, Customer? customer, DeliveryNote? deliveryNote)

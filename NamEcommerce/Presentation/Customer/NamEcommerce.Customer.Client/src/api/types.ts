@@ -29,9 +29,11 @@ export type CustomerSession = {
 export type OtpRequestResult = {
   success: boolean;
   message?: string | null;
+  requiresOtp: boolean;
   challengeId?: string | null;
   maskedDestination?: string | null;
   mockOtp?: string | null;
+  session?: CustomerSession | null;
 };
 
 export type ActionResult = {

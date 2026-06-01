@@ -36,7 +36,15 @@ public sealed class CustomerPortalCommandHandlers(
             RequestedUserAgent = request.RequestedUserAgent
         }).ConfigureAwait(false);
 
-        return new CustomerOtpRequestResultModel(result.Success, result.Message, result.ChallengeId, result.MaskedDestination, result.MockOtp);
+        return new CustomerOtpRequestResultModel(
+            result.Success,
+            result.Message,
+            result.RequiresOtp,
+            result.ChallengeId,
+            result.MaskedDestination,
+            result.MockOtp,
+            result.Session is null ? null : MapSession(result.Session),
+            result.SessionToken);
     }
 
     public async Task<CustomerLoginResultModel> Handle(VerifyCustomerOtpCommand request, CancellationToken cancellationToken)

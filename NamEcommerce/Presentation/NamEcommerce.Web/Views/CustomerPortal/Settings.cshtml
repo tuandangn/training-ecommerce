@@ -1,0 +1,54 @@
+@using NamEcommerce.Application.Contracts.Dtos.CustomerPortal
+@model CustomerPortalSettingsAdminAppDto
+@{
+    ViewData[ViewConstants.PageTitle] = "Cài đặt Customer Portal";
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Cài đặt Customer Portal</h1>
+        <p class="page-header-subtitle">Quản lý xác thực OTP khi khách hàng truy cập từ QR phiếu giao</p>
+    </div>
+</div>
+
+<div class="content-card p-4">
+    <div class="d-flex flex-column flex-lg-row justify-content-between gap-4">
+        <div>
+            <div class="text-muted small text-uppercase fw-bold mb-2">Xác thực OTP</div>
+            <h2 class="h5 fw-bold mb-2">Yêu cầu OTP khi khách vào portal</h2>
+            <p class="text-muted mb-0">
+                Khi tắt OTP, khách quét QR phiếu giao vẫn phải có token hợp lệ và tài khoản không bị khóa,
+                nhưng hệ thống sẽ tạo phiên portal trực tiếp mà không gửi SMS/email.
+            </p>
+            <div class="mt-3">
+                <span class="badge @(Model.OtpEnabled ? "bg-success" : "bg-warning text-dark")">
+                    @(Model.OtpEnabled ? "OTP đang bật" : "OTP đang tắt")
+                </span>
+                @if (Model.UpdatedOnUtc.HasValue)
+                {
+                    <span class="text-muted small ms-2">
+                        Cập nhật: @Model.UpdatedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)
+                    </span>
+                }
+            </div>
+        </div>
+
+        <form asp-action="UpdateSettings" method="post" class="settings-toggle-form">
+            <div class="form-check form-switch portal-setting-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="otpEnabled" name="otpEnabled" value="true" @(Model.OtpEnabled ? "checked" : "") />
+                <input type="hidden" name="otpEnabled" value="false" />
+                <label class="form-check-label fw-semibold" for="otpEnabled">Bật OTP</label>
+            </div>
+            <button type="submit" class="btn btn-primary mt-3">Lưu cài đặt</button>
+        </form>
+    </div>
+</div>
+
+<div class="content-card p-4 mt-4">
+    <h3 class="h6 fw-bold mb-3">Tác động khi tắt OTP</h3>
+    <ul class="text-muted mb-0">
+        <li>Khách vẫn chỉ xem được portal nếu có QR/token phiếu giao còn hiệu lực.</li>
+        <li>Tài khoản khách bị khóa vẫn không thể xác thực.</li>
+        <li>Sự kiện đăng nhập không dùng OTP được ghi nhận trong nhật ký bảo mật.</li>
+    </ul>
+</div>

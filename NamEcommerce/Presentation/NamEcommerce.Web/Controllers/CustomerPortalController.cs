@@ -29,6 +29,22 @@ public sealed class CustomerPortalController(
         return View(model);
     }
 
+    public async Task<IActionResult> Settings()
+    {
+        var model = await customerPortalAdminAppService.GetSettingsAsync().ConfigureAwait(false);
+        return View(model);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdateSettings(bool otpEnabled)
+    {
+        var result = await customerPortalAdminAppService
+            .UpdateSettingsAsync(new UpdateCustomerPortalSettingsAdminAppDto { OtpEnabled = otpEnabled })
+            .ConfigureAwait(false);
+        NotifyResult(result);
+        return RedirectToAction(nameof(Settings));
+    }
+
     public async Task<IActionResult> OrderRequests(int? status = null)
     {
         var model = await customerPortalAdminAppService.GetOrderRequestsAsync(status).ConfigureAwait(false);

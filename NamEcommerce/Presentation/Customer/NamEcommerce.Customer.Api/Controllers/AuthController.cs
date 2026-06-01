@@ -17,6 +17,9 @@ public sealed class AuthController(
     public async Task<IActionResult> RequestOtp(RequestOtpRequest request)
     {
         var result = await mediator.Send(new RequestCustomerOtpCommand(request.DeliveryToken, GetIp(), GetUserAgent())).ConfigureAwait(false);
+        if (result.Success && !result.RequiresOtp && result.Session is not null && !string.IsNullOrWhiteSpace(result.SessionToken))
+            AppendSessionCookie(result.SessionToken);
+
         return result.Success ? Ok(result) : BadRequest(result);
     }
 

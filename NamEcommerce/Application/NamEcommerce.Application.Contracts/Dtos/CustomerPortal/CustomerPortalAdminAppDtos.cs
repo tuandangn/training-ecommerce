@@ -3,11 +3,26 @@ namespace NamEcommerce.Application.Contracts.Dtos.CustomerPortal;
 [Serializable]
 public sealed record CustomerPortalAdminOverviewAppDto
 {
+    public CustomerPortalSettingsAdminAppDto Settings { get; init; } = new();
     public IList<CustomerPortalAccountAdminAppDto> Accounts { get; init; } = [];
     public IList<CustomerPortalSecurityEventAdminAppDto> RecentSecurityEvents { get; init; } = [];
     public IList<CustomerPortalOrderRequestAdminAppDto> PendingOrderRequests { get; init; } = [];
     public IList<CustomerPortalReturnRequestAdminAppDto> PendingReturnRequests { get; init; } = [];
     public IList<CustomerPortalPaymentIntentAdminAppDto> PendingPaymentIntents { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerPortalSettingsAdminAppDto
+{
+    public bool OtpEnabled { get; init; }
+    public DateTime? UpdatedOnUtc { get; init; }
+    public Guid? UpdatedByUserId { get; init; }
+}
+
+[Serializable]
+public sealed record UpdateCustomerPortalSettingsAdminAppDto
+{
+    public bool OtpEnabled { get; init; }
 }
 
 [Serializable]

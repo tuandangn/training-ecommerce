@@ -17,6 +17,15 @@ public sealed record CustomerPortalAccountDto(Guid Id)
 }
 
 [Serializable]
+public sealed record CustomerPortalSettingsDto(Guid Id)
+{
+    public required bool OtpEnabled { get; init; }
+    public required DateTime CreatedOnUtc { get; init; }
+    public DateTime? UpdatedOnUtc { get; init; }
+    public Guid? UpdatedByUserId { get; init; }
+}
+
+[Serializable]
 public sealed record CustomerOtpChallengeDto(Guid Id)
 {
     public required Guid CustomerId { get; init; }

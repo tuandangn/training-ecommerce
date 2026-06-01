@@ -5,6 +5,8 @@ namespace NamEcommerce.Application.Contracts.CustomerPortal;
 public interface ICustomerPortalAdminAppService
 {
     Task<CustomerPortalAdminOverviewAppDto> GetOverviewAsync();
+    Task<CustomerPortalSettingsAdminAppDto> GetSettingsAsync();
+    Task<CustomerActionResultAppDto> UpdateSettingsAsync(UpdateCustomerPortalSettingsAdminAppDto dto);
     Task<IReadOnlyCollection<CustomerPortalAccountAdminAppDto>> GetAccountsAsync();
     Task<CustomerPortalAccountAdminAppDto?> GetAccountAsync(Guid customerId);
     Task<CustomerActionResultAppDto> BlockAccountAsync(Guid customerId);
