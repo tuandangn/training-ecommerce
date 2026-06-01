@@ -472,6 +472,7 @@ $RECYCLE.BIN/
 .trash/
 .understand-anything/
 .playwright-mcp/
+.codegraph/
 plans/
 **/appsettings.Production.json
 **/appsettings.Development.json
