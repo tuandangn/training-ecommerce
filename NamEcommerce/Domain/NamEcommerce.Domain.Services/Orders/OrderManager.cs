@@ -263,6 +263,33 @@ public sealed class OrderManager(
         return pagedData;
     }
 
+    public Task<IList<RecentSalePriceDto>> GetRecentSalePricesAsync(Guid productId, Guid customerId, int take = 10)
+    {
+        if (productId == Guid.Empty || customerId == Guid.Empty)
+            return Task.FromResult<IList<RecentSalePriceDto>>([]);
+
+        var safeTake = Math.Max(1, take);
+        var prices = orderDataReader.DataSource
+            .Where(order => order.OrderStatus != OrderStatus.Cancelled
+                && order.CustomerId == customerId
+                && order.OrderItems.Any(item => item.ProductId == productId))
+            .OrderByDescending(order => order.CreatedOnUtc)
+            .Take(safeTake)
+            .ToList()
+            .SelectMany(order => order.OrderItems
+                .Where(item => item.ProductId == productId)
+                .Select(item => new RecentSalePriceDto(
+                    CustomerId: order.CustomerId,
+                    CustomerName: order.CustomerInfo.FullName,
+                    UnitPrice: item.UnitPrice,
+                    OrderCode: order.Code,
+                    OrderDateUtc: order.CreatedOnUtc)))
+            .Take(safeTake)
+            .ToList();
+
+        return Task.FromResult<IList<RecentSalePriceDto>>(prices);
+    }
+
     public Task<bool> DoesCodeExistAsync(string code, Guid? comparesWithCurrentId = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(code);

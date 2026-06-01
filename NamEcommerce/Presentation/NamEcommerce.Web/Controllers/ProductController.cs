@@ -248,4 +248,18 @@ public sealed class ProductController : BaseAuthorizedController
         var model = await _mediator.Send(query).ConfigureAwait(false);
         return Json(model);
     }
+
+    [HttpGet]
+    public async Task<IActionResult> SalePriceReference(GetProductSalePriceReferenceQuery query)
+    {
+        var model = await _mediator.Send(query).ConfigureAwait(false);
+        return Json(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> PurchasePriceReference(GetProductPurchasePriceReferenceQuery query)
+    {
+        var model = await _mediator.Send(query).ConfigureAwait(false);
+        return Json(model);
+    }
 }

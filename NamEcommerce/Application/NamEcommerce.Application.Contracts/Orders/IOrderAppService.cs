@@ -7,6 +7,7 @@ public interface IOrderAppService
 {
     Task<OrderAppDto?> GetOrderByIdAsync(Guid id);
     Task<IPagedDataAppDto<OrderAppDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status);
+    Task<IList<RecentSalePriceAppDto>> GetRecentSalePricesAsync(Guid productId, Guid customerId, int take = 10);
 
     Task<CreateOrderResultAppDto> CreateOrderAsync(CreateOrderAppDto dto);
     Task<UpdateOrderResultAppDto> UpdateOrderAsync(UpdateOrderAppDto dto);

@@ -21,7 +21,8 @@ export class ProductPriceController {
 
         try {
             const result = await apiGet(`${this.#url}${productId}`);
-            recentPrices = Array.isArray(result) ? result : (result.data ?? []);
+            const payload = result.data ?? result;
+            recentPrices = Array.isArray(payload) ? payload : (payload.items ?? []);
             this.#productPricesMap.set(productId, recentPrices);
         } catch {
             toast('Lỗi', 'Lỗi khi lấy dữ liệu giá của sản phẩm', 'error');
@@ -50,8 +51,17 @@ export class ProductPriceController {
     }
 
     async getProductPriceForCustomer(productId, customerId) {
-        //*TODO*
-        return 0;
+        if (!productId) {
+            throw new Error('productId is required');
+        }
+
+        const params = new URLSearchParams({ ProductId: productId });
+        if (customerId)
+            params.set('CustomerId', customerId);
+
+        const result = await apiGet(`/Product/SalePriceReference?${params.toString()}`);
+        const payload = result.data ?? result;
+        return payload.suggestedPrice ?? 0;
     }
 }
 
@@ -68,7 +78,7 @@ export class ProductPricePicker {
         this.#target = target;
 
         this.#options = Object({
-            url: '/PurchaseOrder/RecentPurchasePrices?productId='
+            url: '/Product/PurchasePriceReference?ProductId='
         }, options)
 
         this.#controller = new ProductPriceController(this.#options.url);
