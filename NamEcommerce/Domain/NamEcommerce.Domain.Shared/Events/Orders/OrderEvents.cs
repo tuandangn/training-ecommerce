@@ -83,6 +83,12 @@ public sealed record OrderCancelled(
     IReadOnlyCollection<OrderReservationItem> Items) : DomainEvent;
 
 /// <summary>
+/// Toàn bộ dòng hàng của đơn đã được giao đến khách hàng.
+/// Handler release pending allocations của đơn.
+/// </summary>
+public sealed record OrderFullyDelivered(Guid OrderId, Guid CustomerId) : DomainEvent;
+
+/// <summary>
 /// Đơn bị xoá (soft delete).
 /// Handler hiện tại release toàn bộ global reservation còn lại của đơn.
 /// </summary>

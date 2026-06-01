@@ -75,6 +75,12 @@ public sealed record Order : AppAggregateEntity
     internal void RaiseSoCancelledWithDirectShipReceived(IReadOnlyList<Guid> allocationIds)
         => RaiseDomainEvent(new SoCancelledWithDirectShipReceived(Id, allocationIds));
 
+    internal void RaiseFullyDeliveredIfComplete()
+    {
+        if (_orderItems.Count > 0 && _orderItems.All(i => i.IsDelivered))
+            RaiseDomainEvent(new OrderFullyDelivered(Id, CustomerId));
+    }
+
     #endregion
 
     #region Methods

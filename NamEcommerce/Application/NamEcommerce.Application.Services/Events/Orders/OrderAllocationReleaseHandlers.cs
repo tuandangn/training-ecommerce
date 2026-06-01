@@ -11,6 +11,13 @@ public sealed class OrderItemRemovedAllocationReleaseHandler(
         => allocationManager.ReleaseAllocationsForOrderItemAsync(notification.OrderItemId);
 }
 
+public sealed class OrderFullyDeliveredAllocationReleaseHandler(
+    IPurchaseOrderAllocationManager allocationManager) : INotificationHandler<OrderFullyDelivered>
+{
+    public Task Handle(OrderFullyDelivered notification, CancellationToken cancellationToken)
+        => allocationManager.ReleaseAllocationsForOrderAsync(notification.OrderId);
+}
+
 public sealed class OrderCancelledAllocationReleaseHandler(
     IPurchaseOrderAllocationManager allocationManager) : INotificationHandler<OrderCancelled>
 {

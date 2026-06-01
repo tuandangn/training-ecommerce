@@ -331,6 +331,7 @@ public sealed class OrderManager(
 
         order.MarkOrderItemDelivered(dto.OrderItemId, dto.PictureId);
         order.UpdatedOnUtc = DateTime.UtcNow;
+        order.RaiseFullyDeliveredIfComplete();
 
         await orderRepository.UpdateAsync(order).ConfigureAwait(false);
     }
