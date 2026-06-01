@@ -8,7 +8,6 @@ using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Dtos.Returns;
 using NamEcommerce.Application.Contracts.Finance;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
-using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
@@ -16,7 +15,6 @@ using NamEcommerce.Application.Contracts.Returns;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Finance;
-using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.Returns;
@@ -54,8 +52,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
         ICustomerDebtAppService customerDebtAppService,
         IExpenseAppService expenseAppService,
         IGoodsReceiptAppService goodsReceiptAppService,
-        IOrderAuditAppService orderAuditAppService)
-        IGoodsReceiptAppService goodsReceiptAppService,
+        IOrderAuditAppService orderAuditAppService,
         ICustomerReturnAppService customerReturnAppService,
         IPictureAppService pictureAppService)
     {
@@ -634,7 +631,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     Surcharge = deliveryNote.Surcharge,
                     SurchargeReason = deliveryNote.SurchargeReason,
                     AmountToCollect = deliveryNote.AmountToCollect,
-                    Items = deliveryNote.Items
+                    Items = deliveryNote.Items,
                     ReturnedQuantity = deliveryNote.Items.Sum(item =>
                         item.ConfirmedReturnQuantity + item.PendingReturnQuantity + item.CompensatedReturnQuantity)
                 })
