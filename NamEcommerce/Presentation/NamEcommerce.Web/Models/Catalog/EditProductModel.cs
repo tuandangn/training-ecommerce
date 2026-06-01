@@ -46,5 +46,5 @@ public sealed record EditProductModel
     public int DisplayOrder { get; set; }
 
     [Display(Name = "Hình ảnh")]
-    public Base64ImageModel? ImageFile { get; set; } = new();
+    public Guid? PictureId { get; set; }
 }

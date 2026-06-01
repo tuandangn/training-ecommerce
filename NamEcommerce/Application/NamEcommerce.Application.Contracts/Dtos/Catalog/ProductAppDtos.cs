@@ -70,8 +70,6 @@ public sealed record CreateProductResultAppDto
 [Serializable]
 public sealed record UpdateProductAppDto(Guid Id) : BaseProductAppDto
 {
-    public FileInfoAppDto? ImageFile { get; set; }
-
     public decimal? NewUnitPrice { get; set; }
     public string? ChangePriceReason { get; set; }
 

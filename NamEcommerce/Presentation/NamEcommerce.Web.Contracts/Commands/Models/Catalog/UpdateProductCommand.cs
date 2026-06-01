@@ -1,6 +1,5 @@
 using MediatR;
 using NamEcommerce.Web.Contracts.Models.Catalog;
-using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 
@@ -16,5 +15,5 @@ public sealed class UpdateProductCommand : IRequest<UpdateProductResultModel>
     public int DisplayOrder { get; set; }
     public decimal? NewUnitPrice { get; set; }
     public string? ChangePriceReason { get; set; }
-    public FileInfoModel? ImageFile { get; set; }
+    public Guid? PictureId { get; set; }
 }

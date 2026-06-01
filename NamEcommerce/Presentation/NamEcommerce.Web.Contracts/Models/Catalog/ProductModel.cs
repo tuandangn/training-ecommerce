@@ -1,5 +1,3 @@
-using NamEcommerce.Web.Contracts.Models.Common;
-
 namespace NamEcommerce.Web.Contracts.Models.Catalog;
 
 [Serializable]
@@ -14,5 +12,5 @@ public sealed record ProductModel
     public decimal UnitPrice { get; set; }
     public decimal CostPrice { get; set; }
     public int DisplayOrder { get; set; }
-    public Base64ImageModel? ImageFile { get; set; }
-} 
+    public Guid? PictureId { get; set; }
+}

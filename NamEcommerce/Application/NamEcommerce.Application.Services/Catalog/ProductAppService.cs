@@ -216,20 +216,6 @@ public sealed class ProductAppService : IProductAppService
             }
         }
 
-        Guid? pictureId = null;
-        if (dto.ImageFile is not null && dto.ImageFile.Data.Length > 0 && !string.IsNullOrEmpty(dto.ImageFile.MimeType))
-        {
-            var insertedPicture = await _pictureManager.CreatePictureAsync(new CreatePictureDto
-            {
-                Data = dto.ImageFile.Data,
-                MimeType = dto.ImageFile.MimeType,
-                Extension = dto.ImageFile.Extension,
-                FileName = dto.ImageFile.FileName
-            }).ConfigureAwait(false);
-
-            pictureId = insertedPicture.CreatedId;
-        }
-
         var result = await _productManager.UpdateProductAsync(new UpdateProductDto(dto.Id)
         {
             Name = dto.Name,
@@ -237,7 +223,7 @@ public sealed class ProductAppService : IProductAppService
             UnitMeasurementId = dto.UnitMeasurementId,
             Categories = dto.Categories.Select(pc => new ProductCategoryDto(pc.CategoryId, pc.DisplayOrder)),
             Vendors = dto.Vendors.Select(pv => new ProductVendorDto(pv.VendorId, pv.DisplayOrder)),
-            Pictures = pictureId.HasValue ? [pictureId.Value] : []
+            Pictures = dto.Pictures
         }).ConfigureAwait(false);
 
         if (dto.NewUnitPrice.HasValue)

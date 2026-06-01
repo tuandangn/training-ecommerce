@@ -66,7 +66,7 @@ public sealed class ProductModelFactory : IProductModelFactory
             AvailableVendors = vendorOptions,
             DisplayOrder = product.DisplayOrder,
             UnitPrice = product.UnitPrice,
-            ImageFile = product.ImageFile ?? new()
+            PictureId = product.PictureId
         };
         model.CostPrice = await _inventoryCostingAppService.GetCurrentProductCostPriceAsync(id).ConfigureAwait(false);
         if (oldModel is not null)

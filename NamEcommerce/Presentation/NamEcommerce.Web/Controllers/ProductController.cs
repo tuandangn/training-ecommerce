@@ -1,8 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
-using NamEcommerce.Web.Contracts.Configurations;
-using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Models.Catalog;
 using NamEcommerce.Web.Services.Catalog;
@@ -11,13 +9,11 @@ namespace NamEcommerce.Web.Controllers;
 
 public sealed class ProductController : BaseAuthorizedController
 {
-    private readonly AppConfig _appConfig;
     private readonly IMediator _mediator;
     private readonly IProductModelFactory _productModelFactory;
 
-    public ProductController(AppConfig appConfig, IMediator mediator, IProductModelFactory productModelFactory)
+    public ProductController(IMediator mediator, IProductModelFactory productModelFactory)
     {
-        _appConfig = appConfig;
         _mediator = mediator;
         _productModelFactory = productModelFactory;
     }
@@ -156,20 +152,6 @@ public sealed class ProductController : BaseAuthorizedController
             return RedirectToAction(nameof(List));
         }
 
-        var imageFileInfo = model.ImageFile != null ? new FileInfoModel
-        {
-            Data = model.ImageFile.GetData() ?? [],
-            MimeType = model.ImageFile.GetMimeType() ?? string.Empty,
-            Extension = model.ImageFile.Extension,
-            FileName = model.ImageFile.FileName
-        } : null;
-        if (imageFileInfo is not null && imageFileInfo.Data.Length > _appConfig.UploadFileMaxSizeInBytes)
-        {
-            ModelState.AddModelError(string.Empty, LocalizeError("Msg.ImageSizeLimit", (int)Math.Floor(_appConfig.UploadFileMaxSizeInBytes / 1024m / 1024)));
-            model = (await _productModelFactory.PrepareEditProductModel(model.Id, model))!;
-            return View(model);
-        }
-
         var updateProductResult = await _mediator.Send(new UpdateProductCommand
         {
             Id = model.Id,
@@ -180,7 +162,7 @@ public sealed class ProductController : BaseAuthorizedController
             UnitMeasurementId = model.UnitMeasurementId,
             NewUnitPrice = model.UnitPrice,
             DisplayOrder = model.DisplayOrder,
-            ImageFile = imageFileInfo,
+            PictureId = model.PictureId,
             ChangePriceReason = model.ChangePriceReason
         });
         if (!updateProductResult.Success)

@@ -1,8 +1,6 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Catalog;
-using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Web.Contracts.Models.Catalog;
-using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
@@ -10,12 +8,10 @@ namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 public sealed class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery, ProductModel?>
 {
     private readonly IProductAppService _productAppService;
-    private readonly IPictureAppService _pictureAppService;
 
-    public GetProductByIdHandler(IProductAppService productAppService, IPictureAppService pictureAppService)
+    public GetProductByIdHandler(IProductAppService productAppService)
     {
         _productAppService = productAppService;
-        _pictureAppService = pictureAppService;
     }
 
     public async Task<ProductModel?> Handle(GetProductByIdQuery request, CancellationToken cancellationToken)
@@ -31,7 +27,8 @@ public sealed class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery,
             ShortDesc = product.ShortDesc,
             UnitPrice = product.UnitPrice,
             CostPrice = product.CostPrice,
-            UnitMeasurementId = product.UnitMeasurementId
+            UnitMeasurementId = product.UnitMeasurementId,
+            PictureId = product.Pictures.FirstOrDefault() is Guid pid && pid != Guid.Empty ? pid : null
         };
 
         var productCategory = product.Categories.FirstOrDefault();
@@ -39,21 +36,6 @@ public sealed class GetProductByIdHandler : IRequestHandler<GetProductByIdQuery,
         model.DisplayOrder = productCategory?.DisplayOrder ?? 1;
 
         model.VendorIds = product.Vendors.Select(v => v.VendorId).ToList();
-
-        foreach (var pictureId in product.Pictures)
-        {
-            var pictureInfo = await _pictureAppService.GetBase64PictureByIdAsync(pictureId).ConfigureAwait(false);
-            if (pictureInfo is not null)
-            {
-                model.ImageFile = new Base64ImageModel
-                {
-                    Base64Data = pictureInfo.Base64Value,
-                    Extension = pictureInfo.Extension,
-                    FileName = pictureInfo.FileName
-                };
-                break;
-            }
-        }
 
         return model;
     }
