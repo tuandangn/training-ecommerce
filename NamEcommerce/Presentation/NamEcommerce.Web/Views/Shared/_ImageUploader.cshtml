@@ -42,9 +42,9 @@
       data-valmsg-for="@Model.FieldName"
       data-valmsg-replace="true"></span>
 
-@section Scripts {
-    <script type="module">
-        import { initImageUploaders } from '/modules/image-uploader.js';
+<script type="module">
+    import { initImageUploaders } from '/modules/image-uploader.js';
+    document.addEventListener('DOMContentLoaded', () => {
         initImageUploaders(document.currentScript?.closest('form') ?? document);
-    </script>
-}
+    });
+</script>

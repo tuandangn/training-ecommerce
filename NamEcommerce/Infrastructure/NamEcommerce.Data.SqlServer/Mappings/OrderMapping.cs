@@ -62,7 +62,6 @@ public sealed class OrderMapping : IEntityTypeConfiguration<Order>
         });
 
         builder.HasMany(o => o.OrderItems).WithOne().HasForeignKey(oi => oi.OrderId);
-        builder.Navigation(o => o.OrderItems).AutoInclude();
-        builder.Metadata.FindNavigation(nameof(Order.OrderItems))?.SetPropertyAccessMode(PropertyAccessMode.Field);
+        builder.Navigation(o => o.OrderItems).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
     }
 }

@@ -26,13 +26,11 @@ public sealed class StockAdjustmentNoteMapping : IEntityTypeConfiguration<StockA
         builder.HasIndex(n => new { n.WarehouseId, n.Status });
         builder.HasIndex(n => n.CreatedOnUtc);
 
-        builder.Metadata.FindNavigation(nameof(StockAdjustmentNote.Items))
-            ?.SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(n => n.Items)
             .WithOne()
             .HasForeignKey(i => i.NoteId)
             .OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(n => n.Items).AutoInclude();
+        builder.Navigation(n => n.Items).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
     }
 }
 

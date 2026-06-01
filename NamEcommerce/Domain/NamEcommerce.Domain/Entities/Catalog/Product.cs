@@ -53,7 +53,7 @@ public record Product : AppAggregateEntity
         => _productVendors.AsReadOnly();
 
     private readonly IList<ProductPicture> _productPictures = [];
-    public IEnumerable<ProductPicture> ProductPictures
+    public IReadOnlyCollection<ProductPicture> ProductPictures
         => _productPictures.AsReadOnly();
 
     #region Methods

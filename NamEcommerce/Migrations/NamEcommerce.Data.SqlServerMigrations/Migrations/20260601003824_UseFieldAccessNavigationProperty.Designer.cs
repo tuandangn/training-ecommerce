@@ -13,8 +13,8 @@ using NamEcommerce.Data.SqlServer;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     [DbContext(typeof(NamEcommerceEfDbContext))]
-    [Migration("20260521183436_RedefineProductInventoryCost")]
-    partial class RedefineProductInventoryCost
+    [Migration("20260601003824_UseFieldAccessNavigationProperty")]
+    partial class UseFieldAccessNavigationProperty
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -205,19 +205,22 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Catalog.ProductVendor", b =>
                 {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("ProductId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("VendorId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("int");
+                    b.HasKey("Id");
 
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("ProductId", "VendorId");
+                    b.HasIndex("ProductId");
 
                     b.HasIndex("VendorId");
 
@@ -670,6 +673,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<string>("AdminNote")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
+
+                    b.Property<bool>("CompensateInNextDelivery")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<Guid?>("ConvertedCustomerReturnId")
                         .HasColumnType("uniqueidentifier");
@@ -1411,6 +1419,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<Guid?>("DeliveryProofPictureId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DeliveryProofPictureIds")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("DeliveryProofPictureIds");
 
                     b.Property<string>("DeliveryReceiverName")
                         .HasMaxLength(255)
@@ -2840,6 +2852,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<bool>("CompensateInNextDelivery")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime?>("ConfirmedOnUtc")
                         .HasColumnType("datetime2");
 
@@ -2887,11 +2904,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<DateTime?>("UpdatedOnUtc")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("WarehouseId")
+                    b.Property<Guid?>("WarehouseId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("WarehouseName")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 

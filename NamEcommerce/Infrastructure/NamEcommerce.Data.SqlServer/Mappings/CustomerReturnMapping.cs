@@ -42,7 +42,6 @@ public sealed class CustomerReturnMapping : IEntityTypeConfiguration<CustomerRet
             .WithOne()
             .HasForeignKey(i => i.CustomerReturnId)
             .OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(r => r.Items).AutoInclude();
-        builder.Metadata.FindNavigation(nameof(CustomerReturn.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
+        builder.Navigation(r => r.Items).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
     }
 }

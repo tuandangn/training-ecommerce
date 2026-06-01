@@ -31,8 +31,7 @@ public sealed class StockTransferNoteMapping : IEntityTypeConfiguration<StockTra
             .WithOne()
             .HasForeignKey(i => i.NoteId)
             .OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(n => n.Items).AutoInclude();
-        builder.Metadata.FindNavigation(nameof(StockTransferNote.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
+        builder.Navigation(n => n.Items).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
     }
 }
 

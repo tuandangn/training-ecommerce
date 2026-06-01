@@ -5,7 +5,7 @@
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     /// <inheritdoc />
-    public partial class FixNavigationAccessToFields : Migration
+    public partial class UseFieldAccessNavigationProperty : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

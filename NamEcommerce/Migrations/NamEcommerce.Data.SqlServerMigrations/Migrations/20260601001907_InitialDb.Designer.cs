@@ -13,8 +13,8 @@ using NamEcommerce.Data.SqlServer;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     [DbContext(typeof(NamEcommerceEfDbContext))]
-    [Migration("20260528044658_UpdateCustomerReturns")]
-    partial class UpdateCustomerReturns
+    [Migration("20260601001907_InitialDb")]
+    partial class InitialDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1419,6 +1419,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<Guid?>("DeliveryProofPictureId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DeliveryProofPictureIds")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("DeliveryProofPictureIds");
 
                     b.Property<string>("DeliveryReceiverName")
                         .HasMaxLength(255)

@@ -36,7 +36,6 @@ public sealed class PurchaseOrderMapping : IEntityTypeConfiguration<PurchaseOrde
             .WithOne()
             .HasForeignKey(i => i.PurchaseOrderId)
             .OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(p => p.Items).AutoInclude();
-        builder.Metadata.FindNavigation(nameof(PurchaseOrder.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
+        builder.Navigation(p => p.Items).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
     }
 }
