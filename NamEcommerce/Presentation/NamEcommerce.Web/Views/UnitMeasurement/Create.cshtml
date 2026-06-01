@@ -1,25 +1,28 @@
 @model CreateUnitMeasurementModel
 @{
-    ViewData[ViewConstants.PageTitle] = "Thêm mới Đơn vị tính";
+    ViewData[ViewConstants.PageTitle] = "Thêm đơn vị tính";
 }
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Thêm mới Đơn vị tính</h1>
-        <p class="page-header-subtitle">Tạo đơn vị đo lường mới</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Thêm mới
+        <span class="text-muted">Đơn vị tính</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="UnitMeasurement" class="text-decoration-none">Đơn vị tính</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
+            </ol>
+        </nav>
     </div>
-</div>
+}
 
-<div class="form-card" style="max-width: 600px;">
-    <div class="form-card-header">
-        <h2 class="form-card-title"><i class="bi bi-rulers me-2 text-primary"></i>Thông tin đơn vị tính</h2>
-        <a asp-action="List" class="form-card-breadcrumb">
-            <i class="bi bi-arrow-left"></i> Trở về danh sách
-        </a>
-    </div>
+<div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
+<div class="content-card">
     <form method="post" asp-antiforgery="true">
-        <div class="form-card-body">
-            <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
+        <div class="content-card-body">
             <ul class="nav nav-tabs" id="unitMeasurementTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="infoTab" data-bs-toggle="tab" data-bs-target="#info"
@@ -55,10 +58,13 @@
                 </div>
             </div>
         </div>
-        <div class="form-card-footer">
-            <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
-            <button type="submit" class="btn btn-primary flex-lg-grow-0 flex-grow-1">
-                <i class="bi bi-plus-lg me-1"></i>Thêm mới
+        <div class="content-card-footer d-flex align-items-center justify-content-between">
+            <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                <i class="bi bi-arrow-left"></i>
+                Trở về
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-floppy me-1"></i>Thêm mới
             </button>
         </div>
     </form>

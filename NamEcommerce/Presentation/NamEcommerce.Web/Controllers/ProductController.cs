@@ -50,12 +50,13 @@ public sealed class ProductController : BaseAuthorizedController
             VendorIds = model.VendorIds,
             UnitMeasurementId = model.UnitMeasurementId,
             DisplayOrder = model.DisplayOrder,
-            PictureId = model.PictureId
+            PictureId = model.PictureId,
+            UnitPrice = model.UnitPrice
         };
         if (model.HasExistingStockQuantity)
         {
             createProductCommand.ProductStocks = model.ProductInventory!.ProductStocks
-                .Where(stock => stock.Quantity > 0)
+                .Where(stock => stock.WarehouseId != Guid.Empty && stock.Quantity > 0 && stock.UnitCost > 0)
                 .Select(stock => new CreateProductCommand.ProductStockModel(stock.WarehouseId, stock.Quantity, stock.UnitCost));
         }
 

@@ -116,7 +116,6 @@ export class ImageUploader {
 
     #addExisting(id, thumbnailsEl, slotsEl) {
         this.#addThumbnail(id, `/Picture/${id}`, thumbnailsEl, slotsEl);
-        this.#addHidden(id);
         this.#uploadedCount++;
     }
 

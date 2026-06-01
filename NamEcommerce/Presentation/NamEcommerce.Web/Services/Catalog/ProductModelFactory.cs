@@ -32,14 +32,17 @@ public sealed class ProductModelFactory : IProductModelFactory
         model.AvailableCategories = categoryOptions;
         model.AvailableUnitMeasurements = unitMeasurementOptions;
         model.AvailableVendors = vendorOptions;
-        model.ProductInventory ??= new CreateProductModel.ProductInventoryModel
+        if (model.ProductInventory.ProductStocks.Count == 0)
         {
-            ProductStocks = warehouseOptions.Select(warehouse => new CreateProductModel.ProductStockModel
+            model.ProductInventory = new CreateProductModel.ProductInventoryModel
             {
-                WarehouseId = warehouse.Id,
-                WarehouseName = warehouse.Name
-            }).ToList()
-        };
+                ProductStocks = warehouseOptions.Select(warehouse => new CreateProductModel.ProductStockModel
+                {
+                    WarehouseId = warehouse.Id,
+                    WarehouseName = warehouse.Name
+                }).ToList()
+            };
+        }
 
         return model;
     }

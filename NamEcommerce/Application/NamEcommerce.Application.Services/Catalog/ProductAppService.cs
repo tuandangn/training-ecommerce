@@ -9,7 +9,6 @@ using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Catalog;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Inventory;
-using NamEcommerce.Domain.Shared.Services.Media;
 
 namespace NamEcommerce.Application.Services.Catalog;
 
@@ -18,17 +17,15 @@ public sealed class ProductAppService : IProductAppService
     private readonly IProductManager _productManager;
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
-    private readonly IPictureManager _pictureManager;
     private readonly IInventoryCostingManager _inventoryCostingManager;
     private readonly IGoodsReceiptManager _goodsReceiptManager;
 
     public ProductAppService(IProductManager productManager, IEntityDataReader<Product> productDataReader,
-        IPictureManager pictureManager, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
-        IInventoryCostingManager inventoryCostingManager, IGoodsReceiptManager goodsReceiptManager)
+        IEntityDataReader<UnitMeasurement> unitMeasurementDataReader, IInventoryCostingManager inventoryCostingManager,
+        IGoodsReceiptManager goodsReceiptManager)
     {
         _productManager = productManager;
         _productDataReader = productDataReader;
-        _pictureManager = pictureManager;
         _unitMeasurementDataReader = unitMeasurementDataReader;
         _inventoryCostingManager = inventoryCostingManager;
         _goodsReceiptManager = goodsReceiptManager;
@@ -70,20 +67,6 @@ public sealed class ProductAppService : IProductAppService
             }
         }
 
-        Guid? pictureId = null;
-        if (dto.ImageFile is not null && dto.ImageFile.Data.Length > 0 && !string.IsNullOrEmpty(dto.ImageFile.MimeType))
-        {
-            var insertedPicture = await _pictureManager.CreatePictureAsync(new CreatePictureDto
-            {
-                Data = dto.ImageFile.Data,
-                MimeType = dto.ImageFile.MimeType,
-                Extension = dto.ImageFile.Extension,
-                FileName = dto.ImageFile.FileName
-            }).ConfigureAwait(false);
-
-            pictureId = insertedPicture.CreatedId;
-        }
-
         var createProductDto = new CreateProductDto
         {
             Name = dto.Name,
@@ -93,7 +76,7 @@ public sealed class ProductAppService : IProductAppService
             UnitPrice = dto.UnitPrice,
             Categories = dto.Categories.Select(item => new ProductCategoryDto(item.CategoryId, item.DisplayOrder)),
             Vendors = dto.Vendors.Select(item => new ProductVendorDto(item.VendorId, item.DisplayOrder)),
-            Pictures = pictureId.HasValue ? [pictureId.Value] : []
+            Pictures = dto.Pictures
         };
         var creationResult = await _productManager.CreateProductAsync(createProductDto).ConfigureAwait(false);
 

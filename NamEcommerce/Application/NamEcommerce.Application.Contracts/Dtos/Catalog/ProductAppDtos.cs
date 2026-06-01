@@ -39,7 +39,6 @@ public sealed record InitialStockAppDto
 [Serializable]
 public sealed record CreateProductAppDto : BaseProductAppDto
 {
-    public FileInfoAppDto? ImageFile { get; set; }
     public decimal CostPrice { get; set; }
     public decimal UnitPrice { get; set; }
     public IList<InitialStockAppDto> InitialStocks { get; init; } = [];
