@@ -50,6 +50,11 @@ public sealed record CustomerPortalAccountAdminAppDto
     public bool HasPassword { get; init; }
     public DateTime? PasswordSetOnUtc { get; init; }
     public DateTime? LastLoginOnUtc { get; init; }
+    public double? LastKnownLatitude { get; init; }
+    public double? LastKnownLongitude { get; init; }
+    public double? LastKnownLocationAccuracyMeters { get; init; }
+    public DateTime? LastKnownLocationCapturedOnUtc { get; init; }
+    public string? LastKnownLocationSource { get; init; }
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
 }

@@ -33,7 +33,8 @@ public sealed class CustomerPortalCommandHandlers(
         {
             DeliveryToken = request.DeliveryToken,
             RequestedIp = request.RequestedIp,
-            RequestedUserAgent = request.RequestedUserAgent
+            RequestedUserAgent = request.RequestedUserAgent,
+            Location = MapLocation(request.Location)
         }).ConfigureAwait(false);
 
         return new CustomerOtpRequestResultModel(
@@ -54,7 +55,8 @@ public sealed class CustomerPortalCommandHandlers(
             ChallengeId = request.ChallengeId,
             Otp = request.Otp,
             RequestedIp = request.RequestedIp,
-            RequestedUserAgent = request.RequestedUserAgent
+            RequestedUserAgent = request.RequestedUserAgent,
+            Location = MapLocation(request.Location)
         }).ConfigureAwait(false);
 
         return MapLoginResult(result);
@@ -128,6 +130,7 @@ public sealed class CustomerPortalCommandHandlers(
         {
             ReceiverName = request.ReceiverName,
             Note = request.Note,
+            Location = MapLocation(request.Location),
             Acceptance = request.Acceptance is null
                 ? null
                 : new ConfirmCustomerDeliveryAcceptanceAppDto
@@ -220,6 +223,17 @@ public sealed class CustomerPortalCommandHandlers(
 
     private static CustomerSessionModel MapSession(CustomerSessionAppDto session)
         => new(session.SessionId, session.CustomerId, session.CustomerName, session.PhoneNumber, session.Email, session.HasPassword, session.ExpiresOnUtc);
+
+    private static CustomerPortalLocationAppDto? MapLocation(CustomerPortalLocationCommand? location)
+        => location is null
+            ? null
+            : new CustomerPortalLocationAppDto
+            {
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                AccuracyMeters = location.AccuracyMeters,
+                CapturedOnUtc = location.CapturedOnUtc
+            };
 
     private static CustomerPaymentIntentModel MapPaymentIntent(CustomerPaymentIntentAppDto intent)
         => new(intent.Id, intent.CustomerDebtId, intent.Amount, intent.Provider, intent.ProviderIntentId, intent.Status, intent.FailureReason, intent.CreatedOnUtc, intent.CompletedOnUtc);

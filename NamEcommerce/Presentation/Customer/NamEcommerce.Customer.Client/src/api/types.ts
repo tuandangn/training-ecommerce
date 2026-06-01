@@ -36,6 +36,13 @@ export type OtpRequestResult = {
   session?: CustomerSession | null;
 };
 
+export type CustomerLocation = {
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number | null;
+  capturedOnUtc: string;
+};
+
 export type ActionResult = {
   success: boolean;
   message?: string | null;

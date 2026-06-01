@@ -37,7 +37,8 @@ public sealed class DeliveryNotesController(IMediator mediator) : ControllerBase
                         item.DeliveryNoteItemId,
                         item.AcceptedQuantity,
                         item.RejectedQuantity,
-                        item.RejectReason)).ToList()))).ConfigureAwait(false);
+                        item.RejectReason)).ToList()),
+            MapLocation(request.Location))).ConfigureAwait(false);
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -63,6 +64,14 @@ public sealed class DeliveryNotesController(IMediator mediator) : ControllerBase
     public sealed record ConfirmDeliveryNoteRequest(
         string? ReceiverName,
         string? Note,
-        ConfirmDeliveryNoteAcceptanceRequest? Acceptance);
+        ConfirmDeliveryNoteAcceptanceRequest? Acceptance,
+        CustomerPortalLocationRequest? Location);
     public sealed record CreateFeedbackRequest(int? Rating, string? Message);
+
+    private static CustomerPortalLocationCommand? MapLocation(CustomerPortalLocationRequest? location)
+        => location is null
+            ? null
+            : new CustomerPortalLocationCommand(location.Latitude, location.Longitude, location.AccuracyMeters, location.CapturedOnUtc);
+
+    public sealed record CustomerPortalLocationRequest(double Latitude, double Longitude, double? AccuracyMeters, DateTime? CapturedOnUtc);
 }

@@ -67,6 +67,7 @@ public sealed class CustomerPortalAuthAppService(
         {
             await securityManager.MarkDeliveryNoteAccessTokenViewedAsync(token.Id, nowUtc).ConfigureAwait(false);
             await RecordEventAsync(deliveryNote.CustomerId, deliveryNote.Id, OtpDisabledLoginEvent, CustomerPortalSecurityEventOutcome.Succeeded, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
+            await UpdateCustomerLocationAsync(deliveryNote.CustomerId, dto.Location, OtpDisabledLoginEvent).ConfigureAwait(false);
             var loginResult = await CreateLoginResultAsync(deliveryNote.CustomerId, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
             return new CustomerOtpRequestResultAppDto
             {
@@ -141,6 +142,7 @@ public sealed class CustomerPortalAuthAppService(
         }
 
         await RecordEventAsync(result.CustomerId, result.DeliveryNoteId, OtpVerifyEvent, CustomerPortalSecurityEventOutcome.Succeeded, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
+        await UpdateCustomerLocationAsync(result.CustomerId, dto.Location, OtpVerifyEvent).ConfigureAwait(false);
         return await CreateLoginResultAsync(result.CustomerId, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
     }
 
@@ -373,6 +375,21 @@ public sealed class CustomerPortalAuthAppService(
             IpAddress = ip,
             UserAgent = userAgent
         });
+
+    private Task UpdateCustomerLocationAsync(Guid customerId, CustomerPortalLocationAppDto? location, string source)
+    {
+        if (location is null)
+            return Task.CompletedTask;
+
+        return securityManager.UpdateLastKnownLocationAsync(customerId, new UpdateCustomerPortalLocationDto
+        {
+            Latitude = location.Latitude,
+            Longitude = location.Longitude,
+            AccuracyMeters = location.AccuracyMeters,
+            Source = source,
+            CapturedOnUtc = DateTime.UtcNow
+        });
+    }
 
     private static string MaskPhone(string phoneNumber)
     {

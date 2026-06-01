@@ -103,6 +103,33 @@ public sealed class CustomerPortalSecurityManager(
         await accountRepository.UpdateAsync(account).ConfigureAwait(false);
     }
 
+    public async Task UpdateLastKnownLocationAsync(Guid customerId, UpdateCustomerPortalLocationDto dto)
+    {
+        if (customerId == Guid.Empty ||
+            !IsValidLatitude(dto.Latitude) ||
+            !IsValidLongitude(dto.Longitude) ||
+            !IsValidAccuracy(dto.AccuracyMeters) ||
+            string.IsNullOrWhiteSpace(dto.Source))
+        {
+            return;
+        }
+
+        var account = accountReader.DataSource.FirstOrDefault(account => account.CustomerId == customerId)
+            ?? new CustomerPortalAccount(customerId);
+
+        account.UpdateLastKnownLocation(
+            dto.Latitude,
+            dto.Longitude,
+            dto.AccuracyMeters,
+            dto.Source.Trim(),
+            dto.CapturedOnUtc);
+
+        if (accountReader.DataSource.Any(existing => existing.Id == account.Id))
+            await accountRepository.UpdateAsync(account).ConfigureAwait(false);
+        else
+            await accountRepository.InsertAsync(account).ConfigureAwait(false);
+    }
+
     public async Task<CustomerOtpChallengeDto> CreateOtpChallengeAsync(CreateCustomerOtpChallengeDto dto)
     {
         dto.Verify();
@@ -336,9 +363,23 @@ public sealed class CustomerPortalSecurityManager(
             Status = account.Status,
             PasswordSetOnUtc = account.PasswordSetOnUtc,
             LastLoginOnUtc = account.LastLoginOnUtc,
+            LastKnownLatitude = account.LastKnownLatitude,
+            LastKnownLongitude = account.LastKnownLongitude,
+            LastKnownLocationAccuracyMeters = account.LastKnownLocationAccuracyMeters,
+            LastKnownLocationCapturedOnUtc = account.LastKnownLocationCapturedOnUtc,
+            LastKnownLocationSource = account.LastKnownLocationSource,
             CreatedOnUtc = account.CreatedOnUtc,
             UpdatedOnUtc = account.UpdatedOnUtc
         };
+
+    private static bool IsValidLatitude(double value)
+        => !double.IsNaN(value) && !double.IsInfinity(value) && value is >= -90 and <= 90;
+
+    private static bool IsValidLongitude(double value)
+        => !double.IsNaN(value) && !double.IsInfinity(value) && value is >= -180 and <= 180;
+
+    private static bool IsValidAccuracy(double? value)
+        => !value.HasValue || (!double.IsNaN(value.Value) && !double.IsInfinity(value.Value) && value.Value >= 0);
 
     private static CustomerPortalSettingsDto MapToDto(CustomerPortalSettings settings)
         => new(settings.Id)

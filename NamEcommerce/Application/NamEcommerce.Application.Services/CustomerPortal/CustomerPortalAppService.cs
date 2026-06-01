@@ -555,6 +555,7 @@ public sealed class CustomerPortalAppService(
             Message = BuildConfirmationMessage(dto)
         }).ConfigureAwait(false);
 
+        await UpdateCustomerLocationAsync(customerId, dto.Location, "DeliveryConfirmed").ConfigureAwait(false);
         return CustomerActionResultAppDto.Ok(
             rejectedItems.Count > 0
                 ? "Msg.CustomerPortal.DeliveryConfirmedWithReturnRequest"
@@ -913,6 +914,21 @@ public sealed class CustomerPortalAppService(
         return string.IsNullOrWhiteSpace(dto.Note)
             ? $"Customer confirmed delivery. Receiver: {dto.ReceiverName}"
             : $"Customer confirmed delivery. Receiver: {dto.ReceiverName}. Note: {dto.Note}";
+    }
+
+    private Task UpdateCustomerLocationAsync(Guid customerId, CustomerPortalLocationAppDto? location, string source)
+    {
+        if (location is null)
+            return Task.CompletedTask;
+
+        return securityManager.UpdateLastKnownLocationAsync(customerId, new UpdateCustomerPortalLocationDto
+        {
+            Latitude = location.Latitude,
+            Longitude = location.Longitude,
+            AccuracyMeters = location.AccuracyMeters,
+            Source = source,
+            CapturedOnUtc = DateTime.UtcNow
+        });
     }
 
     private List<DeliveryNote> GetDeliveredNotesForReturnRequest(Guid customerId, Guid? deliveryNoteId)
