@@ -24,4 +24,5 @@ public interface IOrderManager : ICodeExistCheckingService
     Task<OrderDto?> GetOrderByIdAsync(Guid id);
     Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, OrderStatus? status);
     Task<IPagedDataDto<OrderDto>> GetOrdersAsync(int pageIndex, int pageSize, string? keywords, IEnumerable<OrderStatus> status);
+    Task<IList<RecentSalePriceDto>> GetRecentSalePricesAsync(Guid productId, Guid customerId, int take = 10);
 }
