@@ -147,6 +147,7 @@ public sealed record CustomerOrderDetailsAppDto : CustomerOrderSummaryAppDto
 {
     public string? ShippingAddress { get; init; }
     public string? Note { get; init; }
+    public bool CanUpdateNote { get; init; }
     public IList<CustomerOrderItemAppDto> Items { get; init; } = [];
 }
 

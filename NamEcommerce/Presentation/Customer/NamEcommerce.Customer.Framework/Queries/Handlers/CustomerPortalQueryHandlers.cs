@@ -76,6 +76,7 @@ public sealed class CustomerPortalQueryHandlers(
                 order.ExpectedShippingDateUtc,
                 order.ShippingAddress,
                 order.Note,
+                order.CanUpdateNote,
                 order.Items.Select(item => new CustomerOrderItemModel(item.Id, item.ProductId, item.ProductName, item.Quantity, item.UnitPrice, item.SubTotal)).ToList());
     }
 

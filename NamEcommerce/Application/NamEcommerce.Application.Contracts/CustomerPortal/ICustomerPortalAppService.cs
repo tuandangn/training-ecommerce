@@ -26,4 +26,5 @@ public interface ICustomerPortalAppService
     Task<CustomerReturnRequestDetailsAppDto?> GetReturnRequestDetailsAsync(Guid customerId, Guid returnRequestId);
     Task<CustomerActionResultAppDto> CancelReturnRequestAsync(Guid customerId, Guid returnRequestId);
     Task<CustomerDebtSummaryPortalAppDto> GetDebtSummaryAsync(Guid customerId);
+    Task<CustomerActionResultAppDto> UpdateOrderNoteAsync(Guid customerId, Guid orderId, string? note);
 }

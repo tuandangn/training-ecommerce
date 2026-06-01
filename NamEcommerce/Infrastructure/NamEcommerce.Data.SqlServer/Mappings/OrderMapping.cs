@@ -36,6 +36,7 @@ public sealed class OrderMapping : IEntityTypeConfiguration<Order>
         builder.Property(o => o.OrderDiscount);
 
         builder.Property(o => o.CreatedByUsername).HasMaxLength(1000);
+        builder.Property(o => o.Note);
 
         builder.HasOne<Customer>().WithMany().HasForeignKey(o => o.CustomerId);
 

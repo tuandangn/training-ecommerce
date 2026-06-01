@@ -20,6 +20,7 @@ public sealed record CreateCustomerOrderRequestCommand(
 public sealed record CreateCustomerOrderRequestItemCommand(Guid ProductId, decimal Quantity);
 
 public sealed record ConfirmCustomerOrderRequestCommand(Guid OrderRequestId) : IRequest<CustomerPortalConversionResultModel>;
+public sealed record UpdateCustomerOrderNoteCommand(Guid OrderId, string? Note) : IRequest<CustomerActionResultModel>;
 
 public sealed record ConfirmCustomerDeliveryAcceptanceItemCommand(
     Guid DeliveryNoteItemId,

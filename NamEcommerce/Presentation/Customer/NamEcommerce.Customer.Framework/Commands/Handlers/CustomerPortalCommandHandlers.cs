@@ -20,6 +20,7 @@ public sealed class CustomerPortalCommandHandlers(
     IRequestHandler<LogoutCustomerCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerOrderRequestCommand, CustomerOrderRequestModel>,
     IRequestHandler<ConfirmCustomerOrderRequestCommand, CustomerPortalConversionResultModel>,
+    IRequestHandler<UpdateCustomerOrderNoteCommand, CustomerActionResultModel>,
     IRequestHandler<ConfirmCustomerDeliveryNoteCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerDeliveryFeedbackCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerReturnRequestCommand, CustomerReturnRequestModel>,
@@ -122,6 +123,12 @@ public sealed class CustomerPortalCommandHandlers(
     {
         var result = await portalAppService.ConfirmOrderRequestAsync(RequireCustomerId(), request.OrderRequestId).ConfigureAwait(false);
         return new CustomerPortalConversionResultModel(result.Success, result.Message, result.CreatedId);
+    }
+
+    public async Task<CustomerActionResultModel> Handle(UpdateCustomerOrderNoteCommand request, CancellationToken cancellationToken)
+    {
+        var result = await portalAppService.UpdateOrderNoteAsync(RequireCustomerId(), request.OrderId, request.Note).ConfigureAwait(false);
+        return new CustomerActionResultModel(result.Success, result.Message);
     }
 
     public async Task<CustomerActionResultModel> Handle(ConfirmCustomerDeliveryNoteCommand request, CancellationToken cancellationToken)

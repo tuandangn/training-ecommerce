@@ -124,6 +124,7 @@ public sealed class CustomerPortalAppService(
             ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
             ShippingAddress = order.ShippingAddress,
             Note = order.Note,
+            CanUpdateNote = order.OrderStatus is not (OrderStatus.Completed or OrderStatus.Cancelled),
             Items = order.OrderItems.Select(item => new CustomerOrderItemAppDto
             {
                 Id = item.Id,
@@ -767,6 +768,27 @@ public sealed class CustomerPortalAppService(
                 PaidOnUtc = payment.PaidOnUtc
             }).ToList()
         };
+    }
+
+    public async Task<CustomerActionResultAppDto> UpdateOrderNoteAsync(Guid customerId, Guid orderId, string? note)
+    {
+        var order = await orderAppService.GetOrderByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null || order.CustomerId != customerId)
+            return CustomerActionResultAppDto.Fail("Error.CustomerPortal.Order.NotFound");
+
+        if (!order.CanUpdateInfo)
+            return CustomerActionResultAppDto.Fail("Error.CustomerPortal.Order.CannotUpdate");
+
+        var result = await orderAppService.UpdateOrderAsync(new UpdateOrderAppDto(orderId)
+        {
+            ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
+            OrderDiscount = order.OrderDiscount,
+            Note = note
+        }).ConfigureAwait(false);
+
+        return result.Success
+            ? CustomerActionResultAppDto.Ok()
+            : CustomerActionResultAppDto.Fail(result.ErrorMessage);
     }
 
     private static CustomerOrderSummaryAppDto MapOrderSummary(Order order)

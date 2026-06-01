@@ -756,6 +756,19 @@ public sealed class OrderModelFactory : IOrderModelFactory
             }
         };
 
+        if (!string.IsNullOrWhiteSpace(model.Note))
+        {
+            timeline.Add(new OrderDetailsModel.TimelineEventModel
+            {
+                OccurredOn = model.CreatedOn,
+                Title = "Dặn dò từ khách hàng",
+                Description = model.Note,
+                Icon = "bi-chat-square-text",
+                Tone = "info",
+                Stage = OrderDetailsModel.WorkflowStage.Order
+            });
+        }
+
         foreach (var audit in itemChangeAudits)
         {
             timeline.Add(new OrderDetailsModel.TimelineEventModel

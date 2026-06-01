@@ -63,6 +63,7 @@ public sealed record CustomerOrderDetailsModel(
     DateTime? ExpectedShippingDate,
     string? ShippingAddress,
     string? Note,
+    bool CanUpdateNote,
     IList<CustomerOrderItemModel> Items);
 
 [Serializable]
