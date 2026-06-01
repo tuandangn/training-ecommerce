@@ -152,6 +152,7 @@
                                                 <input type="hidden" name="ProductInventory.ProductStocks[@i].WarehouseName"
                                                        value="@stock.WarehouseName" />
                                                 <span class="fw-medium">@stock.WarehouseName</span>
+                                                <span asp-validation-for="ProductInventory.ProductStocks[@i].WarehouseId" class="text-danger small"></span>
                                             </td>
                                             <td class="text-end" style="max-width:150px;">
                                                 <input name="ProductInventory.ProductStocks[@i].Quantity"
@@ -159,6 +160,7 @@
                                                        class="form-control form-control-sm text-end stock-qty-input"
                                                        data-index="@i"
                                                        placeholder="0" />
+                                                <span asp-validation-for="ProductInventory.ProductStocks[@i].Quantity" class="text-danger small"></span>
                                             </td>
                                             <td class="text-end pe-3" style="max-width:180px;">
                                                 <input name="ProductInventory.ProductStocks[@i].UnitCost"
@@ -167,6 +169,7 @@
                                                        class="form-control form-control-sm text-end stock-cost-input"
                                                        data-index="@i"
                                                        placeholder="Bắt buộc nếu có SL" />
+                                                <span asp-validation-for="ProductInventory.ProductStocks[@i].UnitCost" class="text-danger small"></span>
                                             </td>
                                         </tr>
                                     }
