@@ -20,6 +20,7 @@ public sealed class CreateVendorReturnItemCommand
     public required Guid ProductId { get; init; }
     public Guid? GoodsReceiptItemId { get; init; }
     public required decimal RequestedQuantity { get; init; }
+    public int QuantityDecimalPlaces { get; init; }
     public required decimal AcceptedQuantity { get; init; }
 
     /// <summary>Giá vốn gốc (tham chiếu) — null nếu tạo tự do.</summary>

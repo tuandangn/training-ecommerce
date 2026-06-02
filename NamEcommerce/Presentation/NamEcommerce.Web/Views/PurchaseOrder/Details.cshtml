@@ -1416,7 +1416,11 @@
                 document.getElementById('editPurchaseOrderId').value = this.getAttribute('data-purchaseorder') || '';
                 document.getElementById('editPurchaseOrderItemId').value = this.getAttribute('data-id') || '';
                 document.getElementById('editProductName').textContent = this.getAttribute('data-name') || '';
-                document.getElementById('editItemQuantity').value = this.getAttribute('data-quantity') || '';
+                const editQtyInput = document.getElementById('editItemQuantity');
+                editQtyInput.value = this.getAttribute('data-quantity') || '';
+                const editDecimalPlaces = parseInt(this.getAttribute('data-decimalplaces') || '0', 10);
+                editQtyInput.dataset.decimals = String(editDecimalPlaces);
+                editQtyInput.dataset.decimalBound = '';
                 document.getElementById('editItemUnitCost').value = this.getAttribute('data-unitcost') || '';
                 document.getElementById('editItemNote').value = this.getAttribute('data-note') || '';
                 document.getElementById('editProductError')?.classList.add('d-none');
@@ -1520,6 +1524,12 @@
                 itemUnitPrice.value = 0;
                 itemProductId.value = product.id;
                 btnAddProduct.classList.remove('d-none');
+                const itemQtyInput = document.getElementById('itemQuantity');
+                if (itemQtyInput) {
+                    itemQtyInput.dataset.decimals = String(product.quantityDecimalPlaces ?? 0);
+                    itemQtyInput.dataset.decimalBound = '';
+                    window.DecimalFields?.bindInput?.(itemQtyInput);
+                }
 
                 // Fetch giá nhập gần nhất
                 detailsRecentPrices = [];

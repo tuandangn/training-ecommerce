@@ -17,6 +17,15 @@ public sealed class CreateVendorReturnHandler : IRequestHandler<CreateVendorRetu
 
     public async Task<CreateVendorReturnResultModel> Handle(CreateVendorReturnCommand request, CancellationToken cancellationToken)
     {
+        if (request.Items.Any(i => i.QuantityDecimalPlaces == 0 && i.RequestedQuantity != Math.Floor(i.RequestedQuantity)))
+        {
+            return new CreateVendorReturnResultModel
+            {
+                Success = false,
+                ErrorMessage = "Error.QuantityMustBeInteger"
+            };
+        }
+
         var result = await _vendorReturnAppService.CreateAsync(new CreateVendorReturnAppDto
         {
             VendorId = request.VendorId,

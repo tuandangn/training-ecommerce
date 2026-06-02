@@ -57,6 +57,8 @@ public sealed class CreateGoodsReceiptItemModel
 
     [ValidateNever]
     public string? ProductDisplayPicture { get; set; }
+    [ValidateNever]
+    public int QuantityDecimalPlaces { get; set; }
 
     [Display(Name = "Kho")]
     public Guid? WarehouseId { get; set; }

@@ -93,6 +93,7 @@
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
                                                 <input type="hidden" name="Items[@i].GoodsReceiptItemId" value="@item.GoodsReceiptItemId" />
                                                 <input type="hidden" name="Items[@i].OriginalUnitCost" value="@item.OriginalUnitCost" class="item-orig-cost" />
+                                                <input type="hidden" name="Items[@i].QuantityDecimalPlaces" value="@item.QuantityDecimalPlaces" />
                                             </td>
                                             <td class="text-center text-muted small"></td>
                                             <td class="text-end text-muted small">—</td>
@@ -101,7 +102,7 @@
                                             <td class="text-end">
                                                 <input name="Items[@i].RequestedQuantity" value="@item.RequestedQuantity.DisplayQuantity()"
                                                        class="form-control form-control-sm text-end item-req-qty"
-                                                       data-decimal="quantity" min="0.001" placeholder="0" />
+                                                       data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" min="0.001" placeholder="0" />
                                             </td>
                                             <td class="text-end text-muted small">
                                                 @(item.OriginalUnitCost.HasValue ? item.OriginalUnitCost.Value.DisplayCurrency() : "—")
@@ -694,6 +695,7 @@
                     <input type="hidden" name="Items[${i}].ProductId" value="${item.productId}" />
                     <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="${item.sourceItemId ?? ''}" />
                     <input type="hidden" name="Items[${i}].OriginalUnitCost" value="${origCost}" class="item-orig-cost" />
+                    <input type="hidden" name="Items[${i}].QuantityDecimalPlaces" value="${item.quantityDecimalPlaces ?? 0}" />
                 </td>
                 <td class="text-center text-muted small">${item.unit}</td>
                 <td class="text-end text-muted small">${fmtQty(item.originalQty)}</td>
@@ -702,7 +704,7 @@
                 <td class="text-end">
                     <input name="Items[${i}].RequestedQuantity" value="${available > 0 ? available : ''}"
                            class="form-control form-control-sm text-end item-req-qty"
-                           data-decimal="quantity" min="0.001" max="${available}" placeholder="0" />
+                           data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" min="0.001" max="${available}" placeholder="0" />
                 </td>
                 <td class="text-end text-muted small">${origCost > 0 ? fmtCurrency(origCost) : '—'}</td>
                 <td class="text-end">

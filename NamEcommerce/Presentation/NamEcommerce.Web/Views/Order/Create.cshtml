@@ -130,8 +130,8 @@
                                             </td>
                                             <td class="text-center">
                                                 <input name="Items[@i].Quantity" value="@item.Quantity.DisplayQuantity()"
-                                                       class="form-control row-qty" data-decimal="quantity" 
-                                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.001"
+                                                       class="form-control row-qty" data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces"
+                                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="@(item.QuantityDecimalPlaces > 0 ? "0.001" : "1")"
                                                        data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
                                                 <span class="small text-danger field-validation-valid"
                                                       data-valmsg-for="Items[@i].Quantity" data-valmsg-replace="true"></span>
