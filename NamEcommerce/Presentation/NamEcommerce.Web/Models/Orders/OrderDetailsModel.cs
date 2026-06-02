@@ -60,6 +60,7 @@ public sealed record OrderDetailsModel
             foreach (var item in Items)
             {
                 var totalDeliveredQty = DeliveryNotes
+                    .Where(dn => dn.Status != (int)DeliveryNoteStatus.Cancelled)
                     .SelectMany(dn => dn.Items)
                     .Where(dni => dni.OrderItemId == item.Id)
                     .Sum(dni => Math.Max(0m, dni.Quantity - dni.CompensatedReturnQuantity));

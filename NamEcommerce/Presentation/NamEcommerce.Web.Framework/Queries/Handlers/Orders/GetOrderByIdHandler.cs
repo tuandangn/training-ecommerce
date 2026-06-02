@@ -52,9 +52,7 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             CanCompleteOrder = order.CanCompleteOrder,
             CreatedOn = order.CreatedOnUtc.ToLocalTime()
         };
-        var products = order.CanUpdateInfo 
-            ? await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = order.Items.Select(i => i.ProductId)}, cancellationToken).ConfigureAwait(false)
-            : [];
+        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = order.Items.Select(i => i.ProductId) }, cancellationToken).ConfigureAwait(false);
         foreach (var orderItem in order.Items)
         {
             var product = products.FirstOrDefault(p => p.Id == orderItem.ProductId);
