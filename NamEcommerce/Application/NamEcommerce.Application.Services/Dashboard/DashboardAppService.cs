@@ -65,9 +65,17 @@ public sealed class DashboardAppService(
         => new()
         {
             TodayRevenue = todaySummary.TotalRevenue,
+            TodayGrossRevenue = todaySummary.GrossRevenue,
+            TodayReturnAmount = todaySummary.TotalReturnAmount,
             MonthRevenue = monthSummary.TotalRevenue,
+            MonthGrossRevenue = monthSummary.GrossRevenue,
+            MonthReturnAmount = monthSummary.TotalReturnAmount,
             QuarterRevenue = quarterSummary.TotalRevenue,
+            QuarterGrossRevenue = quarterSummary.GrossRevenue,
+            QuarterReturnAmount = quarterSummary.TotalReturnAmount,
             YearRevenue = yearSummary.TotalRevenue,
+            YearGrossRevenue = yearSummary.GrossRevenue,
+            YearReturnAmount = yearSummary.TotalReturnAmount,
             RevenueTrendUtc = BuildRevenueTrend(trendSummary, trendStart, today)
         };
 
@@ -78,14 +86,29 @@ public sealed class DashboardAppService(
         ProfitLossSummaryAppDto yearSummary)
         => new()
         {
+            TodayRevenue = todaySummary.TotalRevenue,
+            TodayCogs = todaySummary.TotalCogs,
+            TodayGrossProfit = todaySummary.GrossProfit,
+            TodayOperatingExpenses = todaySummary.TotalOperatingExpenses,
             TodayProfit = todaySummary.NetProfit,
-            MonthProfit = monthSummary.NetProfit,
-            QuarterProfit = quarterSummary.NetProfit,
-            YearProfit = yearSummary.NetProfit,
+
             MonthRevenue = monthSummary.TotalRevenue,
             MonthCogs = monthSummary.TotalCogs,
             MonthGrossProfit = monthSummary.GrossProfit,
-            MonthOperatingExpenses = monthSummary.TotalOperatingExpenses
+            MonthOperatingExpenses = monthSummary.TotalOperatingExpenses,
+            MonthProfit = monthSummary.NetProfit,
+
+            QuarterRevenue = quarterSummary.TotalRevenue,
+            QuarterCogs = quarterSummary.TotalCogs,
+            QuarterGrossProfit = quarterSummary.GrossProfit,
+            QuarterOperatingExpenses = quarterSummary.TotalOperatingExpenses,
+            QuarterProfit = quarterSummary.NetProfit,
+
+            YearRevenue = yearSummary.TotalRevenue,
+            YearCogs = yearSummary.TotalCogs,
+            YearGrossProfit = yearSummary.GrossProfit,
+            YearOperatingExpenses = yearSummary.TotalOperatingExpenses,
+            YearProfit = yearSummary.NetProfit
         };
 
     private static IReadOnlyCollection<RevenueTrendPointAppDto> BuildRevenueTrend(

@@ -2,13 +2,17 @@
 
 @{
     ViewData[ViewConstants.PageTitle] = "Chỉnh sửa Chi phí";
+
+    bool isSystem = ViewData["IsSystemGenerated"] is true;
+
     var expenseTypes = new List<SelectListItem>
     {
         new SelectListItem { Value = "1", Text = "Lương thưởng" },
         new SelectListItem { Value = "2", Text = "Mặt bằng" },
         new SelectListItem { Value = "3", Text = "Tiếp thị" },
         new SelectListItem { Value = "4", Text = "Điện nước" },
-        new SelectListItem { Value = "5", Text = "Khác" }
+        new SelectListItem { Value = "5", Text = "Khác" },
+        new SelectListItem { Value = "6", Text = "Hoàn hàng (Hệ thống)" }
     };
 }
 
@@ -27,31 +31,44 @@
         </a>
     </div>
     <div class="form-card-body">
+
+        @if (isSystem)
+        {
+            <div class="alert alert-warning d-flex align-items-center gap-2 mb-4">
+                <i class="bi bi-shield-lock-fill"></i>
+                <span>Khoản chi phí này được tạo tự động bởi hệ thống (từ nghiệp vụ hoàn hàng). Chỉ có thể chỉnh sửa ghi chú.</span>
+            </div>
+        }
+
         <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
         <form class="row g-3" asp-action="Edit" method="post" asp-antiforgery="true">
             <input type="hidden" asp-for="Id" />
-            
+
             <div class="col-md-6">
                 <label asp-for="Title" class="form-label">Khoản chi</label>
-                <input asp-for="Title" class="form-control" autofocus />
+                <input asp-for="Title" class="form-control" autofocus disabled="@isSystem" />
+                @if (isSystem) { <input type="hidden" asp-for="Title" /> }
                 <span asp-validation-for="Title" class="text-danger small"></span>
             </div>
 
             <div class="col-md-6">
                 <label asp-for="Amount" class="form-label">Số tiền (₫)</label>
-                <input asp-for="Amount" type="number" class="form-control" />
+                <input asp-for="Amount" type="number" class="form-control" disabled="@isSystem" />
+                @if (isSystem) { <input type="hidden" asp-for="Amount" /> }
                 <span asp-validation-for="Amount" class="text-danger small"></span>
             </div>
 
             <div class="col-md-6">
                 <label asp-for="ExpenseType" class="form-label">Loại phí</label>
-                <select asp-for="ExpenseType" asp-items="expenseTypes" class="form-select"></select>
+                <select asp-for="ExpenseType" asp-items="expenseTypes" class="form-select" disabled="@isSystem"></select>
+                @if (isSystem) { <input type="hidden" asp-for="ExpenseType" /> }
                 <span asp-validation-for="ExpenseType" class="text-danger small"></span>
             </div>
 
             <div class="col-md-6">
                 <label asp-for="IncurredDate" class="form-label">Ngày thanh toán / Hóa đơn</label>
-                <input asp-for="IncurredDate" type="date" class="form-control" value="@Model.IncurredDate.ToString("yyyy-MM-dd")" />
+                <input asp-for="IncurredDate" type="date" class="form-control" disabled="@isSystem" />
+                @if (isSystem) { <input type="hidden" asp-for="IncurredDate" /> }
                 <span asp-validation-for="IncurredDate" class="text-danger small"></span>
             </div>
 

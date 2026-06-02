@@ -23,6 +23,20 @@
                 Model.ProfitSummary.MonthGrossProfit,
                 Model.ProfitSummary.MonthOperatingExpenses
             }
+        },
+        revenueDetail = new
+        {
+            today = new { gross = Model.SalesSummary.TodayGrossRevenue, returns = Model.SalesSummary.TodayReturnAmount, net = Model.SalesSummary.TodayRevenue },
+            month = new { gross = Model.SalesSummary.MonthGrossRevenue, returns = Model.SalesSummary.MonthReturnAmount, net = Model.SalesSummary.MonthRevenue },
+            quarter = new { gross = Model.SalesSummary.QuarterGrossRevenue, returns = Model.SalesSummary.QuarterReturnAmount, net = Model.SalesSummary.QuarterRevenue },
+            year = new { gross = Model.SalesSummary.YearGrossRevenue, returns = Model.SalesSummary.YearReturnAmount, net = Model.SalesSummary.YearRevenue }
+        },
+        profitDetail = new
+        {
+            today = new { revenue = Model.ProfitSummary.TodayRevenue, cogs = Model.ProfitSummary.TodayCogs, grossProfit = Model.ProfitSummary.TodayGrossProfit, opex = Model.ProfitSummary.TodayOperatingExpenses, net = Model.ProfitSummary.TodayProfit },
+            month = new { revenue = Model.ProfitSummary.MonthRevenue, cogs = Model.ProfitSummary.MonthCogs, grossProfit = Model.ProfitSummary.MonthGrossProfit, opex = Model.ProfitSummary.MonthOperatingExpenses, net = Model.ProfitSummary.MonthProfit },
+            quarter = new { revenue = Model.ProfitSummary.QuarterRevenue, cogs = Model.ProfitSummary.QuarterCogs, grossProfit = Model.ProfitSummary.QuarterGrossProfit, opex = Model.ProfitSummary.QuarterOperatingExpenses, net = Model.ProfitSummary.QuarterProfit },
+            year = new { revenue = Model.ProfitSummary.YearRevenue, cogs = Model.ProfitSummary.YearCogs, grossProfit = Model.ProfitSummary.YearGrossProfit, opex = Model.ProfitSummary.YearOperatingExpenses, net = Model.ProfitSummary.YearProfit }
         }
     };
 }
@@ -231,6 +245,81 @@
             font-variant-numeric: tabular-nums;
         }
 
+        .dashboard-kpi-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem 0.85rem;
+            margin-top: 0.3rem;
+            font-size: 0.72rem;
+            color: #64748B;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .dashboard-kpi-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .dashboard-kpi[data-kpi-detail] {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .dashboard-kpi[data-kpi-detail]:hover {
+            border-color: #CBD5E1;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+        }
+
+        .dashboard-kpi[data-kpi-detail]:focus-visible {
+            outline: 2px solid #4F46E5;
+            outline-offset: 2px;
+        }
+
+        .kpi-detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 1rem;
+            padding: 0.55rem 0;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+
+        .kpi-detail-row.kpi-detail-subtotal {
+            border-top: 1px solid #E2E8F0;
+            margin-top: 0.25rem;
+            padding-top: 0.65rem;
+            font-weight: 700;
+            color: #0F172A;
+        }
+
+        .kpi-detail-row.kpi-detail-total {
+            border-top: 2px solid #0F172A;
+            margin-top: 0.25rem;
+            padding-top: 0.75rem;
+            font-weight: 700;
+            font-size: 1.05rem;
+            color: #0F172A;
+        }
+
+        .kpi-detail-label {
+            color: #475569;
+        }
+
+        .kpi-detail-value {
+            font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+        }
+
+        .kpi-detail-value.is-negative {
+            color: #dc3545;
+        }
+
+        .kpi-detail-value.is-positive {
+            color: #198754;
+        }
+
         @@media (max-width: 767.98px) {
             .dashboard-kpi {
                 min-height: 108px;
@@ -256,45 +345,73 @@
 <div class="dashboard-grid">
     <div class="row g-3">
         <div class="col-12 col-sm-6 col-xl-3">
-            <div class="dashboard-kpi">
+            <div class="dashboard-kpi" data-kpi-detail="revenue-today" role="button" tabindex="0" aria-label="Xem chi tiết doanh số ngày">
                 <div class="d-flex align-items-start gap-3">
                     <span class="dashboard-kpi-icon bg-primary"><i class="bi bi-calendar-day"></i></span>
                     <div class="min-w-0">
                         <div class="dashboard-kpi-label">Doanh số ngày</div>
-                        <div class="dashboard-kpi-value">@Model.SalesSummary.TodayRevenue.DisplayCurrencyWithSymbol()</div>
+                        <div class="dashboard-kpi-value @(Model.SalesSummary.TodayRevenue < 0 ? "text-danger" : "")">@Model.SalesSummary.TodayRevenue.DisplayCurrencyWithSymbol()</div>
+                        @if (Model.SalesSummary.TodayReturnAmount > 0)
+                        {
+                            <div class="dashboard-kpi-meta">
+                                <span class="dashboard-kpi-meta-item"><i class="bi bi-arrow-up-short text-success"></i>@Model.SalesSummary.TodayGrossRevenue.DisplayCurrencyWithSymbol()</span>
+                                <span class="dashboard-kpi-meta-item text-danger"><i class="bi bi-arrow-down-short"></i>@Model.SalesSummary.TodayReturnAmount.DisplayCurrencyWithSymbol()</span>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-xl-3">
-            <div class="dashboard-kpi">
+            <div class="dashboard-kpi" data-kpi-detail="revenue-month" role="button" tabindex="0" aria-label="Xem chi tiết doanh số tháng">
                 <div class="d-flex align-items-start gap-3">
                     <span class="dashboard-kpi-icon bg-info"><i class="bi bi-calendar3"></i></span>
                     <div class="min-w-0">
                         <div class="dashboard-kpi-label">Doanh số tháng</div>
-                        <div class="dashboard-kpi-value">@Model.SalesSummary.MonthRevenue.DisplayCurrencyWithSymbol()</div>
+                        <div class="dashboard-kpi-value @(Model.SalesSummary.MonthRevenue < 0 ? "text-danger" : "")">@Model.SalesSummary.MonthRevenue.DisplayCurrencyWithSymbol()</div>
+                        @if (Model.SalesSummary.MonthReturnAmount > 0)
+                        {
+                            <div class="dashboard-kpi-meta">
+                                <span class="dashboard-kpi-meta-item"><i class="bi bi-arrow-up-short text-success"></i>@Model.SalesSummary.MonthGrossRevenue.DisplayCurrencyWithSymbol()</span>
+                                <span class="dashboard-kpi-meta-item text-danger"><i class="bi bi-arrow-down-short"></i>@Model.SalesSummary.MonthReturnAmount.DisplayCurrencyWithSymbol()</span>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-xl-3">
-            <div class="dashboard-kpi">
+            <div class="dashboard-kpi" data-kpi-detail="revenue-quarter" role="button" tabindex="0" aria-label="Xem chi tiết doanh số quý">
                 <div class="d-flex align-items-start gap-3">
                     <span class="dashboard-kpi-icon bg-warning"><i class="bi bi-calendar-range"></i></span>
                     <div class="min-w-0">
                         <div class="dashboard-kpi-label">Doanh số quý</div>
-                        <div class="dashboard-kpi-value">@Model.SalesSummary.QuarterRevenue.DisplayCurrencyWithSymbol()</div>
+                        <div class="dashboard-kpi-value @(Model.SalesSummary.QuarterRevenue < 0 ? "text-danger" : "")">@Model.SalesSummary.QuarterRevenue.DisplayCurrencyWithSymbol()</div>
+                        @if (Model.SalesSummary.QuarterReturnAmount > 0)
+                        {
+                            <div class="dashboard-kpi-meta">
+                                <span class="dashboard-kpi-meta-item"><i class="bi bi-arrow-up-short text-success"></i>@Model.SalesSummary.QuarterGrossRevenue.DisplayCurrencyWithSymbol()</span>
+                                <span class="dashboard-kpi-meta-item text-danger"><i class="bi bi-arrow-down-short"></i>@Model.SalesSummary.QuarterReturnAmount.DisplayCurrencyWithSymbol()</span>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-xl-3">
-            <div class="dashboard-kpi">
+            <div class="dashboard-kpi" data-kpi-detail="revenue-year" role="button" tabindex="0" aria-label="Xem chi tiết doanh số năm">
                 <div class="d-flex align-items-start gap-3">
                     <span class="dashboard-kpi-icon bg-success"><i class="bi bi-calendar4-week"></i></span>
                     <div class="min-w-0">
                         <div class="dashboard-kpi-label">Doanh số năm</div>
-                        <div class="dashboard-kpi-value">@Model.SalesSummary.YearRevenue.DisplayCurrencyWithSymbol()</div>
+                        <div class="dashboard-kpi-value @(Model.SalesSummary.YearRevenue < 0 ? "text-danger" : "")">@Model.SalesSummary.YearRevenue.DisplayCurrencyWithSymbol()</div>
+                        @if (Model.SalesSummary.YearReturnAmount > 0)
+                        {
+                            <div class="dashboard-kpi-meta">
+                                <span class="dashboard-kpi-meta-item"><i class="bi bi-arrow-up-short text-success"></i>@Model.SalesSummary.YearGrossRevenue.DisplayCurrencyWithSymbol()</span>
+                                <span class="dashboard-kpi-meta-item text-danger"><i class="bi bi-arrow-down-short"></i>@Model.SalesSummary.YearReturnAmount.DisplayCurrencyWithSymbol()</span>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
@@ -303,45 +420,45 @@
 
     <div class="row g-3">
         <div class="col-12 col-sm-6 col-xl-3">
-            <div class="dashboard-kpi">
+            <div class="dashboard-kpi" data-kpi-detail="profit-today" role="button" tabindex="0" aria-label="Xem chi tiết lợi nhuận ngày">
                 <div class="d-flex align-items-start gap-3">
                     <span class="dashboard-kpi-icon bg-success"><i class="bi bi-graph-up-arrow"></i></span>
                     <div class="min-w-0">
                         <div class="dashboard-kpi-label">Lợi nhuận ngày</div>
-                        <div class="dashboard-kpi-value">@Model.ProfitSummary.TodayProfit.DisplayCurrencyWithSymbol()</div>
+                        <div class="dashboard-kpi-value @(Model.ProfitSummary.TodayProfit < 0 ? "text-danger" : "")">@Model.ProfitSummary.TodayProfit.DisplayCurrencyWithSymbol()</div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-xl-3">
-            <div class="dashboard-kpi">
+            <div class="dashboard-kpi" data-kpi-detail="profit-month" role="button" tabindex="0" aria-label="Xem chi tiết lợi nhuận tháng">
                 <div class="d-flex align-items-start gap-3">
                     <span class="dashboard-kpi-icon bg-teal" style="background-color:#0f766e;"><i class="bi bi-bar-chart-line"></i></span>
                     <div class="min-w-0">
                         <div class="dashboard-kpi-label">Lợi nhuận tháng</div>
-                        <div class="dashboard-kpi-value">@Model.ProfitSummary.MonthProfit.DisplayCurrencyWithSymbol()</div>
+                        <div class="dashboard-kpi-value @(Model.ProfitSummary.MonthProfit < 0 ? "text-danger" : "")">@Model.ProfitSummary.MonthProfit.DisplayCurrencyWithSymbol()</div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-xl-3">
-            <div class="dashboard-kpi">
+            <div class="dashboard-kpi" data-kpi-detail="profit-quarter" role="button" tabindex="0" aria-label="Xem chi tiết lợi nhuận quý">
                 <div class="d-flex align-items-start gap-3">
                     <span class="dashboard-kpi-icon bg-secondary"><i class="bi bi-pie-chart"></i></span>
                     <div class="min-w-0">
                         <div class="dashboard-kpi-label">Lợi nhuận quý</div>
-                        <div class="dashboard-kpi-value">@Model.ProfitSummary.QuarterProfit.DisplayCurrencyWithSymbol()</div>
+                        <div class="dashboard-kpi-value @(Model.ProfitSummary.QuarterProfit < 0 ? "text-danger" : "")">@Model.ProfitSummary.QuarterProfit.DisplayCurrencyWithSymbol()</div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-xl-3">
-            <div class="dashboard-kpi">
+            <div class="dashboard-kpi" data-kpi-detail="profit-year" role="button" tabindex="0" aria-label="Xem chi tiết lợi nhuận năm">
                 <div class="d-flex align-items-start gap-3">
                     <span class="dashboard-kpi-icon bg-dark"><i class="bi bi-award"></i></span>
                     <div class="min-w-0">
                         <div class="dashboard-kpi-label">Lợi nhuận năm</div>
-                        <div class="dashboard-kpi-value">@Model.ProfitSummary.YearProfit.DisplayCurrencyWithSymbol()</div>
+                        <div class="dashboard-kpi-value @(Model.ProfitSummary.YearProfit < 0 ? "text-danger" : "")">@Model.ProfitSummary.YearProfit.DisplayCurrencyWithSymbol()</div>
                     </div>
                 </div>
             </div>
@@ -615,6 +732,19 @@
             </table>
         </div>
     </section>
+</div>
+
+<div class="modal fade" id="kpiDetailModal" tabindex="-1" aria-labelledby="kpiDetailModalLabel" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 360px;">
+        <div class="modal-content" style="border-radius: 12px; border: 1px solid #E2E8F0;">
+            <div class="modal-header" style="border-bottom: 1px solid #F1F5F9; padding: 1.1rem 1.25rem 0.9rem;">
+                <h5 class="modal-title fw-700" id="kpiDetailModalLabel" style="font-size: 1rem; color: #0F172A;"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body" id="kpiDetailModalBody" style="padding: 1.1rem 1.25rem 1.25rem;">
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {

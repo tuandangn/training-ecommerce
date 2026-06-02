@@ -40,10 +40,7 @@ public class ExpenseManager : IExpenseManager
             SourceCustomerReturnId = dto.SourceCustomerReturnId,
             SourceOrderId = dto.SourceOrderId
         };
-        if (!string.IsNullOrWhiteSpace(dto.Description))
-        {
-            expense.UpdateInfo(dto.Title, dto.Description, dto.Amount, dto.ExpenseType, dto.IncurredDate);
-        }
+        expense.SetDescription(dto.Description);
 
         await _expenseRepository.InsertAsync(expense);
         return new CreateExpenseResultDto { CreatedId = expense.Id };

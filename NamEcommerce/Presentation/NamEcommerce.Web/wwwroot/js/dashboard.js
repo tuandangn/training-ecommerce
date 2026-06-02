@@ -20,6 +20,116 @@
         }).format(value || 0);
     }
 
+    function valueClass(value) {
+        if (value < 0) return 'kpi-detail-value is-negative';
+        if (value > 0) return 'kpi-detail-value is-positive';
+        return 'kpi-detail-value';
+    }
+
+    function detailRow(label, value, isSigned) {
+        var displayValue = isSigned && value !== 0
+            ? (value < 0 ? '− ' + formatCurrency(Math.abs(value)) : '+ ' + formatCurrency(value))
+            : formatCurrency(value);
+
+        return '<div class="kpi-detail-row">'
+            + '<span class="kpi-detail-label">' + label + '</span>'
+            + '<span class="' + valueClass(value) + '">' + displayValue + '</span>'
+            + '</div>';
+    }
+
+    function subtotalRow(label, value) {
+        return '<div class="kpi-detail-row kpi-detail-subtotal">'
+            + '<span>' + label + '</span>'
+            + '<span class="' + valueClass(value) + '">' + formatCurrency(value) + '</span>'
+            + '</div>';
+    }
+
+    function totalRow(label, value) {
+        return '<div class="kpi-detail-row kpi-detail-total">'
+            + '<span>' + label + '</span>'
+            + '<span class="' + valueClass(value) + '">' + formatCurrency(value) + '</span>'
+            + '</div>';
+    }
+
+    function buildRevenueDetail(data) {
+        var html = detailRow('Doanh thu gộp', data.gross, false);
+        if (data.returns !== 0) {
+            html += detailRow('Trả hàng', -data.returns, true);
+        }
+        html += totalRow('Doanh thu thuần', data.net);
+        return html;
+    }
+
+    function buildProfitDetail(data) {
+        var html = detailRow('Doanh thu thuần', data.revenue, false);
+        html += detailRow('Giá vốn hàng bán', -data.cogs, true);
+        html += subtotalRow('Lãi gộp', data.grossProfit);
+        html += detailRow('Chi phí vận hành', -data.opex, true);
+        html += totalRow('Lợi nhuận ròng', data.net);
+        return html;
+    }
+
+    var periodLabels = {
+        today: 'Hôm nay',
+        month: 'Tháng này',
+        quarter: 'Quý này',
+        year: 'Năm nay'
+    };
+
+    var typeLabels = {
+        revenue: 'Doanh số',
+        profit: 'Lợi nhuận'
+    };
+
+    function initKpiDetailModals(payload) {
+        var modalEl = document.getElementById('kpiDetailModal');
+        if (!modalEl || typeof bootstrap === 'undefined') {
+            return;
+        }
+
+        var modal = new bootstrap.Modal(modalEl);
+        var modalTitle = document.getElementById('kpiDetailModalLabel');
+        var modalBody = document.getElementById('kpiDetailModalBody');
+
+        function openDetail(type, period) {
+            var label = typeLabels[type] + ' — ' + periodLabels[period];
+            modalTitle.textContent = label;
+
+            var html = '';
+            if (type === 'revenue' && payload.revenueDetail) {
+                var data = payload.revenueDetail[period];
+                if (data) {
+                    html = buildRevenueDetail(data);
+                }
+            } else if (type === 'profit' && payload.profitDetail) {
+                var pdata = payload.profitDetail[period];
+                if (pdata) {
+                    html = buildProfitDetail(pdata);
+                }
+            }
+
+            modalBody.innerHTML = html || '<p class="text-muted mb-0">Không có dữ liệu.</p>';
+            modal.show();
+        }
+
+        document.querySelectorAll('[data-kpi-detail]').forEach(function (card) {
+            function handleActivate() {
+                var parts = card.getAttribute('data-kpi-detail').split('-');
+                var type = parts[0];
+                var period = parts[1];
+                openDetail(type, period);
+            }
+
+            card.addEventListener('click', handleActivate);
+            card.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleActivate();
+                }
+            });
+        });
+    }
+
     function renderRevenueChart(payload) {
         var canvas = document.getElementById('dashboardRevenueChart');
         if (!canvas || !payload?.revenueTrend) {
@@ -149,12 +259,14 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        if (typeof Chart !== 'function') {
+        var payload = readChartData();
+        if (!payload) {
             return;
         }
 
-        var payload = readChartData();
-        if (!payload) {
+        initKpiDetailModals(payload);
+
+        if (typeof Chart !== 'function') {
             return;
         }
 

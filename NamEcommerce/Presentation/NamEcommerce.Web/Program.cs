@@ -190,6 +190,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IStockAuditLogger, StockAuditLogger>();
     services.AddScoped<ICustomerManager, CustomerManager>();
     services.AddScoped<IExpenseManager, ExpenseManager>();
+    services.AddScoped<IExpenseBudgetManager, ExpenseBudgetManager>();
     services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();
     services.AddScoped<IOrderManager, OrderManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
@@ -227,6 +228,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IFinancialReportAppService, FinancialReportAppService>();
     services.AddScoped<IDirectShipReportAppService, DirectShipReportAppService>();
     services.AddScoped<IExpenseAppService, ExpenseAppService>();
+    services.AddScoped<IExpenseBudgetAppService, ExpenseBudgetAppService>();
     services.AddScoped<IDeliveryNoteAppService, DeliveryNoteAppService>();
     services.AddScoped<IPreparationAppService, PreparationAppService>();
     services.AddScoped<IOrderAppService, OrderAppService>();

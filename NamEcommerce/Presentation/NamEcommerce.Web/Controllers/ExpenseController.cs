@@ -1,57 +1,47 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Dtos.Finance;
-using NamEcommerce.Application.Contracts.Finance;
 using NamEcommerce.Web.Contracts.Commands.Models.Finance;
+using NamEcommerce.Web.Contracts.Queries.Models.Finance;
 
 namespace NamEcommerce.Web.Controllers;
 
-public class ExpenseController : BaseAuthorizedController
+public class ExpenseController(IMediator mediator) : BaseAuthorizedController
 {
-    private readonly IMediator _mediator;
-    private readonly IExpenseAppService _expenseAppService;
-
-    public ExpenseController(IMediator mediator, IExpenseAppService expenseAppService)
-    {
-        _mediator = mediator;
-        _expenseAppService = expenseAppService;
-    }
-
     public IActionResult Index() => RedirectToAction(nameof(List));
 
-    public async Task<IActionResult> List(int page = 1, string? keywords = null, DateTime? fromDate = null, DateTime? toDate = null, int? expenseType = null)
+    public async Task<IActionResult> List(
+        int page = 1,
+        string? keywords = null,
+        DateTime? fromDate = null,
+        DateTime? toDate = null,
+        int? expenseType = null,
+        string? sortBy = null,
+        bool sortDesc = true)
     {
-        const int pageSize = 20;
-        var result = await _expenseAppService.GetExpensesAsync(
-            keywords: keywords,
-            fromDate: fromDate,
-            toDate: toDate,
-            expenseType: expenseType,
-            pageIndex: page - 1,
-            pageSize: pageSize);
+        var model = await mediator.Send(new GetExpensesQuery
+        {
+            Page = page,
+            Keywords = keywords,
+            FromDate = fromDate,
+            ToDate = toDate,
+            ExpenseType = expenseType,
+            SortBy = sortBy,
+            SortDesc = sortDesc
+        }).ConfigureAwait(false);
 
-        ViewData["Keywords"] = keywords;
-        ViewData["FromDate"] = fromDate?.ToString("yyyy-MM-dd");
-        ViewData["ToDate"] = toDate?.ToString("yyyy-MM-dd");
-        ViewData["ExpenseType"] = expenseType;
-
-        return View(result);
+        return View(model);
     }
 
     [HttpGet]
     public IActionResult Create()
-    {
-        return View(new CreateExpenseAppDto { IncurredDate = DateTime.Today });
-    }
+        => View(new CreateExpenseAppDto { IncurredDate = DateTime.Today, ExpenseType = 5 });
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(CreateExpenseAppDto dto)
     {
-        if (!ModelState.IsValid)
-        {
-            return View(dto);
-        }
+        if (!ModelState.IsValid) return View(dto);
 
         var (isValid, errorMessage) = dto.Validate();
         if (!isValid)
@@ -60,7 +50,7 @@ public class ExpenseController : BaseAuthorizedController
             return View(dto);
         }
 
-        var result = await _mediator.Send(new CreateExpenseCommand
+        var result = await mediator.Send(new CreateExpenseCommand
         {
             Title = dto.Title,
             Description = dto.Description,
@@ -68,8 +58,8 @@ public class ExpenseController : BaseAuthorizedController
             ExpenseType = dto.ExpenseType,
             IncurredDate = dto.IncurredDate
         }).ConfigureAwait(false);
-        if (result.Success)
-            return RedirectToAction(nameof(List));
+
+        if (result.Success) return RedirectToAction(nameof(List));
 
         AddLocalizedModelError(result.ErrorMessage ?? "Error.ExpenseCreateFailed");
         return View(dto);
@@ -78,29 +68,26 @@ public class ExpenseController : BaseAuthorizedController
     [HttpGet]
     public async Task<IActionResult> Edit(Guid id)
     {
-        var expense = await _expenseAppService.GetExpenseByIdAsync(id);
-        if (expense == null) return NotFound();
+        var model = await mediator.Send(new GetExpenseByIdQuery(id)).ConfigureAwait(false);
+        if (model is null) return NotFound();
 
-        var dto = new UpdateExpenseAppDto
+        ViewData["IsSystemGenerated"] = model.IsSystemGenerated;
+        return View(new UpdateExpenseAppDto
         {
-            Id = expense.Id,
-            Title = expense.Title,
-            Description = expense.Description,
-            Amount = expense.Amount,
-            ExpenseType = expense.ExpenseType,
-            IncurredDate = expense.IncurredDate
-        };
-        return View(dto);
+            Id = model.Id,
+            Title = model.Title,
+            Description = model.Description,
+            Amount = model.Amount,
+            ExpenseType = model.ExpenseType,
+            IncurredDate = model.IncurredDate
+        });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(UpdateExpenseAppDto dto)
     {
-        if (!ModelState.IsValid)
-        {
-            return View(dto);
-        }
+        if (!ModelState.IsValid) return View(dto);
 
         var (isValid, errorMessage) = dto.Validate();
         if (!isValid)
@@ -109,7 +96,7 @@ public class ExpenseController : BaseAuthorizedController
             return View(dto);
         }
 
-        var result = await _mediator.Send(new UpdateExpenseCommand
+        var result = await mediator.Send(new UpdateExpenseCommand
         {
             Id = dto.Id,
             Title = dto.Title,
@@ -118,8 +105,8 @@ public class ExpenseController : BaseAuthorizedController
             ExpenseType = dto.ExpenseType,
             IncurredDate = dto.IncurredDate
         }).ConfigureAwait(false);
-        if (result.Success)
-            return RedirectToAction(nameof(List));
+
+        if (result.Success) return RedirectToAction(nameof(List));
 
         AddLocalizedModelError(result.ErrorMessage ?? "Error.ExpenseUpdateFailed");
         return View(dto);
@@ -129,7 +116,31 @@ public class ExpenseController : BaseAuthorizedController
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Delete(Guid id)
     {
-        await _mediator.Send(new DeleteExpenseCommand(id)).ConfigureAwait(false);
+        await mediator.Send(new DeleteExpenseCommand(id)).ConfigureAwait(false);
         return RedirectToAction(nameof(List));
+    }
+
+    public async Task<IActionResult> Budgets(int? year, int? month)
+    {
+        var now = DateTime.UtcNow;
+        var model = await mediator.Send(new GetExpenseBudgetsQuery
+        {
+            Year = year ?? now.Year,
+            Month = month ?? now.Month
+        }).ConfigureAwait(false);
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> UpsertBudget(UpsertExpenseBudgetCommand command)
+    {
+        var result = await mediator.Send(command).ConfigureAwait(false);
+        if (result.Success)
+            return RedirectToAction(nameof(Budgets), new { year = command.Year, month = command.Month });
+
+        AddLocalizedModelError(result.ErrorMessage ?? "Error.BudgetUpsertFailed");
+        return RedirectToAction(nameof(Budgets), new { year = command.Year, month = command.Month });
     }
 }

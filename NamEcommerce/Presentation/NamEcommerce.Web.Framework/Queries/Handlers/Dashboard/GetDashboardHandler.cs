@@ -24,9 +24,17 @@ public sealed class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Das
             SalesSummary = new SalesSummaryModel
             {
                 TodayRevenue = dto.SalesSummary.TodayRevenue,
+                TodayGrossRevenue = dto.SalesSummary.TodayGrossRevenue,
+                TodayReturnAmount = dto.SalesSummary.TodayReturnAmount,
                 MonthRevenue = dto.SalesSummary.MonthRevenue,
+                MonthGrossRevenue = dto.SalesSummary.MonthGrossRevenue,
+                MonthReturnAmount = dto.SalesSummary.MonthReturnAmount,
                 QuarterRevenue = dto.SalesSummary.QuarterRevenue,
+                QuarterGrossRevenue = dto.SalesSummary.QuarterGrossRevenue,
+                QuarterReturnAmount = dto.SalesSummary.QuarterReturnAmount,
                 YearRevenue = dto.SalesSummary.YearRevenue,
+                YearGrossRevenue = dto.SalesSummary.YearGrossRevenue,
+                YearReturnAmount = dto.SalesSummary.YearReturnAmount,
                 RevenueTrend = dto.SalesSummary.RevenueTrendUtc.Select(point => new RevenueTrendPointModel
                 {
                     Date = DateTimeHelper.ToLocalTime(point.DateUtc),
@@ -36,14 +44,29 @@ public sealed class GetDashboardHandler : IRequestHandler<GetDashboardQuery, Das
             },
             ProfitSummary = new ProfitSummaryModel
             {
+                TodayRevenue = dto.ProfitSummary.TodayRevenue,
+                TodayCogs = dto.ProfitSummary.TodayCogs,
+                TodayGrossProfit = dto.ProfitSummary.TodayGrossProfit,
+                TodayOperatingExpenses = dto.ProfitSummary.TodayOperatingExpenses,
                 TodayProfit = dto.ProfitSummary.TodayProfit,
-                MonthProfit = dto.ProfitSummary.MonthProfit,
-                QuarterProfit = dto.ProfitSummary.QuarterProfit,
-                YearProfit = dto.ProfitSummary.YearProfit,
+
                 MonthRevenue = dto.ProfitSummary.MonthRevenue,
                 MonthCogs = dto.ProfitSummary.MonthCogs,
                 MonthGrossProfit = dto.ProfitSummary.MonthGrossProfit,
-                MonthOperatingExpenses = dto.ProfitSummary.MonthOperatingExpenses
+                MonthOperatingExpenses = dto.ProfitSummary.MonthOperatingExpenses,
+                MonthProfit = dto.ProfitSummary.MonthProfit,
+
+                QuarterRevenue = dto.ProfitSummary.QuarterRevenue,
+                QuarterCogs = dto.ProfitSummary.QuarterCogs,
+                QuarterGrossProfit = dto.ProfitSummary.QuarterGrossProfit,
+                QuarterOperatingExpenses = dto.ProfitSummary.QuarterOperatingExpenses,
+                QuarterProfit = dto.ProfitSummary.QuarterProfit,
+
+                YearRevenue = dto.ProfitSummary.YearRevenue,
+                YearCogs = dto.ProfitSummary.YearCogs,
+                YearGrossProfit = dto.ProfitSummary.YearGrossProfit,
+                YearOperatingExpenses = dto.ProfitSummary.YearOperatingExpenses,
+                YearProfit = dto.ProfitSummary.YearProfit
             },
             PendingOrders = dto.PendingOrders.Select(order => new PendingOrderModel
             {
