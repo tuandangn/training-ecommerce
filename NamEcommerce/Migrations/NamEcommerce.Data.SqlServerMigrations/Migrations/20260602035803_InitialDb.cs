@@ -230,6 +230,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     Status = table.Column<int>(type: "int", nullable: false),
                     PasswordSetOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     LastLoginOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastKnownLatitude = table.Column<double>(type: "float", nullable: true),
+                    LastKnownLongitude = table.Column<double>(type: "float", nullable: true),
+                    LastKnownLocationAccuracyMeters = table.Column<double>(type: "float", nullable: true),
+                    LastKnownLocationCapturedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    LastKnownLocationSource = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
@@ -260,6 +265,24 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_CustomerPortalSession", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CustomerPortalSettings",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OtpEnabled = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CustomerPortalSettings", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -430,6 +453,26 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_DeliveryNoteAccessToken", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ExpenseBudgets",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ExpenseType = table.Column<int>(type: "int", nullable: false),
+                    Year = table.Column<int>(type: "int", nullable: false),
+                    Month = table.Column<int>(type: "int", nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ModifiedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ExpenseBudgets", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -1282,6 +1325,46 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PurchaseOrderItemChangeAudit",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PurchaseOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PurchaseOrderItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProductId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProductName = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    Action = table.Column<int>(type: "int", nullable: false),
+                    OldQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    NewQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    OldUnitCost = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    NewUnitCost = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    OldNote = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    NewNote = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    ChangedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ChangedByUsername = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PurchaseOrderItemChangeAudit", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_PurchaseOrderItemChangeAudit_Product_ProductId",
+                        column: x => x.ProductId,
+                        principalSchema: "tbl",
+                        principalTable: "Product",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_PurchaseOrderItemChangeAudit_PurchaseOrder_PurchaseOrderId",
+                        column: x => x.PurchaseOrderId,
+                        principalSchema: "tbl",
+                        principalTable: "PurchaseOrder",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "RolePermission",
                 schema: "tbl",
                 columns: table => new
@@ -1605,6 +1688,44 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "OrderItemChangeAudit",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OrderItemId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProductId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ProductName = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    Action = table.Column<int>(type: "int", nullable: false),
+                    OldQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    NewQuantity = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    OldUnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    NewUnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    ChangedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ChangedByUsername = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OrderItemChangeAudit", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_OrderItemChangeAudit_Order_OrderId",
+                        column: x => x.OrderId,
+                        principalSchema: "tbl",
+                        principalTable: "Order",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_OrderItemChangeAudit_Product_ProductId",
+                        column: x => x.ProductId,
+                        principalSchema: "tbl",
+                        principalTable: "Product",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "CustomerReturnRequestItemPicture",
                 schema: "tbl",
                 columns: table => new
@@ -1912,6 +2033,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 column: "AllocationId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ExpenseBudgets_ExpenseType_Year_Month",
+                schema: "tbl",
+                table: "ExpenseBudgets",
+                columns: new[] { "ExpenseType", "Year", "Month" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Expenses_SourceCustomerReturnId",
                 schema: "tbl",
                 table: "Expenses",
@@ -2113,6 +2241,30 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 column: "ProductId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_OrderItemChangeAudit_OrderId",
+                schema: "tbl",
+                table: "OrderItemChangeAudit",
+                column: "OrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderItemChangeAudit_OrderId_CreatedOnUtc",
+                schema: "tbl",
+                table: "OrderItemChangeAudit",
+                columns: new[] { "OrderId", "CreatedOnUtc" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderItemChangeAudit_OrderItemId",
+                schema: "tbl",
+                table: "OrderItemChangeAudit",
+                column: "OrderItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderItemChangeAudit_ProductId",
+                schema: "tbl",
+                table: "OrderItemChangeAudit",
+                column: "ProductId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_OutboxMessage_Pending",
                 schema: "tbl",
                 table: "OutboxMessage",
@@ -2207,6 +2359,30 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 name: "IX_PurchaseOrderItemAllocation_PurchaseOrderItemId",
                 schema: "tbl",
                 table: "PurchaseOrderItemAllocation",
+                column: "PurchaseOrderItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrderItemChangeAudit_ProductId",
+                schema: "tbl",
+                table: "PurchaseOrderItemChangeAudit",
+                column: "ProductId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrderItemChangeAudit_PurchaseOrderId",
+                schema: "tbl",
+                table: "PurchaseOrderItemChangeAudit",
+                column: "PurchaseOrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrderItemChangeAudit_PurchaseOrderId_CreatedOnUtc",
+                schema: "tbl",
+                table: "PurchaseOrderItemChangeAudit",
+                columns: new[] { "PurchaseOrderId", "CreatedOnUtc" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseOrderItemChangeAudit_PurchaseOrderItemId",
+                schema: "tbl",
+                table: "PurchaseOrderItemChangeAudit",
                 column: "PurchaseOrderItemId");
 
             migrationBuilder.CreateIndex(
@@ -2395,6 +2571,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl");
 
             migrationBuilder.DropTable(
+                name: "CustomerPortalSettings",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
                 name: "CustomerRefund",
                 schema: "tbl");
 
@@ -2420,6 +2600,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
             migrationBuilder.DropTable(
                 name: "DirectShipAddressChangeLog",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "ExpenseBudgets",
                 schema: "tbl");
 
             migrationBuilder.DropTable(
@@ -2455,6 +2639,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl");
 
             migrationBuilder.DropTable(
+                name: "OrderItemChangeAudit",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
                 name: "OutboxMessage",
                 schema: "tbl");
 
@@ -2476,6 +2664,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
             migrationBuilder.DropTable(
                 name: "ProductVendor",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "PurchaseOrderItemChangeAudit",
                 schema: "tbl");
 
             migrationBuilder.DropTable(

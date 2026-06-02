@@ -13,8 +13,8 @@ using NamEcommerce.Data.SqlServer;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     [DbContext(typeof(NamEcommerceEfDbContext))]
-    [Migration("20260602032551_AddPurchaseOrderItemAudit")]
-    partial class AddPurchaseOrderItemAudit
+    [Migration("20260602035803_InitialDb")]
+    partial class InitialDb
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
