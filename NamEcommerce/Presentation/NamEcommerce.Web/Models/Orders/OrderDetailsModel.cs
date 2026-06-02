@@ -149,6 +149,15 @@ public sealed record OrderDetailsModel
                 .Sum(dni => Math.Max(0m, dni.Quantity - dni.CompensatedReturnQuantity));
         }
 
+        public decimal GetCustomerKeptQuantity(IList<DeliveryNoteBasicModel> deliveryNotes)
+        {
+            return deliveryNotes
+                .Where(dn => dn.Status == (int)DeliveryNoteStatus.Delivered)
+                .SelectMany(dn => dn.Items)
+                .Where(dni => dni.OrderItemId == Id)
+                .Sum(dni => dni.CustomerKeptQuantity);
+        }
+
         public decimal GetCompensatedReturnQuantity(IList<DeliveryNoteBasicModel> deliveryNotes)
         {
             return deliveryNotes
@@ -198,6 +207,8 @@ public sealed record OrderDetailsModel
         public decimal ConfirmedReturnQuantity { get; init; }
         public decimal PendingReturnQuantity { get; init; }
         public decimal CompensatedReturnQuantity { get; init; }
+        public decimal ReturnedQuantity => ConfirmedReturnQuantity + PendingReturnQuantity;
+        public decimal CustomerKeptQuantity => Math.Max(0m, Quantity - ReturnedQuantity);
     }
 
     [Serializable]
@@ -292,6 +303,9 @@ public sealed record OrderDetailsModel
         public decimal DirectShipQuantity { get; init; }
         public decimal DirectShipReceivedQuantity { get; init; }
         public string DirectShipStatusText { get; init; } = string.Empty;
+        public bool IsFullyDelivered => OrderedQuantity > 0 && DeliveredQuantity >= OrderedQuantity;
+        public bool HasDeliveryGap => IssuedQuantity > DeliveredQuantity;
+        public decimal DeliveryGapQuantity => Math.Max(0m, IssuedQuantity - DeliveredQuantity);
     }
 
     [Serializable]

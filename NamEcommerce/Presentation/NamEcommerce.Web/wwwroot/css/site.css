@@ -1315,6 +1315,15 @@ body {
             background-color: var(--gray-50);
         }
 
+        .data-table tbody tr.workflow-attention-row td {
+            background-color: var(--warning-light);
+            border-bottom-color: #fbbf24;
+        }
+
+        .data-table tbody tr.workflow-attention-row:hover td {
+            background-color: #fde68a;
+        }
+
     /* -- Table summary row -- */
     .data-table tfoot td {
         padding: 0.75rem 1rem;

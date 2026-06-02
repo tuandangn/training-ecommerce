@@ -590,6 +590,13 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 var directShipAllocations = model.DirectShipAllocations
                     .Where(allocation => allocation.OrderItemId == item.Id)
                     .ToList();
+                var directShipDeliveredNotes = validNotes
+                    .Where(deliveryNote => deliveryNote.IsDirectShip && deliveryNote.Status == (int)DeliveryNoteStatus.Delivered)
+                    .ToList();
+                var directShipDeliveredItems = directShipDeliveredNotes
+                    .SelectMany(deliveryNote => deliveryNote.Items)
+                    .Where(noteItem => noteItem.OrderItemId == item.Id)
+                    .ToList();
 
                 return new OrderDetailsModel.DeliveryItemProgressModel
                 {
@@ -598,9 +605,11 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     OrderedQuantity = item.Quantity,
                     AvailableQuantity = Math.Max(0, item.ProductAvailableQty ?? shortageItem?.AvailableQuantity ?? 0),
                     IssuedQuantity = item.GetDeliveredQuantity(issuedNotes),
-                    DeliveredQuantity = item.GetDeliveredToCustomerQuantity(validNotes),
+                    DeliveredQuantity = item.GetCustomerKeptQuantity(validNotes),
                     DirectShipQuantity = directShipAllocations.Sum(allocation => allocation.AllocatedQuantity),
-                    DirectShipReceivedQuantity = directShipAllocations.Sum(allocation => allocation.ReceivedQuantity),
+                    DirectShipReceivedQuantity = directShipDeliveredItems.Count > 0
+                        ? directShipDeliveredItems.Sum(noteItem => noteItem.CustomerKeptQuantity)
+                        : directShipAllocations.Sum(allocation => allocation.ReceivedQuantity),
                     DirectShipStatusText = GetDirectShipStatusText(directShipAllocations)
                 };
             }).ToList(),
@@ -632,8 +641,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     SurchargeReason = deliveryNote.SurchargeReason,
                     AmountToCollect = deliveryNote.AmountToCollect,
                     Items = deliveryNote.Items,
-                    ReturnedQuantity = deliveryNote.Items.Sum(item =>
-                        item.ConfirmedReturnQuantity + item.PendingReturnQuantity + item.CompensatedReturnQuantity)
+                    ReturnedQuantity = deliveryNote.Items.Sum(item => item.ReturnedQuantity)
                 })
                 .ToList(),
             Returns = model.CustomerReturns
