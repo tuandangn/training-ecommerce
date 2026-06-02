@@ -62,9 +62,14 @@ public sealed class ShortageQueryService(
                      .Where(item => item.OrderItemId != Guid.Empty)
                      .GroupBy(item => item.ProductId))
         {
-            var remainingAvailable = await inventoryStockManager
+            var availableForOrder = await inventoryStockManager
                 .ComputeAvailableQuantityForOrderAsync(productGroup.Key, deliveryNote.OrderId)
                 .ConfigureAwait(false);
+            // The delivery note's quantities are already warehouse-reserved (order-level reservation
+            // was released and transferred to warehouse-level in DeliveryNoteCreatedHandler).
+            // Add them back so the shortage reflects actual missing stock, not the warehouse reservation.
+            var warehouseReservedForThisDn = productGroup.Sum(item => item.Quantity);
+            var remainingAvailable = availableForOrder + warehouseReservedForThisDn;
 
             foreach (var item in productGroup)
             {
