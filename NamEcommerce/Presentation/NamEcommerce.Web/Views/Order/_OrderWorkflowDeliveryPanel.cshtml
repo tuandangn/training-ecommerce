@@ -4,6 +4,7 @@
     var canCreateDelivery = Model.Status != (int)OrderStatus.Completed
         && Model.Status != (int)OrderStatus.Cancelled
         && !Model.AreAllItemsFullyCovered;
+    var showInventoryColumn = Model.DeliveryWorkflow.Items.Any(item => !item.IsFullyDelivered);
 }
 
 <section class="workflow-panel @(isActive ? "active" : "")" data-workflow-panel="delivery" role="tabpanel">
@@ -32,7 +33,10 @@
                             <tr>
                                 <th>Hàng hóa</th>
                                 <th class="text-end">SL đặt</th>
-                                <th class="text-end">Tồn kho</th>
+                                @if (showInventoryColumn)
+                                {
+                                    <th class="text-end">Tồn kho</th>
+                                }
                                 <th class="text-end">Đã xuất</th>
                                 <th class="text-end">Đã giao</th>
                                 <th class="text-end">Giao thẳng</th>
@@ -41,12 +45,29 @@
                         <tbody>
                             @foreach (var item in Model.DeliveryWorkflow.Items)
                             {
-                                <tr>
-                                    <td class="fw-600 text-dark">@item.ProductName</td>
+                                <tr class="@(item.HasDeliveryGap ? "workflow-attention-row" : "")">
+                                    <td class="fw-600 text-dark">
+                                        @item.ProductName
+                                        @if (item.HasDeliveryGap)
+                                        {
+                                            <span class="status-badge warning ms-2">
+                                                <i class="bi bi-exclamation-triangle me-1"></i>Thiếu giao
+                                            </span>
+                                        }
+                                    </td>
                                     <td class="text-end">@item.OrderedQuantity.DisplayQuantity()</td>
-                                    <td class="text-end">@item.AvailableQuantity.DisplayQuantity()</td>
+                                    @if (showInventoryColumn)
+                                    {
+                                        <td class="text-end">@item.AvailableQuantity.DisplayQuantity()</td>
+                                    }
                                     <td class="text-end">@item.IssuedQuantity.DisplayQuantity()</td>
-                                    <td class="text-end">@item.DeliveredQuantity.DisplayQuantity()</td>
+                                    <td class="text-end @(item.HasDeliveryGap ? "text-warning fw-bold" : "")">
+                                        <div>@item.DeliveredQuantity.DisplayQuantity()</div>
+                                        @if (item.HasDeliveryGap)
+                                        {
+                                            <div class="small">Thiếu @item.DeliveryGapQuantity.DisplayQuantity()</div>
+                                        }
+                                    </td>
                                     <td class="text-end">
                                         @if (item.DirectShipQuantity > 0)
                                         {
@@ -82,6 +103,7 @@
                             <tr>
                                 <th>Phiếu giao</th>
                                 <th>Nguồn</th>
+                                <th>Người nhận</th>
                                 <th class="text-end">SL xuất</th>
                                 <th class="text-end">Trả lại</th>
                                 <th>Trạng thái</th>
@@ -114,6 +136,7 @@
                                             <span>@(note.WarehouseName ?? "Kho")</span>
                                         }
                                     </td>
+                                    <td>@(string.IsNullOrWhiteSpace(note.DeliveryReceiverName) ? "-" : note.DeliveryReceiverName)</td>
                                     <td class="text-end">
                                         <div>@note.TotalQuantity.DisplayQuantity()</div>
                                         @if (note.CompensatedReturnQuantity > 0)
@@ -215,7 +238,7 @@
                                     <td>@customerReturn.DeliveryNoteCode</td>
                                     <td><span class="status-badge @customerReturn.StatusClass">@customerReturn.StatusText</span></td>
                                     <td class="text-end">@customerReturn.GrossRefundAmount.DisplayCurrencyWithSymbol()</td>
-                                    <td class="text-end">@customerReturn.AdditionalCost.DisplayCurrencyWithSymbol()</td>
+                                    <td class="text-end @(customerReturn.AdditionalCost > 0 ? "text-danger fw-bold" : "text-muted")">@customerReturn.AdditionalCost.DisplayCurrencyWithSymbol()</td>
                                     <td class="text-end fw-bold">@customerReturn.NetRefundAmount.DisplayCurrencyWithSymbol()</td>
                                     <td class="text-end">@customerReturn.ReturnDate.ToString(ViewConstants.DefaultDateFormat)</td>
                                 </tr>
