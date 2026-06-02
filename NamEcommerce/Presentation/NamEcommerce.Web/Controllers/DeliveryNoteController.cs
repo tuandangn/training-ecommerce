@@ -4,6 +4,7 @@ using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
+using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.DeliveryNotes;
@@ -128,6 +129,31 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(model.OrderId, model).ConfigureAwait(false);
             return View(model);
         }
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetCreateStockAvailability(Guid warehouseId, [FromQuery] Guid[] productIds)
+    {
+        if (warehouseId == Guid.Empty || productIds.Length == 0)
+            return Json(new { items = Array.Empty<object>() });
+
+        var distinctProductIds = productIds
+            .Where(productId => productId != Guid.Empty)
+            .Distinct()
+            .ToList();
+
+        var items = new List<object>(distinctProductIds.Count);
+        foreach (var productId in distinctProductIds)
+        {
+            var stockInfo = await _mediator.Send(new GetProductStockInfoQuery(productId, warehouseId)).ConfigureAwait(false);
+            items.Add(new
+            {
+                productId,
+                quantityAvailable = Math.Max(0m, stockInfo?.QuantityAvailable ?? 0m)
+            });
+        }
+
+        return Json(new { items });
     }
 
     public async Task<IActionResult> Details(Guid id)

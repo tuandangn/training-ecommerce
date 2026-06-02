@@ -93,6 +93,7 @@
                                     <th>Mặt hàng</th>
                                     <th class="text-end">Đã đặt</th>
                                     <th class="text-end">Đã giao</th>
+                                    <th class="text-end">Có thể xuất</th>
                                     <th class="text-end pe-4" style="width: 150px;">SL xuất đợt này</th>
                                 </tr>
                             </thead>
@@ -101,21 +102,33 @@
                                 {
                                     for (int i = 0; i < Model.Items.Count; i++)
                                     {
-                                        <tr class="item-row">
+                                        var requiredQuantityValue = Model.Items[i].RemainingQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                        var availableQuantityValue = Model.Items[i].AvailableQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                                        <tr class="item-row"
+                                            data-product-id="@Model.Items[i].ProductId"
+                                            data-required-quantity="@requiredQuantityValue"
+                                            data-available-quantity="@availableQuantityValue"
+                                            data-stock-loaded="false">
                                             <td class="align-middle text-center ps-4">
                                                 <input type="checkbox" asp-for="Items[i].Selected" class="form-check-input item-checkbox" />
                                                 <input type="hidden" asp-for="Items[i].OrderItemId" />
+                                                <input type="hidden" asp-for="Items[i].ProductId" class="item-product-id" />
                                                 <input type="hidden" asp-for="Items[i].ProductName" />
                                                 <input type="hidden" asp-for="Items[i].OrderedQuantity" />
                                                 <input type="hidden" asp-for="Items[i].PreviouslyDeliveredQuantity" />
+                                                <input type="hidden" asp-for="Items[i].RemainingQuantity" class="item-required-quantity" />
+                                                <input type="hidden" asp-for="Items[i].AvailableQuantity" class="item-available-quantity" />
                                                 <input type="hidden" asp-for="Items[i].UnitPrice" class="item-price" />
                                             </td>
                                             <td class="align-middle fw-medium">@Model.Items[i].ProductName</td>
                                             <td class="text-end align-middle">@Model.Items[i].OrderedQuantity.DisplayQuantity()</td>
                                             <td class="text-end align-middle text-success">@Model.Items[i].PreviouslyDeliveredQuantity.DisplayQuantity()</td>
+                                            <td class="text-end align-middle">
+                                                <span class="badge text-bg-secondary stock-availability-badge">Chọn kho</span>
+                                            </td>
                                             <td class="pe-4">
                                                 <input asp-for="Items[i].Quantity" class="form-control text-end quantity-input fw-bold"
-                                                       max="@Model.Items[i].OrderedQuantity" data-decimal="quantity" value="@Model.Items[i].Quantity.DisplayQuantity()" />
+                                                       max="@Model.Items[i].RemainingQuantity" data-decimal="quantity" value="@Model.Items[i].Quantity.DisplayQuantity()" />
                                             </td>
                                         </tr>
                                     }
@@ -123,7 +136,7 @@
                                 else
                                 {
                                     <tr>
-                                        <td colspan="5" class="text-center py-5">
+                                        <td colspan="6" class="text-center py-5">
                                             <div class="empty-state">
                                                 <div class="empty-icon"><i class="bi bi-check-circle text-success"></i></div>
                                                 <h5>Hàng hóa đã giao đủ</h5>
@@ -261,6 +274,9 @@
 
             const $moneySummary = $('#moneySummary');
             const $productsPrice = $('#productsPrice');
+            const $warehouseSelect = $('#WarehouseId');
+            const stockAvailabilityUrl = '@Url.Action("GetCreateStockAvailability", "DeliveryNote")';
+            let stockAvailabilityRequestId = 0;
 
             function formatCurrency(amount, withSymbol) {
                 if (withSymbol)
@@ -306,25 +322,191 @@
                 $breakdownTotal.text(formatCurrency(amountToCollect, true));
             }
 
+            function parseQuantity(value) {
+                const parsed = parseFloat(DecimalFields.stripFormatting(value, 2));
+                return Number.isFinite(parsed) ? parsed : 0;
+            }
+
+            function formatQuantity(quantity) {
+                return DecimalFields.formatQuantity(Math.max(0, quantity));
+            }
+
+            function getRequiredQuantity($row) {
+                const dataValue = parseFloat($row.attr('data-required-quantity'));
+                if (Number.isFinite(dataValue))
+                    return dataValue;
+                return parseQuantity($row.find('.item-required-quantity').val());
+            }
+
+            function getAvailableQuantity($row) {
+                const dataValue = parseFloat($row.attr('data-available-quantity'));
+                if (Number.isFinite(dataValue))
+                    return dataValue;
+                return parseQuantity($row.find('.item-available-quantity').val());
+            }
+
+            function setQuantity($row, quantity) {
+                $row.find('.quantity-input').val(formatQuantity(quantity));
+            }
+
+            function setStockBadge($row, text, className) {
+                $row.find('.stock-availability-badge')
+                    .removeClass('text-bg-secondary text-bg-success text-bg-warning text-bg-danger')
+                    .addClass(className)
+                    .text(text);
+            }
+
+            function updateSelectAllState() {
+                const itemCount = $('.item-checkbox').length;
+                const checkedCount = $('.item-checkbox:checked').length;
+                $('#selectAll').prop('checked', itemCount > 0 && itemCount === checkedCount);
+            }
+
+            function applyStockAvailability($row, availableQuantity, stockLoaded) {
+                const requiredQuantity = getRequiredQuantity($row);
+                const $quantityInput = $row.find('.quantity-input');
+                const $checkbox = $row.find('.item-checkbox');
+
+                $row
+                    .removeClass('table-danger table-warning')
+                    .attr('data-stock-loaded', stockLoaded ? 'true' : 'false')
+                    .attr('data-available-quantity', availableQuantity.toString());
+                $row.find('.item-available-quantity').val(formatQuantity(availableQuantity));
+
+                if (!stockLoaded) {
+                    $quantityInput.attr('max', requiredQuantity);
+                    setStockBadge($row, 'Chọn kho', 'text-bg-secondary');
+                    if (parseQuantity($quantityInput.val()) > requiredQuantity)
+                        setQuantity($row, requiredQuantity);
+                    return;
+                }
+
+                const maxQuantity = Math.min(requiredQuantity, availableQuantity);
+                $quantityInput.attr('max', maxQuantity);
+                setQuantity($row, maxQuantity);
+
+                if (availableQuantity <= 0) {
+                    $row.addClass('table-danger');
+                    $checkbox.prop('checked', false);
+                    setStockBadge($row, 'Không có', 'text-bg-danger');
+                    return;
+                }
+
+                if (availableQuantity < requiredQuantity) {
+                    $row.addClass('table-warning');
+                    setStockBadge($row, formatQuantity(availableQuantity), 'text-bg-warning');
+                    return;
+                }
+
+                setStockBadge($row, formatQuantity(availableQuantity), 'text-bg-success');
+            }
+
+            function clampQuantityInput($input) {
+                const $row = $input.closest('.item-row');
+                if ($row.attr('data-stock-loaded') !== 'true')
+                    return;
+
+                const maxQuantity = Math.min(getRequiredQuantity($row), getAvailableQuantity($row));
+                const quantity = parseQuantity($input.val());
+                if (quantity > maxQuantity)
+                    $input.val(formatQuantity(maxQuantity));
+            }
+
+            function loadStockAvailability() {
+                const requestId = ++stockAvailabilityRequestId;
+                const warehouseId = $warehouseSelect.val();
+                if (!warehouseId) {
+                    $('.item-row').each(function() {
+                        applyStockAvailability($(this), 0, false);
+                    });
+                    updateSelectAllState();
+                    calculateAmount();
+                    return;
+                }
+
+                const productIds = [];
+                $('.item-row').each(function() {
+                    const productId = $(this).attr('data-product-id');
+                    if (productId && !productIds.includes(productId))
+                        productIds.push(productId);
+                    setStockBadge($(this), 'Đang kiểm...', 'text-bg-secondary');
+                });
+
+                if (!productIds.length)
+                    return;
+
+                $.ajax({
+                    url: stockAvailabilityUrl,
+                    type: 'GET',
+                    traditional: true,
+                    data: { warehouseId, productIds },
+                    success: function(response) {
+                        if (requestId !== stockAvailabilityRequestId)
+                            return;
+
+                        const availabilityByProductId = {};
+                        (response.items || []).forEach(function(item) {
+                            availabilityByProductId[String(item.productId).toLowerCase()] = parseFloat(item.quantityAvailable) || 0;
+                        });
+
+                        $('.item-row').each(function() {
+                            const $row = $(this);
+                            const productId = String($row.attr('data-product-id')).toLowerCase();
+                            applyStockAvailability($row, availabilityByProductId[productId] || 0, true);
+                        });
+
+                        updateSelectAllState();
+                        calculateAmount();
+                    },
+                    error: function() {
+                        if (requestId !== stockAvailabilityRequestId)
+                            return;
+
+                        $('.item-row').each(function() {
+                            const $row = $(this);
+                            $row.addClass('table-warning').attr('data-stock-loaded', 'false');
+                            setStockBadge($row, 'Lỗi tải', 'text-bg-warning');
+                        });
+                    }
+                });
+            }
+
             // Events
-            $('#selectAll, .item-checkbox, .quantity-input, #surchargeInput, #showPriceSwitch').on('change input', function() {
+            $('.item-checkbox').on('change', function() {
+                updateSelectAllState();
                 calculateAmount();
             });
 
+            $('.quantity-input').on('change input', function() {
+                clampQuantityInput($(this));
+                calculateAmount();
+            });
+
+            $('#surchargeInput, #showPriceSwitch').on('change input', function() {
+                calculateAmount();
+            });
+
+            $warehouseSelect.on('change', loadStockAvailability);
+
             // Initial calculation
             calculateAmount();
+            loadStockAvailability();
 
             // Select all
             $('#selectAll').change(function() {
                 var checked = $(this).is(':checked');
-                $('.item-checkbox').prop('checked', checked);
+                $('.item-checkbox').each(function() {
+                    const $row = $(this).closest('.item-row');
+                    const canSelect = $row.attr('data-stock-loaded') !== 'true' || getAvailableQuantity($row) > 0;
+                    $(this).prop('checked', checked && canSelect);
+                });
+                updateSelectAllState();
                 calculateAmount();
             });
 
             // Handle individual checkbox change to uncheck selectAll
             $('.item-checkbox').change(function() {
-                var allChecked = $('.item-checkbox').length === $('.item-checkbox:checked').length;
-                $('#selectAll').prop('checked', allChecked);
+                updateSelectAllState();
             });
 
             // Validation on submit
@@ -338,6 +520,16 @@
                         alert('Vui lòng nhập số lượng hợp lệ cho các mặt hàng được chọn.');
                         e.preventDefault();
                         return false; // break loop
+                    }
+
+                    if (row.attr('data-stock-loaded') === 'true') {
+                        var availableQuantity = getAvailableQuantity(row);
+                        var maxQuantity = Math.min(getRequiredQuantity(row), availableQuantity);
+                        if (availableQuantity <= 0 || qty > maxQuantity) {
+                            alert('Số lượng xuất vượt số lượng có thể xuất trong kho đã chọn.');
+                            e.preventDefault();
+                            return false;
+                        }
                     }
                 });
 
