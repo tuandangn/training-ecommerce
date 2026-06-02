@@ -1,0 +1,225 @@
+@using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
+@model PurchaseOrderDetailsModel
+@{
+    var hasAnyAllocations = Model.AllocationsPerItem.Values.Any(a => a.Count > 0) ||
+                             Model.DirectShipAllocationsPerItem.Values.Any(a => a.Count > 0);
+    string AllocationStatusText(int status) => status switch
+    {
+        0 => "Đã phân bổ",
+        1 => "Nhận một phần",
+        2 => "Đã nhận đủ",
+        3 => "Chờ khách xác nhận",
+        4 => "Khách đã nhận",
+        5 => "Đã hủy",
+        _ => "Không rõ"
+    };
+    string AllocationStatusColor(int status) => status switch
+    {
+        0 => "secondary",
+        1 => "warning",
+        2 => "success",
+        3 => "info text-white",
+        4 => "success",
+        5 => "danger",
+        _ => "secondary"
+    };
+    var allocationCount = 0;
+    foreach (var item in Model.Info.Items)
+    {
+        var r = Model.AllocationsPerItem.TryGetValue(item.Id, out var a) ? a.Count : 0;
+        var ds = Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var d) ? d.Count : 0;
+        allocationCount += r > 0 ? r : ds;
+    }
+}
+
+<section id="po-stage-returning" class="workflow-panel @(Model.Workflow.ActiveStage == PurchaseOrderDetailsModel.WorkflowStage.Returning ? "active" : "")">
+    <div class="content-card">
+        <div class="content-card-header">
+            <div>
+                <h5>Phân bổ đơn hàng khách</h5>
+                <div class="text-muted small">
+                    @if (allocationCount > 0)
+                    {
+                        <span>@allocationCount phân bổ</span>
+                    }
+                    else
+                    {
+                        <span>Chưa có phân bổ</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (!hasAnyAllocations && !Model.CanAllocateItems)
+        {
+            <div class="px-4 py-5 text-center text-muted">
+                <i class="bi bi-diagram-3 fs-2 d-block mb-2 opacity-25"></i>
+                Chưa có phân bổ cho đơn nhập này.
+            </div>
+        }
+        else
+        {
+            <div class="po-allocation-stack px-3 py-3">
+                @foreach (var item in Model.Info.Items)
+                {
+                    IEnumerable<PurchaseOrderDetailsModel.AllocationForPoModel> itemAllocations = Model.AllocationsPerItem.TryGetValue(item.Id, out var alloc) ? alloc : Enumerable.Empty<PurchaseOrderDetailsModel.AllocationForPoModel>();
+                    IEnumerable<PurchaseOrderDetailsModel.DirectShipAllocationForPoModel> itemDirectShip = Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var ds) ? ds : Enumerable.Empty<PurchaseOrderDetailsModel.DirectShipAllocationForPoModel>();
+                    var hasItemAllocations = itemAllocations.Any() || itemDirectShip.Any();
+                    var hasReceivingAllocations = itemAllocations.Any(a => a.AllocatedQuantity - a.ReceivedQuantity > 0);
+                    var allocatedQuantity = itemAllocations.Any() ? itemAllocations.Sum(a => a.AllocatedQuantity) : itemDirectShip.Sum(a => a.AllocatedQuantity);
+
+                    @if (!hasItemAllocations && !Model.CanAllocateItems) { continue; }
+
+                    <div class="po-allocation-card mb-3">
+                        <div class="po-allocation-card-header">
+                            <div class="min-w-0">
+                                <div class="fw-semibold text-dark text-truncate">@item.ProductName</div>
+                                <div class="small text-muted">
+                                    Đặt @item.QuantityOrdered.DisplayQuantity()
+                                    @if (allocatedQuantity > 0)
+                                    {
+                                        <span>· Phân bổ @allocatedQuantity.DisplayQuantity()</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="po-allocation-card-actions">
+                                @if (Model.CanAllocateItems)
+                                {
+                                    <button class="btn btn-sm btn-outline-primary btn-allocate-to-order"
+                                            data-testid="po-allocate-open"
+                                            data-purchase-id="@Model.Info.Id"
+                                            data-item-id="@item.Id"
+                                            data-item-name="@item.ProductName">
+                                        <i class="bi bi-diagram-3 me-1"></i>Phân bổ
+                                    </button>
+                                }
+                                @if (hasReceivingAllocations)
+                                {
+                                    <button class="btn btn-sm btn-outline-danger btn-release-allocate"
+                                            data-purchase-id="@Model.Info.Id"
+                                            data-item-id="@item.Id"
+                                            data-item-name="@item.ProductName">
+                                        <i class="bi bi-x-octagon me-1"></i>Hủy
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                        @if (!hasItemAllocations)
+                        {
+                            <div class="po-allocation-empty">Chưa phân bổ dòng hàng này.</div>
+                        }
+                        else
+                        {
+                            <div class="po-allocation-list">
+                                @foreach (var allocation in itemAllocations)
+                                {
+                                    <div class="po-allocation-row">
+                                        <div class="po-allocation-icon"><i class="bi bi-diagram-3"></i></div>
+                                        <div class="po-allocation-body">
+                                            <div class="po-allocation-title">
+                                                <span>Đơn bán</span>
+                                                <a asp-controller="Order" asp-action="Details" asp-route-id="@allocation.OrderId"
+                                                   class="text-decoration-none fw-semibold">@allocation.OrderCode</a>
+                                                @if (allocation.IsDirectShip)
+                                                {
+                                                    <span class="badge bg-info text-white">Giao thẳng</span>
+                                                }
+                                            </div>
+                                            @if (!string.IsNullOrWhiteSpace(allocation.CustomerName) || !string.IsNullOrWhiteSpace(allocation.CustomerPhone) || !string.IsNullOrWhiteSpace(allocation.ShippingAddress))
+                                            {
+                                                <div class="small text-muted">
+                                                    @allocation.CustomerName
+                                                    @if (!string.IsNullOrWhiteSpace(allocation.CustomerPhone))
+                                                    {
+                                                        <span class="ms-1">(@allocation.CustomerPhone)</span>
+                                                    }
+                                                    @if (!string.IsNullOrWhiteSpace(allocation.ShippingAddress))
+                                                    {
+                                                        <span class="d-block">@allocation.ShippingAddress</span>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                        <div class="po-allocation-meta">
+                                            <span>@allocation.ReceivedQuantity.DisplayQuantity() / @allocation.AllocatedQuantity.DisplayQuantity()</span>
+                                            <span class="status-badge @AllocationStatusColor(allocation.Status)">@AllocationStatusText(allocation.Status)</span>
+                                        </div>
+                                        <div class="po-allocation-actions">
+                                            @if (Model.Info.CanReceiveGoods && !allocation.IsDirectShip && allocation.Status != 2 && allocation.Status != 5)
+                                            {
+                                                <button type="button" class="btn btn-outline-primary btn-sm"
+                                                        data-bs-toggle="modal" data-bs-target="#markDsModal"
+                                                        data-allocation-id="@allocation.AllocationId"
+                                                        data-order-code="@allocation.OrderCode">
+                                                    <i class="bi bi-send me-1"></i>Giao thẳng
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                @foreach (var dsAlloc in itemDirectShip)
+                                {
+                                    var deliveryStatus = dsAlloc.DeliveryStatus.HasValue ? (DeliveryNoteStatus?)((DeliveryNoteStatus)dsAlloc.DeliveryStatus.Value) : null;
+                                    var (dsStatusBadge, dsStatusText) = deliveryStatus switch
+                                    {
+                                        DeliveryNoteStatus.Confirmed => ("info text-white", "Chờ khách xác nhận"),
+                                        DeliveryNoteStatus.Delivered => ("success", "Khách đã nhận"),
+                                        DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy/từ chối"),
+                                        _ => dsAlloc.Status switch
+                                        {
+                                            0 => ("secondary", "Chờ nhận"),
+                                            1 => ("warning", "Nhận một phần"),
+                                            2 => ("info text-white", "Đã nhận"),
+                                            _ => ("secondary", "Không rõ")
+                                        }
+                                    };
+                                    <div class="po-allocation-row">
+                                        <div class="po-allocation-icon direct"><i class="bi bi-send"></i></div>
+                                        <div class="po-allocation-body">
+                                            <div class="po-allocation-title">
+                                                <span>Giao thẳng</span>
+                                                @if (dsAlloc.DeliveryNoteId.HasValue)
+                                                {
+                                                    <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@dsAlloc.DeliveryNoteId"
+                                                       class="text-decoration-none fw-semibold">@dsAlloc.DeliveryNoteCode</a>
+                                                }
+                                            </div>
+                                            <div class="small text-muted">
+                                                @dsAlloc.DirectShipAddress
+                                                @if (!string.IsNullOrWhiteSpace(dsAlloc.DirectShipContactName))
+                                                {
+                                                    <span class="ms-1">· @dsAlloc.DirectShipContactName</span>
+                                                }
+                                                @if (!string.IsNullOrWhiteSpace(dsAlloc.DirectShipContactPhone))
+                                                {
+                                                    <span class="ms-1">(@dsAlloc.DirectShipContactPhone)</span>
+                                                }
+                                            </div>
+                                        </div>
+                                        <div class="po-allocation-meta">
+                                            <span>@dsAlloc.ReceivedQuantity.DisplayQuantity() / @dsAlloc.AllocatedQuantity.DisplayQuantity()</span>
+                                            <span class="status-badge @dsStatusBadge">@dsStatusText</span>
+                                        </div>
+                                        <div class="po-allocation-actions">
+                                            @if (Model.Info.CanReceiveGoods && dsAlloc.Status != 2)
+                                            {
+                                                <button type="button" class="btn btn-outline-secondary btn-sm btnEditDirectShipAddress"
+                                                        data-bs-toggle="modal" data-bs-target="#editDirectShipAddressModal"
+                                                        data-allocation-id="@dsAlloc.AllocationId"
+                                                        data-address="@dsAlloc.DirectShipAddress"
+                                                        data-contact-name="@dsAlloc.DirectShipContactName"
+                                                        data-contact-phone="@dsAlloc.DirectShipContactPhone">
+                                                    <i class="bi bi-pencil-square me-1"></i>Sửa địa chỉ
+                                                </button>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</section>

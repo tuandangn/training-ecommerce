@@ -1,0 +1,112 @@
+@using NamEcommerce.Domain.Shared.Enums.PurchaseOrders
+@model PurchaseOrderDetailsModel
+@{
+    var poStatus = (PurchaseOrderStatus)Model.Info.Status;
+    var totalShipping = Model.Info.ShippingAmount + Model.Info.AccumulatedShippingAmount;
+    var totalTax = Model.Info.TaxAmount + Model.Info.AccumulatedTaxAmount;
+    var s = Model.Settlement;
+}
+
+<section id="po-stage-settlement" class="workflow-panel @(Model.Workflow.ActiveStage == PurchaseOrderDetailsModel.WorkflowStage.Settlement ? "active" : "")">
+    <div class="content-card">
+        <div class="content-card-header">
+            <div>
+                <h5>Kết sổ</h5>
+                <div class="text-muted small">Công nợ và thanh toán với nhà cung cấp</div>
+            </div>
+        </div>
+
+        <div class="content-card-body">
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <h6 class="text-muted text-uppercase fw-semibold mb-3" style="font-size:0.72rem;letter-spacing:.06em;">Chi phí đơn nhập</h6>
+                    <div class="order-summary">
+                        <div class="order-summary-row">
+                            <span class="label">Tiền hàng</span>
+                            <span class="value">@s.PurchaseTotal.DisplayCurrencyWithSymbol()</span>
+                        </div>
+                        @if (totalShipping > 0)
+                        {
+                            <div class="order-summary-row">
+                                <span class="label">Phí vận chuyển</span>
+                                <span class="value text-muted">@totalShipping.DisplayCurrencyWithSymbol()</span>
+                            </div>
+                        }
+                        @if (totalTax > 0)
+                        {
+                            <div class="order-summary-row">
+                                <span class="label">Thuế VAT</span>
+                                <span class="value text-muted">@totalTax.DisplayCurrencyWithSymbol()</span>
+                            </div>
+                        }
+                        @if (s.ReturnTotal > 0)
+                        {
+                            <div class="order-summary-row">
+                                <span class="label">Trả hàng (@Model.Returns.ReturnCount phiếu)</span>
+                                <span class="value text-success">-@s.ReturnTotal.DisplayCurrencyWithSymbol()</span>
+                            </div>
+                        }
+                        <div class="order-summary-row total">
+                            <span class="label">Cần thanh toán</span>
+                            <span class="value">@s.NetPayable.DisplayCurrencyWithSymbol()</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <h6 class="text-muted text-uppercase fw-semibold mb-3" style="font-size:0.72rem;letter-spacing:.06em;">Công nợ nhà cung cấp</h6>
+                    @if (s.DebtCount == 0 && s.PaymentCount == 0)
+                    {
+                        <div class="workflow-soft-empty py-3">
+                            <i class="bi bi-wallet2"></i>
+                            <span>Chưa tạo công nợ.</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="order-summary">
+                            @if (s.DebtTotal > 0)
+                            {
+                                <div class="order-summary-row">
+                                    <span class="label">Công nợ đã tạo (@s.DebtCount)</span>
+                                    <span class="value text-danger">@s.DebtTotal.DisplayCurrencyWithSymbol()</span>
+                                </div>
+                            }
+                            @if (s.PaidTotal > 0)
+                            {
+                                <div class="order-summary-row">
+                                    <span class="label">Đã thanh toán (@s.PaymentCount)</span>
+                                    <span class="value text-success">@s.PaidTotal.DisplayCurrencyWithSymbol()</span>
+                                </div>
+                            }
+                            <div class="order-summary-row @(s.RemainingDebt > 0 ? "total" : "")">
+                                <span class="label">Còn lại</span>
+                                <span class="value @(s.RemainingDebt > 0 ? "text-danger" : "text-success")">
+                                    @if (s.RemainingDebt <= 0)
+                                    {
+                                        <i class="bi bi-check-circle-fill me-1"></i>
+                                    }
+                                    @s.RemainingDebt.DisplayCurrencyWithSymbol()
+                                </span>
+                            </div>
+                        </div>
+                    }
+                    @if (Model.Returns.TotalAmount > 0)
+                    {
+                        <div class="alert alert-info border-0 small mt-3 mb-0">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Tổng thu hồi từ trả hàng: <strong>@Model.Returns.TotalAmount.DisplayCurrencyWithSymbol()</strong>
+                        </div>
+                    }
+                    @if (Model.Receiving.HasPendingCosting)
+                    {
+                        <div class="alert alert-warning border-0 small mt-3 mb-0">
+                            <i class="bi bi-hourglass-split me-1"></i>
+                            Một số mặt hàng chưa được định giá. Số liệu kết sổ có thể chưa chính xác.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

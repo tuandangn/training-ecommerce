@@ -1,10 +1,22 @@
 @model PurchaseOrderDetailsModel
+@{
+    string StageAnchor(PurchaseOrderDetailsModel.WorkflowStage stage) => stage switch
+    {
+        PurchaseOrderDetailsModel.WorkflowStage.Ordering => "#po-stage-ordering",
+        PurchaseOrderDetailsModel.WorkflowStage.Receiving => "#po-stage-receiving",
+        PurchaseOrderDetailsModel.WorkflowStage.Returning => "#po-stage-returning",
+        PurchaseOrderDetailsModel.WorkflowStage.Settlement => "#po-stage-settlement",
+        _ => "#po-stage-ordering"
+    };
+}
 
 <div class="content-card order-workflow-bar mb-3">
     <div class="order-workflow-steps" aria-label="Quy trình đơn nhập">
         @foreach (var step in Model.Workflow.Steps)
         {
-            <div class="workflow-step @(step.IsActive ? "active" : "") @(step.IsDone ? "complete" : "")">
+            var anchor = StageAnchor(step.Stage);
+            <a class="workflow-step text-decoration-none @(step.IsActive ? "active" : "") @(step.IsDone ? "complete" : "")"
+               href="@anchor" role="button">
                 <span class="workflow-step-index">
                     <i class="bi @step.Icon"></i>
                 </span>
@@ -12,7 +24,7 @@
                     <span class="workflow-step-title">@step.Title</span>
                     <span class="workflow-step-summary">@step.StatusText</span>
                 </span>
-            </div>
+            </a>
         }
     </div>
 </div>
