@@ -299,10 +299,10 @@ export default class CreatePurchaseOrderController {
                 <span class="small text-danger field-validation-valid" data-valmsg-for="Items[${index}].ProductId" data-valmsg-replace="true"></span>
             </td>
             <td class="text-end">
-                <input name="Items[${index}].Quantity" data-decimal="quantity"
+                <input name="Items[${index}].Quantity" data-decimal="quantity" data-decimals="${p.quantityDecimalPlaces ?? 0}"
                     class="row-qty no-additional-element" value="${quantity}" autocomplete="off"
-                    data-val="true" data-val-required="Vui lòng nhập số lượng." 
-                    data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001" 
+                    data-val="true" data-val-required="Vui lòng nhập số lượng."
+                    data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="${(p.quantityDecimalPlaces ?? 0) > 0 ? '0.0001' : '1'}"
                     data-val-number="Số lượng phải là số" />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="Items[${index}].Quantity"

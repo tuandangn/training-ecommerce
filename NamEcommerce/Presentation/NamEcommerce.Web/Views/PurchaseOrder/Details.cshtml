@@ -2190,5 +2190,29 @@
             })();
         </script>
     }
+
+    @if (Model.CanModifyInfo && Model.ModifyInfo?.CanChangeVendor == true)
+    {
+        <script type="module">
+            import VendorPicker from '/modules/VendorPicker.js';
+            const modal = document.getElementById('poEditInfoModal');
+            if (modal) {
+                let picker = null;
+                modal.addEventListener('shown.bs.modal', () => {
+                    if (picker) return;
+                    const el = modal.querySelector('#vendorPicker');
+                    if (!el) return;
+                    picker = new VendorPicker(el);
+                    const hiddenInput = modal.querySelector('input[name="VendorId"]');
+                    el.addEventListener('select', e => {
+                        if (hiddenInput) hiddenInput.value = e.detail?.vendor?.id ?? '';
+                    });
+                    el.addEventListener('remove', () => {
+                        if (hiddenInput) hiddenInput.value = '';
+                    });
+                });
+            }
+        </script>
+    }
     }
 }

@@ -10,13 +10,15 @@ public static class UnitMeasurementExtensions
         => new UnitMeasurementAppDto(unitMeasurement.Id)
         {
             Name = unitMeasurement.Name,
-            DisplayOrder = unitMeasurement.DisplayOrder
+            DisplayOrder = unitMeasurement.DisplayOrder,
+            DecimalPlaces = unitMeasurement.DecimalPlaces
         };
 
     public static UnitMeasurementAppDto ToDto(this UnitMeasurementDto dto)
         => new UnitMeasurementAppDto(dto.Id)
         {
             Name = dto.Name,
-            DisplayOrder = dto.DisplayOrder
+            DisplayOrder = dto.DisplayOrder,
+            DecimalPlaces = dto.DecimalPlaces
         };
 }

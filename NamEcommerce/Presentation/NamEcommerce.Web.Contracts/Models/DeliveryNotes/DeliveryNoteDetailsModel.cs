@@ -43,6 +43,9 @@ public sealed class DeliveryNoteDetailsModel
     public string? CustomerPortalUrl { get; set; }
     public string? CustomerPortalQrCodeSvg { get; set; }
 
+    public string? RejectionReason { get; set; }
+    public string? ReturnedToWarehouseName { get; set; }
+
     public IList<DeliveryNoteItemModel> Items { get; set; } = [];
     public ShortageInfoModel ShortageInfo { get; set; } = new();
 }

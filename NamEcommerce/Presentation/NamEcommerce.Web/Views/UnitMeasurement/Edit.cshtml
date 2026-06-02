@@ -54,6 +54,13 @@
                             <input asp-for="DisplayOrder" class="form-control" placeholder="0" />
                             <span asp-validation-for="DisplayOrder" class="text-danger small"></span>
                         </div>
+                        <div class="col-sm-6">
+                            <label asp-for="DecimalPlaces" class="form-label"></label>
+                            <select asp-for="DecimalPlaces" class="form-select">
+                                <option value="0">Không (chỉ số nguyên)</option>
+                                <option value="2">Có (2 chữ số thập phân)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>

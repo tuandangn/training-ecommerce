@@ -34,6 +34,7 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
         {
             DisplayOrder = dto.DisplayOrder
         };
+        unitMeasurement.SetDecimalPlaces(dto.DecimalPlaces);
         unitMeasurement.MarkCreated();
 
         var insertedUnitMeasurement = await _unitMeasurementRepository.InsertAsync(unitMeasurement).ConfigureAwait(false);
@@ -67,6 +68,7 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
 
         await unitMeasurement.SetNameAsync(dto.Name, this).ConfigureAwait(false);
         unitMeasurement.DisplayOrder = dto.DisplayOrder;
+        unitMeasurement.SetDecimalPlaces(dto.DecimalPlaces);
         unitMeasurement.MarkUpdated();
 
         var result = await _unitMeasurementRepository.UpdateAsync(unitMeasurement).ConfigureAwait(false);
@@ -74,7 +76,8 @@ public sealed class UnitMeasurementManager : IUnitMeasurementManager
         return new UpdateUnitMeasurementResultDto(result.Id)
         {
             Name = result.Name,
-            DisplayOrder = result.DisplayOrder
+            DisplayOrder = result.DisplayOrder,
+            DecimalPlaces = result.DecimalPlaces
         };
     }
 

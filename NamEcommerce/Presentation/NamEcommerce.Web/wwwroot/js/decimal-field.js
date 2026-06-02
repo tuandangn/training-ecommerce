@@ -36,9 +36,12 @@
         return formatCurrency(raw, '\u20ab');
     }
 
-    function formatQuantity(raw) {
+    function formatQuantity(raw, decimals) {
+        decimals = (decimals === undefined) ? 2 : parseInt(decimals, 10);
         const n = parseFloat(raw);
         if (isNaN(n)) return raw;
+        if (decimals === 0)
+            return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
         const parts = n.toFixed(2).split('.');
         const decimalValue = parseFloat(parts[1]);
         if (isNaN(decimalValue) || decimalValue === 0)
@@ -141,7 +144,7 @@
             if (raw === '') {
                 this.value = '';
             } else {
-                this.value = type === 'currency' ? formatCurrency(raw) : formatQuantity(raw);
+                this.value = type === 'currency' ? formatCurrency(raw) : formatQuantity(raw, decimals);
             }
             _formatting = false;
         });
@@ -237,7 +240,8 @@
         var opts = Object.assign({
             name: '', value: null,
             id: null, cssClass: '',
-            placeholder: '0,00'
+            placeholder: null,
+            decimals: 2
         }, options);
 
         var wrapper = document.createElement('div');
@@ -251,13 +255,14 @@
         input.type = 'text';
         input.name = opts.name;
         input.className = ('form-control decimal-input quantity-input ' + opts.cssClass).trim();
-        input.placeholder = opts.placeholder;
-        input.inputMode = 'decimal';
+        var decimals = parseInt(opts.decimals, 10);
+        input.inputMode = decimals > 0 ? 'decimal' : 'numeric';
         input.autocomplete = 'off';
-        input.dataset.decimals = '2';
+        input.dataset.decimals = String(decimals);
         input.dataset.type = 'quantity';
+        input.placeholder = opts.placeholder !== null ? opts.placeholder : (decimals > 0 ? '0,00' : '0');
         if (opts.id) input.id = opts.id;
-        if (opts.value != null) input.value = formatQuantity(String(opts.value));
+        if (opts.value != null) input.value = formatQuantity(String(opts.value), decimals);
 
         if (opts.includeSuffix || input.classList.contains('include-suffix'))
             wrapper.appendChild(suffix);
@@ -293,7 +298,7 @@
         if (input.dataset.decimalBound === '1') return { input: input };
 
         var isCurr = (type === 'currency');
-        var decimals = isCurr ? 0 : 2;
+        var decimals = isCurr ? 0 : parseInt(input.dataset.decimals ?? '2', 10);
 
         var opts = Object.assign({
             showHint: false,

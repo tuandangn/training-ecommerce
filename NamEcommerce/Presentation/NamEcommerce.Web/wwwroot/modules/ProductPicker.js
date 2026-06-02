@@ -3,7 +3,7 @@ class Product {
     constructor({ id, name, availableQty, picture,
         unitPrice, vendorCount, firstVendorId,
         availableVendors, unitMeasurement, availableWarehouses,
-        categoryName
+        categoryName, quantityDecimalPlaces
     }) {
         this.id = id;
         this.name = name ?? '';
@@ -11,6 +11,7 @@ class Product {
         this.picture = picture ?? '';
         this.unitPrice = unitPrice ?? 0;
         this.unitMeasurement = unitMeasurement ?? '';
+        this.quantityDecimalPlaces = quantityDecimalPlaces ?? 0;
         this.vendorCount = vendorCount ?? 0;
         this.firstVendorId = firstVendorId ?? null;
         this.availableVendors = availableVendors ?? [];
@@ -120,7 +121,7 @@ class ProductPickerView {
         nameField.innerHTML = productNameHtml;
 
         if (product.availableQty > 0) {
-            stockField.textContent = 'Tồn kho: ' + DecimalFields.formatQuantity(product.availableQty) + (product.unitMeasurement ? ' ' + product.unitMeasurement.toLowerCase() : '');
+            stockField.textContent = 'Tồn kho: ' + DecimalFields.formatQuantity(product.availableQty, product.quantityDecimalPlaces) + (product.unitMeasurement ? ' ' + product.unitMeasurement.toLowerCase() : '');
         } else {
             stockField.innerHTML = this.#options.purchase ? '<span class="text-muted">Hết hàng</span>' : '<span class="text-danger">Hết hàng</span>';
         }
@@ -178,7 +179,7 @@ class ProductPickerView {
         let stockInfoHtml = '';
         if (product.availableQty > 0) {
             stockInfoHtml = `<div class="small text-muted">
-                            <span>Tồn kho: ${DecimalFields.formatQuantity(product.availableQty)}${product.unitMeasurement ? ' ' + product.unitMeasurement.toLowerCase() : ''}</span>
+                            <span>Tồn kho: ${DecimalFields.formatQuantity(product.availableQty, product.quantityDecimalPlaces)}${product.unitMeasurement ? ' ' + product.unitMeasurement.toLowerCase() : ''}</span>
                         </div>`;
         } else {
             if (this.#options.purchase) {

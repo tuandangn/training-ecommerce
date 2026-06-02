@@ -10,5 +10,6 @@ public sealed class UnitMeasurementMapping : IEntityTypeConfiguration<UnitMeasur
         builder.Property(c => c.Name).HasMaxLength(200).IsRequired();
         builder.Property(c => c.NormalizedName).HasMaxLength(400);
         builder.Property(c => c.DisplayOrder).IsRequired();
+        builder.Property(c => c.DecimalPlaces).IsRequired().HasDefaultValue(0);
     }
 }

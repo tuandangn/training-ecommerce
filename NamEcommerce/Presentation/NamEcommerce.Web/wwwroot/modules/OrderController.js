@@ -227,10 +227,10 @@ export default class OrderController {
             <td class="text-center">
                 <input name="Items[${index}].Quantity" value="${quantity}"
                     class="form-control row-qty"
-                    data-decimal="quantity" data-val="true"
+                    data-decimal="quantity" data-decimals="${p.quantityDecimalPlaces ?? 0}" data-val="true"
                     data-val-required="Vui lòng nhập số lượng."
                     data-val-range="Số lượng phải lớn hơn 0."
-                    data-val-range-min="0.001"
+                    data-val-range-min="${(p.quantityDecimalPlaces ?? 0) > 0 ? '0.001' : '1'}"
                     data-val-number="Số lượng không đúng." />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="Items[${index}].Quantity"

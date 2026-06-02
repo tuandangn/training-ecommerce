@@ -8,6 +8,7 @@ public sealed record ProductForOrderModel(Guid Id)
     public required string Name { get; init; }
     public string? PictureUrl { get; set; }
     public string? UnitMeasurement { get; set; }
+    public int QuantityDecimalPlaces { get; init; } = 0;
     public string? CategoryName { get; set; }
     public int VendorCount => AvailableVendors.Count();
     public Guid? FirstVendorId => AvailableVendors.FirstOrDefault()?.Id;

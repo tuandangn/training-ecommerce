@@ -24,7 +24,8 @@ public sealed class GetUnitMeasurementHandler : IRequestHandler<GetUnitMeasureme
         {
             Id = unitMeasurement.Id,
             Name = unitMeasurement.Name,
-            DisplayOrder = unitMeasurement.DisplayOrder
+            DisplayOrder = unitMeasurement.DisplayOrder,
+            DecimalPlaces = unitMeasurement.DecimalPlaces
         };
     }
 }

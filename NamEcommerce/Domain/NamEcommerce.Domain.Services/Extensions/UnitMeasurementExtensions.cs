@@ -9,6 +9,7 @@ public static class UnitMeasurementExtensions
         => new UnitMeasurementDto(unitMeasurement.Id)
         {
             Name = unitMeasurement.Name,
-            DisplayOrder = unitMeasurement.DisplayOrder
+            DisplayOrder = unitMeasurement.DisplayOrder,
+            DecimalPlaces = unitMeasurement.DecimalPlaces
         };
 }

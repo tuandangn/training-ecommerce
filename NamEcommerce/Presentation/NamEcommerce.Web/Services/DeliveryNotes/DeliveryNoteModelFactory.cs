@@ -276,6 +276,16 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             }
         }
 
+        if (deliveryNote.DeliveryConfirmationStatus == (int)DeliveryConfirmationStatus.Rejected)
+        {
+            model.RejectionReason = deliveryNote.ConfirmedNote;
+            model.ReturnedToWarehouseName = await _mediator.Send(new GetDeliveryNoteReturnWarehouseQuery
+            {
+                DeliveryNoteId = id,
+                DeliveryNoteWarehouseId = deliveryNote.WarehouseId
+            }).ConfigureAwait(false);
+        }
+
         model.ShortageInfo = await _mediator.Send(new GetDeliveryNoteShortageInfoQuery
         {
             DeliveryNoteId = id

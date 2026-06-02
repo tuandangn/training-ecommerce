@@ -24,7 +24,8 @@ public sealed class GetUnitMeasurementListHandler : IRequestHandler<GetUnitMeasu
             Keywords = request.Keywords,
             Data = pagedData.MapToModel(item => new UnitMeasurementListModel.ItemModel(item.Id, item.Name)
             {
-                DisplayOrder = item.DisplayOrder
+                DisplayOrder = item.DisplayOrder,
+                DecimalPlaces = item.DecimalPlaces
             })
         };
 

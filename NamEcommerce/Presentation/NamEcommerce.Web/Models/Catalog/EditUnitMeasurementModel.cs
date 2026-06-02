@@ -12,4 +12,7 @@ public sealed record EditUnitMeasurementModel
 
     [Display(Name = "Thứ tự hiển thị")]
     public int DisplayOrder { get; set; }
+
+    [Display(Name = "Cho phép số thập phân")]
+    public int DecimalPlaces { get; set; }
 }

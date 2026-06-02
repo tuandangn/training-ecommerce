@@ -179,7 +179,7 @@
                                     <th>Mặt hàng</th>
                                     <th class="text-end">Đã đặt</th>
                                     <th class="text-end">Đã giao</th>
-                                    <th class="text-end">Có thể xuất</th>
+                                    <th class="px-3">Có thể xuất</th>
                                     <th class="text-end pe-4" style="width: 150px;">SL xuất đợt này</th>
                                 </tr>
                             </thead>
@@ -209,7 +209,7 @@
                                             <td class="align-middle fw-medium">@Model.Items[i].ProductName</td>
                                             <td class="text-end align-middle">@Model.Items[i].OrderedQuantity.DisplayQuantity()</td>
                                             <td class="text-end align-middle text-success">@Model.Items[i].PreviouslyDeliveredQuantity.DisplayQuantity()</td>
-                                            <td class="text-end align-middle">
+                                            <td class="align-middle px-3">
                                                 <div class="delivery-stock-state stock-availability-state">
                                                     <span class="delivery-stock-status is-neutral">
                                                         <i class="bi bi-box-seam stock-status-icon"></i>
@@ -450,6 +450,7 @@
                 $state.find('.delivery-stock-status')
                     .removeClass('is-neutral is-loading is-ok is-short is-empty is-error')
                     .addClass(`is-${state}`);
+                $state.find('.stock-availability-note').toggleClass('d-none', !note);
                 $state.find('.stock-availability-note')
                     .removeClass('is-short is-empty is-error')
                     .addClass(state === 'short' || state === 'empty' || state === 'error' ? `is-${state}` : '')
@@ -490,7 +491,7 @@
                         $row.attr('data-stock-auto-unchecked', 'true');
                     $row.addClass('stock-row-empty');
                     $checkbox.prop('checked', false);
-                    setStockState($row, 'Không có tồn kho', 'Đã đặt SL xuất = 0 và bỏ chọn dòng này', 'empty', 'bi-exclamation-triangle');
+                    setStockState($row, 'Không có tồn kho', '', 'empty', 'bi-exclamation-triangle');
                     return;
                 }
 

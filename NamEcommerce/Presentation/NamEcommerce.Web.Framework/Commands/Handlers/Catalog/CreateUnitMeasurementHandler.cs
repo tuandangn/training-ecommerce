@@ -20,7 +20,8 @@ public sealed class CreateUnitMeasurementHandler : IRequestHandler<CreateUnitMea
         var result = await _unitMeasurementAppService.CreateUnitMeasurementAsync(new CreateUnitMeasurementAppDto
         {
             Name = request.Name,
-            DisplayOrder = request.DisplayOrder
+            DisplayOrder = request.DisplayOrder,
+            DecimalPlaces = request.DecimalPlaces
         }).ConfigureAwait(false);
 
         return new CreateUnitMeasurementResultModel

@@ -13,5 +13,6 @@ public sealed class UnitMeasurementListModel
     public sealed record ItemModel(Guid Id, string Name)
     {
         public int DisplayOrder { get; init; }
+        public int DecimalPlaces { get; init; }
     }
 }
