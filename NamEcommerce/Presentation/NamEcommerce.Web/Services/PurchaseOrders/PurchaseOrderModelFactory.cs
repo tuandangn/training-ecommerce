@@ -324,7 +324,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         PurchaseOrderDetailsModel model,
         VendorDebtsByVendorAppDto? vendorDebts)
     {
-        var debts = vendorDebts?.Debts.Where(debt => debt.PurchaseOrderId == model.Info.Id).ToList() ?? [];
+        var debts = GetVendorDebtsForPurchaseOrder(model, vendorDebts);
         var payments = debts.SelectMany(debt => debt.Payments).ToList();
         var purchaseTotal = model.Info.TotalAmount;
         var returnTotal = model.RelatedVendorReturns.Sum(item => item.TotalAmount);
@@ -478,7 +478,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             });
         }
 
-        var debts = vendorDebts?.Debts.Where(debt => debt.PurchaseOrderId == model.Info.Id).ToList() ?? [];
+        var debts = GetVendorDebtsForPurchaseOrder(model, vendorDebts);
         foreach (var debt in debts)
         {
             timeline.Add(new PurchaseOrderDetailsModel.TimelineEventModel
@@ -508,6 +508,25 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         return timeline
             .OrderByDescending(item => item.OccurredOn)
             .ThenBy(item => item.Title)
+            .ToList();
+    }
+
+    private static IList<VendorDebtAppDto> GetVendorDebtsForPurchaseOrder(
+        PurchaseOrderDetailsModel model,
+        VendorDebtsByVendorAppDto? vendorDebts)
+    {
+        if (vendorDebts is null)
+        {
+            return [];
+        }
+
+        var receiptIds = model.RelatedGoodsReceipts.Select(receipt => receipt.Id).ToHashSet();
+        return vendorDebts.Debts
+            .Where(debt =>
+                debt.PurchaseOrderId == model.Info.Id ||
+                (debt.GoodsReceiptId.HasValue && receiptIds.Contains(debt.GoodsReceiptId.Value)))
+            .GroupBy(debt => debt.Id)
+            .Select(group => group.First())
             .ToList();
     }
 
