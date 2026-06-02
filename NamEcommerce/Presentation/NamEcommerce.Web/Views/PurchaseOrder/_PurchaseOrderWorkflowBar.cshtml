@@ -1,0 +1,28 @@
+@model PurchaseOrderDetailsModel
+
+<div class="content-card order-workflow-bar mb-3">
+    <div class="order-workflow-steps" aria-label="Quy trình đơn nhập">
+        @foreach (var step in Model.Workflow.Steps)
+        {
+            var target = step.Stage switch
+            {
+                PurchaseOrderDetailsModel.WorkflowStage.Ordering => "#po-stage-ordering",
+                PurchaseOrderDetailsModel.WorkflowStage.Receiving => "#po-stage-receiving",
+                PurchaseOrderDetailsModel.WorkflowStage.Returning => "#po-stage-returning",
+                PurchaseOrderDetailsModel.WorkflowStage.Settlement => "#po-stage-settlement",
+                _ => "#po-stage-ordering"
+            };
+
+            <a class="workflow-step text-decoration-none @(step.IsActive ? "active" : "") @(step.IsDone ? "complete" : "")"
+               href="@target">
+                <span class="workflow-step-index">
+                    <i class="bi @step.Icon"></i>
+                </span>
+                <span class="workflow-step-copy">
+                    <span class="workflow-step-title">@step.Title</span>
+                    <span class="workflow-step-summary">@step.StatusText</span>
+                </span>
+            </a>
+        }
+    </div>
+</div>

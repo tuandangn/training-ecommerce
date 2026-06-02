@@ -21,6 +21,7 @@ public interface IPurchaseOrderManager : ICodeExistCheckingService
     Task<CreatePoFromShortageResultDto> AddItemsToExistingDraftAsync(Guid purchaseOrderId, IList<CreatePoFromShortageItemDto> items);
     Task<UpdatePurchaseOrderResultDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderDto dto);
     Task<AddPurchaseOrderItemResultDto> AddPurchaseOrderItemAsync(AddPurchaseOrderItemDto dto);
+    Task UpdatePurchaseOrderItemAsync(UpdatePurchaseOrderItemDto dto);
     Task DeleteOrderItemAsync(Guid purchaseOrderId, Guid itemId);
     Task<ReceivedGoodsForItemResultDto> ReceiveItemsAsync(ReceivedGoodsForItemDto dto);
     Task<BulkReceiveGoodsForPurchaseOrderResultDto> BulkReceiveItemsAsync(BulkReceiveGoodsForPurchaseOrderDto dto);

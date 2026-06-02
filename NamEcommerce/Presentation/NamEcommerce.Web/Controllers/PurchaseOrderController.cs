@@ -271,6 +271,38 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    public async Task<IActionResult> UpdatePurchaseOrderItem([FromBody] EditPurchaseOrderItemModel model)
+    {
+        if (!ModelState.IsValid)
+            return Json(new { success = false, errorMessage = LocalizeError("Error.InvalidRequest", GetErrorMessage()) });
+
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
+        if (purchaseOrder is null)
+            return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderIsNotFound") });
+
+        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == model.PurchaseOrderItemId);
+        if (purchaseOrderItem is null)
+            return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderItemIsNotFound") });
+
+        if (!purchaseOrder.CanAddItems)
+            return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderCannotUpdateOrderItems") });
+
+        var result = await _mediator.Send(new UpdatePurchaseOrderItemCommand
+        {
+            PurchaseOrderId = model.PurchaseOrderId,
+            PurchaseOrderItemId = model.PurchaseOrderItemId,
+            Quantity = model.Quantity ?? 0,
+            UnitCost = model.UnitCost ?? 0,
+            Note = model.Note
+        });
+
+        if (!result.Success)
+            return Json(new { success = false, errorMessage = LocalizeError(result.ErrorMessage!) });
+
+        return Json(new { success = true });
+    }
+
+    [HttpPost]
     public async Task<IActionResult> BulkReceive(BulkReceivePurchaseOrderModel model)
     {
         if (!ModelState.IsValid)

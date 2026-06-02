@@ -104,6 +104,8 @@
         </nav>
     </div>
 }
+@await Html.PartialAsync("_PurchaseOrderWorkflowBar", Model)
+@await Html.PartialAsync("_PurchaseOrderWorkflowOverview", Model)
 <div class="content-card mb-3 position-relative">
     <div class="content-card-body-flush">
         <div class="row g-3">
@@ -243,6 +245,18 @@
                                                                 }
                                                                 @if (Model.Info.CanAddItems)
                                                                 {
+                                                                    <li>
+                                                                        <button class="dropdown-item btnEditItem"
+                                                                                data-id="@item.Id"
+                                                                                data-purchaseorder="@Model.Info.Id"
+                                                                                data-name="@item.ProductName"
+                                                                                data-quantity="@item.QuantityOrdered"
+                                                                                data-unitcost="@item.UnitCost"
+                                                                                data-note="@item.Note">
+                                                                            <i class="bi bi-pencil-square me-1"></i>
+                                                                            Sửa dòng hàng
+                                                                        </button>
+                                                                    </li>
                                                                     <li>
                                                                         <button class="dropdown-item btnRemoveItem" data-id="@item.Id"
                                                                                 disabled="@(Model.Info.Items.Count <= 1)"
@@ -784,6 +798,52 @@
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
                         <button type="submit" id="btnAddItem" class="btn btn-success d-none">
                             <i class="bi bi-plus-lg me-1"></i>Thêm vào
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+@if (Model.Info.CanAddItems)
+{
+    <div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Sửa dòng hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editProductForm">
+                    <input type="hidden" id="editPurchaseOrderId" value="@Model.Info.Id" />
+                    <input type="hidden" id="editPurchaseOrderItemId" />
+                    <div class="modal-body py-3">
+                        <div class="alert alert-light border mb-3">
+                            <div class="small text-muted">Hàng hóa</div>
+                            <div class="fw-semibold" id="editProductName"></div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small fw-medium text-muted" for="editItemQuantity">Số lượng</label>
+                                <input id="editItemQuantity" class="form-control no-additional-element"
+                                       data-decimal="quantity" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-medium text-muted" for="editItemUnitCost">Đơn giá</label>
+                                <input id="editItemUnitCost" class="form-control no-additional-element"
+                                       data-decimal="currency" />
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label small fw-medium text-muted" for="editItemNote">Ghi chú</label>
+                            <textarea id="editItemNote" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div id="editProductError" class="alert alert-danger d-none mt-3 mb-0"></div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 pb-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" id="btnEditItemSubmit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
                         </button>
                     </div>
                 </form>
@@ -1860,6 +1920,80 @@
                 }
                 }
 
+                // Handle Edit Item Button
+                document.querySelectorAll('.btnEditItem').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const modal = document.getElementById('editProductModal');
+                if (!modal) return;
+
+                document.getElementById('editPurchaseOrderId').value = this.getAttribute('data-purchaseorder') || '';
+                document.getElementById('editPurchaseOrderItemId').value = this.getAttribute('data-id') || '';
+                document.getElementById('editProductName').textContent = this.getAttribute('data-name') || '';
+                document.getElementById('editItemQuantity').value = this.getAttribute('data-quantity') || '';
+                document.getElementById('editItemUnitCost').value = this.getAttribute('data-unitcost') || '';
+                document.getElementById('editItemNote').value = this.getAttribute('data-note') || '';
+                document.getElementById('editProductError')?.classList.add('d-none');
+                window.DecimalFields?.autoWrap?.(modal);
+
+                new bootstrap.Modal(modal).show();
+                });
+                });
+
+                document.getElementById('editProductForm')?.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const errorEl = document.getElementById('editProductError');
+                const submitBtn = document.getElementById('btnEditItemSubmit');
+                errorEl?.classList.add('d-none');
+
+                const payload = {
+                purchaseOrderId: document.getElementById('editPurchaseOrderId')?.value,
+                purchaseOrderItemId: document.getElementById('editPurchaseOrderItemId')?.value,
+                quantity: parsePurchaseOrderDecimal(document.getElementById('editItemQuantity')?.value, 2),
+                unitCost: parsePurchaseOrderDecimal(document.getElementById('editItemUnitCost')?.value, 0),
+                note: document.getElementById('editItemNote')?.value || null
+                };
+
+                if (!payload.quantity || payload.quantity <= 0) {
+                showEditProductError('Số lượng phải lớn hơn 0.');
+                return;
+                }
+                if (payload.unitCost < 0) {
+                showEditProductError('Đơn giá không được âm.');
+                return;
+                }
+
+                submitBtn.disabled = true;
+                const originalHtml = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+
+                try {
+                const response = await fetch('@Url.Action("UpdatePurchaseOrderItem")', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('editProductModal'))?.hide();
+                setTimeout(() => location.reload(), 300);
+                return;
+                }
+
+                showEditProductError(data.errorMessage || 'Không thể sửa dòng hàng.');
+                } catch (error) {
+                console.error('Error:', error);
+                showEditProductError('Có lỗi xảy ra khi sửa dòng hàng.');
+                } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHtml;
+                }
+                });
+
                 // Handle Remove Item Button
                 document.querySelectorAll('.btnRemoveItem').forEach(btn => {
                 btn.addEventListener('click', async function(e) {
@@ -2050,6 +2184,33 @@
                 if (productPickerInstance) {
                 productPickerInstance.clear();
                 }
+                }
+
+                function parsePurchaseOrderDecimal(value, scale) {
+                const raw = String(value ?? '').trim();
+                if (!raw) return 0;
+                const stripped = window.DecimalFields?.stripFormatting
+                    ? DecimalFields.stripFormatting(raw, scale)
+                    : normalizePurchaseOrderDecimal(raw);
+                const parsed = parseFloat(stripped);
+                return isNaN(parsed) ? 0 : parsed;
+                }
+
+                function normalizePurchaseOrderDecimal(value) {
+                let normalized = String(value ?? '').replace(/[^0-9,.-]/g, '');
+                if (normalized.includes(',') && normalized.includes('.')) {
+                normalized = normalized.replace(/\./g, '').replace(',', '.');
+                } else if (normalized.includes(',')) {
+                normalized = normalized.replace(',', '.');
+                }
+                return normalized;
+                }
+
+                function showEditProductError(message) {
+                const errorEl = document.getElementById('editProductError');
+                if (!errorEl) return;
+                errorEl.textContent = message;
+                errorEl.classList.remove('d-none');
                 }
 
                 async function removeItem(itemId, purchaseOrderId) {
