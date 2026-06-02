@@ -5,6 +5,7 @@ using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
+using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 
@@ -48,16 +49,9 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
             {
                 Name = productInfo.Name,
                 UnitPrice = productInfo.UnitPrice,
-                CategoryName = categoryName
+                CategoryName = categoryName,
+                PictureUrl = PictureHelper.GetPictureUrl(productInfo.Pictures.FirstOrDefault())
             };
-
-            foreach (var pictureId in productInfo.Pictures)
-            {
-                var base64PictureInfo = await _pictureAppService.GetBase64PictureByIdAsync(pictureId).ConfigureAwait(false);
-                if (base64PictureInfo is null) continue;
-                productModel.PictureUrl = base64PictureInfo?.Base64Value;
-                break;
-            }
 
             var stockInfo = await _mediator.Send(new GetProductStockInfoQuery(productInfo.Id, request.WarehouseId), cancellationToken).ConfigureAwait(false);
             productModel.QuantityOnHand = stockInfo.QuantityOnHand;

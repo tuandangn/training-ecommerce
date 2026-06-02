@@ -657,7 +657,11 @@
 
                         row.classList.toggle('is-not-selected', !checked);
                         ['input', 'select', 'textarea'].forEach(tag =>
-                            row.querySelectorAll(tag).forEach(control => control.disabled = !checked)
+                            row.querySelectorAll(tag).forEach(control => {
+                                if (control.classList.contains('item-check')) 
+                                    return;
+                                control.disabled = !checked;
+                            })
                         );
                         if (checked && !rowHidden && !groupHidden) {
                             groupTotal += rowTotal;

@@ -5,6 +5,8 @@ using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
+using NamEcommerce.Web.Contracts.Queries.Models.Media;
+using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 
@@ -44,6 +46,7 @@ public sealed class GetProductListHandler(
                 Name = product.Name,
                 ShortDesc = product.ShortDesc,
                 UnitPrice = product.UnitPrice,
+                PictureUrl = PictureHelper.GetPictureUrl(product.Pictures.FirstOrDefault())
             };
 
             productModel.UnitMeasurementName = unitMeasurements.FirstOrDefault(um => um.Id == product.UnitMeasurementId)?.Name;
@@ -55,19 +58,10 @@ public sealed class GetProductListHandler(
                 productModel.CategoryBreadcrumb = categoryBreadcrumbs[productCategory.CategoryId];
             }
 
-            foreach (var pictureId in product.Pictures)
-            {
-                var base64PictureInfo = await pictureAppService.GetBase64PictureByIdAsync(pictureId).ConfigureAwait(false);
-                if (base64PictureInfo is null)
-                    continue;
-                productModel.PictureUrl = base64PictureInfo?.Base64Value;
-                break;
-            }
-
             var productVendors = vendors.Where(v => product.Vendors.Any(pv => pv.VendorId == v.Id));
             productModel.VendorNames = productVendors.Select(pv => pv.Name);
 
-            var stockInfo = await mediator.Send(new GetProductStockInfoQuery(product.Id, null)).ConfigureAwait(false);
+            var stockInfo = await mediator.Send(new GetProductStockInfoQuery(product.Id, null), cancellationToken).ConfigureAwait(false);
             productModel.StockQuantity = stockInfo.QuantityAvailable;
 
             productModels.Add(productModel);
