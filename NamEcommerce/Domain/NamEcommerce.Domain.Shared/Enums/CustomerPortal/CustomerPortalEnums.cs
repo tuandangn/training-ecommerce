@@ -61,3 +61,16 @@ public enum CustomerPaymentIntentStatus
     Cancelled = 4,
     Reconciled = 5
 }
+
+public enum CustomerPortalNotificationType
+{
+    OrderRequestCreated = 0,
+    ReturnRequestCreated = 1,
+    DeliveryReceivedConfirmed = 2
+}
+
+public enum CustomerPortalNotificationStatus
+{
+    Unread = 0,
+    Read = 1
+}

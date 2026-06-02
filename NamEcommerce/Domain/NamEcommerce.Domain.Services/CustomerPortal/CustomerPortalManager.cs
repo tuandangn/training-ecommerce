@@ -11,6 +11,8 @@ namespace NamEcommerce.Domain.Services.CustomerPortal;
 public sealed class CustomerPortalManager(
     IRepository<CustomerDeliveryFeedback> feedbackRepository,
     IEntityDataReader<CustomerDeliveryFeedback> feedbackReader,
+    IRepository<CustomerPortalNotification> notificationRepository,
+    IEntityDataReader<CustomerPortalNotification> notificationReader,
     IRepository<CustomerOrderRequest> orderRequestRepository,
     IEntityDataReader<CustomerOrderRequest> orderRequestReader,
     IRepository<CustomerReturnRequest> returnRequestRepository,
@@ -37,6 +39,56 @@ public sealed class CustomerPortalManager(
             .ToList();
 
         return Task.FromResult<IReadOnlyCollection<CustomerDeliveryFeedbackDto>>(feedbacks);
+    }
+
+    public async Task<CustomerPortalNotificationDto> CreateNotificationAsync(CreateCustomerPortalNotificationDto dto)
+    {
+        dto.Verify();
+
+        var notification = new CustomerPortalNotification(
+            dto.CustomerId,
+            dto.Type,
+            dto.Title,
+            dto.Message,
+            dto.RelatedEntityId,
+            dto.RelatedEntityType);
+        var inserted = await notificationRepository.InsertAsync(notification).ConfigureAwait(false);
+        return MapToDto(inserted);
+    }
+
+    public async Task<CustomerPortalNotificationDto?> GetNotificationByIdAsync(Guid id)
+    {
+        var notification = await notificationReader.GetByIdAsync(id).ConfigureAwait(false);
+        return notification is null ? null : MapToDto(notification);
+    }
+
+    public Task<IReadOnlyCollection<CustomerPortalNotificationDto>> GetNotificationsAsync(CustomerPortalNotificationStatus? status = null, int take = 100)
+    {
+        take = Math.Clamp(take, 1, 500);
+        var query = notificationReader.DataSource.AsQueryable();
+        if (status.HasValue)
+            query = query.Where(notification => notification.Status == status.Value);
+
+        var notifications = query
+            .OrderByDescending(notification => notification.CreatedOnUtc)
+            .Take(take)
+            .ToList()
+            .Select(MapToDto)
+            .ToList();
+
+        return Task.FromResult<IReadOnlyCollection<CustomerPortalNotificationDto>>(notifications);
+    }
+
+    public Task<int> CountNotificationsAsync(CustomerPortalNotificationStatus status)
+        => Task.FromResult(notificationReader.DataSource.Count(notification => notification.Status == status));
+
+    public async Task MarkNotificationReadAsync(Guid id, Guid readByUserId, DateTime nowUtc)
+    {
+        var notification = await notificationRepository.GetByIdAsync(id).ConfigureAwait(false)
+            ?? throw new NamEcommerceDomainException("Error.CustomerPortal.NotificationNotFound", id);
+
+        notification.MarkRead(readByUserId, nowUtc);
+        await notificationRepository.UpdateAsync(notification).ConfigureAwait(false);
     }
 
     public async Task<CustomerOrderRequestDto> CreateOrderRequestAsync(CreateCustomerOrderRequestDto dto)
@@ -298,6 +350,21 @@ public sealed class CustomerPortalManager(
             Status = feedback.Status,
             CreatedOnUtc = feedback.CreatedOnUtc,
             ReviewedOnUtc = feedback.ReviewedOnUtc
+        };
+
+    private static CustomerPortalNotificationDto MapToDto(CustomerPortalNotification notification)
+        => new(notification.Id)
+        {
+            CustomerId = notification.CustomerId,
+            Type = notification.Type,
+            Status = notification.Status,
+            Title = notification.Title,
+            Message = notification.Message,
+            RelatedEntityId = notification.RelatedEntityId,
+            RelatedEntityType = notification.RelatedEntityType,
+            CreatedOnUtc = notification.CreatedOnUtc,
+            ReadOnUtc = notification.ReadOnUtc,
+            ReadByUserId = notification.ReadByUserId
         };
 
     private static CustomerOrderRequestDto MapToDto(CustomerOrderRequest request)
