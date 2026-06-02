@@ -2005,7 +2005,7 @@ body {
 
 .order-workflow-steps {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0;
     overflow: hidden;
 }
@@ -2293,6 +2293,191 @@ body {
     line-height: 1.35;
 }
 
+.po-detail-tabs-header {
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+
+.po-detail-tabs {
+    margin-bottom: 0;
+}
+
+.po-detail-tabs .nav-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.5rem;
+    color: var(--gray-600);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.po-detail-tabs .nav-link.active {
+    color: var(--primary);
+}
+
+.po-detail-tab-content > .tab-pane {
+    min-height: 18rem;
+}
+
+.po-tab-pane {
+    padding: 1rem;
+}
+
+.po-allocation-stack {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.po-allocation-card {
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.po-allocation-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-allocation-card-actions,
+.po-allocation-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.4rem;
+}
+
+.po-allocation-empty {
+    padding: 0.85rem 1rem;
+    color: var(--gray-500);
+    font-size: 0.86rem;
+    font-weight: 500;
+}
+
+.po-allocation-list {
+    display: grid;
+}
+
+.po-allocation-row {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) auto auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    border-top: 1px solid var(--gray-100);
+}
+
+.po-allocation-row:first-child {
+    border-top: 0;
+}
+
+.po-allocation-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 8px;
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.po-allocation-icon.direct {
+    background: var(--info-light);
+    color: var(--info);
+}
+
+.po-allocation-body {
+    min-width: 0;
+}
+
+.po-allocation-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 700;
+}
+
+.po-allocation-meta {
+    display: grid;
+    justify-items: end;
+    gap: 0.25rem;
+    color: var(--gray-600);
+    font-size: 0.84rem;
+    white-space: nowrap;
+}
+
+.po-detail-sidebar {
+    display: grid;
+    gap: 1rem;
+}
+
+.po-info-card {
+    overflow: hidden;
+}
+
+.po-info-body {
+    padding-top: 0.9rem;
+}
+
+.po-info-list {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.po-info-row {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.po-info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 8px;
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.po-info-label,
+.po-info-value,
+.po-info-sub {
+    display: block;
+}
+
+.po-info-label {
+    color: var(--gray-500);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.po-info-value {
+    color: var(--gray-900);
+    font-size: 0.95rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.po-info-sub {
+    margin-top: 0.15rem;
+    color: var(--gray-500);
+    font-size: 0.84rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
 @media (max-width: 991.98px) {
     .order-workflow-layout,
     .order-workflow-info-grid,
@@ -2306,11 +2491,22 @@ body {
     }
 
     .order-workflow-steps {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .workflow-step {
         border-bottom: 1px solid var(--gray-200);
+    }
+
+    .po-allocation-row {
+        grid-template-columns: 2rem minmax(0, 1fr);
+    }
+
+    .po-allocation-meta,
+    .po-allocation-actions {
+        grid-column: 2;
+        justify-items: start;
+        justify-content: flex-start;
     }
 }
 

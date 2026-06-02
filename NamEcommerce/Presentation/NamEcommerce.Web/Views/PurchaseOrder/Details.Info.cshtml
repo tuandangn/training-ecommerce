@@ -1,49 +1,60 @@
 @model PurchaseOrderDetailsModel
-<div>
+<div class="po-info-panel">
     <div class="content-card-header">
         <h5>
             Thông tin đơn nhập
         </h5>
     </div>
-    <div class="content-card-body">
-        <div class="mb-3">
-            <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Ngày đặt</span>
-            <div class="ps-2 d-flex align-items-center">
-                <div class="fw-medium text-dark fs-6">
-                    @Model.Info.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+    <div class="content-card-body po-info-body">
+        <div class="po-info-list">
+            <div class="po-info-row">
+                <span class="po-info-icon">
+                    <i class="bi bi-calendar2-week"></i>
+                </span>
+                <div>
+                    <span class="po-info-label">Ngày đặt</span>
+                    <strong class="po-info-value">
+                        @Model.Info.PlacedOn.ToString(ViewConstants.DefaultDateTimeFormat)
+                    </strong>
                 </div>
             </div>
-        </div>
-        <div class="mb-3">
-            <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Nhà cung cấp</span>
-            <div class="ps-2">
-                <div class="fw-medium text-dark fs-6">@(Model.Info.VendorName ?? "N/A")</div>
-                @if (!string.IsNullOrEmpty(Model.Info.VendorPhone))
-                {
-                    <div class="text-muted small">
-                        <i class="bi bi-phone"></i>
-                        @Model.Info.VendorPhone
-                    </div>
-                }
-                @if (!string.IsNullOrEmpty(Model.Info.VendorAddress))
-                {
-                    <div class="text-muted small">
-                        <i class="bi bi-geo-alt"></i>
-                        @Model.Info.VendorAddress
-                    </div>
-                }
-            </div>
-        </div>
-        @if (!string.IsNullOrEmpty(Model.Info.Note))
-        {
-            <div>
-                <span class="form-label small fw-bold text-muted text-uppercase d-block mb-2">Ghi chú</span>
-                <div class="ps-2 d-flex align-items-center">
-                    <div class="fw-medium">
-                        @Model.Info.Note
-                    </div>
+            <div class="po-info-row">
+                <span class="po-info-icon">
+                    <i class="bi bi-building"></i>
+                </span>
+                <div>
+                    <span class="po-info-label">Nhà cung cấp</span>
+                    <strong class="po-info-value">@(Model.Info.VendorName ?? "N/A")</strong>
+                    @if (!string.IsNullOrEmpty(Model.Info.VendorPhone))
+                    {
+                        <span class="po-info-sub">
+                            <i class="bi bi-phone"></i>
+                            @Model.Info.VendorPhone
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Info.VendorAddress))
+                    {
+                        <span class="po-info-sub">
+                            <i class="bi bi-geo-alt"></i>
+                            @Model.Info.VendorAddress
+                        </span>
+                    }
                 </div>
             </div>
-        }
+            @if (!string.IsNullOrEmpty(Model.Info.Note))
+            {
+                <div class="po-info-row">
+                    <span class="po-info-icon">
+                        <i class="bi bi-stickies"></i>
+                    </span>
+                    <div>
+                        <span class="po-info-label">Ghi chú</span>
+                        <strong class="po-info-value">
+                            @Model.Info.Note
+                        </strong>
+                    </div>
+                </div>
+            }
+        </div>
     </div>
 </div>

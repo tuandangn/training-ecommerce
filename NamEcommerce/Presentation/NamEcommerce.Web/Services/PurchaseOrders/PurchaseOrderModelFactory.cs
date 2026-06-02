@@ -272,9 +272,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
     {
         if (status is PurchaseOrderStatus.Completed or PurchaseOrderStatus.Cancelled)
             return PurchaseOrderDetailsModel.WorkflowStage.Settlement;
-        if (model.RelatedVendorReturns.Count > 0)
-            return PurchaseOrderDetailsModel.WorkflowStage.Returning;
-        if (model.Info.Items.Any(item => item.QuantityReceived > 0) || model.RelatedGoodsReceipts.Count > 0)
+        if (model.RelatedVendorReturns.Count > 0 || model.Info.Items.Any(item => item.QuantityReceived > 0) || model.RelatedGoodsReceipts.Count > 0)
             return PurchaseOrderDetailsModel.WorkflowStage.Receiving;
 
         return PurchaseOrderDetailsModel.WorkflowStage.Ordering;
@@ -349,7 +347,12 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         PurchaseOrderStatus status,
         (string Text, string Class) receivingStatus,
         PurchaseOrderDetailsModel.WorkflowStage activeStage)
-        => new()
+    {
+        var receivingStepText = model.Returns.ReturnCount > 0
+            ? $"{receivingStatus.Text} · {model.Returns.ReturnCount} trả"
+            : receivingStatus.Text;
+
+        return new()
         {
             ActiveStage = activeStage,
             StatusText = status.GetDisplayText(),
@@ -359,11 +362,11 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             Steps =
             [
                 BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Ordering, "Đặt hàng", "bi-bag-plus", model.Info.Items.Count > 0 ? "Đã có hàng" : "Chưa có hàng", activeStage, model.Info.Items.Count > 0),
-                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Receiving, "Nhận hàng", "bi-box-arrow-in-down", receivingStatus.Text, activeStage, model.Receiving.ReceivedQuantity >= model.Receiving.OrderedQuantity && model.Receiving.OrderedQuantity > 0),
-                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Returning, "Trả hàng", "bi-arrow-counterclockwise", model.Returns.ReturnCount > 0 ? $"{model.Returns.ReturnCount} phiếu" : "Chưa có", activeStage, model.Returns.ReturnCount > 0),
+                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Receiving, "Nhận hàng", "bi-box-arrow-in-down", receivingStepText, activeStage, model.Receiving.ReceivedQuantity >= model.Receiving.OrderedQuantity && model.Receiving.OrderedQuantity > 0),
                 BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Settlement, "Kết sổ", "bi-journal-check", GetSettlementStatusText(model, status), activeStage, status == PurchaseOrderStatus.Completed)
             ]
         };
+    }
 
     private static PurchaseOrderDetailsModel.WorkflowStepModel BuildStep(
         PurchaseOrderDetailsModel.WorkflowStage stage,
