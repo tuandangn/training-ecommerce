@@ -76,6 +76,20 @@ public sealed record CreatePurchaseOrderResultDto
 }
 
 [Serializable]
+public sealed class SplitPurchaseOrderDto
+{
+    public Guid SourcePurchaseOrderId { get; init; }
+    public IList<SplitPurchaseOrderItemDto> Items { get; init; } = [];
+}
+
+[Serializable]
+public sealed class SplitPurchaseOrderItemDto
+{
+    public Guid ItemId { get; init; }
+    public decimal Quantity { get; init; }
+}
+
+[Serializable]
 public sealed record UpdatePurchaseOrderDto(Guid Id) : BasePurchaseOrderDto
 {
     public decimal TaxAmount { get; set; }

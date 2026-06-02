@@ -116,6 +116,102 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         };
     }
 
+    public async Task<CreatePurchaseOrderResultDto> CopyPurchaseOrderAsync(Guid sourceId)
+    {
+        var source = await _purchaseOrderDataReader.GetByIdAsync(sourceId).ConfigureAwait(false);
+        if (source is null)
+            throw new PurchaseOrderIsNotFoundException(sourceId);
+
+        var now = DateTime.UtcNow;
+        var po = await CreatePurchaseOrderAggregateAsync(
+            source.VendorId,
+            source.WarehouseId,
+            now,
+            source.ExpectedDeliveryDateUtc > now ? source.ExpectedDeliveryDateUtc : null,
+            source.Note,
+            0, 0).ConfigureAwait(false);
+
+        foreach (var item in source.Items)
+        {
+            await po.AddPurchaseOrderItemAsync(
+                new PurchaseOrderItem(po.Id, item.ProductId, item.QuantityOrdered, item.UnitCost) { Note = item.Note },
+                _productDataReader, requireVendorProduct: false).ConfigureAwait(false);
+        }
+
+        po.MarkCreated();
+        var inserted = await _purchaseOrderRepository.InsertAsync(po).ConfigureAwait(false);
+        return new CreatePurchaseOrderResultDto { CreatedId = inserted.Id };
+    }
+
+    public async Task<CreatePurchaseOrderResultDto> SplitPurchaseOrderAsync(SplitPurchaseOrderDto dto)
+    {
+        var source = await _purchaseOrderDataReader.GetByIdAsync(dto.SourcePurchaseOrderId).ConfigureAwait(false);
+        if (source is null)
+            throw new PurchaseOrderIsNotFoundException(dto.SourcePurchaseOrderId);
+
+        if (!source.CanUpdateItems())
+            throw new PurchaseOrderCannotUpdateOrderItemsException();
+
+        if (dto.Items.Count == 0)
+            throw new PurchaseOrderDataIsInvalidException("Error.PurchaseOrder.SplitItemsRequired");
+
+        foreach (var split in dto.Items)
+        {
+            var srcItem = source.Items.FirstOrDefault(i => i.Id == split.ItemId)
+                ?? throw new PurchaseOrderItemIsNotFoundException();
+
+            var available = srcItem.QuantityOrdered - srcItem.QuantityReceived;
+            if (split.Quantity <= 0 || split.Quantity > available)
+                throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemQuantityMustBePositive");
+        }
+
+        var hasRemainingInSource = source.Items.Any(srcItem =>
+        {
+            var splitItem = dto.Items.FirstOrDefault(s => s.ItemId == srcItem.Id);
+            if (splitItem is null) return true;
+            return srcItem.QuantityOrdered - splitItem.Quantity > 0;
+        });
+
+        if (!hasRemainingInSource)
+            throw new PurchaseOrderDataIsInvalidException("Error.PurchaseOrder.SplitMustLeaveItemsInSource");
+
+        var now = DateTime.UtcNow;
+        var po2 = await CreatePurchaseOrderAggregateAsync(
+            source.VendorId,
+            source.WarehouseId,
+            now,
+            source.ExpectedDeliveryDateUtc > now ? source.ExpectedDeliveryDateUtc : null,
+            source.Note,
+            0, 0).ConfigureAwait(false);
+
+        foreach (var split in dto.Items)
+        {
+            var srcItem = source.Items.First(i => i.Id == split.ItemId);
+            await po2.AddPurchaseOrderItemAsync(
+                new PurchaseOrderItem(po2.Id, srcItem.ProductId, split.Quantity, srcItem.UnitCost) { Note = srcItem.Note },
+                _productDataReader, requireVendorProduct: false).ConfigureAwait(false);
+        }
+
+        po2.MarkCreated();
+        await _purchaseOrderRepository.InsertAsync(po2).ConfigureAwait(false);
+
+        foreach (var split in dto.Items)
+        {
+            var srcItem = source.Items.First(i => i.Id == split.ItemId);
+            var remaining = srcItem.QuantityOrdered - split.Quantity;
+            if (remaining <= 0)
+                source.RemoveOrderItem(split.ItemId);
+            else
+                source.UpdateOrderItem(split.ItemId, remaining, srcItem.UnitCost, srcItem.Note);
+        }
+
+        source.UpdatedOnUtc = DateTime.UtcNow;
+        source.MarkUpdated();
+        await _purchaseOrderRepository.UpdateAsync(source).ConfigureAwait(false);
+
+        return new CreatePurchaseOrderResultDto { CreatedId = po2.Id };
+    }
+
     public Task<ExistingDraftPurchaseOrderDto?> FindDraftForVendorAsync(Guid vendorId)
     {
         if (vendorId == Guid.Empty)

@@ -177,6 +177,22 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         };
     }
 
+    public async Task<CreatePurchaseOrderResultAppDto> CopyPurchaseOrderAsync(Guid id)
+    {
+        var result = await _purchaseOrderManager.CopyPurchaseOrderAsync(id).ConfigureAwait(false);
+        return new CreatePurchaseOrderResultAppDto { Success = true, CreatedId = result.CreatedId };
+    }
+
+    public async Task<CreatePurchaseOrderResultAppDto> SplitPurchaseOrderAsync(SplitPurchaseOrderAppDto dto)
+    {
+        var result = await _purchaseOrderManager.SplitPurchaseOrderAsync(new SplitPurchaseOrderDto
+        {
+            SourcePurchaseOrderId = dto.PurchaseOrderId,
+            Items = dto.Items.Select(i => new SplitPurchaseOrderItemDto { ItemId = i.ItemId, Quantity = i.Quantity }).ToList()
+        }).ConfigureAwait(false);
+        return new CreatePurchaseOrderResultAppDto { Success = true, CreatedId = result.CreatedId };
+    }
+
     public async Task<UpdatePurchaseOrderResultAppDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);

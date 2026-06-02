@@ -189,6 +189,31 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Copy(Guid id)
+    {
+        var result = await _mediator.Send(new CopyPurchaseOrderCommand(id)).ConfigureAwait(false);
+        if (result.Success && result.CreatedId.HasValue)
+        {
+            NotifySuccess("Msg.SaveSuccess");
+            return RedirectToAction(nameof(Details), new { id = result.CreatedId.Value });
+        }
+
+        NotifyError(result.ErrorMessage ?? "Error.InvalidRequest");
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Split([FromBody] SplitPurchaseOrderCommand command)
+    {
+        var result = await _mediator.Send(command).ConfigureAwait(false);
+        if (result.Success && result.CreatedId.HasValue)
+            return this.JsonOk(new { newPurchaseOrderId = result.CreatedId.Value });
+
+        return this.JsonError(LocalizeError(result.ErrorMessage ?? "Error.InvalidRequest"));
+    }
+
+    [HttpPost]
     public async Task<IActionResult> AddPurchaseOrderItem(AddPurchaseOrderItemModel model)
     {
         if (!ModelState.IsValid)

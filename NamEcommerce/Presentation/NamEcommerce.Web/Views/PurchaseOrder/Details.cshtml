@@ -106,6 +106,25 @@
 }
 @await Html.PartialAsync("_PurchaseOrderWorkflowBar", Model)
 @await Html.PartialAsync("_PurchaseOrderWorkflowOverview", Model)
+
+<div class="d-flex gap-2 mb-3">
+    @if (purchaseOrderStatus != PurchaseOrderStatus.Cancelled)
+    {
+        <form method="post" asp-action="Copy" asp-route-id="@Model.Info.Id" class="d-inline">
+            @Html.AntiForgeryToken()
+            <button type="submit" class="btn btn-sm btn-light border">
+                <i class="bi bi-copy me-1"></i>Sao chép đơn
+            </button>
+        </form>
+    }
+    @if (Model.Info.CanAddItems && Model.Info.Items.Any(i => i.QuantityOrdered - i.QuantityReceived > 0))
+    {
+        <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#splitPOModal">
+            <i class="bi bi-scissors me-1"></i>Chia đơn nhập
+        </button>
+    }
+</div>
+
 <div class="content-card mb-3 position-relative">
     <div class="content-card-body-flush">
         <div class="row g-3">
@@ -2570,6 +2589,127 @@
                         const data = await resp.json();
                         if (data.success) {
                             location.reload();
+                        } else {
+                            errEl.textContent = data.message || 'Có lỗi xảy ra.';
+                            errEl.classList.remove('d-none');
+                        }
+                    } catch {
+                        errEl.textContent = 'Có lỗi xảy ra.';
+                        errEl.classList.remove('d-none');
+                    } finally {
+                        btn.disabled = false;
+                    }
+                });
+            })();
+        </script>
+    }
+
+    @if (Model.Info.CanAddItems && Model.Info.Items.Any(i => i.QuantityOrdered - i.QuantityReceived > 0))
+    {
+        var splittableItems = Model.Info.Items.Where(i => i.QuantityOrdered - i.QuantityReceived > 0).ToList();
+        <div class="modal fade" id="splitPOModal" tabindex="-1" aria-labelledby="splitPOModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="splitPOModalLabel">
+                            <i class="bi bi-scissors me-2 text-secondary"></i>Chia đơn nhập <strong>@Model.Info.Code</strong>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted small mb-3">
+                            Nhập số lượng chuyển sang đơn mới (PO2). Phần còn lại ở lại đơn hiện tại (PO1).
+                            Để trống hoặc nhập 0 để giữ nguyên.
+                        </p>
+                        <div class="table-responsive">
+                            <table class="table data-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-3">Hàng hóa</th>
+                                        <th class="text-end" style="width:120px">Đặt hàng</th>
+                                        <th class="text-end" style="width:120px">Đã nhận</th>
+                                        <th class="text-end" style="width:150px">Chuyển sang PO2</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var si in splittableItems)
+                                    {
+                                        var available = si.QuantityOrdered - si.QuantityReceived;
+                                        <tr data-item-id="@si.Id" data-item-available="@available">
+                                            <td class="ps-3 fw-medium">@si.ProductName</td>
+                                            <td class="text-end text-muted">@si.QuantityOrdered.DisplayQuantity()</td>
+                                            <td class="text-end text-muted">
+                                                @if (si.QuantityReceived > 0)
+                                                {
+                                                    <span class="status-badge warning py-1">@si.QuantityReceived.DisplayQuantity()</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted fst-italic small">—</span>
+                                                }
+                                            </td>
+                                            <td class="text-end pe-3">
+                                                <input type="number" class="form-control form-control-sm text-end split-qty-input"
+                                                       min="0" max="@available" step="1" value="0"
+                                                       style="width:100px;margin-left:auto;" />
+                                                <div class="small text-muted mt-1">Tối đa: @available.DisplayQuantity()</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="splitErrorMsg" class="alert alert-danger mt-3 d-none small"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="button" class="btn btn-primary" id="btnConfirmSplit">
+                            <i class="bi bi-scissors me-1"></i>Chia đơn
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            (function () {
+                document.getElementById('btnConfirmSplit').addEventListener('click', async function () {
+                    const btn = this;
+                    const errEl = document.getElementById('splitErrorMsg');
+                    errEl.classList.add('d-none');
+
+                    const items = [];
+                    document.querySelectorAll('#splitPOModal tr[data-item-id]').forEach(row => {
+                        const qty = parseFloat(row.querySelector('.split-qty-input').value) || 0;
+                        const available = parseFloat(row.dataset.itemAvailable);
+                        if (qty > available) {
+                            errEl.textContent = `Số lượng không được vượt quá số lượng khả dụng.`;
+                            errEl.classList.remove('d-none');
+                            return;
+                        }
+                        if (qty > 0) {
+                            items.push({ itemId: row.dataset.itemId, quantity: qty });
+                        }
+                    });
+
+                    if (errEl.textContent) return;
+
+                    if (items.length === 0) {
+                        errEl.textContent = 'Vui lòng nhập số lượng cho ít nhất một mặt hàng.';
+                        errEl.classList.remove('d-none');
+                        return;
+                    }
+
+                    btn.disabled = true;
+                    try {
+                        const resp = await fetch('@Url.Action("Split", "PurchaseOrder")', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ purchaseOrderId: '@Model.Info.Id', items })
+                        });
+                        const data = await resp.json();
+                        if (data.success) {
+                            window.location.href = '/PurchaseOrder/Details/' + data.data.newPurchaseOrderId;
                         } else {
                             errEl.textContent = data.message || 'Có lỗi xảy ra.';
                             errEl.classList.remove('d-none');
