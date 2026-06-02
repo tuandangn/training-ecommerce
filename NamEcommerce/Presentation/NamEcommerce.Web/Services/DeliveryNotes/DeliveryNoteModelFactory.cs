@@ -186,8 +186,10 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                     Selected = true
                 };
                 itemModel.ProductName = orderItem.ProductName ?? string.Empty;
+                itemModel.ProductId = orderItem.ProductId;
                 itemModel.OrderedQuantity = orderItem.Quantity;
                 itemModel.PreviouslyDeliveredQuantity = deliveredQuantity;
+                itemModel.RemainingQuantity = remainingQty;
                 itemModel.UnitPrice = orderItem.UnitPrice;
 
                 if (existingItem is null)
