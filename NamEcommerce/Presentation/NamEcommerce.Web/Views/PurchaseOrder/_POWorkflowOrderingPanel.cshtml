@@ -16,27 +16,6 @@
                 <div class="text-muted small">@Model.Info.Items.Count mặt hàng · @Model.Info.TotalAmount.DisplayCurrencyWithSymbol()</div>
             </div>
             <div class="d-flex gap-2 flex-wrap align-items-center">
-                @if (poStatus != PurchaseOrderStatus.Cancelled)
-                {
-                    <form method="post" asp-action="Copy" asp-route-id="@Model.Info.Id" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-sm btn-light border">
-                            <i class="bi bi-copy me-1"></i>Sao chép
-                        </button>
-                    </form>
-                }
-                @if (canSplit)
-                {
-                    <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#splitPOModal">
-                        <i class="bi bi-scissors me-1"></i>Chia đơn
-                    </button>
-                }
-                @if (Model.Info.CanAddItems)
-                {
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                        <i class="bi bi-plus-lg me-1"></i><span class="d-none d-md-inline">Thêm hàng</span>
-                    </button>
-                }
                 @if (Model.Info.Status == (int)PurchaseOrderStatus.Draft)
                 {
                     <form asp-action="SubmitsPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline">
@@ -64,15 +43,8 @@
             </div>
         </div>
 
-        @if (Model.CanModifyInfo && Model.ModifyInfo != null)
-        {
-            <div class="content-card-body pb-0">
-                <partial name="Details.InfoModify" model="Model.ModifyInfo" />
-            </div>
-        }
-        else
-        {
-            <div class="order-workflow-info-grid px-4 py-3 border-bottom">
+        <div class="content-card-body">
+            <div class="order-workflow-info-grid mb-3">
                 <div>
                     <div class="workflow-info-label">Nhà cung cấp</div>
                     <div class="fw-bold text-dark">@(Model.Info.VendorName ?? "—")</div>
@@ -130,163 +102,189 @@
                     }
                 </div>
             </div>
-        }
-
-        <div class="table-responsive">
-            <table class="table data-table mb-0">
-                <thead>
-                    <tr>
-                        <th class="ps-3">Hàng hóa</th>
-                        <th class="text-end">Số lượng đặt</th>
-                        <th class="text-end">Đã nhận</th>
-                        <th class="text-end">Đơn giá</th>
-                        <th class="text-end d-none d-md-table-cell pe-3">Thành tiền</th>
-                        @if (Model.Info.CanAddItems)
-                        {
-                            <th class="text-center"></th>
-                        }
-                    </tr>
-                </thead>
-                <tbody id="itemsTableBody">
-                    @if (Model.Info.Items.Count > 0)
+            <div class="table-responsive">
+                <table class="table data-table mb-0 caption-top">
+                    @if (Model.Info.CanAddItems)
                     {
-                        @for (var i = 0; i < Model.Info.Items.Count; i++)
+                        <caption>
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    @if (poStatus != PurchaseOrderStatus.Cancelled)
+                                    {
+                                        <form method="post" asp-action="Copy" asp-route-id="@Model.Info.Id" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-light border">
+                                                <i class="bi bi-copy me-1"></i>Sao chép
+                                            </button>
+                                        </form>
+                                    }
+                                    @if (canSplit)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#splitPOModal">
+                                            <i class="bi bi-scissors me-1"></i>Chia đơn
+                                        </button>
+                                    }
+                                </div>
+                                <button type="button" class="btn btn-sm btn-link text-dark text-decoration-none border-bottom-0" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                                    <i class="bi bi-plus-lg me-1"></i>
+                                    <span class="d-none d-md-inline">Thêm hàng hóa</span>
+                                </button>
+                            </div>
+                        </caption>
+                    }
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Hàng hóa</th>
+                            <th class="text-end">Số lượng đặt</th>
+                            <th class="text-end">Đã nhận</th>
+                            <th class="text-end">Đơn giá</th>
+                            <th class="text-end d-none d-md-table-cell pe-3">Thành tiền</th>
+                            @if (Model.Info.CanAddItems)
+                            {
+                                <th class="text-end" style="width: 48px"></th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody id="itemsTableBody">
+                        @if (Model.Info.Items.Count > 0)
                         {
-                            var item = Model.Info.Items[i];
-                            <tr id="row-@i" data-item-id="@item.Id">
-                                <td class="ps-3">
-                                    <div class="d-flex align-items-center gap-2">
-                                        @if (!string.IsNullOrEmpty(item.ProductPicture))
+                            @for (var i = 0; i < Model.Info.Items.Count; i++)
+                            {
+                                var item = Model.Info.Items[i];
+                                <tr id="row-@i" data-item-id="@item.Id">
+                                    <td class="ps-3">
+                                        <div class="d-flex align-items-center gap-2">
+                                            @if (!string.IsNullOrEmpty(item.ProductPicture))
+                                            {
+                                                <img src="@item.ProductPicture" class="rounded d-none d-lg-block"
+                                                     style="width:40px;height:40px;object-fit:cover;" alt="@item.ProductName" />
+                                            }
+                                            else
+                                            {
+                                                <div class="d-flex align-items-center justify-content-center rounded bg-light d-none d-lg-flex"
+                                                     style="width:40px;height:40px;flex-shrink:0;">
+                                                    <i class="bi bi-image text-muted"></i>
+                                                </div>
+                                            }
+                                            <span class="fw-medium product-name">@item.ProductName</span>
+                                        </div>
+                                        <input type="hidden" class="product-id" value="@item.ProductId" />
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="quantity-text">@item.QuantityOrdered.DisplayQuantity()</span>
+                                        <input type="hidden" class="row-qty" value="@item.QuantityOrdered" />
+                                    </td>
+                                    <td class="text-end">
+                                        @if (item.QuantityReceived >= item.QuantityOrdered)
                                         {
-                                            <img src="@item.ProductPicture" class="rounded d-none d-lg-block"
-                                                 style="width:40px;height:40px;object-fit:cover;" alt="@item.ProductName" />
+                                            <span class="status-badge success py-1 px-2">
+                                                <i class="bi bi-check-circle-fill"></i> @item.QuantityReceived.DisplayQuantity()
+                                            </span>
+                                        }
+                                        else if (item.QuantityReceived > 0)
+                                        {
+                                            <span class="status-badge warning py-1 px-2">@item.QuantityReceived.DisplayQuantity()</span>
                                         }
                                         else
                                         {
-                                            <div class="d-flex align-items-center justify-content-center rounded bg-light d-none d-lg-flex"
-                                                 style="width:40px;height:40px;flex-shrink:0;">
-                                                <i class="bi bi-image text-muted"></i>
-                                            </div>
+                                            <span class="text-muted fst-italic small">Chưa nhận</span>
                                         }
-                                        <span class="fw-medium product-name">@item.ProductName</span>
-                                    </div>
-                                    <input type="hidden" class="product-id" value="@item.ProductId" />
-                                </td>
-                                <td class="text-end">
-                                    <span class="quantity-text">@item.QuantityOrdered.DisplayQuantity()</span>
-                                    <input type="hidden" class="row-qty" value="@item.QuantityOrdered" />
-                                </td>
-                                <td class="text-end">
-                                    @if (item.QuantityReceived >= item.QuantityOrdered)
-                                    {
-                                        <span class="status-badge success py-1 px-2">
-                                            <i class="bi bi-check-circle-fill"></i> @item.QuantityReceived.DisplayQuantity()
-                                        </span>
-                                    }
-                                    else if (item.QuantityReceived > 0)
-                                    {
-                                        <span class="status-badge warning py-1 px-2">@item.QuantityReceived.DisplayQuantity()</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted fst-italic small">Chưa nhận</span>
-                                    }
-                                </td>
-                                <td class="text-end text-muted">
-                                    <span class="unit-price-text text-nowrap">@item.UnitCost.DisplayCurrency()</span>
-                                </td>
-                                <td class="text-end fw-600 text-primary d-none d-md-table-cell pe-3">
-                                    <span class="total-price-text">@item.TotalCost.DisplayCurrency()</span>
-                                </td>
-                                @if (Model.Info.CanAddItems)
-                                {
-                                    <td class="text-center">
-                                        <button class="btn-table-action" type="button" data-bs-toggle="dropdown">
-                                            <i class="bi bi-three-dots-vertical"></i>
-                                        </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                                            <li>
-                                                <button class="dropdown-item btnEditItem"
-                                                        data-id="@item.Id"
-                                                        data-purchaseorder="@Model.Info.Id"
-                                                        data-name="@item.ProductName"
-                                                        data-quantity="@item.QuantityOrdered"
-                                                        data-unitcost="@item.UnitCost"
-                                                        data-note="@item.Note">
-                                                    <i class="bi bi-pencil-square me-1"></i>Sửa dòng hàng
-                                                </button>
-                                            </li>
-                                            <li>
-                                                <button class="dropdown-item btnRemoveItem"
-                                                        data-id="@item.Id"
-                                                        disabled="@(Model.Info.Items.Count <= 1)"
-                                                        data-purchaseorder="@Model.Info.Id"
-                                                        data-name="@item.ProductName">
-                                                    <i class="bi bi-trash me-1 text-danger"></i>Xóa bỏ
-                                                </button>
-                                            </li>
-                                        </ul>
                                     </td>
-                                }
+                                    <td class="text-end text-muted">
+                                        <span class="unit-price-text text-nowrap">@item.UnitCost.DisplayCurrency()</span>
+                                    </td>
+                                    <td class="text-end fw-600 text-primary d-none d-md-table-cell pe-3">
+                                        <span class="total-price-text">@item.TotalCost.DisplayCurrency()</span>
+                                    </td>
+                                    @if (Model.Info.CanAddItems)
+                                    {
+                                        <td class="text-end">
+                                            <button class="btn-table-action" type="button" data-bs-toggle="dropdown">
+                                                <i class="bi bi-three-dots-vertical"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                                <li>
+                                                    <button class="dropdown-item btnEditItem"
+                                                            data-id="@item.Id"
+                                                            data-purchaseorder="@Model.Info.Id"
+                                                            data-name="@item.ProductName"
+                                                            data-quantity="@item.QuantityOrdered"
+                                                            data-unitcost="@item.UnitCost"
+                                                            data-note="@item.Note">
+                                                        <i class="bi bi-pencil-square me-1"></i>Sửa dòng hàng
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button class="dropdown-item btnRemoveItem"
+                                                            data-id="@item.Id"
+                                                            disabled="@(Model.Info.Items.Count <= 1)"
+                                                            data-purchaseorder="@Model.Info.Id"
+                                                            data-name="@item.ProductName">
+                                                        <i class="bi bi-trash me-1 text-danger"></i>Xóa bỏ
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="@(Model.Info.CanAddItems ? 6 : 5)">
+                                    <div class="py-4 text-center text-muted">
+                                        <i class="bi bi-box-seam me-1"></i> Chưa có sản phẩm nào.
+                                    </div>
+                                </td>
                             </tr>
                         }
-                    }
-                    else
-                    {
-                        <tr>
-                            <td colspan="@(Model.Info.CanAddItems ? 6 : 5)">
-                                <div class="py-4 text-center text-muted">
-                                    <i class="bi bi-box-seam me-1"></i> Chưa có sản phẩm nào.
-                                </div>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <div class="@(Model.Info.Items.Count > 0 ? "" : "d-none") order-summary" id="tableFooter">
-            <div class="order-summary-row">
-                <span class="label">Tạm tính</span>
-                <span class="value" id="subTotal">@subTotal.DisplayCurrencyWithSymbol()</span>
+                    </tbody>
+                </table>
             </div>
-            @if (totalShipping > 0)
-            {
+            <div class="@(Model.Info.Items.Count > 0 ? "" : "d-none") order-summary" id="tableFooter">
                 <div class="order-summary-row">
-                    <span class="label">
-                        Phí vận chuyển
-                        @if (Model.Info.AccumulatedShippingAmount > 0 && Model.Info.ShippingAmount > 0)
-                        {
-                            <span class="small text-muted">(@Model.Info.ShippingAmount.DisplayCurrencyWithSymbol() + nhận hàng @Model.Info.AccumulatedShippingAmount.DisplayCurrencyWithSymbol())</span>
-                        }
-                        else if (Model.Info.AccumulatedShippingAmount > 0)
-                        {
-                            <span class="small text-muted">(từ nhận hàng)</span>
-                        }
-                    </span>
-                    <span class="value text-muted">@totalShipping.DisplayCurrencyWithSymbol()</span>
+                    <span class="label">Tạm tính</span>
+                    <span class="value" id="subTotal">@subTotal.DisplayCurrencyWithSymbol()</span>
                 </div>
-            }
-            @if (totalTax > 0)
-            {
-                <div class="order-summary-row">
-                    <span class="label">
-                        Thuế VAT
-                        @if (Model.Info.AccumulatedTaxAmount > 0 && Model.Info.TaxAmount > 0)
-                        {
-                            <span class="small text-muted">(@Model.Info.TaxAmount.DisplayCurrencyWithSymbol() + nhận hàng @Model.Info.AccumulatedTaxAmount.DisplayCurrencyWithSymbol())</span>
-                        }
-                        else if (Model.Info.AccumulatedTaxAmount > 0)
-                        {
-                            <span class="small text-muted">(từ nhận hàng)</span>
-                        }
-                    </span>
-                    <span class="value text-muted">@totalTax.DisplayCurrencyWithSymbol()</span>
+                @if (totalShipping > 0)
+                {
+                    <div class="order-summary-row">
+                        <span class="label">
+                            Phí vận chuyển
+                            @if (Model.Info.AccumulatedShippingAmount > 0 && Model.Info.ShippingAmount > 0)
+                            {
+                                <span class="small text-muted">(@Model.Info.ShippingAmount.DisplayCurrencyWithSymbol() + nhận hàng @Model.Info.AccumulatedShippingAmount.DisplayCurrencyWithSymbol())</span>
+                            }
+                            else if (Model.Info.AccumulatedShippingAmount > 0)
+                            {
+                                <span class="small text-muted">(từ nhận hàng)</span>
+                            }
+                        </span>
+                        <span class="value text-muted">@totalShipping.DisplayCurrencyWithSymbol()</span>
+                    </div>
+                }
+                @if (totalTax > 0)
+                {
+                    <div class="order-summary-row">
+                        <span class="label">
+                            Thuế VAT
+                            @if (Model.Info.AccumulatedTaxAmount > 0 && Model.Info.TaxAmount > 0)
+                            {
+                                <span class="small text-muted">(@Model.Info.TaxAmount.DisplayCurrencyWithSymbol() + nhận hàng @Model.Info.AccumulatedTaxAmount.DisplayCurrencyWithSymbol())</span>
+                            }
+                            else if (Model.Info.AccumulatedTaxAmount > 0)
+                            {
+                                <span class="small text-muted">(từ nhận hàng)</span>
+                            }
+                        </span>
+                        <span class="value text-muted">@totalTax.DisplayCurrencyWithSymbol()</span>
+                    </div>
+                }
+                <div class="order-summary-row total">
+                    <span class="label">Tổng cộng</span>
+                    <span class="value" id="grandTotal">@Model.Info.TotalAmount.DisplayCurrencyWithSymbol()</span>
                 </div>
-            }
-            <div class="order-summary-row total">
-                <span class="label">Tổng cộng</span>
-                <span class="value" id="grandTotal">@Model.Info.TotalAmount.DisplayCurrencyWithSymbol()</span>
             </div>
         </div>
     </div>
