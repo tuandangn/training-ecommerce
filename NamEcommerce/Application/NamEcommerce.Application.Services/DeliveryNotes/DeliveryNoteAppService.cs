@@ -26,6 +26,15 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(dto.WarehouseId);
 
+        foreach (var warehouseId in dto.Items.Select(item => item.WarehouseId).Distinct())
+        {
+            if (warehouseId == dto.WarehouseId)
+                continue;
+
+            if (await _warehouseAppService.GetWarehouseByIdAsync(warehouseId).ConfigureAwait(false) is null)
+                throw new WarehouseIsNotFoundException(warehouseId);
+        }
+
         var domainDto = new CreateDeliveryNoteDto
         {
             OrderId = dto.OrderId,
@@ -41,6 +50,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
             Items = dto.Items.Select(i => new CreateDeliveryNoteItemDto
             {
                 OrderItemId = i.OrderItemId,
+                WarehouseId = i.WarehouseId,
                 Quantity = i.Quantity
             }).ToList()
         };

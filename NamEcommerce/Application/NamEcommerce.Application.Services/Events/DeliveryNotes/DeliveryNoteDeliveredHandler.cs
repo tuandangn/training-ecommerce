@@ -10,9 +10,6 @@ using NamEcommerce.Domain.Shared.Services.Inventory;
 
 namespace NamEcommerce.Application.Services.Events.DeliveryNotes;
 
-/// <summary>
-/// Khi phiếu giao hàng đã giao thành công — sinh công nợ khách hàng tương ứng (idempotent qua <c>DeliveryNoteId</c>).
-/// </summary>
 public sealed class DeliveryNoteDeliveredHandler(
     ICustomerDebtManager debtManager,
     IDeliveryNoteAppService deliveryNoteAppService) : INotificationHandler<DeliveryNoteDelivered>
@@ -22,12 +19,12 @@ public sealed class DeliveryNoteDeliveredHandler(
 
     public async Task Handle(DeliveryNoteDelivered notification, CancellationToken cancellationToken)
     {
-        // Event đã carry đủ thông tin, vẫn fetch lại để đảm bảo phiếu vẫn ở trạng thái Delivered.
         var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
-        if (deliveryNote is null) return;
+        if (deliveryNote is null)
+            return;
 
-        // Guard: phiếu xuất do trả NCC không sinh công nợ khách hàng.
-        if (deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn) return;
+        if (deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn)
+            return;
 
         if (notification.AmountToCollect <= 0)
             return;
@@ -55,34 +52,51 @@ public sealed class DeliveryNoteDeliveredStockHandler(
             return;
 
         var deliveryNote = await deliveryNoteAppService.GetByIdAsync(notification.DeliveryNoteId).ConfigureAwait(false);
-        if (deliveryNote is null) return;
+        if (deliveryNote is null)
+            return;
 
         if (deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToCustomer && !deliveryNote.IsDirectShip)
-            return; // Standard delivery notes are handled in ConfirmAsync
+            return;
 
         var releaseReservedStock = deliveryNote.OrderId != Guid.Empty
             && (deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToCustomer || deliveryNote.SourceType == (int)DeliveryNoteSourceType.DirectShipToCustomer);
+        var referenceType = deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn
+            ? (int)NamEcommerce.Domain.Entities.Inventory.StockReferenceType.VendorReturn
+            : (int)NamEcommerce.Domain.Entities.Inventory.StockReferenceType.SalesOrder;
+
+        var dispatchGroups = deliveryNote.Items
+            .GroupBy(item => new
+            {
+                item.ProductId,
+                WarehouseId = item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId
+            })
+            .Select(group => new
+            {
+                group.Key.ProductId,
+                group.Key.WarehouseId,
+                Quantity = group.Sum(item => item.Quantity)
+            })
+            .ToList();
+
+        foreach (var group in dispatchGroups)
+        {
+            await stockManager.DispatchStockUpToAsync(
+                group.ProductId,
+                group.WarehouseId,
+                group.Quantity,
+                deliveryNote.Id,
+                Guid.Empty,
+                $"Xuat hang cho phieu xuat {deliveryNote.Code}",
+                releaseReservedStock: releaseReservedStock,
+                referenceType: referenceType).ConfigureAwait(false);
+        }
 
         foreach (var item in deliveryNote.Items)
         {
-            await stockManager.DispatchStockUpToAsync(
-                item.ProductId,
-                deliveryNote.WarehouseId,
-                deliveryNote.Items
-                    .Where(i => i.ProductId == item.ProductId)
-                    .Sum(i => i.Quantity),
-                deliveryNote.Id,
-                Guid.Empty,
-                $"Xuất hàng cho phiếu xuất {deliveryNote.Code}",
-                releaseReservedStock: releaseReservedStock,
-                referenceType: deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn
-                    ? (int)NamEcommerce.Domain.Entities.Inventory.StockReferenceType.VendorReturn
-                    : (int)NamEcommerce.Domain.Entities.Inventory.StockReferenceType.SalesOrder).ConfigureAwait(false);
-
             await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
             {
                 ProductId = item.ProductId,
-                WarehouseId = deliveryNote.WarehouseId,
+                WarehouseId = item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId,
                 Quantity = item.Quantity,
                 MovementType = deliveryNote.SourceType == (int)DeliveryNoteSourceType.ToVendorReturn
                     ? InventoryCostMovementType.VendorReturn

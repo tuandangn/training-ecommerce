@@ -60,6 +60,7 @@ public sealed class CreateDeliveryNoteItemModel
 {
     public Guid OrderItemId { get; set; }
     public Guid ProductId { get; set; }
+    public Guid WarehouseId { get; set; }
     public string ProductName { get; set; } = string.Empty;
     public decimal OrderedQuantity { get; set; }
     public decimal PreviouslyDeliveredQuantity { get; set; }
@@ -71,4 +72,14 @@ public sealed class CreateDeliveryNoteItemModel
     
     public decimal UnitPrice { get; set; }
     public bool Selected { get; set; }
+    public IList<CreateDeliveryNoteItemWarehouseAllocationModel> WarehouseAllocations { get; set; } = [];
+}
+
+[Serializable]
+public sealed class CreateDeliveryNoteItemWarehouseAllocationModel
+{
+    public Guid WarehouseId { get; set; }
+    public string WarehouseName { get; set; } = string.Empty;
+    public decimal AvailableQuantity { get; set; }
+    public decimal Quantity { get; set; }
 }

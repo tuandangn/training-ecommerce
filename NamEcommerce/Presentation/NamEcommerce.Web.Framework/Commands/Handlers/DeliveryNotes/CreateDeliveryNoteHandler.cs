@@ -41,6 +41,7 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
             Items = selectedItems.Select(i => new CreateDeliveryNoteItemAppDto
             {
                 OrderItemId = i.OrderItemId,
+                WarehouseId = i.WarehouseId == Guid.Empty ? request.WarehouseId : i.WarehouseId,
                 Quantity = i.Quantity
             }).ToList()
         };

@@ -43,6 +43,7 @@ public static class DeliveryNoteExtensions
                 DeliveryNoteId = i.DeliveryNoteId,
                 OrderItemId = i.OrderItemId,
                 ProductId = i.ProductId,
+                WarehouseId = i.WarehouseId,
                 ProductName = i.ProductName,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,

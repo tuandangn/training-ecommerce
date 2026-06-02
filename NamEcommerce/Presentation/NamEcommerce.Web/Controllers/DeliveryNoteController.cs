@@ -86,7 +86,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             return View(model);
         }
 
-        var orderItems = model.Items.Where(i => i.Selected && i.Quantity > 0);
+        var orderItems = BuildCreateDeliveryNoteItems(model);
         if (!orderItems.Any())
         {
             AddLocalizedModelError("Error.DeliveryNoteItemRequired");
@@ -106,11 +106,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 Surcharge = model.Surcharge,
                 SurchargeReason = model.SurchargeReason,
                 AmountToCollect = model.AmountToCollect,
-                Items = orderItems.Select(i => new CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel
-                {
-                    OrderItemId = i.OrderItemId,
-                    Quantity = i.Quantity
-                }).ToList()
+                Items = orderItems
             }).ConfigureAwait(false);
 
             if (result.Success)
@@ -134,7 +130,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     [HttpGet]
     public async Task<IActionResult> GetCreateStockAvailability(Guid warehouseId, [FromQuery] Guid[] productIds)
     {
-        if (warehouseId == Guid.Empty || productIds.Length == 0)
+        if (productIds.Length == 0)
             return Json(new { items = Array.Empty<object>() });
 
         var distinctProductIds = productIds
@@ -142,14 +138,30 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             .Distinct()
             .ToList();
 
+        var warehouses = (await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false))
+            .Options
+            .ToList();
+
         var items = new List<object>(distinctProductIds.Count);
         foreach (var productId in distinctProductIds)
         {
-            var stockInfo = await _mediator.Send(new GetProductStockInfoQuery(productId, warehouseId)).ConfigureAwait(false);
+            var warehouseItems = new List<object>(warehouses.Count);
+            foreach (var warehouse in warehouses)
+            {
+                var stockInfo = await _mediator.Send(new GetProductStockInfoQuery(productId, warehouse.Id)).ConfigureAwait(false);
+                warehouseItems.Add(new
+                {
+                    warehouseId = warehouse.Id,
+                    warehouseName = warehouse.Name,
+                    quantityAvailable = Math.Max(0m, stockInfo?.QuantityAvailable ?? 0m),
+                    isDefault = warehouse.Id == warehouseId
+                });
+            }
+
             items.Add(new
             {
                 productId,
-                quantityAvailable = Math.Max(0m, stockInfo?.QuantityAvailable ?? 0m)
+                warehouses = warehouseItems
             });
         }
 
@@ -330,18 +342,22 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         {
             var model = await _deliveryNoteModelFactory.PrepareCreateDeliveryNoteModelAsync(request.OrderId).ConfigureAwait(false);
 
-            // Validate that requested quantities don't exceed remaining quantities
             foreach (var selectedItem in request.SelectedItems)
             {
                 if (selectedItem.Quantity <= 0)
                     return Json(new { success = false, message = LocalizeError("Error.OrderItemQuantityMustBePositive") });
+            }
 
-                var orderItem = model.Items.FirstOrDefault(i => i.OrderItemId == selectedItem.OrderItemId);
+            // Validate that requested quantities don't exceed remaining quantities
+            foreach (var selectedGroup in request.SelectedItems.GroupBy(item => item.OrderItemId))
+            {
+                var orderItem = model.Items.FirstOrDefault(i => i.OrderItemId == selectedGroup.Key);
                 if (orderItem == null)
                     return Json(new { success = false, message = LocalizeError("Error.OrderItemIsNotFound") });
 
                 var remainingQty = orderItem.Quantity;
-                if (selectedItem.Quantity > remainingQty)
+                var requestedQuantity = selectedGroup.Sum(item => item.Quantity);
+                if (requestedQuantity > remainingQty)
                     return Json(new { success = false, message = LocalizeError("Error.QuantityExceedsRemaining", orderItem.ProductName, remainingQty) });
             }
 
@@ -353,7 +369,9 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 if (selectedItem != null)
                 {
                     item.Selected = true;
-                    item.Quantity = selectedItem.Quantity;
+                    item.Quantity = request.SelectedItems
+                        .Where(s => s.OrderItemId == item.OrderItemId)
+                        .Sum(s => s.Quantity);
                 }
                 else
                 {
@@ -376,10 +394,11 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 Surcharge = request.Surcharge,
                 SurchargeReason = request.SurchargeReason,
                 AmountToCollect = request.AmountToCollect,
-                Items = model.Items.Where(i => i.Selected).Select(i => new CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel
+                Items = request.SelectedItems.Select(selectedItem => new CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel
                 {
-                    OrderItemId = i.OrderItemId,
-                    Quantity = i.Quantity
+                    OrderItemId = selectedItem.OrderItemId,
+                    WarehouseId = selectedItem.WarehouseId == Guid.Empty ? request.WarehouseId : selectedItem.WarehouseId,
+                    Quantity = selectedItem.Quantity
                 }).ToList()
             }).ConfigureAwait(false);
 
@@ -415,6 +434,39 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
             });
         }
     }
+
+    private static IList<CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel> BuildCreateDeliveryNoteItems(CreateDeliveryNoteModel model)
+    {
+        var result = new List<CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel>();
+        foreach (var item in model.Items.Where(i => i.Selected))
+        {
+            if (item.WarehouseAllocations.Any())
+            {
+                result.AddRange(item.WarehouseAllocations
+                    .Where(allocation => allocation.WarehouseId != Guid.Empty && allocation.Quantity > 0)
+                    .Select(allocation => new CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel
+                    {
+                        OrderItemId = item.OrderItemId,
+                        WarehouseId = allocation.WarehouseId,
+                        Quantity = allocation.Quantity
+                    }));
+                continue;
+            }
+
+            var warehouseId = item.WarehouseId == Guid.Empty ? model.WarehouseId : item.WarehouseId;
+            if (warehouseId == Guid.Empty || item.Quantity <= 0)
+                continue;
+
+            result.Add(new CreateDeliveryNoteCommand.CreateDeliveryNoteItemModel
+            {
+                OrderItemId = item.OrderItemId,
+                WarehouseId = warehouseId,
+                Quantity = item.Quantity
+            });
+        }
+
+        return result;
+    }
 }
 
 #region Helper classes
@@ -435,6 +487,7 @@ public class CreateFromPreparationRequest
 public class SelectedItemModel
 {
     public Guid OrderItemId { get; set; }
+    public Guid WarehouseId { get; set; }
     public decimal Quantity { get; set; }
 }
 

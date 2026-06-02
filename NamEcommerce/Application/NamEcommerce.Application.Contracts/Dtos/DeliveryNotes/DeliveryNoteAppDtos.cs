@@ -54,6 +54,7 @@ public sealed record DeliveryNoteItemAppDto
     public required Guid DeliveryNoteId { get; init; }
     public required Guid OrderItemId { get; init; }
     public required Guid ProductId { get; init; }
+    public required Guid WarehouseId { get; init; }
     public required string ProductName { get; init; }
     public required decimal Quantity { get; init; }
     public required decimal UnitPrice { get; init; }
@@ -85,6 +86,8 @@ public sealed record CreateDeliveryNoteAppDto
             return (false, "Error.ShippingAddressRequired");
         if (Items == null || !Items.Any())
             return (false, "Error.DeliveryNoteItemsRequired");
+        if (Items.Any(i => i.WarehouseId == Guid.Empty))
+            return (false, "Error.WarehouseRequired");
         if (Items.Any(i => i.Quantity <= 0))
             return (false, "Error.DeliveryNoteQuantityMustBePositive");
         if (Surcharge < 0)
@@ -100,6 +103,7 @@ public sealed record CreateDeliveryNoteAppDto
 public sealed record CreateDeliveryNoteItemAppDto
 {
     public required Guid OrderItemId { get; init; }
+    public required Guid WarehouseId { get; init; }
     public required decimal Quantity { get; init; }
 }
 

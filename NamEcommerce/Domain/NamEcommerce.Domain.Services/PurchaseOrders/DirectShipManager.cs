@@ -459,6 +459,7 @@ public sealed class DirectShipManager(
                 DeliveryNoteId = i.DeliveryNoteId,
                 OrderItemId = i.OrderItemId,
                 ProductId = i.ProductId,
+                WarehouseId = i.WarehouseId == Guid.Empty ? d.WarehouseId : i.WarehouseId,
                 ProductName = i.ProductName ?? string.Empty,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,

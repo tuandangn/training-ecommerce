@@ -21,6 +21,7 @@ public sealed class CreateDeliveryNoteCommand : IRequest<CreateDeliveryNoteResul
     public sealed class CreateDeliveryNoteItemModel
     {
         public Guid OrderItemId { get; set; }
+        public Guid WarehouseId { get; set; }
         public decimal Quantity { get; set; }
     }
 }

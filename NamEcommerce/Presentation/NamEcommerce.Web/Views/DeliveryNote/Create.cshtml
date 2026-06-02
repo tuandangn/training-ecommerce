@@ -103,6 +103,61 @@
             .delivery-stock-note.is-error {
                 color: #b91c1c;
             }
+
+        .warehouse-allocation-list {
+            display: grid;
+            gap: 0.45rem;
+            min-width: 260px;
+        }
+
+        .warehouse-allocation-line {
+            display: grid;
+            grid-template-columns: minmax(120px, 1fr) 88px 94px;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.45rem 0.55rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            background: #fff;
+        }
+
+            .warehouse-allocation-line.is-empty {
+                background: #f8fafc;
+                color: #64748b;
+            }
+
+            .warehouse-allocation-line.is-short {
+                border-color: rgba(245, 158, 11, 0.34);
+                background: rgba(245, 158, 11, 0.06);
+            }
+
+            .warehouse-allocation-line.is-over {
+                border-color: rgba(239, 68, 68, 0.34);
+                background: rgba(239, 68, 68, 0.06);
+            }
+
+        .warehouse-allocation-name {
+            min-width: 0;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #334155;
+        }
+
+        .warehouse-allocation-meta {
+            font-size: 0.74rem;
+            color: #64748b;
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .warehouse-allocation-input {
+            height: 34px;
+            font-weight: 700;
+        }
+
+        .allocation-total-text {
+            font-variant-numeric: tabular-nums;
+        }
     </style>
 }
 
@@ -179,8 +234,8 @@
                                     <th>Mặt hàng</th>
                                     <th class="text-end">Đã đặt</th>
                                     <th class="text-end">Đã giao</th>
-                                    <th class="px-3">Có thể xuất</th>
-                                    <th class="text-end pe-4" style="width: 150px;">SL xuất đợt này</th>
+                                    <th>Phân bổ kho</th>
+                                    <th class="text-end pe-4" style="width: 130px;">Tổng xuất</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -191,6 +246,7 @@
                                         var requiredQuantityValue = Model.Items[i].RemainingQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
                                         var availableQuantityValue = Model.Items[i].AvailableQuantity.ToString(System.Globalization.CultureInfo.InvariantCulture);
                                         <tr class="item-row"
+                                            data-item-index="@i"
                                             data-product-id="@Model.Items[i].ProductId"
                                             data-required-quantity="@requiredQuantityValue"
                                             data-available-quantity="@availableQuantityValue"
@@ -199,6 +255,7 @@
                                                 <input type="checkbox" asp-for="Items[i].Selected" class="form-check-input item-checkbox" />
                                                 <input type="hidden" asp-for="Items[i].OrderItemId" />
                                                 <input type="hidden" asp-for="Items[i].ProductId" class="item-product-id" />
+                                                <input type="hidden" asp-for="Items[i].WarehouseId" class="item-warehouse-id" />
                                                 <input type="hidden" asp-for="Items[i].ProductName" />
                                                 <input type="hidden" asp-for="Items[i].OrderedQuantity" />
                                                 <input type="hidden" asp-for="Items[i].PreviouslyDeliveredQuantity" />
@@ -209,18 +266,20 @@
                                             <td class="align-middle fw-medium">@Model.Items[i].ProductName</td>
                                             <td class="text-end align-middle">@Model.Items[i].OrderedQuantity.DisplayQuantity()</td>
                                             <td class="text-end align-middle text-success">@Model.Items[i].PreviouslyDeliveredQuantity.DisplayQuantity()</td>
-                                            <td class="align-middle px-3">
+                                            <td class="align-middle">
                                                 <div class="delivery-stock-state stock-availability-state">
                                                     <span class="delivery-stock-status is-neutral">
                                                         <i class="bi bi-box-seam stock-status-icon"></i>
-                                                        <span class="stock-availability-label">Chọn kho</span>
+                                                        <span class="stock-availability-label">Đang chờ tồn kho</span>
                                                     </span>
-                                                    <span class="delivery-stock-note stock-availability-note">Tồn kho sẽ cập nhật theo kho xuất</span>
+                                                    <span class="delivery-stock-note stock-availability-note">Tự phân bổ theo kho ưu tiên, sau đó tới các kho còn hàng</span>
                                                 </div>
+                                                <div class="warehouse-allocation-list mt-2"></div>
                                             </td>
                                             <td class="pe-4">
-                                                <input asp-for="Items[i].Quantity" class="form-control text-end quantity-input fw-bold"
-                                                       max="@Model.Items[i].RemainingQuantity" data-decimal="quantity" value="@Model.Items[i].Quantity.DisplayQuantity()" />
+                                                <input type="hidden" asp-for="Items[i].Quantity" class="quantity-input" value="@Model.Items[i].Quantity.DisplayQuantity()" />
+                                                <div class="allocation-total-text text-end fw-bold">0</div>
+                                                <div class="allocation-total-note text-end small text-muted">/ @Model.Items[i].RemainingQuantity.DisplayQuantity()</div>
                                             </td>
                                         </tr>
                                     }
@@ -582,6 +641,263 @@
                 });
             }
 
+            function escapeHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, char => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[char]));
+            }
+
+            function getAllocatedQuantity($row) {
+                let total = 0;
+                $row.find('.allocation-quantity-input').each(function() {
+                    total += parseQuantity($(this).val());
+                });
+                return total;
+            }
+
+            function getAvailableQuantity($row) {
+                const dataValue = parseFloat($row.attr('data-total-available-quantity'));
+                return Number.isFinite(dataValue) ? dataValue : 0;
+            }
+
+            function setQuantity($row, quantity) {
+                $row.find('.quantity-input').val(formatQuantity(quantity));
+                $row.find('.allocation-total-text').text(formatQuantity(quantity));
+            }
+
+            function getAllocationWarehouses(warehouses, requiredQuantity) {
+                const normalized = (warehouses || []).map(warehouse => ({
+                    warehouseId: warehouse.warehouseId,
+                    warehouseName: warehouse.warehouseName || '',
+                    quantityAvailable: parseFloat(warehouse.quantityAvailable) || 0,
+                    isDefault: warehouse.isDefault === true
+                }));
+                const ordered = normalized.slice().sort((left, right) => {
+                    if (left.isDefault !== right.isDefault)
+                        return left.isDefault ? -1 : 1;
+                    return right.quantityAvailable - left.quantityAvailable;
+                });
+
+                let remainingQuantity = requiredQuantity;
+                const suggestedByWarehouseId = {};
+                ordered.forEach(function(warehouse) {
+                    const quantity = Math.min(remainingQuantity, warehouse.quantityAvailable);
+                    suggestedByWarehouseId[String(warehouse.warehouseId).toLowerCase()] = Math.max(0, quantity);
+                    remainingQuantity -= quantity;
+                });
+
+                const visible = ordered.filter(warehouse => warehouse.isDefault || warehouse.quantityAvailable > 0);
+                return (visible.length ? visible : ordered).map(warehouse => ({
+                    ...warehouse,
+                    suggestedQuantity: suggestedByWarehouseId[String(warehouse.warehouseId).toLowerCase()] || 0
+                }));
+            }
+
+            function renderWarehouseAllocations($row, warehouses, stockLoaded) {
+                const requiredQuantity = getRequiredQuantity($row);
+                const $checkbox = $row.find('.item-checkbox');
+                const itemIndex = $row.attr('data-item-index');
+                const totalAvailable = (warehouses || []).reduce((sum, warehouse) => sum + (parseFloat(warehouse.quantityAvailable) || 0), 0);
+                const allocationWarehouses = stockLoaded ? getAllocationWarehouses(warehouses, requiredQuantity) : [];
+
+                $row
+                    .removeClass('stock-row-empty stock-row-short')
+                    .attr('data-stock-loaded', stockLoaded ? 'true' : 'false')
+                    .attr('data-total-available-quantity', totalAvailable.toString());
+                $row.find('.item-available-quantity').val(formatQuantity(totalAvailable));
+                $row.find('.warehouse-allocation-list').empty();
+
+                if (!stockLoaded) {
+                    setQuantity($row, 0);
+                    setStockState($row, 'Đang chờ tồn kho', 'Tự phân bổ theo kho ưu tiên, sau đó tới các kho còn hàng', 'neutral', 'bi-box-seam');
+                    return;
+                }
+
+                const allocationHtml = allocationWarehouses.map(function(warehouse, index) {
+                    const warehouseName = escapeHtml(warehouse.warehouseName);
+                    const warehouseId = escapeHtml(warehouse.warehouseId);
+                    const availableQuantity = formatQuantity(warehouse.quantityAvailable);
+                    const suggestedQuantity = formatQuantity(warehouse.suggestedQuantity);
+                    const stateClass = warehouse.quantityAvailable <= 0 ? 'is-empty' : '';
+                    return `<div class="warehouse-allocation-line ${stateClass}">
+                        <div class="warehouse-allocation-name text-truncate" title="${warehouseName}">${warehouseName}</div>
+                        <div class="warehouse-allocation-meta">Tồn ${availableQuantity}</div>
+                        <input type="hidden" name="Items[${itemIndex}].WarehouseAllocations[${index}].WarehouseId" value="${warehouseId}" />
+                        <input class="form-control form-control-sm text-end warehouse-allocation-input allocation-quantity-input"
+                               name="Items[${itemIndex}].WarehouseAllocations[${index}].Quantity"
+                               value="${suggestedQuantity}"
+                               data-available-quantity="${warehouse.quantityAvailable}"
+                               data-decimal="quantity" />
+                    </div>`;
+                }).join('');
+                $row.find('.warehouse-allocation-list').html(allocationHtml);
+
+                if (totalAvailable <= 0) {
+                    if ($checkbox.is(':checked'))
+                        $row.attr('data-stock-auto-unchecked', 'true');
+                    $row.addClass('stock-row-empty');
+                    $checkbox.prop('checked', false);
+                    setQuantity($row, 0);
+                    setStockState($row, 'Không có tồn kho', 'Không kho nào còn hàng để phân bổ, dòng này đã bỏ chọn', 'empty', 'bi-exclamation-triangle');
+                    return;
+                }
+
+                if ($row.attr('data-stock-auto-unchecked') === 'true') {
+                    $checkbox.prop('checked', true);
+                    $row.removeAttr('data-stock-auto-unchecked');
+                }
+
+                refreshRowAllocation($row);
+            }
+
+            function refreshRowAllocation($row) {
+                const requiredQuantity = getRequiredQuantity($row);
+                const allocatedQuantity = getAllocatedQuantity($row);
+                const totalAvailable = getAvailableQuantity($row);
+                const firstWarehouseId = $row.find('.allocation-quantity-input')
+                    .filter(function() { return parseQuantity($(this).val()) > 0; })
+                    .first()
+                    .siblings('input[name$=".WarehouseId"]')
+                    .val();
+                const hasOverWarehouse = $row.find('.allocation-quantity-input').toArray().some(input => {
+                    const $input = $(input);
+                    return parseQuantity($input.val()) > (parseFloat($input.attr('data-available-quantity')) || 0);
+                });
+
+                $row.removeClass('stock-row-empty stock-row-short');
+                $row.find('.warehouse-allocation-line').each(function() {
+                    const $line = $(this);
+                    const $input = $line.find('.allocation-quantity-input');
+                    const quantity = parseQuantity($input.val());
+                    const availableQuantity = parseFloat($input.attr('data-available-quantity')) || 0;
+                    $line.toggleClass('is-over', quantity > availableQuantity);
+                    $line.toggleClass('is-empty', availableQuantity <= 0);
+                });
+
+                $row.find('.item-warehouse-id').val(firstWarehouseId || $warehouseSelect.val() || '');
+                setQuantity($row, allocatedQuantity);
+
+                if ($row.attr('data-stock-loaded') !== 'true') {
+                    setStockState($row, 'Đang chờ tồn kho', 'Tự phân bổ theo kho ưu tiên, sau đó tới các kho còn hàng', 'neutral', 'bi-box-seam');
+                    return;
+                }
+
+                if (totalAvailable <= 0) {
+                    $row.addClass('stock-row-empty');
+                    setStockState($row, 'Không có tồn kho', 'Không kho nào còn hàng để phân bổ', 'empty', 'bi-exclamation-triangle');
+                    return;
+                }
+
+                if (hasOverWarehouse) {
+                    $row.addClass('stock-row-short');
+                    setStockState($row, 'Vượt tồn kho', 'Có kho đang nhập số lượng lớn hơn tồn khả dụng', 'error', 'bi-exclamation-triangle');
+                    return;
+                }
+
+                if (allocatedQuantity <= 0) {
+                    $row.addClass('stock-row-short');
+                    setStockState($row, 'Chưa phân bổ', 'Nhập số lượng xuất ở ít nhất một kho', 'short', 'bi-exclamation-circle');
+                    return;
+                }
+
+                if (allocatedQuantity > requiredQuantity) {
+                    $row.addClass('stock-row-short');
+                    setStockState($row, 'Vượt số cần xuất', `Đang vượt ${formatQuantity(allocatedQuantity - requiredQuantity)} so với số còn cần giao`, 'error', 'bi-exclamation-triangle');
+                    return;
+                }
+
+                if (allocatedQuantity < requiredQuantity) {
+                    const shortageQuantity = requiredQuantity - allocatedQuantity;
+                    $row.addClass('stock-row-short');
+                    setStockState($row, 'Chưa phân bổ đủ', `Còn thiếu ${formatQuantity(shortageQuantity)} so với số cần xuất`, 'short', 'bi-exclamation-circle');
+                    return;
+                }
+
+                setStockState($row, 'Đã phân bổ đủ', `Tổng tồn khả dụng ${formatQuantity(totalAvailable)}`, 'ok', 'bi-check-circle');
+            }
+
+            function clampQuantityInput($input) {
+                refreshRowAllocation($input.closest('.item-row'));
+            }
+
+            function loadStockAvailability() {
+                const requestId = ++stockAvailabilityRequestId;
+                const warehouseId = $warehouseSelect.val();
+                const productIds = [];
+                $('.item-row').each(function() {
+                    const productId = $(this).attr('data-product-id');
+                    if (productId && !productIds.includes(productId))
+                        productIds.push(productId);
+                    setStockState($(this), 'Đang kiểm tra', 'Đang lấy tồn kho theo tất cả kho', 'loading', 'bi-arrow-repeat');
+                });
+
+                if (!productIds.length)
+                    return;
+
+                $.ajax({
+                    url: stockAvailabilityUrl,
+                    type: 'GET',
+                    traditional: true,
+                    data: { warehouseId, productIds },
+                    success: function(response) {
+                        if (requestId !== stockAvailabilityRequestId)
+                            return;
+
+                        const availabilityByProductId = {};
+                        (response.items || []).forEach(function(item) {
+                            availabilityByProductId[String(item.productId).toLowerCase()] = item.warehouses || [];
+                        });
+
+                        $('.item-row').each(function() {
+                            const $row = $(this);
+                            const productId = String($row.attr('data-product-id')).toLowerCase();
+                            renderWarehouseAllocations($row, availabilityByProductId[productId] || [], true);
+                        });
+
+                        updateSelectAllState();
+                        calculateAmount();
+                    },
+                    error: function() {
+                        if (requestId !== stockAvailabilityRequestId)
+                            return;
+
+                        $('.item-row').each(function() {
+                            const $row = $(this);
+                            $row
+                                .removeClass('stock-row-empty stock-row-short')
+                                .attr('data-stock-loaded', 'false');
+                            $row.find('.warehouse-allocation-list').empty();
+                            setQuantity($row, 0);
+                            setStockState($row, 'Không tải được', 'Kiểm tra lại kho hoặc tải lại trang', 'error', 'bi-exclamation-triangle');
+                        });
+                    }
+                });
+            }
+
+            function hasInvalidAllocation($row) {
+                const requiredQuantity = getRequiredQuantity($row);
+                const allocatedQuantity = getAllocatedQuantity($row);
+                if ($row.attr('data-stock-loaded') !== 'true')
+                    return 'Tồn kho chưa tải xong, vui lòng thử lại.';
+                if (allocatedQuantity <= 0)
+                    return 'Vui lòng phân bổ số lượng xuất cho các mặt hàng được chọn.';
+                if (allocatedQuantity > requiredQuantity)
+                    return 'Số lượng phân bổ đang vượt số còn cần giao.';
+
+                const invalidWarehouse = $row.find('.allocation-quantity-input').toArray().some(input => {
+                    const $input = $(input);
+                    return parseQuantity($input.val()) > (parseFloat($input.attr('data-available-quantity')) || 0);
+                });
+                if (invalidWarehouse)
+                    return 'Có kho đang phân bổ vượt tồn khả dụng.';
+
+                return null;
+            }
+
             // Events
             $('.item-checkbox').on('change', function() {
                 updateSelectAllState();
@@ -590,6 +906,12 @@
 
             $('.quantity-input').on('change input', function() {
                 clampQuantityInput($(this));
+                calculateAmount();
+            });
+
+            $(document).on('change input', '.allocation-quantity-input', function() {
+                refreshRowAllocation($(this).closest('.item-row'));
+                updateSelectAllState();
                 calculateAmount();
             });
 
@@ -631,6 +953,13 @@
                         alert('Vui lòng nhập số lượng hợp lệ cho các mặt hàng được chọn.');
                         e.preventDefault();
                         return false; // break loop
+                    }
+
+                    var allocationError = hasInvalidAllocation(row);
+                    if (allocationError) {
+                        alert(allocationError);
+                        e.preventDefault();
+                        return false;
                     }
 
                     if (row.attr('data-stock-loaded') === 'true') {

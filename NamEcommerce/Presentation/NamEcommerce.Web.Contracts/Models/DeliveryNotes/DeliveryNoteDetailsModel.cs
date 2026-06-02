@@ -53,6 +53,8 @@ public sealed class DeliveryNoteDetailsModel
 public sealed class DeliveryNoteItemModel
 {
     public Guid Id { get; set; }
+    public Guid WarehouseId { get; set; }
+    public string? WarehouseName { get; set; }
     public string ProductName { get; set; } = string.Empty;
     public decimal Quantity { get; set; }
     public decimal UnitPrice { get; set; }
