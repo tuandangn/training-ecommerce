@@ -486,7 +486,8 @@
                                                                         "name": @Json.Serialize(item.ProductName),
                                                                         "remaining": @item.RemainingQuantity.ToString("#0"),
                                                                         "unitCost": @item.UnitCost.ToString("#0"),
-                                                                        "dsRemaining": @itemDsRemaining.ToString("#0")
+                                                                        "dsRemaining": @itemDsRemaining.ToString("#0"),
+                                                                        "decimalPlaces": @item.QuantityDecimalPlaces
                                                                     }@(idx < remainingItems.Count - 1 ? "," : "")</text>
                                                         }
                                                     ],

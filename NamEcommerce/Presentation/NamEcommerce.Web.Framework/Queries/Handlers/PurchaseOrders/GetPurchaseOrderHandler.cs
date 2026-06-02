@@ -69,6 +69,7 @@ public sealed class GetPurchaseOrderHandler : IRequestHandler<GetPurchaseOrderQu
                 CurrentUnitPrice = product.CurrentUnitPrice,
                 ProductPicture = product.PictureUrl,
                 UnitMeasurement = product.UnitMeasurement,
+                QuantityDecimalPlaces = product.QuantityDecimalPlaces,
                 Note = item.Note,
                 QuantityOrdered = item.QuantityOrdered,
                 QuantityReceived = item.QuantityReceived,

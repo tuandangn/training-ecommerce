@@ -5,6 +5,7 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
+using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Application.Contracts.Media;
@@ -171,6 +172,10 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 group => group.Key,
                 group => group.Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity)));
 
+        var productIds = order.Items.Select(i => i.ProductId).Distinct();
+        var orderProducts = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
+        var decimalPlacesByProductId = orderProducts.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
+
         foreach (var orderItem in order.Items)
         {
             var deliveredQuantity = activeDeliveryNotes
@@ -201,6 +206,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 itemModel.PreviouslyDeliveredQuantity = deliveredQuantity;
                 itemModel.RemainingQuantity = remainingQty;
                 itemModel.UnitPrice = orderItem.UnitPrice;
+                itemModel.QuantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(orderItem.ProductId);
 
                 if (existingItem is null)
                     model.Items.Add(itemModel);

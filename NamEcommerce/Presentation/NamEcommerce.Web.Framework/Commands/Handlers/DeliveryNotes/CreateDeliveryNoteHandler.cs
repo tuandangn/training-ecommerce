@@ -27,6 +27,15 @@ public sealed class CreateDeliveryNoteHandler : IRequestHandler<CreateDeliveryNo
             };
         }
 
+        if (selectedItems.Any(i => i.QuantityDecimalPlaces == 0 && i.Quantity != Math.Floor(i.Quantity)))
+        {
+            return new CreateDeliveryNoteResultModel
+            {
+                Success = false,
+                ErrorMessage = "Error.QuantityMustBeInteger"
+            };
+        }
+
         var dto = new CreateDeliveryNoteAppDto
         {
             OrderId = request.OrderId,

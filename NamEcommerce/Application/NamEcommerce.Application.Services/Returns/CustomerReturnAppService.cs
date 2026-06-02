@@ -226,9 +226,11 @@ public sealed class CustomerReturnAppService(
             .Select(p => p.UnitMeasurementId!.Value)
             .Distinct()
             .ToList();
-        var unitDict = unitMeasurementDataReader.DataSource
+        var unitMeasurements = unitMeasurementDataReader.DataSource
             .Where(u => unitIds.Contains(u.Id))
-            .ToDictionary(u => u.Id, u => u.Name);
+            .ToList();
+        var unitDict = unitMeasurements.ToDictionary(u => u.Id, u => u.Name);
+        var unitDecimalPlacesDict = unitMeasurements.ToDictionary(u => u.Id, u => u.DecimalPlaces);
 
         var result = deliveryNote.Items.Select(item =>
         {
@@ -244,8 +246,12 @@ public sealed class CustomerReturnAppService(
 
             productDict.TryGetValue(item.ProductId, out var product);
             var unit = "";
+            var decimalPlaces = 0;
             if (product?.UnitMeasurementId.HasValue == true)
+            {
                 unitDict.TryGetValue(product.UnitMeasurementId.Value, out unit);
+                unitDecimalPlacesDict.TryGetValue(product.UnitMeasurementId.Value, out decimalPlaces);
+            }
 
             return new ReturnableItemAppDto
             {
@@ -255,7 +261,8 @@ public sealed class CustomerReturnAppService(
                 OriginalQty = item.Quantity,
                 AlreadyReturnedQty = alreadyReturned + pendingPortalReturnQty,
                 UnitPrice = item.UnitPrice,
-                SourceItemId = item.Id
+                SourceItemId = item.Id,
+                QuantityDecimalPlaces = decimalPlaces
             };
         }).ToList();
 

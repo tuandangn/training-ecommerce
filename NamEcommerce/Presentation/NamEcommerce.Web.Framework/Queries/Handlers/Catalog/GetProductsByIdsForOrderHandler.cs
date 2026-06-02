@@ -40,7 +40,8 @@ public sealed class GetProductsByIdsForOrderHandler : IRequestHandler<GetProduct
                 Disabled = true
             }
         }, cancellationToken).ConfigureAwait(false);
-        var unitMeasurementOptions = await _mediator.Send(new GetUnitMeasurementOptionListQuery(), cancellationToken).ConfigureAwait(false);
+        var unitMeasurementList = await _mediator.Send(new GetUnitMeasurementListQuery { Keywords = null, PageIndex = 0, PageSize = int.MaxValue }, cancellationToken).ConfigureAwait(false);
+        var unitMeasurementById = unitMeasurementList.Data.ToDictionary(u => u.Id);
         var warehouseOptions = await _mediator.Send(new GetWarehouseOptionListQuery(), cancellationToken).ConfigureAwait(false);
 
         var model = new List<ProductForOrderModel>(products.Count());
@@ -60,7 +61,11 @@ public sealed class GetProductsByIdsForOrderHandler : IRequestHandler<GetProduct
             productModel.AvailableWarehouses = warehouseOptions.Where(option => stockInfo.AvailableWarehouseIds.Contains(option.Id)).ToList();
             if (productInfo.Vendors != null)
                 productModel.AvailableVendors = vendorOptions.Where(option => productInfo.Vendors.Any(v => v.VendorId == option.Id)).ToList();
-            productModel.UnitMeasurement = unitMeasurementOptions.FirstOrDefault(option => option.Id == productInfo.UnitMeasurementId)?.Name;
+            if (productInfo.UnitMeasurementId.HasValue && unitMeasurementById.TryGetValue(productInfo.UnitMeasurementId.Value, out var um))
+            {
+                productModel.UnitMeasurement = um.Name;
+                productModel.QuantityDecimalPlaces = um.DecimalPlaces;
+            }
 
             model.Add(productModel);
         }

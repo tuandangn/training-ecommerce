@@ -144,6 +144,13 @@ export default class BulkReceiveController {
         this.#tbody?.addEventListener('change', (e) => {
             if (e.target.matches('.bulk-row-item')) {
                 const tr = e.target.closest('tr');
+                const item = this.#itemsById.get(e.target.value);
+                const qtyInput = tr.querySelector('.bulk-row-qty');
+                if (qtyInput && item) {
+                    qtyInput.dataset.decimals = String(item.decimalPlaces ?? 0);
+                    qtyInput.dataset.decimalBound = '';
+                    window.DecimalFields?.bindInput?.(qtyInput);
+                }
                 this.#refreshRowHint(tr);
                 this.#syncRowWarehouse(tr);
                 // Reload DS items if DS panel is open
@@ -222,7 +229,7 @@ export default class BulkReceiveController {
             <td class="text-end pe-2">
                 <input name="Items[${idx}].Quantity"
                        class="form-control form-control-sm text-end bulk-row-qty no-additional-element no-hint"
-                       data-decimal="quantity" value="${escapeHtml(qtyValue)}" placeholder="0" />
+                       data-decimal="quantity" data-decimals="${presetItemId ? (this.#itemsById.get(presetItemId)?.decimalPlaces ?? 0) : 0}" value="${escapeHtml(qtyValue)}" placeholder="0" />
             </td>
             <td class="text-end pe-2">
                 <input name="Items[${idx}].ActualUnitCost"

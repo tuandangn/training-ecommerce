@@ -41,6 +41,9 @@ public sealed class CreateCustomerReturnItemModel
     [ValidateNever]
     public string? ProductDisplayName { get; set; }
 
+    [ValidateNever]
+    public int QuantityDecimalPlaces { get; set; }
+
     public Guid? DeliveryNoteItemId { get; set; }
 
     [Display(Name = "Số lượng yêu cầu")]

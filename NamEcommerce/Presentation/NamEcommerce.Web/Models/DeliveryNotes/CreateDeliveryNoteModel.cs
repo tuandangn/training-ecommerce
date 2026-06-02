@@ -66,6 +66,7 @@ public sealed class CreateDeliveryNoteItemModel
     public decimal PreviouslyDeliveredQuantity { get; set; }
     public decimal RemainingQuantity { get; set; }
     public decimal AvailableQuantity { get; set; }
+    public int QuantityDecimalPlaces { get; set; }
 
     // Default to the remaining un-delivered quantity
     public decimal Quantity { get; set; }

@@ -5,6 +5,7 @@ using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
+using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.DeliveryNotes;
@@ -277,6 +278,9 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         {
             DeliveryNoteId = id
         }).ConfigureAwait(false);
+        var productIds = deliveryNote.Items.Select(i => i.ProductId).Distinct();
+        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
+        var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
         var items = deliveryNote.Items.Select(i =>
         {
             returnedQuantities.TryGetValue(i.Id, out var summary);
@@ -289,7 +293,8 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
                 SubTotal = i.SubTotal,
                 ReturnedQuantity = summary?.ConfirmedQuantity ?? 0m,
                 PendingReturnQuantity = summary?.PendingQuantity ?? 0m,
-                CompensatedReturnQuantity = summary?.ActiveCompensatedQuantity ?? 0m
+                CompensatedReturnQuantity = summary?.ActiveCompensatedQuantity ?? 0m,
+                QuantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(i.ProductId)
             };
         }).ToList();
         return this.JsonOk(items);

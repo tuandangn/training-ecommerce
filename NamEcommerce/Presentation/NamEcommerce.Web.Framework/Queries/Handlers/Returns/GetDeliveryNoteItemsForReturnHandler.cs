@@ -33,7 +33,8 @@ public sealed class GetDeliveryNoteItemsForReturnHandler
             OriginalQty = d.OriginalQty,
             AlreadyReturnedQty = d.AlreadyReturnedQty,
             UnitPrice = d.UnitPrice,
-            SourceItemId = d.SourceItemId
+            SourceItemId = d.SourceItemId,
+            QuantityDecimalPlaces = d.QuantityDecimalPlaces
         }).ToList();
     }
 }

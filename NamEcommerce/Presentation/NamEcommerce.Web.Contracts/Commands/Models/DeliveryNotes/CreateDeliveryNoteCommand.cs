@@ -23,6 +23,7 @@ public sealed class CreateDeliveryNoteCommand : IRequest<CreateDeliveryNoteResul
         public Guid OrderItemId { get; set; }
         public Guid WarehouseId { get; set; }
         public decimal Quantity { get; set; }
+        public int QuantityDecimalPlaces { get; set; }
     }
 }
 

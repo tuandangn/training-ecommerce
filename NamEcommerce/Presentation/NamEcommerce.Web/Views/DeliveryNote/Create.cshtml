@@ -262,6 +262,7 @@
                                                 <input type="hidden" asp-for="Items[i].RemainingQuantity" class="item-required-quantity" />
                                                 <input type="hidden" asp-for="Items[i].AvailableQuantity" class="item-available-quantity" />
                                                 <input type="hidden" asp-for="Items[i].UnitPrice" class="item-price" />
+                                                <input type="hidden" asp-for="Items[i].QuantityDecimalPlaces" />
                                             </td>
                                             <td class="align-middle fw-medium">@Model.Items[i].ProductName</td>
                                             <td class="text-end align-middle">@Model.Items[i].OrderedQuantity.DisplayQuantity()</td>

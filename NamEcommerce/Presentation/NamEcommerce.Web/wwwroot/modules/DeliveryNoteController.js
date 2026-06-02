@@ -109,11 +109,11 @@ export default class DeliveryNoteController {
             const deliveredQty = Number(item.quantity || 0);
             return `<tr data-item-id="${item.id}" data-delivered-qty="${deliveredQty}">
                             <td class="pe-3">${this.#escapeHtml(item.productName)}</td>
-                            <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty)}</td>
+                            <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty, item.quantityDecimalPlaces)}</td>
                             <td class="pe-3">
                                 <input class="form-control form-control-sm text-end accepted-qty" name="acceptedQty_${item.id}"
-                                    value="${DecimalFields.formatQuantity(deliveredQty)}"
-                    data-decimal="quantity" data-val="true"
+                                    value="${DecimalFields.formatQuantity(deliveredQty, item.quantityDecimalPlaces)}"
+                    data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" data-val="true"
                     data-val-required="Vui lòng nhập số lượng."
                     data-val-range="Số lượng phải nhỏ hơn ${DecimalFields.formatQuantity(deliveredQty)}." data-val-range-max="${deliveredQty}"
                     data-val-range-min="0"
@@ -342,7 +342,7 @@ export default class DeliveryNoteController {
             const deliveredQty = Number(item.quantity || 0);
             return `<tr>
                             <td class="pe-3">${this.#escapeHtml(item.productName)}</td>
-                            <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty)}</td>
+                            <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty, item.quantityDecimalPlaces)}</td>
                         </tr>`;
         }).join('');
         const container = document.getElementById('rejectTableBody');
