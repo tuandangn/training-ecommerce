@@ -250,6 +250,7 @@
                             <tr>
                                 <th class="ps-4" style="width: 50px;">#</th>
                                 <th>Tên hàng hóa</th>
+                                <th>Kho</th>
                                 <th class="text-end">Số lượng</th>
                                 @if (hasReturned)
                                 {
@@ -271,6 +272,7 @@
                                     <tr>
                                         <td class="ps-4">@(idx++)</td>
                                         <td class="fw-medium text-dark">@item.ProductName</td>
+                                        <td class="text-muted small">@item.WarehouseName</td>
                                         <td class="text-end fw-bold">@item.Quantity.DisplayQuantity()</td>
                                         @if (hasReturned)
                                         {
@@ -317,7 +319,7 @@
                                 }
                                 // Cột: # | Name | Qty | (hasReturned: Returned) | (ShowPrice: Price | SubTotal)
                                 // Label colspan = total - 1 (chừa cột cuối cho value)
-                                var summaryLabelColspan = 2 + (hasReturned ? 1 : 0) + (Model.ShowPrice ? 2 : 0);
+                                var summaryLabelColspan = 3 + (hasReturned ? 1 : 0) + (Model.ShowPrice ? 2 : 0);
                                 @if (Model.ShowPrice)
                                 {
                                     <tr class="bg-light border-top">
@@ -349,7 +351,7 @@
                             else
                             {
                                 <tr>
-                                    <td colspan="@(3 + (hasReturned ? 1 : 0) + (Model.ShowPrice ? 2 : 0))" class="text-center py-4">
+                                    <td colspan="@(4 + (hasReturned ? 1 : 0) + (Model.ShowPrice ? 2 : 0))" class="text-center py-4">
                                         Không có hàng hóa
                                     </td>
                                 </tr>

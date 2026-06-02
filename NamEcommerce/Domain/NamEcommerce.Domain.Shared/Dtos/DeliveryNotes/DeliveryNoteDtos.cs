@@ -53,6 +53,7 @@ public sealed record DeliveryNoteItemDto
     public required Guid DeliveryNoteId { get; init; }
     public required Guid OrderItemId { get; init; }
     public required Guid ProductId { get; init; }
+    public required Guid WarehouseId { get; init; }
     public required string ProductName { get; init; }
     public required decimal Quantity { get; init; }
     public required decimal UnitPrice { get; init; }
@@ -89,6 +90,8 @@ public sealed record CreateDeliveryNoteDto
             throw new NamEcommerceDomainException("Error.ShippingAddressRequired");
         if (Items == null || !Items.Any())
             throw new NamEcommerceDomainException("Error.DeliveryNoteItemsRequired");
+        if (Items.Any(i => i.WarehouseId == Guid.Empty))
+            throw new NamEcommerceDomainException("Error.WarehouseRequired");
         if (Items.Any(i => i.Quantity <= 0))
             throw new NamEcommerceDomainException("Error.QuantityMustBePositive");
         if (Surcharge < 0)
@@ -102,6 +105,7 @@ public sealed record CreateDeliveryNoteDto
 public sealed record CreateDeliveryNoteItemDto
 {
     public required Guid OrderItemId { get; init; }
+    public required Guid WarehouseId { get; init; }
     public required decimal Quantity { get; init; }
 }
 

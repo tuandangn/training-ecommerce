@@ -37,6 +37,10 @@
                             <i class="bi bi-geo-alt me-1"></i>
                             Địa chỉ giao
                         </th>
+                        <th class="d-none d-xl-table-cell">
+                            <i class="bi bi-box-seam me-1"></i>
+                            Kho xuất
+                        </th>
                         <th class="text-center" style="width: 140px;">
                             Trạng thái
                         </th>
@@ -92,6 +96,11 @@
                                 <td class="d-none d-lg-table-cell">
                                     <span class="d-inline-block text-truncate" style="max-width: 250px;" title="@deliveryNote.ShippingAddress">
                                         @deliveryNote.ShippingAddress
+                                    </span>
+                                </td>
+                                <td class="d-none d-xl-table-cell">
+                                    <span class="d-inline-block text-truncate small text-muted" style="max-width: 180px;" title="@deliveryNote.WarehouseName">
+                                        @deliveryNote.WarehouseName
                                     </span>
                                 </td>
                                 <td class="text-center">
@@ -177,7 +186,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="7">
+                            <td colspan="8">
                                 <div class="empty-state">
                                     <div class="empty-icon"><i class="bi bi-inbox"></i></div>
                                     <h5>Không tìm thấy phiếu xuất kho nào</h5>
@@ -238,6 +247,10 @@
                                 <span class="text-muted small">@deliveryNote.ShippingAddress</span>
                             </div>
                         }
+                        <div class="list-card-field">
+                            <span class="list-card-label">Kho xuất</span>
+                            <span class="list-card-value fw-normal text-muted">@deliveryNote.WarehouseName</span>
+                        </div>
                         <div class="list-card-field">
                             <span class="list-card-label">Ngày tạo</span>
                             <span class="list-card-value fw-normal text-muted">@deliveryNote.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>

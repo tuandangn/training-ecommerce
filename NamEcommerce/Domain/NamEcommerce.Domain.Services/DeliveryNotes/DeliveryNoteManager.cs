@@ -71,6 +71,14 @@ public sealed class DeliveryNoteManager(
             .GroupBy(item => orderItemsById[item.OrderItemId].ProductId)
             .Select(g => new { ProductId = g.Key, Quantity = g.Sum(item => item.Quantity) })
             .ToList();
+        var itemsByProductWarehouse = dto.Items
+            .GroupBy(item => new
+            {
+                orderItemsById[item.OrderItemId].ProductId,
+                item.WarehouseId
+            })
+            .Select(g => new { g.Key.ProductId, g.Key.WarehouseId, Quantity = g.Sum(item => item.Quantity) })
+            .ToList();
 
         foreach (var item in itemsByProduct)
         {
@@ -79,13 +87,13 @@ public sealed class DeliveryNoteManager(
                 throw new InvalidStockOperationException("Error.CannotReleaseMoreThanReserved", reservedQuantity, item.Quantity);
         }
 
-        foreach (var item in itemsByProduct)
+        foreach (var item in itemsByProductWarehouse)
         {
-            var stock = await stockManager.GetInventoryStockForProductAsync(item.ProductId, dto.WarehouseId).ConfigureAwait(false);
+            var stock = await stockManager.GetInventoryStockForProductAsync(item.ProductId, item.WarehouseId).ConfigureAwait(false);
             if (stock is null)
-                throw new InsufficientStockException(item.ProductId, dto.WarehouseId, item.Quantity, 0);
+                throw new InsufficientStockException(item.ProductId, item.WarehouseId, item.Quantity, 0);
             if (stock.QuantityAvailable < item.Quantity)
-                throw new InsufficientStockException(item.ProductId, dto.WarehouseId, item.Quantity, stock.QuantityAvailable);
+                throw new InsufficientStockException(item.ProductId, item.WarehouseId, item.Quantity, stock.QuantityAvailable);
         }
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
@@ -120,7 +128,8 @@ public sealed class DeliveryNoteManager(
                 productId: orderItem.ProductId,
                 productName: orderItem.ProductName ?? string.Empty,
                 quantity: itemDto.Quantity,
-                unitPrice: orderItem.UnitPrice
+                unitPrice: orderItem.UnitPrice,
+                warehouseId: itemDto.WarehouseId
             );
         }
 
@@ -252,7 +261,7 @@ public sealed class DeliveryNoteManager(
         deliveryNote.SourceType = DeliveryNoteSourceType.ToVendorReturn;
 
         foreach (var item in dto.Items)
-            deliveryNote.AddItemFromVendorReturn(item.ProductId, item.ProductName, item.Quantity, item.UnitCost);
+            deliveryNote.AddItemFromVendorReturn(item.ProductId, item.ProductName, item.Quantity, item.UnitCost, dto.WarehouseId);
 
         // Snapshot hiển thị trước khi xuất kho; COGS authoritative được ghi trong cost allocation.
         foreach (var item in deliveryNote.Items)
@@ -319,7 +328,8 @@ public sealed class DeliveryNoteManager(
             productId: orderItem.ProductId,
             productName: orderItem.ProductName ?? string.Empty,
             quantity: dto.Quantity,
-            unitPrice: orderItem.UnitPrice);
+            unitPrice: orderItem.UnitPrice,
+            warehouseId: dto.DirectShipWarehouseId);
 
         deliveryNote.SetAsDirectShip(dto.GoodsReceiptId);
         deliveryNote.MarkCreated();
@@ -393,12 +403,20 @@ public sealed class DeliveryNoteManager(
                 .GroupBy(item => item.ProductId)
                 .Select(g => new { ProductId = g.Key, Quantity = g.Sum(item => item.Quantity) })
                 .ToList();
+            var itemsByProductWarehouse = deliveryNote.Items
+                .GroupBy(item => new
+                {
+                    item.ProductId,
+                    WarehouseId = ResolveItemWarehouseId(deliveryNote, item)
+                })
+                .Select(g => new { g.Key.ProductId, g.Key.WarehouseId, Quantity = g.Sum(item => item.Quantity) })
+                .ToList();
 
-            foreach (var item in itemsByProduct)
+            foreach (var item in itemsByProductWarehouse)
             {
                 await ReleaseReservedStockIfPresentAsync(
                     item.ProductId,
-                    deliveryNote.WarehouseId,
+                    item.WarehouseId,
                     item.Quantity,
                     deliveryNote.Id,
                     $"Giải phóng hàng phiếu xuất {deliveryNote.Code} bị hủy").ConfigureAwait(false);
@@ -428,9 +446,10 @@ public sealed class DeliveryNoteManager(
             {
                 await stockManager.ReceiveStockUpToAsync(
                     item.ProductId,
-                    deliveryNote.WarehouseId,
+                    ResolveItemWarehouseId(deliveryNote, item),
                     deliveryNote.Items
-                        .Where(i => i.ProductId == item.ProductId)
+                        .Where(i => i.ProductId == item.ProductId
+                            && ResolveItemWarehouseId(deliveryNote, i) == ResolveItemWarehouseId(deliveryNote, item))
                         .Sum(i => i.Quantity),
                     $"Nhập lại kho do hủy phiếu xuất {deliveryNote.Code}",
                     Guid.Empty,
@@ -440,7 +459,7 @@ public sealed class DeliveryNoteManager(
                 await inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
                 {
                     ProductId = item.ProductId,
-                    WarehouseId = deliveryNote.WarehouseId,
+                    WarehouseId = ResolveItemWarehouseId(deliveryNote, item),
                     Quantity = item.Quantity,
                     UnitCost = item.CostAtDispatch,
                     MovementType = InventoryCostMovementType.CustomerReturn,
@@ -469,6 +488,9 @@ public sealed class DeliveryNoteManager(
             }
         }
     }
+
+    private static Guid ResolveItemWarehouseId(DeliveryNote deliveryNote, DeliveryNoteItem item)
+        => item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId;
 
     private async Task ReleaseReservedStockIfPresentAsync(
         Guid productId,
@@ -960,6 +982,7 @@ public sealed class DeliveryNoteManager(
                 DeliveryNoteId = i.DeliveryNoteId,
                 OrderItemId = i.OrderItemId,
                 ProductId = i.ProductId,
+                WarehouseId = i.WarehouseId,
                 ProductName = i.ProductName ?? string.Empty,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,

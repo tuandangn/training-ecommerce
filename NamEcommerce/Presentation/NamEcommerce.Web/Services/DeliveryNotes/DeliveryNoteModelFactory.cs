@@ -61,6 +61,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             searchModel.Keywords,
             pageNumber - 1,
             pageSize).ConfigureAwait(false);
+        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var warehouseNamesById = availableWarehouses.Options.ToDictionary(warehouse => warehouse.Id, warehouse => warehouse.Name);
 
         var deliveryNotes = pagedData.Items.Select(deliveryNote => new DeliveryNoteListItemModel
         {
@@ -81,6 +83,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             Items = deliveryNote.Items.Select(item => new DeliveryNoteListItemProductModel
             {
                 Id = item.Id,
+                WarehouseId = item.WarehouseId,
+                WarehouseName = ResolveWarehouseName(item.WarehouseId, warehouseNamesById),
                 ProductName = item.ProductName,
                 Quantity = item.Quantity
             }).ToList()
@@ -88,8 +92,14 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 
         foreach (var deliveryNote in deliveryNotes)
         {
-            var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(deliveryNote.WarehouseId).ConfigureAwait(false);
-            deliveryNote.WarehouseName = warehouse?.Name;
+            deliveryNote.WarehouseName = BuildWarehouseSummary(
+                deliveryNote.Items.Select(item => item.WarehouseName),
+                ResolveWarehouseName(deliveryNote.WarehouseId, warehouseNamesById));
+            if (string.IsNullOrWhiteSpace(deliveryNote.WarehouseName))
+            {
+                var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(deliveryNote.WarehouseId).ConfigureAwait(false);
+                deliveryNote.WarehouseName = warehouse?.Name;
+            }
         }
 
         var data = PagedDataModel.Create(deliveryNotes, pagedData.Pagination.PageIndex, pagedData.Pagination.PageSize, pagedData.Pagination.TotalCount);
@@ -98,7 +108,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         {
             Keywords = searchModel.Keywords,
             Data = data,
-            AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false)
+            AvailableWarehouses = availableWarehouses
         };
 
         return model;
@@ -219,6 +229,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         {
             DeliveryNoteId = id
         }).ConfigureAwait(false);
+        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var warehouseNamesById = availableWarehouses.Options.ToDictionary(warehouse => warehouse.Id, warehouse => warehouse.Name);
 
         var model = new DeliveryNoteDetailsModel
         {
@@ -253,6 +265,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 return new DeliveryNoteItemModel
                 {
                     Id = i.Id,
+                    WarehouseId = i.WarehouseId,
+                    WarehouseName = ResolveWarehouseName(i.WarehouseId, warehouseNamesById),
                     ProductName = i.ProductName,
                     Quantity = i.Quantity,
                     UnitPrice = i.UnitPrice,
@@ -264,8 +278,10 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             }).ToList()
         };
 
-        model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
-        model.WarehouseName = model.AvailableWarehouses?.Options.FirstOrDefault(warehouse => warehouse.Id == deliveryNote.WarehouseId)?.Name;
+        model.AvailableWarehouses = availableWarehouses;
+        model.WarehouseName = BuildWarehouseSummary(
+            model.Items.Select(item => item.WarehouseName),
+            ResolveWarehouseName(deliveryNote.WarehouseId, warehouseNamesById));
 
         if (deliveryNote.DeliveryProofPictureId.HasValue)
         {
@@ -282,6 +298,22 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         }).ConfigureAwait(false);
 
         return model;
+    }
+
+    private static string? ResolveWarehouseName(Guid warehouseId, IReadOnlyDictionary<Guid, string> warehouseNamesById)
+        => warehouseId == Guid.Empty ? null : warehouseNamesById.GetValueOrDefault(warehouseId);
+
+    private static string? BuildWarehouseSummary(IEnumerable<string?> itemWarehouseNames, string? fallbackWarehouseName)
+    {
+        var warehouseNames = itemWarehouseNames
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return warehouseNames.Count > 0
+            ? string.Join(", ", warehouseNames)
+            : fallbackWarehouseName;
     }
 
     private string GetStatusName(DeliveryNoteStatus status)

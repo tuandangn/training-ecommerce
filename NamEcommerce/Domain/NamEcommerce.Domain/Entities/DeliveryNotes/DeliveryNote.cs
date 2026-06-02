@@ -107,9 +107,14 @@ public sealed record DeliveryNote : AppAggregateEntity
         _items.Add(new DeliveryNoteItem(Id, orderItemId, productId, productName, quantity, unitPrice));
     }
 
-    internal void AddItemFromVendorReturn(Guid productId, string productName, decimal quantity, decimal unitCost)
+    internal void AddItem(Guid orderItemId, Guid productId, string productName, decimal quantity, decimal unitPrice, Guid warehouseId)
     {
-        _items.Add(new DeliveryNoteItem(Id, Guid.Empty, productId, productName, quantity, unitCost));
+        _items.Add(new DeliveryNoteItem(Id, orderItemId, productId, productName, quantity, unitPrice, warehouseId));
+    }
+
+    internal void AddItemFromVendorReturn(Guid productId, string productName, decimal quantity, decimal unitCost, Guid warehouseId)
+    {
+        _items.Add(new DeliveryNoteItem(Id, Guid.Empty, productId, productName, quantity, unitCost, warehouseId));
     }
 
     internal void MarkAsDeliveredFromVendorReturn()
