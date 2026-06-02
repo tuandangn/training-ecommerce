@@ -20,6 +20,92 @@
     </div>
 }
 
+@section Styles {
+    <style>
+        .delivery-stock-table {
+            font-variant-numeric: tabular-nums;
+        }
+
+            .delivery-stock-table tbody tr.stock-row-short {
+                background-color: rgba(245, 158, 11, 0.045);
+            }
+
+                .delivery-stock-table tbody tr.stock-row-short > td:first-child {
+                    box-shadow: inset 3px 0 0 #f59e0b;
+                }
+
+            .delivery-stock-table tbody tr.stock-row-empty {
+                background-color: rgba(239, 68, 68, 0.045);
+            }
+
+                .delivery-stock-table tbody tr.stock-row-empty > td:first-child {
+                    box-shadow: inset 3px 0 0 #ef4444;
+                }
+
+        .delivery-stock-state {
+            min-width: 170px;
+        }
+
+        .delivery-stock-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            padding: 0.18rem 0.55rem;
+            font-size: 0.76rem;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+
+            .delivery-stock-status.is-neutral,
+            .delivery-stock-status.is-loading {
+                border-color: #e2e8f0;
+                background: #f8fafc;
+                color: #475569;
+            }
+
+            .delivery-stock-status.is-ok {
+                border-color: rgba(16, 185, 129, 0.28);
+                background: rgba(16, 185, 129, 0.09);
+                color: #047857;
+            }
+
+            .delivery-stock-status.is-short {
+                border-color: rgba(245, 158, 11, 0.34);
+                background: rgba(245, 158, 11, 0.11);
+                color: #92400e;
+            }
+
+            .delivery-stock-status.is-empty,
+            .delivery-stock-status.is-error {
+                border-color: rgba(239, 68, 68, 0.3);
+                background: rgba(239, 68, 68, 0.1);
+                color: #b91c1c;
+            }
+
+        .delivery-stock-note {
+            display: block;
+            max-width: 190px;
+            margin-top: 0.3rem;
+            color: #64748b;
+            font-size: 0.72rem;
+            line-height: 1.25;
+            white-space: normal;
+        }
+
+            .delivery-stock-note.is-short {
+                color: #92400e;
+            }
+
+            .delivery-stock-note.is-empty,
+            .delivery-stock-note.is-error {
+                color: #b91c1c;
+            }
+    </style>
+}
+
 <form asp-action="Create" method="post" id="createDeliveryForm">
     <input type="hidden" asp-for="OrderId" />
 
@@ -84,7 +170,7 @@
                         <span class="fw-bold text-success ms-2" id="selectedTotalText">0đ</span>
                     </div>
                     <div class="table-responsive">
-                        <table class="table data-table mb-0">
+                        <table class="table data-table delivery-stock-table mb-0">
                             <thead>
                                 <tr>
                                     <th style="width: 50px;" class="text-center ps-4">
@@ -124,7 +210,13 @@
                                             <td class="text-end align-middle">@Model.Items[i].OrderedQuantity.DisplayQuantity()</td>
                                             <td class="text-end align-middle text-success">@Model.Items[i].PreviouslyDeliveredQuantity.DisplayQuantity()</td>
                                             <td class="text-end align-middle">
-                                                <span class="badge text-bg-secondary stock-availability-badge">Chọn kho</span>
+                                                <div class="delivery-stock-state stock-availability-state">
+                                                    <span class="delivery-stock-status is-neutral">
+                                                        <i class="bi bi-box-seam stock-status-icon"></i>
+                                                        <span class="stock-availability-label">Chọn kho</span>
+                                                    </span>
+                                                    <span class="delivery-stock-note stock-availability-note">Tồn kho sẽ cập nhật theo kho xuất</span>
+                                                </div>
                                             </td>
                                             <td class="pe-4">
                                                 <input asp-for="Items[i].Quantity" class="form-control text-end quantity-input fw-bold"
@@ -349,11 +441,19 @@
                 $row.find('.quantity-input').val(formatQuantity(quantity));
             }
 
-            function setStockBadge($row, text, className) {
-                $row.find('.stock-availability-badge')
-                    .removeClass('text-bg-secondary text-bg-success text-bg-warning text-bg-danger')
-                    .addClass(className)
-                    .text(text);
+            function setStockState($row, label, note, state, icon) {
+                const $state = $row.find('.stock-availability-state');
+                $state.find('.stock-status-icon')
+                    .removeClass()
+                    .addClass(`bi ${icon} stock-status-icon`);
+                $state.find('.stock-availability-label').text(label);
+                $state.find('.delivery-stock-status')
+                    .removeClass('is-neutral is-loading is-ok is-short is-empty is-error')
+                    .addClass(`is-${state}`);
+                $state.find('.stock-availability-note')
+                    .removeClass('is-short is-empty is-error')
+                    .addClass(state === 'short' || state === 'empty' || state === 'error' ? `is-${state}` : '')
+                    .text(note);
             }
 
             function updateSelectAllState() {
@@ -368,14 +468,14 @@
                 const $checkbox = $row.find('.item-checkbox');
 
                 $row
-                    .removeClass('table-danger table-warning')
+                    .removeClass('stock-row-empty stock-row-short')
                     .attr('data-stock-loaded', stockLoaded ? 'true' : 'false')
                     .attr('data-available-quantity', availableQuantity.toString());
                 $row.find('.item-available-quantity').val(formatQuantity(availableQuantity));
 
                 if (!stockLoaded) {
                     $quantityInput.attr('max', requiredQuantity);
-                    setStockBadge($row, 'Chọn kho', 'text-bg-secondary');
+                    setStockState($row, 'Chọn kho', 'Tồn kho sẽ cập nhật theo kho xuất', 'neutral', 'bi-box-seam');
                     if (parseQuantity($quantityInput.val()) > requiredQuantity)
                         setQuantity($row, requiredQuantity);
                     return;
@@ -386,19 +486,27 @@
                 setQuantity($row, maxQuantity);
 
                 if (availableQuantity <= 0) {
-                    $row.addClass('table-danger');
+                    if ($checkbox.is(':checked'))
+                        $row.attr('data-stock-auto-unchecked', 'true');
+                    $row.addClass('stock-row-empty');
                     $checkbox.prop('checked', false);
-                    setStockBadge($row, 'Không có', 'text-bg-danger');
+                    setStockState($row, 'Không có tồn kho', 'Đã đặt SL xuất = 0 và bỏ chọn dòng này', 'empty', 'bi-exclamation-triangle');
                     return;
+                }
+
+                if ($row.attr('data-stock-auto-unchecked') === 'true') {
+                    $checkbox.prop('checked', true);
+                    $row.removeAttr('data-stock-auto-unchecked');
                 }
 
                 if (availableQuantity < requiredQuantity) {
-                    $row.addClass('table-warning');
-                    setStockBadge($row, formatQuantity(availableQuantity), 'text-bg-warning');
+                    const shortageQuantity = requiredQuantity - availableQuantity;
+                    $row.addClass('stock-row-short');
+                    setStockState($row, formatQuantity(availableQuantity), `Thiếu ${formatQuantity(shortageQuantity)} so với số cần xuất`, 'short', 'bi-exclamation-circle');
                     return;
                 }
 
-                setStockBadge($row, formatQuantity(availableQuantity), 'text-bg-success');
+                setStockState($row, formatQuantity(availableQuantity), 'Đủ cho số còn cần xuất', 'ok', 'bi-check-circle');
             }
 
             function clampQuantityInput($input) {
@@ -429,7 +537,7 @@
                     const productId = $(this).attr('data-product-id');
                     if (productId && !productIds.includes(productId))
                         productIds.push(productId);
-                    setStockBadge($(this), 'Đang kiểm...', 'text-bg-secondary');
+                    setStockState($(this), 'Đang kiểm tra', 'Đang lấy tồn kho kho đã chọn', 'loading', 'bi-arrow-repeat');
                 });
 
                 if (!productIds.length)
@@ -464,8 +572,10 @@
 
                         $('.item-row').each(function() {
                             const $row = $(this);
-                            $row.addClass('table-warning').attr('data-stock-loaded', 'false');
-                            setStockBadge($row, 'Lỗi tải', 'text-bg-warning');
+                            $row
+                                .removeClass('stock-row-empty stock-row-short')
+                                .attr('data-stock-loaded', 'false');
+                            setStockState($row, 'Không tải được', 'Kiểm tra lại kho hoặc tải lại trang', 'error', 'bi-exclamation-triangle');
                         });
                     }
                 });
