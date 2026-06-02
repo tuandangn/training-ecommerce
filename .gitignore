@@ -473,6 +473,7 @@ $RECYCLE.BIN/
 .understand-anything/
 .playwright-mcp/
 .codegraph/
+*.pid
 plans/
 **/appsettings.Production.json
 **/appsettings.Development.json
