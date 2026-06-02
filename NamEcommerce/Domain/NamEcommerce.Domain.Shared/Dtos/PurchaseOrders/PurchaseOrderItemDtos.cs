@@ -31,6 +31,21 @@ public sealed record PurchaseOrderItemDto(Guid Id) : BasePurchaseOrderItemDto
 
 [Serializable]
 public sealed record AddPurchaseOrderItemDto : BasePurchaseOrderItemDto;
+
+[Serializable]
+public sealed record UpdatePurchaseOrderItemDto : BasePurchaseOrderItemDto
+{
+    public required Guid PurchaseOrderItemId { get; init; }
+
+    public new void Verify()
+    {
+        if (PurchaseOrderItemId == Guid.Empty)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemIsNotFound");
+
+        base.Verify();
+    }
+}
+
 [Serializable]
 public sealed record AddPurchaseOrderItemResultDto
 {

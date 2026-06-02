@@ -362,7 +362,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         await purchaseOrder.AddPurchaseOrderItemAsync(purchaseOrderItem, _productDataReader).ConfigureAwait(false);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
 
-        purchaseOrder.MarkItemAdded(purchaseOrderItem);
+        purchaseOrder.MarkItemAdded(purchaseOrderItem, product.Name);
         await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
 
         return new AddPurchaseOrderItemResultDto
@@ -370,6 +370,38 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
             PurchaseOrderId = purchaseOrder.Id,
             CreatedItemId = purchaseOrderItem.Id
         };
+    }
+
+    public async Task UpdatePurchaseOrderItemAsync(UpdatePurchaseOrderItemDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        dto.Verify();
+
+        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
+
+        if (!purchaseOrder.CanUpdateItems())
+            throw new PurchaseOrderCannotUpdateOrderItemsException();
+
+        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == dto.PurchaseOrderItemId);
+        if (purchaseOrderItem is null)
+            throw new PurchaseOrderItemIsNotFoundException();
+
+        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
+        if (product is null)
+            throw new ProductIsNotFoundException(purchaseOrderItem.ProductId);
+
+        var oldQuantityOrdered = purchaseOrderItem.QuantityOrdered;
+        var oldUnitCost = purchaseOrderItem.UnitCost;
+        var oldNote = purchaseOrderItem.Note;
+
+        purchaseOrder.UpdateOrderItem(dto.PurchaseOrderItemId, dto.QuantityOrdered, dto.UnitCost, dto.Note);
+        purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
+        purchaseOrder.MarkItemUpdated(purchaseOrderItem, oldQuantityOrdered, oldUnitCost, oldNote, product.Name);
+
+        await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }
 
     public async Task ClosePartialAsync(Guid purchaseOrderId, string reason)
@@ -839,9 +871,17 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         if (!purchaseOrder.CanUpdateItems())
             throw new PurchaseOrderCannotUpdateOrderItemsException();
 
+        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == itemId);
+        if (purchaseOrderItem is null)
+            throw new PurchaseOrderItemIsNotFoundException();
+
+        var product = await _productDataReader.GetByIdAsync(purchaseOrderItem.ProductId).ConfigureAwait(false);
+        if (product is null)
+            throw new ProductIsNotFoundException(purchaseOrderItem.ProductId);
+
+        purchaseOrder.MarkItemRemoved(purchaseOrderItem, product.Name);
         purchaseOrder.RemoveOrderItem(itemId);
         purchaseOrder.UpdatedOnUtc = DateTime.UtcNow;
-        purchaseOrder.MarkItemRemoved(itemId);
 
         await _purchaseOrderRepository.UpdateAsync(purchaseOrder).ConfigureAwait(false);
     }

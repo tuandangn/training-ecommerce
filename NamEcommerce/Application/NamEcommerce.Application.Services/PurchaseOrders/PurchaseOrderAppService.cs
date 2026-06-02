@@ -355,6 +355,38 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         return CommonActionResultDto.CreateSuccess();
     }
 
+    public async Task<CommonActionResultDto> UpdatePurchaseOrderItemAsync(UpdatePurchaseOrderItemAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return CommonActionResultDto.CreateError(errorMessage);
+
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderIsNotFound");
+
+        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == dto.PurchaseOrderItemId);
+        if (purchaseOrderItem is null)
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderItemIsNotFound");
+
+        if (!purchaseOrder.CanAddItems)
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotUpdateOrderItems");
+
+        await _purchaseOrderManager.UpdatePurchaseOrderItemAsync(new UpdatePurchaseOrderItemDto
+        {
+            PurchaseOrderId = dto.PurchaseOrderId,
+            PurchaseOrderItemId = dto.PurchaseOrderItemId,
+            ProductId = purchaseOrderItem.ProductId,
+            QuantityOrdered = dto.QuantityOrdered,
+            UnitCost = dto.UnitCost,
+            Note = dto.Note
+        }).ConfigureAwait(false);
+
+        return CommonActionResultDto.CreateSuccess();
+    }
+
     public async Task<CommonActionResultDto> ChangeStatusAsync(Guid purchaseOrderId, int status)
     {
         var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(purchaseOrderId).ConfigureAwait(false);

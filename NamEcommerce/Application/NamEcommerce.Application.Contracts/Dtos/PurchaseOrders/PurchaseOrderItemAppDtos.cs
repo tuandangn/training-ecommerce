@@ -54,6 +54,20 @@ public sealed record CreatePurchaseOrderItemAppDto
 public sealed record AddPurchaseOrderItemAppDto() : BasePurchaseOrderItemAppDto;
 
 [Serializable]
+public sealed record UpdatePurchaseOrderItemAppDto() : BasePurchaseOrderItemAppDto
+{
+    public required Guid PurchaseOrderItemId { get; init; }
+
+    public new (bool valid, string? errorMessage) Validate()
+    {
+        if (PurchaseOrderItemId == Guid.Empty)
+            return (false, "Error.PurchaseOrderItemIsNotFound");
+
+        return base.Validate();
+    }
+}
+
+[Serializable]
 public sealed record ReceivedGoodsForItemAppDto(Guid PurchaseOrderId, Guid PurchaseOrderItemId)
 {
     public required decimal ReceivedQuantity { get; init; }
