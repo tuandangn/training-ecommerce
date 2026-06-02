@@ -396,12 +396,11 @@ public sealed class DeliveryNoteManager(
 
             foreach (var item in itemsByProduct)
             {
-                await stockManager.ReleaseReservedStockAsync(
+                await ReleaseReservedStockIfPresentAsync(
                     item.ProductId,
                     deliveryNote.WarehouseId,
                     item.Quantity,
                     deliveryNote.Id,
-                    Guid.Empty,
                     $"Giải phóng hàng phiếu xuất {deliveryNote.Code} bị hủy").ConfigureAwait(false);
             }
 
@@ -415,14 +414,10 @@ public sealed class DeliveryNoteManager(
                         ProductReservationReason.DeliveryNoteCreated,
                         deliveryNote.Id).ConfigureAwait(false);
                     var quantityToReserve = Math.Min(item.Quantity, releasedQuantity);
-                    if (quantityToReserve <= 0)
-                        continue;
-
-                    await productReservationManager.ReserveAsync(
+                    await RestoreOrderReservationForCancelledDeliveryAsync(
                         item.ProductId,
                         quantityToReserve,
                         deliveryNote.OrderId,
-                        ProductReservationReason.DeliveryNoteCancelled,
                         deliveryNote.Id).ConfigureAwait(false);
                 }
             }
@@ -465,15 +460,71 @@ public sealed class DeliveryNoteManager(
 
                 foreach (var item in itemsByProduct)
                 {
-                    await productReservationManager.ReserveAsync(
+                    await RestoreOrderReservationForCancelledDeliveryAsync(
                         item.ProductId,
                         item.Quantity,
                         deliveryNote.OrderId,
-                        ProductReservationReason.DeliveryNoteCancelled,
                         deliveryNote.Id).ConfigureAwait(false);
                 }
             }
         }
+    }
+
+    private async Task ReleaseReservedStockIfPresentAsync(
+        Guid productId,
+        Guid warehouseId,
+        decimal targetQuantity,
+        Guid deliveryNoteId,
+        string note)
+    {
+        if (targetQuantity <= 0)
+        {
+            return;
+        }
+
+        var stock = await stockManager.GetInventoryStockForProductAsync(productId, warehouseId).ConfigureAwait(false);
+        if (stock is null || stock.QuantityReserved < targetQuantity)
+        {
+            return;
+        }
+
+        await stockManager.ReleaseReservedStockAsync(
+            productId,
+            warehouseId,
+            targetQuantity,
+            deliveryNoteId,
+            Guid.Empty,
+            note).ConfigureAwait(false);
+    }
+
+    private async Task RestoreOrderReservationForCancelledDeliveryAsync(
+        Guid productId,
+        decimal targetQuantity,
+        Guid orderId,
+        Guid deliveryNoteId)
+    {
+        if (orderId == Guid.Empty || targetQuantity <= 0)
+        {
+            return;
+        }
+
+        var alreadyRestoredQuantity = await productReservationManager.GetReservedByReferenceAsync(
+            productId,
+            orderId,
+            ProductReservationReason.DeliveryNoteCancelled,
+            deliveryNoteId).ConfigureAwait(false);
+        var missingQuantity = targetQuantity - alreadyRestoredQuantity;
+        if (missingQuantity <= 0)
+        {
+            return;
+        }
+
+        await productReservationManager.ReserveAsync(
+            productId,
+            missingQuantity,
+            orderId,
+            ProductReservationReason.DeliveryNoteCancelled,
+            deliveryNoteId).ConfigureAwait(false);
     }
 
     public async Task<DeliveryNoteDto?> GetByIdAsync(Guid id)
