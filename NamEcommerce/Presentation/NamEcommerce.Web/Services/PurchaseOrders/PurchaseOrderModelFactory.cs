@@ -352,6 +352,15 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             ? $"{receivingStatus.Text} · {model.Returns.ReturnCount} trả"
             : receivingStatus.Text;
 
+        var allocationCount = 0;
+        foreach (var item in model.Info.Items)
+        {
+            var regular = model.AllocationsPerItem.TryGetValue(item.Id, out var a) ? a.Count : 0;
+            var ds = model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var d) ? d.Count : 0;
+            allocationCount += regular > 0 ? regular : ds;
+        }
+        var allocationText = allocationCount > 0 ? $"{allocationCount} phân bổ" : "Chưa phân bổ";
+
         return new()
         {
             ActiveStage = activeStage,
@@ -363,6 +372,7 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
             [
                 BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Ordering, "Đặt hàng", "bi-bag-plus", model.Info.Items.Count > 0 ? "Đã có hàng" : "Chưa có hàng", activeStage, model.Info.Items.Count > 0),
                 BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Receiving, "Nhận hàng", "bi-box-arrow-in-down", receivingStepText, activeStage, model.Receiving.ReceivedQuantity >= model.Receiving.OrderedQuantity && model.Receiving.OrderedQuantity > 0),
+                BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Returning, "Phân bổ", "bi-diagram-3", allocationText, activeStage, false),
                 BuildStep(PurchaseOrderDetailsModel.WorkflowStage.Settlement, "Kết sổ", "bi-journal-check", GetSettlementStatusText(model, status), activeStage, status == PurchaseOrderStatus.Completed)
             ]
         };
