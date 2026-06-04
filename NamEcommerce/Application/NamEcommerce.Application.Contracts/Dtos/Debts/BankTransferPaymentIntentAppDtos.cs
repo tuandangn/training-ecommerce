@@ -41,6 +41,8 @@ public sealed record BankTransferPaymentIntentAppDto(Guid Id)
     public string? ProviderTransactionId { get; init; }
     public DateTime? VerifiedAtUtc { get; init; }
     public Guid? VerifiedByUserId { get; init; }
+    public DateTime ExpiresAtUtc { get; init; }
+    public DateTime? ExpiredAtUtc { get; init; }
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
 }

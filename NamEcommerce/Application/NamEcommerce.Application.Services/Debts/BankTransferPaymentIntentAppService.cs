@@ -49,7 +49,8 @@ public sealed class BankTransferPaymentIntentAppService(
                 Template = string.IsNullOrWhiteSpace(settings.Template) ? "compact2" : settings.Template,
                 TransferContentPrefix = string.IsNullOrWhiteSpace(settings.TransferContentPrefix)
                     ? "QS"
-                    : settings.TransferContentPrefix
+                    : settings.TransferContentPrefix,
+                IntentExpiryMinutes = settings.IntentExpiryMinutes
             }).ConfigureAwait(false);
 
             return BankTransferPaymentIntentResultAppDto.CreateSuccess(MapToDto(intent));
@@ -144,6 +145,8 @@ public sealed class BankTransferPaymentIntentAppService(
             ProviderTransactionId = intent.ProviderTransactionId,
             VerifiedAtUtc = intent.VerifiedAtUtc,
             VerifiedByUserId = intent.VerifiedByUserId,
+            ExpiresAtUtc = intent.ExpiresAtUtc,
+            ExpiredAtUtc = intent.ExpiredAtUtc,
             CreatedOnUtc = intent.CreatedOnUtc,
             UpdatedOnUtc = intent.UpdatedOnUtc
         };

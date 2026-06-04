@@ -1228,6 +1228,12 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<Guid?>("DeliveryNoteId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime?>("ExpiredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -1290,6 +1296,8 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .IsUnique();
 
                     b.HasIndex("Status", "CreatedOnUtc");
+
+                    b.HasIndex("Status", "ExpiresAtUtc");
 
                     b.ToTable("BankTransferPaymentIntent", "tbl");
                 });

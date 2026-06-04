@@ -15,11 +15,14 @@ public sealed record CreateBankTransferPaymentIntentDto
     public required string AccountName { get; init; }
     public required string Template { get; init; }
     public required string TransferContentPrefix { get; init; }
+    public int IntentExpiryMinutes { get; init; } = 15;
 
     public void Verify()
     {
         if (Amount <= 0)
             throw new NamEcommerceDomainException("Error.PaymentAmountMustBePositive");
+        if (IntentExpiryMinutes <= 0)
+            throw new NamEcommerceDomainException("Error.PaymentIntentExpiryInvalid");
         if (Amount != decimal.Truncate(Amount))
             throw new NamEcommerceDomainException("Error.BankTransferAmountMustBeWholeNumber");
         if (string.IsNullOrWhiteSpace(BankId))
@@ -57,6 +60,8 @@ public sealed record BankTransferPaymentIntentDto(Guid Id)
     public string? RawPayload { get; init; }
     public DateTime? VerifiedAtUtc { get; init; }
     public Guid? VerifiedByUserId { get; init; }
+    public DateTime ExpiresAtUtc { get; init; }
+    public DateTime? ExpiredAtUtc { get; init; }
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
 }

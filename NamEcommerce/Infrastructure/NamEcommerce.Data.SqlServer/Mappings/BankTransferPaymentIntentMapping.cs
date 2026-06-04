@@ -28,11 +28,14 @@ public sealed class BankTransferPaymentIntentMapping : IEntityTypeConfiguration<
         builder.Property(intent => intent.RawPayload).IsRequired(false);
         builder.Property(intent => intent.VerifiedAtUtc).IsRequired(false);
         builder.Property(intent => intent.VerifiedByUserId).IsRequired(false);
+        builder.Property(intent => intent.ExpiresAtUtc).IsRequired();
+        builder.Property(intent => intent.ExpiredAtUtc).IsRequired(false);
         builder.Property(intent => intent.CreatedOnUtc).IsRequired();
         builder.Property(intent => intent.UpdatedOnUtc).IsRequired(false);
 
         builder.HasIndex(intent => intent.ReferenceCode).IsUnique();
         builder.HasIndex(intent => new { intent.Status, intent.CreatedOnUtc });
+        builder.HasIndex(intent => new { intent.Status, intent.ExpiresAtUtc });
         builder.HasIndex(intent => intent.CustomerId);
         builder.HasIndex(intent => intent.ProviderTransactionId);
         builder.HasIndex(intent => intent.OrderId);

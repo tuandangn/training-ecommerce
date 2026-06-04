@@ -9,5 +9,6 @@ public interface IBankTransferPaymentIntentManager
     Task<BankTransferPaymentIntentDto?> GetByReferenceCodeAsync(string referenceCode);
     Task<BankTransferPaymentIntentDto> ConfirmManuallyAsync(Guid id, Guid verifiedByUserId, string? note);
     Task<BankTransferPaymentIntentDto> ConfirmFromProviderAsync(ConfirmBankTransferPaymentIntentDto dto);
+    Task<BankTransferPaymentIntentDto> ExpireIfPendingAsync(Guid id, DateTime nowUtc);
     Task<BankTransferPaymentIntentDto> ConsumeAsync(Guid id, Guid orderId, Guid deliveryNoteId, Guid customerDebtId, Guid customerPaymentId);
 }
