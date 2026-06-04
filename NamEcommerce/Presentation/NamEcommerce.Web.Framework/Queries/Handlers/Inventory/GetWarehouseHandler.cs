@@ -30,7 +30,8 @@ public sealed class GetWarehouseHandler : IRequestHandler<GetWarehouseQuery, War
             PhoneNumber = warehouse.PhoneNumber,
             Address = warehouse.Address,
             ManagerUserId = warehouse.ManagerUserId,
-            IsActive = warehouse.IsActive
+            IsActive = warehouse.IsActive,
+            DisplayOrder = warehouse.DisplayOrder
         };
     }
 }

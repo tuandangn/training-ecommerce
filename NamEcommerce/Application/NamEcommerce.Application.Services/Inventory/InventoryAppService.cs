@@ -342,7 +342,7 @@ public sealed class InventoryAppService : IInventoryAppService
             .ToDictionary(g => g.Key, g => (IReadOnlyList<InventoryCostHistoryAppDto>)g.Take(take).ToList());
     }
 
-    public Task<string?> GetReturnWarehouseNameForDeliveryNoteAsync(Guid deliveryNoteId, Guid deliveryNoteWarehouseId)
+    public async Task<string?> GetReturnWarehouseNameForDeliveryNoteAsync(Guid deliveryNoteId, Guid deliveryNoteWarehouseId)
     {
         var returnWarehouseId = _stockMovementReader.DataSource
             .Where(log => log.ReferenceId == deliveryNoteId
@@ -352,14 +352,14 @@ public sealed class InventoryAppService : IInventoryAppService
             .FirstOrDefault();
 
         if (returnWarehouseId == default)
-            return Task.FromResult<string?>(null);
+            return null;
 
         var name = _warehouseReader.DataSource
             .Where(w => w.Id == returnWarehouseId)
             .Select(w => w.Name)
             .FirstOrDefault();
 
-        return Task.FromResult(name);
+        return name.Value;
     }
 
     private IReadOnlyList<InventoryCostHistoryAppDto> MapCostHistory(IReadOnlyCollection<InventoryCostLedgerEntry> entries)
@@ -382,7 +382,7 @@ public sealed class InventoryAppService : IInventoryAppService
             ProductId = x.ProductId,
             ProductName = productMap.GetValueOrDefault(x.ProductId) ?? string.Empty,
             WarehouseId = x.WarehouseId,
-            WarehouseName = warehouseMap.GetValueOrDefault(x.WarehouseId) ?? string.Empty,
+            WarehouseName = warehouseMap.GetValueOrDefault(x.WarehouseId).Value ?? string.Empty,
             OccurredAtUtc = x.OccurredAtUtc,
             SequenceNumber = x.SequenceNumber,
             MovementType = (int)x.MovementType,

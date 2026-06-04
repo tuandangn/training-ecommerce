@@ -25,7 +25,8 @@ public sealed class CreateWarehouseHandler : IRequestHandler<CreateWarehouseComm
             Address = request.Address,
             PhoneNumber = request.PhoneNumber,
             ManagerUserId = request.ManagerUserId,
-            IsActive = request.IsActive
+            IsActive = request.IsActive,
+            DisplayOrder = request.DisplayOrder
         }).ConfigureAwait(false);
 
         return new CreateWarehouseResultModel

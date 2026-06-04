@@ -52,7 +52,8 @@ public sealed class WarehouseAppService : IWarehouseAppService
             Address = dto.Address,
             ManagerUserId = dto.ManagerUserId,
             WarehouseType = (WarehouseType)dto.WarehouseType,
-            IsActive = dto.IsActive
+            IsActive = dto.IsActive,
+            DisplayOrder = dto.DisplayOrder
         }).ConfigureAwait(false);
 
         return new CreateWarehouseResultAppDto
@@ -152,7 +153,8 @@ public sealed class WarehouseAppService : IWarehouseAppService
             Address = dto.Address,
             ManagerUserId = dto.ManagerUserId,
             WarehouseType = (WarehouseType)dto.WarehouseType,
-            IsActive = dto.IsActive
+            IsActive = dto.IsActive,
+            DisplayOrder = dto.DisplayOrder
         }).ConfigureAwait(false);
 
         return new UpdateWarehouseResultAppDto

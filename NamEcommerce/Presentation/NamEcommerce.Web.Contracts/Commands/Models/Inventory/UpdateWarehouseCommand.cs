@@ -14,5 +14,6 @@ public sealed class UpdateWarehouseCommand : IRequest<UpdateWarehouseResultModel
     public string? PhoneNumber { get; init; }
     public Guid? ManagerUserId { get; set; }
     public bool IsActive { get; set; }
+    public int DisplayOrder { get; set; }
 }
 

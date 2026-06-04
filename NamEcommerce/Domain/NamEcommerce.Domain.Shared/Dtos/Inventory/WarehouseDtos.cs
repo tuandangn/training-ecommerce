@@ -31,10 +31,14 @@ public abstract record BaseWarehouseDto
 public sealed record WarehouseDto(Guid Id) : BaseWarehouseDto
 {
     public string? WarehouseNameKey { get; set; }
+    public int DisplayOrder { get; set; }
 }
 
 [Serializable]
-public sealed record CreateWarehouseDto : BaseWarehouseDto;
+public sealed record CreateWarehouseDto : BaseWarehouseDto
+{
+    public int DisplayOrder { get; set; }
+}
 [Serializable]
 public sealed record CreateWarehouseResultDto
 {
@@ -42,6 +46,9 @@ public sealed record CreateWarehouseResultDto
 }
 
 [Serializable]
-public sealed record UpdateWarehouseDto(Guid Id) : BaseWarehouseDto;
+public sealed record UpdateWarehouseDto(Guid Id) : BaseWarehouseDto
+{
+    public int DisplayOrder { get; set; }
+}
 [Serializable]
 public sealed record UpdateWarehouseResultDto(Guid Id) : BaseWarehouseDto;

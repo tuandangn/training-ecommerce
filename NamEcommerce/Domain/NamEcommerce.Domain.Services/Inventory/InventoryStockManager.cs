@@ -240,7 +240,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
             var normalizedKeywords = TextHelper.Normalize(keywords);
             var uppercaseKeywords = keywords.Trim().ToUpper();
             query = query.Where(agg => agg.p.Name.ToUpper().Contains(uppercaseKeywords) || agg.p.Name.ToUpper().Contains(normalizedKeywords) || agg.p.NormalizedName.Contains(normalizedKeywords)
-                || agg.w.Name.ToUpper().Contains(uppercaseKeywords) || agg.w.Name.ToUpper().Contains(normalizedKeywords) || agg.w.NormalizedName.Contains(normalizedKeywords));
+                || agg.w.Name.Value.ToUpper().Contains(uppercaseKeywords) || agg.w.Name.Value.ToUpper().Contains(normalizedKeywords) || agg.w.Name.NormalizedValue.Contains(normalizedKeywords));
         }
 
         var total = query.Count();

@@ -22,4 +22,7 @@ public sealed class CreateWarehouseModel
 
     [Display(Name = "Đang hoạt động")]
     public bool IsActive { get; set; }
+
+    [Display(Name = "Thứ tự hiển thị")]
+    public int DisplayOrder { get; set; }
 }

@@ -1055,6 +1055,118 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.ToTable("Customer", "tbl");
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.BankTransferPaymentIntent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AccountName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("AccountNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BankId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("CustomerDebtId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CustomerPaymentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("DeliveryNoteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<Guid?>("OrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ProviderTransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("QrImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("RawPayload")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReferenceCode")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("nvarchar(25)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Template")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("UpdatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("VerificationSource")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("VerifiedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("VerifiedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerDebtId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("CustomerPaymentId");
+
+                    b.HasIndex("DeliveryNoteId");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("ProviderTransactionId");
+
+                    b.HasIndex("ReferenceCode")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "CreatedOnUtc");
+
+                    b.ToTable("BankTransferPaymentIntent", "tbl");
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.CustomerCreditNote", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1187,111 +1299,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.HasIndex("SourceReturnId");
 
                     b.ToTable("CustomerCreditNoteAllocation", "tbl");
-                });
-
-            modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.BankTransferPaymentIntent", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("AccountName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("AccountNo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("BankId")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime>("CreatedOnUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("CustomerDebtId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("CustomerId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("CustomerPaymentId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("DeliveryNoteId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Note")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<Guid?>("OrderId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ProviderTransactionId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("QrImageUrl")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("RawPayload")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReferenceCode")
-                        .IsRequired()
-                        .HasMaxLength(25)
-                        .HasColumnType("nvarchar(25)");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Template")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime?>("UpdatedOnUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("VerifiedAtUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid?>("VerifiedByUserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int?>("VerificationSource")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CustomerDebtId");
-
-                    b.HasIndex("CustomerId");
-
-                    b.HasIndex("CustomerPaymentId");
-
-                    b.HasIndex("DeliveryNoteId");
-
-                    b.HasIndex("OrderId");
-
-                    b.HasIndex("ProviderTransactionId");
-
-                    b.HasIndex("ReferenceCode")
-                        .IsUnique();
-
-                    b.HasIndex("Status", "CreatedOnUtc");
-
-                    b.ToTable("BankTransferPaymentIntent", "tbl");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.CustomerDebt", b =>
@@ -2844,10 +2851,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Address")
-                        .HasMaxLength(800)
-                        .HasColumnType("nvarchar(800)");
-
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -2855,6 +2858,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<DateTime?>("DeletedOnUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -2865,27 +2871,46 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<Guid?>("ManagerUserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("NormalizedAddress")
-                        .IsRequired()
-                        .HasMaxLength(1600)
-                        .HasColumnType("nvarchar(1600)");
-
-                    b.Property<string>("NormalizedName")
-                        .IsRequired()
-                        .HasMaxLength(400)
-                        .HasColumnType("nvarchar(400)");
-
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.Property<int>("WarehouseType")
                         .HasColumnType("int");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Address", "NamEcommerce.Domain.Entities.Inventory.Warehouse.Address#NormalizableString", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("NormalizedValue")
+                                .IsRequired()
+                                .HasMaxLength(800)
+                                .HasColumnType("nvarchar(800)")
+                                .HasColumnName("NormalizedAddress");
+
+                            b1.Property<string>("Value")
+                                .IsRequired()
+                                .HasMaxLength(800)
+                                .HasColumnType("nvarchar(800)")
+                                .HasColumnName("Address");
+                        });
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Name", "NamEcommerce.Domain.Entities.Inventory.Warehouse.Name#NormalizableString", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<string>("NormalizedValue")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("nvarchar(200)")
+                                .HasColumnName("NormalizedName");
+
+                            b1.Property<string>("Value")
+                                .IsRequired()
+                                .HasMaxLength(200)
+                                .HasColumnType("nvarchar(200)")
+                                .HasColumnName("Name");
+                        });
 
                     b.HasKey("Id");
 
