@@ -45,3 +45,17 @@ public enum PaymentType
     /// </summary>
     VendorDebtPayment = 50
 }
+
+public enum CreditNoteStatus
+{
+    Unapplied = 10,
+    PartiallyApplied = 20,
+    FullyApplied = 30,
+    Cancelled = 40
+}
+
+public enum CreditNoteSourceType
+{
+    CustomerReturn = 10,
+    VendorReturn = 20
+}

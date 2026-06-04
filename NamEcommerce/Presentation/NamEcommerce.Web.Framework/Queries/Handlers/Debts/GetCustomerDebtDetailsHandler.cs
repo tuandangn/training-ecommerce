@@ -1,5 +1,6 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Debts;
+using NamEcommerce.Application.Contracts.Dtos.Debts;
 using NamEcommerce.Web.Contracts.Models.Debts;
 using NamEcommerce.Web.Contracts.Queries.Models.Debts;
 
@@ -28,7 +29,8 @@ public sealed class GetCustomerDebtDetailsHandler(ICustomerDebtAppService debtAp
             Status = d.Status,
             DueDateUtc = d.DueDateUtc?.ToLocalTime(),
             CreatedOnUtc = d.CreatedOnUtc.ToLocalTime(),
-            Payments = d.Payments.Select(p => MapPayment(p)).ToList()
+            Payments = d.Payments.Select(p => MapPayment(p)).ToList(),
+            CreditNoteAllocations = d.CreditNoteAllocations.Select(MapAllocation).ToList()
         }).ToList();
 
         var deposits = result.Deposits.Select(p => MapPayment(p)).ToList();
@@ -44,11 +46,13 @@ public sealed class GetCustomerDebtDetailsHandler(ICustomerDebtAppService debtAp
             DepositBalance = result.DepositBalance,
             Debts = debtItems,
             Deposits = deposits,
-            RecentPayments = recentPayments
+            RecentPayments = recentPayments,
+            UnappliedCreditNoteBalance = result.UnappliedCreditNoteBalance,
+            UnappliedCreditNotes = result.UnappliedCreditNotes.Select(MapCreditNote).ToList()
         };
     }
 
-    private static CustomerPaymentListItemModel MapPayment(Application.Contracts.Dtos.Debts.CustomerPaymentAppDto p) =>
+    private static CustomerPaymentListItemModel MapPayment(CustomerPaymentAppDto p) =>
         new()
         {
             Id = p.Id,
@@ -61,5 +65,31 @@ public sealed class GetCustomerDebtDetailsHandler(ICustomerDebtAppService debtAp
             OrderCode = p.OrderCode,
             DeliveryNoteCode = p.DeliveryNoteCode,
             CustomerDebtId = p.CustomerDebtId
+        };
+
+    private static CustomerCreditNoteModel MapCreditNote(CustomerCreditNoteAppDto creditNote) =>
+        new()
+        {
+            Id = creditNote.Id,
+            Code = creditNote.Code,
+            SourceReturnId = creditNote.SourceReturnId,
+            SourceReturnCode = creditNote.SourceReturnCode,
+            Amount = creditNote.Amount,
+            AppliedAmount = creditNote.AppliedAmount,
+            RemainingAmount = creditNote.RemainingAmount,
+            CreatedOn = creditNote.CreatedOnUtc.ToLocalTime()
+        };
+
+    private static CreditNoteAllocationModel MapAllocation(CustomerCreditNoteAllocationAppDto allocation) =>
+        new()
+        {
+            Id = allocation.Id,
+            CreditNoteCode = allocation.CustomerCreditNoteCode,
+            SourceReturnId = allocation.SourceReturnId,
+            SourceReturnCode = allocation.SourceReturnCode,
+            Amount = allocation.Amount,
+            AppliedOn = allocation.AppliedOnUtc.ToLocalTime(),
+            ReversedOn = allocation.ReversedOnUtc?.ToLocalTime(),
+            ReverseReason = allocation.ReverseReason
         };
 }

@@ -118,17 +118,45 @@ public sealed record VendorDebt : AppAggregateEntity
         if (amount <= 0) return;
 
         PaidAmount += amount;
-        RemainingAmount = TotalAmount - PaidAmount;
+        RemainingAmount -= amount;
 
-        if (RemainingAmount <= 0)
-        {
+        if (RemainingAmount < 0)
             RemainingAmount = 0;
-            Status = DebtStatus.FullyPaid;
-        }
-        else
-        {
-            Status = DebtStatus.PartiallyPaid;
-        }
+
+        Status = RemainingAmount <= 0
+            ? DebtStatus.FullyPaid
+            : DebtStatus.PartiallyPaid;
+
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
+
+    internal void ApplyCreditNote(decimal amount)
+    {
+        if (amount <= 0) return;
+
+        RemainingAmount -= amount;
+        if (RemainingAmount < 0)
+            RemainingAmount = 0;
+
+        Status = RemainingAmount <= 0
+            ? DebtStatus.FullyPaid
+            : PaidAmount > 0 ? DebtStatus.PartiallyPaid : DebtStatus.Outstanding;
+
+        UpdatedOnUtc = DateTime.UtcNow;
+    }
+
+    internal void ReverseCreditNote(decimal amount)
+    {
+        if (amount <= 0) return;
+
+        var maxRemaining = TotalAmount - PaidAmount;
+        RemainingAmount += amount;
+        if (RemainingAmount > maxRemaining)
+            RemainingAmount = maxRemaining;
+
+        Status = RemainingAmount <= 0
+            ? DebtStatus.FullyPaid
+            : PaidAmount > 0 ? DebtStatus.PartiallyPaid : DebtStatus.Outstanding;
 
         UpdatedOnUtc = DateTime.UtcNow;
     }

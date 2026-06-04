@@ -203,7 +203,9 @@ public sealed class VendorDebtAppService(IVendorDebtManager debtManager) : IVend
             AdvanceBalance = result.AdvanceBalance,
             Debts = result.Debts.Select(d => d.ToDto()).ToList(),
             AdvancePayments = result.AdvancePayments.Select(p => p.ToDto()).ToList(),
-            RecentPayments = result.RecentPayments.Select(p => p.ToDto()).ToList()
+            RecentPayments = result.RecentPayments.Select(p => p.ToDto()).ToList(),
+            UnappliedCreditNoteBalance = result.UnappliedCreditNoteBalance,
+            UnappliedCreditNotes = result.UnappliedCreditNotes.Select(c => c.ToDto()).ToList()
         };
     }
 

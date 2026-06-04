@@ -76,6 +76,46 @@
 }
 
 @* ── Danh sách phiếu công nợ ── *@
+@if (Model.UnappliedCreditNotes.Any())
+{
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold text-uppercase small text-muted">Chứng từ điều chỉnh từ trả hàng chưa cấn trừ</h6>
+            <span class="badge bg-warning-subtle text-warning border border-warning-subtle fw-normal">
+                @Model.UnappliedCreditNoteBalance.ToString(ViewConstants.CurrencyDisplayFormat)
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="bg-light bg-opacity-50">
+                    <tr>
+                        <th class="ps-4 border-0 small text-uppercase text-muted fw-bold">Mã trả hàng</th>
+                        <th class="border-0 small text-uppercase text-muted fw-bold">Mã chứng từ</th>
+                        <th class="text-end border-0 small text-uppercase text-muted fw-bold">Số tiền gốc</th>
+                        <th class="text-end border-0 small text-uppercase text-muted fw-bold">Đã cấn trừ</th>
+                        <th class="text-end border-0 small text-uppercase text-muted fw-bold pe-4">Còn lại</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var credit in Model.UnappliedCreditNotes)
+                    {
+                        <tr>
+                            <td class="ps-4 fw-medium">
+                                <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@credit.SourceReturnId"
+                                   class="text-decoration-none">@credit.SourceReturnCode</a>
+                            </td>
+                            <td class="font-monospace small">@credit.Code</td>
+                            <td class="text-end">@credit.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</td>
+                            <td class="text-end text-success">@credit.AppliedAmount.ToString(ViewConstants.CurrencyDisplayFormat)</td>
+                            <td class="text-end fw-bold text-warning pe-4">@credit.RemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
 <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
     <div class="card-header bg-white border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-bold text-uppercase small text-muted">Danh sách phiếu công nợ</h6>
@@ -170,6 +210,25 @@
                                     <i class="bi bi-printer"></i>
                                 </a>
                             </div>
+                        </div>
+                    }
+                </div>
+            }
+            @if (debt.CreditNoteAllocations.Any())
+            {
+                <div class="mt-2 ps-3 border-start border-2 border-warning-subtle">
+                    @foreach (var allocation in debt.CreditNoteAllocations)
+                    {
+                        var reversed = allocation.ReversedOn.HasValue;
+                        <div class="d-flex align-items-center justify-content-between py-1 small @(reversed ? "text-muted" : "text-warning")">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-arrow-return-left"></i>
+                                <span>@(reversed ? "Đã đảo cấn trừ" : "Cấn trừ") từ trả hàng</span>
+                                <a asp-controller="CustomerReturn" asp-action="Details" asp-route-id="@allocation.SourceReturnId"
+                                   class="text-decoration-none">@allocation.SourceReturnCode</a>
+                                <span class="font-monospace">@allocation.CreditNoteCode</span>
+                            </div>
+                            <span class="fw-bold">-@allocation.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
                         </div>
                     }
                 </div>

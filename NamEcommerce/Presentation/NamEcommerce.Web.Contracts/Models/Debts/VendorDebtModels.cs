@@ -36,6 +36,7 @@ public sealed class VendorDebtDetailsModel
     public decimal TotalRemainingAmount { get; init; }
     /// <summary>Tiền ứng trước cho NCC chưa áp dụng vào phiếu nợ.</summary>
     public decimal AdvanceBalance { get; init; }
+    public decimal UnappliedCreditNoteBalance { get; init; }
 
     /// <summary>Danh sách từng phiếu công nợ (kèm lịch sử thanh toán).</summary>
     public IList<VendorDebtItemModel> Debts { get; init; } = [];
@@ -45,6 +46,7 @@ public sealed class VendorDebtDetailsModel
 
     /// <summary>Lịch sử giao dịch gần nhất.</summary>
     public IList<VendorPaymentListItemModel> RecentPayments { get; init; } = [];
+    public IList<VendorCreditNoteModel> UnappliedCreditNotes { get; init; } = [];
 }
 
 /// <summary>Một phiếu công nợ NCC trong trang Details.</summary>
@@ -64,6 +66,19 @@ public sealed record VendorDebtItemModel
     public DateTime CreatedOn { get; init; }
 
     public IList<VendorPaymentListItemModel> Payments { get; init; } = [];
+    public IList<CreditNoteAllocationModel> CreditNoteAllocations { get; init; } = [];
+}
+
+public sealed record VendorCreditNoteModel
+{
+    public required Guid Id { get; init; }
+    public required string Code { get; init; }
+    public required Guid SourceReturnId { get; init; }
+    public required string SourceReturnCode { get; init; }
+    public decimal Amount { get; init; }
+    public decimal AppliedAmount { get; init; }
+    public decimal RemainingAmount { get; init; }
+    public DateTime CreatedOn { get; init; }
 }
 
 // ── Shared / Payment ─────────────────────────────────────────────────────────

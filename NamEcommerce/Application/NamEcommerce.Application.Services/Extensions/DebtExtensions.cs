@@ -23,7 +23,8 @@ public static class DebtExtensions
             Status = (int)debt.Status,
             DueDateUtc = debt.DueDateUtc,
             CreatedOnUtc = debt.CreatedOnUtc,
-            Payments = debt.Payments.Select(p => p.ToDto()).ToList()
+            Payments = debt.Payments.Select(p => p.ToDto()).ToList(),
+            CreditNoteAllocations = debt.CreditNoteAllocations.Select(a => a.ToDto()).ToList()
         };
     }
 
@@ -47,6 +48,45 @@ public static class DebtExtensions
             PaidOnUtc = payment.PaidOnUtc,
             RecordedByUserId = payment.RecordedByUserId,
             CreatedOnUtc = payment.CreatedOnUtc
+        };
+    }
+
+    public static CustomerCreditNoteAppDto ToDto(this CustomerCreditNoteDto creditNote)
+    {
+        return new CustomerCreditNoteAppDto
+        {
+            Id = creditNote.Id,
+            Code = creditNote.Code,
+            CustomerId = creditNote.CustomerId,
+            CustomerName = creditNote.CustomerName,
+            SourceReturnId = creditNote.SourceReturnId,
+            SourceReturnCode = creditNote.SourceReturnCode,
+            SourceDeliveryNoteId = creditNote.SourceDeliveryNoteId,
+            Amount = creditNote.Amount,
+            AppliedAmount = creditNote.AppliedAmount,
+            RemainingAmount = creditNote.RemainingAmount,
+            Status = (int)creditNote.Status,
+            CreatedOnUtc = creditNote.CreatedOnUtc,
+            Allocations = creditNote.Allocations.Select(a => a.ToDto()).ToList()
+        };
+    }
+
+    public static CustomerCreditNoteAllocationAppDto ToDto(this CustomerCreditNoteAllocationDto allocation)
+    {
+        return new CustomerCreditNoteAllocationAppDto
+        {
+            Id = allocation.Id,
+            CustomerCreditNoteId = allocation.CustomerCreditNoteId,
+            CustomerCreditNoteCode = allocation.CustomerCreditNoteCode,
+            SourceReturnId = allocation.SourceReturnId,
+            SourceReturnCode = allocation.SourceReturnCode,
+            CustomerDebtId = allocation.CustomerDebtId,
+            CustomerDebtCode = allocation.CustomerDebtCode,
+            Amount = allocation.Amount,
+            AppliedOnUtc = allocation.AppliedOnUtc,
+            AppliedByUserId = allocation.AppliedByUserId,
+            ReversedOnUtc = allocation.ReversedOnUtc,
+            ReverseReason = allocation.ReverseReason
         };
     }
 }

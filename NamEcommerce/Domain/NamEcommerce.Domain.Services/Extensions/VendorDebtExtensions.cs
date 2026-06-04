@@ -43,4 +43,43 @@ public static class VendorDebtExtensions
             RecordedByUserId = payment.RecordedByUserId,
             CreatedOnUtc = payment.CreatedOnUtc
         };
+
+    public static VendorCreditNoteDto ToDto(this VendorCreditNote creditNote)
+        => new VendorCreditNoteDto
+        {
+            Id = creditNote.Id,
+            Code = creditNote.Code,
+            VendorId = creditNote.VendorId,
+            VendorName = creditNote.VendorName,
+            SourceReturnId = creditNote.SourceReturnId,
+            SourceReturnCode = creditNote.SourceReturnCode,
+            SourceGoodsReceiptId = creditNote.SourceGoodsReceiptId,
+            SourcePurchaseOrderId = creditNote.SourcePurchaseOrderId,
+            Amount = creditNote.Amount,
+            AppliedAmount = creditNote.AppliedAmount,
+            RemainingAmount = creditNote.RemainingAmount,
+            Status = creditNote.Status,
+            CreatedOnUtc = creditNote.CreatedOnUtc,
+            Allocations = creditNote.Allocations
+                .OrderBy(a => a.AppliedOnUtc)
+                .Select(a => a.ToDto())
+                .ToList()
+        };
+
+    public static VendorCreditNoteAllocationDto ToDto(this VendorCreditNoteAllocation allocation)
+        => new VendorCreditNoteAllocationDto
+        {
+            Id = allocation.Id,
+            VendorCreditNoteId = allocation.VendorCreditNoteId,
+            VendorCreditNoteCode = allocation.VendorCreditNoteCode,
+            SourceReturnId = allocation.SourceReturnId,
+            SourceReturnCode = allocation.SourceReturnCode,
+            VendorDebtId = allocation.VendorDebtId,
+            VendorDebtCode = allocation.VendorDebtCode,
+            Amount = allocation.Amount,
+            AppliedOnUtc = allocation.AppliedOnUtc,
+            AppliedByUserId = allocation.AppliedByUserId,
+            ReversedOnUtc = allocation.ReversedOnUtc,
+            ReverseReason = allocation.ReverseReason
+        };
 }
