@@ -82,6 +82,28 @@ public sealed record ProviderConfirmBankTransferPaymentIntentAppDto
 }
 
 [Serializable]
+public sealed record ProcessBankTransferProviderTransactionAppDto
+{
+    public required string ReferenceCode { get; init; }
+    public required decimal Amount { get; init; }
+    public required string BankId { get; init; }
+    public required string AccountNo { get; init; }
+    public required string ProviderTransactionId { get; init; }
+    public required int Source { get; init; }
+    public string? RawPayload { get; init; }
+    public DateTime ConfirmedAtUtc { get; init; } = DateTime.UtcNow;
+}
+
+[Serializable]
+public sealed record BankTransferProviderProcessingResultAppDto
+{
+    public required bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+    public BankTransferPaymentIntentAppDto? Intent { get; init; }
+    public Guid? VerificationLogId { get; init; }
+}
+
+[Serializable]
 public sealed record BankTransferVerificationRequestAppDto
 {
     public required string ReferenceCode { get; init; }
