@@ -109,7 +109,7 @@ class FastSale {
                 ${item.pictureUrl ? `<img class="fast-sale-product-image" src="${this.escape(item.pictureUrl)}" alt="">` : '<div class="fast-sale-product-image d-flex align-items-center justify-content-center"><i class="bi bi-image text-muted"></i></div>'}
                 <div class="min-w-0">
                     <div class="fw-semibold text-truncate">${this.escape(item.name)}</div>
-                    <div class="small text-muted">${this.formatMoney(item.unitPrice)} · Còn ${this.formatQuantity(item.quantityAvailable, item.quantityDecimalPlaces)}</div>
+                    <div class="small text-muted">${this.formatMoneyWithSymbol(item.unitPrice)} · Còn ${this.formatQuantity(item.quantityAvailable, item.quantityDecimalPlaces)}</div>
                 </div>
                 <button type="button" class="btn btn-sm btn-primary" title="Thêm">
                     <i class="bi bi-plus-lg"></i>
@@ -149,8 +149,8 @@ class FastSale {
         const discount = this.getDiscount();
         const total = Math.max(0, subtotal - discount);
 
-        this.subtotal.textContent = this.formatMoney(subtotal);
-        this.total.textContent = this.formatMoney(total);
+        this.subtotal.textContent = this.formatMoneyWithSymbol(subtotal);
+        this.total.textContent = this.formatMoneyWithSymbol(total);
         this.qrPanel.classList.toggle('visible', this.paymentMethod === 'bank');
         this.createQr.disabled = this.paymentMethod !== 'bank' || total <= 0 || this.cart.length === 0;
         this.confirmQr.disabled = !this.paymentIntent || this.paymentIntentConfirmed || !this.manualConfirmEnabled;
@@ -172,38 +172,46 @@ class FastSale {
             row.innerHTML = `
                 <td class="ps-3 fw-medium">${this.escape(item.name)}</td>
                 <td class="text-center" style="width: 110px;">
-                    <input class="form-control form-control-sm text-end" value="${this.formatQuantity(item.quantity, item.quantityDecimalPlaces)}" inputmode="decimal">
+                    <input class="form-control form-control-sm text-end" value="${this.formatQuantity(item.quantity, item.quantityDecimalPlaces)}" data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces}"/>
                 </td>
                 <td class="text-end" style="width: 140px;">
-                    <input class="form-control form-control-sm text-end" value="${item.unitPrice}" inputmode="decimal">
+                    <input class="form-control form-control-sm text-end" value="${this.formatMoney(item.unitPrice)}" data-decimal="currency" />
                 </td>
-                <td class="text-end fw-semibold text-nowrap">${this.formatMoney(item.quantity * item.unitPrice)}</td>
+                <td class="text-end fw-semibold text-nowrap">${this.formatMoneyWithSymbol(item.quantity * item.unitPrice)}</td>
                 <td class="text-end pe-3" style="width: 48px;">
                     <button type="button" class="btn btn-sm btn-light" title="Xóa"><i class="bi bi-x-lg"></i></button>
                 </td>`;
 
+
             const quantityInput = row.querySelectorAll('input')[0];
             const priceInput = row.querySelectorAll('input')[1];
-            quantityInput.addEventListener('input', () => {
-                item.quantity = Math.max(0, this.parseNumber(quantityInput.value));
+
+            const quantityChanged = debounce(() => {
+                item.quantity = DecimalFields.getValue(quantityInput);
                 this.paymentIntent = null;
                 this.paymentIntentConfirmed = false;
                 this.render();
-            });
-            priceInput.addEventListener('input', () => {
-                item.unitPrice = Math.max(0, this.parseNumber(priceInput.value));
+            }, 1000);
+            const unitPriceChanged = debounce(() => {
+                item.unitPrice = DecimalFields.getValue(priceInput);
                 this.paymentIntent = null;
                 this.paymentIntentConfirmed = false;
                 this.render();
-            });
+            }, 1000);
+
+            quantityInput.addEventListener('input', quantityChanged);
+            priceInput.addEventListener('input', unitPriceChanged);
+
             row.querySelector('button').addEventListener('click', () => {
                 this.cart.splice(index, 1);
                 this.paymentIntent = null;
                 this.paymentIntentConfirmed = false;
                 this.render();
             });
+
             this.cartBody.appendChild(row);
         });
+        DecimalFields.autoWrap(this.cartBody);
     }
 
     async createPaymentIntent() {
@@ -233,7 +241,7 @@ class FastSale {
         this.paymentIntentConfirmed = false;
         this.qrImage.src = this.paymentIntent.qrImageUrl;
         this.reference.textContent = this.paymentIntent.referenceCode;
-        this.qrAmount.textContent = this.formatMoney(this.paymentIntent.amount);
+        this.qrAmount.textContent = this.formatMoneyWithSymbol(this.paymentIntent.amount);
         this.showAlert('success', 'Đã tạo QR chuyển khoản.');
         this.render();
     }
@@ -326,7 +334,7 @@ class FastSale {
     }
 
     getDiscount() {
-        return Math.max(0, this.parseNumber(this.discount.value));
+        return DecimalFields.getValue(this.discount);
     }
 
     calculateTotal() {
@@ -340,7 +348,10 @@ class FastSale {
     }
 
     formatMoney(value) {
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(value || 0);
+        return DecimalFields.formatCurrency(value || 0);
+    }
+    formatMoneyWithSymbol(value) {
+        return DecimalFields.formatCurrencyWithSymbol(value || 0);
     }
 
     formatQuantity(value, decimals) {
@@ -351,8 +362,7 @@ class FastSale {
     }
 
     showAlert(type, message) {
-        this.alert.className = `fast-sale-alert visible alert alert-${type}`;
-        this.alert.textContent = message || '';
+        window.NotificationCenter[type](message, 'warning');
     }
 
     escape(value) {

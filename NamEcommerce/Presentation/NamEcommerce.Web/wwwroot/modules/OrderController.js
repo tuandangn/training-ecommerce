@@ -117,6 +117,7 @@ export default class OrderController {
     }
 
     #render() {
+        console.count('render');
         this.#renderSummary();
         this.#renderCustomer();
         this.#renderItems();
@@ -276,8 +277,6 @@ export default class OrderController {
             const newUnitPrice = parseNumber(DecimalFields.stripFormatting(inputUnitPrice.value, 0), 0);
             this.#updateItem(index, { quantity: newQuantity, unitPrice: newUnitPrice });
         }, 1500, () => {
-            if (inputQuantity._decimalFormatting)
-                return false;
             var quantityRaw = DecimalFields.stripFormatting(inputQuantity.value, 2)
             return DecimalFields.isValidDecimal(inputQuantity, quantityRaw);
         });
@@ -286,16 +285,16 @@ export default class OrderController {
             const newUnitPrice = parseNumber(DecimalFields.stripFormatting(inputUnitPrice.value, 0), 0);
             this.#updateItem(index, { unitPrice: newUnitPrice, quantity: newQuantity });
         }, 1500, () => {
-            if (inputUnitPrice._decimalFormatting)
-                return false;
             var unitPriceRaw = DecimalFields.stripFormatting(inputUnitPrice.value)
             return DecimalFields.isValidDecimal(inputUnitPrice, unitPriceRaw);
         });
 
         inputQuantity.addEventListener('input', inputQtyChangeDebounced);
+        inputQuantity.addEventListener('change', inputQtyChangeDebounced.flush);
         inputQuantity.addEventListener('focusin', () => inputUnitPriceChangeDebounced.cancel());
 
         inputUnitPrice.addEventListener('input', inputUnitPriceChangeDebounced);
+        inputUnitPrice.addEventListener('change', inputUnitPriceChangeDebounced.flush);
         inputUnitPrice.addEventListener('focusin', () => inputQtyChangeDebounced.cancel());
 
         return row;

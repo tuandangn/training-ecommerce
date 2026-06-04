@@ -17,51 +17,18 @@
     function stripFormatting(str, decimals) {
         if (!str) return '';
         str = str.trim();
-
-        // 1. Giữ lại dấu âm (-) nếu có ở đầu chuỗi
-        const isNegative = str.startsWith('-');
-
-        // 2. Xác định vị trí dấu chấm và dấu phẩy cuối cùng
-        const lastDot = str.lastIndexOf('.');
-        const lastComma = str.lastIndexOf(',');
-
-        let cleanStr = str;
-
-        if (lastDot !== -1 || lastComma !== -1) {
-            if (lastComma > lastDot) {
-                // Định dạng kiểu VN/Đức: 1.234.567,89 -> Xóa chấm, đổi phẩy thành chấm
-                cleanStr = str.replace(/\./g, '').replace(',', '.');
-            } else {
-                // Định dạng kiểu Mỹ: 1,234,567.89 -> Xóa phẩy
-                cleanStr = str.replace(/,/g, '');
-            }
-        }
-
-        // 3. Xóa tất cả các ký tự không phải số hoặc dấu chấm thập phân
-        cleanStr = cleanStr.replace(/[^\d.]/g, '');
-
-        // 4. Ép kiểu về số Float để xử lý số lượng chữ số thập phân
-        let num = parseFloat(cleanStr);
-        if (isNaN(num)) return '';
-
-        // Khôi phục lại dấu âm ban đầu
-        if (isNegative) num = -num;
-
-        // 5. Xử lý tham số decimals
-        decimals = (decimals === undefined) ? null : parseInt(decimals, 10);
-
-        if (decimals !== null && !isNaN(decimals)) {
-            return num.toFixed(decimals);
-        }
-
-        // Nếu không truyền decimals, trả về chuỗi số nguyên bản đã làm sạch
-        return num.toString();
+        if (!decimals) return str.replace(/[^\d]/g, '');
+        var lastDot = str.lastIndexOf('.');
+        var lastComma = str.lastIndexOf(',');
+        if (lastDot === -1 && lastComma === -1) return str.replace(/[^\d]/g, '');
+        if (lastComma > lastDot) return str.replace(/\./g, '').replace(',', '.');
+        return str.replace(/,/g, '');
     }
 
     function stripInputFormatting(input) {
         if (!input || !(input instanceof HTMLInputElement)) throw new Error('Invalid input element');
         var value = input.value;
-        if (!value) return stripFormatting(value, 0);
+        if (!value || value == '0') return stripFormatting(value, 0);
         var decimals = parseInt(input.dataset.decimals, 10) || 0;
         return stripFormatting(value, decimals);
     }
@@ -99,8 +66,8 @@
     }
 
     function formatQuantity(raw, decimals) {
-        // 1. Xác định số lượng chữ số thập phân (mặc định là 0 nếu undefined)
-        decimals = (decimals === undefined) ? 0 : parseInt(decimals, 10);
+        // 1. Xác định số lượng chữ số thập phân (mặc định là 2 nếu undefined)
+        decimals = (decimals === undefined) ? 2 : parseInt(decimals, 10);
 
         const n = parseFloat(raw);
         if (isNaN(n)) return raw;
@@ -119,6 +86,20 @@
 
         // 4. Trả về kết quả kết hợp với phần thập phân sau dấu phẩy
         return formattedInteger + ',' + parts[1];
+    }
+
+    function formatInput(input) {
+        if (!input || !(input instanceof HTMLInputElement)) throw new Error('Invalid input element');
+        var value = stripInputFormatting(input);
+        if (!value || value === '0') return formatQuantity(value);
+        var type = input.dataset.decimal || "quantity";
+        var decimals = parseInt(input.dataset.decimals, 10) || 0;
+        return type === 'currency' ? formatCurrency(value) : formatQuantity(value, decimals);
+    }
+
+    function getValue(input) {
+        var stripped = stripInputFormatting(input);
+        return parseFloat(stripped) || 0;
     }
 
     var SUFFIX_SVG =
@@ -170,40 +151,19 @@
         if (input.dataset.decimalBound === '1') return;
         input.dataset.decimalBound = '1';
 
+        // const newInput = input.cloneNode(true);
+        // input.parentNode.replaceChild(newInput, input);
+        // input = newInput;
+
         var type = input.dataset.type;
-        // Flag ngan event 'input' / 'change' fire khi chinh code minh gan .value
-        var _formatting = false;
-
-        // Wrap de ben ngoai co the check: input._decimalFormatting
-        Object.defineProperty(input, '_decimalFormatting', {
-            get: function () { return _formatting; }
-        });
-
-        input.addEventListener('input', function (e) {
-            // Bo qua neu do chinh blur handler gan gia tri
-            if (_formatting) {
-                e.stopImmediatePropagation();
-                return;
-            }
-        });
-
-        input.addEventListener('change', function (e) {
-            if (_formatting) {
-                e.stopImmediatePropagation();
-                return;
-            }
-        });
 
         input.addEventListener('focus', function () {
-            _formatting = true;
             this.value = stripInputFormatting(this);
             this.select();
-            _formatting = false;
         });
 
         input.addEventListener('blur', function (e) {
-            var decimals = parseInt(this.dataset.decimals || '0', 10);
-            var raw = stripFormatting(this.value, decimals);
+            var raw = stripInputFormatting(this);
 
             // Validate truoc khi format
             // jQuery Validate unobtrusive: kiem tra field nay co hop le khong
@@ -212,13 +172,11 @@
                 return;
             }
 
-            _formatting = true;
             if (raw === '') {
                 this.value = '';
             } else {
-                this.value = type === 'currency' ? formatCurrency(raw) : formatQuantity(raw, decimals);
+                this.value = formatInput(this);
             }
-            _formatting = false;
         });
 
         input.addEventListener('keypress', function (e) {
@@ -372,7 +330,7 @@
         if (input.dataset.decimalBound === '1') return { input: input };
 
         var isCurr = (type === 'currency');
-        var decimals = isCurr ? 0 : parseInt(input.dataset.decimals ?? '0', 10);
+        var decimals = isCurr ? 0 : (parseInt(input.dataset.decimals, 10) || 2);
 
         var opts = Object.assign({
             showHint: false,
@@ -418,7 +376,7 @@
         }
 
         var raw = stripFormatting(input.value, decimals);
-        if (raw) input.value = isCurr ? formatCurrency(raw) : formatQuantity(raw);
+        if (raw) input.value = isCurr ? formatCurrency(raw, null, decimals) : formatQuantity(raw, decimals);
 
         bindInput(input);
         var hint = (isCurr && (opts.showHint)) ? attachHint(wrapper, input) : null;
@@ -501,7 +459,8 @@
         formatQuantity: formatQuantity,
         stripFormatting: stripFormatting,
         stripInputFormatting: stripInputFormatting,
-        getFormData: getFormData
+        getFormData: getFormData,
+        getValue: getValue
     };
 
 })(window);

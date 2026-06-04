@@ -8,7 +8,9 @@ namespace NamEcommerce.Web.Controllers;
 
 public sealed class FastSaleController(IMediator mediator, IFastSaleModelFactory fastSaleModelFactory) : BaseAuthorizedController
 {
-    public async Task<IActionResult> Index()
+    public IActionResult Index() => RedirectToAction(nameof(CreateOrder));
+
+    public async Task<IActionResult> CreateOrder()
     {
         var model = await fastSaleModelFactory.PrepareFastSaleModelAsync().ConfigureAwait(false);
         return View(model);

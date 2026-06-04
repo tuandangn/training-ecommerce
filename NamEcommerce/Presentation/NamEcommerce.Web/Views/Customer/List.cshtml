@@ -21,59 +21,62 @@
 <div class="content-card" data-responsive-list data-list-key="customer-list">
     <div class="action-toolbar">
         <partial name="_Search" model="@(new CustomerListSearchModel { Keywords = query })" />
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Tạo đơn
+        </a>
         <partial name="_ResponsiveListToolbar" />
     </div>
 
     <div class="responsive-list-panel" data-list-view-panel="list">
         <div class="table-responsive">
-        <table class="table data-table">
-            <thead>
-                <tr>
-                    <th class="ps-4">Họ tên</th>
-                    <th>Điện thoại</th>
-                    <th style="width: 100px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Data.Pagination.TotalCount > 0)
-                {
-                    @foreach (var item in Model.Data)
+            <table class="table data-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Họ tên</th>
+                        <th>Điện thoại</th>
+                        <th style="width: 100px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Data.Pagination.TotalCount > 0)
+                    {
+                        @foreach (var item in Model.Data)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-medium">@item.FullName</td>
+                                <td>
+                                    <a href="tel:@item.PhoneNumber" class="text-decoration-none text-muted">
+                                        @item.PhoneNumber
+                                    </a>
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn-table-action danger btnDelete"
+                                            data-id="@item.Id" data-name="@item.FullName" title="Xóa">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                    <form id="deleteForm@(item.Id)" asp-action="Delete" asp-route-id="@item.Id"
+                                          method="post" style="display:none;"></form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
                     {
                         <tr>
-                            <td class="ps-4 fw-medium">@item.FullName</td>
-                            <td>
-                                <a href="tel:@item.PhoneNumber" class="text-decoration-none text-muted">
-                                    @item.PhoneNumber
-                                </a>
-                            </td>
-                            <td class="text-end pe-3">
-                                <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <button type="button" class="btn-table-action danger btnDelete"
-                                        data-id="@item.Id" data-name="@item.FullName" title="Xóa">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                                <form id="deleteForm@(item.Id)" asp-action="Delete" asp-route-id="@item.Id"
-                                      method="post" style="display:none;"></form>
+                            <td colspan="3">
+                                <div class="empty-state">
+                                    <div class="empty-icon"><i class="bi bi-people"></i></div>
+                                    <h5>Chưa có khách hàng nào</h5>
+                                    <p>Thêm khách hàng để bắt đầu quản lý.</p>
+                                </div>
                             </td>
                         </tr>
                     }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="3">
-                            <div class="empty-state">
-                                <div class="empty-icon"><i class="bi bi-people"></i></div>
-                                <h5>Chưa có khách hàng nào</h5>
-                                <p>Thêm khách hàng để bắt đầu quản lý.</p>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
         </div>
     </div>
 
