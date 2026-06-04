@@ -250,6 +250,7 @@
                                             data-product-id="@Model.Items[i].ProductId"
                                             data-required-quantity="@requiredQuantityValue"
                                             data-available-quantity="@availableQuantityValue"
+                                            data-decimalplaces="@Model.Items[i].QuantityDecimalPlaces"
                                             data-stock-loaded="false">
                                             <td class="align-middle text-center ps-4">
                                                 <input type="checkbox" asp-for="Items[i].Selected" class="form-check-input item-checkbox" />
@@ -732,7 +733,7 @@
                                name="Items[${itemIndex}].WarehouseAllocations[${index}].Quantity"
                                value="${suggestedQuantity}"
                                data-available-quantity="${warehouse.quantityAvailable}"
-                               data-decimal="quantity" />
+                               data-decimal="quantity" data-decimals="${parseInt($row.attr('data-decimalplaces') || '0', 10)}" />
                     </div>`;
                 }).join('');
                 $row.find('.warehouse-allocation-list').html(allocationHtml);

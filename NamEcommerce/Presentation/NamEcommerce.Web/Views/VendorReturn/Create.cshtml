@@ -747,6 +747,7 @@
                     <input type="hidden" name="Items[${i}].ProductId" value="${product.id}" />
                     <input type="hidden" name="Items[${i}].GoodsReceiptItemId" value="" />
                     <input type="hidden" name="Items[${i}].OriginalUnitCost" value="" class="item-orig-cost" />
+                    <input type="hidden" name="Items[${i}].QuantityDecimalPlaces" value="${product.quantityDecimalPlaces ?? 0}" />
                 </td>
                 <td class="text-center text-muted small">${escapeHtml(product.unitMeasurement ?? '')}</td>
                 <td class="text-end text-muted small">—</td>
@@ -755,7 +756,7 @@
                 <td class="text-end">
                     <input name="Items[${i}].RequestedQuantity" value="1"
                            class="form-control form-control-sm text-end item-req-qty"
-                           data-decimal="quantity" min="0.001" placeholder="0" />
+                           data-decimal="quantity" data-decimals="${product.quantityDecimalPlaces ?? 0}" min="0.001" placeholder="0" />
                 </td>
                 <td class="text-end text-muted small">—</td>
                 <td class="text-end">

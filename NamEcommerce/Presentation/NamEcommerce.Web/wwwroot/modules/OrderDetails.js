@@ -89,6 +89,9 @@ async function submitFormAsync(form) {
                 console.log(product);
                 addProductId.value = product.id;
                 addProductQuantity.value = 1;
+                addProductQuantity.dataset.decimals = String(product.quantityDecimalPlaces ?? 0);
+                addProductQuantity.dataset.decimalBound = '';
+                window.DecimalFields?.bindInput?.(addProductQuantity);
                 addProductUnitPrice.value = product.price || 0;
                 modalProductInfo.classList.remove('d-none');
                 addItemBtn.classList.remove('d-none');
