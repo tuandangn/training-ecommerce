@@ -79,6 +79,27 @@ public sealed class ManualConfirmBankTransferPaymentIntentHandler(IBankTransferP
     }
 }
 
+public sealed class ProcessBankTransferProviderTransactionHandler(IBankTransferPaymentIntentAppService paymentIntentAppService)
+    : IRequestHandler<ProcessBankTransferProviderTransactionCommand, BankTransferPaymentIntentResultModel>
+{
+    public async Task<BankTransferPaymentIntentResultModel> Handle(ProcessBankTransferProviderTransactionCommand request, CancellationToken cancellationToken)
+    {
+        var result = await paymentIntentAppService.ProcessProviderTransactionAsync(new ProcessBankTransferProviderTransactionAppDto
+        {
+            ReferenceCode = request.ReferenceCode,
+            Amount = request.Amount,
+            BankId = request.BankId,
+            AccountNo = request.AccountNo,
+            ProviderTransactionId = request.ProviderTransactionId,
+            Source = request.Source,
+            RawPayload = request.RawPayload,
+            ConfirmedAtUtc = request.ConfirmedAtUtc
+        }).ConfigureAwait(false);
+
+        return FastSaleCommandHandlerMapper.MapIntentResult(result);
+    }
+}
+
 internal static class FastSaleCommandHandlerMapper
 {
     public static QuickSaleItemAppDto MapItem(QuickSaleItemCommand item)
@@ -106,6 +127,27 @@ internal static class FastSaleCommandHandlerMapper
         {
             Success = result.Success,
             ErrorMessage = result.ErrorMessage,
+            Intent = result.Intent is null
+                ? null
+                : new BankTransferPaymentIntentModel
+                {
+                    Id = result.Intent.Id,
+                    ReferenceCode = result.Intent.ReferenceCode,
+                    Amount = result.Intent.Amount,
+                    BankId = result.Intent.BankId,
+                    AccountNo = result.Intent.AccountNo,
+                    AccountName = result.Intent.AccountName,
+                    QrImageUrl = result.Intent.QrImageUrl,
+                    Status = result.Intent.Status
+                }
+        };
+
+    public static BankTransferPaymentIntentResultModel MapIntentResult(BankTransferProviderProcessingResultAppDto result)
+        => new()
+        {
+            Success = result.Success,
+            ErrorMessage = result.ErrorMessage,
+            VerificationLogId = result.VerificationLogId,
             Intent = result.Intent is null
                 ? null
                 : new BankTransferPaymentIntentModel

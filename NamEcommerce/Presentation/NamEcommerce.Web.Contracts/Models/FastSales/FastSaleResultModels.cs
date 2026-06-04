@@ -31,4 +31,5 @@ public sealed record BankTransferPaymentIntentResultModel
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
     public BankTransferPaymentIntentModel? Intent { get; init; }
+    public Guid? VerificationLogId { get; init; }
 }
