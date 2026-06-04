@@ -824,6 +824,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             OrderId = d.OrderId,
             OrderCode = d.OrderCode,
             CustomerName = d.CustomerName,
+            ProductId = d.ProductId,
             ProductName = d.ProductName,
             TotalQuantity = d.TotalQuantity,
             AllocatedOutstanding = d.AllocatedOutstanding,

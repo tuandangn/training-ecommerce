@@ -221,6 +221,7 @@ public sealed class ProductController : BaseAuthorizedController
             id = product.Id,
             name = product.Name,
             unitMeasurement = product.UnitMeasurement,
+            quantityDecimalPlaces = product.QuantityDecimalPlaces,
             picture = product.PictureUrl,
             unitPrice = product.CurrentUnitPrice,
             availableQty = product.QuantityAvailable,

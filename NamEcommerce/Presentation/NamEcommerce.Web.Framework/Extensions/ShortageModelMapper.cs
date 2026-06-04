@@ -51,6 +51,7 @@ public static class ShortageModelMapper
             ProductId = dto.ProductId,
             ProductName = dto.ProductName,
             UnitMeasurementName = dto.UnitMeasurementName,
+            QuantityDecimalPlaces = dto.QuantityDecimalPlaces,
             RequiredQuantity = dto.RequiredQuantity,
             ShippedQuantity = dto.ShippedQuantity,
             AvailableQuantity = dto.AvailableQuantity,

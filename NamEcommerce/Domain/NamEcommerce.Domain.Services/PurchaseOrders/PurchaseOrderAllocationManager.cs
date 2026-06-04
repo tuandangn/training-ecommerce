@@ -346,6 +346,7 @@ public sealed class PurchaseOrderAllocationManager(
                     OrderCode = ctx.Order.Code,
                     CustomerName = ctx.Order.CustomerInfo.FullName,
                     CustomerPhone = ctx.Order.CustomerInfo.PhoneNumber,
+                    ProductId = ctx.Item.ProductId,
                     ProductName = ctx.Item.ProductName ?? string.Empty,
                     TotalQuantity = ctx.Item.Quantity,
                     AllocatedOutstanding = outstanding,

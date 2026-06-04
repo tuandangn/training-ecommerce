@@ -33,6 +33,7 @@ public sealed class ShortageAggregationItemModel
     public Guid ProductId { get; set; }
     public string ProductName { get; set; } = string.Empty;
     public string? UnitMeasurementName { get; set; }
+    public int QuantityDecimalPlaces { get; set; }
     public decimal RequiredQuantity { get; set; }
     public decimal ShippedQuantity { get; set; }
     public decimal AvailableQuantity { get; set; }

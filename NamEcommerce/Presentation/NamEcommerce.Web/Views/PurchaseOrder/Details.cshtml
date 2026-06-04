@@ -1891,7 +1891,7 @@
                                         <td class="pe-2">
                                             <div class="d-flex align-items-center justify-content-end">
                                                 <input type="text" class="form-control form-control-sm text-end allocate-qty-input no-additional-element no-hint"
-                                                       data-decimal="quantity" value="${fmtQty(item.availableToAllocate)}" style="width:90px;display:inline-block" />
+                                                       data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" style="width:90px;display:inline-block" />
                                            </div>
                                         </td>`;
                                     tbody.appendChild(tr);

@@ -262,10 +262,10 @@
                                             <label>
                                                 <span>Số lượng:</span>
                                                 <span>
-                                                    <input class="form-control quantity-to-order" data-decimal="quantity" name="quantityToOrder@(item.OrderItemId)"
+                                                    <input class="form-control quantity-to-order" data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" name="quantityToOrder@(item.OrderItemId)"
                                                            value="@item.QuantityToOrder.DisplayCurrency()" autocomplete="off"
                                                            data-val="true" data-val-required="Vui lòng nhập số lượng"
-                                                           data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001"
+                                                           data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="@(item.QuantityDecimalPlaces > 0 ? "0.0001" : "1")"
                                                            data-val-number="Số lượng phải là số" />
                                                     <span class="small text-danger field-validation-valid" data-valmsg-for="quantityToOrder@(item.OrderItemId)" data-valmsg-replace="true"></span>
                                                 </span>

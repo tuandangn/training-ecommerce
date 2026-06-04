@@ -533,6 +533,9 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return Json(Array.Empty<object>());
 
         var items = await _purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+        var productIds = items.Select(i => i.ProductId).Distinct();
+        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
+        var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 
         return Json(items.Select(item => new
         {
@@ -543,6 +546,7 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             customerPhone = item.CustomerPhone,
             shippingAddress = item.ShippingAddress,
             productName = item.ProductName,
+            quantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(item.ProductId),
             totalQuantity = item.TotalQuantity,
             allocatedOutstanding = item.AllocatedOutstanding,
             availableToAllocate = item.AvailableToAllocate

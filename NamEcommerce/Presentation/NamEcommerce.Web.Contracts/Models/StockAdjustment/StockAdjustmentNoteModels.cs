@@ -47,6 +47,7 @@ public sealed class StockAdjustmentNoteItemInputModel
     public string ProductName { get; set; } = string.Empty;
     public decimal SystemQuantity { get; set; }
     public decimal PhysicalQuantity { get; set; }
+    public int QuantityDecimalPlaces { get; set; }
 }
 
 public sealed class CreateStockAdjustmentNoteResultModel
