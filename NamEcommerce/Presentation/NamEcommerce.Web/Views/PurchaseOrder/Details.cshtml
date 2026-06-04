@@ -1059,9 +1059,11 @@
                     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
                 }
                 function _parseReceiveQty() {
-                    const v = document.getElementById('modalReceivedQty')?.value || '0';
+                    const el = document.getElementById('modalReceivedQty');
+                    const v = el?.value || '0';
+                    const decimals = parseInt(el?.dataset?.decimals ?? '2', 10);
                     return (window.DecimalFields?.stripFormatting)
-                        ? parseFloat(DecimalFields.stripFormatting(v, 2)) || 0
+                        ? parseFloat(DecimalFields.stripFormatting(v, decimals)) || 0
                         : parseFloat(v.replace(/[^0-9.]/g, '')) || 0;
                 }
                 function syncWarehouseVisibility() {
@@ -1148,8 +1150,13 @@
                         document.getElementById('modalItemId').value = itemId;
                         document.getElementById('modalItemName').innerText = itemName;
                         document.getElementById('modalItemRemaining').innerText = remaining + currentUnitMeasurement;
-                        document.getElementById('modalReceivedQty').value = remaining;
-                        document.getElementById('modalReceivedQty').max = remainingRaw;
+                        const receivedQtyInput = document.getElementById('modalReceivedQty');
+                        receivedQtyInput.value = remaining;
+                        receivedQtyInput.max = remainingRaw;
+                        const receiveDecimalPlaces = parseInt(button.getAttribute('data-decimalplaces') || '0', 10);
+                        receivedQtyInput.dataset.decimals = String(receiveDecimalPlaces);
+                        receivedQtyInput.dataset.decimalBound = '';
+                        window.DecimalFields?.bindInput?.(receivedQtyInput);
                         itemRemainingQty = parseFloat(remainingRaw) || 0;
                         document.getElementById('oversupplyWarningPanel').classList.add('d-none');
                         document.getElementById('modalOversupplyAction').value = '';
@@ -1342,9 +1349,11 @@
                 const receiveItemForm = receiveItemModal?.querySelector('form');
                 if (receiveItemForm) {
                 receiveItemForm.addEventListener('submit', function (e) {
+                const _rqEl = document.getElementById('modalReceivedQty');
+                const _rqDecimals = parseInt(_rqEl?.dataset?.decimals ?? '2', 10);
                 const val = (window.DecimalFields && typeof DecimalFields.stripFormatting === 'function')
-                    ? parseFloat(DecimalFields.stripFormatting(document.getElementById('modalReceivedQty').value, 2)) || 0
-                    : parseFloat((document.getElementById('modalReceivedQty').value || '').replace(/[^0-9.]/g, '')) || 0;
+                    ? parseFloat(DecimalFields.stripFormatting(_rqEl.value, _rqDecimals)) || 0
+                    : parseFloat((_rqEl?.value || '').replace(/[^0-9.]/g, '')) || 0;
                 if (val > itemRemainingQty && itemRemainingQty > 0) {
                 const choice = document.querySelector('input[name="oversupplyChoice"]:checked')?.value;
                 if (!choice || choice === 'Cancel') {

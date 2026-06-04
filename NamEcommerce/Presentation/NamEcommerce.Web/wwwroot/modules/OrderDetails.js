@@ -144,10 +144,17 @@ async function submitFormAsync(form) {
             const data = $(this).data();
             $('#editItemId').val(data.id);
             $('#editProductName').text(data.product);
-            $('#editQuantity').val(DecimalFields.formatQuantity(data.qty));
+            const editQtyEl = document.getElementById('editQuantity');
+            if (editQtyEl) {
+                const dp = parseInt(data.decimalplaces ?? 0, 10);
+                editQtyEl.dataset.decimals = String(dp);
+                editQtyEl.dataset.decimalBound = '';
+                window.DecimalFields?.bindInput?.(editQtyEl);
+            }
+            $('#editQuantity').val(DecimalFields.formatQuantity(data.qty, data.decimalplaces ?? 0));
             $('#editUnitPrice').val(DecimalFields.formatCurrency(data.price));
             if (data.availableqty > 0) {
-                $('#editProductStock').find('.stock-field').text('Tồn kho: ' + DecimalFields.formatQuantity(Math.max(0, data.availableqty), 2));
+                $('#editProductStock').find('.stock-field').text('Tồn kho: ' + DecimalFields.formatQuantity(Math.max(0, data.availableqty), data.decimalplaces ?? 0));
             } else {
                 $('#editProductStock').find('.stock-field').html('<span class="text-danger">Hết hàng</span>');
             }

@@ -144,6 +144,10 @@ public sealed class OrderModelFactory : IOrderModelFactory
             CanCompleteOrder = order.CanCompleteOrder,
             CreatedOn = order.CreatedOn
         };
+        var orderProductIds = order.Items.Select(i => i.ProductId).Distinct();
+        var orderProducts = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = orderProductIds }).ConfigureAwait(false);
+        var orderDecimalPlacesByProductId = orderProducts.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
+
         foreach (var it in order.Items)
         {
             model.Items.Add(new OrderDetailsModel.OrderItemModel(it.Id)
@@ -153,7 +157,8 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 ProductPicture = it.ProductPicture,
                 ProductAvailableQty = it.ProductAvailableQty,
                 Quantity = it.Quantity,
-                UnitPrice = it.UnitPrice
+                UnitPrice = it.UnitPrice,
+                QuantityDecimalPlaces = orderDecimalPlacesByProductId.GetValueOrDefault(it.ProductId)
             });
         }
 

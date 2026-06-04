@@ -134,7 +134,8 @@
                                                         data-product="@item.ProductName"
                                                         data-availableQty="@item.ProductAvailableQty?.DisplayQuantity()"
                                                         data-qty="@item.Quantity.ToString("#")"
-                                                        data-price="@item.UnitPrice.ToString("#")">
+                                                        data-price="@item.UnitPrice.ToString("#")"
+                                                        data-decimalplaces="@item.QuantityDecimalPlaces">
                                                     <i class="bi bi-pencil me-2 text-primary"></i>Chỉnh sửa
                                                 </button>
                                             </li>

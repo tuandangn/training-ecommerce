@@ -120,6 +120,7 @@ public sealed record OrderDetailsModel
         public string? ProductName { get; set; }
         public string? ProductPicture { get; set; }
         public decimal? ProductAvailableQty { get; set; }
+        public int QuantityDecimalPlaces { get; set; }
         public decimal SubTotal => UnitPrice * Quantity;
 
         public decimal GetDeliveredQuantity(IList<DeliveryNoteBasicModel> deliveryNotes)
