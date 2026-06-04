@@ -12,7 +12,7 @@ public record BaseUnitMeasurementAppDto
         if (string.IsNullOrEmpty(Name))
             return (false, "Error.UnitMeasurementNameRequired");
 
-        if (DecimalPlaces is not (0 or 2))
+        if (DecimalPlaces is not (0 or 1 or 2))
             return (false, "Error.UnitMeasurementDecimalPlacesInvalid");
 
         return (true, null);

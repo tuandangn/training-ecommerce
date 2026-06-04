@@ -345,6 +345,7 @@ export default class ProductPicker {
 
         try {
             const data = await this.api.search(query, this.vendorId);
+            console.log(data);
             const products = data.map(d => new Product(d));
             this.view.renderSuggestion(products, query);
         } catch (err) {

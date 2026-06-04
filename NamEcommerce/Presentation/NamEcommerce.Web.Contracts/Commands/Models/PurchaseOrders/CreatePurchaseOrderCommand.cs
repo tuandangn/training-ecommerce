@@ -25,4 +25,5 @@ public sealed class CreatePurchaseOrderItemCommand
     public decimal Quantity { get; init; }
     public decimal UnitCost { get; init; }
     public string? Note { get; init; }
+    public int QuantityDecimalPlaces { get; init; }
 }

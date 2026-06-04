@@ -132,6 +132,9 @@
   <data name="Error.NotMatch" xml:space="preserve">
     <value>{0} does not match.</value>
   </data>
+  <data name="Error.QuantityMustBeInteger" xml:space="preserve">
+    <value>Quantity must be a whole number for this unit of measure.</value>
+  </data>
   <data name="Error.QuantityMustBePositive" xml:space="preserve">
     <value>Quantity must be greater than 0.</value>
   </data>

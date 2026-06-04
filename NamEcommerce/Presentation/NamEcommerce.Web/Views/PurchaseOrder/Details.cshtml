@@ -178,6 +178,7 @@
                 </div>
                 <form asp-action="AddPurchaseOrderItem" method="post" id="addProductForm">
                     <input type="hidden" name="purchaseOrderId" value="@Model.Info.Id" />
+                    <input type="hidden" id="addItemDecimalPlaces" name="QuantityDecimalPlaces" value="0" />
                     <div class="modal-body py-3">
                         <div class="mb-3">
                             <div id="productPicker"></div>
@@ -307,6 +308,7 @@
                     <div class="modal-body py-4">
                         <input type="hidden" name="PurchaseOrderId" value="@Model.Info.Id" />
                         <input type="hidden" name="PurchaseOrderItemId" id="modalItemId" />
+                        <input type="hidden" name="QuantityDecimalPlaces" id="modalDecimalPlaces" value="0" />
                         <input type="hidden" name="OversupplyAction" id="modalOversupplyAction" value="" />
                         <input type="hidden" name="DirectShipOrderId" id="modalDsOrderId" value="" />
                         <input type="hidden" name="DirectShipOrderItemId" id="modalDsOrderItemId" value="" />
@@ -1157,6 +1159,8 @@
                         receivedQtyInput.dataset.decimals = String(receiveDecimalPlaces);
                         receivedQtyInput.dataset.decimalBound = '';
                         window.DecimalFields?.bindInput?.(receivedQtyInput);
+                        const modalDpInput = document.getElementById('modalDecimalPlaces');
+                        if (modalDpInput) modalDpInput.value = receiveDecimalPlaces;
                         itemRemainingQty = parseFloat(remainingRaw) || 0;
                         document.getElementById('oversupplyWarningPanel').classList.add('d-none');
                         document.getElementById('modalOversupplyAction').value = '';
@@ -1535,9 +1539,12 @@
                 btnAddProduct.classList.remove('d-none');
                 const itemQtyInput = document.getElementById('itemQuantity');
                 if (itemQtyInput) {
-                    itemQtyInput.dataset.decimals = String(product.quantityDecimalPlaces ?? 0);
+                    const dp = String(product.quantityDecimalPlaces ?? 0);
+                    itemQtyInput.dataset.decimals = dp;
                     itemQtyInput.dataset.decimalBound = '';
                     window.DecimalFields?.bindInput?.(itemQtyInput);
+                    const addDpInput = document.getElementById('addItemDecimalPlaces');
+                    if (addDpInput) addDpInput.value = dp;
                 }
 
                 // Fetch giá nhập gần nhất

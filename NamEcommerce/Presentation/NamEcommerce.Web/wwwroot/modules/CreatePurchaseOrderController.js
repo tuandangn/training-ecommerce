@@ -296,6 +296,7 @@ export default class CreatePurchaseOrderController {
                 </div>
                 <input type="text" class="visually-hidden product-id" name="Items[${index}].ProductId" value="${p.id}"
                     data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
+                <input type="hidden" name="Items[${index}].QuantityDecimalPlaces" value="${p.quantityDecimalPlaces ?? 0}" />
                 <span class="small text-danger field-validation-valid" data-valmsg-for="Items[${index}].ProductId" data-valmsg-replace="true"></span>
             </td>
             <td class="text-end">

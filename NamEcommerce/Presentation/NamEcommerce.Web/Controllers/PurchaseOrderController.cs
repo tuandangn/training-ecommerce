@@ -229,7 +229,8 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             ProductId = model.ProductId ?? default,
             Quantity = model.Quantity ?? 0,
             UnitCost = model.UnitCost ?? 0,
-            Note = model.Note
+            Note = model.Note,
+            QuantityDecimalPlaces = model.QuantityDecimalPlaces
         });
 
         if (!result.Success)

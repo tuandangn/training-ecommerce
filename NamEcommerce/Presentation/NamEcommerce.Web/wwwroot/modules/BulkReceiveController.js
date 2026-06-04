@@ -147,9 +147,12 @@ export default class BulkReceiveController {
                 const item = this.#itemsById.get(e.target.value);
                 const qtyInput = tr.querySelector('.bulk-row-qty');
                 if (qtyInput && item) {
-                    qtyInput.dataset.decimals = String(item.decimalPlaces ?? 0);
+                    const dp = String(item.decimalPlaces ?? 0);
+                    qtyInput.dataset.decimals = dp;
                     qtyInput.dataset.decimalBound = '';
                     window.DecimalFields?.bindInput?.(qtyInput);
+                    const dpInput = tr.querySelector('.bulk-row-decimal-places');
+                    if (dpInput) dpInput.value = dp;
                 }
                 this.#refreshRowHint(tr);
                 this.#syncRowWarehouse(tr);
@@ -230,6 +233,7 @@ export default class BulkReceiveController {
                 <input name="Items[${idx}].Quantity"
                        class="form-control form-control-sm text-end bulk-row-qty no-additional-element no-hint"
                        data-decimal="quantity" data-decimals="${presetItemId ? (this.#itemsById.get(presetItemId)?.decimalPlaces ?? 0) : 0}" value="${escapeHtml(qtyValue)}" placeholder="0" />
+                <input type="hidden" name="Items[${idx}].QuantityDecimalPlaces" class="bulk-row-decimal-places" value="${presetItemId ? (this.#itemsById.get(presetItemId)?.decimalPlaces ?? 0) : 0}" />
             </td>
             <td class="text-end pe-2">
                 <input name="Items[${idx}].ActualUnitCost"

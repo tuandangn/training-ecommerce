@@ -57,8 +57,9 @@
                         <div class="col-sm-6">
                             <label asp-for="DecimalPlaces" class="form-label"></label>
                             <select asp-for="DecimalPlaces" class="form-select">
-                                <option value="0">Không (chỉ số nguyên)</option>
-                                <option value="2">Có (2 chữ số thập phân)</option>
+                                <option value="0">0</option>
+                                <option value="1">1 chữ số (0.1 -> 0.9)</option>
+                                <option value="2">2 chữ số (0.01 -> 0.99)</option>
                             </select>
                         </div>
                     </div>

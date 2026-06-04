@@ -14,7 +14,7 @@ public abstract record BaseUnitMeasurementDto
         if (string.IsNullOrEmpty(Name))
             throw new UnitMeasurementDataIsInvalidException("Error.UnitMeasurementNameRequired");
 
-        if (DecimalPlaces is not (0 or 2))
+        if (DecimalPlaces is not (0 or 1 or 2))
             throw new UnitMeasurementDataIsInvalidException("Error.UnitMeasurementDecimalPlacesInvalid");
     }
 }

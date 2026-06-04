@@ -17,36 +17,108 @@
     function stripFormatting(str, decimals) {
         if (!str) return '';
         str = str.trim();
-        if (!decimals) return str.replace(/[^\d]/g, '');
-        var lastDot = str.lastIndexOf('.');
-        var lastComma = str.lastIndexOf(',');
-        if (lastDot === -1 && lastComma === -1) return str.replace(/[^\d]/g, '');
-        if (lastComma > lastDot) return str.replace(/\./g, '').replace(',', '.');
-        return str.replace(/,/g, '');
+
+        // 1. Giữ lại dấu âm (-) nếu có ở đầu chuỗi
+        const isNegative = str.startsWith('-');
+
+        // 2. Xác định vị trí dấu chấm và dấu phẩy cuối cùng
+        const lastDot = str.lastIndexOf('.');
+        const lastComma = str.lastIndexOf(',');
+
+        let cleanStr = str;
+
+        if (lastDot !== -1 || lastComma !== -1) {
+            if (lastComma > lastDot) {
+                // Định dạng kiểu VN/Đức: 1.234.567,89 -> Xóa chấm, đổi phẩy thành chấm
+                cleanStr = str.replace(/\./g, '').replace(',', '.');
+            } else {
+                // Định dạng kiểu Mỹ: 1,234,567.89 -> Xóa phẩy
+                cleanStr = str.replace(/,/g, '');
+            }
+        }
+
+        // 3. Xóa tất cả các ký tự không phải số hoặc dấu chấm thập phân
+        cleanStr = cleanStr.replace(/[^\d.]/g, '');
+
+        // 4. Ép kiểu về số Float để xử lý số lượng chữ số thập phân
+        let num = parseFloat(cleanStr);
+        if (isNaN(num)) return '';
+
+        // Khôi phục lại dấu âm ban đầu
+        if (isNegative) num = -num;
+
+        // 5. Xử lý tham số decimals
+        decimals = (decimals === undefined) ? null : parseInt(decimals, 10);
+
+        if (decimals !== null && !isNaN(decimals)) {
+            return num.toFixed(decimals);
+        }
+
+        // Nếu không truyền decimals, trả về chuỗi số nguyên bản đã làm sạch
+        return num.toString();
     }
 
-    function formatCurrency(raw, endSymbol) {
-        var n = parseInt(raw, 10);
+    function stripInputFormatting(input) {
+        if (!input || !(input instanceof HTMLInputElement)) throw new Error('Invalid input element');
+        var value = input.value;
+        if (!value) return stripFormatting(value, 0);
+        var decimals = parseInt(input.dataset.decimals, 10) || 0;
+        return stripFormatting(value, decimals);
+    }
+
+    function formatCurrency(raw, endSymbol, decimals) {
+        // 1. Chuyển đổi thành số thực (Float) thay vì số nguyên (Int)
+        const n = parseFloat(raw);
         if (isNaN(n)) return raw;
-        var currencyText = n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        if (endSymbol) currencyText += ' ' + endSymbol;
+
+        // 2. Xác định số lượng chữ số thập phân (mặc định tiền tệ thường là 0)
+        decimals = (decimals === undefined) ? 0 : parseInt(decimals, 10);
+
+        // 3. Làm tròn số theo decimals được truyền vào
+        const fixedNumber = n.toFixed(decimals);
+        const parts = fixedNumber.split('.');
+
+        // Định dạng dấu chấm phân cách hàng nghìn cho phần số nguyên
+        let currencyText = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+        // 4. Nếu có phần thập phân (và decimals > 0), ghép nó vào bằng dấu phẩy
+        if (parts[1] && parseInt(parts[1], 10) > 0) {
+            currencyText += ',' + parts[1];
+        }
+
+        // 5. Thêm ký hiệu tiền tệ ở cuối nếu có
+        if (endSymbol) {
+            currencyText += ' ' + endSymbol;
+        }
+
         return currencyText;
     }
+
     function formatCurrencyWithSymbol(raw) {
         return formatCurrency(raw, '\u20ab');
     }
 
     function formatQuantity(raw, decimals) {
-        decimals = (decimals === undefined) ? 2 : parseInt(decimals, 10);
+        // 1. Xác định số lượng chữ số thập phân (mặc định là 0 nếu undefined)
+        decimals = (decimals === undefined) ? 0 : parseInt(decimals, 10);
+
         const n = parseFloat(raw);
         if (isNaN(n)) return raw;
-        if (decimals === 0)
-            return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        const parts = n.toFixed(2).split('.');
-        const decimalValue = parseFloat(parts[1]);
-        if (isNaN(decimalValue) || decimalValue === 0)
-            return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        return parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + parts[1];
+
+        // 2. Dùng toFixed(decimals) để làm tròn chuẩn theo tham số truyền vào
+        const fixedNumber = n.toFixed(decimals);
+        const parts = fixedNumber.split('.');
+
+        // Định dạng dấu chấm phân cách hàng nghìn cho phần số nguyên
+        const formattedInteger = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+        // 3. Nếu không có phần thập phân hoặc decimals = 0 thì chỉ trả về phần nguyên
+        if (!parts[1] || parseInt(parts[1], 10) === 0) {
+            return formattedInteger;
+        }
+
+        // 4. Trả về kết quả kết hợp với phần thập phân sau dấu phẩy
+        return formattedInteger + ',' + parts[1];
     }
 
     var SUFFIX_SVG =
@@ -99,7 +171,6 @@
         input.dataset.decimalBound = '1';
 
         var type = input.dataset.type;
-        var decimals = parseInt(input.dataset.decimals || '0', 10);
         // Flag ngan event 'input' / 'change' fire khi chinh code minh gan .value
         var _formatting = false;
 
@@ -125,12 +196,13 @@
 
         input.addEventListener('focus', function () {
             _formatting = true;
-            this.value = stripFormatting(this.value, decimals);
+            this.value = stripInputFormatting(this);
             this.select();
             _formatting = false;
         });
 
-        input.addEventListener('blur', function () {
+        input.addEventListener('blur', function (e) {
+            var decimals = parseInt(this.dataset.decimals || '0', 10);
             var raw = stripFormatting(this.value, decimals);
 
             // Validate truoc khi format
@@ -152,6 +224,7 @@
         input.addEventListener('keypress', function (e) {
             if (e.key == 'Enter' || e.code == 'Enter' || e.keyCode == 13)
                 return;
+            var decimals = parseInt(this.dataset.decimals || '0', 10);
             var char = String.fromCharCode(e.which);
             if (!/\d/.test(char) && !(decimals > 0 && char === '.')) e.preventDefault();
             if (char === '.' && this.value.includes('.')) e.preventDefault();
@@ -159,6 +232,7 @@
 
         input.addEventListener('paste', function (e) {
             e.preventDefault();
+            var decimals = parseInt(this.dataset.decimals || '0', 10);
             var pasted = (e.clipboardData || window.clipboardData).getData('text');
             document.execCommand('insertText', false, stripFormatting(pasted, decimals));
         });
@@ -298,7 +372,7 @@
         if (input.dataset.decimalBound === '1') return { input: input };
 
         var isCurr = (type === 'currency');
-        var decimals = isCurr ? 0 : parseInt(input.dataset.decimals ?? '2', 10);
+        var decimals = isCurr ? 0 : parseInt(input.dataset.decimals ?? '0', 10);
 
         var opts = Object.assign({
             showHint: false,
@@ -426,6 +500,7 @@
         formatCurrencyWithSymbol: formatCurrencyWithSymbol,
         formatQuantity: formatQuantity,
         stripFormatting: stripFormatting,
+        stripInputFormatting: stripInputFormatting,
         getFormData: getFormData
     };
 

@@ -66,7 +66,8 @@
                                             {
                                                 foreach (var unitMeasurement in Model.AvailableUnitMeasurements)
                                                 {
-                                                    <option value="@unitMeasurement.Id" selected="@(unitMeasurement.Id == Model.UnitMeasurementId)">
+                                                    var dp = Model.UnitMeasurementDecimalPlacesMap.TryGetValue(unitMeasurement.Id.ToString(), out var v) ? v : 0;
+                                                    <option value="@unitMeasurement.Id" selected="@(unitMeasurement.Id == Model.UnitMeasurementId)" data-decimalplaces="@dp">
                                                         @unitMeasurement.Name
                                                     </option>
                                                 }
@@ -140,8 +141,9 @@
                                                                     <span asp-validation-for="ProductInventory.ProductStocks[@i].WarehouseId" class="text-danger small"></span>
                                                                 </td>
                                                                 <td class="text-end" style="max-width:150px;">
+                                                                    @{ var initDp = Model.UnitMeasurementId.HasValue && Model.UnitMeasurementDecimalPlacesMap.TryGetValue(Model.UnitMeasurementId.Value.ToString(), out var initDpVal) ? initDpVal : 0; }
                                                                     <input name="ProductInventory.ProductStocks[@i].Quantity"
-                                                                           value="@stock.Quantity.DisplayQuantity()" data-decimal="quantity"
+                                                                           value="@stock.Quantity.DisplayQuantity()" data-decimal="quantity" data-decimals="@initDp"
                                                                            class="form-control form-control-sm text-end stock-qty-input"
                                                                            data-index="@i" placeholder="Nhập số lượng"
                                                                            data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0"
@@ -288,6 +290,20 @@
                 bootstrap.Modal.getInstance(document.getElementById('confirmOpeningModal'))?.hide();
                 submitBtn.click();
             });
+
+            // Update data-decimals on stock qty inputs when UnitMeasurement changes
+            const unitMeasurementSelect = document.getElementById('UnitMeasurementId');
+            if (unitMeasurementSelect) {
+                unitMeasurementSelect.addEventListener('change', function () {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const dp = parseInt(selectedOption.dataset.decimalplaces ?? '0', 10);
+                    document.querySelectorAll('.stock-qty-input').forEach(input => {
+                        input.dataset.decimals = String(dp);
+                        input.dataset.decimalBound = '';
+                        window.DecimalFields?.bindInput?.(input);
+                    });
+                });
+            }
         })();
     </script>
 }

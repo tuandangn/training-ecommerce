@@ -112,6 +112,7 @@
                                                     <input type="text" class="visually-hidden product-id"
                                                            name="Items[@i].ProductId" value="@item.ProductId" data-val="true"
                                                            data-val-required="Vui lòng chọn hàng hóa." />
+                                                    <input type="hidden" name="Items[@i].QuantityDecimalPlaces" value="@item.QuantityDecimalPlaces" />
                                                     <span class="small text-danger" asp-validation-for="Items[i].ProductId"></span>
                                                     @if (item.AvailableVendors.Any())
                                                     {

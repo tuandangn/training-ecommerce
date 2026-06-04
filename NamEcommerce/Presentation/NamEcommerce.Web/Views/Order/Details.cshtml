@@ -62,6 +62,7 @@
                         </div>
                         <input type="hidden" id="editItemId" name="ItemId" />
                         <input type="hidden" name="OrderId" value="@Model.Id" />
+                        <input type="hidden" id="editDecimalPlaces" name="QuantityDecimalPlaces" value="0" />
                         <div class="row g-3">
                             <div class="col-6">
                                 <label class="form-label" for="editQuantity">Số lượng</label>
@@ -106,6 +107,7 @@
                 </div>
                 <form action="#" method="post" id="addProductForm">
                     <input type="hidden" name="OrderId" value="@Model.Id" />
+                    <input type="hidden" id="addProductDecimalPlaces" name="QuantityDecimalPlaces" value="0" />
                     <div class="modal-body py-3">
                         <div class="mb-3">
                             <div id="productPicker"></div>

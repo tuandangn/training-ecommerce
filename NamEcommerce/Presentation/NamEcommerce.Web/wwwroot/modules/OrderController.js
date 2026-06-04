@@ -14,12 +14,13 @@ class Customer {
 }
 
 class ProductInfo {
-    constructor({ id, name, availableQty, picture, unitPrice }) {
+    constructor({ id, name, availableQty, picture, unitPrice, quantityDecimalPlaces }) {
         this.id = id;
         this.name = name ?? '';
         this.availableQty = availableQty ?? 0;
         this.picture = picture ?? '';
         this.unitPrice = unitPrice ?? 0;
+        this.quantityDecimalPlaces = quantityDecimalPlaces ?? 0;
     }
 }
 
@@ -220,6 +221,7 @@ export default class OrderController {
                 </div>
                 <input type="text" class="visually-hidden product-id" name="Items[${index}].ProductId" value="${p.id}"
                     data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
+                <input type="hidden" name="Items[${index}].QuantityDecimalPlaces" value="${p.quantityDecimalPlaces ?? 0}" />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="Items[${index}].ProductId"
                     data-valmsg-replace="true"></span>
@@ -289,7 +291,7 @@ export default class OrderController {
             var unitPriceRaw = DecimalFields.stripFormatting(inputUnitPrice.value)
             return DecimalFields.isValidDecimal(inputUnitPrice, unitPriceRaw);
         });
-        
+
         inputQuantity.addEventListener('input', inputQtyChangeDebounced);
         inputQuantity.addEventListener('focusin', () => inputUnitPriceChangeDebounced.cancel());
 
@@ -570,7 +572,7 @@ export class AddItemController {
         this.#getCustomerId = getCustomerId;
 
         getEl('itemQuantity').addEventListener('input', (e) => {
-            this.state.quantity = parseNumber(DecimalFields.stripFormatting(e.target.value, 2), 1);
+            this.state.quantity = parseNumber(DecimalFields.stripInputFormatting(e.target), 1);
         });
         getEl('itemUnitPrice').addEventListener('input', (e) => {
             this.state.unitPrice = parseNumber(DecimalFields.stripFormatting(e.target.value));
@@ -725,14 +727,23 @@ export class AddItemController {
     #render() {
         const { productInfo, quantity, unitPrice } = this.state;
 
-        getEl('itemQuantity').value = quantity;
-        getEl('itemUnitPrice').value = unitPrice;
+        const itemQuantity = getEl('itemQuantity');
+        itemQuantity.value = DecimalFields.formatQuantity(quantity, productInfo?.quantityDecimalPlaces);
+        var currentDecimals = parseInt(itemQuantity.dataset.decimals ?? '0', 10);
+        if (currentDecimals !== productInfo?.quantityDecimalPlaces) {
+            itemQuantity.dataset.decimals = productInfo?.quantityDecimalPlaces ?? 0;
+            if (productInfo)
+                DecimalFields.wrapExistingInput(itemQuantity, 'quantity');
+        }
 
-        const currencyHint = getEl('modalProductInfo').querySelector('.currency-hint');
+        getEl('itemUnitPrice').value = DecimalFields.formatCurrency(unitPrice);
+
+        const modalProductInfo = getEl('modalProductInfo');
+        const currencyHint = modalProductInfo.querySelector('.currency-hint');
         if (currencyHint) currencyHint.textContent = '';
 
         const hasProduct = Boolean(productInfo);
-        getEl('modalProductInfo').classList.toggle('d-none', !hasProduct);
+        modalProductInfo.classList.toggle('d-none', !hasProduct);
         getEl('addItemToTable').classList.toggle('d-none', !hasProduct);
     }
 }

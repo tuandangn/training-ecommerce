@@ -86,8 +86,9 @@ async function submitFormAsync(form) {
         productPickerEl.addEventListener('select', (e) => {
             const product = e.detail?.product;
             if (product) {
-                console.log(product);
                 addProductId.value = product.id;
+                const dpInput = document.getElementById('addProductDecimalPlaces');
+                if (dpInput) dpInput.value = product.quantityDecimalPlaces ?? 0;
                 addProductQuantity.value = 1;
                 addProductQuantity.dataset.decimals = String(product.quantityDecimalPlaces ?? 0);
                 addProductQuantity.dataset.decimalBound = '';
@@ -148,12 +149,14 @@ async function submitFormAsync(form) {
             $('#editItemId').val(data.id);
             $('#editProductName').text(data.product);
             const editQtyEl = document.getElementById('editQuantity');
+            const dp = parseInt(data.decimalplaces ?? 0, 10);
             if (editQtyEl) {
-                const dp = parseInt(data.decimalplaces ?? 0, 10);
                 editQtyEl.dataset.decimals = String(dp);
                 editQtyEl.dataset.decimalBound = '';
                 window.DecimalFields?.bindInput?.(editQtyEl);
             }
+            const editDpInput = document.getElementById('editDecimalPlaces');
+            if (editDpInput) editDpInput.value = dp;
             $('#editQuantity').val(DecimalFields.formatQuantity(data.qty, data.decimalplaces ?? 0));
             $('#editUnitPrice').val(DecimalFields.formatCurrency(data.price));
             if (data.availableqty > 0) {

@@ -26,6 +26,9 @@ public sealed class ReceivePurchaseOrderItemHandler : IRequestHandler<ReceivePur
 
     public async Task<ReceivePurchaseOrderItemResultModel> Handle(ReceivePurchaseOrderItemCommand request, CancellationToken cancellationToken)
     {
+        if (request.QuantityDecimalPlaces == 0 && request.ReceivedQuantity != Math.Floor(request.ReceivedQuantity))
+            return new ReceivePurchaseOrderItemResultModel { Success = false, ErrorMessage = "Error.QuantityMustBeInteger" };
+
         var currentUser = await _currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
 
         var upgradeExisting = request.DirectShipExistingAllocationId.HasValue

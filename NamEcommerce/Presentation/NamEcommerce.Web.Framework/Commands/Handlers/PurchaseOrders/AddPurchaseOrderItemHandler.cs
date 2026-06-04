@@ -17,6 +17,9 @@ public sealed class AddPurchaseOrderItemHandler : IRequestHandler<AddPurchaseOrd
 
     public async Task<AddPurchaseOrderItemResultModel> Handle(AddPurchaseOrderItemCommand request, CancellationToken cancellationToken)
     {
+        if (request.QuantityDecimalPlaces == 0 && request.Quantity != Math.Floor(request.Quantity))
+            return new AddPurchaseOrderItemResultModel { Success = false, ErrorMessage = "Error.QuantityMustBeInteger" };
+
         var result = await _purchaseOrderAppService.AddPurchaseOrderItemAsync(new AddPurchaseOrderItemAppDto
         {
             PurchaseOrderId = request.PurchaseOrderId,

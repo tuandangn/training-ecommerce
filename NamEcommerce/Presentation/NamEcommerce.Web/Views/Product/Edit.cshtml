@@ -63,7 +63,8 @@
                                         {
                                             foreach (var unitMeasurement in Model.AvailableUnitMeasurements)
                                             {
-                                                <option value="@unitMeasurement.Id" selected="@(unitMeasurement.Id == Model.UnitMeasurementId)">
+                                                var dpEdit = Model.UnitMeasurementDecimalPlacesMap.TryGetValue(unitMeasurement.Id.ToString(), out var dpEditVal) ? dpEditVal : 0;
+                                                <option value="@unitMeasurement.Id" selected="@(unitMeasurement.Id == Model.UnitMeasurementId)" data-decimalplaces="@dpEdit">
                                                     @unitMeasurement.Name
                                                 </option>
                                             }
@@ -158,4 +159,19 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script defer>
+        (function () {
+            const unitMeasurementSelect = document.getElementById('UnitMeasurementId');
+            if (!unitMeasurementSelect) return;
+            unitMeasurementSelect.addEventListener('change', function () {
+                const selectedOption = this.options[this.selectedIndex];
+                const dp = parseInt(selectedOption.dataset.decimalplaces ?? '0', 10);
+                document.querySelectorAll('.stock-qty-input').forEach(input => {
+                    input.dataset.decimals = String(dp);
+                    input.dataset.decimalBound = '';
+                    window.DecimalFields?.bindInput?.(input);
+                });
+            });
+        })();
+    </script>
 }
