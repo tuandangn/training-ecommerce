@@ -474,7 +474,6 @@ $RECYCLE.BIN/
 .playwright-mcp/
 .codegraph/
 *.pid
-plans/
 **/appsettings.Production.json
 **/appsettings.Development.json
 **/appsettings.E2E.json
