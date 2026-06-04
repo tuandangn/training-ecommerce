@@ -109,11 +109,11 @@ export default class DeliveryNoteController {
             const deliveredQty = Number(item.quantity || 0);
             return `<tr data-item-id="${item.id}" data-delivered-qty="${deliveredQty}">
                             <td class="pe-3">${this.#escapeHtml(item.productName)}</td>
-                            <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty)}</td>
+                            <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty, item.quantityDecimalPlaces)}</td>
                             <td class="pe-3">
                                 <input class="form-control form-control-sm text-end accepted-qty" name="acceptedQty_${item.id}"
-                                    value="${DecimalFields.formatQuantity(deliveredQty)}"
-                    data-decimal="quantity" data-val="true"
+                                    value="${DecimalFields.formatQuantity(deliveredQty, item.quantityDecimalPlaces)}"
+                    data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" data-val="true"
                     data-val-required="Vui lòng nhập số lượng."
                     data-val-range="Số lượng phải nhỏ hơn ${DecimalFields.formatQuantity(deliveredQty)}." data-val-range-max="${deliveredQty}"
                     data-val-range-min="0"
@@ -182,31 +182,29 @@ export default class DeliveryNoteController {
             window.NotificationCenter.warning('Vui lòng nhập lý do trả hàng.');
             return null;
         }
+        if (!hasRejectedItems) {
+            $('#compensateInNextDelivery').prop('checked', false);
+        }
 
         return items;
     }
 
     #deliveredModalEvents() {
-        const self = this;
-        this.#deliveredContainer.addEventListener('hidden.bs.modal', () => this.#resetDeliveredControls());
-
-        // Image Preview inside Modal
-        $("#deliveryProofPicture").change(function () {
-            var input = this;
-            if (input.files && input.files[0]) {
-                var reader = new FileReader();
-
-                reader.onload = function (e) {
-                    $('#previewContainer').removeClass('d-none');
-                    $('#imagePreview').attr('src', e.target.result).show();
-                }
-
-                reader.readAsDataURL(input.files[0]);
-                self.#deliveredContainer.querySelector('[data-valmsg-for="pictureFile"]').textContent = '';
-            } else {
-                $('#previewContainer').addClass('d-none');
-                $('#imagePreview').hide();
+        this.#deliveredContainer.addEventListener('hidden.bs.modal', () => {
+            // Destroy uploader so it re-inits fresh on next open
+            const uploaderEl = this.#deliveredContainer.querySelector('[data-image-uploader]');
+            if (uploaderEl?._imageUploader) {
+                uploaderEl._imageUploader.destroy();
+                delete uploaderEl._imageUploader;
             }
+            this.#resetDeliveredControls();
+        });
+
+        this.#deliveredContainer.addEventListener('shown.bs.modal', () => {
+            // Re-init image uploader each time modal opens
+            import('/modules/image-uploader.js').then(({ initImageUploaders }) => {
+                initImageUploaders(this.#deliveredContainer);
+            });
         });
 
         // Form Submit for Delivery Proof
@@ -241,7 +239,24 @@ export default class DeliveryNoteController {
 
             const rejectedQty = Math.max(0, deliveredQty - acceptedQty);
             $row.find('.rejected-qty').text(DecimalFields.formatQuantity(rejectedQty));
-            $('#rejectReason').closest('div').toggleClass('d-none', rejectedQty <= 0);
+            updateReturnControls();
+        }
+
+        function updateReturnControls() {
+            let hasRejectedItems = false;
+            $('#acceptanceTableBody tr').each(function () {
+                const $row = $(this);
+                const deliveredQty = Number($row.data('delivered-qty') || 0);
+                let acceptedQty = parseFloat(DecimalFields.stripFormatting($row.find('.accepted-qty').val(), 2));
+                if (!acceptedQty) acceptedQty = 0;
+                if (Math.max(0, deliveredQty - acceptedQty) > 0) hasRejectedItems = true;
+            });
+
+            $('#rejectReason').closest('div').toggleClass('d-none', !hasRejectedItems);
+            $('#compensateInNextDeliveryContainer').toggleClass('d-none', !hasRejectedItems);
+            if (!hasRejectedItems) {
+                $('#compensateInNextDelivery').prop('checked', false);
+            }
         }
     }
 
@@ -249,11 +264,10 @@ export default class DeliveryNoteController {
         $('#receiverName').val('');
         $('#rejectReason').val('');
         $('#rejectReason').closest('div').addClass('d-none');
+        $('#compensateInNextDelivery').prop('checked', false);
+        $('#compensateInNextDeliveryContainer').addClass('d-none');
         $('#agreedCustomerCharge').val('0');
         $('#agreedCustomerChargeReason').val('');
-        $('#deliveryProofPicture').val('');
-        $('#previewContainer').addClass('d-none');
-        $('#imagePreview').hide();
         $('#acceptanceTableBody').html('');
         $('#acceptanceItemsJson').val('');
     }
@@ -328,7 +342,7 @@ export default class DeliveryNoteController {
             const deliveredQty = Number(item.quantity || 0);
             return `<tr>
                             <td class="pe-3">${this.#escapeHtml(item.productName)}</td>
-                            <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty)}</td>
+                            <td class="text-end pe-3">${DecimalFields.formatQuantity(deliveredQty, item.quantityDecimalPlaces)}</td>
                         </tr>`;
         }).join('');
         const container = document.getElementById('rejectTableBody');
@@ -371,7 +385,7 @@ export default class DeliveryNoteController {
 
     #resetRejectControls() {
         this.#rejectContainer.querySelector('#rejectDnCode').textContent = this.#rejectState.code ? 'Phiếu: ' + this.#rejectState.code : '';
-        const option = this.#rejectContainer.querySelector(`#rejectWarehouseId option[value="${this.#rejectState.warehouse}"]`);
+        const option = this.#rejectContainer.querySelector(`#rejectReturnWarehouseId option[value="${this.#rejectState.warehouse}"]`);
         if(option)
             this.#rejectContainer.querySelector('#rejectReturnWarehouseId').value = this.#rejectState.warehouse;
         else

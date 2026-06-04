@@ -19,6 +19,10 @@ public sealed class OrdersController(IMediator mediator) : ControllerBase
         var model = await mediator.Send(new GetCustomerOrderDetailsQuery(id)).ConfigureAwait(false);
         return model is null ? NotFound() : Ok(model);
     }
+
+    [HttpPatch("{id:guid}/note")]
+    public async Task<IActionResult> UpdateNote(Guid id, [FromBody] UpdateCustomerOrderNoteCommand command)
+        => Ok(await mediator.Send(command with { OrderId = id }).ConfigureAwait(false));
 }
 
 [ApiController]

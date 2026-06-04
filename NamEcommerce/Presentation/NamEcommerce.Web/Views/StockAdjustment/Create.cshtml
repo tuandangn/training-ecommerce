@@ -51,16 +51,17 @@
                                                 <div class="fw-medium">@item.ProductName</div>
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
                                                 <input type="hidden" name="Items[@i].ProductName" value="@item.ProductName" />
+                                                <input type="hidden" name="Items[@i].QuantityDecimalPlaces" value="@item.QuantityDecimalPlaces" />
                                             </td>
                                             <td class="text-end">
                                                 <input name="Items[@i].SystemQuantity" value="@item.SystemQuantity"
                                                        class="form-control form-control-sm text-end item-system-qty"
-                                                       data-decimal="quantity" readonly />
+                                                       data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" readonly />
                                             </td>
                                             <td class="text-end">
                                                 <input name="Items[@i].PhysicalQuantity" value="@item.PhysicalQuantity"
                                                        class="form-control form-control-sm text-end item-physical-qty"
-                                                       data-decimal="quantity" min="0" placeholder="0" />
+                                                       data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" min="0" placeholder="0" />
                                             </td>
                                             <td class="text-end item-delta text-muted small">
                                                 @{ var delta = item.PhysicalQuantity - item.SystemQuantity; }

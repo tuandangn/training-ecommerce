@@ -43,6 +43,9 @@ public sealed class DeliveryNoteDetailsModel
     public string? CustomerPortalUrl { get; set; }
     public string? CustomerPortalQrCodeSvg { get; set; }
 
+    public string? RejectionReason { get; set; }
+    public string? ReturnedToWarehouseName { get; set; }
+
     public IList<DeliveryNoteItemModel> Items { get; set; } = [];
     public ShortageInfoModel ShortageInfo { get; set; } = new();
 }
@@ -50,8 +53,11 @@ public sealed class DeliveryNoteDetailsModel
 public sealed class DeliveryNoteItemModel
 {
     public Guid Id { get; set; }
+    public Guid WarehouseId { get; set; }
+    public string? WarehouseName { get; set; }
     public string ProductName { get; set; } = string.Empty;
     public decimal Quantity { get; set; }
+    public int QuantityDecimalPlaces { get; set; }
     public decimal UnitPrice { get; set; }
     public decimal SubTotal { get; set; }
 
@@ -60,4 +66,5 @@ public sealed class DeliveryNoteItemModel
 
     /// <summary>Số đang giữ trong VR Draft/Inspecting.</summary>
     public decimal PendingReturnQuantity { get; set; }
+    public decimal CompensatedReturnQuantity { get; set; }
 }

@@ -23,4 +23,5 @@ public sealed class CreateGoodsReceiptItemCommand
     public Guid? WarehouseId { get; init; }
     public decimal Quantity { get; init; }
     public decimal? UnitCost { get; init; }
+    public int QuantityDecimalPlaces { get; init; }
 }

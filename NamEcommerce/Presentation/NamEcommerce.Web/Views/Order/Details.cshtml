@@ -19,7 +19,7 @@
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
                 <li class="breadcrumb-item"><a asp-action="List" asp-controller="Order" class="text-decoration-none">Đơn bán</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Đơn bán @Model.Code</li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.Code</li>
             </ol>
         </nav>
     </div>
@@ -62,6 +62,7 @@
                         </div>
                         <input type="hidden" id="editItemId" name="ItemId" />
                         <input type="hidden" name="OrderId" value="@Model.Id" />
+                        <input type="hidden" id="editDecimalPlaces" name="QuantityDecimalPlaces" value="0" />
                         <div class="row g-3">
                             <div class="col-6">
                                 <label class="form-label" for="editQuantity">Số lượng</label>
@@ -106,6 +107,7 @@
                 </div>
                 <form action="#" method="post" id="addProductForm">
                     <input type="hidden" name="OrderId" value="@Model.Id" />
+                    <input type="hidden" id="addProductDecimalPlaces" name="QuantityDecimalPlaces" value="0" />
                     <div class="modal-body py-3">
                         <div class="mb-3">
                             <div id="productPicker"></div>
@@ -349,6 +351,19 @@
             </div>
         </div>
     </div>
+}
+
+@if (Model.DeliveryWorkflow.Notes.Any(note => note.Status == (int)DeliveryNoteStatus.Confirmed || note.Status == (int)DeliveryNoteStatus.Delivering))
+{
+    <partial name="_DeliveryNote.ConfirmDelivered" />
+}
+
+@if (Model.AvailableWarehouses is not null
+    && Model.DeliveryWorkflow.Notes.Any(note => note.IsDirectShip
+        && note.Status != (int)DeliveryNoteStatus.Delivered
+        && note.Status != (int)DeliveryNoteStatus.Cancelled))
+{
+    <partial name="_DeliveryNote.ConfirmReject" model="Model.AvailableWarehouses" />
 }
 
 @section Scripts {

@@ -30,17 +30,16 @@ public sealed class WarehouseManager : IWarehouseManager
 
         if (dto.WarehouseType == WarehouseType.DirectTransit && await DirectShipTransitExistsAsync().ConfigureAwait(false))
             throw new DirectShipTransitWarehouseAlreadyExistsException();
-        if (await DoesCodeExistAsync(dto.Code).ConfigureAwait(false))
-            throw new WarehouseCodeExistsException(dto.Code);
-        if (await DoesNameExistAsync(dto.Name).ConfigureAwait(false))
-            throw new WarehouseNameExistsException(dto.Name);
 
-        var warehouse = new Warehouse(dto.Code, dto.Name, dto.WarehouseType)
+        var warehouse = new Warehouse(dto.WarehouseType)
         {
             PhoneNumber = dto.PhoneNumber,
             Address = dto.Address,
-            ManagerUserId = dto.ManagerUserId
+            ManagerUserId = dto.ManagerUserId,
+            DisplayOrder = dto.DisplayOrder
         };
+        await warehouse.SetCodeAsync(dto.Code, this).ConfigureAwait(false);
+        await warehouse.SetNameAsync(dto.Name, this).ConfigureAwait(false);
         warehouse.SetActive(dto.IsActive);
         warehouse.MarkCreated();
 
@@ -107,16 +106,16 @@ public sealed class WarehouseManager : IWarehouseManager
         {
             var normizedKeywords = TextHelper.Normalize(keywords);
             query = query.Where(c =>
-                c.Name.Contains(keywords)
-                || c.Name.Contains(normizedKeywords)
-                || c.NormalizedName.Contains(normizedKeywords)
+                c.Name.Value.Contains(keywords)
+                || c.Name.Value.Contains(normizedKeywords)
+                || c.Name.NormalizedValue.Contains(normizedKeywords)
                 || c.Code.Contains(keywords));
         }
 
         if (types != null && types.Length > 0)
             query = query.Where(c => types.Contains(c.WarehouseType));
 
-        query = query.OrderBy(c => c.Name);
+        query = query.OrderBy(c => c.DisplayOrder).ThenBy(c => c.Name.Value);
 
         var totalCount = query.Count();
         var pagedData = query
@@ -155,6 +154,7 @@ public sealed class WarehouseManager : IWarehouseManager
         warehouse.PhoneNumber = dto.PhoneNumber;
         warehouse.ManagerUserId = dto.ManagerUserId;
         warehouse.ChangeType(dto.WarehouseType);
+        warehouse.DisplayOrder = dto.DisplayOrder;
         warehouse.SetActive(dto.IsActive);
         warehouse.MarkUpdated();
 

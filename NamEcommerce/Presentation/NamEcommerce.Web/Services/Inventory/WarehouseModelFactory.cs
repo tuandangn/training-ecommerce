@@ -25,7 +25,8 @@ public sealed class WarehouseModelFactory : IWarehouseModelFactory
     {
         var model = oldModel ?? new CreateWarehouseModel
         {
-            IsActive = true
+            IsActive = true,
+            DisplayOrder = 1
         };
         model.CodePrefix = CodePrefix;
 
@@ -45,6 +46,7 @@ public sealed class WarehouseModelFactory : IWarehouseModelFactory
             Name = warehouse!.Name,
             Address = warehouse.Address,
             PhoneNumber = warehouse.PhoneNumber,
+            DisplayOrder = warehouse.DisplayOrder,
             IsActive = warehouse.IsActive
         };
         model.CodePrefix = CodePrefix;

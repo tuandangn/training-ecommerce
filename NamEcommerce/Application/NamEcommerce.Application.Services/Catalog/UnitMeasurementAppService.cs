@@ -77,7 +77,8 @@ public sealed class UnitMeasurementAppService : IUnitMeasurementAppService
         var result = await _unitMeasurementManager.CreateUnitMeasurementAsync(new CreateUnitMeasurementDto
         {
             Name = dto.Name,
-            DisplayOrder = dto.DisplayOrder
+            DisplayOrder = dto.DisplayOrder,
+            DecimalPlaces = dto.DecimalPlaces
         }).ConfigureAwait(false);
 
         return new CreateUnitMeasurementResultAppDto
@@ -123,7 +124,8 @@ public sealed class UnitMeasurementAppService : IUnitMeasurementAppService
         var result = await _unitMeasurementManager.UpdateUnitMeasurementAsync(new UpdateUnitMeasurementDto(dto.Id)
         {
             Name = dto.Name,
-            DisplayOrder = dto.DisplayOrder
+            DisplayOrder = dto.DisplayOrder,
+            DecimalPlaces = dto.DecimalPlaces
         }).ConfigureAwait(false);
 
         return new UpdateUnitMeasurementResultAppDto

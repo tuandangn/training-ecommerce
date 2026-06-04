@@ -1,8 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
-using NamEcommerce.Web.Contracts.Configurations;
-using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Models.Catalog;
 using NamEcommerce.Web.Services.Catalog;
@@ -11,13 +9,11 @@ namespace NamEcommerce.Web.Controllers;
 
 public sealed class ProductController : BaseAuthorizedController
 {
-    private readonly AppConfig _appConfig;
     private readonly IMediator _mediator;
     private readonly IProductModelFactory _productModelFactory;
 
-    public ProductController(AppConfig appConfig, IMediator mediator, IProductModelFactory productModelFactory)
+    public ProductController(IMediator mediator, IProductModelFactory productModelFactory)
     {
-        _appConfig = appConfig;
         _mediator = mediator;
         _productModelFactory = productModelFactory;
     }
@@ -46,20 +42,6 @@ public sealed class ProductController : BaseAuthorizedController
             return View(model);
         }
 
-        var imageFileInfo = model.ImageFile != null ? new FileInfoModel
-        {
-            Data = model.ImageFile.GetData() ?? [],
-            MimeType = model.ImageFile.GetMimeType() ?? string.Empty,
-            Extension = model.ImageFile.Extension,
-            FileName = model.ImageFile.FileName
-        } : null;
-        if (imageFileInfo is not null && imageFileInfo.Data.Length > _appConfig.UploadFileMaxSizeInBytes)
-        {
-            ModelState.AddModelError(string.Empty, LocalizeError("Msg.ImageSizeLimit", (int)Math.Floor(_appConfig.UploadFileMaxSizeInBytes / 1024m / 1024)));
-            model = await _productModelFactory.PrepareCreateProductModel(model);
-            return View(model);
-        }
-
         var createProductCommand = new CreateProductCommand
         {
             Name = model.Name!,
@@ -68,13 +50,14 @@ public sealed class ProductController : BaseAuthorizedController
             VendorIds = model.VendorIds,
             UnitMeasurementId = model.UnitMeasurementId,
             DisplayOrder = model.DisplayOrder,
-            ImageFile = imageFileInfo
+            PictureId = model.PictureId,
+            UnitPrice = model.UnitPrice
         };
         if (model.HasExistingStockQuantity)
         {
             createProductCommand.ProductStocks = model.ProductInventory!.ProductStocks
-                .Where(stock => stock.Quantity > 0)
-                .Select(stock => new CreateProductCommand.ProductStockModel(stock.WarehouseId, stock.Quantity));
+                .Where(stock => stock.WarehouseId != Guid.Empty && stock.Quantity > 0 && stock.UnitCost > 0)
+                .Select(stock => new CreateProductCommand.ProductStockModel(stock.WarehouseId, stock.Quantity, stock.UnitCost));
         }
 
         var createProductResult = await _mediator.Send(createProductCommand);
@@ -170,20 +153,6 @@ public sealed class ProductController : BaseAuthorizedController
             return RedirectToAction(nameof(List));
         }
 
-        var imageFileInfo = model.ImageFile != null ? new FileInfoModel
-        {
-            Data = model.ImageFile.GetData() ?? [],
-            MimeType = model.ImageFile.GetMimeType() ?? string.Empty,
-            Extension = model.ImageFile.Extension,
-            FileName = model.ImageFile.FileName
-        } : null;
-        if (imageFileInfo is not null && imageFileInfo.Data.Length > _appConfig.UploadFileMaxSizeInBytes)
-        {
-            ModelState.AddModelError(string.Empty, LocalizeError("Msg.ImageSizeLimit", (int)Math.Floor(_appConfig.UploadFileMaxSizeInBytes / 1024m / 1024)));
-            model = (await _productModelFactory.PrepareEditProductModel(model.Id, model))!;
-            return View(model);
-        }
-
         var updateProductResult = await _mediator.Send(new UpdateProductCommand
         {
             Id = model.Id,
@@ -194,7 +163,7 @@ public sealed class ProductController : BaseAuthorizedController
             UnitMeasurementId = model.UnitMeasurementId,
             NewUnitPrice = model.UnitPrice,
             DisplayOrder = model.DisplayOrder,
-            ImageFile = imageFileInfo,
+            PictureId = model.PictureId,
             ChangePriceReason = model.ChangePriceReason
         });
         if (!updateProductResult.Success)
@@ -224,6 +193,7 @@ public sealed class ProductController : BaseAuthorizedController
             id = productInfo.Id,
             name = productInfo.Name,
             unitMeasurement = productInfo.UnitMeasurement,
+            quantityDecimalPlaces = productInfo.QuantityDecimalPlaces,
             picture = productInfo.PictureUrl,
             unitPrice = productInfo.UnitPrice,
             availableQty = productInfo.QuantityAvailable,
@@ -252,6 +222,7 @@ public sealed class ProductController : BaseAuthorizedController
             id = product.Id,
             name = product.Name,
             unitMeasurement = product.UnitMeasurement,
+            quantityDecimalPlaces = product.QuantityDecimalPlaces,
             picture = product.PictureUrl,
             unitPrice = product.CurrentUnitPrice,
             availableQty = product.QuantityAvailable,
@@ -276,6 +247,20 @@ public sealed class ProductController : BaseAuthorizedController
 
     [HttpGet]
     public async Task<IActionResult> PriceHistory(GetProductPriceHistoryQuery query)
+    {
+        var model = await _mediator.Send(query).ConfigureAwait(false);
+        return Json(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> SalePriceReference(GetProductSalePriceReferenceQuery query)
+    {
+        var model = await _mediator.Send(query).ConfigureAwait(false);
+        return Json(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> PurchasePriceReference(GetProductPurchasePriceReferenceQuery query)
     {
         var model = await _mediator.Send(query).ConfigureAwait(false);
         return Json(model);

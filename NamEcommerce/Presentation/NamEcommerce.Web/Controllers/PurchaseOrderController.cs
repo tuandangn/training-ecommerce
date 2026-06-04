@@ -9,6 +9,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Application.Contracts.Orders;
 using Microsoft.Extensions.Localization;
+using NamEcommerce.Web.Extensions;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -66,14 +67,9 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     {
         var result = await _mediator.Send(command).ConfigureAwait(false);
         if (!result.Success)
-            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+            return this.JsonError(LocalizeError(result.ErrorMessage!));
 
-        return Json(new
-        {
-            success = true,
-            items = result.Items,
-            message = Localizer["Msg.PurchaseOrders.CreateSuccess", result.Items.Count].Value
-        });
+        return this.JsonOk(result.Items, Localizer["Msg.PurchaseOrders.CreateSuccess", result.Items.Count].Value);
     }
 
     [HttpPost]
@@ -193,6 +189,31 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Copy(Guid id)
+    {
+        var result = await _mediator.Send(new CopyPurchaseOrderCommand(id)).ConfigureAwait(false);
+        if (result.Success && result.CreatedId.HasValue)
+        {
+            NotifySuccess("Msg.SaveSuccess");
+            return RedirectToAction(nameof(Details), new { id = result.CreatedId.Value });
+        }
+
+        NotifyError(result.ErrorMessage ?? "Error.InvalidRequest");
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Split([FromBody] SplitPurchaseOrderCommand command)
+    {
+        var result = await _mediator.Send(command).ConfigureAwait(false);
+        if (result.Success && result.CreatedId.HasValue)
+            return this.JsonOk(new { newPurchaseOrderId = result.CreatedId.Value });
+
+        return this.JsonError(LocalizeError(result.ErrorMessage ?? "Error.InvalidRequest"));
+    }
+
+    [HttpPost]
     public async Task<IActionResult> AddPurchaseOrderItem(AddPurchaseOrderItemModel model)
     {
         if (!ModelState.IsValid)
@@ -208,7 +229,8 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             ProductId = model.ProductId ?? default,
             Quantity = model.Quantity ?? 0,
             UnitCost = model.UnitCost ?? 0,
-            Note = model.Note
+            Note = model.Note,
+            QuantityDecimalPlaces = model.QuantityDecimalPlaces
         });
 
         if (!result.Success)
@@ -260,7 +282,8 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             DirectShipOrderItemId = model.DirectShipOrderItemId,
             DirectShipAddress = model.DirectShipAddress,
             DirectShipContactName = model.DirectShipContactName,
-            DirectShipContactPhone = model.DirectShipContactPhone
+            DirectShipContactPhone = model.DirectShipContactPhone,
+            DirectShipExistingAllocationId = model.DirectShipExistingAllocationId
         });
 
         if (!result.Success)
@@ -271,6 +294,38 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
 
         NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(Details), new { id = model.PurchaseOrderId });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> UpdatePurchaseOrderItem([FromBody] EditPurchaseOrderItemModel model)
+    {
+        if (!ModelState.IsValid)
+            return Json(new { success = false, errorMessage = LocalizeError("Error.InvalidRequest", GetErrorMessage()) });
+
+        var purchaseOrder = await _mediator.Send(new GetPurchaseOrderQuery { Id = model.PurchaseOrderId });
+        if (purchaseOrder is null)
+            return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderIsNotFound") });
+
+        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == model.PurchaseOrderItemId);
+        if (purchaseOrderItem is null)
+            return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderItemIsNotFound") });
+
+        if (!purchaseOrder.CanAddItems)
+            return Json(new { success = false, errorMessage = LocalizeError("Error.PurchaseOrderCannotUpdateOrderItems") });
+
+        var result = await _mediator.Send(new UpdatePurchaseOrderItemCommand
+        {
+            PurchaseOrderId = model.PurchaseOrderId,
+            PurchaseOrderItemId = model.PurchaseOrderItemId,
+            Quantity = model.Quantity ?? 0,
+            UnitCost = model.UnitCost ?? 0,
+            Note = model.Note
+        });
+
+        if (!result.Success)
+            return Json(new { success = false, errorMessage = LocalizeError(result.ErrorMessage!) });
+
+        return Json(new { success = true });
     }
 
     [HttpPost]
@@ -301,7 +356,8 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
                 DirectShipOrderItemId = line.DirectShipOrderItemId,
                 DirectShipAddress = line.DirectShipAddress,
                 DirectShipContactName = line.DirectShipContactName,
-                DirectShipContactPhone = line.DirectShipContactPhone
+                DirectShipContactPhone = line.DirectShipContactPhone,
+                DirectShipExistingAllocationId = line.DirectShipExistingAllocationId
             })
             .ToList();
 
@@ -478,6 +534,9 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return Json(Array.Empty<object>());
 
         var items = await _purchaseOrderAppService.GetEligibleOrderItemsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+        var productIds = items.Select(i => i.ProductId).Distinct();
+        var products = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
+        var decimalPlacesByProductId = products.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
 
         return Json(items.Select(item => new
         {
@@ -488,9 +547,32 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             customerPhone = item.CustomerPhone,
             shippingAddress = item.ShippingAddress,
             productName = item.ProductName,
+            quantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(item.ProductId),
             totalQuantity = item.TotalQuantity,
             allocatedOutstanding = item.AllocatedOutstanding,
             availableToAllocate = item.AvailableToAllocate
+        }));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> NonDirectShipAllocations(Guid purchaseOrderItemId)
+    {
+        if (purchaseOrderItemId == Guid.Empty)
+            return Json(Array.Empty<object>());
+
+        var allocations = await _purchaseOrderAppService.GetNonDirectShipAllocationsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+
+        return Json(allocations.Select(a => new
+        {
+            allocationId = a.AllocationId,
+            orderId = a.OrderId,
+            orderItemId = a.OrderItemId,
+            orderCode = a.OrderCode,
+            customerName = a.CustomerName,
+            customerPhone = a.CustomerPhone,
+            shippingAddress = a.ShippingAddress,
+            allocatedQty = a.AllocatedQuantity,
+            remainingQty = a.RemainingQuantity
         }));
     }
 
@@ -526,5 +608,23 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
 
         return Json(new { success = true });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> MarkAllocationAsDirectShip([FromBody] MarkAllocationAsDirectShipCommand command)
+    {
+        if (command is null
+            || command.AllocationId == Guid.Empty
+            || string.IsNullOrWhiteSpace(command.Address)
+            || string.IsNullOrWhiteSpace(command.ContactPhone))
+        {
+            return Json(new { success = false, message = LocalizeError("Error.InvalidRequest") });
+        }
+
+        var result = await _mediator.Send(command).ConfigureAwait(false);
+        if (!result.Success)
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
+
+        return Json(new { success = true, message = LocalizeError("Msg.SaveSuccess") });
     }
 }

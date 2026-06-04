@@ -44,8 +44,8 @@ public sealed record AllocatePurchaseOrderItemForOrder
 
         public void Verify()
         {
-            if (string.IsNullOrEmpty(ContactPhone))
-                throw new DirectShipDataIsInvalidException("Error.DirectShipDataIsInvalid", "Label.ContactPhone");
+            if (string.IsNullOrWhiteSpace(ContactPhone))
+                throw new DirectShipDataIsInvalidException("Error.DirectShipContactPhoneRequired");
         }
     }
 }
@@ -57,12 +57,28 @@ public sealed record EligibleOrderItemForAllocationDto
     public required Guid OrderId { get; init; }
     public required string OrderCode { get; init; }
     public required string CustomerName { get; init; }
+    public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
+    public int QuantityDecimalPlaces { get; init; }
     public required decimal TotalQuantity { get; init; }
     public required decimal AllocatedOutstanding { get; init; }
     public required decimal AvailableToAllocate { get; init; }
     public string? ShippingAddress { get; init; }
     public string? CustomerPhone { get; init; }
+}
+
+[Serializable]
+public sealed record NonDirectShipAllocationDto
+{
+    public required Guid AllocationId { get; init; }
+    public required Guid OrderId { get; init; }
+    public required Guid OrderItemId { get; init; }
+    public required string OrderCode { get; init; }
+    public required string CustomerName { get; init; }
+    public required decimal AllocatedQuantity { get; init; }
+    public required decimal RemainingQuantity { get; init; }
+    public string? CustomerPhone { get; init; }
+    public string? ShippingAddress { get; init; }
 }
 
 [Serializable]

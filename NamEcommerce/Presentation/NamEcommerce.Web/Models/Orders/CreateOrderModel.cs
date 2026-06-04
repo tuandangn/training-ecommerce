@@ -55,6 +55,9 @@ public sealed class CreateOrderItemModel
     [ValidateNever]
     public decimal? ProductDisplayQty { get; set; }
 
+    [ValidateNever]
+    public int QuantityDecimalPlaces { get; set; }
+
     [Display(Name = "Số lượng")]
     public decimal? Quantity { get; set; }
 

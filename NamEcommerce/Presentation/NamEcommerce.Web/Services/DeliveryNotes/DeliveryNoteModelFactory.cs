@@ -5,6 +5,7 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
+using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Application.Contracts.Media;
@@ -61,6 +62,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             searchModel.Keywords,
             pageNumber - 1,
             pageSize).ConfigureAwait(false);
+        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var warehouseNamesById = availableWarehouses.Options.ToDictionary(warehouse => warehouse.Id, warehouse => warehouse.Name);
 
         var deliveryNotes = pagedData.Items.Select(deliveryNote => new DeliveryNoteListItemModel
         {
@@ -81,6 +84,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             Items = deliveryNote.Items.Select(item => new DeliveryNoteListItemProductModel
             {
                 Id = item.Id,
+                WarehouseId = item.WarehouseId,
+                WarehouseName = ResolveWarehouseName(item.WarehouseId, warehouseNamesById),
                 ProductName = item.ProductName,
                 Quantity = item.Quantity
             }).ToList()
@@ -88,8 +93,14 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 
         foreach (var deliveryNote in deliveryNotes)
         {
-            var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(deliveryNote.WarehouseId).ConfigureAwait(false);
-            deliveryNote.WarehouseName = warehouse?.Name;
+            deliveryNote.WarehouseName = BuildWarehouseSummary(
+                deliveryNote.Items.Select(item => item.WarehouseName),
+                ResolveWarehouseName(deliveryNote.WarehouseId, warehouseNamesById));
+            if (string.IsNullOrWhiteSpace(deliveryNote.WarehouseName))
+            {
+                var warehouse = await _warehouseAppService.GetWarehouseByIdAsync(deliveryNote.WarehouseId).ConfigureAwait(false);
+                deliveryNote.WarehouseName = warehouse?.Name;
+            }
         }
 
         var data = PagedDataModel.Create(deliveryNotes, pagedData.Pagination.PageIndex, pagedData.Pagination.PageSize, pagedData.Pagination.TotalCount);
@@ -98,7 +109,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         {
             Keywords = searchModel.Keywords,
             Data = data,
-            AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false)
+            AvailableWarehouses = availableWarehouses
         };
 
         return model;
@@ -116,7 +127,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             ShowPrice = false, // Default is hide price
             Items = []
         };
-        var includeReturnedCompensation = model.CompensateReturnedQuantityInNextDelivery;
+        model.OrderId = order.Id;
         model.OrderCode = order.Code;
         //*TODO*
         model.PlacedOn = DateTimeHelper.ToLocalTime(order.CreatedOnUtc);
@@ -146,7 +157,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 if (!returnedByItem.TryGetValue(noteItem.Id, out var summary))
                     continue;
 
-                var returnedQuantity = Math.Max(0m, summary.ConfirmedQuantity + summary.PendingQuantity);
+                var returnedQuantity = Math.Max(0m, summary.ActiveCompensatedQuantity);
                 returnedByDeliveryNoteItemId[noteItem.Id] = Math.Min(noteItem.Quantity, returnedQuantity);
             }
         }
@@ -161,6 +172,10 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 group => group.Key,
                 group => group.Sum(allocation => Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity)));
 
+        var productIds = order.Items.Select(i => i.ProductId).Distinct();
+        var orderProducts = await _mediator.Send(new GetProductsByIdsForOrderQuery { Ids = productIds }).ConfigureAwait(false);
+        var decimalPlacesByProductId = orderProducts.ToDictionary(p => p.Id, p => p.QuantityDecimalPlaces);
+
         foreach (var orderItem in order.Items)
         {
             var deliveredQuantity = activeDeliveryNotes
@@ -172,9 +187,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 .Where(item => item.OrderItemId == orderItem.Id)
                 .Sum(item => returnedByDeliveryNoteItemId.GetValueOrDefault(item.Id));
             var netDeliveredQuantity = Math.Max(0m, deliveredQuantity - returnedQuantity);
-            var deliveredQtyForRemaining = includeReturnedCompensation
-                ? netDeliveredQuantity
-                : deliveredQuantity;
+            var deliveredQtyForRemaining = netDeliveredQuantity;
             var directShipOutstandingQty = directShipOutstandingQuantities.GetValueOrDefault(orderItem.Id);
             var remainingQty = orderItem.Quantity - deliveredQtyForRemaining - directShipOutstandingQty;
             if (remainingQty > 0)
@@ -188,9 +201,12 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                     Selected = true
                 };
                 itemModel.ProductName = orderItem.ProductName ?? string.Empty;
+                itemModel.ProductId = orderItem.ProductId;
                 itemModel.OrderedQuantity = orderItem.Quantity;
-                itemModel.PreviouslyDeliveredQuantity = deliveredQtyForRemaining;
+                itemModel.PreviouslyDeliveredQuantity = deliveredQuantity;
+                itemModel.RemainingQuantity = remainingQty;
                 itemModel.UnitPrice = orderItem.UnitPrice;
+                itemModel.QuantityDecimalPlaces = decimalPlacesByProductId.GetValueOrDefault(orderItem.ProductId);
 
                 if (existingItem is null)
                     model.Items.Add(itemModel);
@@ -219,6 +235,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         {
             DeliveryNoteId = id
         }).ConfigureAwait(false);
+        var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        var warehouseNamesById = availableWarehouses.Options.ToDictionary(warehouse => warehouse.Id, warehouse => warehouse.Name);
 
         var model = new DeliveryNoteDetailsModel
         {
@@ -253,18 +271,23 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
                 return new DeliveryNoteItemModel
                 {
                     Id = i.Id,
+                    WarehouseId = i.WarehouseId,
+                    WarehouseName = ResolveWarehouseName(i.WarehouseId, warehouseNamesById),
                     ProductName = i.ProductName,
                     Quantity = i.Quantity,
                     UnitPrice = i.UnitPrice,
                     SubTotal = i.SubTotal,
                     ReturnedQuantity = summary?.ConfirmedQuantity ?? 0m,
-                    PendingReturnQuantity = summary?.PendingQuantity ?? 0m
+                    PendingReturnQuantity = summary?.PendingQuantity ?? 0m,
+                    CompensatedReturnQuantity = summary?.ActiveCompensatedQuantity ?? 0m
                 };
             }).ToList()
         };
 
-        model.AvailableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
-        model.WarehouseName = model.AvailableWarehouses?.Options.FirstOrDefault(warehouse => warehouse.Id == deliveryNote.WarehouseId)?.Name;
+        model.AvailableWarehouses = availableWarehouses;
+        model.WarehouseName = BuildWarehouseSummary(
+            model.Items.Select(item => item.WarehouseName),
+            ResolveWarehouseName(deliveryNote.WarehouseId, warehouseNamesById));
 
         if (deliveryNote.DeliveryProofPictureId.HasValue)
         {
@@ -275,12 +298,38 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             }
         }
 
+        if (deliveryNote.DeliveryConfirmationStatus == (int)DeliveryConfirmationStatus.Rejected)
+        {
+            model.RejectionReason = deliveryNote.ConfirmedNote;
+            model.ReturnedToWarehouseName = await _mediator.Send(new GetDeliveryNoteReturnWarehouseQuery
+            {
+                DeliveryNoteId = id,
+                DeliveryNoteWarehouseId = deliveryNote.WarehouseId
+            }).ConfigureAwait(false);
+        }
+
         model.ShortageInfo = await _mediator.Send(new GetDeliveryNoteShortageInfoQuery
         {
             DeliveryNoteId = id
         }).ConfigureAwait(false);
 
         return model;
+    }
+
+    private static string? ResolveWarehouseName(Guid warehouseId, IReadOnlyDictionary<Guid, string> warehouseNamesById)
+        => warehouseId == Guid.Empty ? null : warehouseNamesById.GetValueOrDefault(warehouseId);
+
+    private static string? BuildWarehouseSummary(IEnumerable<string?> itemWarehouseNames, string? fallbackWarehouseName)
+    {
+        var warehouseNames = itemWarehouseNames
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return warehouseNames.Count > 0
+            ? string.Join(", ", warehouseNames)
+            : fallbackWarehouseName;
     }
 
     private string GetStatusName(DeliveryNoteStatus status)

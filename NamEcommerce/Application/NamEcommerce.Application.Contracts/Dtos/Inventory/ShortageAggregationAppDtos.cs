@@ -52,6 +52,7 @@ public sealed record ShortageAggregationItemAppDto
     public required Guid ProductId { get; init; }
     public required string ProductName { get; init; }
     public string? UnitMeasurementName { get; init; }
+    public int QuantityDecimalPlaces { get; init; }
     public required decimal RequiredQuantity { get; init; }
     public required decimal ShippedQuantity { get; init; }
     public required decimal AvailableQuantity { get; init; }

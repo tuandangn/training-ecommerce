@@ -22,8 +22,16 @@ public sealed record UnitMeasurement : AppAggregateEntity
     internal string NormalizedName { get; private set; }
 
     public int DisplayOrder { get; set; }
+    public int DecimalPlaces { get; private set; }
 
     #region Methods
+
+    internal void SetDecimalPlaces(int decimalPlaces)
+    {
+        if (decimalPlaces is not (0 or 1 or 2))
+            throw new ArgumentException("DecimalPlaces phải là 0, 1 hoặc 2.", nameof(decimalPlaces));
+        DecimalPlaces = decimalPlaces;
+    }
 
     internal async Task SetNameAsync(string name, INameExistCheckingService checker)
     {

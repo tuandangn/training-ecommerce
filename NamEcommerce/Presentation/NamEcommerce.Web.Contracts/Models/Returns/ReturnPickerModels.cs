@@ -37,4 +37,5 @@ public sealed class ReturnableItemModel
     public decimal AvailableQty => Math.Max(0, OriginalQty - AlreadyReturnedQty);
     public required decimal UnitPrice { get; init; }
     public Guid? SourceItemId { get; init; }
+    public int QuantityDecimalPlaces { get; init; }
 }

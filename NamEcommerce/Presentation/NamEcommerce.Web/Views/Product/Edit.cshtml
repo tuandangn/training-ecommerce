@@ -2,25 +2,25 @@
 @{
     ViewData[ViewConstants.PageTitle] = "Chỉnh sửa Hàng hóa";
 }
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Chỉnh sửa Hàng hóa</h1>
-        <p class="page-header-subtitle">Cập nhật thông tin sản phẩm</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Hàng hóa
+        <span class="text-muted">@Model.Name</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Product" class="text-decoration-none">Hàng hóa</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.Name</li>
+            </ol>
+        </nav>
     </div>
-</div>
-<div class="form-card" style="max-width: 1100px;">
-    <div class="form-card-header">
-        <h2 class="form-card-title">
-            <i class="bi bi-tags me-2" style="color: var(--warning);"></i>
-            Thông tin hàng hóa
-        </h2>
-        <a asp-action="List" class="form-card-breadcrumb">
-            <i class="bi bi-arrow-left"></i> Trở về danh sách
-        </a>
-    </div>
+}
+<div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
+<div class="content-card">
     <form method="post" asp-antiforgery="true">
-        <div class="form-card-body">
-            <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
+        <div class="content-card-body">
             <input type="hidden" asp-for="Id" />
             <ul class="nav nav-tabs" id="productTabs" role="tablist">
                 <li class="nav-item" role="presentation">
@@ -40,13 +40,19 @@
                 <div class="tab-pane fade show active" id="info" role="tabpanel">
                     <div class="row g-3">
                         <div class="col-12 col-lg-4 order-0 order-lg-2">
-                            <partial name="_UploadPicture" for="ImageFile" />
+                            @await Html.PartialAsync("_ImageUploader", new ImageUploaderModel
+                            {
+                                FieldName = "PictureId",
+                                Label = "Hình ảnh",
+                                MaxFiles = 1,
+                                ExistingPictureIds = Model.PictureId.HasValue ? [Model.PictureId.Value] : []
+                            })
                         </div>
                         <div class="col-12 col-lg-8 order-1">
                             <div class="row g-3">
                                 <div class="col-12 col-md-8">
                                     <label asp-for="Name" class="form-label"></label>
-                                    <input asp-for="Name" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Name)" autofocus autocomplete="off"/>
+                                    <input asp-for="Name" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Name)" autofocus autocomplete="off" />
                                     <span asp-validation-for="Name" class="text-danger small"></span>
                                 </div>
                                 <div class="col-12 col-md-4">
@@ -57,7 +63,8 @@
                                         {
                                             foreach (var unitMeasurement in Model.AvailableUnitMeasurements)
                                             {
-                                                <option value="@unitMeasurement.Id" selected="@(unitMeasurement.Id == Model.UnitMeasurementId)">
+                                                var dpEdit = Model.UnitMeasurementDecimalPlacesMap.TryGetValue(unitMeasurement.Id.ToString(), out var dpEditVal) ? dpEditVal : 0;
+                                                <option value="@unitMeasurement.Id" selected="@(unitMeasurement.Id == Model.UnitMeasurementId)" data-decimalplaces="@dpEdit">
                                                     @unitMeasurement.Name
                                                 </option>
                                             }
@@ -65,6 +72,22 @@
                                     </select>
                                     <span asp-validation-for="UnitMeasurementId" class="text-danger small"></span>
                                 </div>
+                                <div class="col-12 col-md-6 col-lg-4">
+                                    <label asp-for="CostPrice" class="form-label"></label>
+                                    <input asp-for="CostPrice" class="form-control" disabled value="@Model.CostPrice.DisplayCurrency()" data-decimal="currency" />
+                                    <span asp-validation-for="CostPrice" class="text-danger small"></span>
+                                </div>
+                                <div class="col-12 col-md-6 col-lg-4">
+                                    <label asp-for="UnitPrice" class="form-label"></label>
+                                    @Html.EditorFor(m => m.UnitPrice)
+                                    <span asp-validation-for="UnitPrice" class="text-danger small"></span>
+                                </div>
+                                <div class="col-12 col-lg-4">
+                                    <label asp-for="ChangePriceReason" class="form-label"></label>
+                                    <input asp-for="ChangePriceReason" class="form-control" placeholder="Nhập lý do thay đổi giá" />
+                                    <span asp-validation-for="ChangePriceReason" class="text-danger small"></span>
+                                </div>
+
                                 <div class="col-12">
                                     <label asp-for="CategoryId" class="form-label"></label>
                                     <select asp-for="CategoryId" class="form-select">
@@ -101,21 +124,6 @@
                                     }
                                     <span asp-validation-for="VendorIds" class="text-danger small"></span>
                                 </div>
-                                <div class="col-12 col-md-6 col-lg-4">
-                                    <label asp-for="CostPrice" class="form-label"></label>
-                                    <input asp-for="CostPrice" class="form-control" disabled value="@Model.CostPrice.DisplayCurrency()" data-decimal="currency"/>
-                                    <span asp-validation-for="CostPrice" class="text-danger small"></span>
-                                </div>
-                                <div class="col-12 col-md-6 col-lg-4">
-                                    <label asp-for="UnitPrice" class="form-label"></label>
-                                    @Html.EditorFor(m => m.UnitPrice)
-                                    <span asp-validation-for="UnitPrice" class="text-danger small"></span>
-                                </div>
-                                <div class="col-12 col-lg-4">
-                                    <label asp-for="ChangePriceReason" class="form-label"></label>
-                                    <input asp-for="ChangePriceReason" class="form-control" placeholder="Nhập lý do thay đổi giá" />
-                                    <span asp-validation-for="ChangePriceReason" class="text-danger small"></span>
-                                </div>
                                 <div class="col-12">
                                     <label asp-for="ShortDesc" class="form-label"></label>
                                     <textarea asp-for="ShortDesc" class="form-control" rows="3"
@@ -137,10 +145,13 @@
                 </div>
             </div>
         </div>
-        <div class="form-card-footer">
-            <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
-            <button type="submit" class="btn btn-primary flex-lg-grow-0 flex-grow-1">
-                <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
+        <div class="content-card-footer  d-flex align-items-center justify-content-between">
+            <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                <i class="bi bi-arrow-left"></i>
+                Trở về
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-floppy me-1"></i>Lưu thay đổi
             </button>
         </div>
     </form>
@@ -148,4 +159,19 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script defer>
+        (function () {
+            const unitMeasurementSelect = document.getElementById('UnitMeasurementId');
+            if (!unitMeasurementSelect) return;
+            unitMeasurementSelect.addEventListener('change', function () {
+                const selectedOption = this.options[this.selectedIndex];
+                const dp = parseInt(selectedOption.dataset.decimalplaces ?? '0', 10);
+                document.querySelectorAll('.stock-qty-input').forEach(input => {
+                    input.dataset.decimals = String(dp);
+                    input.dataset.decimalBound = '';
+                    window.DecimalFields?.bindInput?.(input);
+                });
+            });
+        })();
+    </script>
 }

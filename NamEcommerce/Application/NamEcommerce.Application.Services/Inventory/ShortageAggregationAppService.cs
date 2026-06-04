@@ -56,9 +56,11 @@ public sealed class ShortageAggregationAppService(
             .Select(product => product.UnitMeasurementId!.Value)
             .Distinct()
             .ToList();
-        var unitMeasurements = unitMeasurementReader.DataSource
+        var unitMeasurementData = unitMeasurementReader.DataSource
             .Where(unitMeasurement => unitMeasurementIds.Contains(unitMeasurement.Id))
-            .ToDictionary(unitMeasurement => unitMeasurement.Id, unitMeasurement => unitMeasurement.Name);
+            .ToList();
+        var unitMeasurements = unitMeasurementData.ToDictionary(u => u.Id, u => u.Name);
+        var unitDecimalPlaces = unitMeasurementData.ToDictionary(u => u.Id, u => u.DecimalPlaces);
         var groups = new Dictionary<Guid, VendorShortageGroupAppDto>();
         var noVendorItems = new List<ShortageAggregationItemAppDto>();
 
@@ -73,6 +75,9 @@ public sealed class ShortageAggregationAppService(
                                       && unitMeasurements.TryGetValue(product.UnitMeasurementId.Value, out var unitName)
                 ? unitName
                 : null;
+            var quantityDecimalPlaces = product?.UnitMeasurementId.HasValue == true
+                                        && unitDecimalPlaces.TryGetValue(product.UnitMeasurementId!.Value, out var dp)
+                ? dp : 0;
 
             var isFromPrimaryOrder = primaryOrderItemIds is null || primaryOrderItemIds.Contains(shortage.OrderItemId);
 
@@ -84,6 +89,7 @@ public sealed class ShortageAggregationAppService(
                 ProductId = shortage.ProductId,
                 ProductName = shortage.ProductName,
                 UnitMeasurementName = unitMeasurementName,
+                QuantityDecimalPlaces = quantityDecimalPlaces,
                 RequiredQuantity = shortage.RequiredQuantity,
                 ShippedQuantity = shortage.ShippedQuantity,
                 AvailableQuantity = shortage.AvailableQuantity,
@@ -339,7 +345,7 @@ public sealed class ShortageAggregationAppService(
                         PurchaseOrderItemId = bucket.PurchaseOrderItemId,
                         OrderItemId = item.OrderItemId,
                         AllocationQuantity = allocationQuantity,
-                        DirectShipInfo = item.DirectShipInfo is not null && !string.IsNullOrEmpty(item.DirectShipInfo.ContactPhone)
+                        DirectShipInfo = item.DirectShipInfo is not null
                             ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(item.DirectShipInfo.ContactName, item.DirectShipInfo.ContactPhone, item.DirectShipInfo.Address)
                             {
                                 Priority = item.DirectShipInfo.Priority
@@ -426,7 +432,7 @@ public sealed class ShortageAggregationAppService(
                                         PurchaseOrderItemId = (action.PurchaseOrderId.Value, action.PurchaseOrderItemId.Value),
                                         OrderItemId = (item.OrderId, item.OrderItemId),
                                         AllocationQuantity = actionAllocationQuantity,
-                                        DirectShipInfo = item.DirectShipInfo is not null && !string.IsNullOrEmpty(item.DirectShipInfo.ContactPhone)
+                                        DirectShipInfo = item.DirectShipInfo is not null
                                             ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(item.DirectShipInfo.ContactName, item.DirectShipInfo.ContactPhone, item.DirectShipInfo.Address)
                                             {
                                                 Priority = item.DirectShipInfo.Priority

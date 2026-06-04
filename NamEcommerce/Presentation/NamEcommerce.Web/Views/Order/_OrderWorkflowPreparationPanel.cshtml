@@ -7,7 +7,7 @@
         <div class="content-card-header">
             <div>
                 <h5>Chuẩn bị hàng</h5>
-                <div class="text-muted small">Tồn kho, hàng thiếu, giao thẳng và đơn nhập liên quan</div>
+                <div class="text-muted small">Tồn kho, hàng thiếu và đơn nhập liên quan</div>
             </div>
             <div class="d-flex flex-wrap gap-2">
                 @if (Model.ShortageInfo.HasShortage && Model.CanUpdateInfo)
@@ -50,10 +50,7 @@
                                 <th class="text-end">SL đặt</th>
                                 <th class="text-end">Tồn kho</th>
                                 <th class="text-end">SL thiếu</th>
-                                <th class="text-end">Đã xuất</th>
-                                <th class="text-end">Đã giao</th>
-                                <th class="text-end">Giao thẳng</th>
-                                <th class="text-end">Giá vốn</th>
+                                <th class="text-end">Giao đủ</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -70,27 +67,32 @@
                                         }
                                     </td>
                                     <td class="text-end">@item.OrderedQuantity.DisplayQuantity()</td>
-                                    <td class="text-end">@item.AvailableQuantity.DisplayQuantity()</td>
+                                    <td class="text-end">
+                                        @if (!item.IsFullyDelivered && item.ShortageQuantity > 0)
+                                        {
+                                            @item.AvailableQuantity.DisplayQuantity()
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
                                     <td class="text-end">
                                         <span class="@(item.ShortageQuantity > 0 ? "text-danger fw-bold" : "text-success fw-600")">
                                             @item.ShortageQuantity.DisplayQuantity()
                                         </span>
                                     </td>
-                                    <td class="text-end">@item.IssuedQuantity.DisplayQuantity()</td>
-                                    <td class="text-end">@item.DeliveredQuantity.DisplayQuantity()</td>
                                     <td class="text-end">
-                                        @if (item.DirectShipQuantity > 0)
+                                        @if (item.IsFullyDelivered)
                                         {
-                                            <div class="fw-600">@item.DirectShipReceivedQuantity.DisplayQuantity() / @item.DirectShipQuantity.DisplayQuantity()</div>
-                                            <div class="small text-muted">@item.DirectShipStatusText</div>
+                                            <span class="text-success" title="Đã giao đủ">
+                                                <i class="bi bi-check-circle-fill"></i>
+                                            </span>
                                         }
                                         else
                                         {
-                                            <span class="text-muted">Không</span>
+                                            <span class="text-muted">Còn @item.RemainingDeliveryQuantity.DisplayQuantity()</span>
                                         }
-                                    </td>
-                                    <td class="text-end">
-                                        @(item.UnitCost.HasValue ? item.UnitCost.Value.DisplayCurrencyWithSymbol() : "-")
                                     </td>
                                 </tr>
                             }

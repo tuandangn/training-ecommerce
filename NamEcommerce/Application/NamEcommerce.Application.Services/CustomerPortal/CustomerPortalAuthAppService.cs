@@ -20,6 +20,7 @@ public sealed class CustomerPortalAuthAppService(
 {
     private const string OtpRequestEvent = "OtpRequest";
     private const string OtpVerifyEvent = "OtpVerify";
+    private const string OtpDisabledLoginEvent = "OtpDisabledLogin";
     private const string PasswordLoginEvent = "PasswordLogin";
     private const string SetPasswordEvent = "SetPassword";
     private const string ChangePasswordEvent = "ChangePassword";
@@ -59,6 +60,23 @@ public sealed class CustomerPortalAuthAppService(
         {
             await RecordEventAsync(deliveryNote.CustomerId, deliveryNote.Id, OtpRequestEvent, CustomerPortalSecurityEventOutcome.Blocked, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
             return GenericOtpFailure;
+        }
+
+        var settings = await securityManager.GetSettingsAsync().ConfigureAwait(false);
+        if (!settings.OtpEnabled)
+        {
+            await securityManager.MarkDeliveryNoteAccessTokenViewedAsync(token.Id, nowUtc).ConfigureAwait(false);
+            await RecordEventAsync(deliveryNote.CustomerId, deliveryNote.Id, OtpDisabledLoginEvent, CustomerPortalSecurityEventOutcome.Succeeded, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
+            await UpdateCustomerLocationAsync(deliveryNote.CustomerId, dto.Location, OtpDisabledLoginEvent).ConfigureAwait(false);
+            var loginResult = await CreateLoginResultAsync(deliveryNote.CustomerId, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
+            return new CustomerOtpRequestResultAppDto
+            {
+                Success = loginResult.Success,
+                Message = "OTP đang tắt. Khách hàng đã được xác thực bằng mã QR phiếu giao.",
+                RequiresOtp = false,
+                SessionToken = loginResult.SessionToken,
+                Session = loginResult.Session
+            };
         }
 
         if (await securityManager.HasRecentOtpChallengeAsync(deliveryNote.CustomerId, deliveryNote.Id, TimeSpan.FromSeconds(securityOptions.SafeOtpCooldownSeconds), nowUtc).ConfigureAwait(false) ||
@@ -124,6 +142,7 @@ public sealed class CustomerPortalAuthAppService(
         }
 
         await RecordEventAsync(result.CustomerId, result.DeliveryNoteId, OtpVerifyEvent, CustomerPortalSecurityEventOutcome.Succeeded, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
+        await UpdateCustomerLocationAsync(result.CustomerId, dto.Location, OtpVerifyEvent).ConfigureAwait(false);
         return await CreateLoginResultAsync(result.CustomerId, dto.RequestedIp, dto.RequestedUserAgent).ConfigureAwait(false);
     }
 
@@ -356,6 +375,21 @@ public sealed class CustomerPortalAuthAppService(
             IpAddress = ip,
             UserAgent = userAgent
         });
+
+    private Task UpdateCustomerLocationAsync(Guid customerId, CustomerPortalLocationAppDto? location, string source)
+    {
+        if (location is null)
+            return Task.CompletedTask;
+
+        return securityManager.UpdateLastKnownLocationAsync(customerId, new UpdateCustomerPortalLocationDto
+        {
+            Latitude = location.Latitude,
+            Longitude = location.Longitude,
+            AccuracyMeters = location.AccuracyMeters,
+            Source = source,
+            CapturedOnUtc = DateTime.UtcNow
+        });
+    }
 
     private static string MaskPhone(string phoneNumber)
     {

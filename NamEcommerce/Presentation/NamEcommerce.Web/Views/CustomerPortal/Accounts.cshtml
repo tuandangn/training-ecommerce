@@ -1,5 +1,6 @@
 @using NamEcommerce.Application.Contracts.Dtos.CustomerPortal
 @using NamEcommerce.Domain.Shared.Enums.CustomerPortal
+@using System.Globalization
 @model IReadOnlyCollection<CustomerPortalAccountAdminAppDto>
 @{
     ViewData[ViewConstants.PageTitle] = "Tài khoản Customer Portal";
@@ -26,6 +27,7 @@
                     <th class="text-center">Mật khẩu</th>
                     <th class="text-center">Trạng thái</th>
                     <th class="text-center">Lần cuối</th>
+                    <th>Vị trí gần nhất</th>
                     <th></th>
                 </tr>
             </thead>
@@ -47,6 +49,30 @@
                     <td class="text-center"><span class="badge @status.GetDisplayColor()">@status.GetDisplayText()</span></td>
                     <td class="text-center text-muted small">
                         @(item.LastLoginOnUtc.HasValue ? item.LastLoginOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat) : "—")
+                    </td>
+                    <td class="text-muted small">
+                        @if (item.LastKnownLatitude.HasValue && item.LastKnownLongitude.HasValue)
+                        {
+                            <a href="@BuildMapUrl(item.LastKnownLatitude.Value, item.LastKnownLongitude.Value)" target="_blank" rel="noreferrer" class="text-decoration-none">
+                                Xem bản đồ
+                            </a>
+                            <div>
+                                @item.LastKnownLatitude.Value.ToString("0.######", CultureInfo.InvariantCulture),
+                                @item.LastKnownLongitude.Value.ToString("0.######", CultureInfo.InvariantCulture)
+                            </div>
+                            @if (item.LastKnownLocationCapturedOnUtc.HasValue)
+                            {
+                                <div>@item.LastKnownLocationCapturedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                            }
+                            @if (item.LastKnownLocationAccuracyMeters.HasValue)
+                            {
+                                <div>Sai số ~@item.LastKnownLocationAccuracyMeters.Value.ToString("0", CultureInfo.InvariantCulture)m</div>
+                            }
+                        }
+                        else
+                        {
+                            <span>—</span>
+                        }
                     </td>
                     <td class="text-end pe-3">
                         <form asp-action="ResetAccountPassword" method="post" class="d-flex justify-content-end gap-2 mb-2">
@@ -82,9 +108,14 @@
             }
             @if (!Model.Any())
             {
-                <tr><td colspan="6"><div class="empty-state py-5 text-muted">Chưa có khách hàng nào kích hoạt portal</div></td></tr>
+                <tr><td colspan="7"><div class="empty-state py-5 text-muted">Chưa có khách hàng nào kích hoạt portal</div></td></tr>
             }
             </tbody>
         </table>
     </div>
 </div>
+
+@functions {
+    private static string BuildMapUrl(double latitude, double longitude)
+        => $"https://www.google.com/maps/search/?api=1&query={latitude.ToString(CultureInfo.InvariantCulture)},{longitude.ToString(CultureInfo.InvariantCulture)}";
+}

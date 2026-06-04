@@ -59,12 +59,13 @@
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
                                                 <input type="hidden" name="Items[@i].DeliveryNoteItemId" value="@item.DeliveryNoteItemId" />
                                                 <input type="hidden" name="Items[@i].OriginalUnitPrice" value="@item.OriginalUnitPrice" class="item-orig-price" />
+                                                <input type="hidden" name="Items[@i].QuantityDecimalPlaces" value="@item.QuantityDecimalPlaces" />
                                             </td>
                                             <td class="text-end text-muted small">—</td>
                                             <td class="text-end">
                                                 <input name="Items[@i].RequestedQuantity" value="@item.RequestedQuantity.DisplayQuantity()"
                                                        class="form-control form-control-sm text-end item-req-qty"
-                                                       data-decimal="quantity" min="0.001" placeholder="0" />
+                                                       data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" min="0.001" placeholder="0" />
                                             </td>
                                             <td class="text-end">
                                                 <input name="Items[@i].ReturnUnitPrice" value="@item.ReturnUnitPrice.DisplayCurrency()"
@@ -139,6 +140,12 @@
                             <input asp-for="AdditionalCost" id="additionalCostInput"
                                    class="form-control" data-decimal="currency" min="0" placeholder="0"
                                    value="@Model.AdditionalCost.DisplayCurrency()" />
+                        </div>
+                        <div class="form-check form-switch mb-3 p-3 bg-light rounded border">
+                            <input class="form-check-input ms-0" type="checkbox" asp-for="CompensateInNextDelivery" role="switch" id="compensateInNextDeliverySwitch">
+                            <label class="form-check-label ms-2 fw-medium" asp-for="CompensateInNextDelivery" for="compensateInNextDeliverySwitch">
+                                Bù số lượng trả lại vào lần giao sau
+                            </label>
                         </div>
                         <div class="mb-0">
                             <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
@@ -331,7 +338,7 @@
                 <td class="text-end">
                     <input name="Items[${i}].RequestedQuantity" value="${fmtQty(available)}"
                            class="form-control form-control-sm text-end item-req-qty"
-                           data-decimal="quantity" max="${available}" placeholder="0" data-val="true"
+                           data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" max="${available}" placeholder="0" data-val="true"
                     data-val-required="Vui lòng nhập số lượng."
                     data-val-range="Số lượng phải lớn hơn 0."
                     data-val-range-min="0.001" data-val-range-max="${available}"

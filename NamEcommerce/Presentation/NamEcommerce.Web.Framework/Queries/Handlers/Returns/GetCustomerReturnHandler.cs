@@ -36,6 +36,7 @@ public sealed class GetCustomerReturnHandler : IRequestHandler<GetCustomerReturn
             ReturnDate = DateTimeHelper.ToLocalTime(dto.ReturnDate),
             ConfirmedOn = DateTimeHelper.ToLocalTime(dto.ConfirmedOnUtc),
             AdditionalCost = dto.AdditionalCost,
+            CompensateInNextDelivery = dto.CompensateInNextDelivery,
             GeneratedGoodsReceiptId = dto.GeneratedGoodsReceiptId,
             CreatedOn = DateTimeHelper.ToLocalTime(dto.CreatedOnUtc),
             UpdatedOn = DateTimeHelper.ToLocalTime(dto.UpdatedOnUtc)

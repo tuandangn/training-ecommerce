@@ -79,7 +79,7 @@ export default class CreatePurchaseOrderController {
     #validator;
 
     constructor() {
-        this.#priceController = new ProductPriceController('/PurchaseOrder/RecentPurchasePrices?productId=');
+        this.#priceController = new ProductPriceController('/Product/PurchasePriceReference?ProductId=');
         this.#addItemController = new AddItemController();
 
         this.#bindProductPicker();
@@ -296,13 +296,14 @@ export default class CreatePurchaseOrderController {
                 </div>
                 <input type="text" class="visually-hidden product-id" name="Items[${index}].ProductId" value="${p.id}"
                     data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
+                <input type="hidden" name="Items[${index}].QuantityDecimalPlaces" value="${p.quantityDecimalPlaces ?? 0}" />
                 <span class="small text-danger field-validation-valid" data-valmsg-for="Items[${index}].ProductId" data-valmsg-replace="true"></span>
             </td>
             <td class="text-end">
-                <input name="Items[${index}].Quantity" data-decimal="quantity"
+                <input name="Items[${index}].Quantity" data-decimal="quantity" data-decimals="${p.quantityDecimalPlaces ?? 0}"
                     class="row-qty no-additional-element" value="${quantity}" autocomplete="off"
-                    data-val="true" data-val-required="Vui lòng nhập số lượng." 
-                    data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="0.0001" 
+                    data-val="true" data-val-required="Vui lòng nhập số lượng."
+                    data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="${(p.quantityDecimalPlaces ?? 0) > 0 ? '0.0001' : '1'}"
                     data-val-number="Số lượng phải là số" />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="Items[${index}].Quantity"
@@ -615,11 +616,10 @@ export class AddItemController {
     }
 
     setVendor(vendorId) {
-        const unitCost = this.#getPriceOfVendor(vendorId, this.state.recentPrices);
-        if (unitCost)
-            this.#setState({ vendorId, unitCost });
-        else
-            this.#setState({ vendorId });
+        const unitCost = vendorId
+            ? this.#getPriceOfVendor(vendorId, this.state.recentPrices) ?? 0
+            : 0;
+        this.#setState({ vendorId, unitCost });
     }
 
     async setProduct(productInfo, currentVendorId) {
@@ -627,12 +627,16 @@ export class AddItemController {
         let unitCost = 0;
         if (productInfo) {
             try {
-                const result = await apiGet(`/PurchaseOrder/RecentPurchasePrices?productId=${productInfo.id}`);
-                recentPrices = Array.isArray(result) ? result : (result.data ?? []);
+                const params = new URLSearchParams({ ProductId: productInfo.id });
+                if (currentVendorId)
+                    params.set('VendorId', currentVendorId);
+                const result = await apiGet(`/Product/PurchasePriceReference?${params.toString()}`);
+                const payload = result.data ?? result;
+                recentPrices = Array.isArray(payload) ? payload : (payload.items ?? []);
+                unitCost = payload.suggestedCost ?? 0;
             } catch {
                 recentPrices = [];
             }
-            unitCost = this.#getPriceOfVendor(currentVendorId, recentPrices) ?? 0;
         }
 
         this.#setState({
@@ -754,7 +758,7 @@ export class AddItemController {
         const textEl = document.getElementById('recentPricesAutoFillText');
         if (!infoEl || !textEl) return;
 
-        if (!this.state.productInfo || this.state.recentPrices.length === 0) {
+        if (!this.state.productInfo) {
             infoEl.classList.add('d-none');
             return;
         }
@@ -764,13 +768,13 @@ export class AddItemController {
             if (match) {
                 textEl.innerHTML = `Giá nhập gần nhất của nhà cung cấp <span>${match.vendorName}</span> là <span class="fw-bold">${DecimalFields.formatCurrency(String(match.unitCost))}</span>.`;
                 infoEl.classList.remove('d-none');
+                infoEl.className = 'small text-success mb-1';
             } else {
-                textEl.textContent = 'Nhà cung cấp này chưa có lịch sử nhập hàng cho sản phẩm — vui lòng nhập giá thủ công.';
+                textEl.textContent = 'Nhà cung cấp này chưa có lịch sử nhập hàng cho sản phẩm - vui lòng nhập giá thủ công.';
                 infoEl.classList.remove('d-none');
-                infoEl.className = infoEl.className.replace('text-success', 'text-warning');
+                infoEl.className = 'small text-warning mb-1';
             }
         } else {
-            // Chưa chọn NCC → gợi ý chọn hàng để điền giá
             textEl.textContent = 'Chọn nhà cung cấp để tự động điền giá, hoặc nhấn vào hàng trong bảng bên dưới.';
             infoEl.classList.remove('d-none');
             infoEl.className = 'small text-info mb-1';

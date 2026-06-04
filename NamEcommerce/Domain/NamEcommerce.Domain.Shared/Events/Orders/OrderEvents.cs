@@ -25,7 +25,8 @@ public sealed record OrderItemAdded(
     Guid OrderItemId,
     Guid ProductId,
     decimal Quantity,
-    decimal UnitPrice) : DomainEvent;
+    decimal UnitPrice,
+    string? ProductName) : DomainEvent;
 
 /// <summary>
 /// Một dòng hàng trong đơn được sửa số lượng / đơn giá.
@@ -37,7 +38,9 @@ public sealed record OrderItemUpdated(
     Guid ProductId,
     decimal OldQuantity,
     decimal Quantity,
-    decimal UnitPrice) : DomainEvent;
+    decimal UnitPrice,
+    decimal OldUnitPrice,
+    string? ProductName) : DomainEvent;
 
 /// <summary>
 /// Một dòng hàng bị xoá khỏi đơn.
@@ -47,7 +50,9 @@ public sealed record OrderItemRemoved(
     Guid OrderId,
     Guid OrderItemId,
     Guid ProductId,
-    decimal Quantity) : DomainEvent;
+    decimal Quantity,
+    decimal UnitPrice,
+    string? ProductName) : DomainEvent;
 
 /// <summary>
 /// Đơn đã được kết sổ và hoàn thành.
@@ -76,6 +81,12 @@ public sealed record OrderItemDelivered(
 public sealed record OrderCancelled(
     Guid OrderId,
     IReadOnlyCollection<OrderReservationItem> Items) : DomainEvent;
+
+/// <summary>
+/// Toàn bộ dòng hàng của đơn đã được giao đến khách hàng.
+/// Handler release pending allocations của đơn.
+/// </summary>
+public sealed record OrderFullyDelivered(Guid OrderId, Guid CustomerId) : DomainEvent;
 
 /// <summary>
 /// Đơn bị xoá (soft delete).

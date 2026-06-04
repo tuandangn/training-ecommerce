@@ -6,105 +6,112 @@
     string? query = Model.Keywords;
 }
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Kho hàng</h1>
-        <p class="page-header-subtitle">Quản lý các vị trí lưu trữ hàng hóa</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">Kho hàng</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Kho hàng</li>
+            </ol>
+        </nav>
     </div>
-    <a asp-action="Create" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i>Thêm mới
-    </a>
-</div>
+}
 
 <div class="content-card" data-responsive-list data-list-key="warehouse-list">
     <div class="action-toolbar">
-        <div class="search-group">
-            <partial name="_Search" model="@(new WarehouseListSearchModel { Keywords = Model.Keywords })" />
-        </div>
+        <partial name="_Search" model="@(new WarehouseListSearchModel { Keywords = Model.Keywords })" />
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Thêm mới
+        </a>
         <partial name="_ResponsiveListToolbar" />
     </div>
 
     <div class="responsive-list-panel" data-list-view-panel="list">
         <div class="table-responsive">
-        <table class="table data-table">
-            <thead>
-                <tr>
-                    <th class="ps-4">Kho hàng</th>
-                    <th><i class="bi bi-phone me-1"></i>Điện thoại</th>
-                    <th class="d-none d-md-table-cell"><i class="bi bi-map me-1"></i>Địa chỉ</th>
-                    <th>Loại kho</th>
-                    <th class="text-center" style="width: 110px;">Trạng thái</th>
-                    <th style="width: 100px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Data.Pagination.TotalCount > 0)
-                {
-                    @foreach (var item in Model.Data)
+            <table class="table data-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Kho hàng</th>
+                        <th><i class="bi bi-phone me-1"></i>Điện thoại</th>
+                        <th class="d-none d-md-table-cell"><i class="bi bi-map me-1"></i>Địa chỉ</th>
+                        <th>Loại kho</th>
+                        <th class="text-center" style="width: 110px;">Trạng thái</th>
+                        <th style="width: 100px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Data.Pagination.TotalCount > 0)
+                    {
+                        @foreach (var item in Model.Data)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-medium">
+                                        <a class="text-decoration-none text-dark" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                            @HighlighHelper.Highlight(item.Name, query)
+                                        </a>
+                                    </div>
+                                    <div class="text-muted small">@item.Code</div>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(item.PhoneNumber))
+                                    {
+                                        <a href="tel:@item.PhoneNumber" class="text-decoration-none">
+                                            <i class="bi bi-telephone me-1"></i>@item.PhoneNumber
+                                        </a>
+                                    }
+                                </td>
+                                <td class="d-none d-md-table-cell">
+                                    @if (!string.IsNullOrEmpty(item.Address))
+                                    {
+                                        var encodedAddress = MyUrlEncoder.Encode(item.Address);
+                                        <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank"
+                                           class="text-decoration-none">
+                                            <i class="bi bi-geo-alt me-1"></i>@HighlighHelper.Highlight(item.Address, query)
+                                        </a>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="text-muted">@L[item.WarehouseType!]</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (item.IsActive)
+                                    {
+                                        <span class="status-badge success"><i class="bi bi-check-circle"></i>Hoạt động</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge secondary"><i class="bi bi-dash-circle"></i>Ngừng</span>
+                                    }
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                        <i class="bi bi-pencil"></i>
+                                        <span class="visually-hidden">Chỉnh sửa</span>
+                                    </a>
+                                    <button type="button" class="btn-table-action danger btnDelete" data-id="@item.Id" data-name="@item.Name" title="Xóa">
+                                        <i class="bi bi-trash"></i>
+                                        <span class="visually-hidden">Xóa bỏ</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
                     {
                         <tr>
-                            <td class="ps-4">
-                                <div class="fw-medium">@HighlighHelper.Highlight(item.Name, query)</div>
-                                <div class="text-muted small">@item.Code</div>
-                            </td>
-                            <td>
-                                @if (!string.IsNullOrEmpty(item.PhoneNumber))
-                                {
-                                    <a href="tel:@item.PhoneNumber" class="text-decoration-none">
-                                        <i class="bi bi-telephone me-1"></i>@item.PhoneNumber
-                                    </a>
-                                }
-                            </td>
-                            <td class="d-none d-md-table-cell">
-                                @if (!string.IsNullOrEmpty(item.Address))
-                                {
-                                    var encodedAddress = MyUrlEncoder.Encode(item.Address);
-                                    <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank"
-                                       class="text-decoration-none">
-                                        <i class="bi bi-geo-alt me-1"></i>@HighlighHelper.Highlight(item.Address, query)
-                                    </a>
-                                }
-                            </td>
-                            <td>
-                                <span class="text-muted">@L[item.WarehouseType!]</span>
-                            </td>
-                            <td class="text-center">
-                                @if (item.IsActive)
-                                {
-                                    <span class="status-badge success"><i class="bi bi-check-circle"></i>Hoạt động</span>
-                                }
-                                else
-                                {
-                                    <span class="status-badge secondary"><i class="bi bi-dash-circle"></i>Ngừng</span>
-                                }
-                            </td>
-                            <td class="text-end pe-3">
-                                <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
-                                    <i class="bi bi-pencil"></i>
-                                    <span class="visually-hidden">Chỉnh sửa</span>
-                                </a>
-                                <button type="button" class="btn-table-action danger btnDelete" data-id="@item.Id" data-name="@item.Name" title="Xóa">
-                                    <i class="bi bi-trash"></i>
-                                    <span class="visually-hidden">Xóa bỏ</span>
-                                </button>
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <div class="empty-icon"><i class="bi bi-geo-alt"></i></div>
+                                    <h5>Chưa có kho hàng nào</h5>
+                                    <p>Tạo kho hàng để quản lý vị trí lưu trữ.</p>
+                                </div>
                             </td>
                         </tr>
                     }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="5">
-                            <div class="empty-state">
-                                <div class="empty-icon"><i class="bi bi-geo-alt"></i></div>
-                                <h5>Chưa có kho hàng nào</h5>
-                                <p>Tạo kho hàng để quản lý vị trí lưu trữ.</p>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -116,7 +123,11 @@
                 <article class="list-card">
                     <div class="list-card-header">
                         <div class="list-card-title-group">
-                            <div class="list-card-title">@HighlighHelper.Highlight(item.Name, query)</div>
+                            <div class="list-card-title">
+                                <a class="text-decoration-none text-dark" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                    @HighlighHelper.Highlight(item.Name, query)
+                                </a>
+                            </div>
                             <div class="list-card-meta">@item.Code</div>
                         </div>
                         @if (item.IsActive)
@@ -192,6 +203,17 @@
     <script type="module" defer>
         import { confirm } from "/modules/modals.js";
         (function () {
+            const txtKeywords = document.getElementById('@(nameof(WarehouseListSearchModel.Keywords))');
+            const form = txtKeywords.closest('form');
+            const onSearchChanged = debounce(function () {
+                form.submit();
+            }, 500);
+            txtKeywords.addEventListener('input', onSearchChanged);
+
+            if (txtKeywords.value){
+                focusEnd(txtKeywords);
+            }
+
             $('.btnDelete').on('click', async function (e) {
                 e.preventDefault();
                 const name = $(this).data('name');

@@ -4,6 +4,19 @@
     var purchaseOrderStatus = (PurchaseOrderStatus)Model.Info.Status;
     var hasReceipts = Model.RelatedGoodsReceipts.Count > 0;
     var hasReturns = Model.RelatedVendorReturns.Count > 0;
+    var allocationCount = 0;
+    foreach (var item in Model.Info.Items)
+    {
+        var itemRegularAllocationCount = Model.AllocationsPerItem.TryGetValue(item.Id, out var allocationsForCount)
+            ? allocationsForCount.Count
+            : 0;
+        var itemDirectShipAllocationCount = Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var directShipAllocationsForCount)
+            ? directShipAllocationsForCount.Count
+            : 0;
+        allocationCount += itemRegularAllocationCount > 0 ? itemRegularAllocationCount : itemDirectShipAllocationCount;
+    }
+    var hasAnyAllocations = allocationCount > 0;
+    var receivingDocumentCount = Model.RelatedGoodsReceipts.Count + Model.RelatedVendorReturns.Count;
 }
 @functions {
     string BuildReceiptItemsHtml(IList<RelatedGoodsReceiptItemModel> items)
@@ -104,565 +117,19 @@
         </nav>
     </div>
 }
-<div class="content-card mb-3 position-relative">
-    <div class="content-card-body-flush">
-        <div class="row g-3">
-            <div class="col-lg-8 order-0">
-                <div class="mb-3">
-                    <div class="content-card-header">
-                        <h5>Danh sách hàng hóa</h5>
-                        @if (Model.Info.CanAddItems)
-                        {
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                                <i class="bi bi-plus-lg me-1"></i>
-                                <span class="d-none d-lg-inline">Thêm hàng hóa</span>
-                                <span class="d-lg-none">Thêm</span>
-                            </button>
-                        }
-                    </div>
-                    <div class="content-card-body-flush">
-                        <div class="table-responsive">
-                            <table class="table data-table mb-0">
-                                <thead>
-                                    <tr>
-                                        <th class="ps-3">Hàng hóa</th>
-                                        <th class="text-end">Số lượng</th>
-                                        <th class="text-end">Đã Nhận</th>
-                                        <th class="text-end">Đơn giá</th>
-                                        <th class="text-end d-none d-md-table-cell @(Model.Info.CanAddItems ? "" : "pe-3")">Thành tiền</th>
-                                        @if (Model.Info.CanAddItems || Model.Info.CanReceiveGoods || Model.DirectShipAllocationsPerItem.Count > 0 || Model.AllocationsPerItem.Count > 0 || Model.CanAllocateItems)
-                                        {
-                                            <th class="text-center"></th>
-                                        }
-                                    </tr>
-                                </thead>
-                                <tbody id="itemsTableBody">
-                                    @if (Model.Info.Items.Count > 0)
-                                    {
-                                        @for (var i = 0; i < Model.Info.Items.Count; i++)
-                                        {
-                                            var item = Model.Info.Items[i];
-                                            var hasAllocations = Model.AllocationsPerItem.TryGetValue(item.Id, out var allocations) && allocations.Count > 0;
-                                            var allocatedQuantity = hasAllocations ? allocations!.Sum(allocation => allocation.AllocatedQuantity) : 0m;
-                                            <tr id="row-@i" data-item-id="@item.Id">
-                                                <td class="ps-3">
-                                                    <div class="d-flex align-items-center gap-2">
-                                                        @if (!string.IsNullOrEmpty(item.ProductPicture))
-                                                        {
-                                                            <img src="@item.ProductPicture" class="rounded d-none d-lg-block"
-                                                                 style="width: 40px; height: 40px; object-fit: cover;" alt="@item.ProductName" />
-                                                        }
-                                                        else
-                                                        {
-                                                            <div class="d-flex align-items-center justify-content-center rounded bg-light"
-                                                                 style="width: 40px; height: 40px;">
-                                                                <i class="bi bi-image text-muted"></i>
-                                                            </div>
-                                                        }
-                                                        <span class="fw-medium product-name">@item.ProductName</span>
-                                                    </div>
-                                                    <input type="hidden" class="product-id" value="@item.ProductId" />
-                                                </td>
-                                                <td class="text-end">
-                                                    <span class="quantity-text">@item.QuantityOrdered.DisplayQuantity()</span>
-                                                    @if (allocatedQuantity > 0)
-                                                    {
-                                                        <div class="small text-primary text-nowrap">
-                                                            Phân bổ: @allocatedQuantity.DisplayQuantity()
-                                                        </div>
-                                                    }
-                                                    <input type="hidden" class="row-qty" value="@item.QuantityOrdered" />
-                                                </td>
-                                                <td class="text-end">
-                                                    @if (item.QuantityReceived >= item.QuantityOrdered)
-                                                    {
-                                                        <span class="status-badge success py-1 px-2">
-                                                            <i class="bi bi-check-circle-fill"></i> @item.QuantityReceived.DisplayQuantity()
-                                                        </span>
-                                                    }
-                                                    else if (item.QuantityReceived > 0)
-                                                    {
-                                                        <span class="status-badge warning py-1 px-2">
-                                                            @item.QuantityReceived.DisplayQuantity()
-                                                        </span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="text-muted fst-italic small">Chưa nhận</span>
-                                                    }
-                                                </td>
-                                                <td class="text-end text-muted">
-                                                    <span class="unit-price-text text-nowrap">
-                                                        @item.UnitCost.DisplayCurrency()
-                                                    </span>
-                                                </td>
-                                                <td class="text-end fw-600 text-primary d-none d-md-table-cell @(Model.Info.CanAddItems ? "" : "pe-4")">
-                                                    <span class="total-price-text">
-                                                        @item.TotalCost.DisplayCurrency()
-                                                    </span>
-                                                </td>
-                                                @if (Model.Info.CanAddItems || (Model.Info.CanReceiveGoods && item.RemainingQuantity > 0) || Model.CanAllocateItems || hasAllocations)
-                                                {
-                                                    <td class="text-center">
-                                                        <div>
-                                                            <button class="btn-table-action" type="button" data-testid="po-item-actions" data-bs-toggle="dropdown">
-                                                                <i class="bi bi-three-dots-vertical"></i>
-                                                            </button>
-                                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                                                                @if (Model.Info.CanReceiveGoods && item.RemainingQuantity > 0)
-                                                                {
-                                                                    <li>
-                                    <button class="dropdown-item" data-testid="po-receive-item-open" data-bs-toggle="modal" data-bs-target="#receiveItemModal"
-                                                                                data-item-id="@item.Id" data-item-name="@item.ProductName" data-item-remaining="@item.RemainingQuantity"
-                                                                                data-item-unit-cost="@item.UnitCost" data-item-unit-price="@item.CurrentUnitPrice" data-unit="@item.UnitMeasurement">
-                                                                            <i class="bi bi-truck me-1"></i>
-                                                                            Nhận hàng
-                                                                        </button>
-                                                                    </li>
-                                                                }
-                                                                @if (Model.CanAllocateItems)
-                                                                {
-                                                                    <li>
-                                                                        <button class="dropdown-item btn-allocate-to-order" data-testid="po-allocate-open" data-purchase-id="@Model.Info.Id"
-                                                                                data-item-id="@item.Id" data-item-name="@item.ProductName">
-                                                                            <i class="bi bi-diagram-3 me-1"></i>
-                                                                            Phân bổ đơn hàng
-                                                                        </button>
-                                                                    </li>
-                                                                }
-                                                                @if (hasAllocations)
-                                                                {
-                                                                    <li>
-                                                                        <button class="dropdown-item btn-release-allocate" data-purchase-id="@Model.Info.Id"
-                                                                                data-item-id="@item.Id" data-item-name="@item.ProductName">
-                                                                            <i class="bi bi-x-octagon me-1"></i>
-                                                                            Hủy phân bổ
-                                                                        </button>
-                                                                    </li>
-                                                                }
-                                                                @if (Model.Info.CanAddItems)
-                                                                {
-                                                                    <li>
-                                                                        <button class="dropdown-item btnRemoveItem" data-id="@item.Id"
-                                                                                disabled="@(Model.Info.Items.Count <= 1)"
-                                                                                data-purchaseorder="@Model.Info.Id" data-name="@item.ProductName">
-                                                                            <i class="bi bi-trash me-1 text-danger"></i>
-                                                                            Xóa bỏ
-                                                                        </button>
-                                                                    </li>
-                                                                }
-                                                            </ul>
-                                                        </div>
-                                                    </td>
-                                                }
-                                                else if (Model.DirectShipAllocationsPerItem.Count > 0 || Model.AllocationsPerItem.Count > 0)
-                                                {
-                                                    <td></td>
-                                                }
+@await Html.PartialAsync("_PurchaseOrderWorkflowBar", Model)
 
-                                            </tr>
-                                            @if (hasAllocations)
-                                            {
-                                                foreach (var allocation in allocations!)
-                                                {
-                                                    var allocationStatusColor = AllocationStatusColor(allocation.Status);
-                                                    var allocationStatusText = AllocationStatusText(allocation.Status);
-                                                    <tr class="table-light">
-                                                        <td colspan="3" class="ps-5 py-1 small">
-                                                            <i class="bi bi-diagram-3 me-1 text-primary"></i>
-                                                            <strong>Phân bổ cho đơn bán:</strong>
-                                                            <a asp-controller="Order" asp-action="Details"
-                                                               asp-route-id="@allocation.OrderId"
-                                                               class="text-decoration-none fw-semibold ms-1">@allocation.OrderCode</a>
-                                                            @if (allocation.IsDirectShip)
-                                                            {
-                                                                <span class="badge bg-info text-white ms-2">Giao thẳng</span>
-                                                            }
-                                                            <span class="d-md-none ms-2 status-badge @allocationStatusColor">@allocationStatusText</span>
-                                                        </td>
-                                                        <td class="py-1 text-end small text-muted">
-                                                            @allocation.ReceivedQuantity.DisplayQuantity() / @allocation.AllocatedQuantity.DisplayQuantity()
-                                                        </td>
-                                                        <td class="py-1 d-none d-md-table-cell">
-                                                            <span class="status-badge @allocationStatusColor">@allocationStatusText</span>
-                                                        </td>
-                                                        @if (Model.Info.CanAddItems || (Model.Info.CanReceiveGoods && item.RemainingQuantity > 0) || Model.CanAllocateItems || Model.DirectShipAllocationsPerItem.Count > 0 || Model.AllocationsPerItem.Count > 0)
-                                                        {
-                                                            <td></td>
-                                                        }
-                                                    </tr>
-                                                }
-                                            }
-                                            @if (Model.DirectShipAllocationsPerItem.TryGetValue(item.Id, out var dsAllocations))
-                                            {
-                                                foreach (var alloc in dsAllocations)
-                                                {
-                                                    var deliveryStatus = alloc.DeliveryStatus.HasValue
-                                                        ? (DeliveryNoteStatus)alloc.DeliveryStatus.Value
-                                                        : (DeliveryNoteStatus?)null;
-                                                    var (dsStatusBadge, dsStatusText) = deliveryStatus switch
-                                                    {
-                                                        DeliveryNoteStatus.Confirmed => ("info text-white", "Chờ khách xác nhận"),
-                                                        DeliveryNoteStatus.Delivered => ("success", "Khách đã nhận"),
-                                                        DeliveryNoteStatus.Cancelled => ("danger", "Đã hủy/từ chối"),
-                                                        _ => alloc.Status switch
-                                                        {
-                                                            0 => ("secondary", "Chờ nhận"),
-                                                            1 => ("warning", "Nhận một phần"),
-                                                            2 => ("info text-white", "Đã nhận"),
-                                                            _ => ("secondary", "Không rõ")
-                                                        }
-                                                    };
-                                                    <tr class="table-light">
-                                                        <td colspan="3" class="ps-5 py-1 small">
-                                                            <i class="bi bi-send me-1 text-primary"></i>
-                                                            <strong>Giao thẳng:</strong>
-                                                            @alloc.DirectShipAddress
-                                                            @if (!string.IsNullOrEmpty(alloc.DirectShipContactName))
-                                                            { <span class="text-muted ms-2">— @alloc.DirectShipContactName</span> }
-                                                            @if (!string.IsNullOrEmpty(alloc.DirectShipContactPhone))
-                                                            { <span class="text-muted ms-1">(@alloc.DirectShipContactPhone)</span> }
-                                                            @if (alloc.DeliveryNoteId.HasValue)
-                                                            {
-                                                                <a asp-controller="DeliveryNote" asp-action="Details"
-                                                                   asp-route-id="@alloc.DeliveryNoteId"
-                                                                   class="ms-2 text-decoration-none">@alloc.DeliveryNoteCode</a>
-                                                            }
-                                                            <span class="d-md-none ms-2 status-badge @dsStatusBadge">@dsStatusText</span>
-                                                        </td>
-                                                        <td class="py-1 text-end small text-muted">
-                                                            @alloc.ReceivedQuantity.DisplayQuantity() / @alloc.AllocatedQuantity.DisplayQuantity()
-                                                        </td>
-                                                        <td class="py-1 d-none d-md-table-cell">
-                                                            <span class="status-badge @dsStatusBadge">@dsStatusText</span>
-                                                        </td>
-                                                        <td class="py-1 text-center">
-                                                            <button class="btn btn-sm btn-outline-secondary py-0 px-2 btnEditDirectShipAddress"
-                                                                    data-allocation-id="@alloc.AllocationId"
-                                                                    data-address="@alloc.DirectShipAddress"
-                                                                    data-contact-name="@(alloc.DirectShipContactName ?? "")"
-                                                                    data-contact-phone="@(alloc.DirectShipContactPhone ?? "")">
-                                                                <i class="bi bi-pencil-square"></i>
-                                                                <span class="visually-hidden ms-1">Sửa địa chỉ giao</span>
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                }
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <tr>
-                                            <td colspan="@(Model.Info.CanAddItems || Model.Info.CanReceiveGoods || Model.DirectShipAllocationsPerItem.Count > 0 || Model.AllocationsPerItem.Count > 0 || Model.CanAllocateItems ? 6 : 5)">
-                                                <div class="py-4 text-center text-muted">
-                                                    <i class="bi bi-box-seam me-1"></i> Chưa có sản phẩm nào.
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                        @{
-                            var totalShipping = Model.Info.ShippingAmount + Model.Info.AccumulatedShippingAmount;
-                            var totalTax = Model.Info.TaxAmount + Model.Info.AccumulatedTaxAmount;
-                            var subTotal = Model.Info.TotalAmount - totalShipping - totalTax;
-                        }
-                        <div class="@(Model.Info.Items.Count > 0 ? "" : "d-none") order-summary" id="tableFooter">
-                            <div class="order-summary-row">
-                                <span class="label">Tạm tính</span>
-                                <span class="value" id="subTotal">
-                                    @subTotal.DisplayCurrencyWithSymbol()
-                                </span>
-                            </div>
-                            @if (totalShipping > 0)
-                            {
-                                <div class="order-summary-row">
-                                    <span class="label">
-                                        Phí vận chuyển
-                                        @if (Model.Info.AccumulatedShippingAmount > 0 && Model.Info.ShippingAmount > 0)
-                                        {
-                                            <span class="small text-muted">(@Model.Info.ShippingAmount.DisplayCurrencyWithSymbol() + nhận hàng @Model.Info.AccumulatedShippingAmount.DisplayCurrencyWithSymbol())</span>
-                                        }
-                                        else if (Model.Info.AccumulatedShippingAmount > 0)
-                                        {
-                                            <span class="small text-muted">(từ nhận hàng)</span>
-                                        }
-                                    </span>
-                                    <span class="value text-muted">@totalShipping.DisplayCurrencyWithSymbol()</span>
-                                </div>
-                            }
-                            @if (totalTax > 0)
-                            {
-                                <div class="order-summary-row">
-                                    <span class="label">
-                                        Thuế VAT
-                                        @if (Model.Info.AccumulatedTaxAmount > 0 && Model.Info.TaxAmount > 0)
-                                        {
-                                            <span class="small text-muted">(@Model.Info.TaxAmount.DisplayCurrencyWithSymbol() + nhận hàng @Model.Info.AccumulatedTaxAmount.DisplayCurrencyWithSymbol())</span>
-                                        }
-                                        else if (Model.Info.AccumulatedTaxAmount > 0)
-                                        {
-                                            <span class="small text-muted">(từ nhận hàng)</span>
-                                        }
-                                    </span>
-                                    <span class="value text-muted">+ @totalTax.DisplayCurrencyWithSymbol()</span>
-                                </div>
-                            }
-                            <div class="order-summary-row total">
-                                <span class="label">Tổng cộng</span>
-                                <span class="value" id="grandTotal">
-                                    @Model.Info.TotalAmount.DisplayCurrencyWithSymbol()
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    @if (hasReceipts || hasReturns)
-                    {
-                        <div class="content-card-body">
-                            <div class="row g-3 mt-1">
-                                <div class="col-12">
-                                    <div class="content-card mb-3 h-100">
-                                        <div class="content-card-header">
-                                            <h5 class="mb-0">
-                                                Phiếu nhận hàng
-                                                @if (hasReceipts)
-                                                {
-                                                    <span class="badge rounded-pill bg-light text-dark border ms-1">@Model.RelatedGoodsReceipts.Count phiếu</span>
-                                                }
-                                            </h5>
-                                        </div>
-                                        @if (!hasReceipts)
-                                        {
-                                            <div class="content-card-body text-center py-4">
-                                                <div class="text-muted small">
-                                                    Chưa có phiếu nhận hàng nào.
-                                                </div>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <div class="table-responsive">
-                                                <table class="table data-table mb-0 align-middle">
-                                                    <thead>
-                                                        <tr>
-                                                            <th class="ps-3">Mã phiếu</th>
-                                                            <th>Kho nhập</th>
-                                                            <th class="d-none d-lg-table-cell">Hàng hóa</th>
-                                                            <th class="text-end">Số lượng</th>
-                                                            <th class="text-end pe-3">Giá trị</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach (var receipt in Model.RelatedGoodsReceipts)
-                                                        {
-                                                            var receiptItemsHtml = BuildReceiptItemsHtml(receipt.Items);
-                                                            foreach (var item in receipt.Items)
-                                                            {
-                                                                <tr>
-                                                                    <td class="ps-3">
-                                                                        <a asp-action="Details" asp-controller="GoodsReceipt" asp-route-id="@receipt.Id" class="text-decoration-none fw-medium text-nowrap"
-                                                                           data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="right"
-                                                                           data-bs-custom-class="po-items-popover-content"
-                                                                           data-bs-title="@($"{receipt.ItemCount} mặt hàng")"
-                                                                           data-bs-content="@receiptItemsHtml">
-                                                                            @receipt.Code
-                                                                        </a>
-                                                                        <div class="small text-muted text-nowrap">
-                                                                            @receipt.ReceivedOn.ToString(ViewConstants.DefaultDateTimeFormat)
-                                                                        </div>
-                                                                    </td>
-                                                                    <td>
-                                                                        <span class="small">@item.WarehouseName</span>
-                                                                    </td>
-                                                                    <td class="d-none d-lg-table-cell">
-                                                                        @item.ProductName
-                                                                    </td>
-                                                                    <td class="text-end">
-                                                                        <span class="fw-medium">@item.Quantity.DisplayQuantity()</span>
-                                                                    </td>
-                                                                    <td class="text-end pe-3 text-nowrap">
-                                                                        @if (item.UnitCost.HasValue)
-                                                                        {
-                                                                            <span class="fw-bold text-primary">@((item.UnitCost.Value * item.Quantity).DisplayCurrencyWithSymbol())</span>
-                                                                        }
-                                                                        else
-                                                                        {
-                                                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
-                                                                                <i class="bi bi-hourglass-split me-1"></i>Chờ định giá
-                                                                            </span>
-                                                                        }
-                                                                    </td>
-                                                                </tr>
-                                                            }
-                                                        }
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        }
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="content-card mb-3 h-100">
-                                        <div class="content-card-header">
-                                            <h5 class="mb-0">
-                                                Phiếu trả hàng
-                                                @if (hasReturns)
-                                                {
-                                                    <span class="badge rounded-pill bg-light text-dark border ms-1">@Model.RelatedVendorReturns.Count phiếu</span>
-                                                }
-                                            </h5>
-                                        </div>
-                                        @if (!hasReturns)
-                                        {
-                                            <div class="content-card-body text-center py-4">
-                                                <div class="text-muted small">
-                                                    Chưa có phiếu trả hàng nào.
-                                                </div>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <div class="table-responsive">
-                                                <table class="table data-table mb-0 align-middle">
-                                                    <thead>
-                                                        <tr>
-                                                            <th class="ps-3">Mã phiếu</th>
-                                                            <th>Kho xuất</th>
-                                                            <th class="d-none d-lg-table-cell">Hàng hóa</th>
-                                                            <th class="text-end">Số lượng</th>
-                                                            <th class="text-end pe-3">Giá trị</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach (var vendorReturn in Model.RelatedVendorReturns)
-                                                        {
-                                                            var returnStatus = (VendorReturnStatus)vendorReturn.Status;
-                                                            var returnItemsHtml = BuildReturnItemsHtml(vendorReturn.Items);
-                                                            @foreach (var item in vendorReturn.Items)
-                                                            {
-                                                                <tr>
-                                                                    <td class="ps-3">
-                                                                        <a asp-action="Details" asp-controller="VendorReturn" asp-route-id="@vendorReturn.Id" class="text-decoration-none fw-medium text-nowrap"
-                                                                           data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true" data-bs-placement="left"
-                                                                           data-bs-custom-class="po-items-popover-content"
-                                                                           data-bs-title="@($"{vendorReturn.Code} — {vendorReturn.ItemCount} mặt hàng")"
-                                                                           data-bs-content="@returnItemsHtml">
-                                                                            @vendorReturn.Code
-                                                                        </a>
-                                                                        <div class="small text-muted text-nowrap">
-                                                                            @vendorReturn.ReturnDate.ToString(ViewConstants.DefaultDateTimeFormat)
-                                                                        </div>
-                                                                        <span class="status-badge @ReturnStatusColor(returnStatus)">
-                                                                            @ReturnStatusText(returnStatus)
-                                                                        </span>
-                                                                    </td>
-                                                                    <td>
-                                                                        <span class="small">@(string.IsNullOrWhiteSpace(vendorReturn.WarehouseName) ? "Chưa chọn" : vendorReturn.WarehouseName)</span>
-                                                                    </td>
-                                                                    <td>
-                                                                        @item.ProductName
-                                                                    </td>
-                                                                    <td class="text-end">
-                                                                        <span class="fw-medium">@item.AcceptedQuantity.DisplayQuantity()</span>
-                                                                    </td>
-                                                                    <td class="text-end pe-3 text-nowrap">
-                                                                        <span class="fw-bold text-danger">@((item.AcceptedQuantity * item.ReturnUnitCost).DisplayCurrencyWithSymbol())</span>
-                                                                    </td>
-                                                                </tr>
-                                                            }
-                                                            @if (vendorReturn.AdditionalCost > 0)
-                                                            {
-                                                                <tr>
-                                                                    <td colspan="5" class="text-end pe-3 text-danger fw-medium">
-                                                                        <div data-bs-toggle="tooltip" title="Chi phí phát sinh đã trừ vào tổng thu hồi">
-                                                                            Phát sinh chi phí: @vendorReturn.AdditionalCost.DisplayCurrencyWithSymbol()
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
-                                                            }
-                                                        }
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-            <div class="col-lg-4 order-0 order-lg-1">
-                @if (Model.CanModifyInfo && Model.ModifyInfo != null)
-                {
-                    <partial name="Details.InfoModify" model="Model.ModifyInfo" />
-                }
-                else
-                {
-                    <partial name="Details.Info" model="Model" />
-                }
-            </div>
-        </div>
+
+<div class="order-workflow-layout">
+    <div class="order-workflow-main">
+        @await Html.PartialAsync("_POWorkflowOrderingPanel", Model)
+        @await Html.PartialAsync("_POWorkflowReceivingPanel", Model)
+        @await Html.PartialAsync("_POWorkflowAllocationPanel", Model)
+        @await Html.PartialAsync("_POWorkflowSettlementPanel", Model)
     </div>
-    <div class="content-card-footer d-flex align-items-center justify-content-between">
-        <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
-            <i class="bi bi-arrow-left"></i>
-            Trở về
-        </a>
-        <div>
-            @if (Model.Info.Status == (int)PurchaseOrderStatus.Draft)
-            {
-                <form asp-action="SubmitsPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline">
-                    <button type="submit" class="btn btn-primary" data-testid="po-submit-for-approval">
-                        <i class="bi bi-send me-1"></i> Gửi đơn
-                    </button>
-                </form>
-            }
-            else if (Model.Info.Status == (int)PurchaseOrderStatus.Submitted)
-            {
-                <form asp-action="ChangeStatus" asp-route-id="@Model.Info.Id" asp-route-status="@((int)PurchaseOrderStatus.Approved)" method="post" class="d-inline">
-                    <button type="submit" class="btn btn-info text-white" data-testid="po-approve">
-                        <i class="bi bi-check-all me-1"></i> Duyệt đơn
-                    </button>
-                </form>
-            }
-            @if (Model.Info.CanReceiveGoods && Model.Info.Items.Any(i => i.RemainingQuantity > 0))
-            {
-                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#bulkReceiveModal">
-                    <i class="bi bi-box-arrow-in-down me-1"></i>
-                    <span>Nhận hàng</span>
-                </button>
-            }
-            @if (hasReceipts && Model.Info.Status != (int)PurchaseOrderStatus.Cancelled)
-            {
-                <a class="btn btn-outline-danger"
-                   asp-controller="VendorReturn" asp-action="Create"
-                   asp-route-vendorId="@Model.Info.VendorId"
-                   asp-route-vendorName="@Model.Info.VendorName"
-                   asp-route-purchaseOrderId="@Model.Info.Id"
-                   asp-route-purchaseOrderCode="@Model.Info.Code">
-                    <i class="bi bi-arrow-return-left me-1"></i>
-                    <span>Trả hàng</span>
-                </a>
-            }
-            @if (Model.Info.Status == (int)PurchaseOrderStatus.Receiving)
-            {
-                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#closePartialModal">
-                    <i class="bi bi-archive me-1"></i> Đóng đơn
-                </button>
-            }
-            @if (Model.Info.Status != (int)PurchaseOrderStatus.Completed && Model.Info.Status != (int)PurchaseOrderStatus.Cancelled)
-            {
-                <form asp-action="CancelPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline">
-                    <button type="submit" class="btn btn-outline-danger">
-                        <i class="bi bi-x-circle me-1"></i> Hủy đơn
-                    </button>
-                </form>
-            }
-        </div>
-    </div>
+    <aside class="order-workflow-timeline">
+        @await Html.PartialAsync("_PurchaseOrderWorkflowTimeline", Model)
+    </aside>
 </div>
 @if (Model.Info.Status == (int)PurchaseOrderStatus.Receiving)
 {
@@ -711,6 +178,7 @@
                 </div>
                 <form asp-action="AddPurchaseOrderItem" method="post" id="addProductForm">
                     <input type="hidden" name="purchaseOrderId" value="@Model.Info.Id" />
+                    <input type="hidden" id="addItemDecimalPlaces" name="QuantityDecimalPlaces" value="0" />
                     <div class="modal-body py-3">
                         <div class="mb-3">
                             <div id="productPicker"></div>
@@ -780,6 +248,52 @@
         </div>
     </div>
 }
+@if (Model.Info.CanAddItems)
+{
+    <div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Sửa dòng hàng</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editProductForm">
+                    <input type="hidden" id="editPurchaseOrderId" value="@Model.Info.Id" />
+                    <input type="hidden" id="editPurchaseOrderItemId" />
+                    <div class="modal-body py-3">
+                        <div class="alert alert-light border mb-3">
+                            <div class="small text-muted">Hàng hóa</div>
+                            <div class="fw-semibold" id="editProductName"></div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small fw-medium text-muted" for="editItemQuantity">Số lượng</label>
+                                <input id="editItemQuantity" class="form-control no-additional-element"
+                                       data-decimal="quantity" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-medium text-muted" for="editItemUnitCost">Đơn giá</label>
+                                <input id="editItemUnitCost" class="form-control no-additional-element"
+                                       data-decimal="currency" />
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label small fw-medium text-muted" for="editItemNote">Ghi chú</label>
+                            <textarea id="editItemNote" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div id="editProductError" class="alert alert-danger d-none mt-3 mb-0"></div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 pb-3">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" id="btnEditItemSubmit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
 
 @if (Model.Info.CanReceiveGoods)
 {
@@ -794,9 +308,11 @@
                     <div class="modal-body py-4">
                         <input type="hidden" name="PurchaseOrderId" value="@Model.Info.Id" />
                         <input type="hidden" name="PurchaseOrderItemId" id="modalItemId" />
+                        <input type="hidden" name="QuantityDecimalPlaces" id="modalDecimalPlaces" value="0" />
                         <input type="hidden" name="OversupplyAction" id="modalOversupplyAction" value="" />
                         <input type="hidden" name="DirectShipOrderId" id="modalDsOrderId" value="" />
                         <input type="hidden" name="DirectShipOrderItemId" id="modalDsOrderItemId" value="" />
+                        <input type="hidden" name="DirectShipExistingAllocationId" id="modalDsExistingAllocationId" value="" />
 
                         <div class="alert alert-info border-0 mb-4">
                             <div class="small fw-bold">
@@ -907,7 +423,7 @@
                                         </div>
                                         <div class="col-6">
                                             <input type="text" name="DirectShipContactPhone" id="modalDsContactPhone"
-                                                   class="form-control form-control-sm" placeholder="Số điện thoại" />
+                                                   class="form-control form-control-sm" placeholder="Số điện thoại *" />
                                         </div>
                                     </div>
                                 </div>
@@ -972,7 +488,8 @@
                                                                         "name": @Json.Serialize(item.ProductName),
                                                                         "remaining": @item.RemainingQuantity.ToString("#0"),
                                                                         "unitCost": @item.UnitCost.ToString("#0"),
-                                                                        "dsRemaining": @itemDsRemaining.ToString("#0")
+                                                                        "dsRemaining": @itemDsRemaining.ToString("#0"),
+                                                                        "decimalPlaces": @item.QuantityDecimalPlaces
                                                                     }@(idx < remainingItems.Count - 1 ? "," : "")</text>
                                                         }
                                                     ],
@@ -1100,7 +617,7 @@
                             <input id="editDsContactName" type="text" class="form-control" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase">Điện thoại</label>
+                            <label class="form-label small fw-bold text-muted text-uppercase">Điện thoại <span class="text-danger">*</span></label>
                             <input id="editDsContactPhone" type="text" class="form-control" />
                         </div>
                         <div id="editDsSuccessBanner" class="alert alert-warning border-0 d-none">
@@ -1113,6 +630,46 @@
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
                         <button type="button" class="btn btn-primary" id="btnSaveDirectShipAddress">
                             <i class="bi bi-save me-1"></i> Lưu
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="markDirectShipModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow rounded-4">
+                    <div class="modal-header border-0 pb-0">
+                        <div>
+                            <h5 class="modal-title fw-bold">@L["PurchaseOrder.MarkDirectShip.Title"]</h5>
+                            <p class="text-muted small mb-0" id="markDsOrderSummary"></p>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body py-4">
+                        <input type="hidden" id="markDsAllocationId" />
+                        <div class="alert alert-info border-0 small">
+                            <i class="bi bi-info-circle me-1"></i>
+                            @L["PurchaseOrder.MarkDirectShip.HelpText"]
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.Address"] <span class="text-danger">*</span></label>
+                            <textarea id="markDsAddress" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.ContactName"]</label>
+                            <input id="markDsContactName" type="text" class="form-control" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase">@L["PurchaseOrder.MarkDirectShip.ContactPhone"] <span class="text-danger">*</span></label>
+                            <input id="markDsContactPhone" type="text" class="form-control" />
+                        </div>
+                        <div id="markDsErrorBanner" class="alert alert-danger border-0 small d-none"></div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0 pb-4">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@L["Btn.Close"]</button>
+                        <button type="button" class="btn btn-primary" id="btnMarkDirectShip">
+                            <i class="bi bi-send me-1"></i> @L["PurchaseOrder.MarkDirectShip.Submit"]
                         </button>
                     </div>
                 </div>
@@ -1171,7 +728,7 @@
                                         <input type="text" class="form-control form-control-sm" id="allocateDsContact" placeholder="Tên người nhận" />
                                     </div>
                                     <div class="col-6">
-                                        <input type="text" class="form-control form-control-sm" id="allocateDsPhone" placeholder="Số điện thoại" />
+                                        <input type="text" class="form-control form-control-sm" id="allocateDsPhone" placeholder="Số điện thoại *" />
                                     </div>
                                 </div>
                             </div>
@@ -1189,6 +746,45 @@
             </div>
         </div>
         }
+
+    @if (Model.Info.CanReceiveGoods)
+    {
+    <div class="modal fade" id="markDsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-send me-2 text-primary"></i>Chuyển sang Giao thẳng
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">Phân bổ cho đơn: <strong id="markDsOrderCode"></strong></p>
+                    <input type="hidden" id="markDsAllocationId" />
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Địa chỉ giao hàng <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="markDsAddress" placeholder="Nhập địa chỉ giao hàng" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Số điện thoại <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="markDsPhone" placeholder="Nhập số điện thoại" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Tên người nhận</label>
+                        <input type="text" class="form-control" id="markDsContactName" placeholder="Nhập tên người nhận (tùy chọn)" />
+                    </div>
+                    <div class="alert alert-danger d-none mt-2" id="markDsError"></div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-primary" id="btnMarkDsSubmit">
+                        <i class="bi bi-check-lg me-1"></i>Xác nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
 
         @section Styles {
             <style>
@@ -1241,6 +837,49 @@
             <partial name="_ValidationScriptsPartial" />
 
             <script>
+                // Workflow panel switching
+                (function () {
+                    function activatePanel(targetId) {
+                        document.querySelectorAll('.workflow-panel').forEach(p => p.classList.remove('active'));
+                        const target = document.getElementById(targetId.replace('#', ''));
+                        if (target) {
+                            target.classList.add('active');
+                            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
+                        document.querySelectorAll('.workflow-step').forEach(s => {
+                            const href = s.getAttribute('href') || '';
+                            s.classList.toggle('active', href === targetId);
+                            s.setAttribute('aria-selected', href === targetId ? 'true' : 'false');
+                        });
+                    }
+
+                    document.querySelectorAll('.workflow-step').forEach(step => {
+                        step.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            const href = this.getAttribute('href');
+                            if (href) activatePanel(href);
+                        });
+                    });
+
+                    // Activate the initial active panel
+                    const activeStep = document.querySelector('.workflow-step.active');
+                    if (activeStep) {
+                        const href = activeStep.getAttribute('href');
+                        if (href) {
+                            const target = document.getElementById(href.replace('#', ''));
+                            if (target && !target.classList.contains('active')) {
+                                target.classList.add('active');
+                            }
+                        }
+                    } else {
+                        // Default: show ordering panel
+                        const firstPanel = document.getElementById('po-stage-ordering');
+                        if (firstPanel) firstPanel.classList.add('active');
+                    }
+                })();
+            </script>
+
+            <script>
                 document.querySelectorAll('.btnEditDirectShipAddress').forEach(btn => {
                     btn.addEventListener('click', function() {
                         document.getElementById('editDsAllocationId').value = this.dataset.allocationId;
@@ -1265,6 +904,12 @@
                         errorBanner.classList.remove('d-none');
                         return;
                     }
+                    const newContactPhone = document.getElementById('editDsContactPhone').value.trim();
+                    if (!newContactPhone) {
+                        errorBanner.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
+                        errorBanner.classList.remove('d-none');
+                        return;
+                    }
                     try {
                         const resp = await fetch('/DirectShipDelivery/UpdateAddress', {
                             method: 'POST',
@@ -1273,13 +918,90 @@
                                 allocationId,
                                 newAddress,
                                 newContactName: document.getElementById('editDsContactName').value.trim() || null,
-                                newContactPhone: document.getElementById('editDsContactPhone').value.trim() || null
+                                newContactPhone
                             })
                         });
                         const data = await resp.json();
                         if (data.success) successBanner.classList.remove('d-none');
                         else { errorBanner.textContent = data.message || 'Có lỗi xảy ra.'; errorBanner.classList.remove('d-none'); }
                     } catch { errorBanner.textContent = 'Lỗi kết nối.'; errorBanner.classList.remove('d-none'); }
+                });
+
+                const markDirectShipText = {
+                    addressRequired: @Json.Serialize(L["Error.DirectShipAddressRequired"].Value),
+                    phoneRequired: @Json.Serialize(L["Error.DirectShipContactPhoneRequired"].Value),
+                    unexpected: @Json.Serialize(L["Error.UnexpectedError"].Value),
+                    network: @Json.Serialize(L["Error.Network"].Value),
+                    saving: @Json.Serialize(L["Common.Processing"].Value),
+                    submit: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.Submit"].Value),
+                    orderPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.OrderPrefix"].Value),
+                    customerPrefix: @Json.Serialize(L["PurchaseOrder.MarkDirectShip.CustomerPrefix"].Value)
+                };
+
+                document.querySelectorAll('.btnMarkAllocationDirectShip').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        document.getElementById('markDsAllocationId').value = this.dataset.allocationId || '';
+                        document.getElementById('markDsAddress').value = this.dataset.shippingAddress || '';
+                        document.getElementById('markDsContactName').value = this.dataset.customerName || '';
+                        document.getElementById('markDsContactPhone').value = this.dataset.customerPhone || '';
+                        document.getElementById('markDsErrorBanner').classList.add('d-none');
+                        document.getElementById('markDsErrorBanner').textContent = '';
+                        const summaryParts = [];
+                        if (this.dataset.orderCode) summaryParts.push(`${markDirectShipText.orderPrefix}: ${this.dataset.orderCode}`);
+                        if (this.dataset.customerName) summaryParts.push(`${markDirectShipText.customerPrefix}: ${this.dataset.customerName}`);
+                        document.getElementById('markDsOrderSummary').textContent = summaryParts.join(' · ');
+                        bootstrap.Modal.getOrCreateInstance(document.getElementById('markDirectShipModal')).show();
+                    });
+                });
+
+                document.getElementById('btnMarkDirectShip')?.addEventListener('click', async function() {
+                    const allocationId = document.getElementById('markDsAllocationId')?.value;
+                    const address = document.getElementById('markDsAddress').value.trim();
+                    const contactName = document.getElementById('markDsContactName').value.trim();
+                    const contactPhone = document.getElementById('markDsContactPhone').value.trim();
+                    const errorBanner = document.getElementById('markDsErrorBanner');
+                    errorBanner.classList.add('d-none');
+                    errorBanner.textContent = '';
+                    if (!address) {
+                        errorBanner.textContent = markDirectShipText.addressRequired;
+                        errorBanner.classList.remove('d-none');
+                        return;
+                    }
+                    if (!contactPhone) {
+                        errorBanner.textContent = markDirectShipText.phoneRequired;
+                        errorBanner.classList.remove('d-none');
+                        return;
+                    }
+
+                    const originalHtml = this.innerHTML;
+                    this.disabled = true;
+                    this.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span>${markDirectShipText.saving}`;
+                    try {
+                        const resp = await fetch('/PurchaseOrder/MarkAllocationAsDirectShip', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
+                            body: JSON.stringify({
+                                allocationId,
+                                address,
+                                contactName: contactName || null,
+                                contactPhone,
+                                priority: 0
+                            })
+                        });
+                        const data = await resp.json();
+                        if (data.success) {
+                            location.reload();
+                            return;
+                        }
+                        errorBanner.textContent = data.message || markDirectShipText.unexpected;
+                        errorBanner.classList.remove('d-none');
+                    } catch {
+                        errorBanner.textContent = markDirectShipText.network;
+                        errorBanner.classList.remove('d-none');
+                    } finally {
+                        this.disabled = false;
+                        this.innerHTML = originalHtml || `<i class="bi bi-send me-1"></i> ${markDirectShipText.submit}`;
+                    }
                 });
             </script>
 
@@ -1339,9 +1061,11 @@
                     return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
                 }
                 function _parseReceiveQty() {
-                    const v = document.getElementById('modalReceivedQty')?.value || '0';
+                    const el = document.getElementById('modalReceivedQty');
+                    const v = el?.value || '0';
+                    const decimals = parseInt(el?.dataset?.decimals ?? '2', 10);
                     return (window.DecimalFields?.stripFormatting)
-                        ? parseFloat(DecimalFields.stripFormatting(v, 2)) || 0
+                        ? parseFloat(DecimalFields.stripFormatting(v, decimals)) || 0
                         : parseFloat(v.replace(/[^0-9.]/g, '')) || 0;
                 }
                 function syncWarehouseVisibility() {
@@ -1428,8 +1152,15 @@
                         document.getElementById('modalItemId').value = itemId;
                         document.getElementById('modalItemName').innerText = itemName;
                         document.getElementById('modalItemRemaining').innerText = remaining + currentUnitMeasurement;
-                        document.getElementById('modalReceivedQty').value = remaining;
-                        document.getElementById('modalReceivedQty').max = remainingRaw;
+                        const receivedQtyInput = document.getElementById('modalReceivedQty');
+                        receivedQtyInput.value = remaining;
+                        receivedQtyInput.max = remainingRaw;
+                        const receiveDecimalPlaces = parseInt(button.getAttribute('data-decimalplaces') || '0', 10);
+                        receivedQtyInput.dataset.decimals = String(receiveDecimalPlaces);
+                        receivedQtyInput.dataset.decimalBound = '';
+                        window.DecimalFields?.bindInput?.(receivedQtyInput);
+                        const modalDpInput = document.getElementById('modalDecimalPlaces');
+                        if (modalDpInput) modalDpInput.value = receiveDecimalPlaces;
                         itemRemainingQty = parseFloat(remainingRaw) || 0;
                         document.getElementById('oversupplyWarningPanel').classList.add('d-none');
                         document.getElementById('modalOversupplyAction').value = '';
@@ -1447,6 +1178,7 @@
                         document.getElementById('modalSellingPriceSection')?.classList.remove('d-none');
                         document.getElementById('modalDsOrderItemId').value = '';
                         document.getElementById('modalDsOrderId').value = '';
+                        document.getElementById('modalDsExistingAllocationId').value = '';
                         document.getElementById('modalDsAddressInput').value = '';
                         document.getElementById('modalDsContactName').value = '';
                         document.getElementById('modalDsContactPhone').value = '';
@@ -1479,6 +1211,7 @@
                             currentDsCustomerName = null;
                             document.getElementById('modalDsOrderItemId').value = '';
                             document.getElementById('modalDsOrderId').value = '';
+                            document.getElementById('modalDsExistingAllocationId').value = '';
                             receiveOriginalPhone = '';
                         }
 						syncWarehouseVisibility();
@@ -1510,49 +1243,85 @@
                     fields.classList.add('d-none');
                     errorBox.classList.add('d-none');
                     try {
-                        const resp = await fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${poItemId}`, { signal });
-                        if (!resp.ok) throw new Error('Lỗi tải dữ liệu');
-                        const data = await resp.json();
+                        const [resp1, resp2] = await Promise.all([
+                            fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${poItemId}`, { signal }),
+                            fetch(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderItemId=${poItemId}`, { signal })
+                        ]);
+                        if (!resp1.ok || !resp2.ok) throw new Error('Lỗi tải dữ liệu');
+                        const [eligible, nonDs] = await Promise.all([resp1.json(), resp2.json()]);
                         loading.classList.add('d-none');
-                        if (!data || !data.length) {
+                        if ((!eligible || !eligible.length) && (!nonDs || !nonDs.length)) {
                             empty.classList.remove('d-none');
                             return;
                         }
                         items.innerHTML = '';
-                        data.forEach(function(order) {
-                            const btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.className = 'list-group-item list-group-item-action py-2 px-3';
-                            btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <span class="fw-semibold">${order.orderCode}</span>
-                                    <span class="text-muted ms-2 small">${order.customerName}</span>
-                                </div>
-                                <span class="badge bg-secondary ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate) + currentUnitMeasurement}</span>
-                            </div>`;
-                            btn.dataset.shippingAddress = order.shippingAddress || '';
-                            btn.dataset.customerPhone = order.customerPhone || '';
-                            btn.dataset.customerName = order.customerName || '';
-                            btn.addEventListener('click', function() {
-                                document.querySelectorAll('#modalDsOrderItems .list-group-item').forEach(el => el.classList.remove('active'));
-                                btn.classList.add('active');
-                                document.getElementById('modalDsOrderId').value = order.orderId;
-                                document.getElementById('modalDsOrderItemId').value = order.orderItemId;
-                                document.getElementById('modalDsSelectedOrder').textContent =
-                                    `Đơn hàng: ${order.orderCode} · Khách: ${order.customerName} · Có thể nhận: ${order.availableToAllocate}`;
-                                document.getElementById('modalDsAddressInput').value = btn.dataset.shippingAddress;
-                                document.getElementById('modalDsContactName').value = btn.dataset.customerName;
-                                document.getElementById('modalDsContactPhone').value = btn.dataset.customerPhone;
-                                receiveOriginalPhone = btn.dataset.customerPhone;
-                                fields.classList.remove('d-none');
-                                currentDsAvailableQty = parseFloat(DecimalFields.stripFormatting(String(order.availableToAllocate), 2)) || 0;
-                                currentDsCustomerName = btn.dataset.customerName || order.orderCode;
-                                syncWarehouseVisibility();
-                                toggleDirectShipCheckbox();
-                                updateDistributionPreview();
+
+                        function selectDsItem(availableQty, shippingAddress, customerName, customerPhone) {
+                            document.querySelectorAll('#modalDsOrderItems .list-group-item-action').forEach(el => el.classList.remove('active'));
+                            document.getElementById('modalDsAddressInput').value = shippingAddress;
+                            document.getElementById('modalDsContactName').value = customerName;
+                            document.getElementById('modalDsContactPhone').value = customerPhone;
+                            receiveOriginalPhone = customerPhone;
+                            fields.classList.remove('d-none');
+                            currentDsAvailableQty = parseFloat(DecimalFields.stripFormatting(String(availableQty), 2)) || 0;
+                            currentDsCustomerName = customerName;
+                            syncWarehouseVisibility();
+                            toggleDirectShipCheckbox();
+                            updateDistributionPreview();
+                        }
+
+                        if (eligible && eligible.length) {
+                            const hdr = document.createElement('div');
+                            hdr.className = 'list-group-item list-group-item-light text-muted small fw-semibold py-1 px-3 border-0';
+                            hdr.textContent = 'Tạo phân bổ mới + Giao thẳng';
+                            items.appendChild(hdr);
+                            eligible.forEach(function(order) {
+                                const btn = document.createElement('button');
+                                btn.type = 'button';
+                                btn.className = 'list-group-item list-group-item-action py-2 px-3';
+                                btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
+                                    <div><span class="fw-semibold">${order.orderCode}</span><span class="text-muted ms-2 small">${order.customerName}</span></div>
+                                    <span class="badge bg-success ms-2">Còn ${DecimalFields.formatQuantity(order.availableToAllocate) + currentUnitMeasurement}</span>
+                                </div>`;
+                                btn.addEventListener('click', function() {
+                                    btn.classList.add('active');
+                                    document.getElementById('modalDsOrderId').value = order.orderId;
+                                    document.getElementById('modalDsOrderItemId').value = order.orderItemId;
+                                    document.getElementById('modalDsExistingAllocationId').value = '';
+                                    document.getElementById('modalDsSelectedOrder').textContent =
+                                        `Đơn hàng: ${order.orderCode} · Khách: ${order.customerName} · Có thể nhận: ${order.availableToAllocate}`;
+                                    selectDsItem(order.availableToAllocate, order.shippingAddress || '', order.customerName || '', order.customerPhone || '');
+                                });
+                                items.appendChild(btn);
                             });
-                            items.appendChild(btn);
-                        });
+                        }
+
+                        if (nonDs && nonDs.length) {
+                            const hdr = document.createElement('div');
+                            hdr.className = 'list-group-item list-group-item-light text-muted small fw-semibold py-1 px-3 border-0';
+                            hdr.textContent = 'Nâng cấp giao thẳng (phân bổ hiện có)';
+                            items.appendChild(hdr);
+                            nonDs.forEach(function(alloc) {
+                                const btn = document.createElement('button');
+                                btn.type = 'button';
+                                btn.className = 'list-group-item list-group-item-action py-2 px-3';
+                                btn.innerHTML = `<div class="d-flex justify-content-between align-items-start">
+                                    <div><span class="fw-semibold">${alloc.orderCode}</span><span class="text-muted ms-2 small">${alloc.customerName}</span></div>
+                                    <span class="badge bg-warning text-dark ms-2">Còn ${DecimalFields.formatQuantity(alloc.remainingQty) + currentUnitMeasurement}</span>
+                                </div>`;
+                                btn.addEventListener('click', function() {
+                                    btn.classList.add('active');
+                                    document.getElementById('modalDsExistingAllocationId').value = alloc.allocationId;
+                                    document.getElementById('modalDsOrderId').value = '';
+                                    document.getElementById('modalDsOrderItemId').value = '';
+                                    document.getElementById('modalDsSelectedOrder').textContent =
+                                        `Nâng cấp: ${alloc.orderCode} · Khách: ${alloc.customerName} · Còn: ${alloc.remainingQty}`;
+                                    selectDsItem(alloc.remainingQty, alloc.shippingAddress || '', alloc.customerName || '', alloc.customerPhone || '');
+                                });
+                                items.appendChild(btn);
+                            });
+                        }
+
                         list.classList.remove('d-none');
                     } catch (err) {
                         if (err.name === 'AbortError') return;
@@ -1584,9 +1353,11 @@
                 const receiveItemForm = receiveItemModal?.querySelector('form');
                 if (receiveItemForm) {
                 receiveItemForm.addEventListener('submit', function (e) {
+                const _rqEl = document.getElementById('modalReceivedQty');
+                const _rqDecimals = parseInt(_rqEl?.dataset?.decimals ?? '2', 10);
                 const val = (window.DecimalFields && typeof DecimalFields.stripFormatting === 'function')
-                    ? parseFloat(DecimalFields.stripFormatting(document.getElementById('modalReceivedQty').value, 2)) || 0
-                    : parseFloat((document.getElementById('modalReceivedQty').value || '').replace(/[^0-9.]/g, '')) || 0;
+                    ? parseFloat(DecimalFields.stripFormatting(_rqEl.value, _rqDecimals)) || 0
+                    : parseFloat((_rqEl?.value || '').replace(/[^0-9.]/g, '')) || 0;
                 if (val > itemRemainingQty && itemRemainingQty > 0) {
                 const choice = document.querySelector('input[name="oversupplyChoice"]:checked')?.value;
                 if (!choice || choice === 'Cancel') {
@@ -1599,11 +1370,19 @@
                 const dsToggle = document.getElementById('modalDsToggle');
                 if (dsToggle && dsToggle.checked) {
                 const dsOrderItemId = document.getElementById('modalDsOrderItemId').value;
+                const dsExistingAllocationId = document.getElementById('modalDsExistingAllocationId').value;
                 const dsAddress = document.getElementById('modalDsAddressInput').value.trim();
                 const errorBox = document.getElementById('modalDsError');
-                if (!dsOrderItemId) {
+                if (!dsOrderItemId && !dsExistingAllocationId) {
                     e.preventDefault();
                     errorBox.textContent = 'Vui lòng chọn đơn hàng để giao thẳng.';
+                    errorBox.classList.remove('d-none');
+                    return;
+                }
+                const currentPhone = document.getElementById('modalDsContactPhone').value.trim();
+                if (!currentPhone) {
+                    e.preventDefault();
+                    errorBox.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
                     errorBox.classList.remove('d-none');
                     return;
                 }
@@ -1613,7 +1392,6 @@
                     errorBox.classList.remove('d-none');
                     return;
                 }
-                const currentPhone = document.getElementById('modalDsContactPhone').value.trim();
                 if (receiveOriginalPhone && currentPhone !== receiveOriginalPhone) {
                     if (!confirm(`Số điện thoại liên lạc đã thay đổi từ "${receiveOriginalPhone}" thành "${currentPhone}". Xác nhận tiếp tục?`)) {
                         e.preventDefault();
@@ -1640,6 +1418,84 @@
                 warningBox.classList.add('d-none');
                 }
                 }
+
+                // Handle Edit Item Button
+                document.querySelectorAll('.btnEditItem').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const modal = document.getElementById('editProductModal');
+                if (!modal) return;
+
+                document.getElementById('editPurchaseOrderId').value = this.getAttribute('data-purchaseorder') || '';
+                document.getElementById('editPurchaseOrderItemId').value = this.getAttribute('data-id') || '';
+                document.getElementById('editProductName').textContent = this.getAttribute('data-name') || '';
+                const editQtyInput = document.getElementById('editItemQuantity');
+                editQtyInput.value = this.getAttribute('data-quantity') || '';
+                const editDecimalPlaces = parseInt(this.getAttribute('data-decimalplaces') || '0', 10);
+                editQtyInput.dataset.decimals = String(editDecimalPlaces);
+                editQtyInput.dataset.decimalBound = '';
+                document.getElementById('editItemUnitCost').value = this.getAttribute('data-unitcost') || '';
+                document.getElementById('editItemNote').value = this.getAttribute('data-note') || '';
+                document.getElementById('editProductError')?.classList.add('d-none');
+                window.DecimalFields?.autoWrap?.(modal);
+
+                new bootstrap.Modal(modal).show();
+                });
+                });
+
+                document.getElementById('editProductForm')?.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const errorEl = document.getElementById('editProductError');
+                const submitBtn = document.getElementById('btnEditItemSubmit');
+                errorEl?.classList.add('d-none');
+
+                const payload = {
+                purchaseOrderId: document.getElementById('editPurchaseOrderId')?.value,
+                purchaseOrderItemId: document.getElementById('editPurchaseOrderItemId')?.value,
+                quantity: parsePurchaseOrderDecimal(document.getElementById('editItemQuantity')?.value, 2),
+                unitCost: parsePurchaseOrderDecimal(document.getElementById('editItemUnitCost')?.value, 0),
+                note: document.getElementById('editItemNote')?.value || null
+                };
+
+                if (!payload.quantity || payload.quantity <= 0) {
+                showEditProductError('Số lượng phải lớn hơn 0.');
+                return;
+                }
+                if (payload.unitCost < 0) {
+                showEditProductError('Đơn giá không được âm.');
+                return;
+                }
+
+                submitBtn.disabled = true;
+                const originalHtml = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
+
+                try {
+                const response = await fetch('@Url.Action("UpdatePurchaseOrderItem")', {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': document.querySelector('[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('editProductModal'))?.hide();
+                setTimeout(() => location.reload(), 300);
+                return;
+                }
+
+                showEditProductError(data.errorMessage || 'Không thể sửa dòng hàng.');
+                } catch (error) {
+                console.error('Error:', error);
+                showEditProductError('Có lỗi xảy ra khi sửa dòng hàng.');
+                } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHtml;
+                }
+                });
 
                 // Handle Remove Item Button
                 document.querySelectorAll('.btnRemoveItem').forEach(btn => {
@@ -1681,6 +1537,15 @@
                 itemUnitPrice.value = 0;
                 itemProductId.value = product.id;
                 btnAddProduct.classList.remove('d-none');
+                const itemQtyInput = document.getElementById('itemQuantity');
+                if (itemQtyInput) {
+                    const dp = String(product.quantityDecimalPlaces ?? 0);
+                    itemQtyInput.dataset.decimals = dp;
+                    itemQtyInput.dataset.decimalBound = '';
+                    window.DecimalFields?.bindInput?.(itemQtyInput);
+                    const addDpInput = document.getElementById('addItemDecimalPlaces');
+                    if (addDpInput) addDpInput.value = dp;
+                }
 
                 // Fetch giá nhập gần nhất
                 detailsRecentPrices = [];
@@ -1831,6 +1696,33 @@
                 if (productPickerInstance) {
                 productPickerInstance.clear();
                 }
+                }
+
+                function parsePurchaseOrderDecimal(value, scale) {
+                const raw = String(value ?? '').trim();
+                if (!raw) return 0;
+                const stripped = window.DecimalFields?.stripFormatting
+                    ? DecimalFields.stripFormatting(raw, scale)
+                    : normalizePurchaseOrderDecimal(raw);
+                const parsed = parseFloat(stripped);
+                return isNaN(parsed) ? 0 : parsed;
+                }
+
+                function normalizePurchaseOrderDecimal(value) {
+                let normalized = String(value ?? '').replace(/[^0-9,.-]/g, '');
+                if (normalized.includes(',') && normalized.includes('.')) {
+                normalized = normalized.replace(/\./g, '').replace(',', '.');
+                } else if (normalized.includes(',')) {
+                normalized = normalized.replace(',', '.');
+                }
+                return normalized;
+                }
+
+                function showEditProductError(message) {
+                const errorEl = document.getElementById('editProductError');
+                if (!errorEl) return;
+                errorEl.textContent = message;
+                errorEl.classList.remove('d-none');
                 }
 
                 async function removeItem(itemId, purchaseOrderId) {
@@ -2006,7 +1898,7 @@
                                         <td class="pe-2">
                                             <div class="d-flex align-items-center justify-content-end">
                                                 <input type="text" class="form-control form-control-sm text-end allocate-qty-input no-additional-element no-hint"
-                                                       data-decimal="quantity" value="${fmtQty(item.availableToAllocate)}" style="width:90px;display:inline-block" />
+                                                       data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" value="${fmtQty(item.availableToAllocate)}" style="width:90px;display:inline-block" />
                                            </div>
                                         </td>`;
                                     tbody.appendChild(tr);
@@ -2062,13 +1954,18 @@
 
                         const isDs = document.getElementById('allocateIsDirectShip').checked;
                         const address = document.getElementById('allocateDsAddress').value.trim();
+                        const currentPhone = document.getElementById('allocateDsPhone').value.trim();
+                        if (isDs && !currentPhone) {
+                            errEl.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
+                            errEl.classList.remove('d-none');
+                            return;
+                        }
                         if (isDs && !address) {
                             errEl.textContent = 'Vui lòng nhập địa chỉ giao hàng.';
                             errEl.classList.remove('d-none');
                             return;
                         }
 
-                        const currentPhone = document.getElementById('allocateDsPhone').value.trim();
                         if (isDs && originalPhone && currentPhone !== originalPhone) {
                             if (!confirm(`Số điện thoại liên lạc đã thay đổi từ "${originalPhone}" thành "${currentPhone}". Xác nhận tiếp tục?`)) {
                                 return;
@@ -2146,5 +2043,203 @@
                 });
             });
         </script>
+
+    @if (Model.Info.CanReceiveGoods)
+    {
+        <script>
+            (function () {
+                const markDsModal = document.getElementById('markDsModal');
+                if (!markDsModal) return;
+                markDsModal.addEventListener('show.bs.modal', function (e) {
+                    const btn = e.relatedTarget;
+                    document.getElementById('markDsAllocationId').value = btn.dataset.allocationId;
+                    document.getElementById('markDsOrderCode').textContent = btn.dataset.orderCode;
+                    document.getElementById('markDsAddress').value = '';
+                    document.getElementById('markDsPhone').value = '';
+                    document.getElementById('markDsContactName').value = '';
+                    document.getElementById('markDsError').classList.add('d-none');
+                });
+
+                document.getElementById('btnMarkDsSubmit')?.addEventListener('click', async function () {
+                    const allocationId = document.getElementById('markDsAllocationId').value;
+                    const address = document.getElementById('markDsAddress').value.trim();
+                    const phone = document.getElementById('markDsPhone').value.trim();
+                    const contactName = document.getElementById('markDsContactName').value.trim();
+                    const errEl = document.getElementById('markDsError');
+                    errEl.classList.add('d-none');
+
+                    if (!address) { errEl.textContent = 'Vui lòng nhập địa chỉ giao hàng.'; errEl.classList.remove('d-none'); return; }
+                    if (!phone) { errEl.textContent = 'Vui lòng nhập số điện thoại.'; errEl.classList.remove('d-none'); return; }
+
+                    const btn = this;
+                    btn.disabled = true;
+                    try {
+                        const resp = await fetch('/DirectShipDelivery/MarkAsDirectShip', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '' },
+                            body: JSON.stringify({ allocationId, address, contactName, contactPhone: phone })
+                        });
+                        const data = await resp.json();
+                        if (data.success) {
+                            location.reload();
+                        } else {
+                            errEl.textContent = data.message || 'Có lỗi xảy ra.';
+                            errEl.classList.remove('d-none');
+                        }
+                    } catch {
+                        errEl.textContent = 'Có lỗi xảy ra.';
+                        errEl.classList.remove('d-none');
+                    } finally {
+                        btn.disabled = false;
+                    }
+                });
+            })();
+        </script>
     }
-        }
+
+    @if (Model.Info.CanAddItems && Model.Info.Items.Any(i => i.QuantityOrdered - i.QuantityReceived > 0))
+    {
+        var splittableItems = Model.Info.Items.Where(i => i.QuantityOrdered - i.QuantityReceived > 0).ToList();
+        <div class="modal fade" id="splitPOModal" tabindex="-1" aria-labelledby="splitPOModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="splitPOModalLabel">
+                            <i class="bi bi-scissors me-2 text-secondary"></i>Chia đơn nhập <strong>@Model.Info.Code</strong>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="text-muted small mb-3">
+                            Nhập số lượng chuyển sang đơn mới (PO2). Phần còn lại ở lại đơn hiện tại (PO1).
+                            Để trống hoặc nhập 0 để giữ nguyên.
+                        </p>
+                        <div class="table-responsive">
+                            <table class="table data-table align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-3">Hàng hóa</th>
+                                        <th class="text-end" style="width:120px">Đặt hàng</th>
+                                        <th class="text-end" style="width:120px">Đã nhận</th>
+                                        <th class="text-end" style="width:150px">Chuyển sang PO2</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var si in splittableItems)
+                                    {
+                                        var available = si.QuantityOrdered - si.QuantityReceived;
+                                        <tr data-item-id="@si.Id" data-item-available="@available">
+                                            <td class="ps-3 fw-medium">@si.ProductName</td>
+                                            <td class="text-end text-muted">@si.QuantityOrdered.DisplayQuantity()</td>
+                                            <td class="text-end text-muted">
+                                                @if (si.QuantityReceived > 0)
+                                                {
+                                                    <span class="status-badge warning py-1">@si.QuantityReceived.DisplayQuantity()</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted fst-italic small">—</span>
+                                                }
+                                            </td>
+                                            <td class="text-end pe-3">
+                                                <input type="number" class="form-control form-control-sm text-end split-qty-input"
+                                                       min="0" max="@available" step="1" value="0"
+                                                       style="width:100px;margin-left:auto;" />
+                                                <div class="small text-muted mt-1">Tối đa: @available.DisplayQuantity()</div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="splitErrorMsg" class="alert alert-danger mt-3 d-none small"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="button" class="btn btn-primary" id="btnConfirmSplit">
+                            <i class="bi bi-scissors me-1"></i>Chia đơn
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            (function () {
+                document.getElementById('btnConfirmSplit').addEventListener('click', async function () {
+                    const btn = this;
+                    const errEl = document.getElementById('splitErrorMsg');
+                    errEl.classList.add('d-none');
+
+                    const items = [];
+                    document.querySelectorAll('#splitPOModal tr[data-item-id]').forEach(row => {
+                        const qty = parseFloat(row.querySelector('.split-qty-input').value) || 0;
+                        const available = parseFloat(row.dataset.itemAvailable);
+                        if (qty > available) {
+                            errEl.textContent = `Số lượng không được vượt quá số lượng khả dụng.`;
+                            errEl.classList.remove('d-none');
+                            return;
+                        }
+                        if (qty > 0) {
+                            items.push({ itemId: row.dataset.itemId, quantity: qty });
+                        }
+                    });
+
+                    if (errEl.textContent) return;
+
+                    if (items.length === 0) {
+                        errEl.textContent = 'Vui lòng nhập số lượng cho ít nhất một mặt hàng.';
+                        errEl.classList.remove('d-none');
+                        return;
+                    }
+
+                    btn.disabled = true;
+                    try {
+                        const resp = await fetch('@Url.Action("Split", "PurchaseOrder")', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ purchaseOrderId: '@Model.Info.Id', items })
+                        });
+                        const data = await resp.json();
+                        if (data.success) {
+                            window.location.href = '/PurchaseOrder/Details/' + data.data.newPurchaseOrderId;
+                        } else {
+                            errEl.textContent = data.message || 'Có lỗi xảy ra.';
+                            errEl.classList.remove('d-none');
+                        }
+                    } catch {
+                        errEl.textContent = 'Có lỗi xảy ra.';
+                        errEl.classList.remove('d-none');
+                    } finally {
+                        btn.disabled = false;
+                    }
+                });
+            })();
+        </script>
+    }
+
+    @if (Model.CanModifyInfo && Model.ModifyInfo?.CanChangeVendor == true)
+    {
+        <script type="module">
+            import VendorPicker from '/modules/VendorPicker.js';
+            const modal = document.getElementById('poEditInfoModal');
+            if (modal) {
+                let picker = null;
+                modal.addEventListener('shown.bs.modal', () => {
+                    if (picker) return;
+                    const el = modal.querySelector('#vendorPicker');
+                    if (!el) return;
+                    picker = new VendorPicker(el);
+                    const hiddenInput = modal.querySelector('input[name="VendorId"]');
+                    el.addEventListener('select', e => {
+                        if (hiddenInput) hiddenInput.value = e.detail?.vendor?.id ?? '';
+                    });
+                    el.addEventListener('remove', () => {
+                        if (hiddenInput) hiddenInput.value = '';
+                    });
+                });
+            }
+        </script>
+    }
+    }
+}

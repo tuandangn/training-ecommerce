@@ -1,5 +1,4 @@
 using NamEcommerce.Domain.Entities.Returns;
-using static NamEcommerce.Data.SqlServer.NamEcommerceEfDataDefaults;
 
 namespace NamEcommerce.Data.SqlServer.Mappings;
 
@@ -37,18 +36,14 @@ public sealed class VendorReturnMapping : IEntityTypeConfiguration<VendorReturn>
         builder.Property(r => r.CreatedOnUtc).IsRequired();
         builder.Property(r => r.UpdatedOnUtc).IsRequired(false);
 
-        // Index hỗ trợ query theo nguồn + filter theo Status
         builder.HasIndex(r => new { r.PurchaseOrderId, r.Status });
         builder.HasIndex(r => new { r.GoodsReceiptId, r.Status });
         builder.HasIndex(r => new { r.VendorId, r.Status });
 
-        // Navigation: _items (private backing field)
-        builder.Metadata.FindNavigation(nameof(VendorReturn.Items))
-            ?.SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(r => r.Items)
             .WithOne()
             .HasForeignKey(i => i.VendorReturnId)
             .OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(r => r.Items).AutoInclude();
+        builder.Navigation(r => r.Items).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
     }
 }

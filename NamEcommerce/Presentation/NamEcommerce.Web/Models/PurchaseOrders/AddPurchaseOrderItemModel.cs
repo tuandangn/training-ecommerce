@@ -21,4 +21,6 @@ public sealed class AddPurchaseOrderItemModel
 
     [Display(Name = "Kho hàng")]
     public Guid? WarehouseId { get; set; }
+
+    public int QuantityDecimalPlaces { get; set; }
 }

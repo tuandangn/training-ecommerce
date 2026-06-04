@@ -17,8 +17,8 @@ public sealed class ProductMapping : IEntityTypeConfiguration<Product>
         builder.Property(p => p.CreatedOnUtc);
         builder.Property(p => p.UpdatedOnUtc);
 
-        builder.Navigation(p => p.ProductCategories).AutoInclude();
-        builder.Navigation(p => p.ProductVendors).AutoInclude();
-        builder.Navigation(p => p.ProductPictures).AutoInclude();
+        builder.Navigation(p => p.ProductCategories).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
+        builder.Navigation(p => p.ProductVendors).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
+        builder.Navigation(p => p.ProductPictures).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
     }
 }

@@ -99,6 +99,7 @@ using NamEcommerce.Web.Services.CustomerPortal;
 using NamEcommerce.Web.Services.Dashboard;
 using NamEcommerce.Web.Services.Debts;
 using NamEcommerce.Web.Services.DeliveryNotes;
+using NamEcommerce.Web.Services.FastSales;
 using NamEcommerce.Web.Services.GoodsReceipts;
 using NamEcommerce.Web.Services.Inventory;
 using NamEcommerce.Web.Services.Localizations;
@@ -146,6 +147,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.Configure<WarehouseSettings>(options => builder.Configuration.Bind(AppConstants.WarehouseSettingSectionName, options));
     services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<WarehouseSettings>>().Value);
 
+    services.Configure<BankTransferPaymentSettings>(options => configuration.GetSection(BankTransferPaymentSettings.SectionName).Bind(options));
+    services.AddScoped(services => services.GetRequiredService<IOptionsSnapshot<BankTransferPaymentSettings>>().Value);
+
     var customerPortalSecurityOptions = new CustomerPortalSecurityOptions();
     configuration.GetSection(CustomerPortalSecurityOptions.SectionName).Bind(customerPortalSecurityOptions);
     services.AddSingleton(customerPortalSecurityOptions);
@@ -184,14 +188,18 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IInventoryStockManager>(services => services.GetRequiredService<InventoryStockManager>());
     services.AddScoped<IInventoryCostingManager, InventoryCostingManager>();
     services.AddScoped<IProductReservationManager, ProductReservationManager>();
+    services.AddScoped<IOrderItemChangeAuditManager, OrderItemChangeAuditManager>();
+    services.AddScoped<IPurchaseOrderItemChangeAuditManager, PurchaseOrderItemChangeAuditManager>();
     services.AddScoped<IShortageQueryService, ShortageQueryService>();
     services.AddScoped<IInventoryValidator, InventoryValidator>();
     services.AddScoped<IStockAuditLogger, StockAuditLogger>();
     services.AddScoped<ICustomerManager, CustomerManager>();
     services.AddScoped<IExpenseManager, ExpenseManager>();
+    services.AddScoped<IExpenseBudgetManager, ExpenseBudgetManager>();
     services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();
     services.AddScoped<IOrderManager, OrderManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
+    services.AddScoped<IBankTransferPaymentIntentManager, BankTransferPaymentIntentManager>();
     services.AddScoped<ICustomerPortalSecurityManager, CustomerPortalSecurityManager>();
     services.AddScoped<ICustomerPortalManager, CustomerPortalManager>();
     services.AddScoped<IVendorDebtManager, VendorDebtManager>();
@@ -220,16 +228,22 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IDirectShipAppService, DirectShipAppService>();
     services.AddScoped<ISupplierSuggestionService, SupplierSuggestionService>();
     services.AddScoped<IPurchaseOrderAppService, PurchaseOrderAppService>();
+    services.AddScoped<IPurchaseOrderAuditAppService, PurchaseOrderAuditAppService>();
     services.AddScoped<IShortageAggregationAppService, ShortageAggregationAppService>();
     services.AddScoped<ICustomerAppService, CustomerAppService>();
     services.AddScoped<IDashboardAppService, DashboardAppService>();
     services.AddScoped<IFinancialReportAppService, FinancialReportAppService>();
     services.AddScoped<IDirectShipReportAppService, DirectShipReportAppService>();
     services.AddScoped<IExpenseAppService, ExpenseAppService>();
+    services.AddScoped<IExpenseBudgetAppService, ExpenseBudgetAppService>();
     services.AddScoped<IDeliveryNoteAppService, DeliveryNoteAppService>();
     services.AddScoped<IPreparationAppService, PreparationAppService>();
     services.AddScoped<IOrderAppService, OrderAppService>();
+    services.AddScoped<IOrderAuditAppService, OrderAuditAppService>();
+    services.AddScoped<IFastSaleAppService, FastSaleAppService>();
     services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
+    services.AddScoped<IBankTransferPaymentIntentAppService, BankTransferPaymentIntentAppService>();
+    services.AddScoped<IBankTransferVerificationProvider, NoneBankTransferVerificationProvider>();
     services.AddScoped<ICustomerPortalAdminAppService, CustomerPortalAdminAppService>();
     services.AddScoped<ICustomerPortalDeliveryTokenAppService, CustomerPortalDeliveryTokenAppService>();
     services.AddScoped<ICustomerPortalNotificationSender, MockSmsCustomerPortalNotificationSender>();
@@ -263,6 +277,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IOrderModelFactory, OrderModelFactory>();
     services.AddScoped<IPreparationModelFactory, PreparationModelFactory>();
     services.AddScoped<IDeliveryNoteModelFactory, DeliveryNoteModelFactory>();
+    services.AddScoped<IFastSaleModelFactory, FastSaleModelFactory>();
     services.AddScoped<IGoodsReceiptModelFactory, GoodsReceiptModelFactory>();
     services.AddScoped<ICustomerReturnModelFactory, CustomerReturnModelFactory>();
     services.AddScoped<IVendorReturnModelFactory, VendorReturnModelFactory>();

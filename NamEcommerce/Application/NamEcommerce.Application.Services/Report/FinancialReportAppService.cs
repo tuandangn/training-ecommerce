@@ -102,6 +102,8 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
 
         var dto = new ProfitLossSummaryAppDto
         {
+            GrossRevenue = grossRevenue,
+            TotalReturnAmount = totalReturnAmt,
             TotalRevenue = grossRevenue - totalReturnAmt,
             TotalCogs = cogsSummary.TotalCost,
             HasPendingCogs = cogsSummary.HasPendingCost,

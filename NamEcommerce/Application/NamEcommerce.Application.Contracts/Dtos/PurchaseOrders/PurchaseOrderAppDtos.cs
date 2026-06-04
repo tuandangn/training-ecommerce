@@ -75,6 +75,19 @@ public sealed record CreatePurchaseOrderAppDto : BasePurchaseOrderAppDto
     }
 }
 [Serializable]
+public sealed class SplitPurchaseOrderAppDto
+{
+    public Guid PurchaseOrderId { get; init; }
+    public IList<SplitItemAppDto> Items { get; init; } = [];
+
+    public sealed class SplitItemAppDto
+    {
+        public Guid ItemId { get; init; }
+        public decimal Quantity { get; init; }
+    }
+}
+
+[Serializable]
 public sealed record CreatePurchaseOrderResultAppDto
 {
     public required bool Success { get; init; }

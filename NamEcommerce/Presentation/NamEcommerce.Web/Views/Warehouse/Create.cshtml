@@ -1,25 +1,28 @@
 @model CreateWarehouseModel
 @{
-    ViewData[ViewConstants.PageTitle] = "Thêm mới Kho hàng";
+    ViewData[ViewConstants.PageTitle] = "Thêm kho hàng";
 }
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Thêm mới Kho hàng</h1>
-        <p class="page-header-subtitle">Tạo kho hàng mới để lưu trữ hàng hóa</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Thêm mới
+        <span class="text-muted">Kho hàng</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Warehouse" class="text-decoration-none">Kho hàng</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
+            </ol>
+        </nav>
     </div>
-</div>
+}
 
-<div class="form-card">
-    <div class="form-card-header">
-        <h2 class="form-card-title"><i class="bi bi-geo-alt me-2 text-primary"></i>Thông tin kho hàng</h2>
-        <a asp-action="List" class="form-card-breadcrumb">
-            <i class="bi bi-arrow-left"></i> Trở về danh sách
-        </a>
-    </div>
-    <div class="form-card-body">
-        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
-        <form class="row g-3" method="post" asp-antiforgery="true">
+<div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
+<div class="content-card">
+    <form method="post" asp-antiforgery="true">
+        <div class="content-card-body">
             <ul class="nav nav-tabs" id="warehouseTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="infoTab" data-bs-toggle="tab" data-bs-target="#info"
@@ -77,17 +80,25 @@
                             </div>
                             <span asp-validation-for="IsActive" class="text-danger small"></span>
                         </div>
+                        <div class="col-12">
+                            <label asp-for="DisplayOrder" class="form-label"></label>
+                            <input asp-for="DisplayOrder" class="form-control" placeholder="@Html.DisplayNameFor(m => m.DisplayOrder)" />
+                            <span asp-validation-for="DisplayOrder" class="text-danger small"></span>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="form-card-footer" style="margin: 0 -1.5rem -1.5rem; border-radius: 0 0 var(--card-radius) var(--card-radius);">
-                <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i>Thêm mới
-                </button>
-            </div>
-        </form>
-    </div>
+        </div>
+        <div class="content-card-footer d-flex align-items-center justify-content-between">
+            <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                <i class="bi bi-arrow-left"></i>
+                Trở về
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-floppy me-1"></i>Thêm mới
+            </button>
+        </div>
+    </form>
 </div>
 
 @section Scripts {

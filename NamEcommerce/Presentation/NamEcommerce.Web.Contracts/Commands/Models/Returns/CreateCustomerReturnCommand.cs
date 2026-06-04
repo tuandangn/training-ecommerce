@@ -10,6 +10,7 @@ public sealed class CreateCustomerReturnCommand : IRequest<CreateCustomerReturnR
     public required Guid CustomerId { get; init; }
     public string? Note { get; init; }
     public decimal AdditionalCost { get; init; } = 0;
+    public bool CompensateInNextDelivery { get; init; }
     public IList<CreateCustomerReturnItemCommand> Items { get; init; } = [];
 }
 
@@ -19,6 +20,7 @@ public sealed class CreateCustomerReturnItemCommand
     public required Guid ProductId { get; init; }
     public Guid? DeliveryNoteItemId { get; init; }
     public required decimal RequestedQuantity { get; init; }
+    public int QuantityDecimalPlaces { get; init; }
     public required decimal AcceptedQuantity { get; init; }
     public decimal? OriginalUnitPrice { get; init; }
     public required decimal ReturnUnitPrice { get; init; }

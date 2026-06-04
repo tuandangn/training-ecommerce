@@ -5,6 +5,7 @@ using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Enums.Debts;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Debts;
@@ -17,6 +18,8 @@ public sealed class CustomerDebtManager(
     IEntityDataReader<CustomerDebt> debtReader,
     IRepository<CustomerPayment> paymentRepository,
     IEntityDataReader<CustomerPayment> paymentReader,
+    IRepository<CustomerCreditNote> creditNoteRepository,
+    IEntityDataReader<CustomerCreditNote> creditNoteReader,
     IEntityDataReader<Customer> customerReader,
     IEntityDataReader<DeliveryNote> deliveryNoteReader) : ICustomerDebtManager
 {
@@ -32,6 +35,13 @@ public sealed class CustomerDebtManager(
         var monthPrefix = $"PT-KH-{DateTime.UtcNow:yyMM}";
         var count = paymentReader.SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
         return $"{monthPrefix}-{(count + 1):D3}";
+    }
+
+    private Task<string> GenerateCreditNoteCodeAsync()
+    {
+        var monthPrefix = $"DC-KH-{DateTime.UtcNow:yyMM}";
+        var count = creditNoteReader.SecuredDataSource.Count(c => c.Code.StartsWith(monthPrefix));
+        return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
     }
 
     public async Task<CustomerDebtDto> CreateInitialDebtAsync(CreateInitialCustomerDebtDto dto)
@@ -141,6 +151,9 @@ public sealed class CustomerDebtManager(
             var debt = await debtRepository.GetByIdAsync(dto.CustomerDebtId.Value).ConfigureAwait(false);
             if (debt != null)
             {
+                if (payment.Amount > debt.RemainingAmount)
+                    throw new NamEcommerceDomainException("Error.PaymentAmountExceedsRemaining", payment.Amount, debt.RemainingAmount);
+
                 debt.ApplyPayment(payment.Amount);
                 payment.MarkAsApplied();
                 debt.MarkUpdated();
@@ -153,6 +166,9 @@ public sealed class CustomerDebtManager(
             var debt = debtReader.DataSource.FirstOrDefault(d => d.DeliveryNoteId == dto.DeliveryNoteId.Value);
             if (debt != null)
             {
+                if (payment.Amount > debt.RemainingAmount)
+                    throw new NamEcommerceDomainException("Error.PaymentAmountExceedsRemaining", payment.Amount, debt.RemainingAmount);
+
                 debt.ApplyPayment(payment.Amount);
                 payment.MarkAsApplied();
                 payment.CustomerDebtId = debt.Id;
@@ -177,8 +193,14 @@ public sealed class CustomerDebtManager(
             .OrderBy(p => p.PaidOnUtc)
             .ToList();
 
+        var allocations = GetCreditNoteAllocationsByDebtId(id);
+
         var dto = MapToDto(debt);
-        return dto with { Payments = payments.Select(MapToPaymentDto).ToList() };
+        return dto with
+        {
+            Payments = payments.Select(MapToPaymentDto).ToList(),
+            CreditNoteAllocations = allocations
+        };
     }
 
     public async Task<CustomerPaymentDto?> GetPaymentByIdAsync(Guid paymentId)
@@ -288,48 +310,53 @@ public sealed class CustomerDebtManager(
         return results;
     }
 
-    public async Task<(decimal OverRefundAmount, Guid? DebtId)> ApplyReturnFromCustomerReturnAsync(Guid customerId, Guid returnId, decimal amount)
+    public async Task<CustomerCreditNoteDto> ApplyCreditNoteFromCustomerReturnAsync(
+        Guid customerId,
+        Guid returnId,
+        string returnCode,
+        Guid? sourceDeliveryNoteId,
+        decimal amount)
     {
-        if (amount <= 0) return (0, null);
+        if (amount <= 0)
+            throw new NamEcommerceDomainException("Error.CreditNote.AmountMustBePositive");
 
-        var orderedDebts = debtReader.DataSource
-            .Where(d => d.CustomerId == customerId)
-            .OrderBy(d => d.CreatedOnUtc)
-            .ToList();
+        var existing = creditNoteReader.DataSource
+            .FirstOrDefault(c => c.SourceReturnId == returnId && c.Status != CreditNoteStatus.Cancelled);
+        if (existing is not null)
+            return MapToCreditNoteDto(existing);
 
-        if (!orderedDebts.Any()) return (0, null);
+        var customer = await customerReader.GetByIdAsync(customerId).ConfigureAwait(false);
+        if (customer == null) throw new CustomerIsNotFoundException(customerId);
 
-        var touchedDebts = new List<CustomerDebt>();
-        var remaining = amount;
+        var code = await GenerateCreditNoteCodeAsync().ConfigureAwait(false);
+        var sourceId = sourceDeliveryNoteId is { } id && id != Guid.Empty ? id : (Guid?)null;
+        var creditNote = new CustomerCreditNote(
+            code,
+            customer.Id,
+            customer.FullName,
+            returnId,
+            returnCode,
+            sourceId,
+            amount);
 
-        foreach (var debt in orderedDebts)
+        if (sourceId.HasValue)
         {
-            if (remaining <= 0) break;
-            if (debt.RemainingAmount <= 0) continue;
+            var sourceDebt = debtReader.DataSource
+                .FirstOrDefault(d => d.CustomerId == customerId
+                    && d.DeliveryNoteId == sourceId.Value
+                    && d.RemainingAmount > 0);
 
-            var toApply = Math.Min(remaining, debt.RemainingAmount);
-            debt.ApplyReturn(toApply, returnId);
-            touchedDebts.Add(debt);
-            remaining -= toApply;
+            if (sourceDebt is not null)
+            {
+                var applyAmount = Math.Min(creditNote.RemainingAmount, sourceDebt.RemainingAmount);
+                creditNote.AllocateToDebt(sourceDebt, applyAmount, null);
+                sourceDebt.MarkUpdated();
+                await debtRepository.UpdateAsync(sourceDebt).ConfigureAwait(false);
+            }
         }
 
-        decimal overRefundAmount = 0;
-        Guid? overRefundDebtId = null;
-        if (remaining > 0)
-        {
-            var first = orderedDebts[0];
-            first.ApplyReturn(remaining, returnId);
-            if (!touchedDebts.Contains(first))
-                touchedDebts.Add(first);
-
-            overRefundAmount = remaining;
-            overRefundDebtId = first.Id;
-        }
-
-        foreach (var debt in touchedDebts)
-            await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
-
-        return (overRefundAmount, overRefundDebtId);
+        var inserted = await creditNoteRepository.InsertAsync(creditNote).ConfigureAwait(false);
+        return MapToCreditNoteDto(inserted);
     }
 
     public async Task<IPagedDataDto<CustomerDebtSummaryDto>> GetCustomersWithDebtsAsync(string? keywords = null, int pageIndex = 0, int pageSize = 15)
@@ -402,7 +429,12 @@ public sealed class CustomerDebtManager(
                 .Where(p => p.CustomerDebtId == debt.Id)
                 .OrderBy(p => p.PaidOnUtc)
                 .ToList();
-            debtDtos.Add(MapToDto(debt) with { Payments = payments.Select(MapToPaymentDto).ToList() });
+            var allocations = GetCreditNoteAllocationsByDebtId(debt.Id);
+            debtDtos.Add(MapToDto(debt) with
+            {
+                Payments = payments.Select(MapToPaymentDto).ToList(),
+                CreditNoteAllocations = allocations
+            });
         }
 
         var deposits = paymentReader.DataSource
@@ -417,6 +449,12 @@ public sealed class CustomerDebtManager(
             .ToList();
 
         var depositBalance = deposits.Sum(p => p.Amount);
+        var unappliedCreditNotes = creditNoteReader.DataSource
+            .Where(c => c.CustomerId == customerId
+                && c.Status != CreditNoteStatus.Cancelled
+                && c.RemainingAmount > 0)
+            .OrderByDescending(c => c.CreatedOnUtc)
+            .ToList();
 
         return new CustomerDebtsByCustomerDto
         {
@@ -428,7 +466,9 @@ public sealed class CustomerDebtManager(
             DepositBalance = depositBalance,
             Debts = debtDtos,
             Deposits = deposits.Select(MapToPaymentDto).ToList(),
-            RecentPayments = recentPayments.Select(MapToPaymentDto).ToList()
+            RecentPayments = recentPayments.Select(MapToPaymentDto).ToList(),
+            UnappliedCreditNoteBalance = unappliedCreditNotes.Sum(c => c.RemainingAmount),
+            UnappliedCreditNotes = unappliedCreditNotes.Select(MapToCreditNoteDto).ToList()
         };
     }
 
@@ -483,6 +523,56 @@ public sealed class CustomerDebtManager(
             Status = debt.Status,
             DueDateUtc = debt.DueDateUtc,
             CreatedOnUtc = debt.CreatedOnUtc
+        };
+    }
+
+    private IList<CustomerCreditNoteAllocationDto> GetCreditNoteAllocationsByDebtId(Guid debtId)
+        => creditNoteReader.DataSource
+            .SelectMany(c => c.Allocations)
+            .Where(a => a.CustomerDebtId == debtId)
+            .OrderBy(a => a.AppliedOnUtc)
+            .Select(MapToCreditNoteAllocationDto)
+            .ToList();
+
+    private static CustomerCreditNoteDto MapToCreditNoteDto(CustomerCreditNote creditNote)
+    {
+        return new CustomerCreditNoteDto
+        {
+            Id = creditNote.Id,
+            Code = creditNote.Code,
+            CustomerId = creditNote.CustomerId,
+            CustomerName = creditNote.CustomerName,
+            SourceReturnId = creditNote.SourceReturnId,
+            SourceReturnCode = creditNote.SourceReturnCode,
+            SourceDeliveryNoteId = creditNote.SourceDeliveryNoteId,
+            Amount = creditNote.Amount,
+            AppliedAmount = creditNote.AppliedAmount,
+            RemainingAmount = creditNote.RemainingAmount,
+            Status = creditNote.Status,
+            CreatedOnUtc = creditNote.CreatedOnUtc,
+            Allocations = creditNote.Allocations
+                .OrderBy(a => a.AppliedOnUtc)
+                .Select(MapToCreditNoteAllocationDto)
+                .ToList()
+        };
+    }
+
+    private static CustomerCreditNoteAllocationDto MapToCreditNoteAllocationDto(CustomerCreditNoteAllocation allocation)
+    {
+        return new CustomerCreditNoteAllocationDto
+        {
+            Id = allocation.Id,
+            CustomerCreditNoteId = allocation.CustomerCreditNoteId,
+            CustomerCreditNoteCode = allocation.CustomerCreditNoteCode,
+            SourceReturnId = allocation.SourceReturnId,
+            SourceReturnCode = allocation.SourceReturnCode,
+            CustomerDebtId = allocation.CustomerDebtId,
+            CustomerDebtCode = allocation.CustomerDebtCode,
+            Amount = allocation.Amount,
+            AppliedOnUtc = allocation.AppliedOnUtc,
+            AppliedByUserId = allocation.AppliedByUserId,
+            ReversedOnUtc = allocation.ReversedOnUtc,
+            ReverseReason = allocation.ReverseReason
         };
     }
 

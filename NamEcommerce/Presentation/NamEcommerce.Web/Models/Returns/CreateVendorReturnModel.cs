@@ -52,6 +52,9 @@ public sealed class CreateVendorReturnItemModel
     [ValidateNever]
     public string? ProductDisplayName { get; set; }
 
+    [ValidateNever]
+    public int QuantityDecimalPlaces { get; set; }
+
     public Guid? GoodsReceiptItemId { get; set; }
 
     [Display(Name = "Số lượng yêu cầu")]

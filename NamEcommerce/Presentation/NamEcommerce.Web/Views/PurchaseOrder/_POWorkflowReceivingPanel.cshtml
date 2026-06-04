@@ -1,0 +1,335 @@
+@using NamEcommerce.Domain.Shared.Enums.PurchaseOrders
+@model PurchaseOrderDetailsModel
+@{
+    var poStatus = (PurchaseOrderStatus)Model.Info.Status;
+    var hasReceipts = Model.RelatedGoodsReceipts.Count > 0;
+    var hasReturns = Model.RelatedVendorReturns.Count > 0;
+    string BuildReceiptItemsHtml(IList<RelatedGoodsReceiptItemModel> items)
+    {
+        if (items.Count == 0) return string.Empty;
+        var sb = new System.Text.StringBuilder("<div class=\"po-items-list\">");
+        foreach (var item in items)
+        {
+            var name = System.Net.WebUtility.HtmlEncode(item.ProductName);
+            var qty = item.Quantity.DisplayQuantity();
+            var wh = string.IsNullOrEmpty(item.WarehouseName) ? string.Empty : $" <span class=\"text-muted\">· {System.Net.WebUtility.HtmlEncode(item.WarehouseName)}</span>";
+            sb.Append($"<div class=\"po-items-row\"><div class=\"po-items-name\">{name}{wh}</div><div class=\"po-items-qty\">{qty}</div></div>");
+        }
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+    string BuildReturnItemsHtml(IList<RelatedVendorReturnItemModel> items)
+    {
+        if (items.Count == 0) return string.Empty;
+        var sb = new System.Text.StringBuilder("<div class=\"po-items-list\">");
+        foreach (var item in items)
+        {
+            var name = System.Net.WebUtility.HtmlEncode(item.ProductName);
+            var accepted = item.AcceptedQuantity.DisplayQuantity();
+            var requested = item.RequestedQuantity.DisplayQuantity();
+            var qtyDisplay = item.AcceptedQuantity < item.RequestedQuantity
+                ? $"<span class=\"text-warning\">{accepted}</span> / {requested}"
+                : accepted;
+            sb.Append($"<div class=\"po-items-row\"><div class=\"po-items-name\">{name}</div><div class=\"po-items-qty\">{qtyDisplay}</div></div>");
+        }
+        sb.Append("</div>");
+        return sb.ToString();
+    }
+    string ReturnStatusColor(VendorReturnStatus status) => status switch
+    {
+        VendorReturnStatus.Draft => "secondary",
+        VendorReturnStatus.Inspecting => "warning",
+        VendorReturnStatus.Confirmed => "success",
+        VendorReturnStatus.Cancelled => "danger",
+        _ => "secondary"
+    };
+    string ReturnStatusText(VendorReturnStatus status) => status switch
+    {
+        VendorReturnStatus.Draft => "Nháp",
+        VendorReturnStatus.Inspecting => "Đang kiểm",
+        VendorReturnStatus.Confirmed => "Đã xác nhận",
+        VendorReturnStatus.Cancelled => "Đã hủy",
+        _ => status.ToString()
+    };
+}
+
+<section id="po-stage-receiving" class="workflow-panel @(Model.Workflow.ActiveStage == PurchaseOrderDetailsModel.WorkflowStage.Receiving ? "active" : "")">
+    <div class="content-card">
+        <div class="content-card-header">
+            <div>
+                <h5>Nhận hàng</h5>
+                <div class="text-muted small">
+                    Đã nhận @Model.Receiving.ReceivedQuantity.DisplayQuantity() / @Model.Receiving.OrderedQuantity.DisplayQuantity()
+                    @if (Model.Receiving.ReceiptCount > 0)
+                    {
+                        <span>· @Model.Receiving.ReceiptCount phiếu nhập</span>
+                    }
+                </div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                @if (Model.Info.CanReceiveGoods && Model.Info.Items.Any(i => i.RemainingQuantity > 0))
+                {
+                    <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#bulkReceiveModal">
+                        <i class="bi bi-box-arrow-in-down me-1"></i>Nhận hàng loạt
+                    </button>
+                }
+                @if (hasReceipts && poStatus != PurchaseOrderStatus.Cancelled)
+                {
+                    <a class="btn btn-sm btn-outline-danger"
+                       asp-controller="VendorReturn" asp-action="Create"
+                       asp-route-vendorId="@Model.Info.VendorId"
+                       asp-route-vendorName="@Model.Info.VendorName"
+                       asp-route-purchaseOrderId="@Model.Info.Id"
+                       asp-route-purchaseOrderCode="@Model.Info.Code">
+                        <i class="bi bi-arrow-return-left me-1"></i>Trả hàng
+                    </a>
+                }
+                @if (poStatus == PurchaseOrderStatus.Receiving)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#closePartialModal">
+                        <i class="bi bi-archive me-1"></i>Đóng đơn
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table data-table mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Hàng hóa</th>
+                        <th class="text-end">Đặt hàng</th>
+                        <th class="text-end">Đã nhận</th>
+                        <th class="text-end pe-3">Còn lại</th>
+                        @if (Model.Info.CanReceiveGoods)
+                        {
+                            <th class="text-center"></th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Info.Items)
+                    {
+                        var pct = item.QuantityOrdered > 0 ? (int)(item.QuantityReceived * 100 / item.QuantityOrdered) : 0;
+                        var isFullyReceived = item.QuantityReceived >= item.QuantityOrdered;
+                        <tr>
+                            <td class="ps-3">
+                                <div class="fw-medium">@item.ProductName</div>
+                                <div class="progress mt-1" style="height:4px;width:100px;">
+                                    <div class="progress-bar @(isFullyReceived ? "bg-success" : "bg-primary")" style="width:@pct%"></div>
+                                </div>
+                            </td>
+                            <td class="text-end text-muted">@item.QuantityOrdered.DisplayQuantity()</td>
+                            <td class="text-end">
+                                @if (isFullyReceived)
+                                {
+                                    <span class="status-badge success py-1">
+                                        <i class="bi bi-check-circle-fill"></i> @item.QuantityReceived.DisplayQuantity()
+                                    </span>
+                                }
+                                else if (item.QuantityReceived > 0)
+                                {
+                                    <span class="status-badge warning py-1">@item.QuantityReceived.DisplayQuantity()</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted fst-italic small">Chưa nhận</span>
+                                }
+                            </td>
+                            <td class="text-end pe-3 @(item.RemainingQuantity > 0 ? "fw-semibold" : "text-muted")">
+                                @if (item.RemainingQuantity > 0)
+                                {
+                                    @item.RemainingQuantity.DisplayQuantity()
+                                }
+                                else
+                                {
+                                    <i class="bi bi-check-all text-success"></i>
+                                }
+                            </td>
+                            @if (Model.Info.CanReceiveGoods)
+                            {
+                                <td class="text-center">
+                                    @if (item.RemainingQuantity > 0)
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary"
+                                                data-bs-toggle="modal" data-bs-target="#receiveItemModal"
+                                                data-testid="po-receive-item-open"
+                                                data-item-id="@item.Id"
+                                                data-item-name="@item.ProductName"
+                                                data-item-remaining="@item.RemainingQuantity"
+                                                data-item-unit-cost="@item.UnitCost"
+                                                data-item-unit-price="@item.CurrentUnitPrice"
+                                                data-unit="@item.UnitMeasurement"
+                                                data-decimalplaces="@item.QuantityDecimalPlaces">
+                                            <i class="bi bi-truck me-1"></i>Nhận
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted small">—</span>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (hasReceipts || hasReturns)
+        {
+            <div class="content-card-body">
+                <div class="row g-3 mt-1">
+                    <div class="col-12">
+                        <div class="content-card mb-3 h-100">
+                            <div class="content-card-header">
+                                <h5 class="mb-0">
+                                    Phiếu nhận hàng
+                                    @if (hasReceipts)
+                                    {
+                                        <span class="badge rounded-pill bg-light text-dark border ms-1">@Model.RelatedGoodsReceipts.Count phiếu</span>
+                                    }
+                                </h5>
+                            </div>
+                            @if (!hasReceipts)
+                            {
+                                <div class="content-card-body text-center py-4">
+                                    <div class="text-muted small">Chưa có phiếu nhận hàng nào.</div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="table-responsive">
+                                    <table class="table data-table mb-0 align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th class="ps-3">Mã phiếu</th>
+                                                <th>Kho nhập</th>
+                                                <th class="d-none d-lg-table-cell">Hàng hóa</th>
+                                                <th class="text-end">Số lượng</th>
+                                                <th class="text-end pe-3">Giá trị</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var receipt in Model.RelatedGoodsReceipts)
+                                            {
+                                                var receiptItemsHtml = BuildReceiptItemsHtml(receipt.Items);
+                                                foreach (var ri in receipt.Items)
+                                                {
+                                                    <tr>
+                                                        <td class="ps-3">
+                                                            <a asp-action="Details" asp-controller="GoodsReceipt" asp-route-id="@receipt.Id"
+                                                               class="text-decoration-none fw-medium text-nowrap"
+                                                               data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true"
+                                                               data-bs-placement="right"
+                                                               data-bs-custom-class="po-items-popover-content"
+                                                               data-bs-title="@($"{receipt.ItemCount} mặt hàng")"
+                                                               data-bs-content="@receiptItemsHtml">
+                                                                @receipt.Code
+                                                            </a>
+                                                            <div class="small text-muted text-nowrap">@receipt.ReceivedOn.ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                                                        </td>
+                                                        <td><span class="small">@ri.WarehouseName</span></td>
+                                                        <td class="d-none d-lg-table-cell">@ri.ProductName</td>
+                                                        <td class="text-end"><span class="fw-medium">@ri.Quantity.DisplayQuantity()</span></td>
+                                                        <td class="text-end pe-3 text-nowrap">
+                                                            @if (ri.UnitCost.HasValue)
+                                                            {
+                                                                <span class="fw-bold text-primary">@((ri.UnitCost.Value * ri.Quantity).DisplayCurrencyWithSymbol())</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle small">
+                                                                    <i class="bi bi-hourglass-split me-1"></i>Chờ định giá
+                                                                </span>
+                                                            }
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    @if (hasReturns)
+                    {
+                        <div class="col-12">
+                            <div class="content-card mb-3">
+                                <div class="content-card-header">
+                                    <h5 class="mb-0">
+                                        Phiếu trả hàng
+                                        <span class="badge rounded-pill bg-light text-dark border ms-1">@Model.RelatedVendorReturns.Count phiếu</span>
+                                    </h5>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table data-table mb-0 align-middle">
+                                        <thead>
+                                            <tr>
+                                                <th class="ps-3">Mã phiếu</th>
+                                                <th>Kho xuất</th>
+                                                <th class="d-none d-lg-table-cell">Hàng hóa</th>
+                                                <th class="text-end">Số lượng</th>
+                                                <th class="text-end pe-3">Giá trị</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var vendorReturn in Model.RelatedVendorReturns)
+                                            {
+                                                var returnStatus = (VendorReturnStatus)vendorReturn.Status;
+                                                var returnItemsHtml = BuildReturnItemsHtml(vendorReturn.Items);
+                                                foreach (var ri in vendorReturn.Items)
+                                                {
+                                                    <tr>
+                                                        <td class="ps-3">
+                                                            <a asp-action="Details" asp-controller="VendorReturn" asp-route-id="@vendorReturn.Id"
+                                                               class="text-decoration-none fw-medium text-nowrap"
+                                                               data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true"
+                                                               data-bs-placement="left"
+                                                               data-bs-custom-class="po-items-popover-content"
+                                                               data-bs-title="@($"{vendorReturn.Code} — {vendorReturn.ItemCount} mặt hàng")"
+                                                               data-bs-content="@returnItemsHtml">
+                                                                @vendorReturn.Code
+                                                            </a>
+                                                            <div class="small text-muted text-nowrap">@vendorReturn.ReturnDate.ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                                                            <span class="status-badge @ReturnStatusColor(returnStatus)">@ReturnStatusText(returnStatus)</span>
+                                                        </td>
+                                                        <td><span class="small">@(string.IsNullOrWhiteSpace(vendorReturn.WarehouseName) ? "Chưa chọn" : vendorReturn.WarehouseName)</span></td>
+                                                        <td class="d-none d-lg-table-cell">@ri.ProductName</td>
+                                                        <td class="text-end"><span class="fw-medium">@ri.AcceptedQuantity.DisplayQuantity()</span></td>
+                                                        <td class="text-end pe-3 text-nowrap">
+                                                            <span class="fw-bold text-danger">@((ri.AcceptedQuantity * ri.ReturnUnitCost).DisplayCurrencyWithSymbol())</span>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                                @if (vendorReturn.AdditionalCost > 0)
+                                                {
+                                                    <tr>
+                                                        <td colspan="5" class="text-end pe-3 text-danger fw-medium">
+                                                            <div data-bs-toggle="tooltip" title="Chi phí phát sinh đã trừ vào tổng thu hồi">
+                                                                Phát sinh chi phí: @vendorReturn.AdditionalCost.DisplayCurrencyWithSymbol()
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="px-4 py-4 text-center text-muted">
+                <i class="bi bi-box-arrow-in-down fs-2 d-block mb-2 opacity-25"></i>
+                Chưa có phiếu nhận hàng hay trả hàng nào.
+            </div>
+        }
+    </div>
+</section>

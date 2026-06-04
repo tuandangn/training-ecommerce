@@ -5,6 +5,7 @@ using NamEcommerce.Web.Contracts.Models.Catalog;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
+using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Catalog;
 
@@ -33,7 +34,8 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
                 Disabled = true
             }
         }, cancellationToken).ConfigureAwait(false);
-        var unitMeasurementOptions = await _mediator.Send(new GetUnitMeasurementOptionListQuery(), cancellationToken).ConfigureAwait(false);
+        var unitMeasurementList = await _mediator.Send(new GetUnitMeasurementListQuery { Keywords = null, PageIndex = 0, PageSize = int.MaxValue }, cancellationToken).ConfigureAwait(false);
+        var unitMeasurementById = unitMeasurementList.Data.ToDictionary(u => u.Id);
         var warehouseOptions = await _mediator.Send(new GetWarehouseOptionListQuery(), cancellationToken).ConfigureAwait(false);
 
         var productListItems = new List<ProductListForOrderModel.ProductItemModel>();
@@ -48,16 +50,9 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
             {
                 Name = productInfo.Name,
                 UnitPrice = productInfo.UnitPrice,
-                CategoryName = categoryName
+                CategoryName = categoryName,
+                PictureUrl = PictureHelper.GetPictureUrl(productInfo.Pictures.FirstOrDefault())
             };
-
-            foreach (var pictureId in productInfo.Pictures)
-            {
-                var base64PictureInfo = await _pictureAppService.GetBase64PictureByIdAsync(pictureId).ConfigureAwait(false);
-                if (base64PictureInfo is null) continue;
-                productModel.PictureUrl = base64PictureInfo?.Base64Value;
-                break;
-            }
 
             var stockInfo = await _mediator.Send(new GetProductStockInfoQuery(productInfo.Id, request.WarehouseId), cancellationToken).ConfigureAwait(false);
             productModel.QuantityOnHand = stockInfo.QuantityOnHand;
@@ -68,7 +63,11 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
             if (productInfo.Vendors != null)
                 productModel.AvailableVendors = vendorOptions.Where(option => productInfo.Vendors.Any(v => v.VendorId == option.Id)).ToList();
 
-            productModel.UnitMeasurement = unitMeasurementOptions.FirstOrDefault(option => option.Id == productInfo.UnitMeasurementId)?.Name;
+            if (productInfo.UnitMeasurementId.HasValue && unitMeasurementById.TryGetValue(productInfo.UnitMeasurementId.Value, out var um))
+            {
+                productModel.UnitMeasurement = um.Name;
+                productModel.QuantityDecimalPlaces = um.DecimalPlaces;
+            }
 
             productListItems.Add(productModel);
         }

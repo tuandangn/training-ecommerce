@@ -24,7 +24,8 @@ public class CreateExpenseAppDto
     public (bool isValid, string? errorMessage) Validate()
     {
         if (string.IsNullOrWhiteSpace(Title)) return (false, "Error.ExpenseTitleRequired");
-        if (Amount < 0) return (false, "Error.ExpenseAmountMustBePositive");
+        if (Amount <= 0) return (false, "Error.ExpenseAmountMustBePositive");
+        if (ExpenseType is < 1 or > 5) return (false, "Error.ExpenseTypeInvalid");
         return (true, null);
     }
 }

@@ -15,6 +15,9 @@ public enum GoodsReceiptSourceType
     /// <summary>Nhập do khách trả hàng — auto-sinh khi <c>CustomerReturn.Confirmed</c>.</summary>
     FromCustomerReturn = 1,
 
-    /// <summary>Nhập do điều chỉnh / kiểm kê / khởi tạo Product. Phase C — chưa dùng.</summary>
-    FromAdjustment = 2
+    /// <summary>Nhập do điều chỉnh / kiểm kê. Phase C — chưa dùng.</summary>
+    FromAdjustment = 2,
+
+    /// <summary>Tồn kho đầu kỳ khi tạo sản phẩm mới — không thể hủy, xóa, hoặc trả NCC.</summary>
+    OpeningBalance = 3
 }

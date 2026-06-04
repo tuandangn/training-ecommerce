@@ -326,7 +326,7 @@ public sealed class E2ETestDataService(
             .ConfigureAwait(false);
         var warehouseIds = await dbContext.Set<Warehouse>()
             .IgnoreQueryFilters()
-            .Where(x => x.Name.Contains(marker))
+            .Where(x => x.Name.Value.Contains(marker))
             .Select(x => x.Id)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

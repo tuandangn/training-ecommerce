@@ -10,4 +10,5 @@ public sealed class AddOrderItemCommand : IRequest<CommonActionResultModel>
     public required Guid ProductId { get; init; }
     public required decimal Quantity { get; init; }
     public required decimal UnitPrice { get; init; }
+    public int QuantityDecimalPlaces { get; init; }
 }

@@ -65,27 +65,35 @@ public sealed class DeliveryNoteManager(
             .GroupBy(item => item.OrderItemId)
             .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
 
-        EnsureQuantitiesCanBeDelivered(order, requestedQuantitiesByOrderItem, dto.CompensateReturnedQuantityInNextDelivery);
+        EnsureQuantitiesCanBeDelivered(order, requestedQuantitiesByOrderItem);
 
         var itemsByProduct = dto.Items
             .GroupBy(item => orderItemsById[item.OrderItemId].ProductId)
             .Select(g => new { ProductId = g.Key, Quantity = g.Sum(item => item.Quantity) })
             .ToList();
+        var itemsByProductWarehouse = dto.Items
+            .GroupBy(item => new
+            {
+                orderItemsById[item.OrderItemId].ProductId,
+                item.WarehouseId
+            })
+            .Select(g => new { g.Key.ProductId, g.Key.WarehouseId, Quantity = g.Sum(item => item.Quantity) })
+            .ToList();
 
         foreach (var item in itemsByProduct)
         {
             var reservedQuantity = await productReservationManager.GetReservedForOrderAsync(item.ProductId, order.Id).ConfigureAwait(false);
-            if (!dto.CompensateReturnedQuantityInNextDelivery && reservedQuantity < item.Quantity)
+            if (reservedQuantity < item.Quantity)
                 throw new InvalidStockOperationException("Error.CannotReleaseMoreThanReserved", reservedQuantity, item.Quantity);
         }
 
-        foreach (var item in itemsByProduct)
+        foreach (var item in itemsByProductWarehouse)
         {
-            var stock = await stockManager.GetInventoryStockForProductAsync(item.ProductId, dto.WarehouseId).ConfigureAwait(false);
+            var stock = await stockManager.GetInventoryStockForProductAsync(item.ProductId, item.WarehouseId).ConfigureAwait(false);
             if (stock is null)
-                throw new InsufficientStockException(item.ProductId, dto.WarehouseId, item.Quantity, 0);
+                throw new InsufficientStockException(item.ProductId, item.WarehouseId, item.Quantity, 0);
             if (stock.QuantityAvailable < item.Quantity)
-                throw new InsufficientStockException(item.ProductId, dto.WarehouseId, item.Quantity, stock.QuantityAvailable);
+                throw new InsufficientStockException(item.ProductId, item.WarehouseId, item.Quantity, stock.QuantityAvailable);
         }
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
@@ -120,7 +128,8 @@ public sealed class DeliveryNoteManager(
                 productId: orderItem.ProductId,
                 productName: orderItem.ProductName ?? string.Empty,
                 quantity: itemDto.Quantity,
-                unitPrice: orderItem.UnitPrice
+                unitPrice: orderItem.UnitPrice,
+                warehouseId: itemDto.WarehouseId
             );
         }
 
@@ -174,7 +183,7 @@ public sealed class DeliveryNoteManager(
         deliveryNote.AmountToCollect = acceptance.AmountToCollect;
 
         // 1. Mark DeliveryNote Delivered — raise DeliveryNoteDelivered event
-        deliveryNote.MarkDelivered(dto.PictureId, dto.ReceiverName);
+        deliveryNote.MarkDelivered(dto.PictureIds, dto.ReceiverName);
 
         // Save entity (display cost + status) → interceptor fires event → DeliveryNoteDeliveredStockHandler dispatches stock/cost.
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
@@ -198,7 +207,7 @@ public sealed class DeliveryNoteManager(
                     {
                         OrderId = order.Id,
                         OrderItemId = orderItem.Id,
-                        PictureId = dto.PictureId
+                        PictureId = dto.PictureIds.Count > 0 ? dto.PictureIds[0] : Guid.Empty
                     }).ConfigureAwait(false);
                 }
             }
@@ -252,7 +261,7 @@ public sealed class DeliveryNoteManager(
         deliveryNote.SourceType = DeliveryNoteSourceType.ToVendorReturn;
 
         foreach (var item in dto.Items)
-            deliveryNote.AddItemFromVendorReturn(item.ProductId, item.ProductName, item.Quantity, item.UnitCost);
+            deliveryNote.AddItemFromVendorReturn(item.ProductId, item.ProductName, item.Quantity, item.UnitCost, dto.WarehouseId);
 
         // Snapshot hiển thị trước khi xuất kho; COGS authoritative được ghi trong cost allocation.
         foreach (var item in deliveryNote.Items)
@@ -279,10 +288,13 @@ public sealed class DeliveryNoteManager(
             ?? throw new OrderIsNotFoundException(dto.OrderItemId);
 
         var orderItem = order.OrderItems.First(oi => oi.Id == dto.OrderItemId);
-        EnsureQuantitiesCanBeDelivered(order, new Dictionary<Guid, decimal>
-        {
-            [orderItem.Id] = dto.Quantity
-        }, includeReturnedCompensation: false);
+        EnsureQuantitiesCanBeDelivered(
+            order,
+            new Dictionary<Guid, decimal>
+            {
+                [orderItem.Id] = dto.Quantity
+            },
+            includeDirectShipOutstanding: false);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
         string contactName = string.IsNullOrWhiteSpace(dto.ContactName)
@@ -316,7 +328,8 @@ public sealed class DeliveryNoteManager(
             productId: orderItem.ProductId,
             productName: orderItem.ProductName ?? string.Empty,
             quantity: dto.Quantity,
-            unitPrice: orderItem.UnitPrice);
+            unitPrice: orderItem.UnitPrice,
+            warehouseId: dto.DirectShipWarehouseId);
 
         deliveryNote.SetAsDirectShip(dto.GoodsReceiptId);
         deliveryNote.MarkCreated();
@@ -390,15 +403,22 @@ public sealed class DeliveryNoteManager(
                 .GroupBy(item => item.ProductId)
                 .Select(g => new { ProductId = g.Key, Quantity = g.Sum(item => item.Quantity) })
                 .ToList();
-
-            foreach (var item in itemsByProduct)
-            {
-                await stockManager.ReleaseReservedStockAsync(
+            var itemsByProductWarehouse = deliveryNote.Items
+                .GroupBy(item => new
+                {
                     item.ProductId,
-                    deliveryNote.WarehouseId,
+                    WarehouseId = ResolveItemWarehouseId(deliveryNote, item)
+                })
+                .Select(g => new { g.Key.ProductId, g.Key.WarehouseId, Quantity = g.Sum(item => item.Quantity) })
+                .ToList();
+
+            foreach (var item in itemsByProductWarehouse)
+            {
+                await ReleaseReservedStockIfPresentAsync(
+                    item.ProductId,
+                    item.WarehouseId,
                     item.Quantity,
                     deliveryNote.Id,
-                    Guid.Empty,
                     $"Giải phóng hàng phiếu xuất {deliveryNote.Code} bị hủy").ConfigureAwait(false);
             }
 
@@ -412,14 +432,10 @@ public sealed class DeliveryNoteManager(
                         ProductReservationReason.DeliveryNoteCreated,
                         deliveryNote.Id).ConfigureAwait(false);
                     var quantityToReserve = Math.Min(item.Quantity, releasedQuantity);
-                    if (quantityToReserve <= 0)
-                        continue;
-
-                    await productReservationManager.ReserveAsync(
+                    await RestoreOrderReservationForCancelledDeliveryAsync(
                         item.ProductId,
                         quantityToReserve,
                         deliveryNote.OrderId,
-                        ProductReservationReason.DeliveryNoteCancelled,
                         deliveryNote.Id).ConfigureAwait(false);
                 }
             }
@@ -430,9 +446,10 @@ public sealed class DeliveryNoteManager(
             {
                 await stockManager.ReceiveStockUpToAsync(
                     item.ProductId,
-                    deliveryNote.WarehouseId,
+                    ResolveItemWarehouseId(deliveryNote, item),
                     deliveryNote.Items
-                        .Where(i => i.ProductId == item.ProductId)
+                        .Where(i => i.ProductId == item.ProductId
+                            && ResolveItemWarehouseId(deliveryNote, i) == ResolveItemWarehouseId(deliveryNote, item))
                         .Sum(i => i.Quantity),
                     $"Nhập lại kho do hủy phiếu xuất {deliveryNote.Code}",
                     Guid.Empty,
@@ -442,7 +459,7 @@ public sealed class DeliveryNoteManager(
                 await inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
                 {
                     ProductId = item.ProductId,
-                    WarehouseId = deliveryNote.WarehouseId,
+                    WarehouseId = ResolveItemWarehouseId(deliveryNote, item),
                     Quantity = item.Quantity,
                     UnitCost = item.CostAtDispatch,
                     MovementType = InventoryCostMovementType.CustomerReturn,
@@ -462,15 +479,74 @@ public sealed class DeliveryNoteManager(
 
                 foreach (var item in itemsByProduct)
                 {
-                    await productReservationManager.ReserveAsync(
+                    await RestoreOrderReservationForCancelledDeliveryAsync(
                         item.ProductId,
                         item.Quantity,
                         deliveryNote.OrderId,
-                        ProductReservationReason.DeliveryNoteCancelled,
                         deliveryNote.Id).ConfigureAwait(false);
                 }
             }
         }
+    }
+
+    private static Guid ResolveItemWarehouseId(DeliveryNote deliveryNote, DeliveryNoteItem item)
+        => item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId;
+
+    private async Task ReleaseReservedStockIfPresentAsync(
+        Guid productId,
+        Guid warehouseId,
+        decimal targetQuantity,
+        Guid deliveryNoteId,
+        string note)
+    {
+        if (targetQuantity <= 0)
+        {
+            return;
+        }
+
+        var stock = await stockManager.GetInventoryStockForProductAsync(productId, warehouseId).ConfigureAwait(false);
+        if (stock is null || stock.QuantityReserved < targetQuantity)
+        {
+            return;
+        }
+
+        await stockManager.ReleaseReservedStockAsync(
+            productId,
+            warehouseId,
+            targetQuantity,
+            deliveryNoteId,
+            Guid.Empty,
+            note).ConfigureAwait(false);
+    }
+
+    private async Task RestoreOrderReservationForCancelledDeliveryAsync(
+        Guid productId,
+        decimal targetQuantity,
+        Guid orderId,
+        Guid deliveryNoteId)
+    {
+        if (orderId == Guid.Empty || targetQuantity <= 0)
+        {
+            return;
+        }
+
+        var alreadyRestoredQuantity = await productReservationManager.GetReservedByReferenceAsync(
+            productId,
+            orderId,
+            ProductReservationReason.DeliveryNoteCancelled,
+            deliveryNoteId).ConfigureAwait(false);
+        var missingQuantity = targetQuantity - alreadyRestoredQuantity;
+        if (missingQuantity <= 0)
+        {
+            return;
+        }
+
+        await productReservationManager.ReserveAsync(
+            productId,
+            missingQuantity,
+            orderId,
+            ProductReservationReason.DeliveryNoteCancelled,
+            deliveryNoteId).ConfigureAwait(false);
     }
 
     public async Task<DeliveryNoteDto?> GetByIdAsync(Guid id)
@@ -600,15 +676,17 @@ public sealed class DeliveryNoteManager(
             })
             .ToList();
 
-        await customerReturnManager.CreateAsync(new CreateCustomerReturnDto
+        var customerReturn = await customerReturnManager.CreateAsync(new CreateCustomerReturnDto
         {
             DeliveryNoteId = deliveryNote.Id,
             CustomerId = deliveryNote.CustomerId,
-            WarehouseId = deliveryNote.IsDirectShip ? null : deliveryNote.WarehouseId,
+            WarehouseId = null,
             AdditionalCost = 0,
+            CompensateInNextDelivery = acceptance.CompensateInNextDelivery,
             Note = BuildAutoGeneratedReturnNote(deliveryNote, acceptance, rejectedLines, deliveryItemsById),
             Items = itemDtos
         }).ConfigureAwait(false);
+        await customerReturnManager.MoveToInspectingAsync(customerReturn.Id).ConfigureAwait(false);
     }
 
     private static string BuildAutoGeneratedReturnNote(
@@ -681,6 +759,7 @@ public sealed class DeliveryNoteManager(
             amountToCollect,
             agreedCustomerCharge,
             acceptance?.AgreedCustomerChargeReason,
+            acceptance?.CompensateInNextDelivery ?? false,
             lines);
     }
 
@@ -713,15 +792,16 @@ public sealed class DeliveryNoteManager(
     private void EnsureQuantitiesCanBeDelivered(
         Order order,
         IReadOnlyDictionary<Guid, decimal> requestedQuantitiesByOrderItem,
-        bool includeReturnedCompensation)
+        bool includeDirectShipOutstanding = true)
     {
         var orderItemsById = order.OrderItems.ToDictionary(item => item.Id);
         var requestedOrderItemIds = requestedQuantitiesByOrderItem.Keys.ToList();
         var activeDeliveryQuantitiesByOrderItem = GetActiveDeliveryQuantitiesByOrderItem(
             order.Id,
-            requestedOrderItemIds,
-            includeReturnedCompensation);
-        var directShipOutstandingQuantitiesByOrderItem = GetDirectShipOutstandingQuantitiesByOrderItem(requestedOrderItemIds);
+            requestedOrderItemIds);
+        var directShipOutstandingQuantitiesByOrderItem = includeDirectShipOutstanding
+            ? GetDirectShipOutstandingQuantitiesByOrderItem(requestedOrderItemIds)
+            : [];
 
         foreach (var (orderItemId, requestedQuantity) in requestedQuantitiesByOrderItem)
         {
@@ -743,8 +823,7 @@ public sealed class DeliveryNoteManager(
 
     private Dictionary<Guid, decimal> GetActiveDeliveryQuantitiesByOrderItem(
         Guid orderId,
-        IReadOnlyCollection<Guid> orderItemIds,
-        bool includeReturnedCompensation)
+        IReadOnlyCollection<Guid> orderItemIds)
     {
         if (orderItemIds.Count == 0)
             return [];
@@ -756,18 +835,7 @@ public sealed class DeliveryNoteManager(
             .GroupBy(item => item.OrderItemId)
             .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
 
-        if (!includeReturnedCompensation)
-        {
-            foreach (var orderItemId in orderItemIds)
-            {
-                if (!deliveredByOrderItem.ContainsKey(orderItemId))
-                    deliveredByOrderItem[orderItemId] = 0m;
-            }
-
-            return deliveredByOrderItem;
-        }
-
-        var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderId, orderItemIds);
+        var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderId, orderItemIds, compensatedOnly: true);
         foreach (var orderItemId in orderItemIds)
         {
             deliveredByOrderItem.TryGetValue(orderItemId, out var deliveredQuantity);
@@ -788,7 +856,7 @@ public sealed class DeliveryNoteManager(
             .ToDictionary(g => g.Key, g => g.Sum(item => item.Quantity));
 
         var orderItemIds = deliveredByOrderItem.Keys.ToList();
-        var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderId, orderItemIds);
+        var returnedByOrderItem = GetReturnedQuantitiesByOrderItem(orderId, orderItemIds, compensatedOnly: true);
         foreach (var orderItemId in orderItemIds)
         {
             var deliveredQuantity = deliveredByOrderItem.GetValueOrDefault(orderItemId);
@@ -799,7 +867,10 @@ public sealed class DeliveryNoteManager(
         return deliveredByOrderItem;
     }
 
-    private Dictionary<Guid, decimal> GetReturnedQuantitiesByOrderItem(Guid orderId, IReadOnlyCollection<Guid> orderItemIds)
+    private Dictionary<Guid, decimal> GetReturnedQuantitiesByOrderItem(
+        Guid orderId,
+        IReadOnlyCollection<Guid> orderItemIds,
+        bool compensatedOnly)
     {
         if (orderItemIds.Count == 0)
             return orderItemIds.ToDictionary(id => id, id => 0m);
@@ -813,7 +884,10 @@ public sealed class DeliveryNoteManager(
 
         // 2. Thực hiện Join và GroupBy dưới DB, sau đó lấy kết quả về RAM dạng Dictionary
         var returnedByOrderItem = customerReturnReader.DataSource
-            .Where(returnNote => returnNote.Status != CustomerReturnStatus.Cancelled)
+            .Where(returnNote => returnNote.Status != CustomerReturnStatus.Cancelled
+                                 && (!compensatedOnly
+                                     || (returnNote.CompensateInNextDelivery
+                                         && returnNote.Status != CustomerReturnStatus.Draft)))
             .SelectMany(returnNote => returnNote.Items)
             .Where(returnItem => returnItem.DeliveryNoteItemId.HasValue)
             // Join trực tiếp 2 Queryable với nhau dưới DB thông qua Id của DeliveryNoteItem
@@ -867,6 +941,7 @@ public sealed class DeliveryNoteManager(
         decimal AmountToCollect,
         decimal AgreedCustomerCharge,
         string? AgreedCustomerChargeReason,
+        bool CompensateInNextDelivery,
         IReadOnlyList<DeliveryAcceptanceLine> Lines);
 
     private static DeliveryNoteDto MapToDto(DeliveryNote deliveryNote)
@@ -889,6 +964,8 @@ public sealed class DeliveryNoteManager(
             SourceType = deliveryNote.SourceType,
             IsDirectShip = deliveryNote.IsDirectShip,
             DeliveryConfirmationStatus = deliveryNote.DeliveryConfirmationStatus,
+            ConfirmedAtUtc = deliveryNote.ConfirmedAtUtc,
+            ConfirmedNote = deliveryNote.ConfirmedNote,
             DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
             DeliveryProofPictureId = deliveryNote.DeliveryProofPictureId,
             DeliveryReceiverName = deliveryNote.DeliveryReceiverName,
@@ -905,6 +982,7 @@ public sealed class DeliveryNoteManager(
                 DeliveryNoteId = i.DeliveryNoteId,
                 OrderItemId = i.OrderItemId,
                 ProductId = i.ProductId,
+                WarehouseId = i.WarehouseId,
                 ProductName = i.ProductName ?? string.Empty,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,

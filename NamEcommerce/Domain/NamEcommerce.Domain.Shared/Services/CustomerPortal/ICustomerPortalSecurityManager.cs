@@ -7,9 +7,12 @@ public interface ICustomerPortalSecurityManager
 {
     Task<CustomerPortalAccountDto> GetOrCreateAccountAsync(Guid customerId);
     Task<CustomerPortalAccountDto?> GetAccountByCustomerIdAsync(Guid customerId);
+    Task<CustomerPortalSettingsDto> GetSettingsAsync();
+    Task<CustomerPortalSettingsDto> UpdateSettingsAsync(bool otpEnabled, Guid? updatedByUserId, DateTime nowUtc);
     Task SetPasswordAsync(Guid customerId, string passwordHash, string passwordSalt, bool markLoginSucceeded = true);
     Task BlockAccountAsync(Guid customerId);
     Task UnblockAccountAsync(Guid customerId);
+    Task UpdateLastKnownLocationAsync(Guid customerId, UpdateCustomerPortalLocationDto dto);
 
     Task<CustomerOtpChallengeDto> CreateOtpChallengeAsync(CreateCustomerOtpChallengeDto dto);
     Task<CustomerOtpChallengeDto?> GetOtpChallengeByIdAsync(Guid challengeId);

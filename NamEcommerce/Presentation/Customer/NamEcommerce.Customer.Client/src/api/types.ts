@@ -29,9 +29,18 @@ export type CustomerSession = {
 export type OtpRequestResult = {
   success: boolean;
   message?: string | null;
+  requiresOtp: boolean;
   challengeId?: string | null;
   maskedDestination?: string | null;
   mockOtp?: string | null;
+  session?: CustomerSession | null;
+};
+
+export type CustomerLocation = {
+  latitude: number;
+  longitude: number;
+  accuracyMeters?: number | null;
+  capturedOnUtc: string;
 };
 
 export type ActionResult = {
@@ -210,6 +219,7 @@ export type ReturnRequestSummary = {
   deliveryNoteCode?: string | null;
   status: number;
   reason?: string | null;
+  compensateInNextDelivery: boolean;
   adminNote?: string | null;
   createdOn: string;
   reviewedOn?: string | null;

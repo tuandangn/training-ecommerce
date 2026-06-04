@@ -26,3 +26,11 @@ public class CreateExpenseResultDto
 {
     public Guid CreatedId { get; set; }
 }
+
+public class UpsertExpenseBudgetDto
+{
+    public ExpenseType ExpenseType { get; set; }
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public decimal Amount { get; set; }
+}

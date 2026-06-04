@@ -14,12 +14,13 @@ class Customer {
 }
 
 class ProductInfo {
-    constructor({ id, name, availableQty, picture, unitPrice }) {
+    constructor({ id, name, availableQty, picture, unitPrice, quantityDecimalPlaces }) {
         this.id = id;
         this.name = name ?? '';
         this.availableQty = availableQty ?? 0;
         this.picture = picture ?? '';
         this.unitPrice = unitPrice ?? 0;
+        this.quantityDecimalPlaces = quantityDecimalPlaces ?? 0;
     }
 }
 
@@ -67,7 +68,7 @@ export default class OrderController {
     #validator;
 
     constructor() {
-        this.#addItemController = new AddItemController();
+        this.#addItemController = new AddItemController(() => getEl('CustomerId')?.value ?? '');
 
         this.#bindProductPicker();
         this.#bindAddItemForm();
@@ -116,6 +117,7 @@ export default class OrderController {
     }
 
     #render() {
+        console.count('render');
         this.#renderSummary();
         this.#renderCustomer();
         this.#renderItems();
@@ -220,6 +222,7 @@ export default class OrderController {
                 </div>
                 <input type="text" class="visually-hidden product-id" name="Items[${index}].ProductId" value="${p.id}"
                     data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
+                <input type="hidden" name="Items[${index}].QuantityDecimalPlaces" value="${p.quantityDecimalPlaces ?? 0}" />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="Items[${index}].ProductId"
                     data-valmsg-replace="true"></span>
@@ -227,10 +230,10 @@ export default class OrderController {
             <td class="text-center">
                 <input name="Items[${index}].Quantity" value="${quantity}"
                     class="form-control row-qty"
-                    data-decimal="quantity" data-val="true"
+                    data-decimal="quantity" data-decimals="${p.quantityDecimalPlaces ?? 0}" data-val="true"
                     data-val-required="Vui lòng nhập số lượng."
                     data-val-range="Số lượng phải lớn hơn 0."
-                    data-val-range-min="0.001"
+                    data-val-range-min="${(p.quantityDecimalPlaces ?? 0) > 0 ? '0.001' : '1'}"
                     data-val-number="Số lượng không đúng." />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="Items[${index}].Quantity"
@@ -274,8 +277,6 @@ export default class OrderController {
             const newUnitPrice = parseNumber(DecimalFields.stripFormatting(inputUnitPrice.value, 0), 0);
             this.#updateItem(index, { quantity: newQuantity, unitPrice: newUnitPrice });
         }, 1500, () => {
-            if (inputQuantity._decimalFormatting)
-                return false;
             var quantityRaw = DecimalFields.stripFormatting(inputQuantity.value, 2)
             return DecimalFields.isValidDecimal(inputQuantity, quantityRaw);
         });
@@ -284,16 +285,16 @@ export default class OrderController {
             const newUnitPrice = parseNumber(DecimalFields.stripFormatting(inputUnitPrice.value, 0), 0);
             this.#updateItem(index, { unitPrice: newUnitPrice, quantity: newQuantity });
         }, 1500, () => {
-            if (inputUnitPrice._decimalFormatting)
-                return false;
             var unitPriceRaw = DecimalFields.stripFormatting(inputUnitPrice.value)
             return DecimalFields.isValidDecimal(inputUnitPrice, unitPriceRaw);
         });
-        
+
         inputQuantity.addEventListener('input', inputQtyChangeDebounced);
+        inputQuantity.addEventListener('change', inputQtyChangeDebounced.flush);
         inputQuantity.addEventListener('focusin', () => inputUnitPriceChangeDebounced.cancel());
 
         inputUnitPrice.addEventListener('input', inputUnitPriceChangeDebounced);
+        inputUnitPrice.addEventListener('change', inputUnitPriceChangeDebounced.flush);
         inputUnitPrice.addEventListener('focusin', () => inputQtyChangeDebounced.cancel());
 
         return row;
@@ -319,9 +320,7 @@ export default class OrderController {
             this.#activeRowIndex = existingIndex;
             this.#setState({ items });
         } else {
-            let unitPrice = 0;
-            // if (this.#state.customer)
-            //     unitPrice = await this.#priceController.getProductPriceForCustomer(product.id, this.#state.customer.id) ?? 0;
+            const unitPrice = await this.#addItemController.getSuggestedUnitPrice(product.id, product.unitPrice);
             items.push(new OrderItem(new ProductInfo(product), 1, unitPrice));
             this.#activeRowIndex = items.length - 1;
             this.#setState({ items });
@@ -383,9 +382,11 @@ export default class OrderController {
 
         el.addEventListener('select', (e) => {
             this.#setState({ customer: e.detail?.customer ? new Customer(e.detail.customer) : null });
+            this.#addItemController.refreshPriceReference();
         });
         el.addEventListener('remove', () => {
             this.#setState({ customer: null });
+            this.#addItemController.refreshPriceReference();
         });
 
         const initialCustomer = el.dataset;
@@ -558,15 +559,19 @@ export default class OrderController {
 }
 
 export class AddItemController {
+    #getCustomerId;
+
     state = {
         productInfo: null,
         quantity: 1,
         unitPrice: 0,
     };
 
-    constructor() {
+    constructor(getCustomerId = () => '') {
+        this.#getCustomerId = getCustomerId;
+
         getEl('itemQuantity').addEventListener('input', (e) => {
-            this.state.quantity = parseNumber(DecimalFields.stripFormatting(e.target.value, 2), 1);
+            this.state.quantity = parseNumber(DecimalFields.stripInputFormatting(e.target), 1);
         });
         getEl('itemUnitPrice').addEventListener('input', (e) => {
             this.state.unitPrice = parseNumber(DecimalFields.stripFormatting(e.target.value));
@@ -577,9 +582,10 @@ export class AddItemController {
         this.state.productInfo = productInfo;
         if (productInfo) {
             this.state.unitPrice = productInfo.unitPrice;
-            // Luôn ẩn container trước, fetch ngầm rồi mới hiện nút toggle
             this.#hidePriceHistory();
-            await this.#fetchPriceHistory(productInfo.id);
+            const reference = await this.#fetchSalePriceReference(productInfo.id);
+            if (reference)
+                this.state.unitPrice = reference.suggestedPrice ?? productInfo.unitPrice ?? 0;
         } else {
             this.state.unitPrice = 0;
             this.#hidePriceHistory();
@@ -587,82 +593,105 @@ export class AddItemController {
         this.#render();
     }
 
-    async #fetchPriceHistory(productId) {
-        const container = getEl('priceHistoryContainer');
+    async refreshPriceReference() {
+        if (!this.state.productInfo)
+            return;
+
+        this.state.unitPrice = this.state.productInfo.unitPrice ?? 0;
+        this.#hidePriceHistory();
+        const reference = await this.#fetchSalePriceReference(this.state.productInfo.id);
+        if (reference)
+            this.state.unitPrice = reference.suggestedPrice ?? this.state.unitPrice;
+        this.#render();
+    }
+
+    async getSuggestedUnitPrice(productId, fallbackPrice = 0) {
+        const reference = await this.#requestSalePriceReference(productId);
+        return reference?.suggestedPrice ?? fallbackPrice ?? 0;
+    }
+
+    async #fetchSalePriceReference(productId) {
         const loading = getEl('priceHistoryLoading');
         const empty = getEl('priceHistoryEmpty');
         const tableBody = getEl('priceHistoryTableBodyContent');
         const toggleBtn = getEl('togglePriceHistoryBtn');
         const closeBtn = getEl('closePriceHistoryBtn');
-        const toggleCostBtn = getEl('toggleCostColLabel');
 
-        // Reset nội dung, ẩn container, hiện loading BÊN TRONG (container vẫn ẩn)
         tableBody.innerHTML = '';
         loading.classList.remove('d-none');
         empty.classList.add('d-none');
         toggleBtn?.classList.add('d-none');
 
         try {
-            // apiGet trả `{ success, data }` cho payload không có shape JsonNotificationResult.
-            // Endpoint /Product/PriceHistory trả `{ items: [...] }` ở root → nằm trong `result.data`.
-            const result = await apiGet(`/Product/PriceHistory?ProductId=${productId}`);
-            if (!result.success) throw new Error('Failed to fetch price history');
-            const data = result.data ?? result;
+            const data = await this.#requestSalePriceReference(productId);
 
             loading.classList.add('d-none');
 
             if (!data.items || data.items.length === 0) {
-                // Không có lịch sử → không hiện nút toggle
-                return;
+                return data;
             }
 
-            // Render các hàng, mỗi hàng có thể click để chọn giá
             data.items.forEach(item => {
                 const row = document.createElement('tr');
                 row.style.cursor = 'pointer';
                 row.title = 'Nhấn để chọn giá bán này';
-                const date = new Date(item.createdOnUtc).toLocaleDateString('vi-VN');
+                const date = item.orderDateText || new Date(item.orderDate).toLocaleDateString('vi-VN');
                 row.innerHTML = `
-                    <td class="ps-2 py-2">${date}</td>
-                    <td class="text-end fw-bold text-success py-2">${item.newPrice < item.newCostPrice ? '<i class="bi bi-exclamation-triangle-fill me-1"></i>' : ''}${DecimalFields.formatCurrency(item.newPrice)}</td >
-                    <td class="text-end text-muted pe-2 py-2 d-none cost-cell">${DecimalFields.formatCurrency(item.newCostPrice)}</td >
+                    <td class="ps-3 py-2 text-nowrap">${escapeHtml(date)}</td>
+                    <td class="py-2">
+                        <span class="fw-medium">${escapeHtml(item.orderCode)}</span>
+                        <div class="text-muted" style="font-size:0.72rem">${escapeHtml(item.sourceText)}</div>
+                    </td>
+                    <td class="text-end fw-bold text-success pe-3 py-2 text-nowrap">${DecimalFields.formatCurrency(item.unitPrice)}</td>
                 `;
-                // Click → điền giá bán vào input và đóng bảng
                 row.addEventListener('click', () => {
                     tableBody.querySelectorAll('tr').forEach(r => r.classList.remove('table-info'));
                     row.classList.add('table-info');
                     const priceInput = getEl('itemUnitPrice');
                     if (priceInput) {
-                        priceInput.value = DecimalFields.formatCurrency(item.newPrice);
+                        priceInput.value = DecimalFields.formatCurrency(item.unitPrice);
                         priceInput.dispatchEvent(new Event('input', { bubbles: true }));
                         priceInput.dispatchEvent(new Event('blur', { bubbles: true }));
                     }
-                    //this.#togglePriceHistory(false); // đóng sau khi chọn
                 });
                 row.addEventListener('mouseenter', () => row.classList.add('table-active'));
                 row.addEventListener('mouseleave', () => row.classList.remove('table-active'));
                 tableBody.appendChild(row);
             });
 
-            // Hiện nút toggle (chỉ khi có dữ liệu)
             if (toggleBtn) {
                 toggleBtn.classList.remove('d-none');
-                // Đảm bảo chỉ bind 1 lần
                 toggleBtn.onclick = () => this.#togglePriceHistory();
             }
             if (closeBtn) {
                 closeBtn.onclick = () => this.#togglePriceHistory(false);
             }
-            if (toggleCostBtn)
-                toggleCostBtn.onclick = () => this.#toggleCost();
 
             this.#togglePriceHistory(true);
+            return data;
         } catch (error) {
             console.error(error);
             loading.classList.add('d-none');
             empty.innerHTML = '<small class="text-danger">Lỗi tải lịch sử.</small>';
             empty.classList.remove('d-none');
+            return null;
         }
+    }
+
+    async #requestSalePriceReference(productId) {
+        if (!productId)
+            return null;
+
+        const params = new URLSearchParams({ ProductId: productId });
+        const customerId = this.#getCustomerId?.();
+        if (customerId)
+            params.set('CustomerId', customerId);
+
+        const result = await apiGet(`/Product/SalePriceReference?${params.toString()}`);
+        if (!result.success)
+            throw new Error('Failed to fetch sale price reference');
+
+        return result.data ?? result;
     }
 
     #togglePriceHistory(forceShow) {
@@ -679,19 +708,6 @@ export class AddItemController {
         }
     }
 
-    #toggleCost(forceClose) {
-        const container = getEl('priceHistoryContainer');
-        const priceHistoryTable = container.querySelector('table');
-        const costColumnHeader = priceHistoryTable.querySelector('.price-history-cost-col');
-
-        const willHide = forceClose !== undefined ? forceClose : !costColumnHeader.classList.contains('d-none');
-        costColumnHeader.classList.toggle('d-none', willHide)
-
-        const priceHistoryBody = getEl('priceHistoryTableBodyContent');
-        const cells = priceHistoryBody.querySelectorAll('.cost-cell');
-        cells.forEach(cell => cell.classList.toggle('d-none', willHide));
-    }
-
     #hidePriceHistory() {
         const container = getEl('priceHistoryContainer');
         const toggleBtn = getEl('togglePriceHistoryBtn');
@@ -699,7 +715,6 @@ export class AddItemController {
         if (container) container.classList.add('d-none');
         if (toggleBtn) toggleBtn.classList.add('d-none');
         if (labelEl) labelEl.textContent = 'Xem lịch sử giá';
-        this.#toggleCost(true);
     }
 
     reset() {
@@ -711,14 +726,31 @@ export class AddItemController {
     #render() {
         const { productInfo, quantity, unitPrice } = this.state;
 
-        getEl('itemQuantity').value = quantity;
-        getEl('itemUnitPrice').value = unitPrice;
+        const itemQuantity = getEl('itemQuantity');
+        itemQuantity.value = DecimalFields.formatQuantity(quantity, productInfo?.quantityDecimalPlaces);
+        var currentDecimals = parseInt(itemQuantity.dataset.decimals ?? '0', 10);
+        if (currentDecimals !== productInfo?.quantityDecimalPlaces) {
+            itemQuantity.dataset.decimals = productInfo?.quantityDecimalPlaces ?? 0;
+            if (productInfo)
+                DecimalFields.wrapExistingInput(itemQuantity, 'quantity');
+        }
 
-        const currencyHint = getEl('modalProductInfo').querySelector('.currency-hint');
+        getEl('itemUnitPrice').value = DecimalFields.formatCurrency(unitPrice);
+
+        const modalProductInfo = getEl('modalProductInfo');
+        const currencyHint = modalProductInfo.querySelector('.currency-hint');
         if (currencyHint) currencyHint.textContent = '';
 
         const hasProduct = Boolean(productInfo);
-        getEl('modalProductInfo').classList.toggle('d-none', !hasProduct);
+        modalProductInfo.classList.toggle('d-none', !hasProduct);
         getEl('addItemToTable').classList.toggle('d-none', !hasProduct);
     }
+}
+
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
 }

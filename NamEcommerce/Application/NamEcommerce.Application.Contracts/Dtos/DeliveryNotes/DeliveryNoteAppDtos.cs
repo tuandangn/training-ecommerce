@@ -28,6 +28,8 @@ public sealed record DeliveryNoteAppDto
     public int SourceType { get; init; }
     public bool IsDirectShip { get; init; }
     public int DeliveryConfirmationStatus { get; init; }
+    public DateTime? ConfirmedAtUtc { get; init; }
+    public string? ConfirmedNote { get; init; }
 
     public DateTime? DeliveredOnUtc { get; init; }
     public Guid? DeliveryProofPictureId { get; init; }
@@ -52,6 +54,7 @@ public sealed record DeliveryNoteItemAppDto
     public required Guid DeliveryNoteId { get; init; }
     public required Guid OrderItemId { get; init; }
     public required Guid ProductId { get; init; }
+    public required Guid WarehouseId { get; init; }
     public required string ProductName { get; init; }
     public required decimal Quantity { get; init; }
     public required decimal UnitPrice { get; init; }
@@ -83,6 +86,8 @@ public sealed record CreateDeliveryNoteAppDto
             return (false, "Error.ShippingAddressRequired");
         if (Items == null || !Items.Any())
             return (false, "Error.DeliveryNoteItemsRequired");
+        if (Items.Any(i => i.WarehouseId == Guid.Empty))
+            return (false, "Error.WarehouseRequired");
         if (Items.Any(i => i.Quantity <= 0))
             return (false, "Error.DeliveryNoteQuantityMustBePositive");
         if (Surcharge < 0)
@@ -98,6 +103,7 @@ public sealed record CreateDeliveryNoteAppDto
 public sealed record CreateDeliveryNoteItemAppDto
 {
     public required Guid OrderItemId { get; init; }
+    public required Guid WarehouseId { get; init; }
     public required decimal Quantity { get; init; }
 }
 
@@ -115,6 +121,7 @@ public sealed record DeliveryAcceptanceAppDto
 {
     public decimal AgreedCustomerCharge { get; init; }
     public string? AgreedCustomerChargeReason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
     public IList<DeliveryAcceptanceItemAppDto> Items { get; init; } = [];
 }
 
@@ -122,7 +129,7 @@ public sealed record DeliveryAcceptanceAppDto
 public sealed record MarkDeliveryNoteDeliveredAppDto
 {
     public required Guid DeliveryNoteId { get; init; }
-    public required Guid PictureId { get; init; }
+    public required IReadOnlyList<Guid> PictureIds { get; init; }
     public string? ReceiverName { get; init; }
     public DeliveryAcceptanceAppDto? Acceptance { get; init; }
 }

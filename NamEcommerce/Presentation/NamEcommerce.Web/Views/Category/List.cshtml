@@ -4,74 +4,79 @@
     string? query = Model.Keywords;
 }
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Danh mục</h1>
-        <p class="page-header-subtitle">Quản lý danh mục phân loại hàng hóa</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">Danh mục</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Danh mục</li>
+            </ol>
+        </nav>
     </div>
-    <a asp-action="Create" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i>Thêm mới
-    </a>
-</div>
+}
 
 <div class="content-card" data-responsive-list data-list-key="category-list">
     <div class="action-toolbar">
-        <div class="search-group">
-            <partial name="_Search" model="@(new CategoryListSearchModel { Keywords = Model.Keywords })" />
-        </div>
+        <partial name="_Search" model="@(new CategoryListSearchModel { Keywords = Model.Keywords })" />
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Thêm mới
+        </a>
         <partial name="_ResponsiveListToolbar" />
     </div>
 
     <div class="responsive-list-panel" data-list-view-panel="list">
         <div class="table-responsive">
-        <table class="table data-table">
-            <thead>
-                <tr>
-                    <th class="ps-4">Tên danh mục</th>
-                    <th>Danh mục cha</th>
-                    <th style="width: 100px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Data.Pagination.TotalCount > 0)
-                {
-                    @foreach (var item in Model.Data)
+            <table class="table data-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Tên danh mục</th>
+                        <th>Danh mục cha</th>
+                        <th style="width: 100px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Data.Pagination.TotalCount > 0)
+                    {
+                        @foreach (var item in Model.Data)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <a class="text-decoration-none text-dark" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                        <span class="fw-medium">
+                                            @HighlighHelper.Highlight(item.Name, query)
+                                        </span>
+                                    </a>
+                                </td>
+                                <td class="text-muted">
+                                    @item.Breadcrumb
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn-table-action danger btnDelete"
+                                            data-id="@item.Id" data-name="@item.Name" title="Xóa">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
                     {
                         <tr>
-                            <td class="ps-4">
-                                <span class="fw-medium">
-                                    @HighlighHelper.Highlight(item.Name, query)
-                                </span>
-                            </td>
-                            <td class="text-muted">
-                                @item.Breadcrumb
-                            </td>
-                            <td class="text-end pe-3">
-                                <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <button type="button" class="btn-table-action danger btnDelete"
-                                        data-id="@item.Id" data-name="@item.Name" title="Xóa">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                            <td colspan="3">
+                                <div class="empty-state">
+                                    <div class="empty-icon"><i class="bi bi-grid"></i></div>
+                                    <h5>Chưa có danh mục nào</h5>
+                                    <p>Tạo danh mục đầu tiên để phân loại hàng hóa.</p>
+                                </div>
                             </td>
                         </tr>
                     }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="3">
-                            <div class="empty-state">
-                                <div class="empty-icon"><i class="bi bi-grid"></i></div>
-                                <h5>Chưa có danh mục nào</h5>
-                                <p>Tạo danh mục đầu tiên để phân loại hàng hóa.</p>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -83,7 +88,9 @@
                 <article class="list-card">
                     <div class="list-card-header">
                         <div class="list-card-title-group">
-                            <div class="list-card-title">@HighlighHelper.Highlight(item.Name, query)</div>
+                            <a class="text-decoration-none text-dark" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                <div class="list-card-title">@HighlighHelper.Highlight(item.Name, query)</div>
+                            </a>
                             <div class="list-card-meta">@item.Breadcrumb</div>
                         </div>
                     </div>
@@ -123,15 +130,27 @@
 @section Scripts {
     <script type="module" defer>
         import { confirm } from "/modules/modals.js";
+
         (function () {
-        $('.btnDelete').on('click', async function (e) {
-        e.preventDefault();
-        const name = $(this).data('name');
-        $(this).prop('disabled', true);
-        const confirmed = await confirm('Xóa danh mục', `Bạn muốn xóa danh mục <strong>${name}</strong>?`);
-        if (!confirmed) { $(this).prop('disabled', false); return; }
-        $(`#deleteForm${$(this).data('id')}`).submit();
-        });
+            const txtKeywords = document.getElementById('@(nameof(CategoryListSearchModel.Keywords))');
+            const form = txtKeywords.closest('form');
+            const onSearchChanged = debounce(function () {
+                form.submit();
+            }, 500);
+            txtKeywords.addEventListener('input', onSearchChanged);
+
+            if (txtKeywords.value){
+                focusEnd(txtKeywords);
+            }
+
+            $('.btnDelete').on('click', async function (e) {
+                e.preventDefault();
+                const name = $(this).data('name');
+                $(this).prop('disabled', true);
+                const confirmed = await confirm('Xóa danh mục', `Bạn muốn xóa danh mục <strong>${name}</strong>?`);
+                if (!confirmed) { $(this).prop('disabled', false); return; }
+                $(`#deleteForm${$(this).data('id')}`).submit();
+            });
         })();
     </script>
 }

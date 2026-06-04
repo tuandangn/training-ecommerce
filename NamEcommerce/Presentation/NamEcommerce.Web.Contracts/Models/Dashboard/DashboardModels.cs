@@ -16,9 +16,17 @@ public sealed record DashboardModel
 public sealed record SalesSummaryModel
 {
     public required decimal TodayRevenue { get; init; }
+    public required decimal TodayGrossRevenue { get; init; }
+    public required decimal TodayReturnAmount { get; init; }
     public required decimal MonthRevenue { get; init; }
+    public required decimal MonthGrossRevenue { get; init; }
+    public required decimal MonthReturnAmount { get; init; }
     public required decimal QuarterRevenue { get; init; }
+    public required decimal QuarterGrossRevenue { get; init; }
+    public required decimal QuarterReturnAmount { get; init; }
     public required decimal YearRevenue { get; init; }
+    public required decimal YearGrossRevenue { get; init; }
+    public required decimal YearReturnAmount { get; init; }
     public IReadOnlyCollection<RevenueTrendPointModel> RevenueTrend { get; init; } = [];
 }
 
@@ -33,14 +41,29 @@ public sealed record RevenueTrendPointModel
 [Serializable]
 public sealed record ProfitSummaryModel
 {
+    public required decimal TodayRevenue { get; init; }
+    public required decimal TodayCogs { get; init; }
+    public required decimal TodayGrossProfit { get; init; }
+    public required decimal TodayOperatingExpenses { get; init; }
     public required decimal TodayProfit { get; init; }
-    public required decimal MonthProfit { get; init; }
-    public required decimal QuarterProfit { get; init; }
-    public required decimal YearProfit { get; init; }
+
     public required decimal MonthRevenue { get; init; }
     public required decimal MonthCogs { get; init; }
     public required decimal MonthGrossProfit { get; init; }
     public required decimal MonthOperatingExpenses { get; init; }
+    public required decimal MonthProfit { get; init; }
+
+    public required decimal QuarterRevenue { get; init; }
+    public required decimal QuarterCogs { get; init; }
+    public required decimal QuarterGrossProfit { get; init; }
+    public required decimal QuarterOperatingExpenses { get; init; }
+    public required decimal QuarterProfit { get; init; }
+
+    public required decimal YearRevenue { get; init; }
+    public required decimal YearCogs { get; init; }
+    public required decimal YearGrossProfit { get; init; }
+    public required decimal YearOperatingExpenses { get; init; }
+    public required decimal YearProfit { get; init; }
 }
 
 [Serializable]

@@ -32,10 +32,14 @@ public sealed record WarehouseAppDto(Guid Id) : BaseWarehouseAppDto
 {
     public string? WarehouseNameKey { get; set; }
     public bool IsPhysical { get; set; }
+    public int DisplayOrder { get; set; }
 }
 
 [Serializable]
-public sealed record CreateWarehouseAppDto : BaseWarehouseAppDto;
+public sealed record CreateWarehouseAppDto : BaseWarehouseAppDto
+{
+    public int DisplayOrder { get; set; }
+}
 [Serializable]
 public sealed record CreateWarehouseResultAppDto
 {
@@ -45,7 +49,10 @@ public sealed record CreateWarehouseResultAppDto
 }
 
 [Serializable]
-public sealed record UpdateWarehouseAppDto(Guid Id) : BaseWarehouseAppDto;
+public sealed record UpdateWarehouseAppDto(Guid Id) : BaseWarehouseAppDto
+{
+    public int DisplayOrder { get; set; }
+}
 [Serializable]
 public sealed record UpdateWarehouseResultAppDto
 {

@@ -23,6 +23,9 @@ public sealed class CreateCustomerReturnModel
     [Display(Name = "Chi phí phát sinh")]
     public decimal AdditionalCost { get; set; }
 
+    [Display(Name = "Bù vào lần xuất hàng sau")]
+    public bool CompensateInNextDelivery { get; set; }
+
     [Display(Name = "Ghi chú")]
     public string? Note { get; set; }
 
@@ -37,6 +40,9 @@ public sealed class CreateCustomerReturnItemModel
 
     [ValidateNever]
     public string? ProductDisplayName { get; set; }
+
+    [ValidateNever]
+    public int QuantityDecimalPlaces { get; set; }
 
     public Guid? DeliveryNoteItemId { get; set; }
 

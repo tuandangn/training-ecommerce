@@ -12,4 +12,5 @@ public interface IInventoryAppService
     Task<IPagedDataAppDto<ProductReservationLedgerAppDto>> GetProductReservationLedgerAsync(Guid productId, int pageIndex, int pageSize);
     Task<decimal> GetGlobalAvailableForProductAsync(Guid productId);
     Task<SetStockLevelsResultAppDto> SetStockLevelsAsync(SetStockLevelsAppDto dto);
+    Task<string?> GetReturnWarehouseNameForDeliveryNoteAsync(Guid deliveryNoteId, Guid deliveryNoteWarehouseId);
 }

@@ -24,6 +24,8 @@ public sealed record EditProductModel
     public Guid? UnitMeasurementId { get; set; }
     [ValidateNever]
     public required EntityOptionListModel AvailableUnitMeasurements { get; set; }
+    [ValidateNever]
+    public Dictionary<string, int> UnitMeasurementDecimalPlacesMap { get; set; } = [];
 
     [Display(Name = "Nhà cung cấp")]
     public IList<Guid> VendorIds { get; set; } = [];
@@ -46,5 +48,5 @@ public sealed record EditProductModel
     public int DisplayOrder { get; set; }
 
     [Display(Name = "Hình ảnh")]
-    public Base64ImageModel? ImageFile { get; set; } = new();
+    public Guid? PictureId { get; set; }
 }

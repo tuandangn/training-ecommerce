@@ -132,6 +132,9 @@
   <data name="Error.NotMatch" xml:space="preserve">
     <value>{0} không khớp.</value>
   </data>
+  <data name="Error.QuantityMustBeInteger" xml:space="preserve">
+    <value>Số lượng phải là số nguyên đối với đơn vị tính này.</value>
+  </data>
   <data name="Error.QuantityMustBePositive" xml:space="preserve">
     <value>Số lượng phải lớn hơn 0.</value>
   </data>
@@ -627,6 +630,12 @@
   <data name="Error.ShippingAddressRequired" xml:space="preserve">
     <value>Địa chỉ giao hàng là bắt buộc.</value>
   </data>
+  <data name="Error.DirectShipContactPhoneRequired" xml:space="preserve">
+    <value>Số điện thoại nhận hàng giao thẳng là bắt buộc.</value>
+  </data>
+  <data name="Error.DirectShipAddressRequired" xml:space="preserve">
+    <value>Địa chỉ giao hàng giao thẳng là bắt buộc.</value>
+  </data>
   <data name="Error.DeliveryNoteItemsRequired" xml:space="preserve">
     <value>Phiếu giao hàng phải có ít nhất một mặt hàng.</value>
   </data>
@@ -899,5 +908,44 @@
   </data>
   <data name="Error.WarehouseIsNotSuitableException" xml:space="preserve">
     <value>Kho hàng không thích hợp.</value>
+  </data>
+  <data name="Error.DirectShipAllocationNoRemainingQuantity" xml:space="preserve">
+    <value>Phân bổ đã nhận đủ, không thể chuyển sang giao thẳng.</value>
+  </data>
+  <data name="Error.UnexpectedError" xml:space="preserve">
+    <value>Có lỗi xảy ra. Vui lòng thử lại.</value>
+  </data>
+  <data name="Error.Network" xml:space="preserve">
+    <value>Lỗi kết nối. Vui lòng thử lại.</value>
+  </data>
+  <data name="Common.Processing" xml:space="preserve">
+    <value>Đang xử lý...</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.Action" xml:space="preserve">
+    <value>Chuyển sang giao thẳng</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.Title" xml:space="preserve">
+    <value>Chuyển phân bổ sang giao thẳng</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.HelpText" xml:space="preserve">
+    <value>Phần hàng còn lại của phân bổ này sẽ được giao thẳng khi nhận hàng.</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.Address" xml:space="preserve">
+    <value>Địa chỉ giao hàng</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.ContactName" xml:space="preserve">
+    <value>Người nhận</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.ContactPhone" xml:space="preserve">
+    <value>Điện thoại</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.Submit" xml:space="preserve">
+    <value>Xác nhận giao thẳng</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.OrderPrefix" xml:space="preserve">
+    <value>Đơn bán</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.CustomerPrefix" xml:space="preserve">
+    <value>Khách</value>
   </data>
 </root>

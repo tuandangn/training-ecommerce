@@ -130,8 +130,8 @@
                                             </td>
                                             <td class="text-center">
                                                 <input name="Items[@i].Quantity" value="@item.Quantity.DisplayQuantity()"
-                                                       class="form-control row-qty" data-decimal="quantity" 
-                                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.001"
+                                                       class="form-control row-qty" data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces"
+                                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="@(item.QuantityDecimalPlaces > 0 ? "0.001" : "1")"
                                                        data-val-number="Số lượng không đúng." data-val-required="Vui lòng nhập số lượng." />
                                                 <span class="small text-danger field-validation-valid"
                                                       data-valmsg-for="Items[@i].Quantity" data-valmsg-replace="true"></span>
@@ -222,6 +222,7 @@
         </div>
     </form>
 </div>
+
 <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
@@ -268,8 +269,8 @@
                                         <thead class="table-light text-muted">
                                             <tr>
                                                 <th class="ps-3 fw-normal">Ngày</th>
-                                                <th class="text-end fw-normal">Giá bán</th>
-                                                <th class="text-end pe-2 fw-normal price-history-cost-col d-none">Giá vốn</th>
+                                                <th class="fw-normal">Nguồn</th>
+                                                <th class="text-end pe-3 fw-normal">Giá bán</th>
                                             </tr>
                                         </thead>
                                         <tbody id="priceHistoryTableBodyContent"></tbody>
@@ -279,13 +280,9 @@
                                     <div class="spinner-border spinner-border-sm text-secondary" role="status"></div>
                                 </div>
                                 <div id="priceHistoryEmpty" class="text-center py-2 text-muted small d-none">
-                                    Chưa có dữ liệu biến động giá.
+                                    Chưa có lịch sử bán cho khách này, đang dùng giá mặc định.
                                 </div>
-                                <div class="border-top px-3 py-2 d-flex justify-content-between align-items-center">
-                                    <button type="button" id="toggleCostColBtn"
-                                            class="btn btn-link btn-sm p-0 text-muted small">
-                                        <span id="toggleCostColLabel">Hiện giá vốn</span>
-                                    </button>
+                                <div class="border-top px-3 py-2 d-flex justify-content-end align-items-center">
                                     <button type="button" id="closePriceHistoryBtn" class="btn btn-link btn-sm p-0 text-muted small">
                                         Đóng
                                     </button>

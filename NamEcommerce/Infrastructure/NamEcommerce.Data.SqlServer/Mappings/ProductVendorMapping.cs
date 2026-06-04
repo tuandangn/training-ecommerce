@@ -13,7 +13,7 @@ public class ProductVendorMapping : IEntityTypeConfiguration<ProductVendor>
             .HasForeignKey(mapping => mapping.ProductId)
             .IsRequired()
             .OnDelete(DeleteBehavior.Cascade);
-            
+
         builder.HasOne<Vendor>()
             .WithMany()
             .HasForeignKey(mapping => mapping.VendorId)

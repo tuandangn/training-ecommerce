@@ -18,6 +18,9 @@ public sealed class CreateGoodsReceiptHandler : IRequestHandler<CreateGoodsRecei
 
     public async Task<CreateGoodsReceiptResultModel> Handle(CreateGoodsReceiptCommand request, CancellationToken cancellationToken)
     {
+        if (request.Items.Any(i => i.QuantityDecimalPlaces == 0 && i.Quantity != Math.Floor(i.Quantity)))
+            return new CreateGoodsReceiptResultModel { Success = false, ErrorMessage = "Error.QuantityMustBeInteger" };
+
         var result = await _goodsReceiptAppService.CreateGoodsReceiptAsync(new CreateGoodsReceiptAppDto
         {
             ReceivedOnUtc = DateTimeHelper.ToUniversalTime(request.ReceivedOn),

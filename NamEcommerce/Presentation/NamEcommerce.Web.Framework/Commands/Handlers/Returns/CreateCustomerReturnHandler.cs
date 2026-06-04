@@ -17,6 +17,15 @@ public sealed class CreateCustomerReturnHandler : IRequestHandler<CreateCustomer
 
     public async Task<CreateCustomerReturnResultModel> Handle(CreateCustomerReturnCommand request, CancellationToken cancellationToken)
     {
+        if (request.Items.Any(i => i.QuantityDecimalPlaces == 0 && i.RequestedQuantity != Math.Floor(i.RequestedQuantity)))
+        {
+            return new CreateCustomerReturnResultModel
+            {
+                Success = false,
+                ErrorMessage = "Error.QuantityMustBeInteger"
+            };
+        }
+
         var result = await _customerReturnAppService.CreateAsync(new CreateCustomerReturnAppDto
         {
             DeliveryNoteId = request.DeliveryNoteId,
@@ -24,6 +33,7 @@ public sealed class CreateCustomerReturnHandler : IRequestHandler<CreateCustomer
             WarehouseId = null,
             Note = request.Note,
             AdditionalCost = request.AdditionalCost,
+            CompensateInNextDelivery = request.CompensateInNextDelivery,
             Items = request.Items.Select(i => new CreateCustomerReturnItemAppDto
             {
                 ProductId = i.ProductId,

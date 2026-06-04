@@ -19,7 +19,8 @@ public sealed class UpdateUnitMeasurementHandler : IRequestHandler<UpdateUnitMea
     {
         var updateResult = await _unitMeasurementAppService.UpdateUnitMeasurementAsync(new UpdateUnitMeasurementAppDto(request.Id) {
             Name = request.Name,
-            DisplayOrder = request.DisplayOrder
+            DisplayOrder = request.DisplayOrder,
+            DecimalPlaces = request.DecimalPlaces
         });
 
         return new UpdateUnitMeasurementResultModel

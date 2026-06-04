@@ -80,7 +80,8 @@
                         <caption>
                             <div class="pe-1 d-flex justify-content-end">
                                 <button type="button" class="btn btn-sm btn-link text-dark text-decoration-none border-bottom-0" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                                    <i class="bi bi-plus-lg me-1"></i>Thêm hàng hóa
+                                    <i class="bi bi-plus-lg me-1"></i>
+                                    <span class="d-none d-md-inline">Thêm hàng hóa</span>
                                 </button>
                             </div>
                         </caption>
@@ -133,7 +134,8 @@
                                                         data-product="@item.ProductName"
                                                         data-availableQty="@item.ProductAvailableQty?.DisplayQuantity()"
                                                         data-qty="@item.Quantity.ToString("#")"
-                                                        data-price="@item.UnitPrice.ToString("#")">
+                                                        data-price="@item.UnitPrice.ToString("#")"
+                                                        data-decimalplaces="@item.QuantityDecimalPlaces">
                                                     <i class="bi bi-pencil me-2 text-primary"></i>Chỉnh sửa
                                                 </button>
                                             </li>

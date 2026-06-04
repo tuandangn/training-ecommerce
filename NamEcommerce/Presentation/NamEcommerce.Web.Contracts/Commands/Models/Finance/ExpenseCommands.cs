@@ -24,3 +24,11 @@ public sealed class UpdateExpenseCommand : IRequest<CommonActionResultModel>
 }
 
 public sealed record DeleteExpenseCommand(Guid Id) : IRequest<CommonActionResultModel>;
+
+public sealed class UpsertExpenseBudgetCommand : IRequest<CommonActionResultModel>
+{
+    public required int ExpenseType { get; init; }
+    public required int Year { get; init; }
+    public required int Month { get; init; }
+    public required decimal Amount { get; init; }
+}

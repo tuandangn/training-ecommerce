@@ -11,4 +11,5 @@ public sealed class AddPurchaseOrderItemCommand : IRequest<AddPurchaseOrderItemR
     public decimal Quantity { get; set; }
     public decimal UnitCost { get; set; }
     public string? Note { get; init; }
+    public int QuantityDecimalPlaces { get; init; }
 }

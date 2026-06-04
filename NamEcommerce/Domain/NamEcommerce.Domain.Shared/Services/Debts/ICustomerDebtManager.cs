@@ -13,7 +13,12 @@ public interface ICustomerDebtManager
 
     Task<IList<CustomerPaymentDto>> RecordFlexiblePaymentForCustomerAsync(CreateCustomerPaymentDto dto);
 
-    Task<(decimal OverRefundAmount, Guid? DebtId)> ApplyReturnFromCustomerReturnAsync(Guid customerId, Guid returnId, decimal amount);
+    Task<CustomerCreditNoteDto> ApplyCreditNoteFromCustomerReturnAsync(
+        Guid customerId,
+        Guid returnId,
+        string returnCode,
+        Guid? sourceDeliveryNoteId,
+        decimal amount);
     
     Task<CustomerDebtDto?> GetDebtByIdAsync(Guid id);
 

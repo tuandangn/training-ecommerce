@@ -44,6 +44,8 @@ public sealed record DeliveryNoteListItemModel
 public sealed record DeliveryNoteListItemProductModel
 {
     public required Guid Id { get; init; }
+    public Guid WarehouseId { get; init; }
+    public string? WarehouseName { get; set; }
     public required string ProductName { get; init; }
     public decimal Quantity { get; init; }
 }

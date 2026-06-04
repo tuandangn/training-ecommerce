@@ -199,6 +199,28 @@ public sealed record SetGoodsReceiptVendorResultDto
 }
 
 [Serializable]
+public sealed record CreateOpeningInventoryReceiptDto
+{
+    public required Guid ProductId { get; init; }
+    public required Guid WarehouseId { get; init; }
+    public required decimal Quantity { get; init; }
+    public required decimal UnitCost { get; init; }
+    public Guid? CreatedByUserId { get; init; }
+
+    public void Verify()
+    {
+        if (ProductId == Guid.Empty)
+            throw new ArgumentException("ProductId is required", nameof(ProductId));
+        if (WarehouseId == Guid.Empty)
+            throw new ArgumentException("WarehouseId is required", nameof(WarehouseId));
+        if (Quantity <= 0)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.Item.QuantityMustBePositive");
+        if (UnitCost <= 0)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.OpeningInventory.UnitCostMustBePositive");
+    }
+}
+
+[Serializable]
 public sealed record CreateGoodsReceiptFromCustomerReturnDto
 {
     public required Guid CustomerReturnId { get; init; }

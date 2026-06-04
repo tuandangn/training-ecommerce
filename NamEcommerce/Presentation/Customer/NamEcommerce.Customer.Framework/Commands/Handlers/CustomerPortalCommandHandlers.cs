@@ -20,6 +20,7 @@ public sealed class CustomerPortalCommandHandlers(
     IRequestHandler<LogoutCustomerCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerOrderRequestCommand, CustomerOrderRequestModel>,
     IRequestHandler<ConfirmCustomerOrderRequestCommand, CustomerPortalConversionResultModel>,
+    IRequestHandler<UpdateCustomerOrderNoteCommand, CustomerActionResultModel>,
     IRequestHandler<ConfirmCustomerDeliveryNoteCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerDeliveryFeedbackCommand, CustomerActionResultModel>,
     IRequestHandler<CreateCustomerReturnRequestCommand, CustomerReturnRequestModel>,
@@ -33,10 +34,19 @@ public sealed class CustomerPortalCommandHandlers(
         {
             DeliveryToken = request.DeliveryToken,
             RequestedIp = request.RequestedIp,
-            RequestedUserAgent = request.RequestedUserAgent
+            RequestedUserAgent = request.RequestedUserAgent,
+            Location = MapLocation(request.Location)
         }).ConfigureAwait(false);
 
-        return new CustomerOtpRequestResultModel(result.Success, result.Message, result.ChallengeId, result.MaskedDestination, result.MockOtp);
+        return new CustomerOtpRequestResultModel(
+            result.Success,
+            result.Message,
+            result.RequiresOtp,
+            result.ChallengeId,
+            result.MaskedDestination,
+            result.MockOtp,
+            result.Session is null ? null : MapSession(result.Session),
+            result.SessionToken);
     }
 
     public async Task<CustomerLoginResultModel> Handle(VerifyCustomerOtpCommand request, CancellationToken cancellationToken)
@@ -46,7 +56,8 @@ public sealed class CustomerPortalCommandHandlers(
             ChallengeId = request.ChallengeId,
             Otp = request.Otp,
             RequestedIp = request.RequestedIp,
-            RequestedUserAgent = request.RequestedUserAgent
+            RequestedUserAgent = request.RequestedUserAgent,
+            Location = MapLocation(request.Location)
         }).ConfigureAwait(false);
 
         return MapLoginResult(result);
@@ -114,18 +125,26 @@ public sealed class CustomerPortalCommandHandlers(
         return new CustomerPortalConversionResultModel(result.Success, result.Message, result.CreatedId);
     }
 
+    public async Task<CustomerActionResultModel> Handle(UpdateCustomerOrderNoteCommand request, CancellationToken cancellationToken)
+    {
+        var result = await portalAppService.UpdateOrderNoteAsync(RequireCustomerId(), request.OrderId, request.Note).ConfigureAwait(false);
+        return new CustomerActionResultModel(result.Success, result.Message);
+    }
+
     public async Task<CustomerActionResultModel> Handle(ConfirmCustomerDeliveryNoteCommand request, CancellationToken cancellationToken)
     {
         var result = await portalAppService.ConfirmDeliveryNoteAsync(RequireCustomerId(), request.DeliveryNoteId, new ConfirmCustomerDeliveryNoteAppDto
         {
             ReceiverName = request.ReceiverName,
             Note = request.Note,
+            Location = MapLocation(request.Location),
             Acceptance = request.Acceptance is null
                 ? null
                 : new ConfirmCustomerDeliveryAcceptanceAppDto
                 {
                     AgreedCustomerCharge = request.Acceptance.AgreedCustomerCharge,
                     AgreedCustomerChargeReason = request.Acceptance.AgreedCustomerChargeReason,
+                    CompensateInNextDelivery = request.Acceptance.CompensateInNextDelivery,
                     Items = request.Acceptance.Items
                         .Select(item => new ConfirmCustomerDeliveryAcceptanceItemAppDto
                         {
@@ -159,6 +178,7 @@ public sealed class CustomerPortalCommandHandlers(
         {
             DeliveryNoteId = request.DeliveryNoteId,
             Reason = request.Reason,
+            CompensateInNextDelivery = request.CompensateInNextDelivery,
             Items = request.Items.Select(item => new CreateCustomerReturnRequestItemAppDto
             {
                 DeliveryNoteItemId = item.DeliveryNoteItemId,
@@ -176,7 +196,7 @@ public sealed class CustomerPortalCommandHandlers(
             }).ToList()
         }).ConfigureAwait(false);
 
-        return new CustomerReturnRequestModel(result.Id, result.DeliveryNoteId, result.Status, result.CreatedOnUtc);
+        return new CustomerReturnRequestModel(result.Id, result.DeliveryNoteId, result.Status, result.CreatedOnUtc, result.CompensateInNextDelivery);
     }
 
     public async Task<CustomerActionResultModel> Handle(CancelCustomerReturnRequestCommand request, CancellationToken cancellationToken)
@@ -210,6 +230,17 @@ public sealed class CustomerPortalCommandHandlers(
 
     private static CustomerSessionModel MapSession(CustomerSessionAppDto session)
         => new(session.SessionId, session.CustomerId, session.CustomerName, session.PhoneNumber, session.Email, session.HasPassword, session.ExpiresOnUtc);
+
+    private static CustomerPortalLocationAppDto? MapLocation(CustomerPortalLocationCommand? location)
+        => location is null
+            ? null
+            : new CustomerPortalLocationAppDto
+            {
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                AccuracyMeters = location.AccuracyMeters,
+                CapturedOnUtc = location.CapturedOnUtc
+            };
 
     private static CustomerPaymentIntentModel MapPaymentIntent(CustomerPaymentIntentAppDto intent)
         => new(intent.Id, intent.CustomerDebtId, intent.Amount, intent.Provider, intent.ProviderIntentId, intent.Status, intent.FailureReason, intent.CreatedOnUtc, intent.CompletedOnUtc);

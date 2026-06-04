@@ -27,7 +27,9 @@ public sealed record DeliveryNoteDto
     public DeliveryNoteSourceType SourceType { get; init; }
     public bool IsDirectShip { get; init; }
     public DeliveryConfirmationStatus DeliveryConfirmationStatus { get; init; }
-    
+    public DateTime? ConfirmedAtUtc { get; init; }
+    public string? ConfirmedNote { get; init; }
+
     public DateTime? DeliveredOnUtc { get; init; }
     public Guid? DeliveryProofPictureId { get; init; }
     public string? DeliveryReceiverName { get; init; }
@@ -51,6 +53,7 @@ public sealed record DeliveryNoteItemDto
     public required Guid DeliveryNoteId { get; init; }
     public required Guid OrderItemId { get; init; }
     public required Guid ProductId { get; init; }
+    public required Guid WarehouseId { get; init; }
     public required string ProductName { get; init; }
     public required decimal Quantity { get; init; }
     public required decimal UnitPrice { get; init; }
@@ -87,6 +90,8 @@ public sealed record CreateDeliveryNoteDto
             throw new NamEcommerceDomainException("Error.ShippingAddressRequired");
         if (Items == null || !Items.Any())
             throw new NamEcommerceDomainException("Error.DeliveryNoteItemsRequired");
+        if (Items.Any(i => i.WarehouseId == Guid.Empty))
+            throw new NamEcommerceDomainException("Error.WarehouseRequired");
         if (Items.Any(i => i.Quantity <= 0))
             throw new NamEcommerceDomainException("Error.QuantityMustBePositive");
         if (Surcharge < 0)
@@ -100,6 +105,7 @@ public sealed record CreateDeliveryNoteDto
 public sealed record CreateDeliveryNoteItemDto
 {
     public required Guid OrderItemId { get; init; }
+    public required Guid WarehouseId { get; init; }
     public required decimal Quantity { get; init; }
 }
 
@@ -117,6 +123,7 @@ public sealed record DeliveryAcceptanceDto
 {
     public decimal AgreedCustomerCharge { get; init; }
     public string? AgreedCustomerChargeReason { get; init; }
+    public bool CompensateInNextDelivery { get; init; }
     public IList<DeliveryAcceptanceItemDto> Items { get; init; } = [];
 }
 
@@ -124,7 +131,7 @@ public sealed record DeliveryAcceptanceDto
 public sealed record MarkDeliveryNoteDeliveredDto
 {
     public required Guid DeliveryNoteId { get; init; }
-    public required Guid PictureId { get; init; }
+    public required IReadOnlyList<Guid> PictureIds { get; init; }
     public string? ReceiverName { get; init; }
     public DeliveryAcceptanceDto? Acceptance { get; init; }
 }

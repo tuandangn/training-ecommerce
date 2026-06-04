@@ -7,11 +7,15 @@ public abstract record BaseUnitMeasurementDto
 {
     public required string Name { get; init; }
     public int DisplayOrder { get; set; }
+    public int DecimalPlaces { get; init; } = 0;
 
     public virtual void Verify()
     {
         if (string.IsNullOrEmpty(Name))
             throw new UnitMeasurementDataIsInvalidException("Error.UnitMeasurementNameRequired");
+
+        if (DecimalPlaces is not (0 or 1 or 2))
+            throw new UnitMeasurementDataIsInvalidException("Error.UnitMeasurementDecimalPlacesInvalid");
     }
 }
 
@@ -30,5 +34,8 @@ public sealed record CreateUnitMeasurementResultDto
 [Serializable]
 public sealed record UpdateUnitMeasurementDto(Guid Id) : BaseUnitMeasurementDto;
 [Serializable]
-public sealed record UpdateUnitMeasurementResultDto(Guid Id) : BaseUnitMeasurementDto;
+public sealed record UpdateUnitMeasurementResultDto(Guid Id) : BaseUnitMeasurementDto
+{
+    public override void Verify() { }
+}
 

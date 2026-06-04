@@ -13,9 +13,11 @@ public class DeliveryNoteItemMap : IEntityTypeConfiguration<DeliveryNoteItem>
 
         builder.Property(d => d.OrderItemId).IsRequired();
         builder.Property(d => d.ProductId).IsRequired();
+        builder.Property(d => d.WarehouseId).IsRequired();
         builder.Property(d => d.ProductName).HasMaxLength(400).IsRequired();
         builder.Property(d => d.Quantity).HasColumnType("decimal(18,2)").IsRequired();
         builder.Property(d => d.UnitPrice).HasColumnType("decimal(18,2)").IsRequired();
+        builder.HasIndex(d => d.WarehouseId);
 
         // Ignore computed property
         builder.Ignore(d => d.SubTotal);

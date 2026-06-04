@@ -5,11 +5,15 @@ public record BaseUnitMeasurementAppDto
 {
     public required string Name { get; init; }
     public int DisplayOrder { get; set; }
+    public int DecimalPlaces { get; init; } = 0;
 
     public (bool valid, string? errorMessage) Validate()
     {
         if (string.IsNullOrEmpty(Name))
             return (false, "Error.UnitMeasurementNameRequired");
+
+        if (DecimalPlaces is not (0 or 1 or 2))
+            return (false, "Error.UnitMeasurementDecimalPlacesInvalid");
 
         return (true, null);
     }

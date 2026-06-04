@@ -101,10 +101,11 @@ export default class BulkReceiveController {
             const dsOrderItemBtn = e.target.closest('.bulk-ds-order-item-btn');
             if (dsOrderItemBtn) {
                 const dsTr = dsOrderItemBtn.closest('tr');
-                dsTr.querySelectorAll('.bulk-ds-order-item-btn').forEach(b => b.classList.remove('active'));
+                dsTr.querySelectorAll('.bulk-ds-order-item-btn, .bulk-ds-existing-alloc-btn').forEach(b => b.classList.remove('active'));
                 dsOrderItemBtn.classList.add('active');
                 dsTr.querySelector('.bulk-ds-order-item-id').value = dsOrderItemBtn.dataset.orderItemId;
                 dsTr.querySelector('.bulk-ds-order-id').value = dsOrderItemBtn.dataset.orderId;
+                dsTr.querySelector('.bulk-ds-existing-allocation-id').value = '';
                 const label = dsTr.querySelector('.bulk-ds-selected-label');
                 if (label) label.textContent = `${dsOrderItemBtn.dataset.orderCode} · ${dsOrderItemBtn.dataset.customerName} · Còn: ${dsOrderItemBtn.dataset.availableToAllocate}`;
                 const fields = dsTr.querySelector('.bulk-ds-fields');
@@ -117,11 +118,42 @@ export default class BulkReceiveController {
                 if (nameInput && !nameInput.value) nameInput.value = dsOrderItemBtn.dataset.customerName || '';
                 return;
             }
+
+            const dsExistingAllocBtn = e.target.closest('.bulk-ds-existing-alloc-btn');
+            if (dsExistingAllocBtn) {
+                const dsTr = dsExistingAllocBtn.closest('tr');
+                dsTr.querySelectorAll('.bulk-ds-order-item-btn, .bulk-ds-existing-alloc-btn').forEach(b => b.classList.remove('active'));
+                dsExistingAllocBtn.classList.add('active');
+                dsTr.querySelector('.bulk-ds-existing-allocation-id').value = dsExistingAllocBtn.dataset.allocationId;
+                dsTr.querySelector('.bulk-ds-order-item-id').value = '';
+                dsTr.querySelector('.bulk-ds-order-id').value = '';
+                const label = dsTr.querySelector('.bulk-ds-selected-label');
+                if (label) label.textContent = `Nâng cấp: ${dsExistingAllocBtn.dataset.orderCode} · Khách: ${dsExistingAllocBtn.dataset.customerName} · Còn: ${dsExistingAllocBtn.dataset.remainingQty}`;
+                const fields = dsTr.querySelector('.bulk-ds-fields');
+                fields?.classList.remove('d-none');
+                const addrInput = dsTr.querySelector('.bulk-ds-address-input');
+                if (addrInput && !addrInput.value) addrInput.value = dsExistingAllocBtn.dataset.shippingAddress || '';
+                const phoneInput = dsTr.querySelector('.bulk-ds-contact-phone');
+                if (phoneInput && !phoneInput.value) phoneInput.value = dsExistingAllocBtn.dataset.customerPhone || '';
+                const nameInput = dsTr.querySelector('.bulk-ds-contact-name');
+                if (nameInput && !nameInput.value) nameInput.value = dsExistingAllocBtn.dataset.customerName || '';
+                return;
+            }
         });
 
         this.#tbody?.addEventListener('change', (e) => {
             if (e.target.matches('.bulk-row-item')) {
                 const tr = e.target.closest('tr');
+                const item = this.#itemsById.get(e.target.value);
+                const qtyInput = tr.querySelector('.bulk-row-qty');
+                if (qtyInput && item) {
+                    const dp = String(item.decimalPlaces ?? 0);
+                    qtyInput.dataset.decimals = dp;
+                    qtyInput.dataset.decimalBound = '';
+                    window.DecimalFields?.bindInput?.(qtyInput);
+                    const dpInput = tr.querySelector('.bulk-row-decimal-places');
+                    if (dpInput) dpInput.value = dp;
+                }
                 this.#refreshRowHint(tr);
                 this.#syncRowWarehouse(tr);
                 // Reload DS items if DS panel is open
@@ -200,7 +232,8 @@ export default class BulkReceiveController {
             <td class="text-end pe-2">
                 <input name="Items[${idx}].Quantity"
                        class="form-control form-control-sm text-end bulk-row-qty no-additional-element no-hint"
-                       data-decimal="quantity" value="${escapeHtml(qtyValue)}" placeholder="0" />
+                       data-decimal="quantity" data-decimals="${presetItemId ? (this.#itemsById.get(presetItemId)?.decimalPlaces ?? 0) : 0}" value="${escapeHtml(qtyValue)}" placeholder="0" />
+                <input type="hidden" name="Items[${idx}].QuantityDecimalPlaces" class="bulk-row-decimal-places" value="${presetItemId ? (this.#itemsById.get(presetItemId)?.decimalPlaces ?? 0) : 0}" />
             </td>
             <td class="text-end pe-2">
                 <input name="Items[${idx}].ActualUnitCost"
@@ -237,6 +270,7 @@ export default class BulkReceiveController {
                 <div class="p-2 bg-light rounded-2 border">
                     <input type="hidden" name="Items[${idx}].DirectShipOrderItemId" class="bulk-ds-order-item-id" value="" />
                     <input type="hidden" name="Items[${idx}].DirectShipOrderId" class="bulk-ds-order-id" value="" />
+                    <input type="hidden" name="Items[${idx}].DirectShipExistingAllocationId" class="bulk-ds-existing-allocation-id" value="" />
                     <div class="bulk-ds-loading d-none text-muted small py-1">
                         <span class="spinner-border spinner-border-sm me-1"></span> Đang tải đơn hàng...
                     </div>
@@ -257,7 +291,7 @@ export default class BulkReceiveController {
                                 <input type="text" name="Items[${idx}].DirectShipContactName" class="form-control form-control-sm bulk-ds-contact-name" placeholder="Tên người nhận" />
                             </div>
                             <div class="col-6">
-                                <input type="text" name="Items[${idx}].DirectShipContactPhone" class="form-control form-control-sm bulk-ds-contact-phone" placeholder="Số điện thoại" />
+                                <input type="text" name="Items[${idx}].DirectShipContactPhone" class="form-control form-control-sm bulk-ds-contact-phone" placeholder="Số điện thoại *" />
                             </div>
                         </div>
                     </div>
@@ -286,6 +320,7 @@ export default class BulkReceiveController {
             dsTr.classList.add('d-none');
             dsTr.querySelector('.bulk-ds-order-item-id').value = '';
             dsTr.querySelector('.bulk-ds-order-id').value = '';
+            dsTr.querySelector('.bulk-ds-existing-allocation-id').value = '';
             icon?.classList.replace('text-primary', 'text-secondary');
             this.#syncRowWarehouse(tr);
         }
@@ -320,35 +355,69 @@ export default class BulkReceiveController {
         }
 
         try {
-            const resp = await fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${itemId}`, { signal: controller.signal });
-            if (!resp.ok) throw new Error('Lỗi tải dữ liệu');
-            const data = await resp.json();
+            const [eligibleResp, nonDsResp] = await Promise.all([
+                fetch(`/PurchaseOrder/EligibleOrderItems?purchaseOrderItemId=${itemId}`, { signal: controller.signal }),
+                fetch(`/PurchaseOrder/NonDirectShipAllocations?purchaseOrderItemId=${itemId}`, { signal: controller.signal })
+            ]);
+            if (!eligibleResp.ok || !nonDsResp.ok) throw new Error('Lỗi tải dữ liệu');
+            const [eligibleData, nonDsData] = await Promise.all([eligibleResp.json(), nonDsResp.json()]);
             loading.classList.add('d-none');
             dsTr.dataset.dsLoadedFor = itemId;
 
-            if (!data || !data.length) {
+            if (!eligibleData?.length && !nonDsData?.length) {
                 empty.classList.remove('d-none');
                 return;
             }
 
             orderItems.innerHTML = '';
-            data.forEach(order => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'list-group-item list-group-item-action py-2 px-3 bulk-ds-order-item-btn';
-                btn.dataset.orderItemId = order.orderItemId;
-                btn.dataset.orderId = order.orderId;
-                btn.dataset.orderCode = order.orderCode;
-                btn.dataset.customerName = order.customerName;
-                btn.dataset.availableToAllocate = order.availableToAllocate;
-                btn.dataset.shippingAddress = order.shippingAddress || '';
-                btn.dataset.customerPhone = order.customerPhone || '';
-                btn.innerHTML = `<div class="d-flex justify-content-between align-items-center">
-                    <span><strong>${escapeHtml(order.orderCode)}</strong> <span class="text-muted small">${escapeHtml(order.customerName)}</span></span>
-                    <span class="badge bg-secondary ms-2">Còn ${order.availableToAllocate}</span>
-                </div>`;
-                orderItems.appendChild(btn);
-            });
+
+            if (eligibleData?.length) {
+                const header = document.createElement('div');
+                header.className = 'px-3 py-1 text-muted small fw-semibold bg-light border-bottom';
+                header.textContent = 'Tạo phân bổ mới + Giao thẳng';
+                orderItems.appendChild(header);
+                eligibleData.forEach(order => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'list-group-item list-group-item-action py-2 px-3 bulk-ds-order-item-btn';
+                    btn.dataset.orderItemId = order.orderItemId;
+                    btn.dataset.orderId = order.orderId;
+                    btn.dataset.orderCode = order.orderCode;
+                    btn.dataset.customerName = order.customerName;
+                    btn.dataset.availableToAllocate = order.availableToAllocate;
+                    btn.dataset.shippingAddress = order.shippingAddress || '';
+                    btn.dataset.customerPhone = order.customerPhone || '';
+                    btn.innerHTML = `<div class="d-flex justify-content-between align-items-center">
+                        <span><strong>${escapeHtml(order.orderCode)}</strong> <span class="text-muted small">${escapeHtml(order.customerName)}</span></span>
+                        <span class="badge bg-success ms-2">Còn ${order.availableToAllocate}</span>
+                    </div>`;
+                    orderItems.appendChild(btn);
+                });
+            }
+
+            if (nonDsData?.length) {
+                const header = document.createElement('div');
+                header.className = 'px-3 py-1 text-muted small fw-semibold bg-light border-bottom' + (eligibleData?.length ? ' border-top mt-1' : '');
+                header.textContent = 'Nâng cấp giao thẳng (phân bổ hiện có)';
+                orderItems.appendChild(header);
+                nonDsData.forEach(alloc => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'list-group-item list-group-item-action py-2 px-3 bulk-ds-existing-alloc-btn';
+                    btn.dataset.allocationId = alloc.allocationId;
+                    btn.dataset.orderCode = alloc.orderCode;
+                    btn.dataset.customerName = alloc.customerName;
+                    btn.dataset.remainingQty = alloc.remainingQty;
+                    btn.dataset.shippingAddress = alloc.shippingAddress || '';
+                    btn.dataset.customerPhone = alloc.customerPhone || '';
+                    btn.innerHTML = `<div class="d-flex justify-content-between align-items-center">
+                        <span><strong>${escapeHtml(alloc.orderCode)}</strong> <span class="text-muted small">${escapeHtml(alloc.customerName)}</span></span>
+                        <span class="badge bg-warning text-dark ms-2">Còn ${alloc.remainingQty}</span>
+                    </div>`;
+                    orderItems.appendChild(btn);
+                });
+            }
+
             orderList.classList.remove('d-none');
         } catch (err) {
             if (err.name === 'AbortError') return;
@@ -511,10 +580,16 @@ export default class BulkReceiveController {
         let dsValid = true;
         this.#tbody?.querySelectorAll('.bulk-ds-row:not(.d-none)').forEach(dsTr => {
             const orderItemId = dsTr.querySelector('.bulk-ds-order-item-id')?.value;
+            const existingAllocationId = dsTr.querySelector('.bulk-ds-existing-allocation-id')?.value;
+            const phone = dsTr.querySelector('.bulk-ds-contact-phone')?.value?.trim();
             const address = dsTr.querySelector('.bulk-ds-address-input')?.value?.trim();
             const errorBox = dsTr.querySelector('.bulk-ds-error');
-            if (!orderItemId) {
+            if (!orderItemId && !existingAllocationId) {
                 errorBox.textContent = 'Vui lòng chọn đơn hàng để giao thẳng.';
+                errorBox.classList.remove('d-none');
+                dsValid = false;
+            } else if (!phone) {
+                errorBox.textContent = 'Vui lòng nhập số điện thoại nhận hàng giao thẳng.';
                 errorBox.classList.remove('d-none');
                 dsValid = false;
             } else if (!address) {

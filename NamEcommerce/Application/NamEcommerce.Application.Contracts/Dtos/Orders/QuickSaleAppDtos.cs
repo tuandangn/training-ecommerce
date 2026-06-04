@@ -1,0 +1,75 @@
+using NamEcommerce.Application.Contracts.Dtos.Common;
+
+namespace NamEcommerce.Application.Contracts.Dtos.Orders;
+
+[Serializable]
+public sealed record QuickSaleItemAppDto
+{
+    public required Guid ProductId { get; init; }
+    public decimal Quantity { get; init; }
+    public decimal UnitPrice { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (ProductId == Guid.Empty)
+            return (false, "Error.ProductRequired");
+        if (Quantity <= 0)
+            return (false, "Error.OrderItemQuantityMustBePositive");
+        if (UnitPrice < 0)
+            return (false, "Error.OrderItemUnitPriceCannotBeNegative");
+
+        return (true, null);
+    }
+}
+
+[Serializable]
+public sealed record CreateQuickSaleAppDto
+{
+    public required Guid CustomerId { get; init; }
+    public required Guid WarehouseId { get; init; }
+    public IList<QuickSaleItemAppDto> Items { get; init; } = [];
+    public decimal? OrderDiscount { get; init; }
+    public string? Note { get; init; }
+    public int PaymentMethod { get; init; }
+    public decimal PaidAmount { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (CustomerId == Guid.Empty)
+            return (false, "Error.CustomerRequired");
+        if (WarehouseId == Guid.Empty)
+            return (false, "Error.WarehouseRequired");
+        if (Items.Count == 0)
+            return (false, "Error.OrderItemRequired");
+        if (OrderDiscount is < 0)
+            return (false, "Error.OrderDiscountCannotBeNegative");
+        if (PaidAmount <= 0)
+            return (false, "Error.PaymentAmountMustBePositive");
+
+        foreach (var item in Items)
+        {
+            var result = item.Validate();
+            if (!result.valid)
+                return result;
+        }
+
+        var subtotal = Items.Sum(item => item.Quantity * item.UnitPrice);
+        if ((OrderDiscount ?? 0) > subtotal)
+            return (false, "Error.OrderDiscountExceedsTotal");
+
+        return (true, null);
+    }
+}
+
+[Serializable]
+public sealed record QuickSaleResultAppDto : CommonActionResultDto
+{
+    public Guid? OrderId { get; init; }
+    public Guid? DeliveryNoteId { get; init; }
+    public Guid? CustomerDebtId { get; init; }
+    public Guid? CustomerPaymentId { get; init; }
+    public Guid? PaymentIntentId { get; init; }
+
+    public static new QuickSaleResultAppDto CreateError(string? errorMessage)
+        => new() { Success = false, ErrorMessage = errorMessage };
+}

@@ -12,11 +12,13 @@ using NamEcommerce.Domain.Shared.Dtos.Returns;
 using NamEcommerce.Domain.Shared.Enums.CustomerPortal;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Finance;
+using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
 using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.Finance;
+using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Users;
 
@@ -31,6 +33,7 @@ public sealed class CustomerReturnManager(
     IEntityDataReader<CustomerReturnRequest> customerReturnRequestDataReader,
     ICustomerDebtManager customerDebtManager,
     IExpenseManager expenseManager,
+    IProductReservationManager productReservationManager,
     ICurrentUserAccessor currentUserAccessor) : ICustomerReturnManager
 {
     public async Task<CustomerReturnDto> CreateAsync(CreateCustomerReturnDto dto)
@@ -176,6 +179,7 @@ public sealed class CustomerReturnManager(
             ?? throw new CustomerReturnNotFoundException(id);
 
         customerReturn.MoveToInspecting();
+        await ReserveCompensatedQuantityAsync(customerReturn).ConfigureAwait(false);
         await customerReturnRepository.UpdateAsync(customerReturn).ConfigureAwait(false);
     }
 
@@ -259,8 +263,102 @@ public sealed class CustomerReturnManager(
         var customerReturn = await customerReturnDataReader.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new CustomerReturnNotFoundException(id);
 
+        await ReleaseCompensatedReservationAsync(customerReturn).ConfigureAwait(false);
         customerReturn.Cancel();
         await customerReturnRepository.UpdateAsync(customerReturn).ConfigureAwait(false);
+    }
+
+    private async Task ReserveCompensatedQuantityAsync(CustomerReturn customerReturn)
+    {
+        if (!customerReturn.CompensateInNextDelivery)
+            return;
+
+        var quantities = GetCompensatedQuantitiesByOrderProduct(customerReturn);
+        foreach (var item in quantities)
+        {
+            var alreadyReserved = await productReservationManager.GetReservedByReferenceAsync(
+                item.ProductId,
+                item.OrderId,
+                ProductReservationReason.CustomerReturnCompensation,
+                customerReturn.Id).ConfigureAwait(false);
+
+            var quantityToReserve = item.Quantity - alreadyReserved;
+            if (quantityToReserve <= 0)
+                continue;
+
+            await productReservationManager.ReserveAsync(
+                item.ProductId,
+                quantityToReserve,
+                item.OrderId,
+                ProductReservationReason.CustomerReturnCompensation,
+                customerReturn.Id).ConfigureAwait(false);
+        }
+    }
+
+    private async Task ReleaseCompensatedReservationAsync(CustomerReturn customerReturn)
+    {
+        if (!customerReturn.CompensateInNextDelivery)
+            return;
+
+        var quantities = GetCompensatedQuantitiesByOrderProduct(customerReturn);
+        foreach (var item in quantities)
+        {
+            var reservedByReturn = await productReservationManager.GetReservedByReferenceAsync(
+                item.ProductId,
+                item.OrderId,
+                ProductReservationReason.CustomerReturnCompensation,
+                customerReturn.Id).ConfigureAwait(false);
+            if (reservedByReturn <= 0)
+                continue;
+
+            var reservedForOrder = await productReservationManager.GetReservedForOrderAsync(
+                item.ProductId,
+                item.OrderId).ConfigureAwait(false);
+            var quantityToRelease = Math.Min(reservedByReturn, reservedForOrder);
+            if (quantityToRelease <= 0)
+                continue;
+
+            await productReservationManager.ReleaseAsync(
+                item.ProductId,
+                quantityToRelease,
+                item.OrderId,
+                ProductReservationReason.CustomerReturnCompensation,
+                customerReturn.Id).ConfigureAwait(false);
+        }
+    }
+
+    private List<CompensatedQuantity> GetCompensatedQuantitiesByOrderProduct(CustomerReturn customerReturn)
+    {
+        var sourceItemsById = deliveryNoteDataReader.DataSource
+            .Where(note => note.CustomerId == customerReturn.CustomerId && note.OrderId != Guid.Empty)
+            .SelectMany(note => note.Items.Select(item => new
+            {
+                note.OrderId,
+                item.Id,
+                item.ProductId,
+                item.OrderItemId
+            }))
+            .ToDictionary(item => item.Id);
+
+        if (sourceItemsById.Count == 0)
+            return [];
+
+        return customerReturn.Items
+            .Where(item => item.AcceptedQuantity > 0 && item.DeliveryNoteItemId.HasValue)
+            .Select(item => new
+            {
+                ReturnItem = item,
+                SourceItem = sourceItemsById.GetValueOrDefault(item.DeliveryNoteItemId!.Value)
+            })
+            .Where(item => item.SourceItem is not null
+                && item.SourceItem.ProductId == item.ReturnItem.ProductId
+                && item.SourceItem.OrderItemId != Guid.Empty)
+            .GroupBy(item => new { item.SourceItem!.OrderId, item.ReturnItem.ProductId })
+            .Select(group => new CompensatedQuantity(
+                group.Key.OrderId,
+                group.Key.ProductId,
+                group.Sum(item => item.ReturnItem.AcceptedQuantity)))
+            .ToList();
     }
 
     public async Task<CustomerReturnDto?> GetByIdAsync(Guid id)
@@ -378,16 +476,12 @@ public sealed class CustomerReturnManager(
 
         if (netRefundAmount <= 0) return;
 
-        var (overRefundAmount, debtId) = await customerDebtManager.ApplyReturnFromCustomerReturnAsync(
+        await customerDebtManager.ApplyCreditNoteFromCustomerReturnAsync(
             customerReturn.CustomerId,
-            returnId,
+            customerReturn.Id,
+            customerReturn.Code,
+            customerReturn.DeliveryNoteId == Guid.Empty ? null : customerReturn.DeliveryNoteId,
             netRefundAmount).ConfigureAwait(false);
-
-        if (overRefundAmount > 0 && debtId.HasValue)
-        {
-            customerReturn.MarkOverRefunded(overRefundAmount, debtId.Value);
-            await customerReturnRepository.UpdateAsync(customerReturn).ConfigureAwait(false);
-        }
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
@@ -542,4 +636,6 @@ public sealed class CustomerReturnManager(
     }
 
     private sealed record ReturnSourceItem(DeliveryNote DeliveryNote, DeliveryNoteItem Item);
+
+    private sealed record CompensatedQuantity(Guid OrderId, Guid ProductId, decimal Quantity);
 }

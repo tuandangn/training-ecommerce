@@ -25,8 +25,7 @@ public sealed class CustomerOrderRequestMapping : IEntityTypeConfiguration<Custo
         builder.HasIndex(request => new { request.CustomerId, request.CreatedOnUtc });
         builder.HasIndex(request => request.Status);
 
-        builder.Metadata.FindNavigation(nameof(CustomerOrderRequest.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(request => request.Items).WithOne().HasForeignKey(item => item.CustomerOrderRequestId).OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(request => request.Items).AutoInclude();
+        builder.Navigation(request => request.Items).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
     }
 }

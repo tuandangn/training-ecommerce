@@ -16,7 +16,10 @@ public sealed class AuthController(
     [EnableRateLimiting("CustomerOtp")]
     public async Task<IActionResult> RequestOtp(RequestOtpRequest request)
     {
-        var result = await mediator.Send(new RequestCustomerOtpCommand(request.DeliveryToken, GetIp(), GetUserAgent())).ConfigureAwait(false);
+        var result = await mediator.Send(new RequestCustomerOtpCommand(request.DeliveryToken, GetIp(), GetUserAgent(), MapLocation(request.Location))).ConfigureAwait(false);
+        if (result.Success && !result.RequiresOtp && result.Session is not null && !string.IsNullOrWhiteSpace(result.SessionToken))
+            AppendSessionCookie(result.SessionToken);
+
         return result.Success ? Ok(result) : BadRequest(result);
     }
 
@@ -24,7 +27,7 @@ public sealed class AuthController(
     [EnableRateLimiting("CustomerOtp")]
     public async Task<IActionResult> VerifyOtp(VerifyOtpRequest request)
     {
-        var result = await mediator.Send(new VerifyCustomerOtpCommand(request.ChallengeId, request.Otp, GetIp(), GetUserAgent())).ConfigureAwait(false);
+        var result = await mediator.Send(new VerifyCustomerOtpCommand(request.ChallengeId, request.Otp, GetIp(), GetUserAgent(), MapLocation(request.Location))).ConfigureAwait(false);
         if (!result.Success || result.Session is null || string.IsNullOrWhiteSpace(result.SessionToken))
             return Unauthorized(result);
 
@@ -84,8 +87,14 @@ public sealed class AuthController(
     private string? GetUserAgent()
         => Request.Headers.UserAgent.ToString();
 
-    public sealed record RequestOtpRequest(string DeliveryToken);
-    public sealed record VerifyOtpRequest(Guid ChallengeId, string Otp);
+    private static CustomerPortalLocationCommand? MapLocation(CustomerPortalLocationRequest? location)
+        => location is null
+            ? null
+            : new CustomerPortalLocationCommand(location.Latitude, location.Longitude, location.AccuracyMeters, location.CapturedOnUtc);
+
+    public sealed record CustomerPortalLocationRequest(double Latitude, double Longitude, double? AccuracyMeters, DateTime? CapturedOnUtc);
+    public sealed record RequestOtpRequest(string DeliveryToken, CustomerPortalLocationRequest? Location);
+    public sealed record VerifyOtpRequest(Guid ChallengeId, string Otp, CustomerPortalLocationRequest? Location);
     public sealed record PasswordLoginRequest(string Login, string Password);
     public sealed record SetPasswordRequest(string Password);
     public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);

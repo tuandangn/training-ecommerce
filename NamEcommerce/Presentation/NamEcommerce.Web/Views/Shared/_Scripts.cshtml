@@ -27,46 +27,59 @@
             dtFmt: 'd/m/Y H:i'
         };
 
-        flatpickr('input[type="date"]', {
-            locale:     cfg.locale,
-            dateFormat: 'Y-m-d',
-            altInput:   true,
-            altFormat:  cfg.dateFmt,
-            allowInput: false,
-            closeOnSelect: true,
-            clickOpens: true,
-            onReady: function(selectedDates, dateStr, instance) {
-                const original = instance.input;
-                original.type = "text";
-                original.classList.add("visually-hidden");
-                instance._input?.classList.add('bg-white');
-            },
-            onChange: function(selectedDates, dateStr, instance) {
-                $(instance.input.form).data('validator')?.element(instance.input);
-            }
-        });
+        window.initFlatPickrDate = function(element) {
+            flatpickr(element, {
+                locale:     cfg.locale,
+                dateFormat: 'Y-m-d',
+                altInput:   true,
+                altFormat:  cfg.dateFmt,
+                allowInput: false,
+                closeOnSelect: true,
+                clickOpens: true,
+                onReady: function(selectedDates, dateStr, instance) {
+                    const original = instance.input;
+                    original.type = "text";
+                    original.classList.add("visually-hidden");
+                    instance._input?.classList.add('bg-white');
+                },
+                onChange: function(selectedDates, dateStr, instance) {
+                    $(instance.input.form).data('validator')?.element(instance.input);
+                }
+            });
+        }
+        window.initFlatPickrDateTime = function(element) {
+            flatpickr(element, {
+                locale:      cfg.locale,
+                dateFormat:  'Y-m-d\\TH:i:S',
+                altInput:    true,
+                altFormat:   cfg.dtFmt,
+                enableTime:  true,
+                time_24hr:   true,
+                allowInput:  false,
+                closeOnSelect: true,
+                clickOpens: true,
+                onReady: function(selectedDates, dateStr, instance) {
+                    const original = instance.input;
+                    original.type = "text";
+                    original.classList.add("visually-hidden");
+                    instance._input?.classList.add('bg-white');
+                },
+                onChange: function(selectedDates, dateStr, instance) {
+                    $(instance.input.form).data('validator')?.element(instance.input);
+                    if(selectedDates.length) instance.close();
+                }
+            });
+        }
+        window.initFlatPickrControls = function(container){
+            container.querySelectorAll('input[type="date"]').forEach(function(el) {
+                initFlatPickrDate(el);
+            });
+            container.querySelectorAll('input[type="datetime-local"]').forEach(function(el) {
+                initFlatPickrDateTime(el);
+            });
+        };
 
-        flatpickr('input[type="datetime-local"]', {
-            locale:      cfg.locale,
-            dateFormat:  'Y-m-d\\TH:i:S',
-            altInput:    true,
-            altFormat:   cfg.dtFmt,
-            enableTime:  true,
-            time_24hr:   true,
-            allowInput:  false,
-            closeOnSelect: true,
-            clickOpens: true,
-            onReady: function(selectedDates, dateStr, instance) {
-                const original = instance.input;
-                original.type = "text";
-                original.classList.add("visually-hidden");
-                instance._input?.classList.add('bg-white');
-            },
-            onChange: function(selectedDates, dateStr, instance) {
-                $(instance.input.form).data('validator')?.element(instance.input);
-                if(selectedDates.length) instance.close();
-            }
-        });
+        initFlatPickrControls(document);
 
         var toggle  = document.getElementById('sidebarToggle');
         var sidebar = document.getElementById('appSidebar');

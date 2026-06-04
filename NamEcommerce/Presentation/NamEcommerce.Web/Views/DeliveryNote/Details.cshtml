@@ -17,6 +17,9 @@
         : Model.DeliveryProofPictureUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
             ? Model.DeliveryProofPictureUrl
             : $"data:image/jpeg;base64,{Model.DeliveryProofPictureUrl}";
+    var hasDeliveryCompletionInfo = Model.DeliveredOnUtc.HasValue
+        || !string.IsNullOrWhiteSpace(Model.DeliveryReceiverName)
+        || !string.IsNullOrWhiteSpace(deliveryProofPictureSrc);
 }
 
 @if (isDirectShip)
@@ -145,7 +148,7 @@
 
                 <hr class="border-light my-4">
 
-                @if (Model.ShowPrice || Model.AmountToCollect > 0 || Model.Surcharge > 0)
+                @if (Model.ShowPrice || Model.Surcharge > 0 || Model.AmountToCollect > 0)
                 {
                     <div class="financial-summary-sidebar mb-4 p-3 rounded-3" style="background: linear-gradient(145deg, #f8f9fa 0%, #ffffff 100%); border: 1px solid #edf2f9;">
                         <h6 class="fw-bold mb-3 small text-muted text-uppercase">Tóm tắt thanh toán</h6>
@@ -160,14 +163,14 @@
                         @if (Model.Surcharge > 0)
                         {
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="text-muted small">Phụ phí:</span>
-                                <div class="text-end">
-                                    <span class="fw-bold small">@Model.Surcharge.DisplayCurrencyWithSymbol()</span>
-                                    @if (!string.IsNullOrEmpty(Model.SurchargeReason))
+                                <span class="text-muted small">
+                                    Phụ phí:
+                                    @if (!string.IsNullOrWhiteSpace(Model.SurchargeReason))
                                     {
-                                        <div class="text-muted x-small">(@Model.SurchargeReason)</div>
+                                        <span class="fw-normal fst-italic">(@Model.SurchargeReason)</span>
                                     }
-                                </div>
+                                </span>
+                                <span class="fw-bold small">@Model.Surcharge.DisplayCurrencyWithSymbol()</span>
                             </div>
                         }
                         @if (Model.AmountToCollect > 0)
@@ -187,16 +190,39 @@
                         <div class="text-dark bg-light p-2 rounded border">@Model.Note</div>
                     </div>
                 }
-                @if (Model.Status == 40 && Model.DeliveredOnUtc.HasValue)
+                @if (!string.IsNullOrWhiteSpace(Model.RejectionReason))
+                {
+                    <hr class="border-light my-4">
+
+                    <h6 class="fw-bold mb-3 text-danger"><i class="bi bi-x-circle-fill me-2"></i>Thông tin từ chối</h6>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Lý do từ chối</label>
+                        <div class="text-dark bg-light p-2 rounded border">@Model.RejectionReason</div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.ReturnedToWarehouseName))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Hàng trả về kho</label>
+                            <div class="text-dark fw-bold"><i class="bi bi-house-check me-1 text-muted"></i>@Model.ReturnedToWarehouseName</div>
+                        </div>
+                    }
+                }
+
+                @if (hasDeliveryCompletionInfo)
                 {
                     <hr class="border-light my-4">
 
                     <h6 class="fw-bold mb-3"><i class="bi bi-check-circle-fill text-success me-2"></i>Thông tin nhận hàng</h6>
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Đã giao lúc</label>
-                        <div class="text-dark">@Model.DeliveredOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
-                    </div>
+                    @if (Model.DeliveredOnUtc.HasValue)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Đã giao lúc</label>
+                            <div class="text-dark">@Model.DeliveredOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                        </div>
+                    }
 
                     @if (!string.IsNullOrEmpty(Model.DeliveryReceiverName))
                     {
@@ -228,7 +254,15 @@
                 <h5 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2 text-primary"></i>Danh sách hàng hóa</h5>
             </div>
             @{
-                var hasReturned = Model.Items.Any(i => i.ReturnedQuantity > 0 || i.PendingReturnQuantity > 0);
+                var hasReturned = Model.Items.Any(i => i.ReturnedQuantity > 0 || i.PendingReturnQuantity > 0 || i.CompensatedReturnQuantity > 0);
+                var compensatedReturnQuantity = Model.Items.Sum(i => i.CompensatedReturnQuantity);
+            }
+            @if (compensatedReturnQuantity > 0)
+            {
+                <div class="alert alert-warning border-0 rounded-3 mx-4 mt-3 mb-0 small">
+                    <i class="bi bi-arrow-repeat me-1"></i>
+                    Có @compensatedReturnQuantity.DisplayQuantity() hàng khách trả đang được bù vào lần giao sau. Hàng chỉ nhập kho khi xác nhận phiếu trả.
+                </div>
             }
             <div class="card-body p-0 mt-3 flex-grow-1">
                 <div class="table-responsive">
@@ -237,6 +271,7 @@
                             <tr>
                                 <th class="ps-4" style="width: 50px;">#</th>
                                 <th>Tên hàng hóa</th>
+                                <th>Kho</th>
                                 <th class="text-end">Số lượng</th>
                                 @if (hasReturned)
                                 {
@@ -258,11 +293,12 @@
                                     <tr>
                                         <td class="ps-4">@(idx++)</td>
                                         <td class="fw-medium text-dark">@item.ProductName</td>
+                                        <td class="text-muted small">@item.WarehouseName</td>
                                         <td class="text-end fw-bold">@item.Quantity.DisplayQuantity()</td>
                                         @if (hasReturned)
                                         {
                                             <td class="text-end">
-                                                @if (item.ReturnedQuantity <= 0 && item.PendingReturnQuantity <= 0)
+                                                @if (item.ReturnedQuantity <= 0 && item.PendingReturnQuantity <= 0 && item.CompensatedReturnQuantity <= 0)
                                                 {
                                                     <span class="text-muted small">—</span>
                                                 }
@@ -286,6 +322,12 @@
                                                             <i class="bi bi-hourglass-split"></i> @item.PendingReturnQuantity.DisplayQuantity()
                                                         </div>
                                                     }
+                                                    if (item.CompensatedReturnQuantity > 0)
+                                                    {
+                                                        <div class="small text-warning mt-1" data-bs-toggle="tooltip" title="Duoc cong vao lan giao sau">
+                                                            <i class="bi bi-arrow-repeat"></i> @item.CompensatedReturnQuantity.DisplayQuantity()
+                                                        </div>
+                                                    }
                                                 }
                                             </td>
                                         }
@@ -298,7 +340,7 @@
                                 }
                                 // Cột: # | Name | Qty | (hasReturned: Returned) | (ShowPrice: Price | SubTotal)
                                 // Label colspan = total - 1 (chừa cột cuối cho value)
-                                var summaryLabelColspan = 2 + (hasReturned ? 1 : 0) + (Model.ShowPrice ? 2 : 0);
+                                var summaryLabelColspan = 3 + (hasReturned ? 1 : 0) + (Model.ShowPrice ? 2 : 0);
                                 @if (Model.ShowPrice)
                                 {
                                     <tr class="bg-light border-top">
@@ -330,7 +372,7 @@
                             else
                             {
                                 <tr>
-                                    <td colspan="@(3 + (hasReturned ? 1 : 0) + (Model.ShowPrice ? 2 : 0))" class="text-center py-4">
+                                    <td colspan="@(4 + (hasReturned ? 1 : 0) + (Model.ShowPrice ? 2 : 0))" class="text-center py-4">
                                         Không có hàng hóa
                                     </td>
                                 </tr>

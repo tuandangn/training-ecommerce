@@ -8,133 +8,143 @@
     var portalStatus = Model.PortalAccountStatus.HasValue ? (CustomerPortalAccountStatus)Model.PortalAccountStatus.Value : (CustomerPortalAccountStatus?)null;
 }
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Chỉnh sửa Khách hàng</h1>
-        <p class="page-header-subtitle">Cập nhật thông tin khách hàng</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Khách hàng
+        <span class="text-muted">@Model.FullName</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Customer" class="text-decoration-none">Khách hàng</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.FullName</li>
+            </ol>
+        </nav>
     </div>
-</div>
-
-<div class="form-card">
-    <div class="form-card-header">
-        <h2 class="form-card-title"><i class="bi bi-person-circle me-2 text-primary"></i>Thông tin khách hàng</h2>
-        <a asp-action="List" class="form-card-breadcrumb">
-            <i class="bi bi-arrow-left"></i> Trở về danh sách
-        </a>
-    </div>
-    <div class="form-card-body">
-        <form asp-action="Edit" method="post">
-            <input type="hidden" asp-for="Id" />
-            <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global mb-3"></div>
-
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label asp-for="FullName" class="form-label"></label>
-                    <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên đầy đủ" />
-                    <span asp-validation-for="FullName" class="text-danger small"></span>
-                </div>
-                <div class="col-md-6">
-                    <label asp-for="PhoneNumber" class="form-label"></label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-telephone text-muted"></i></span>
-                        <input asp-for="PhoneNumber" class="form-control" placeholder="Số điện thoại liên lạc" />
+}
+<div>
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <form asp-action="Edit" method="post">
+                <div class="content-card">
+                    <div class="content-card-body">
+                        <input type="hidden" asp-for="Id" />
+                        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global mb-3"></div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label asp-for="FullName" class="form-label"></label>
+                                <input asp-for="FullName" class="form-control" placeholder="Nhập họ tên đầy đủ" />
+                                <span asp-validation-for="FullName" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="PhoneNumber" class="form-label"></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-telephone text-muted"></i></span>
+                                    <input asp-for="PhoneNumber" class="form-control" placeholder="Số điện thoại liên lạc" />
+                                </div>
+                                <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="Address" class="form-label"></label>
+                                <textarea asp-for="Address" class="form-control" rows="2" placeholder="Địa chỉ thường trú"></textarea>
+                                <span asp-validation-for="Address" class="text-danger small"></span>
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="Email" class="form-label"></label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-envelope text-muted"></i></span>
+                                    <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" />
+                                </div>
+                                <span asp-validation-for="Email" class="text-danger small"></span>
+                            </div>
+                            <div class="col-12">
+                                <label asp-for="Note" class="form-label"></label>
+                                <textarea asp-for="Note" class="form-control" rows="3" placeholder="Ghi chú thêm về khách hàng..."></textarea>
+                                <span asp-validation-for="Note" class="text-danger small"></span>
+                            </div>
+                        </div>
                     </div>
-                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
-                </div>
-                <div class="col-12">
-                    <label asp-for="Address" class="form-label"></label>
-                    <textarea asp-for="Address" class="form-control" rows="2" placeholder="Địa chỉ thường trú"></textarea>
-                    <span asp-validation-for="Address" class="text-danger small"></span>
-                </div>
-                <div class="col-12">
-                    <label asp-for="Email" class="form-label"></label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-envelope text-muted"></i></span>
-                        <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" />
+                    <div class="content-card-footer d-flex align-items-center justify-content-between">
+                        <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                            <i class="bi bi-arrow-left"></i>
+                            Trở về
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
+                        </button>
                     </div>
-                    <span asp-validation-for="Email" class="text-danger small"></span>
                 </div>
-                <div class="col-12">
-                    <label asp-for="Note" class="form-label"></label>
-                    <textarea asp-for="Note" class="form-control" rows="3" placeholder="Ghi chú thêm về khách hàng..."></textarea>
-                    <span asp-validation-for="Note" class="text-danger small"></span>
+            </form>
+        </div>
+        <div class="col-lg-5">
+            <div class="content-card">
+                <div class="content-card-header">
+                    <h2 class="form-card-title"><i class="bi bi-shield-lock me-2 text-primary"></i>Cổng khách hàng</h2>
+                    <a asp-controller="CustomerPortal" asp-action="SecurityEvents" asp-route-customerId="@Model.Id" class="form-card-breadcrumb">
+                        <i class="bi bi-clock-history"></i> Xem sự kiện
+                    </a>
                 </div>
-            </div>
-
-            <div class="form-card-footer" style="margin: 1.5rem -1.5rem -1.5rem; border-radius: 0 0 var(--card-radius) var(--card-radius);">
-                <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-lg me-1"></i>Lưu thay đổi
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="form-card mt-4">
-    <div class="form-card-header">
-        <h2 class="form-card-title"><i class="bi bi-shield-lock me-2 text-primary"></i>Cổng khách hàng</h2>
-        <a asp-controller="CustomerPortal" asp-action="SecurityEvents" asp-route-customerId="@Model.Id" class="form-card-breadcrumb">
-            <i class="bi bi-clock-history"></i> Xem sự kiện
-        </a>
-    </div>
-    <div class="form-card-body">
-        <div class="row g-3 align-items-center">
-            <div class="col-md-3">
-                <div class="text-muted small mb-1">Trạng thái truy cập</div>
-                @if (portalStatus.HasValue)
-                {
-                    <span class="badge @portalStatus.Value.GetDisplayColor()">@portalStatus.Value.GetDisplayText()</span>
-                }
-                else
-                {
-                    <span class="badge bg-light text-dark border">Chưa kích hoạt</span>
-                }
-            </div>
-            <div class="col-md-3">
-                <div class="text-muted small mb-1">Mật khẩu</div>
-                <span class="badge @(Model.HasPortalPassword ? "bg-success" : "bg-light text-dark border")">
-                    @(Model.HasPortalPassword ? "Đã cài" : "Chưa cài")
-                </span>
-            </div>
-            <div class="col-md-3">
-                <div class="text-muted small mb-1">Lần đăng nhập cuối</div>
-                <div class="fw-medium">
-                    @(Model.PortalLastLoginOnUtc.HasValue ? Model.PortalLastLoginOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat) : "—")
+                <div class="content-card-body">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-3">
+                            <div class="text-muted small mb-1">Trạng thái truy cập</div>
+                            @if (portalStatus.HasValue)
+                            {
+                                <span class="badge @portalStatus.Value.GetDisplayColor()">@portalStatus.Value.GetDisplayText()</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-dark border">Chưa kích hoạt</span>
+                            }
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-muted small mb-1">Mật khẩu</div>
+                            <span class="badge @(Model.HasPortalPassword ? "bg-success" : "bg-light text-dark border")">
+                                @(Model.HasPortalPassword ? "Đã cài" : "Chưa cài")
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-muted small mb-1">Lần đăng nhập cuối</div>
+                            <div class="fw-medium">
+                                @(Model.PortalLastLoginOnUtc.HasValue ? Model.PortalLastLoginOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat) : "—")
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-muted small mb-1">Cập nhật cuối</div>
+                            <div class="fw-medium">
+                                @(Model.PortalUpdatedOnUtc.HasValue ? Model.PortalUpdatedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat) : "—")
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-3">
-                <div class="text-muted small mb-1">Cập nhật cuối</div>
-                <div class="fw-medium">
-                    @(Model.PortalUpdatedOnUtc.HasValue ? Model.PortalUpdatedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat) : "—")
+                <div class="content-card-footer d-flex align-items-center justify-content-between">
+                    @if (portalStatus == CustomerPortalAccountStatus.Blocked)
+                    {
+                        <form asp-controller="CustomerPortal" asp-action="UnblockAccount" method="post">
+                            <input type="hidden" name="customerId" value="@Model.Id" />
+                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                            <button type="submit" class="btn btn-outline-success btn-sm">
+                                <i class="bi bi-unlock me-1"></i>Mở khóa truy cập
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form asp-controller="CustomerPortal" asp-action="BlockAccount" method="post">
+                            <input type="hidden" name="customerId" value="@Model.Id" />
+                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-lock me-1"></i>Khóa truy cập
+                            </button>
+                        </form>
+                    }
                 </div>
             </div>
         </div>
-
-        <div class="d-flex justify-content-end mt-3">
-            @if (portalStatus == CustomerPortalAccountStatus.Blocked)
-            {
-                <form asp-controller="CustomerPortal" asp-action="UnblockAccount" method="post">
-                    <input type="hidden" name="customerId" value="@Model.Id" />
-                    <input type="hidden" name="returnUrl" value="@returnUrl" />
-                    <button type="submit" class="btn btn-outline-success">
-                        <i class="bi bi-unlock me-1"></i>Mở khóa truy cập
-                    </button>
-                </form>
-            }
-            else
-            {
-                <form asp-controller="CustomerPortal" asp-action="BlockAccount" method="post">
-                    <input type="hidden" name="customerId" value="@Model.Id" />
-                    <input type="hidden" name="returnUrl" value="@returnUrl" />
-                    <button type="submit" class="btn btn-outline-danger">
-                        <i class="bi bi-lock me-1"></i>Khóa truy cập
-                    </button>
-                </form>
-            }
-        </div>
     </div>
 </div>
+
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

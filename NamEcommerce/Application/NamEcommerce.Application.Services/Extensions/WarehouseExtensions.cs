@@ -18,7 +18,8 @@ public static class WarehouseExtensions
             Address = warehouse.Address,
             ManagerUserId = warehouse.ManagerUserId,
             IsActive = warehouse.IsActive,
-            IsPhysical = warehouse.WarehouseType == WarehouseType.Physical
+            IsPhysical = warehouse.WarehouseType == WarehouseType.Physical,
+            DisplayOrder = warehouse.DisplayOrder
         };
 
     public static WarehouseAppDto ToDto(this WarehouseDto dto)
@@ -32,6 +33,7 @@ public static class WarehouseExtensions
             Address = dto.Address,
             ManagerUserId = dto.ManagerUserId,
             IsActive = dto.IsActive,
-            IsPhysical = dto.WarehouseType == (int) WarehouseType.Physical
+            IsPhysical = dto.WarehouseType == (int) WarehouseType.Physical,
+            DisplayOrder = dto.DisplayOrder
         };
 }

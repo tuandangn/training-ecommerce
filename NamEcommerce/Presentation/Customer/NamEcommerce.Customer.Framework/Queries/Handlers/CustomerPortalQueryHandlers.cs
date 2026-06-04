@@ -76,6 +76,7 @@ public sealed class CustomerPortalQueryHandlers(
                 order.ExpectedShippingDateUtc,
                 order.ShippingAddress,
                 order.Note,
+                order.CanUpdateNote,
                 order.Items.Select(item => new CustomerOrderItemModel(item.Id, item.ProductId, item.ProductName, item.Quantity, item.UnitPrice, item.SubTotal)).ToList());
     }
 
@@ -248,6 +249,7 @@ public sealed class CustomerPortalQueryHandlers(
             request.DeliveryNoteCode,
             request.Status,
             request.Reason,
+            request.CompensateInNextDelivery,
             request.AdminNote,
             request.CreatedOnUtc,
             request.ReviewedOnUtc,
@@ -262,6 +264,7 @@ public sealed class CustomerPortalQueryHandlers(
             request.DeliveryNoteCode,
             request.Status,
             request.Reason,
+            request.CompensateInNextDelivery,
             request.AdminNote,
             request.CreatedOnUtc,
             request.ReviewedOnUtc,

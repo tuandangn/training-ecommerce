@@ -75,14 +75,15 @@
                                                     </div>
                                                 </div>
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" class="item-product-id" />
+                                                <input type="hidden" name="Items[@i].QuantityDecimalPlaces" value="@item.QuantityDecimalPlaces" />
                                             </td>
                                             <td class="text-center">
                                                 <input name="Items[@i].Quantity" value="@item.Quantity.DisplayQuantity()"
                                                        class="form-control form-control-sm text-end item-qty no-additional-element"
-                                                       data-decimal="quantity" min="0.001" placeholder="0"
+                                                       data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" min="0.001" placeholder="0"
                                                        data-val="true" data-val-number="Số lượng không đúng."
                                                        data-val-required="Vui lòng nhập số lượng."
-                                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="0.001" />
+                                                       data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="@(item.QuantityDecimalPlaces > 0 ? "0.001" : "1")" />
                                                 <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].Quantity" data-valmsg-replace="true"></span>
                                             </td>
                                             <td>
@@ -202,20 +203,14 @@
                             <span asp-validation-for="Note" class="small text-danger"></span>
                         </div>
                         <div class="mb-2">
-                            <label class="form-label small fw-bold text-muted text-uppercase d-block">
-                                Ảnh chụp
-                            </label>
-                            <div class="d-flex align-items-center">
-                                <div id="pictureList"></div>
-                                <div id="picturePicker"></div>
-                            </div>
-                            <span asp-validation-for="PictureIds" class="small text-danger d-block mt-1"></span>
-                            <div id="pictureHiddenContainer">
-                                @foreach (var id in Model.PictureIds)
-                                {
-                                    <input type="hidden" name="PictureIds" value="@id" />
-                                }
-                            </div>
+                            @await Html.PartialAsync("_ImageUploader", new NamEcommerce.Web.Models.Common.ImageUploaderModel
+                            {
+                                FieldName = "PictureIds",
+                                Label = "Ảnh chụp",
+                                MaxFiles = 2,
+                                Required = false,
+                                ExistingPictureIds = Model.PictureIds.ToList()
+                            })
                         </div>
                     </div>
                     <div class="content-card-footer d-none d-lg-block">
@@ -284,101 +279,6 @@
     </div>
 </div>
 
-@section Styles {
-    <style>
-        /* ── PicturePicker ───────────────────────────────── */
-        #picturePicker, #pictureList {
-            display: flex;
-            align-items: center;
-            justify-content: start;
-        }
-
-        #picturePicker {
-            gap: .5rem;
-        }
-
-        .picture-upload-slot {
-            position: relative;
-            width: 100px;
-            height: 100px;
-            border-radius: 10px;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-
-        .picture-thumbnail-item {
-            width: 100px;
-            height: 100px;
-            object-fit: cover;
-            border-radius: 10px;
-            display: block;
-            position: relative;
-            margin-right: .5rem;
-        }
-
-        .picture-upload-label {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            width: 100px;
-            height: 100px;
-            border: 2px dashed var(--bs-border-color);
-            border-radius: 10px;
-            cursor: pointer;
-            background: #f8f9fa;
-            transition: border-color .15s, background .15s;
-            font-size: .7rem;
-            color: var(--bs-secondary);
-            gap: 4px;
-        }
-
-            .picture-upload-label:hover,
-            .picture-upload-label.drag-over {
-                border-color: var(--bs-primary);
-                background: #eef3ff;
-                color: var(--bs-primary);
-            }
-
-        .picture-upload-placeholder {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-            pointer-events: none;
-        }
-
-        .btn-remove-picture {
-            position: absolute;
-            top: 3px;
-            right: 3px;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(0,0,0,.55);
-            color: #fff;
-            font-size: .65rem;
-            line-height: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            padding: 0;
-            transition: background .15s;
-        }
-
-            .btn-remove-picture:hover {
-                background: var(--bs-danger);
-            }
-
-        .drag-over .picture-upload-label {
-            border-color: var(--bs-primary);
-            background: #eef3ff;
-        }
-    </style>
-}
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />

@@ -8,6 +8,12 @@ public interface ICustomerPortalManager
     Task<CustomerDeliveryFeedbackDto> CreateDeliveryFeedbackAsync(CreateCustomerDeliveryFeedbackDto dto);
     Task<IReadOnlyCollection<CustomerDeliveryFeedbackDto>> GetDeliveryFeedbacksAsync(Guid customerId);
 
+    Task<CustomerPortalNotificationDto> CreateNotificationAsync(CreateCustomerPortalNotificationDto dto);
+    Task<CustomerPortalNotificationDto?> GetNotificationByIdAsync(Guid id);
+    Task<IReadOnlyCollection<CustomerPortalNotificationDto>> GetNotificationsAsync(CustomerPortalNotificationStatus? status = null, int take = 100);
+    Task<int> CountNotificationsAsync(CustomerPortalNotificationStatus status);
+    Task MarkNotificationReadAsync(Guid id, Guid readByUserId, DateTime nowUtc);
+
     Task<CustomerOrderRequestDto> CreateOrderRequestAsync(CreateCustomerOrderRequestDto dto);
     Task<CustomerOrderRequestDto?> GetOrderRequestByIdAsync(Guid id);
     Task<IReadOnlyCollection<CustomerOrderRequestDto>> GetOrderRequestsAsync(Guid customerId);

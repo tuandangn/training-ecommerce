@@ -162,6 +162,24 @@ public sealed record PurchaseOrder : AppAggregateEntity
         _items.Remove(orderItem);
     }
 
+    internal void UpdateOrderItem(Guid itemId, decimal quantityOrdered, decimal unitCost, string? note)
+    {
+        if (!CanUpdateItems())
+            throw new PurchaseOrderCannotUpdateOrderItemsException();
+        if (quantityOrdered <= 0)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemQuantityMustBePositive");
+        if (unitCost < 0)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.PurchaseOrderItemUnitCostCannotBeNegative");
+
+        var orderItem = _items.FirstOrDefault(i => i.Id == itemId);
+        if (orderItem is null)
+            throw new PurchaseOrderItemIsNotFoundException();
+
+        orderItem.QuantityOrdered = quantityOrdered;
+        orderItem.UnitCost = unitCost;
+        orderItem.Note = note;
+    }
+
     public bool CanUpdateItems()
         => Status == PurchaseOrderStatus.Draft
            || Status == PurchaseOrderStatus.Submitted
@@ -241,11 +259,29 @@ public sealed record PurchaseOrder : AppAggregateEntity
     internal void MarkStatusChanged(PurchaseOrderStatus oldStatus)
         => RaiseDomainEvent(new PurchaseOrderStatusChanged(Id, oldStatus, Status));
 
-    internal void MarkItemAdded(PurchaseOrderItem item)
-        => RaiseDomainEvent(new PurchaseOrderItemAdded(Id, item.Id, item.ProductId, item.QuantityOrdered, item.UnitCost));
+    internal void MarkItemAdded(PurchaseOrderItem item, string? productName = null)
+        => RaiseDomainEvent(new PurchaseOrderItemAdded(Id, item.Id, item.ProductId, item.QuantityOrdered, item.UnitCost, productName, item.Note));
 
-    internal void MarkItemRemoved(Guid itemId)
-        => RaiseDomainEvent(new PurchaseOrderItemRemoved(Id, itemId));
+    internal void MarkItemUpdated(
+        PurchaseOrderItem item,
+        decimal oldQuantityOrdered,
+        decimal oldUnitCost,
+        string? oldNote,
+        string? productName = null)
+        => RaiseDomainEvent(new PurchaseOrderItemUpdated(
+            Id,
+            item.Id,
+            item.ProductId,
+            oldQuantityOrdered,
+            item.QuantityOrdered,
+            oldUnitCost,
+            item.UnitCost,
+            oldNote,
+            item.Note,
+            productName));
+
+    internal void MarkItemRemoved(PurchaseOrderItem item, string? productName = null)
+        => RaiseDomainEvent(new PurchaseOrderItemRemoved(Id, item.Id, item.ProductId, item.QuantityOrdered, item.UnitCost, productName, item.Note));
 
     internal void MarkItemReceived(Guid itemId, decimal receivedQuantity, Guid? goodsReceiptId = null)
     {

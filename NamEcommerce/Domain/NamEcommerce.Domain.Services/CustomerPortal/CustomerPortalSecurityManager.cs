@@ -11,6 +11,8 @@ namespace NamEcommerce.Domain.Services.CustomerPortal;
 public sealed class CustomerPortalSecurityManager(
     IRepository<CustomerPortalAccount> accountRepository,
     IEntityDataReader<CustomerPortalAccount> accountReader,
+    IRepository<CustomerPortalSettings> settingsRepository,
+    IEntityDataReader<CustomerPortalSettings> settingsReader,
     IRepository<CustomerOtpChallenge> otpChallengeRepository,
     IEntityDataReader<CustomerOtpChallenge> otpChallengeReader,
     IRepository<CustomerPortalSession> sessionRepository,
@@ -38,6 +40,30 @@ public sealed class CustomerPortalSecurityManager(
     {
         var account = accountReader.DataSource.FirstOrDefault(account => account.CustomerId == customerId);
         return Task.FromResult(account is null ? null : MapToDto(account));
+    }
+
+    public async Task<CustomerPortalSettingsDto> GetSettingsAsync()
+    {
+        var settings = settingsReader.DataSource.OrderBy(settings => settings.CreatedOnUtc).FirstOrDefault();
+        if (settings is not null)
+            return MapToDto(settings);
+
+        var inserted = await settingsRepository.InsertAsync(new CustomerPortalSettings(otpEnabled: false)).ConfigureAwait(false);
+        return MapToDto(inserted);
+    }
+
+    public async Task<CustomerPortalSettingsDto> UpdateSettingsAsync(bool otpEnabled, Guid? updatedByUserId, DateTime nowUtc)
+    {
+        var settings = settingsReader.DataSource.OrderBy(settings => settings.CreatedOnUtc).FirstOrDefault()
+            ?? new CustomerPortalSettings(otpEnabled: false);
+
+        settings.UpdateOtpEnabled(otpEnabled, updatedByUserId, nowUtc);
+
+        var saved = settingsReader.DataSource.Any(existing => existing.Id == settings.Id)
+            ? await settingsRepository.UpdateAsync(settings).ConfigureAwait(false)
+            : await settingsRepository.InsertAsync(settings).ConfigureAwait(false);
+
+        return MapToDto(saved);
     }
 
     public async Task SetPasswordAsync(Guid customerId, string passwordHash, string passwordSalt, bool markLoginSucceeded = true)
@@ -75,6 +101,33 @@ public sealed class CustomerPortalSecurityManager(
 
         account.Unblock();
         await accountRepository.UpdateAsync(account).ConfigureAwait(false);
+    }
+
+    public async Task UpdateLastKnownLocationAsync(Guid customerId, UpdateCustomerPortalLocationDto dto)
+    {
+        if (customerId == Guid.Empty ||
+            !IsValidLatitude(dto.Latitude) ||
+            !IsValidLongitude(dto.Longitude) ||
+            !IsValidAccuracy(dto.AccuracyMeters) ||
+            string.IsNullOrWhiteSpace(dto.Source))
+        {
+            return;
+        }
+
+        var account = accountReader.DataSource.FirstOrDefault(account => account.CustomerId == customerId)
+            ?? new CustomerPortalAccount(customerId);
+
+        account.UpdateLastKnownLocation(
+            dto.Latitude,
+            dto.Longitude,
+            dto.AccuracyMeters,
+            dto.Source.Trim(),
+            dto.CapturedOnUtc);
+
+        if (accountReader.DataSource.Any(existing => existing.Id == account.Id))
+            await accountRepository.UpdateAsync(account).ConfigureAwait(false);
+        else
+            await accountRepository.InsertAsync(account).ConfigureAwait(false);
     }
 
     public async Task<CustomerOtpChallengeDto> CreateOtpChallengeAsync(CreateCustomerOtpChallengeDto dto)
@@ -310,8 +363,31 @@ public sealed class CustomerPortalSecurityManager(
             Status = account.Status,
             PasswordSetOnUtc = account.PasswordSetOnUtc,
             LastLoginOnUtc = account.LastLoginOnUtc,
+            LastKnownLatitude = account.LastKnownLatitude,
+            LastKnownLongitude = account.LastKnownLongitude,
+            LastKnownLocationAccuracyMeters = account.LastKnownLocationAccuracyMeters,
+            LastKnownLocationCapturedOnUtc = account.LastKnownLocationCapturedOnUtc,
+            LastKnownLocationSource = account.LastKnownLocationSource,
             CreatedOnUtc = account.CreatedOnUtc,
             UpdatedOnUtc = account.UpdatedOnUtc
+        };
+
+    private static bool IsValidLatitude(double value)
+        => !double.IsNaN(value) && !double.IsInfinity(value) && value is >= -90 and <= 90;
+
+    private static bool IsValidLongitude(double value)
+        => !double.IsNaN(value) && !double.IsInfinity(value) && value is >= -180 and <= 180;
+
+    private static bool IsValidAccuracy(double? value)
+        => !value.HasValue || (!double.IsNaN(value.Value) && !double.IsInfinity(value.Value) && value.Value >= 0);
+
+    private static CustomerPortalSettingsDto MapToDto(CustomerPortalSettings settings)
+        => new(settings.Id)
+        {
+            OtpEnabled = settings.OtpEnabled,
+            CreatedOnUtc = settings.CreatedOnUtc,
+            UpdatedOnUtc = settings.UpdatedOnUtc,
+            UpdatedByUserId = settings.UpdatedByUserId
         };
 
     private static CustomerOtpChallengeDto MapToDto(CustomerOtpChallenge challenge)

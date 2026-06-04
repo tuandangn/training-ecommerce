@@ -5,127 +5,150 @@
     string? query = Model.Keywords;
 }
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Hàng hóa</h1>
-        <p class="page-header-subtitle">Quản lý danh mục sản phẩm và hàng hóa</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">Hàng hóa</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Hàng hóa</li>
+            </ol>
+        </nav>
     </div>
-    <a asp-action="Create" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i>Thêm mới
-    </a>
-</div>
+}
 
 <div class="content-card" data-responsive-list data-list-key="product-list">
     <div class="action-toolbar">
-        <div class="search-group">
-            <partial name="_Search" model="@(new ProductSearchModel { Q = Model.Keywords })" />
-        </div>
+        <partial name="_Search" model="@(new ProductSearchModel { Q = Model.Keywords, Cid = Model.CategoryId })" />
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Thêm mới
+        </a>
         <partial name="_ResponsiveListToolbar" />
     </div>
+    @if (Model.AvailableCategories.Any())
+    {
+        <div class="product-category-filter">
+            <ul class="nav nav-tabs product-category-tabs" aria-label="Lọc nhanh theo danh mục sản phẩm">
+                <li class="nav-item">
+                    <a asp-action="List" asp-route-q="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-cid=""
+                       class="nav-link @(Model.CategoryId.HasValue ? "" : "active")">Tất cả</a>
+                </li>
+                @foreach (var category in Model.AvailableCategories)
+                {
+                    <li class="nav-item">
+                        <a asp-action="List" asp-route-q="@(string.IsNullOrEmpty(Model.Keywords) ? "" : Model.Keywords)" asp-route-cid="@category.Id"
+                           class="nav-link @(category.Id == Model.CategoryId ? "active" : "")" title="@category.Name">@category.Name</a>
+                    </li>
+                }
+            </ul>
+        </div>
+    }
     <div class="responsive-list-panel" data-list-view-panel="list">
         <div class="table-responsive">
-        <table class="table data-table">
-            <thead>
-                <tr>
-                    <th class="ps-4" style="width: 80px;">Ảnh</th>
-                    <th>Tên hàng hóa</th>
-                    <th class="text-end">Giá bán</th>
-                    <th class="d-none d-lg-table-cell">Danh mục</th>
-                    <th class="text-end">Tồn kho</th>
-                    <th class="d-none d-md-table-cell">Đơn vị</th>
-                    <th>Nhà cung cấp</th>
-                    <th style="width: 100px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (Model.Data.Pagination.TotalCount > 0)
-                {
-                    @foreach (var product in Model.Data)
+            <table class="table data-table">
+                <thead>
+                    <tr>
+                        <th class="ps-4" style="width: 80px;">Ảnh</th>
+                        <th>Tên hàng hóa</th>
+                        <th class="text-end">Giá bán</th>
+                        <th class="d-none d-lg-table-cell">Danh mục</th>
+                        <th class="text-end">Tồn kho</th>
+                        <th class="d-none d-md-table-cell">Đơn vị</th>
+                        <th>Nhà cung cấp</th>
+                        <th style="width: 100px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Data.Pagination.TotalCount > 0)
+                    {
+                        @foreach (var product in Model.Data)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    @if (string.IsNullOrEmpty(product.PictureUrl))
+                                    {
+                                        <div class="d-flex align-items-center justify-content-center rounded"
+                                             style="width: 44px; height: 44px; background: var(--gray-100);">
+                                            <i class="bi bi-image text-muted"></i>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <a class="text-decoration-none" asp-action="Edit" asp-route-id="@product.Id" title="Chỉnh sửa">
+                                            <img src="@product.PictureUrl" alt="@product.Name"
+                                                 class="rounded" style="width: 44px; height: 44px; object-fit: cover;" />
+                                        </a>
+                                    }
+                                </td>
+                                <td>
+                                    <a class="text-decoration-none text-dark" asp-action="Edit" asp-route-id="@product.Id" title="Chỉnh sửa">
+                                        <span class="fw-medium d-block">@HighlighHelper.Highlight(product.Name, query)</span>
+                                    </a>
+                                    @if (product.CategoryId.HasValue)
+                                    {
+                                        <span class="d-inline d-lg-none text-muted small">
+                                            @HighlighHelper.Highlight(product.CategoryBreadcrumb, query)
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <span class="fw-medium d-block text-nowrap">
+                                        @product.UnitPrice.DisplayCurrency()
+                                        @if (!string.IsNullOrEmpty(product.UnitMeasurementName))
+                                        {
+                                            <span class="d-lg-none text-muted small">/ @product.UnitMeasurementName</span>
+                                        }
+                                    </span>
+                                </td>
+                                <td class="text-muted d-none d-lg-table-cell">
+                                    @if (product.CategoryId.HasValue)
+                                    {
+                                        @HighlighHelper.Highlight(product.CategoryBreadcrumb, query)
+                                    }
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    <span class="fw-medium">
+                                        @product.StockQuantity.DisplayQuantity()
+                                    </span>
+                                </td>
+                                <td class="d-none d-md-table-cell text-muted">
+                                    @product.UnitMeasurementName
+                                </td>
+                                <td>
+                                    @foreach (var vendor in product.VendorNames)
+                                    {
+                                        <span class="badge bg-light text-muted fw-normal text-truncate d-inline-block me-2" style="font-size: 0.9rem; max-width: 120px;">
+                                            @HighlighHelper.Highlight(vendor, query)
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end pe-3">
+                                    <a class="btn-table-action" asp-action="Edit" asp-route-id="@product.Id" title="Chỉnh sửa">
+                                        <i class="bi bi-pencil"></i>
+                                        <span class="visually-hidden"></span>
+                                    </a>
+                                    <button type="button" class="btn-table-action danger btnDelete"
+                                            data-id="@product.Id" data-name="@product.Name" title="Xóa">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
                     {
                         <tr>
-                            <td class="ps-4">
-                                @if (string.IsNullOrEmpty(product.PictureUrl))
-                                {
-                                    <div class="d-flex align-items-center justify-content-center rounded"
-                                         style="width: 44px; height: 44px; background: var(--gray-100);">
-                                        <i class="bi bi-image text-muted"></i>
-                                    </div>
-                                }
-                                else
-                                {
-                                    <a href="@product.PictureUrl" target="_blank" data-lightbox="products">
-                                        <img src="@product.PictureUrl" alt="@product.Name"
-                                             class="rounded" style="width: 44px; height: 44px; object-fit: cover;" />
-                                    </a>
-                                }
-                            </td>
-                            <td>
-                                <span class="fw-medium d-block">@HighlighHelper.Highlight(product.Name, query)</span>
-                                @if (product.CategoryId.HasValue)
-                                {
-                                    <span class="d-inline d-lg-none text-muted small">
-                                        @HighlighHelper.Highlight(product.CategoryBreadcrumb, query)
-                                    </span>
-                                }
-                            </td>
-                            <td class="text-end">
-                                <span class="fw-medium d-block text-nowrap">
-                                    @product.UnitPrice.DisplayCurrency()
-                                    @if (!string.IsNullOrEmpty(product.UnitMeasurementName))
-                                    {
-                                        <span class="d-lg-none text-muted small">/ @product.UnitMeasurementName</span>
-                                    }
-                                </span>
-                            </td>
-                            <td class="text-muted d-none d-lg-table-cell">
-                                @if (product.CategoryId.HasValue)
-                                {
-                                    @HighlighHelper.Highlight(product.CategoryBreadcrumb, query)
-                                }
-                            </td>
-                            <td class="text-end text-nowrap">
-                                <span class="fw-medium">
-                                    @product.StockQuantity.DisplayQuantity()
-                                </span>
-                            </td>
-                            <td class="d-none d-md-table-cell text-muted">
-                                @product.UnitMeasurementName
-                            </td>
-                            <td>
-                                @foreach (var vendor in product.VendorNames)
-                                {
-                                    <span class="badge bg-light text-muted fw-normal text-truncate d-inline-block me-2" style="font-size: 0.9rem; max-width: 120px;">
-                                        @HighlighHelper.Highlight(vendor, query)
-                                    </span>
-                                }
-                            </td>
-                            <td class="text-end pe-3">
-                                <a class="btn-table-action" asp-action="Edit" asp-route-id="@product.Id" title="Chỉnh sửa">
-                                    <i class="bi bi-pencil"></i>
-                                    <span class="visually-hidden"></span>
-                                </a>
-                                <button type="button" class="btn-table-action danger btnDelete"
-                                        data-id="@product.Id" data-name="@product.Name" title="Xóa">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                            <td colspan="4">
+                                <div class="empty-state">
+                                    <div class="empty-icon"><i class="bi bi-tags"></i></div>
+                                    <h5>Chưa có hàng hóa nào</h5>
+                                    <p>Thêm hàng hóa để bắt đầu quản lý kho và bán hàng.</p>
+                                </div>
                             </td>
                         </tr>
                     }
-                }
-                else
-                {
-                    <tr>
-                        <td colspan="4">
-                            <div class="empty-state">
-                                <div class="empty-icon"><i class="bi bi-tags"></i></div>
-                                <h5>Chưa có hàng hóa nào</h5>
-                                <p>Thêm hàng hóa để bắt đầu quản lý kho và bán hàng.</p>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -144,12 +167,14 @@
                         }
                         else
                         {
-                            <a href="@product.PictureUrl" target="_blank" data-lightbox="products">
+                            <a class="text-decoration-none text-dark" asp-action="Edit" asp-route-id="@product.Id" title="Chỉnh sửa">
                                 <img src="@product.PictureUrl" alt="@product.Name" class="list-card-media" />
                             </a>
                         }
                         <div class="list-card-title-group flex-grow-1">
-                            <div class="list-card-title">@HighlighHelper.Highlight(product.Name, query)</div>
+                            <a class="text-decoration-none text-dark" asp-action="Edit" asp-route-id="@product.Id" title="Chỉnh sửa">
+                                <div class="list-card-title">@HighlighHelper.Highlight(product.Name, query)</div>
+                            </a>
                             @if (product.CategoryId.HasValue)
                             {
                                 <div class="list-card-meta">@HighlighHelper.Highlight(product.CategoryBreadcrumb, query)</div>
@@ -219,21 +244,81 @@
     <partial name="_DeleteForm" model="@item.Id" />
 }
 
+@section Styles {
+    <style>
+        .product-category-filter {
+            max-width: 100%;
+            overflow: hidden;
+            background: #fff;
+            border-bottom: 1px solid var(--gray-100);
+        }
+
+        .product-category-tabs {
+            border-bottom: 0;
+            padding: 0 1.25rem 0.25rem;
+            scrollbar-width: thin;
+            scrollbar-color: var(--gray-300) transparent;
+        }
+
+            .product-category-tabs::-webkit-scrollbar {
+                display: block;
+                height: 0.375rem;
+            }
+
+            .product-category-tabs::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            .product-category-tabs::-webkit-scrollbar-thumb {
+                background: var(--gray-300);
+                border-radius: 999px;
+            }
+
+            .product-category-tabs .nav-link {
+                max-width: 18rem;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+        @@media (max-width: 575.98px) {
+            .product-category-tabs {
+                padding-right: 0.875rem;
+                padding-left: 0.875rem;
+            }
+
+                .product-category-tabs .nav-link {
+                    max-width: 13rem;
+                }
+        }
+    </style>
+}
+
 @section Scripts {
     <script type="module" defer>
         import { confirm } from "/modules/modals.js";
 
         (function () {
-        $('.btnDelete').on('click', async function (e) {
-        e.preventDefault();
-        const name = $(this).data('name');
-        $(this).prop('disabled', true);
-        const confirmed = await confirm('Xóa hàng hóa', `Bạn muốn xóa hàng hóa <strong>${name}</strong>?`);
-        if (!confirmed) {
-        $(this).prop('disabled', false); return;
-        }
-        $(`#deleteForm${$(this).data('id')}`).submit();
-        });
+            const txtKeywords = document.getElementById('@(nameof(ProductSearchModel.Q))');
+            const form = txtKeywords.closest('form');
+            const onSearchChanged = debounce(function () {
+                form.submit();
+            }, 500);
+            txtKeywords.addEventListener('input', onSearchChanged);
+
+            if (txtKeywords.value){
+                focusEnd(txtKeywords);
+            }
+
+            $('.btnDelete').on('click', async function (e) {
+                e.preventDefault();
+                const name = $(this).data('name');
+                $(this).prop('disabled', true);
+                const confirmed = await confirm('Xóa hàng hóa', `Bạn muốn xóa hàng hóa <strong>${name}</strong>?`);
+                if (!confirmed) {
+                    $(this).prop('disabled', false); return;
+                }
+                $(`#deleteForm${$(this).data('id')}`).submit();
+            });
         })();
     </script>
 }

@@ -1,9 +1,9 @@
+using NamEcommerce.Domain.Metadata;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Domain.Shared.Events.Inventory;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
-using NamEcommerce.Domain.Shared.Helpers;
 
 namespace NamEcommerce.Domain.Entities.Inventory;
 
@@ -12,40 +12,16 @@ public sealed record Warehouse : AppAggregateEntity
 {
     public const string CODE_PREFIX = "KH";
 
-    internal Warehouse(string code, string name, WarehouseType warehouseType) : base(Guid.NewGuid())
-    {
-        if (string.IsNullOrEmpty(code))
-            throw new WarehouseCodeRequiredException();
-        if (string.IsNullOrEmpty(name))
-            throw new WarehouseNameRequiredException();
+    internal Warehouse(WarehouseType warehouseType) : base(Guid.NewGuid()) 
+        => WarehouseType = warehouseType;
 
-        Code = code;
-        Name = name;
-        WarehouseType = warehouseType;
-
-        NormalizedName = TextHelper.Normalize(Name);
-        NormalizedAddress = TextHelper.Normalize(Address);
-    }
-
-    public string Code { get; private set; }
-    public string Name { get; private set; }
-    internal string NormalizedName { get; private set; } = "";
-
-    public string? Address
-    {
-        get;
-        internal set
-        {
-            field = value;
-            NormalizedAddress = TextHelper.Normalize(value);
-        }
-    }
-    internal string NormalizedAddress { get; private set; } = "";
-
+    public string Code { get; private set; } = "";
+    public NormalizableString Name { get; private set; }
+    public NormalizableString Address { get; internal set; }
     public string? PhoneNumber { get; internal set; }
     public Guid? ManagerUserId { get; internal set; }
-
     public WarehouseType WarehouseType { get; private set; }
+    public int DisplayOrder { get; internal set; }
     public bool IsActive { get; private set; }
 
     #region Methods
@@ -63,7 +39,6 @@ public sealed record Warehouse : AppAggregateEntity
             throw new WarehouseNameExistsException(name);
 
         Name = name;
-        NormalizedName = TextHelper.Normalize(name);
     }
 
     internal async Task SetCodeAsync(string code, ICodeExistCheckingService checker)

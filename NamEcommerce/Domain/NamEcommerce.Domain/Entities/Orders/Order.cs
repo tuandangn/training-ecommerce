@@ -75,6 +75,12 @@ public sealed record Order : AppAggregateEntity
     internal void RaiseSoCancelledWithDirectShipReceived(IReadOnlyList<Guid> allocationIds)
         => RaiseDomainEvent(new SoCancelledWithDirectShipReceived(Id, allocationIds));
 
+    internal void RaiseFullyDeliveredIfComplete()
+    {
+        if (_orderItems.Count > 0 && _orderItems.All(i => i.IsDelivered))
+            RaiseDomainEvent(new OrderFullyDelivered(Id, CustomerId));
+    }
+
     #endregion
 
     #region Methods
@@ -112,7 +118,7 @@ public sealed record Order : AppAggregateEntity
 
         RecalculateTotal();
 
-        RaiseDomainEvent(new OrderItemAdded(Id, orderItem.Id, productId, quantity, unitPrice));
+        RaiseDomainEvent(new OrderItemAdded(Id, orderItem.Id, productId, quantity, unitPrice, product.Name));
     }
 
     internal void UpdateOrderItem(Guid orderItemId, decimal quantity, decimal unitPrice)
@@ -129,11 +135,12 @@ public sealed record Order : AppAggregateEntity
             throw new OrderDiscountIsInvalidException("Chiết khấu không được vượt quá tổng tiền hàng");
 
         var oldQuantity = orderItem.Quantity;
+        var oldUnitPrice = orderItem.UnitPrice;
         orderItem.Update(quantity, unitPrice);
 
         RecalculateTotal();
 
-        RaiseDomainEvent(new OrderItemUpdated(Id, orderItemId, orderItem.ProductId, oldQuantity, quantity, unitPrice));
+        RaiseDomainEvent(new OrderItemUpdated(Id, orderItemId, orderItem.ProductId, oldQuantity, quantity, unitPrice, oldUnitPrice, orderItem.ProductName));
     }
 
     internal void RemoveOrderItem(Guid itemId)
@@ -151,12 +158,14 @@ public sealed record Order : AppAggregateEntity
 
         var productId = orderItem.ProductId;
         var quantity = orderItem.Quantity;
+        var unitPrice = orderItem.UnitPrice;
+        var productName = orderItem.ProductName;
 
         _orderItems.Remove(orderItem);
 
         RecalculateTotal();
 
-        RaiseDomainEvent(new OrderItemRemoved(Id, itemId, productId, quantity));
+        RaiseDomainEvent(new OrderItemRemoved(Id, itemId, productId, quantity, unitPrice, productName));
     }
 
     internal void SetOrderDiscount(decimal? orderDiscount)

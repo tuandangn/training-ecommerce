@@ -58,8 +58,9 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
         var goodsReceipt = await _goodsReceiptDataReader.GetByIdAsync(notification.GoodsReceiptId).ConfigureAwait(false);
         if (goodsReceipt is null) return;
 
-        // Guard: phiếu nhập do khách trả hàng — vẫn cộng tồn, nhưng KHÔNG sinh VendorDebt.
+        // Guard: phiếu trả hàng khách và đầu kỳ — vẫn cộng tồn, nhưng KHÔNG sinh VendorDebt.
         var isFromCustomerReturn = goodsReceipt.SourceType == GoodsReceiptSourceType.FromCustomerReturn;
+        var isOpeningBalance = goodsReceipt.SourceType == GoodsReceiptSourceType.OpeningBalance;
 
         // 1. Cộng tồn kho cho các item có warehouse
         foreach (var item in goodsReceipt.Items)
@@ -97,8 +98,8 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
         }
 
         // 2. Sinh công nợ NCC nếu phiếu được tạo với đủ điều kiện ngay từ đầu.
-        // Skip nếu là phiếu nhập do khách trả hàng.
-        if (!isFromCustomerReturn)
+        // Skip nếu là phiếu trả hàng khách hoặc tồn kho đầu kỳ (không có NCC).
+        if (!isFromCustomerReturn && !isOpeningBalance)
             await TryCreateVendorDebtAsync(goodsReceipt).ConfigureAwait(false);
     }
 

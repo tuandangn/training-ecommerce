@@ -28,6 +28,14 @@ public sealed class DeliveryNoteCreatedHandler(IEntityDataReader<DeliveryNote> d
         var productGroups = deliveryNote.Items.GroupBy(item => item.ProductId)
             .Select(group => new { ProductId = group.Key, Quantity = group.Sum(item => item.Quantity) })
             .ToList();
+        var warehouseGroups = deliveryNote.Items
+            .GroupBy(item => new
+            {
+                item.ProductId,
+                WarehouseId = item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId
+            })
+            .Select(group => new { group.Key.ProductId, group.Key.WarehouseId, Quantity = group.Sum(item => item.Quantity) })
+            .ToList();
 
         //release global stock
         if (deliveryNote.OrderId != Guid.Empty)
@@ -49,11 +57,11 @@ public sealed class DeliveryNoteCreatedHandler(IEntityDataReader<DeliveryNote> d
         }
 
         //reserve warehouse stock
-        foreach (var group in productGroups)
+        foreach (var group in warehouseGroups)
         {
             await inventoryStockManager.ReserveStockAsync(
                 group.ProductId,
-                deliveryNote.WarehouseId,
+                group.WarehouseId,
                 group.Quantity,
                 deliveryNote.Id,
                 Guid.Empty,

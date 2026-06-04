@@ -46,6 +46,9 @@ public sealed class CustomerPortalAppService(
     private const int MaxKeywordLength = 80;
     private const int MaxReturnEvidencePicturesPerItem = 3;
     private const int MaxReturnEvidencePictureBytes = 5 * 1024 * 1024;
+    private const string OrderRequestRelatedEntityType = "CustomerOrderRequest";
+    private const string ReturnRequestRelatedEntityType = "CustomerReturnRequest";
+    private const string DeliveryNoteRelatedEntityType = "DeliveryNote";
     private static readonly HashSet<string> AllowedReturnEvidenceMimeTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "image/jpeg",
@@ -124,6 +127,7 @@ public sealed class CustomerPortalAppService(
             ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
             ShippingAddress = order.ShippingAddress,
             Note = order.Note,
+            CanUpdateNote = order.OrderStatus is not (OrderStatus.Completed or OrderStatus.Cancelled),
             Items = order.OrderItems.Select(item => new CustomerOrderItemAppDto
             {
                 Id = item.Id,
@@ -166,6 +170,7 @@ public sealed class CustomerPortalAppService(
         };
 
         var created = await customerPortalManager.CreateOrderRequestAsync(domainDto).ConfigureAwait(false);
+        await CreateOrderRequestCreatedNotificationAsync(created).ConfigureAwait(false);
         return new CustomerOrderRequestAppDto
         {
             Id = created.Id,
@@ -555,6 +560,8 @@ public sealed class CustomerPortalAppService(
             Message = BuildConfirmationMessage(dto)
         }).ConfigureAwait(false);
 
+        await CreateDeliveryConfirmedNotificationAsync(deliveryNote).ConfigureAwait(false);
+        await UpdateCustomerLocationAsync(customerId, dto.Location, "DeliveryConfirmed").ConfigureAwait(false);
         return CustomerActionResultAppDto.Ok(
             rejectedItems.Count > 0
                 ? "Msg.CustomerPortal.DeliveryConfirmedWithReturnRequest"
@@ -680,6 +687,7 @@ public sealed class CustomerPortalAppService(
         };
 
         var created = await customerPortalManager.CreateReturnRequestAsync(request).ConfigureAwait(false);
+        await CreateReturnRequestCreatedNotificationAsync(created, deliveryNotes.FirstOrDefault(note => note.Id == created.DeliveryNoteId)).ConfigureAwait(false);
         return new CustomerReturnRequestAppDto
         {
             Id = created.Id,
@@ -768,6 +776,60 @@ public sealed class CustomerPortalAppService(
         };
     }
 
+    public async Task<CustomerActionResultAppDto> UpdateOrderNoteAsync(Guid customerId, Guid orderId, string? note)
+    {
+        var order = await orderAppService.GetOrderByIdAsync(orderId).ConfigureAwait(false);
+        if (order is null || order.CustomerId != customerId)
+            return CustomerActionResultAppDto.Fail("Error.CustomerPortal.Order.NotFound");
+
+        if (!order.CanUpdateInfo)
+            return CustomerActionResultAppDto.Fail("Error.CustomerPortal.Order.CannotUpdate");
+
+        var result = await orderAppService.UpdateOrderAsync(new UpdateOrderAppDto(orderId)
+        {
+            ExpectedShippingDateUtc = order.ExpectedShippingDateUtc,
+            OrderDiscount = order.OrderDiscount,
+            Note = note
+        }).ConfigureAwait(false);
+
+        return result.Success
+            ? CustomerActionResultAppDto.Ok()
+            : CustomerActionResultAppDto.Fail(result.ErrorMessage);
+    }
+
+    private Task CreateOrderRequestCreatedNotificationAsync(CustomerOrderRequestDto request)
+        => customerPortalManager.CreateNotificationAsync(new CreateCustomerPortalNotificationDto
+        {
+            CustomerId = request.CustomerId,
+            Type = CustomerPortalNotificationType.OrderRequestCreated,
+            Title = $"Yêu cầu đặt hàng mới {request.Code}",
+            Message = "Khách vừa tạo yêu cầu đặt hàng trên Customer Portal. Vui lòng kiểm tra hàng hóa, định giá và duyệt nếu hợp lệ.",
+            RelatedEntityId = request.Id,
+            RelatedEntityType = OrderRequestRelatedEntityType
+        });
+
+    private Task CreateReturnRequestCreatedNotificationAsync(CustomerReturnRequestDto request, DeliveryNote? deliveryNote)
+        => customerPortalManager.CreateNotificationAsync(new CreateCustomerPortalNotificationDto
+        {
+            CustomerId = request.CustomerId,
+            Type = CustomerPortalNotificationType.ReturnRequestCreated,
+            Title = deliveryNote is null ? "Yêu cầu trả hàng mới" : $"Yêu cầu trả hàng cho phiếu {deliveryNote.Code}",
+            Message = "Khách vừa tạo yêu cầu trả hàng trên Customer Portal. Vui lòng xem số lượng, lý do và hình ảnh hiện trạng nếu có.",
+            RelatedEntityId = request.Id,
+            RelatedEntityType = ReturnRequestRelatedEntityType
+        });
+
+    private Task CreateDeliveryConfirmedNotificationAsync(DeliveryNote deliveryNote)
+        => customerPortalManager.CreateNotificationAsync(new CreateCustomerPortalNotificationDto
+        {
+            CustomerId = deliveryNote.CustomerId,
+            Type = CustomerPortalNotificationType.DeliveryReceivedConfirmed,
+            Title = $"Khách đã nhận hàng phiếu {deliveryNote.Code}",
+            Message = "Khách vừa xác nhận đã nhận hàng trên Customer Portal.",
+            RelatedEntityId = deliveryNote.Id,
+            RelatedEntityType = DeliveryNoteRelatedEntityType
+        });
+
     private static CustomerOrderSummaryAppDto MapOrderSummary(Order order)
         => new()
         {
@@ -849,6 +911,7 @@ public sealed class CustomerPortalAppService(
             DeliveryNoteCode = deliveryNote?.Code,
             Status = (int)request.Status,
             Reason = request.Reason,
+            CompensateInNextDelivery = request.CompensateInNextDelivery,
             AdminNote = request.AdminNote,
             CreatedOnUtc = request.CreatedOnUtc,
             ReviewedOnUtc = request.ReviewedOnUtc,
@@ -866,6 +929,7 @@ public sealed class CustomerPortalAppService(
             DeliveryNoteCode = deliveryNote?.Code,
             Status = (int)request.Status,
             Reason = request.Reason,
+            CompensateInNextDelivery = request.CompensateInNextDelivery,
             AdminNote = request.AdminNote,
             CreatedOnUtc = request.CreatedOnUtc,
             ReviewedOnUtc = request.ReviewedOnUtc,
@@ -911,6 +975,21 @@ public sealed class CustomerPortalAppService(
         return string.IsNullOrWhiteSpace(dto.Note)
             ? $"Customer confirmed delivery. Receiver: {dto.ReceiverName}"
             : $"Customer confirmed delivery. Receiver: {dto.ReceiverName}. Note: {dto.Note}";
+    }
+
+    private Task UpdateCustomerLocationAsync(Guid customerId, CustomerPortalLocationAppDto? location, string source)
+    {
+        if (location is null)
+            return Task.CompletedTask;
+
+        return securityManager.UpdateLastKnownLocationAsync(customerId, new UpdateCustomerPortalLocationDto
+        {
+            Latitude = location.Latitude,
+            Longitude = location.Longitude,
+            AccuracyMeters = location.AccuracyMeters,
+            Source = source,
+            CapturedOnUtc = DateTime.UtcNow
+        });
     }
 
     private List<DeliveryNote> GetDeliveredNotesForReturnRequest(Guid customerId, Guid? deliveryNoteId)

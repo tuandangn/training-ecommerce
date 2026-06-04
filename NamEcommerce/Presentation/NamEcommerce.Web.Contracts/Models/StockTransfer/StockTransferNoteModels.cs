@@ -48,6 +48,7 @@ public sealed class StockTransferNoteItemInputModel
     public Guid ProductId { get; set; }
     public string ProductName { get; set; } = string.Empty;
     public decimal Quantity { get; set; }
+    public int QuantityDecimalPlaces { get; set; }
 }
 
 public sealed class CreateStockTransferNoteResultModel

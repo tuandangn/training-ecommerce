@@ -50,7 +50,8 @@ public sealed class WarehouseController : BaseAuthorizedController
             WarehouseType = (int)WarehouseType.Physical,
             Address = model.Address,
             PhoneNumber = model.PhoneNumber,
-            IsActive = model.IsActive
+            IsActive = model.IsActive,
+            DisplayOrder = model.DisplayOrder
         });
         if (!createWarehouseResult.Success)
         {
@@ -99,7 +100,8 @@ public sealed class WarehouseController : BaseAuthorizedController
             WarehouseType = warehouse.WarehouseType,
             PhoneNumber = model.PhoneNumber,
             Address = model.Address,
-            IsActive = model.IsActive
+            IsActive = model.IsActive,
+            DisplayOrder = model.DisplayOrder
         });
         if (!updateWarehouseResult.Success)
         {

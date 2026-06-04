@@ -1,5 +1,4 @@
 using NamEcommerce.Domain.Entities.Returns;
-using static NamEcommerce.Data.SqlServer.NamEcommerceEfDataDefaults;
 
 namespace NamEcommerce.Data.SqlServer.Mappings;
 
@@ -39,12 +38,10 @@ public sealed class CustomerReturnMapping : IEntityTypeConfiguration<CustomerRet
         builder.HasIndex(r => new { r.DeliveryNoteId, r.Status });
         builder.HasIndex(r => new { r.CustomerId, r.Status });
 
-        builder.Metadata.FindNavigation(nameof(CustomerReturn.Items))
-            ?.SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(r => r.Items)
             .WithOne()
             .HasForeignKey(i => i.CustomerReturnId)
             .OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(r => r.Items).AutoInclude();
+        builder.Navigation(r => r.Items).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
     }
 }

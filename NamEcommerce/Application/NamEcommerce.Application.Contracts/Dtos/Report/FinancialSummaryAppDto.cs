@@ -2,8 +2,10 @@ namespace NamEcommerce.Application.Contracts.Dtos.Report;
 
 public class ProfitLossSummaryAppDto
 {
+    public decimal GrossRevenue { get; set; }
+    public decimal TotalReturnAmount { get; set; }
     public decimal TotalRevenue { get; set; }
-    public decimal TotalCogs { get; set; } // Cost of Goods Sold
+    public decimal TotalCogs { get; set; }
     public bool HasPendingCogs { get; set; }
     public bool HasRevaluedCogs { get; set; }
     public decimal GrossProfit => TotalRevenue - TotalCogs;

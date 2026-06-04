@@ -32,7 +32,9 @@ public sealed class BulkReceivePurchaseOrderHandler : IRequestHandler<BulkReceiv
                 DirectShipOrderItemId = item.DirectShipOrderItemId,
                 DirectShipAddress = item.DirectShipAddress,
                 DirectShipContactName = item.DirectShipContactName,
-                DirectShipContactPhone = item.DirectShipContactPhone
+                DirectShipContactPhone = item.DirectShipContactPhone,
+                DirectShipExistingAllocationId = item.DirectShipExistingAllocationId,
+                QuantityDecimalPlaces = item.QuantityDecimalPlaces
             }, cancellationToken).ConfigureAwait(false);
 
             if (!receiveResult.Success)

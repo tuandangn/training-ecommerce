@@ -12,8 +12,32 @@ public sealed record CustomerPortalAccountDto(Guid Id)
     public required CustomerPortalAccountStatus Status { get; init; }
     public DateTime? PasswordSetOnUtc { get; init; }
     public DateTime? LastLoginOnUtc { get; init; }
+    public double? LastKnownLatitude { get; init; }
+    public double? LastKnownLongitude { get; init; }
+    public double? LastKnownLocationAccuracyMeters { get; init; }
+    public DateTime? LastKnownLocationCapturedOnUtc { get; init; }
+    public string? LastKnownLocationSource { get; init; }
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? UpdatedOnUtc { get; init; }
+}
+
+[Serializable]
+public sealed record UpdateCustomerPortalLocationDto
+{
+    public required double Latitude { get; init; }
+    public required double Longitude { get; init; }
+    public double? AccuracyMeters { get; init; }
+    public required string Source { get; init; }
+    public required DateTime CapturedOnUtc { get; init; }
+}
+
+[Serializable]
+public sealed record CustomerPortalSettingsDto(Guid Id)
+{
+    public required bool OtpEnabled { get; init; }
+    public required DateTime CreatedOnUtc { get; init; }
+    public DateTime? UpdatedOnUtc { get; init; }
+    public Guid? UpdatedByUserId { get; init; }
 }
 
 [Serializable]
@@ -197,6 +221,40 @@ public sealed record CustomerDeliveryFeedbackDto(Guid Id)
     public required CustomerDeliveryFeedbackStatus Status { get; init; }
     public DateTime CreatedOnUtc { get; init; }
     public DateTime? ReviewedOnUtc { get; init; }
+}
+
+[Serializable]
+public sealed record CreateCustomerPortalNotificationDto
+{
+    public required Guid CustomerId { get; init; }
+    public required CustomerPortalNotificationType Type { get; init; }
+    public required string Title { get; init; }
+    public string? Message { get; init; }
+    public Guid? RelatedEntityId { get; init; }
+    public string? RelatedEntityType { get; init; }
+
+    public void Verify()
+    {
+        if (CustomerId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.CustomerPortal.CustomerRequired");
+        if (string.IsNullOrWhiteSpace(Title))
+            throw new NamEcommerceDomainException("Error.CustomerPortal.NotificationTitleRequired");
+    }
+}
+
+[Serializable]
+public sealed record CustomerPortalNotificationDto(Guid Id)
+{
+    public required Guid CustomerId { get; init; }
+    public required CustomerPortalNotificationType Type { get; init; }
+    public required CustomerPortalNotificationStatus Status { get; init; }
+    public required string Title { get; init; }
+    public string? Message { get; init; }
+    public Guid? RelatedEntityId { get; init; }
+    public string? RelatedEntityType { get; init; }
+    public DateTime CreatedOnUtc { get; init; }
+    public DateTime? ReadOnUtc { get; init; }
+    public Guid? ReadByUserId { get; init; }
 }
 
 [Serializable]

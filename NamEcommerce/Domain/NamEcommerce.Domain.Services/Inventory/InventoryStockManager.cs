@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Catalog;
@@ -106,14 +107,8 @@ public sealed class InventoryStockManager : IInventoryStockManager
         };
     }
 
-    public Task<StockMovementLogDto?> ReceiveStockUpToAsync(
-        Guid productId,
-        Guid warehouseId,
-        decimal targetQuantity,
-        string? note,
-        Guid? receivedByUserId,
-        int referenceType,
-        Guid? referenceId)
+    public Task<StockMovementLogDto?> ReceiveStockUpToAsync(Guid productId, Guid warehouseId, decimal targetQuantity,
+        string? note, Guid? receivedByUserId, int referenceType, Guid? referenceId)
     {
         if (targetQuantity <= 0)
             return Task.FromResult<StockMovementLogDto?>(null);
@@ -245,7 +240,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
             var normalizedKeywords = TextHelper.Normalize(keywords);
             var uppercaseKeywords = keywords.Trim().ToUpper();
             query = query.Where(agg => agg.p.Name.ToUpper().Contains(uppercaseKeywords) || agg.p.Name.ToUpper().Contains(normalizedKeywords) || agg.p.NormalizedName.Contains(normalizedKeywords)
-                || agg.w.Name.ToUpper().Contains(uppercaseKeywords) || agg.w.Name.ToUpper().Contains(normalizedKeywords) || agg.w.NormalizedName.Contains(normalizedKeywords));
+                || agg.w.Name.Value.ToUpper().Contains(uppercaseKeywords) || agg.w.Name.Value.ToUpper().Contains(normalizedKeywords) || agg.w.Name.NormalizedValue.Contains(normalizedKeywords));
         }
 
         var total = query.Count();
@@ -454,15 +449,9 @@ public sealed class InventoryStockManager : IInventoryStockManager
         };
     }
 
-    public Task<StockMovementLogDto?> DispatchStockUpToAsync(
-        Guid productId,
-        Guid warehouseId,
-        decimal targetQuantity,
-        Guid? referenceId,
-        Guid userId,
-        string? note = null,
-        bool releaseReservedStock = false,
-        int referenceType = (int)StockReferenceType.SalesOrder)
+    public Task<StockMovementLogDto?> DispatchStockUpToAsync(Guid productId, Guid warehouseId,
+        decimal targetQuantity, Guid? referenceId, Guid userId, string? note = null,
+        bool releaseReservedStock = false, int referenceType = (int)StockReferenceType.SalesOrder)
     {
         if (targetQuantity <= 0)
             return Task.FromResult<StockMovementLogDto?>(null);
@@ -682,25 +671,23 @@ public sealed class InventoryStockManager : IInventoryStockManager
         if (_cachedInventoryStocks.TryGetValue((productId, warehouseId), out stock))
             return stock;
 
-        return await Task.Run(() =>
-        {
-            stock = (from inventoryStock in _inventoryStockDataReader.DataSource
-                     where inventoryStock.ProductId == productId && inventoryStock.WarehouseId == warehouseId
-                     select inventoryStock).SingleOrDefault();
+        var stockId = await _inventoryStockDataReader.DataSource
+            .Where(inventoryStock => inventoryStock.ProductId == productId && inventoryStock.WarehouseId == warehouseId)
+            .Select(inventoryStock => inventoryStock.Id)
+            .SingleOrDefaultAsync()
+            .ConfigureAwait(false);
+        if (stockId == Guid.Empty)
+            return null;
 
-            if (stock is not null)
-                _cachedInventoryStocks.Add((productId, warehouseId), stock);
+        stock = await _inventoryStockRepository.GetByIdAsync(stockId).ConfigureAwait(false);
+        if (stock is not null)
+            _cachedInventoryStocks.Add((productId, warehouseId), stock);
 
-            return stock;
-        }).ConfigureAwait(false);
+        return stock;
     }
 
-    private decimal GetMovedQuantity(
-        Guid productId,
-        Guid warehouseId,
-        StockMovementType movementType,
-        StockReferenceType referenceType,
-        Guid? referenceId)
+    private decimal GetMovedQuantity(Guid productId, Guid warehouseId,
+        StockMovementType movementType, StockReferenceType referenceType, Guid? referenceId)
         => _stockMovementDataReader.DataSource
             .Where(log => log.ProductId == productId
                 && log.WarehouseId == warehouseId

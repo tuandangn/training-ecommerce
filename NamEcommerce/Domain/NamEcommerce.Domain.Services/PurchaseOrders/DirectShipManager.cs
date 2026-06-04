@@ -40,6 +40,8 @@ public sealed class DirectShipManager(
     {
         var allocation = await allocationReader.GetByIdAsync(allocationId)
             ?? throw new PurchaseOrderItemAllocationIsNotFoundException(allocationId);
+        if (allocation.ReceivedQuantity >= allocation.AllocatedQuantity)
+            throw new PurchaseOrderItemDataIsInvalidException("Error.DirectShipAllocationNoRemainingQuantity");
 
         allocation.SetDirectShip(address, contactName, contactPhone, priority);
         await allocationRepository.UpdateAsync(allocation, ct).ConfigureAwait(false);
@@ -457,6 +459,7 @@ public sealed class DirectShipManager(
                 DeliveryNoteId = i.DeliveryNoteId,
                 OrderItemId = i.OrderItemId,
                 ProductId = i.ProductId,
+                WarehouseId = i.WarehouseId == Guid.Empty ? d.WarehouseId : i.WarehouseId,
                 ProductName = i.ProductName ?? string.Empty,
                 Quantity = i.Quantity,
                 UnitPrice = i.UnitPrice,

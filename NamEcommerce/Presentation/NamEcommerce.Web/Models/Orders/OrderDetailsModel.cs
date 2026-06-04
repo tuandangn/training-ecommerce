@@ -1,4 +1,5 @@
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 
@@ -59,9 +60,10 @@ public sealed record OrderDetailsModel
             foreach (var item in Items)
             {
                 var totalDeliveredQty = DeliveryNotes
+                    .Where(dn => dn.Status != (int)DeliveryNoteStatus.Cancelled)
                     .SelectMany(dn => dn.Items)
                     .Where(dni => dni.OrderItemId == item.Id)
-                    .Sum(dni => dni.Quantity);
+                    .Sum(dni => Math.Max(0m, dni.Quantity - dni.CompensatedReturnQuantity));
 
                 if (totalDeliveredQty < item.Quantity)
                     return false;
@@ -72,10 +74,12 @@ public sealed record OrderDetailsModel
     }
 
     public IList<DeliveryNoteBasicModel> DeliveryNotes { get; init; } = [];
+    public IList<CustomerReturnProgressModel> CustomerReturns { get; set; } = [];
     public OrderAllocatedPurchaseOrderListModel? AllocatedPurchaseOrders { get; set; }
     public ShortageInfoModel ShortageInfo { get; set; } = new();
     public IList<DirectShipAllocationModel> DirectShipAllocations { get; set; } = [];
     public IList<ReturnWarehouseOptionModel> ReturnWarehouseOptions { get; set; } = [];
+    public EntityOptionListModel? AvailableWarehouses { get; set; }
     public WorkflowModel Workflow { get; set; } = new();
     public PreparationModel Preparation { get; set; } = new();
     public DeliveryWorkflowModel DeliveryWorkflow { get; set; } = new();
@@ -116,6 +120,7 @@ public sealed record OrderDetailsModel
         public string? ProductName { get; set; }
         public string? ProductPicture { get; set; }
         public decimal? ProductAvailableQty { get; set; }
+        public int QuantityDecimalPlaces { get; set; }
         public decimal SubTotal => UnitPrice * Quantity;
 
         public decimal GetDeliveredQuantity(IList<DeliveryNoteBasicModel> deliveryNotes)
@@ -143,7 +148,24 @@ public sealed record OrderDetailsModel
                 .Where(dn => dn.Status == (int)DeliveryNoteStatus.Delivered)
                 .SelectMany(dn => dn.Items)
                 .Where(dni => dni.OrderItemId == Id)
-                .Sum(dni => dni.Quantity);
+                .Sum(dni => Math.Max(0m, dni.Quantity - dni.CompensatedReturnQuantity));
+        }
+
+        public decimal GetCustomerKeptQuantity(IList<DeliveryNoteBasicModel> deliveryNotes)
+        {
+            return deliveryNotes
+                .Where(dn => dn.Status == (int)DeliveryNoteStatus.Delivered)
+                .SelectMany(dn => dn.Items)
+                .Where(dni => dni.OrderItemId == Id)
+                .Sum(dni => dni.CustomerKeptQuantity);
+        }
+
+        public decimal GetCompensatedReturnQuantity(IList<DeliveryNoteBasicModel> deliveryNotes)
+        {
+            return deliveryNotes
+                .SelectMany(dn => dn.Items)
+                .Where(dni => dni.OrderItemId == Id)
+                .Sum(dni => dni.CompensatedReturnQuantity);
         }
     }
 
@@ -155,9 +177,22 @@ public sealed record OrderDetailsModel
         public int Status { get; init; }
         public int SourceType { get; init; }
         public bool IsDirectShip { get; init; }
+        public int DeliveryConfirmationStatus { get; init; }
+        public Guid WarehouseId { get; init; }
         public string? WarehouseName { get; init; }
         public DateTime CreatedOn { get; init; }
+        public DateTime? UpdatedOn { get; init; }
         public DateTime? DeliveredOn { get; init; }
+        public DateTime? ConfirmedAt { get; init; }
+        public string? ConfirmedNote { get; init; }
+        public Guid? DeliveryProofPictureId { get; init; }
+        public string? DeliveryProofPictureUrl { get; set; }
+        public string? DeliveryReceiverName { get; init; }
+        public string? Note { get; init; }
+        public decimal TotalAmount { get; init; }
+        public decimal Surcharge { get; init; }
+        public string? SurchargeReason { get; init; }
+        public decimal AmountToCollect { get; init; }
         public IList<DeliveryNoteItemModel> Items { get; init; } = [];
     }
 
@@ -171,6 +206,11 @@ public sealed record OrderDetailsModel
         public required decimal SubTotal { get; init; }
         public decimal? CostAtDispatch { get; init; }
         public decimal? TotalCost => CostAtDispatch.HasValue ? CostAtDispatch.Value * Quantity : null;
+        public decimal ConfirmedReturnQuantity { get; init; }
+        public decimal PendingReturnQuantity { get; init; }
+        public decimal CompensatedReturnQuantity { get; init; }
+        public decimal ReturnedQuantity => ConfirmedReturnQuantity + PendingReturnQuantity;
+        public decimal CustomerKeptQuantity => Math.Max(0m, Quantity - ReturnedQuantity);
     }
 
     [Serializable]
@@ -215,10 +255,13 @@ public sealed record OrderDetailsModel
         public decimal ShortageQuantity { get; init; }
         public decimal IssuedQuantity { get; init; }
         public decimal DeliveredQuantity { get; init; }
+        public decimal CompensatedReturnQuantity { get; init; }
         public decimal DirectShipQuantity { get; init; }
         public decimal DirectShipReceivedQuantity { get; init; }
         public string DirectShipStatusText { get; init; } = string.Empty;
         public decimal? UnitCost { get; init; }
+        public decimal RemainingDeliveryQuantity => Math.Max(0, OrderedQuantity - DeliveredQuantity);
+        public bool IsFullyDelivered => OrderedQuantity > 0 && RemainingDeliveryQuantity == 0;
         public IList<PreparationPurchaseOrderModel> RelatedPurchaseOrders { get; set; } = [];
     }
 
@@ -245,7 +288,26 @@ public sealed record OrderDetailsModel
         public OrderDeliverySummaryStatus Status { get; set; } = OrderDeliverySummaryStatus.Pending;
         public string StatusText { get; set; } = string.Empty;
         public string StatusClass { get; set; } = "secondary";
+        public IList<DeliveryItemProgressModel> Items { get; set; } = [];
         public IList<DeliveryProgressModel> Notes { get; set; } = [];
+        public IList<CustomerReturnProgressModel> Returns { get; set; } = [];
+    }
+
+    [Serializable]
+    public sealed record DeliveryItemProgressModel
+    {
+        public required Guid OrderItemId { get; init; }
+        public required string ProductName { get; init; }
+        public decimal OrderedQuantity { get; init; }
+        public decimal AvailableQuantity { get; init; }
+        public decimal IssuedQuantity { get; init; }
+        public decimal DeliveredQuantity { get; init; }
+        public decimal DirectShipQuantity { get; init; }
+        public decimal DirectShipReceivedQuantity { get; init; }
+        public string DirectShipStatusText { get; init; } = string.Empty;
+        public bool IsFullyDelivered => OrderedQuantity > 0 && DeliveredQuantity >= OrderedQuantity;
+        public bool HasDeliveryGap => IssuedQuantity > DeliveredQuantity;
+        public decimal DeliveryGapQuantity => Math.Max(0m, IssuedQuantity - DeliveredQuantity);
     }
 
     [Serializable]
@@ -253,14 +315,62 @@ public sealed record OrderDetailsModel
     {
         public required Guid DeliveryNoteId { get; init; }
         public required string Code { get; init; }
+        public required int Status { get; init; }
         public required string StatusText { get; init; }
         public required string StatusClass { get; init; }
         public required bool IsDirectShip { get; init; }
+        public required int DeliveryConfirmationStatus { get; init; }
+        public required Guid WarehouseId { get; init; }
         public string? WarehouseName { get; init; }
+        public string? Note { get; init; }
         public DateTime CreatedOn { get; init; }
+        public DateTime? UpdatedOn { get; init; }
         public DateTime? DeliveredOn { get; init; }
+        public DateTime? ConfirmedAt { get; init; }
+        public string? ConfirmedNote { get; init; }
+        public string? DeliveryProofPictureUrl { get; init; }
+        public string? DeliveryReceiverName { get; init; }
         public decimal TotalQuantity { get; init; }
+        public decimal CompensatedReturnQuantity { get; init; }
+        public decimal ReturnedQuantity { get; init; }
         public decimal TotalAmount { get; init; }
+        public decimal Surcharge { get; init; }
+        public string? SurchargeReason { get; init; }
+        public decimal AmountToCollect { get; init; }
+        public IList<DeliveryNoteItemModel> Items { get; init; } = [];
+    }
+
+    [Serializable]
+    public sealed record CustomerReturnProgressModel
+    {
+        public required Guid Id { get; init; }
+        public required string Code { get; init; }
+        public required Guid DeliveryNoteId { get; init; }
+        public required string DeliveryNoteCode { get; init; }
+        public int Status { get; init; }
+        public string StatusText { get; init; } = string.Empty;
+        public string StatusClass { get; init; } = "secondary";
+        public DateTime ReturnDate { get; init; }
+        public DateTime? ConfirmedOn { get; init; }
+        public DateTime CreatedOn { get; init; }
+        public DateTime? UpdatedOn { get; init; }
+        public decimal AdditionalCost { get; init; }
+        public decimal GrossRefundAmount { get; init; }
+        public decimal NetRefundAmount { get; init; }
+        public bool CompensateInNextDelivery { get; init; }
+        public decimal CompensatedQuantity { get; init; }
+        public string? Note { get; init; }
+        public IList<CustomerReturnItemProgressModel> Items { get; init; } = [];
+    }
+
+    [Serializable]
+    public sealed record CustomerReturnItemProgressModel
+    {
+        public required string ProductName { get; init; }
+        public decimal RequestedQuantity { get; init; }
+        public decimal AcceptedQuantity { get; init; }
+        public decimal ReturnUnitPrice { get; init; }
+        public decimal AcceptedTotal { get; init; }
     }
 
     [Serializable]
@@ -271,9 +381,14 @@ public sealed record OrderDetailsModel
         public decimal TotalExpenses { get; set; }
         public decimal Profit { get; set; }
         public bool IsProfitFinal { get; set; }
+        public decimal ReturnGrossAmount { get; set; }
+        public decimal ReturnAdditionalCost { get; set; }
+        public decimal ReturnNetRefundAmount { get; set; }
+        public decimal ReturnCompensatedQuantity { get; set; }
         public IList<SettlementDebtModel> Debts { get; set; } = [];
         public IList<SettlementExpenseModel> Expenses { get; set; } = [];
         public IList<SettlementCostModel> Costs { get; set; } = [];
+        public IList<SettlementReturnModel> Returns { get; set; } = [];
         public decimal TotalDebtAmount => Debts.Sum(item => item.TotalAmount);
         public decimal TotalPaidAmount => Debts.Sum(item => item.PaidAmount);
         public decimal TotalRemainingAmount => Debts.Sum(item => item.RemainingAmount);
@@ -315,6 +430,21 @@ public sealed record OrderDetailsModel
         public decimal? TotalCost { get; init; }
         public DateTime DispatchedOn { get; init; }
         public bool IsDirectShip { get; init; }
+    }
+
+    [Serializable]
+    public sealed record SettlementReturnModel
+    {
+        public required Guid Id { get; init; }
+        public required string Code { get; init; }
+        public required string DeliveryNoteCode { get; init; }
+        public string StatusText { get; init; } = string.Empty;
+        public string StatusClass { get; init; } = "secondary";
+        public decimal GrossRefundAmount { get; init; }
+        public decimal AdditionalCost { get; init; }
+        public decimal NetRefundAmount { get; init; }
+        public decimal CompensatedQuantity { get; init; }
+        public DateTime ReturnDate { get; init; }
     }
 
     [Serializable]

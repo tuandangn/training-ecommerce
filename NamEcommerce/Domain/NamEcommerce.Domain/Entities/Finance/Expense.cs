@@ -35,6 +35,11 @@ public record Expense : AppAggregateEntity
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? ModifiedOnUtc { get; private set; }
 
+    internal void SetDescription(string? description)
+    {
+        Description = description;
+    }
+
     public void UpdateInfo(string title, string? description, decimal amount, ExpenseType expenseType, DateTime incurredDate)
     {
         if (string.IsNullOrWhiteSpace(title)) throw new ExpenseTitleRequiredException();

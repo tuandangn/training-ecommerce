@@ -228,11 +228,40 @@ public sealed class GoodsReceiptManager(
         return new SetGoodsReceiptVendorResultDto { UpdatedId = updatedGoodsReceipt.Id };
     }
 
+    public async Task<CreateGoodsReceiptResultDto> CreateForOpeningInventoryAsync(CreateOpeningInventoryReceiptDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
+
+        var createdByUser = dto.CreatedByUserId.HasValue
+            ? new CurrentUserInfoDto(dto.CreatedByUserId.Value, string.Empty, string.Empty)
+            : null;
+
+        var goodsReceipt = await GoodsReceipt.CreateAsync(Guid.NewGuid(), createdByUser, goodsReceiptDataReader).ConfigureAwait(false);
+        goodsReceipt.SetCode(await GenerateCodeAsync().ConfigureAwait(false));
+        goodsReceipt.SetReceivedDate(DateTime.UtcNow);
+        goodsReceipt.SourceType = GoodsReceiptSourceType.OpeningBalance;
+
+        await goodsReceipt.AddItemAsync(
+            dto.ProductId, dto.WarehouseId, dto.Quantity, dto.UnitCost,
+            productDataReader, warehouseSettings, warehouseDataReader
+        ).ConfigureAwait(false);
+
+        goodsReceipt.MarkCreated();
+        goodsReceipt.MarkItemUnitCostSet(goodsReceipt.Items.First().Id);
+
+        var inserted = await goodsReceiptRepository.InsertAsync(goodsReceipt).ConfigureAwait(false);
+        return new CreateGoodsReceiptResultDto { CreatedId = inserted.Id };
+    }
+
     public async Task DeleteGoodsReceiptAsync(DeleteGoodsReceiptDto dto)
     {
         var goodsReceipt = await goodsReceiptDataReader.GetByIdAsync(dto.GoodsReceiptId).ConfigureAwait(false);
         if (goodsReceipt is null)
             throw new GoodsReceiptIsNotFoundException(dto.GoodsReceiptId);
+
+        if (goodsReceipt.SourceType == GoodsReceiptSourceType.OpeningBalance)
+            throw new GoodsReceiptItemDataIsInvalidException("Error.GoodsReceipt.OpeningBalanceCannotBeDeleted");
 
         var linkedReturns = vendorReturnReader.DataSource
             .Where(r => r.GoodsReceiptId == dto.GoodsReceiptId)

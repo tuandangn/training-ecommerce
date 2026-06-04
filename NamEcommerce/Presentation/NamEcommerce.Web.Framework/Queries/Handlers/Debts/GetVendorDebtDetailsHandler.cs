@@ -27,7 +27,8 @@ public sealed class GetVendorDebtDetailsHandler(IVendorDebtAppService debtAppSer
             Status = d.Status,
             DueDate = d.DueDateUtc?.ToLocalTime(),
             CreatedOn = d.CreatedOnUtc.ToLocalTime(),
-            Payments = d.Payments.Select(p => MapPayment(p)).ToList()
+            Payments = d.Payments.Select(p => MapPayment(p)).ToList(),
+            CreditNoteAllocations = d.CreditNoteAllocations.Select(MapAllocation).ToList()
         }).ToList();
 
         var advancePayments = result.AdvancePayments.Select(p => MapPayment(p)).ToList();
@@ -43,7 +44,9 @@ public sealed class GetVendorDebtDetailsHandler(IVendorDebtAppService debtAppSer
             AdvanceBalance = result.AdvanceBalance,
             Debts = debtItems,
             AdvancePayments = advancePayments,
-            RecentPayments = recentPayments
+            RecentPayments = recentPayments,
+            UnappliedCreditNoteBalance = result.UnappliedCreditNoteBalance,
+            UnappliedCreditNotes = result.UnappliedCreditNotes.Select(MapCreditNote).ToList()
         };
     }
 
@@ -59,5 +62,31 @@ public sealed class GetVendorDebtDetailsHandler(IVendorDebtAppService debtAppSer
             PaidOn = p.PaidOnUtc.ToLocalTime(),
             PurchaseOrderCode = p.PurchaseOrderCode,
             VendorDebtId = p.VendorDebtId
+        };
+
+    private static VendorCreditNoteModel MapCreditNote(VendorCreditNoteAppDto creditNote) =>
+        new()
+        {
+            Id = creditNote.Id,
+            Code = creditNote.Code,
+            SourceReturnId = creditNote.SourceReturnId,
+            SourceReturnCode = creditNote.SourceReturnCode,
+            Amount = creditNote.Amount,
+            AppliedAmount = creditNote.AppliedAmount,
+            RemainingAmount = creditNote.RemainingAmount,
+            CreatedOn = creditNote.CreatedOnUtc.ToLocalTime()
+        };
+
+    private static CreditNoteAllocationModel MapAllocation(VendorCreditNoteAllocationAppDto allocation) =>
+        new()
+        {
+            Id = allocation.Id,
+            CreditNoteCode = allocation.VendorCreditNoteCode,
+            SourceReturnId = allocation.SourceReturnId,
+            SourceReturnCode = allocation.SourceReturnCode,
+            Amount = allocation.Amount,
+            AppliedOn = allocation.AppliedOnUtc.ToLocalTime(),
+            ReversedOn = allocation.ReversedOnUtc?.ToLocalTime(),
+            ReverseReason = allocation.ReverseReason
         };
 }

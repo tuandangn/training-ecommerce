@@ -8,4 +8,5 @@ public sealed class CreateUnitMeasurementCommand : IRequest<CreateUnitMeasuremen
 {
     public required string Name { get; init; }
     public int DisplayOrder { get; set; }
+    public int DecimalPlaces { get; set; }
 }

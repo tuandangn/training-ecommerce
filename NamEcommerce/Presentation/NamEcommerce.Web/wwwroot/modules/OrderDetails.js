@@ -1,5 +1,6 @@
 import { confirm, toast } from "/modules/modals.js";
 import { apiPost } from "/modules/ajax-helper.js";
+import DeliveryNoteController from "/modules/DeliveryNoteController.js";
 import PromiseModal from "/modules/PromiseModal.js";
 import ProductPicker from "/modules/ProductPicker.js";
 
@@ -30,6 +31,41 @@ async function submitFormAsync(form) {
         });
     });
 
+    const deliveryNoteController = new DeliveryNoteController();
+    document.querySelectorAll('[data-delivery-action]').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const id = button.dataset.deliveryId;
+            const action = button.dataset.deliveryAction;
+            if (!id || !action) return;
+
+            try {
+                let result;
+                if (action === 'confirm') {
+                    result = await deliveryNoteController.confirm(id);
+                } else if (action === 'delivering') {
+                    result = await deliveryNoteController.delivering(id);
+                } else if (action === 'cancel') {
+                    result = await deliveryNoteController.cancel(id);
+                } else if (action === 'delivered') {
+                    await deliveryNoteController.beginDeliveredWorkflow('markDeliveredModal').setId(id);
+                    return;
+                } else if (action === 'reject') {
+                    await deliveryNoteController
+                        .beginRejectWorkflow('rejectDeliveryNoteModal')
+                        .setData(id, button.dataset.deliveryCode || '', button.dataset.deliveryWarehouseId || '');
+                    return;
+                }
+
+                if (result?.success) {
+                    location.reload();
+                }
+            } catch (err) {
+                hidePageLoading();
+                toast('Lỗi', 'Không thể cập nhật phiếu giao.', 'error');
+            }
+        });
+    });
+
     const addProductModalEl = document.getElementById('addProductModal');
     if (addProductModalEl) {
         const productPickerEl = document.getElementById('productPicker');
@@ -50,9 +86,13 @@ async function submitFormAsync(form) {
         productPickerEl.addEventListener('select', (e) => {
             const product = e.detail?.product;
             if (product) {
-                console.log(product);
                 addProductId.value = product.id;
+                const dpInput = document.getElementById('addProductDecimalPlaces');
+                if (dpInput) dpInput.value = product.quantityDecimalPlaces ?? 0;
                 addProductQuantity.value = 1;
+                addProductQuantity.dataset.decimals = String(product.quantityDecimalPlaces ?? 0);
+                addProductQuantity.dataset.decimalBound = '';
+                window.DecimalFields?.bindInput?.(addProductQuantity);
                 addProductUnitPrice.value = product.price || 0;
                 modalProductInfo.classList.remove('d-none');
                 addItemBtn.classList.remove('d-none');
@@ -108,10 +148,19 @@ async function submitFormAsync(form) {
             const data = $(this).data();
             $('#editItemId').val(data.id);
             $('#editProductName').text(data.product);
-            $('#editQuantity').val(DecimalFields.formatQuantity(data.qty));
+            const editQtyEl = document.getElementById('editQuantity');
+            const dp = parseInt(data.decimalplaces ?? 0, 10);
+            if (editQtyEl) {
+                editQtyEl.dataset.decimals = String(dp);
+                editQtyEl.dataset.decimalBound = '';
+                window.DecimalFields?.bindInput?.(editQtyEl);
+            }
+            const editDpInput = document.getElementById('editDecimalPlaces');
+            if (editDpInput) editDpInput.value = dp;
+            $('#editQuantity').val(DecimalFields.formatQuantity(data.qty, data.decimalplaces ?? 0));
             $('#editUnitPrice').val(DecimalFields.formatCurrency(data.price));
             if (data.availableqty > 0) {
-                $('#editProductStock').find('.stock-field').text('Tồn kho: ' + DecimalFields.formatQuantity(Math.max(0, data.availableqty), 2));
+                $('#editProductStock').find('.stock-field').text('Tồn kho: ' + DecimalFields.formatQuantity(Math.max(0, data.availableqty), data.decimalplaces ?? 0));
             } else {
                 $('#editProductStock').find('.stock-field').html('<span class="text-danger">Hết hàng</span>');
             }

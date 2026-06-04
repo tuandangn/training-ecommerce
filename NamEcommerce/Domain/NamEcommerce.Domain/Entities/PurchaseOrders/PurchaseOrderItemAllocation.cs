@@ -32,7 +32,6 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
     public decimal ReceivedQuantity { get; private set; }
     public AllocationStatus Status { get; private set; }
 
-    // Direct-ship fields
     public bool IsDirectShip { get; private set; }
     public string? DirectShipAddress { get; private set; }
     public string? DirectShipContactName { get; private set; }
@@ -78,15 +77,17 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
 
     internal void SetDirectShip(string address, string? contactName, string? contactPhone, int priority)
     {
+        if (string.IsNullOrWhiteSpace(contactPhone))
+            throw new PurchaseOrderItemDataIsInvalidException("Error.DirectShipContactPhoneRequired");
         if (string.IsNullOrWhiteSpace(address))
             throw new PurchaseOrderItemDataIsInvalidException("Error.DirectShipAddressRequired");
 
         IsDirectShip = true;
-        DirectShipAddress = address;
-        DirectShipContactName = contactName;
-        DirectShipContactPhone = contactPhone;
+        DirectShipAddress = address.Trim();
+        DirectShipContactName = string.IsNullOrWhiteSpace(contactName) ? null : contactName.Trim();
+        DirectShipContactPhone = contactPhone.Trim();
         DirectShipPriority = priority;
-        RaiseDomainEvent(new AllocationMarkedAsDirectShip(Id, PurchaseOrderItemId, address, contactName, contactPhone));
+        RaiseDomainEvent(new AllocationMarkedAsDirectShip(Id, PurchaseOrderItemId, DirectShipAddress, DirectShipContactName, DirectShipContactPhone));
     }
 
     internal void ClearDirectShip()
@@ -100,14 +101,16 @@ public sealed record PurchaseOrderItemAllocation : AppAggregateEntity
 
     internal void UpdateDirectShipInfo(string address, string? contactName, string? contactPhone, Guid editedByUserId)
     {
+        if (string.IsNullOrWhiteSpace(contactPhone))
+            throw new PurchaseOrderItemDataIsInvalidException("Error.DirectShipContactPhoneRequired");
         if (string.IsNullOrWhiteSpace(address))
             throw new PurchaseOrderItemDataIsInvalidException("Error.DirectShipAddressRequired");
 
         var oldAddress = DirectShipAddress ?? string.Empty;
-        DirectShipAddress = address;
-        DirectShipContactName = contactName;
-        DirectShipContactPhone = contactPhone;
-        RaiseDomainEvent(new DirectShipAddressUpdated(Id, oldAddress, address, editedByUserId));
+        DirectShipAddress = address.Trim();
+        DirectShipContactName = string.IsNullOrWhiteSpace(contactName) ? null : contactName.Trim();
+        DirectShipContactPhone = contactPhone.Trim();
+        RaiseDomainEvent(new DirectShipAddressUpdated(Id, oldAddress, DirectShipAddress, editedByUserId));
     }
 
     internal void SetStatus(AllocationStatus newStatus) => Status = newStatus;

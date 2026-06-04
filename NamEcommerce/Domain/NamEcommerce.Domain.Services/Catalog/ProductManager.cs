@@ -214,7 +214,7 @@ public sealed class ProductManager : IProductManager
         foreach (var categoryInfo in dto.Categories)
             await product.AddToCategoryAsync(categoryInfo.CategoryId, categoryInfo.DisplayOrder, _categoryDataReader).ConfigureAwait(false);
 
-        var deletedPictureIds = product.ProductPictures.Select(p => p.PictureId).ToList();
+        var deletedPictureIds = product.ProductPictures.Select(p => p.PictureId).Where(pictureId => !dto.Pictures.Contains(pictureId)).ToList();
         product.ClearPictures();
         foreach (var pictureId in dto.Pictures)
             await product.AddPictureAsync(pictureId, _pictureDataReader).ConfigureAwait(false);

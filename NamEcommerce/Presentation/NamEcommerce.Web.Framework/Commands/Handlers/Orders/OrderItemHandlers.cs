@@ -17,6 +17,9 @@ public sealed class UpdateOrderItemHandler : IRequestHandler<UpdateOrderItemComm
 
     public async Task<CommonActionResultModel> Handle(UpdateOrderItemCommand request, CancellationToken cancellationToken)
     {
+        if (request.QuantityDecimalPlaces == 0 && request.Quantity != Math.Floor(request.Quantity))
+            return new CommonActionResultModel { Success = false, ErrorMessage = "Error.QuantityMustBeInteger" };
+
         var result = await _orderAppService.UpdateOrderItemAsync(new UpdateOrderItemAppDto
         {
             OrderId = request.OrderId,

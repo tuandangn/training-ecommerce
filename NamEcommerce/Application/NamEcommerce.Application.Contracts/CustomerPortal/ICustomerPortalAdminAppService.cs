@@ -5,6 +5,8 @@ namespace NamEcommerce.Application.Contracts.CustomerPortal;
 public interface ICustomerPortalAdminAppService
 {
     Task<CustomerPortalAdminOverviewAppDto> GetOverviewAsync();
+    Task<CustomerPortalSettingsAdminAppDto> GetSettingsAsync();
+    Task<CustomerActionResultAppDto> UpdateSettingsAsync(UpdateCustomerPortalSettingsAdminAppDto dto);
     Task<IReadOnlyCollection<CustomerPortalAccountAdminAppDto>> GetAccountsAsync();
     Task<CustomerPortalAccountAdminAppDto?> GetAccountAsync(Guid customerId);
     Task<CustomerActionResultAppDto> BlockAccountAsync(Guid customerId);
@@ -12,6 +14,9 @@ public interface ICustomerPortalAdminAppService
     Task<CustomerActionResultAppDto> ResetAccountPasswordAsync(Guid customerId, string password);
 
     Task<IReadOnlyCollection<CustomerPortalSecurityEventAdminAppDto>> GetSecurityEventsAsync(Guid? customerId = null, int take = 100);
+    Task<IReadOnlyCollection<CustomerPortalNotificationAdminAppDto>> GetNotificationsAsync(int? status = null, int take = 100);
+    Task<CustomerPortalNotificationAdminAppDto?> GetNotificationAsync(Guid id);
+    Task<CustomerActionResultAppDto> MarkNotificationReadAsync(Guid id);
 
     Task<IReadOnlyCollection<CustomerPortalOrderRequestAdminAppDto>> GetOrderRequestsAsync(int? status = null);
     Task<CustomerPortalOrderRequestAdminAppDto?> GetOrderRequestAsync(Guid id);

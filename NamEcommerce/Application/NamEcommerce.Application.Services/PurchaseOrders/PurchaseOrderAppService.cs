@@ -4,6 +4,7 @@ using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
@@ -35,13 +36,15 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     private readonly IEntityDataReader<PurchaseOrderItemAllocation> _purchaseOrderItemAllocationDataReader;
     private readonly IEntityDataReader<DeliveryNote> _deliveryNoteDataReader;
     private readonly IEntityDataReader<Order> _orderDataReader;
+    private readonly IEntityDataReader<Customer> _customerDataReader;
 
     public PurchaseOrderAppService(IPurchaseOrderManager purchaseOrderManager,
         IPurchaseOrderAllocationManager purchaseOrderAllocationManager,
         IEntityDataReader<PurchaseOrderItemAllocation> purchaseOrderItemAllocationDataReader, IEntityDataReader<PurchaseOrder> purchaseOrderDataReader,
         IEntityDataReader<Vendor> vendorDataReader, IEntityDataReader<Warehouse> warehouseDataReader, IEntityDataReader<User> userDataReader,
         IEntityDataReader<Product> productDataReader, IDirectShipManager directShipManager,
-        IEntityDataReader<DeliveryNote> deliveryNoteDataReader, IEntityDataReader<Order> orderDataReader)
+        IEntityDataReader<DeliveryNote> deliveryNoteDataReader, IEntityDataReader<Order> orderDataReader,
+        IEntityDataReader<Customer> customerDataReader)
     {
         _purchaseOrderManager = purchaseOrderManager;
         _purchaseOrderAllocationManager = purchaseOrderAllocationManager;
@@ -54,6 +57,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
         _purchaseOrderItemAllocationDataReader = purchaseOrderItemAllocationDataReader;
         _deliveryNoteDataReader = deliveryNoteDataReader;
         _orderDataReader = orderDataReader;
+        _customerDataReader = customerDataReader;
     }
 
     public async Task<IPagedDataAppDto<PurchaseOrderAppDto>> GetPurchaseOrdersAsync(int pageIndex, int pageSize, string? keywords, int? status)
@@ -171,6 +175,22 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             Success = true,
             CreatedId = result.CreatedId
         };
+    }
+
+    public async Task<CreatePurchaseOrderResultAppDto> CopyPurchaseOrderAsync(Guid id)
+    {
+        var result = await _purchaseOrderManager.CopyPurchaseOrderAsync(id).ConfigureAwait(false);
+        return new CreatePurchaseOrderResultAppDto { Success = true, CreatedId = result.CreatedId };
+    }
+
+    public async Task<CreatePurchaseOrderResultAppDto> SplitPurchaseOrderAsync(SplitPurchaseOrderAppDto dto)
+    {
+        var result = await _purchaseOrderManager.SplitPurchaseOrderAsync(new SplitPurchaseOrderDto
+        {
+            SourcePurchaseOrderId = dto.PurchaseOrderId,
+            Items = dto.Items.Select(i => new SplitPurchaseOrderItemDto { ItemId = i.ItemId, Quantity = i.Quantity }).ToList()
+        }).ConfigureAwait(false);
+        return new CreatePurchaseOrderResultAppDto { Success = true, CreatedId = result.CreatedId };
     }
 
     public async Task<UpdatePurchaseOrderResultAppDto> UpdatePurchaseOrderAsync(UpdatePurchaseOrderAppDto dto)
@@ -348,6 +368,38 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             UnitCost = dto.UnitCost,
             Note = dto.Note
         });
+        return CommonActionResultDto.CreateSuccess();
+    }
+
+    public async Task<CommonActionResultDto> UpdatePurchaseOrderItemAsync(UpdatePurchaseOrderItemAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return CommonActionResultDto.CreateError(errorMessage);
+
+        var purchaseOrder = await _purchaseOrderManager.GetPurchaseOrderByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        if (purchaseOrder is null)
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderIsNotFound");
+
+        var purchaseOrderItem = purchaseOrder.Items.FirstOrDefault(item => item.Id == dto.PurchaseOrderItemId);
+        if (purchaseOrderItem is null)
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderItemIsNotFound");
+
+        if (!purchaseOrder.CanAddItems)
+            return CommonActionResultDto.CreateError("Error.PurchaseOrderCannotUpdateOrderItems");
+
+        await _purchaseOrderManager.UpdatePurchaseOrderItemAsync(new UpdatePurchaseOrderItemDto
+        {
+            PurchaseOrderId = dto.PurchaseOrderId,
+            PurchaseOrderItemId = dto.PurchaseOrderItemId,
+            ProductId = purchaseOrderItem.ProductId,
+            QuantityOrdered = dto.QuantityOrdered,
+            UnitCost = dto.UnitCost,
+            Note = dto.Note
+        }).ConfigureAwait(false);
+
         return CommonActionResultDto.CreateSuccess();
     }
 
@@ -772,6 +824,7 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             OrderId = d.OrderId,
             OrderCode = d.OrderCode,
             CustomerName = d.CustomerName,
+            ProductId = d.ProductId,
             ProductName = d.ProductName,
             TotalQuantity = d.TotalQuantity,
             AllocatedOutstanding = d.AllocatedOutstanding,
@@ -779,6 +832,32 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             ShippingAddress = d.ShippingAddress,
             CustomerPhone = d.CustomerPhone
         }).ToList();
+    }
+
+    public async Task<IList<NonDirectShipAllocationForPoItemAppDto>> GetNonDirectShipAllocationsForPoItemAsync(Guid purchaseOrderItemId)
+    {
+        var domainDtos = await _purchaseOrderAllocationManager.GetNonDirectShipAllocationsForPoItemAsync(purchaseOrderItemId).ConfigureAwait(false);
+        return domainDtos.Select(d => new NonDirectShipAllocationForPoItemAppDto
+        {
+            AllocationId = d.AllocationId,
+            OrderId = d.OrderId,
+            OrderItemId = d.OrderItemId,
+            OrderCode = d.OrderCode,
+            CustomerName = d.CustomerName,
+            CustomerPhone = d.CustomerPhone,
+            ShippingAddress = d.ShippingAddress,
+            AllocatedQuantity = d.AllocatedQuantity,
+            RemainingQuantity = d.RemainingQuantity
+        }).ToList();
+    }
+
+    public Task<decimal> GetAllocationRemainingQuantityAsync(Guid allocationId)
+    {
+        var allocation = _purchaseOrderItemAllocationDataReader.DataSource
+            .FirstOrDefault(a => a.Id == allocationId);
+        if (allocation is null)
+            return Task.FromResult(0m);
+        return Task.FromResult(Math.Max(0m, allocation.AllocatedQuantity - allocation.ReceivedQuantity));
     }
 
     public Task<IList<PurchaseOrderItemAllocationForPoItemAppDto>> GetAllocationsForPurchaseOrderItemsAsync(IReadOnlyList<Guid> purchaseOrderItemIds)
@@ -802,11 +881,17 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                 .Select(item => new { Order = order, Item = item }))
             .ToDictionary(x => x.Item.Id);
 
+        var customerIds = orderItems.Values.Select(x => x.Order.CustomerId).Distinct().ToList();
+        var customers = _customerDataReader.DataSource
+            .Where(customer => customerIds.Contains(customer.Id))
+            .ToDictionary(customer => customer.Id);
+
         var result = allocations
             .Where(allocation => orderItems.ContainsKey(allocation.OrderItemId))
             .Select(allocation =>
             {
                 var orderItem = orderItems[allocation.OrderItemId];
+                customers.TryGetValue(orderItem.Order.CustomerId, out var customer);
                 return new PurchaseOrderItemAllocationForPoItemAppDto
                 {
                     AllocationId = allocation.Id,
@@ -814,6 +899,9 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
                     OrderId = orderItem.Order.Id,
                     OrderItemId = allocation.OrderItemId,
                     OrderCode = orderItem.Order.Code,
+                    CustomerName = customer?.FullName,
+                    CustomerPhone = customer?.PhoneNumber,
+                    ShippingAddress = orderItem.Order.ShippingAddress,
                     AllocatedQuantity = allocation.AllocatedQuantity,
                     ReceivedQuantity = allocation.ReceivedQuantity,
                     Status = (int)allocation.Status,
@@ -829,13 +917,21 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
     {
         try
         {
+            var hasDirectShipInfo = !string.IsNullOrWhiteSpace(dto.DirectShipAddress)
+                || !string.IsNullOrWhiteSpace(dto.DirectShipContactName)
+                || !string.IsNullOrWhiteSpace(dto.DirectShipContactPhone);
+            if (hasDirectShipInfo && string.IsNullOrWhiteSpace(dto.DirectShipContactPhone))
+                return CommonActionResultDto.CreateError("Error.DirectShipContactPhoneRequired");
+            if (hasDirectShipInfo && string.IsNullOrWhiteSpace(dto.DirectShipAddress))
+                return CommonActionResultDto.CreateError("Error.DirectShipAddressRequired");
+
             var allocation = await _purchaseOrderAllocationManager
                 .AllocatePurchaseOrderItemForOrder(new AllocatePurchaseOrderItemForOrder
                 {
                     PurchaseOrderItemId = (dto.PurchaseOrderId, dto.PurchaseOrderItemId),
                     OrderItemId = (dto.OrderId, dto.OrderItemId),
                     AllocationQuantity = dto.Quantity,
-                    DirectShipInfo = !string.IsNullOrEmpty(dto.DirectShipContactPhone) 
+                    DirectShipInfo = hasDirectShipInfo
                         ? new AllocatePurchaseOrderItemForOrder.AllocateDirectShipInfo(dto.DirectShipContactName, dto.DirectShipContactPhone, dto.DirectShipAddress)
                         : null
                 })

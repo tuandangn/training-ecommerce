@@ -56,7 +56,8 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
         var createUnitMeasurementResult = await _mediator.Send(new CreateUnitMeasurementCommand
         {
             Name = model.Name!,
-            DisplayOrder = model.DisplayOrder
+            DisplayOrder = model.DisplayOrder,
+            DecimalPlaces = model.DecimalPlaces
         });
         if (!createUnitMeasurementResult.Success)
         {
@@ -81,7 +82,8 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
         {
             Id = unitMeasurement.Id,
             Name = unitMeasurement.Name,
-            DisplayOrder = unitMeasurement.DisplayOrder
+            DisplayOrder = unitMeasurement.DisplayOrder,
+            DecimalPlaces = unitMeasurement.DecimalPlaces
         };
 
         return View(model);
@@ -104,7 +106,8 @@ public sealed class UnitMeasurementController : BaseAuthorizedController
         {
             Id = model.Id,
             Name = model.Name!,
-            DisplayOrder = model.DisplayOrder
+            DisplayOrder = model.DisplayOrder,
+            DecimalPlaces = model.DecimalPlaces
         });
         if (!updateUnitMeasurementResult.Success)
         {

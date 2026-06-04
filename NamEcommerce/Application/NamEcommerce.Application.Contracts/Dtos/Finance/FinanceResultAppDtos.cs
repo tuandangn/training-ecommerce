@@ -19,3 +19,9 @@ public class DeleteExpenseResultAppDto
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
 }
+
+public class UpsertExpenseBudgetResultAppDto
+{
+    public bool Success { get; set; }
+    public string? ErrorMessage { get; set; }
+}

@@ -1,4 +1,5 @@
 using NamEcommerce.Domain.Entities.DeliveryNotes;
+using System.Linq;
 using NamEcommerce.Domain.Metadata;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Values;
@@ -66,6 +67,16 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         
         builder.Property(d => d.DeliveredOnUtc).IsRequired(false);
         builder.Property(d => d.DeliveryProofPictureId).IsRequired(false);
+        builder.Property(d => d.DeliveryProofPictureIds)
+            .HasConversion(
+                v => string.Join(',', v),
+                v => string.IsNullOrEmpty(v)
+                    ? (IReadOnlyCollection<Guid>)Array.Empty<Guid>()
+                    : v.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                       .Select(Guid.Parse).ToList().AsReadOnly())
+            .HasColumnName("DeliveryProofPictureIds")
+            .HasColumnType("nvarchar(max)")
+            .IsRequired(false);
         builder.Property(d => d.DeliveryReceiverName).HasMaxLength(255).IsRequired(false);
         
         builder.Property(d => d.IsDirectShip).IsRequired().HasDefaultValue(false);
@@ -81,12 +92,9 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.Property(d => d.CreatedOnUtc).IsRequired();
         builder.Property(d => d.UpdatedOnUtc).IsRequired(false);
 
-        // One-to-many relationship with items
-        builder.Metadata.FindNavigation(nameof(DeliveryNote.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(d => d.Items).WithOne().HasForeignKey(i => i.DeliveryNoteId).OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(d => d.Items).AutoInclude();
+        builder.Navigation(d => d.Items).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
 
-        // Ignore computed property
         builder.Ignore(d => d.TotalAmount);
     }
 }

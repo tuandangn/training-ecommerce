@@ -50,11 +50,12 @@
                                                 <div class="fw-medium">@item.ProductName</div>
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
                                                 <input type="hidden" name="Items[@i].ProductName" value="@item.ProductName" />
+                                                <input type="hidden" name="Items[@i].QuantityDecimalPlaces" value="@item.QuantityDecimalPlaces" />
                                             </td>
                                             <td class="text-end">
                                                 <input name="Items[@i].Quantity" value="@item.Quantity"
                                                        class="form-control form-control-sm text-end"
-                                                       data-decimal="quantity" min="0.001" step="0.001" placeholder="0" />
+                                                       data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" min="@(item.QuantityDecimalPlaces > 0 ? "0.001" : "1")" step="@(item.QuantityDecimalPlaces > 0 ? "0.001" : "1")" placeholder="0" />
                                             </td>
                                             <td class="pe-3">
                                                 <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
@@ -189,19 +190,21 @@
             noMsg.style.display = tbody.rows.length === 0 ? 'block' : 'none';
         }
 
-        function addRow(productId, productName, qty) {
+        function addRow(productId, productName, qty, decimalPlaces) {
             const i = rowIndex++;
+            const dp = parseInt(decimalPlaces ?? 0, 10);
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="ps-3">
                     <div class="fw-medium">${escHtml(productName)}</div>
                     <input type="hidden" name="Items[${i}].ProductId" value="${escAttr(productId)}" />
                     <input type="hidden" name="Items[${i}].ProductName" value="${escAttr(productName)}" />
+                    <input type="hidden" name="Items[${i}].QuantityDecimalPlaces" value="${dp}" />
                 </td>
                 <td class="text-end">
                     <input name="Items[${i}].Quantity" value="${qty}"
                            class="form-control form-control-sm text-end"
-                           data-decimal="quantity" min="0.001" step="0.001" placeholder="0" />
+                           data-decimal="quantity" data-decimals="${dp}" min="${dp > 0 ? '0.001' : '1'}" step="${dp > 0 ? '0.001' : '1'}" placeholder="0" />
                 </td>
                 <td class="pe-3">
                     <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
@@ -241,7 +244,10 @@
                 const res = await fetch(url);
                 if (!res.ok) throw new Error();
                 const product = await res.json();
-                pickedProduct = { id: product.id, name: product.name };
+                pickedProduct = { id: product.id, name: product.name, quantityDecimalPlaces: product.quantityDecimalPlaces ?? 0 };
+                qtyInput.dataset.decimals = String(pickedProduct.quantityDecimalPlaces);
+                qtyInput.dataset.decimalBound = '';
+                window.DecimalFields?.bindInput?.(qtyInput);
                 btnConfirm.disabled = false;
                 errEl.classList.add('d-none');
             } catch {
@@ -257,7 +263,7 @@
                 errEl.classList.remove('d-none');
                 return;
             }
-            addRow(pickedProduct.id, pickedProduct.name, qty);
+            addRow(pickedProduct.id, pickedProduct.name, qty, pickedProduct.quantityDecimalPlaces);
             addItemModal.hide();
         });
 

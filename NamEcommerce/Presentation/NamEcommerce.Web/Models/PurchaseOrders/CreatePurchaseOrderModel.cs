@@ -53,6 +53,8 @@ public sealed class CreatePurchaseOrderItemModel
     public string? ProductDisplayName { get; set; }
     [ValidateNever]
     public string? ProductDisplayPicture { get; set; }
+    [ValidateNever]
+    public int QuantityDecimalPlaces { get; set; }
 
     [Display(Name = "Số lượng")]
     [UIHint("Quantity")]

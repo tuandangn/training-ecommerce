@@ -26,6 +26,15 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
         if (warehouse is null)
             throw new WarehouseIsNotFoundException(dto.WarehouseId);
 
+        foreach (var warehouseId in dto.Items.Select(item => item.WarehouseId).Distinct())
+        {
+            if (warehouseId == dto.WarehouseId)
+                continue;
+
+            if (await _warehouseAppService.GetWarehouseByIdAsync(warehouseId).ConfigureAwait(false) is null)
+                throw new WarehouseIsNotFoundException(warehouseId);
+        }
+
         var domainDto = new CreateDeliveryNoteDto
         {
             OrderId = dto.OrderId,
@@ -41,6 +50,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
             Items = dto.Items.Select(i => new CreateDeliveryNoteItemDto
             {
                 OrderItemId = i.OrderItemId,
+                WarehouseId = i.WarehouseId,
                 Quantity = i.Quantity
             }).ToList()
         };
@@ -89,7 +99,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
             await _deliveryNoteManager.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredDto
             {
                 DeliveryNoteId = dto.DeliveryNoteId,
-                PictureId = dto.PictureId,
+                PictureIds = dto.PictureIds,
                 ReceiverName = dto.ReceiverName,
                 Acceptance = dto.Acceptance is null
                     ? null
@@ -97,6 +107,7 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
                     {
                         AgreedCustomerCharge = dto.Acceptance.AgreedCustomerCharge,
                         AgreedCustomerChargeReason = dto.Acceptance.AgreedCustomerChargeReason,
+                        CompensateInNextDelivery = dto.Acceptance.CompensateInNextDelivery,
                         Items = dto.Acceptance.Items.Select(item => new DeliveryAcceptanceItemDto
                         {
                             DeliveryNoteItemId = item.DeliveryNoteItemId,

@@ -11,8 +11,11 @@ using NamEcommerce.Domain.Shared.Services.Outbox;
 
 namespace NamEcommerce.Application.Services.Events.DeliveryNotes;
 
-public sealed class DeliveryNoteConfirmedHandler(IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
-    IInventoryStockManager inventoryStockManager, IInventoryCostingManager inventoryCostingManager, IOutbox outbox) : INotificationHandler<DeliveryNoteConfirmed>
+public sealed class DeliveryNoteConfirmedHandler(
+    IEntityDataReader<DeliveryNote> deliveryNoteDataReader,
+    IInventoryStockManager inventoryStockManager,
+    IInventoryCostingManager inventoryCostingManager,
+    IOutbox outbox) : INotificationHandler<DeliveryNoteConfirmed>
 {
     public async Task Handle(DeliveryNoteConfirmed notification, CancellationToken cancellationToken)
     {
@@ -29,23 +32,38 @@ public sealed class DeliveryNoteConfirmedHandler(IEntityDataReader<DeliveryNote>
         if (deliveryNote.SourceType != DeliveryNoteSourceType.ToCustomer && deliveryNote.SourceType != DeliveryNoteSourceType.DirectShipToCustomer)
             return;
 
-        foreach (var item in deliveryNote.Items)
+        var dispatchGroups = deliveryNote.Items
+            .GroupBy(item => new
+            {
+                item.ProductId,
+                WarehouseId = ResolveItemWarehouseId(deliveryNote, item)
+            })
+            .Select(group => new
+            {
+                group.Key.ProductId,
+                group.Key.WarehouseId,
+                Quantity = group.Sum(item => item.Quantity)
+            })
+            .ToList();
+
+        foreach (var group in dispatchGroups)
         {
             await inventoryStockManager.DispatchStockUpToAsync(
-                item.ProductId,
-                deliveryNote.WarehouseId,
-                deliveryNote.Items
-                    .Where(i => i.ProductId == item.ProductId)
-                    .Sum(i => i.Quantity),
+                group.ProductId,
+                group.WarehouseId,
+                group.Quantity,
                 deliveryNote.Id,
                 Guid.Empty,
-                $"Xuất hàng cho phiếu xuất {deliveryNote.Code}",
+                $"Xuat hang cho phieu xuat {deliveryNote.Code}",
                 releaseReservedStock: true).ConfigureAwait(false);
+        }
 
+        foreach (var item in deliveryNote.Items)
+        {
             await inventoryCostingManager.RegisterOutboundAsync(new RegisterInventoryOutboundCostDto
             {
                 ProductId = item.ProductId,
-                WarehouseId = deliveryNote.WarehouseId,
+                WarehouseId = ResolveItemWarehouseId(deliveryNote, item),
                 Quantity = item.Quantity,
                 MovementType = InventoryCostMovementType.SaleDispatch,
                 ReferenceType = InventoryCostReferenceType.SalesOrder,
@@ -55,10 +73,12 @@ public sealed class DeliveryNoteConfirmedHandler(IEntityDataReader<DeliveryNote>
             }).ConfigureAwait(false);
         }
 
-        //dispatch to n8n
         var integrationEvent = new DeliveryNoteConfirmedIntegrationEvent(notification.DeliveryNoteId);
         await outbox.AddAsync(integrationEvent, cancellationToken).ConfigureAwait(false);
     }
+
+    private static Guid ResolveItemWarehouseId(DeliveryNote deliveryNote, DeliveryNoteItem item)
+        => item.WarehouseId == Guid.Empty ? deliveryNote.WarehouseId : item.WarehouseId;
 }
 
 public sealed class DeliveryNoteConfirmedIntegrationHandler

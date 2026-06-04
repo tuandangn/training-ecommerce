@@ -37,6 +37,8 @@ public sealed record VendorDebtsByVendorDto
     public IList<VendorPaymentDto> AdvancePayments { get; init; } = [];
     /// <summary>Lịch sử thanh toán gần nhất (tất cả loại).</summary>
     public IList<VendorPaymentDto> RecentPayments { get; init; } = [];
+    public decimal UnappliedCreditNoteBalance { get; init; }
+    public IList<VendorCreditNoteDto> UnappliedCreditNotes { get; init; } = [];
 }
 
 [Serializable]
@@ -65,6 +67,43 @@ public sealed record VendorDebtDto
     public DateTime CreatedOnUtc { get; init; }
 
     public IList<VendorPaymentDto> Payments { get; init; } = [];
+    public IList<VendorCreditNoteAllocationDto> CreditNoteAllocations { get; init; } = [];
+}
+
+[Serializable]
+public sealed record VendorCreditNoteDto
+{
+    public required Guid Id { get; init; }
+    public required string Code { get; init; }
+    public required Guid VendorId { get; init; }
+    public required string VendorName { get; init; }
+    public required Guid SourceReturnId { get; init; }
+    public required string SourceReturnCode { get; init; }
+    public Guid? SourceGoodsReceiptId { get; init; }
+    public Guid? SourcePurchaseOrderId { get; init; }
+    public decimal Amount { get; init; }
+    public decimal AppliedAmount { get; init; }
+    public decimal RemainingAmount { get; init; }
+    public CreditNoteStatus Status { get; init; }
+    public DateTime CreatedOnUtc { get; init; }
+    public IList<VendorCreditNoteAllocationDto> Allocations { get; init; } = [];
+}
+
+[Serializable]
+public sealed record VendorCreditNoteAllocationDto
+{
+    public required Guid Id { get; init; }
+    public required Guid VendorCreditNoteId { get; init; }
+    public required string VendorCreditNoteCode { get; init; }
+    public required Guid SourceReturnId { get; init; }
+    public required string SourceReturnCode { get; init; }
+    public required Guid VendorDebtId { get; init; }
+    public required string VendorDebtCode { get; init; }
+    public decimal Amount { get; init; }
+    public DateTime AppliedOnUtc { get; init; }
+    public Guid? AppliedByUserId { get; init; }
+    public DateTime? ReversedOnUtc { get; init; }
+    public string? ReverseReason { get; init; }
 }
 
 [Serializable]

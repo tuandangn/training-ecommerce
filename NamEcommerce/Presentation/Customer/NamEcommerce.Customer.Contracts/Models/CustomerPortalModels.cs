@@ -31,7 +31,15 @@ public sealed record CustomerSessionModel(
 public sealed record CustomerLoginResultModel(bool Success, string? Message, string? SessionToken, CustomerSessionModel? Session);
 
 [Serializable]
-public sealed record CustomerOtpRequestResultModel(bool Success, string? Message, Guid? ChallengeId, string? MaskedDestination, string? MockOtp);
+public sealed record CustomerOtpRequestResultModel(
+    bool Success,
+    string? Message,
+    bool RequiresOtp,
+    Guid? ChallengeId,
+    string? MaskedDestination,
+    string? MockOtp,
+    CustomerSessionModel? Session = null,
+    [property: System.Text.Json.Serialization.JsonIgnore] string? SessionToken = null);
 
 [Serializable]
 public sealed record CustomerOrderListModel(IList<CustomerOrderSummaryModel> Items);
@@ -55,6 +63,7 @@ public sealed record CustomerOrderDetailsModel(
     DateTime? ExpectedShippingDate,
     string? ShippingAddress,
     string? Note,
+    bool CanUpdateNote,
     IList<CustomerOrderItemModel> Items);
 
 [Serializable]
@@ -168,7 +177,7 @@ public sealed record CustomerDeliveryNoteItemModel(
     decimal ReturnableQuantity);
 
 [Serializable]
-public sealed record CustomerReturnRequestModel(Guid Id, Guid DeliveryNoteId, int Status, DateTime CreatedOn);
+public sealed record CustomerReturnRequestModel(Guid Id, Guid DeliveryNoteId, int Status, DateTime CreatedOn, bool CompensateInNextDelivery);
 
 [Serializable]
 public sealed record CustomerReturnableItemListModel(IList<CustomerReturnableItemModel> Items);
@@ -193,6 +202,7 @@ public record CustomerReturnRequestSummaryModel(
     string? DeliveryNoteCode,
     int Status,
     string? Reason,
+    bool CompensateInNextDelivery,
     string? AdminNote,
     DateTime CreatedOn,
     DateTime? ReviewedOn,
@@ -207,6 +217,7 @@ public sealed record CustomerReturnRequestDetailsModel(
     string? DeliveryNoteCode,
     int Status,
     string? Reason,
+    bool CompensateInNextDelivery,
     string? AdminNote,
     DateTime CreatedOn,
     DateTime? ReviewedOn,

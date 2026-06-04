@@ -23,8 +23,7 @@ public sealed class CustomerReturnRequestMapping : IEntityTypeConfiguration<Cust
         builder.HasIndex(request => new { request.CustomerId, request.CreatedOnUtc });
         builder.HasIndex(request => new { request.DeliveryNoteId, request.Status });
 
-        builder.Metadata.FindNavigation(nameof(CustomerReturnRequest.Items))?.SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(request => request.Items).WithOne().HasForeignKey(item => item.CustomerReturnRequestId).OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(request => request.Items).AutoInclude();
+        builder.Navigation(request => request.Items).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
     }
 }

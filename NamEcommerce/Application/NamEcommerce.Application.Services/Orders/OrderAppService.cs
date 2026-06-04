@@ -440,6 +440,20 @@ public sealed class OrderAppService(IOrderManager orderManager,
         return PagedDataAppDto.Create(pagedData.Select(order => order.ToDto()), pageIndex, pageSize, pagedData.PagerInfo.TotalCount);
     }
 
+    public async Task<IList<RecentSalePriceAppDto>> GetRecentSalePricesAsync(Guid productId, Guid customerId, int take = 10)
+    {
+        var domainDtos = await orderManager.GetRecentSalePricesAsync(productId, customerId, take).ConfigureAwait(false);
+
+        return domainDtos
+            .Select(d => new RecentSalePriceAppDto(
+                CustomerId: d.CustomerId,
+                CustomerName: d.CustomerName,
+                UnitPrice: d.UnitPrice,
+                OrderCode: d.OrderCode,
+                OrderDate: d.OrderDateUtc.ToLocalTime()))
+            .ToList();
+    }
+
     public async Task<CreateOrderResultAppDto> CreateOrderAsync(CreateOrderAppDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);

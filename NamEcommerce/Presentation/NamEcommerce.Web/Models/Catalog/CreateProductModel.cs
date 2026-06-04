@@ -22,6 +22,8 @@ public sealed class CreateProductModel
     public Guid? UnitMeasurementId { get; set; }
     [ValidateNever]
     public EntityOptionListModel? AvailableUnitMeasurements { get; set; }
+    [ValidateNever]
+    public Dictionary<string, int> UnitMeasurementDecimalPlacesMap { get; set; } = [];
 
     [Display(Name = "Nhà cung cấp")]
     public IList<Guid> VendorIds { get; set; } = [];
@@ -34,25 +36,27 @@ public sealed class CreateProductModel
     [Display(Name = "Thứ tự hiển thị")]
     public int DisplayOrder { get; set; }
 
-    [Display(Name = "Hình ảnh")]
-    public Base64ImageModel? ImageFile { get; set; }
+    public Guid? PictureId { get; set; }
 
-    // Tồn kho ban đầu
+    public bool HasExistingStockQuantity => ProductInventory.ProductStocks.Any(stock => 
+        stock.WarehouseId != Guid.Empty && stock.Quantity > 0 && stock.UnitCost > 0);
+
     [ValidateNever]
-    public ProductInventoryModel? ProductInventory { get; set; }
+    public ProductInventoryModel ProductInventory { get; set; } = new();
 
-    public bool HasExistingStockQuantity =>
-        ProductInventory?.ProductStocks.Any(s => s.Quantity > 0) ?? false;
-
+    [Serializable]
     public sealed class ProductInventoryModel
     {
         public List<ProductStockModel> ProductStocks { get; set; } = [];
     }
 
+    [Serializable]
     public sealed class ProductStockModel
     {
         public Guid WarehouseId { get; set; }
+        [ValidateNever]
         public string WarehouseName { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
+        public decimal UnitCost { get; set; }
     }
 }

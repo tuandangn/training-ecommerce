@@ -45,15 +45,15 @@ public record Product : AppAggregateEntity
     public DateTime? UpdatedOnUtc { get; internal set; }
 
     private readonly IList<ProductCategory> _productCategories = [];
-    public IEnumerable<ProductCategory> ProductCategories
+    public IReadOnlyCollection<ProductCategory> ProductCategories
         => _productCategories.AsReadOnly();
 
     private readonly IList<ProductVendor> _productVendors = [];
-    public IEnumerable<ProductVendor> ProductVendors
+    public IReadOnlyCollection<ProductVendor> ProductVendors
         => _productVendors.AsReadOnly();
 
     private readonly IList<ProductPicture> _productPictures = [];
-    public IEnumerable<ProductPicture> ProductPictures
+    public IReadOnlyCollection<ProductPicture> ProductPictures
         => _productPictures.AsReadOnly();
 
     #region Methods
@@ -118,6 +118,7 @@ public record Product : AppAggregateEntity
     }
 
     internal void ClearVendors() => _productVendors.Clear();
+
     internal async Task AddVendorAsync(Guid vendorId, int displayOrder, IGetByIdService<Vendor> byIdGetter)
     {
         ArgumentNullException.ThrowIfNull(byIdGetter);

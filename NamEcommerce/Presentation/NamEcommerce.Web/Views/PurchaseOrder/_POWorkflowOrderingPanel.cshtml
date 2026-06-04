@@ -1,0 +1,326 @@
+@using NamEcommerce.Domain.Shared.Enums.PurchaseOrders
+@model PurchaseOrderDetailsModel
+@{
+    var poStatus = (PurchaseOrderStatus)Model.Info.Status;
+    var totalShipping = Model.Info.ShippingAmount + Model.Info.AccumulatedShippingAmount;
+    var totalTax = Model.Info.TaxAmount + Model.Info.AccumulatedTaxAmount;
+    var subTotal = Model.Info.TotalAmount - totalShipping - totalTax;
+    var canSplit = Model.Info.CanAddItems && Model.Info.Items.Any(i => i.QuantityOrdered - i.QuantityReceived > 0);
+}
+
+<section id="po-stage-ordering" class="workflow-panel @(Model.Workflow.ActiveStage == PurchaseOrderDetailsModel.WorkflowStage.Ordering ? "active" : "")">
+    <div class="content-card">
+        <div class="content-card-header flex-wrap gap-2">
+            <div>
+                <h5>Đặt hàng</h5>
+                <div class="text-muted small">@Model.Info.Items.Count mặt hàng · @Model.Info.TotalAmount.DisplayCurrencyWithSymbol()</div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                @if (Model.Info.Status == (int)PurchaseOrderStatus.Draft)
+                {
+                    <form asp-action="SubmitsPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-primary" data-testid="po-submit-for-approval">
+                            <i class="bi bi-send me-1"></i>Gửi đơn
+                        </button>
+                    </form>
+                }
+                else if (Model.Info.Status == (int)PurchaseOrderStatus.Submitted)
+                {
+                    <form asp-action="ChangeStatus" asp-route-id="@Model.Info.Id" asp-route-status="@((int)PurchaseOrderStatus.Approved)" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-info text-white" data-testid="po-approve">
+                            <i class="bi bi-check-all me-1"></i>Duyệt đơn
+                        </button>
+                    </form>
+                }
+                @if (Model.Info.Status != (int)PurchaseOrderStatus.Completed && Model.Info.Status != (int)PurchaseOrderStatus.Cancelled)
+                {
+                    <form asp-action="CancelPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-x-circle me-1"></i><span class="d-none d-md-inline">Hủy đơn</span>
+                        </button>
+                    </form>
+                }
+                @if (Model.CanModifyInfo)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            data-bs-toggle="modal" data-bs-target="#poEditInfoModal">
+                        <i class="bi bi-pencil me-1"></i><span class="d-none d-md-inline">Sửa thông tin</span>
+                    </button>
+                }
+            </div>
+        </div>
+
+        <div class="content-card-body">
+            <div class="order-workflow-info-grid mb-3">
+                <div>
+                    <div class="workflow-info-label">Nhà cung cấp</div>
+                    <div class="fw-bold text-dark">@(Model.Info.VendorName ?? "—")</div>
+                    @if (!string.IsNullOrWhiteSpace(Model.Info.VendorPhone))
+                    {
+                        <a href="tel:@Model.Info.VendorPhone" class="text-decoration-none small text-muted d-block mt-1">
+                            <i class="bi bi-phone me-1"></i>@Model.Info.VendorPhone
+                        </a>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.Info.VendorAddress))
+                    {
+                        <div class="small text-muted">@Model.Info.VendorAddress</div>
+                    }
+                </div>
+                <div>
+                    <div class="workflow-info-label">Thông tin đơn</div>
+                    <div class="fw-bold text-dark">@Model.Info.PlacedOn.ToString(ViewConstants.DefaultDateFormat)</div>
+                    @if (Model.Info.ExpectedDeliveryDate.HasValue)
+                    {
+                        <div class="small text-muted mt-1">
+                            <i class="bi bi-calendar-check me-1"></i>Dự kiến giao: @Model.Info.ExpectedDeliveryDate.Value.ToString(ViewConstants.DefaultDateFormat)
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.Info.WarehouseName))
+                    {
+                        <div class="small text-muted"><i class="bi bi-building me-1"></i>@Model.Info.WarehouseName</div>
+                    }
+                    else
+                    {
+                        <div class="small text-muted fst-italic">Chưa chọn kho</div>
+                    }
+                </div>
+                <div>
+                    <div class="workflow-info-label">Ghi chú</div>
+                    @if (!string.IsNullOrWhiteSpace(Model.Info.Note))
+                    {
+                        <div class="text-dark">@Model.Info.Note</div>
+                    }
+                    else
+                    {
+                        <div class="text-muted small fst-italic">Không có ghi chú</div>
+                    }
+                    @if (totalShipping > 0 || totalTax > 0)
+                    {
+                        <div class="small mt-2">
+                            @if (totalShipping > 0)
+                            {
+                                <span class="me-2">Vận chuyển: <strong>@totalShipping.DisplayCurrencyWithSymbol()</strong></span>
+                            }
+                            @if (totalTax > 0)
+                            {
+                                <span>Thuế: <strong>@totalTax.DisplayCurrencyWithSymbol()</strong></span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table data-table mb-0 caption-top">
+                    @if (Model.Info.CanAddItems)
+                    {
+                        <caption>
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    @if (poStatus != PurchaseOrderStatus.Cancelled)
+                                    {
+                                        <form method="post" asp-action="Copy" asp-route-id="@Model.Info.Id" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-light border">
+                                                <i class="bi bi-copy me-1"></i>Sao chép
+                                            </button>
+                                        </form>
+                                    }
+                                    @if (canSplit)
+                                    {
+                                        <button type="button" class="btn btn-sm btn-light border" data-bs-toggle="modal" data-bs-target="#splitPOModal">
+                                            <i class="bi bi-scissors me-1"></i>Chia đơn
+                                        </button>
+                                    }
+                                </div>
+                                <button type="button" class="btn btn-sm btn-link text-dark text-decoration-none border-bottom-0" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                                    <i class="bi bi-plus-lg me-1"></i>
+                                    <span class="d-none d-md-inline">Thêm hàng hóa</span>
+                                </button>
+                            </div>
+                        </caption>
+                    }
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Hàng hóa</th>
+                            <th class="text-end">Số lượng đặt</th>
+                            <th class="text-end">Đã nhận</th>
+                            <th class="text-end">Đơn giá</th>
+                            <th class="text-end d-none d-md-table-cell pe-3">Thành tiền</th>
+                            @if (Model.Info.CanAddItems)
+                            {
+                                <th class="text-end" style="width: 48px"></th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody id="itemsTableBody">
+                        @if (Model.Info.Items.Count > 0)
+                        {
+                            @for (var i = 0; i < Model.Info.Items.Count; i++)
+                            {
+                                var item = Model.Info.Items[i];
+                                <tr id="row-@i" data-item-id="@item.Id">
+                                    <td class="ps-3">
+                                        <div class="d-flex align-items-center gap-2">
+                                            @if (!string.IsNullOrEmpty(item.ProductPicture))
+                                            {
+                                                <img src="@item.ProductPicture" class="rounded d-none d-lg-block"
+                                                     style="width:40px;height:40px;object-fit:cover;" alt="@item.ProductName" />
+                                            }
+                                            else
+                                            {
+                                                <div class="d-flex align-items-center justify-content-center rounded bg-light d-none d-lg-flex"
+                                                     style="width:40px;height:40px;flex-shrink:0;">
+                                                    <i class="bi bi-image text-muted"></i>
+                                                </div>
+                                            }
+                                            <span class="fw-medium product-name">@item.ProductName</span>
+                                        </div>
+                                        <input type="hidden" class="product-id" value="@item.ProductId" />
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="quantity-text">@item.QuantityOrdered.DisplayQuantity()</span>
+                                        <input type="hidden" class="row-qty" value="@item.QuantityOrdered" />
+                                    </td>
+                                    <td class="text-end">
+                                        @if (item.QuantityReceived >= item.QuantityOrdered)
+                                        {
+                                            <span class="status-badge success py-1 px-2">
+                                                <i class="bi bi-check-circle-fill"></i> @item.QuantityReceived.DisplayQuantity()
+                                            </span>
+                                        }
+                                        else if (item.QuantityReceived > 0)
+                                        {
+                                            <span class="status-badge warning py-1 px-2">@item.QuantityReceived.DisplayQuantity()</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted fst-italic small">Chưa nhận</span>
+                                        }
+                                    </td>
+                                    <td class="text-end text-muted">
+                                        <span class="unit-price-text text-nowrap">@item.UnitCost.DisplayCurrency()</span>
+                                    </td>
+                                    <td class="text-end fw-600 text-primary d-none d-md-table-cell pe-3">
+                                        <span class="total-price-text">@item.TotalCost.DisplayCurrency()</span>
+                                    </td>
+                                    @if (Model.Info.CanAddItems)
+                                    {
+                                        <td class="text-end">
+                                            <button class="btn-table-action" type="button" data-bs-toggle="dropdown">
+                                                <i class="bi bi-three-dots-vertical"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                                <li>
+                                                    <button class="dropdown-item btnEditItem"
+                                                            data-id="@item.Id"
+                                                            data-purchaseorder="@Model.Info.Id"
+                                                            data-name="@item.ProductName"
+                                                            data-quantity="@item.QuantityOrdered"
+                                                            data-unitcost="@item.UnitCost"
+                                                            data-note="@item.Note"
+                                                            data-decimalplaces="@item.QuantityDecimalPlaces">
+                                                        <i class="bi bi-pencil-square me-1"></i>Sửa dòng hàng
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button class="dropdown-item btnRemoveItem"
+                                                            data-id="@item.Id"
+                                                            disabled="@(Model.Info.Items.Count <= 1)"
+                                                            data-purchaseorder="@Model.Info.Id"
+                                                            data-name="@item.ProductName">
+                                                        <i class="bi bi-trash me-1 text-danger"></i>Xóa bỏ
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="@(Model.Info.CanAddItems ? 6 : 5)">
+                                    <div class="py-4 text-center text-muted">
+                                        <i class="bi bi-box-seam me-1"></i> Chưa có sản phẩm nào.
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="@(Model.Info.Items.Count > 0 ? "" : "d-none") order-summary" id="tableFooter">
+                <div class="order-summary-row">
+                    <span class="label">Tạm tính</span>
+                    <span class="value" id="subTotal">@subTotal.DisplayCurrencyWithSymbol()</span>
+                </div>
+                @if (totalShipping > 0)
+                {
+                    <div class="order-summary-row">
+                        <span class="label">
+                            Phí vận chuyển
+                            @if (Model.Info.AccumulatedShippingAmount > 0 && Model.Info.ShippingAmount > 0)
+                            {
+                                <span class="small text-muted">(@Model.Info.ShippingAmount.DisplayCurrencyWithSymbol() + nhận hàng @Model.Info.AccumulatedShippingAmount.DisplayCurrencyWithSymbol())</span>
+                            }
+                            else if (Model.Info.AccumulatedShippingAmount > 0)
+                            {
+                                <span class="small text-muted">(từ nhận hàng)</span>
+                            }
+                        </span>
+                        <span class="value text-muted">@totalShipping.DisplayCurrencyWithSymbol()</span>
+                    </div>
+                }
+                @if (totalTax > 0)
+                {
+                    <div class="order-summary-row">
+                        <span class="label">
+                            Thuế VAT
+                            @if (Model.Info.AccumulatedTaxAmount > 0 && Model.Info.TaxAmount > 0)
+                            {
+                                <span class="small text-muted">(@Model.Info.TaxAmount.DisplayCurrencyWithSymbol() + nhận hàng @Model.Info.AccumulatedTaxAmount.DisplayCurrencyWithSymbol())</span>
+                            }
+                            else if (Model.Info.AccumulatedTaxAmount > 0)
+                            {
+                                <span class="small text-muted">(từ nhận hàng)</span>
+                            }
+                        </span>
+                        <span class="value text-muted">@totalTax.DisplayCurrencyWithSymbol()</span>
+                    </div>
+                }
+                <div class="order-summary-row total">
+                    <span class="label">Tổng cộng</span>
+                    <span class="value" id="grandTotal">@Model.Info.TotalAmount.DisplayCurrencyWithSymbol()</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@if (Model.CanModifyInfo && Model.ModifyInfo != null)
+{
+    <div class="modal fade" id="poEditInfoModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <form asp-action="Edit" asp-controller="PurchaseOrder">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold">
+                            <i class="bi bi-pencil-square me-2 text-primary"></i>Chỉnh sửa thông tin đơn
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body pt-3">
+                        @await Html.PartialAsync("Details.InfoModify", Model.ModifyInfo)
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-floppy me-1"></i>Lưu thay đổi
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}

@@ -19,6 +19,9 @@ public sealed class CreatePurchaseOrderHandler : IRequestHandler<CreatePurchaseO
 
     public async Task<CreatePurchaseOrderResultModel> Handle(CreatePurchaseOrderCommand request, CancellationToken cancellationToken)
     {
+        if (request.Items?.Any(i => i.ProductId.HasValue && i.QuantityDecimalPlaces == 0 && i.Quantity != Math.Floor(i.Quantity)) == true)
+            return new CreatePurchaseOrderResultModel { Success = false, ErrorMessage = "Error.QuantityMustBeInteger" };
+
         var result = await _purchaseOrderAppService.CreatePurchaseOrderAsync(new CreatePurchaseOrderAppDto
         {
             PlacedOnUtc = DateTimeHelper.ToUniversalTime(request.PlacedOn),

@@ -35,4 +35,5 @@ public sealed record ReturnableItemAppDto
     public required decimal AlreadyReturnedQty { get; init; }
     public required decimal UnitPrice { get; init; }
     public Guid? SourceItemId { get; init; }
+    public int QuantityDecimalPlaces { get; init; }
 }

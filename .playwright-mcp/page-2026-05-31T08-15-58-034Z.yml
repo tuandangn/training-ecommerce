@@ -1,0 +1,134 @@
+- generic [active] [ref=e1]:
+  - link "Bỏ qua menu" [ref=e2] [cursor=pointer]:
+    - /url: "#mainContent"
+  - generic [ref=e3]:
+    - complementary "Điều hướng chính" [ref=e4]:
+      - link " VLXD Tuấn Khôi Quản lý bán hàng" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: 
+        - generic [ref=e8]:
+          - generic [ref=e9]: VLXD Tuấn Khôi
+          - generic [ref=e10]: Quản lý bán hàng
+      - navigation "Menu chính" [ref=e11]:
+        - list [ref=e12]:
+          - listitem [ref=e13]:
+            - link " Dashboard" [ref=e14] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e15]: 
+              - text: Dashboard
+          - listitem [ref=e16]:
+            - link " Bán hàng" [ref=e17] [cursor=pointer]:
+              - /url: "#collapseSales"
+              - generic [ref=e18]: 
+              - text: Bán hàng
+          - listitem [ref=e19]:
+            - link " Nhập hàng" [ref=e20] [cursor=pointer]:
+              - /url: "#collapsePurchases"
+              - generic [ref=e21]: 
+              - text: Nhập hàng
+          - listitem [ref=e22]:
+            - link " Tồn kho" [expanded] [ref=e23] [cursor=pointer]:
+              - /url: "#collapseInventory"
+              - generic [ref=e24]: 
+              - text: Tồn kho
+            - list [ref=e26]:
+              - listitem [ref=e27]:
+                - link "Tồn kho" [ref=e28] [cursor=pointer]:
+                  - /url: /Inventory/StockList
+              - listitem [ref=e29]:
+                - link "Xuất kho" [ref=e30] [cursor=pointer]:
+                  - /url: /DeliveryNote/List
+              - listitem [ref=e31]:
+                - link "Nhập kho" [ref=e32] [cursor=pointer]:
+                  - /url: /GoodsReceipt/List
+              - listitem [ref=e33]:
+                - link "Kiểm kê" [ref=e34] [cursor=pointer]:
+                  - /url: /StockAdjustment/List
+          - listitem [ref=e35]:
+            - link " Công nợ" [ref=e36] [cursor=pointer]:
+              - /url: "#collapseDebt"
+              - generic [ref=e37]: 
+              - text: Công nợ
+          - listitem [ref=e38]:
+            - link " Hàng hóa" [ref=e39] [cursor=pointer]:
+              - /url: "#collapseCatalog"
+              - generic [ref=e40]: 
+              - text: Hàng hóa
+          - listitem [ref=e41]:
+            - link " Cổng khách hàng" [ref=e42] [cursor=pointer]:
+              - /url: "#collapseCustomerPortal"
+              - generic [ref=e43]: 
+              - text: Cổng khách hàng
+    - generic [ref=e44]:
+      - banner [ref=e45]:
+        - text: 
+        - heading "Phiếu xuất kho" [level=1] [ref=e47]
+        - button "TĐ" [ref=e50] [cursor=pointer]:
+          - generic [ref=e51]: TĐ
+      - main [ref=e53]:
+        - generic [ref=e55]:
+          - heading "Phiếu xuất kho" [level=1] [ref=e56]
+          - paragraph [ref=e57]: Quản lý phiếu xuất kho và giao hàng
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - generic [ref=e61]:
+              - generic [ref=e63]:
+                - generic [ref=e65]: 
+                - textbox "Tìm theo mã phiếu, khách hàng..." [ref=e66]
+              - button " Lọc" [ref=e67] [cursor=pointer]:
+                - generic [ref=e68]: 
+                - text: Lọc
+            - group "Chọn kiểu hiển thị" [ref=e69]:
+              - button "Dạng danh sách" [pressed] [ref=e70] [cursor=pointer]:
+                - generic [ref=e71]: 
+              - button "Dạng lưới" [ref=e72] [cursor=pointer]:
+                - generic [ref=e73]: 
+          - table [ref=e76]:
+            - rowgroup [ref=e77]:
+              - row "Mã PXK Đơn hàng  Khách hàng  Địa chỉ giao Trạng thái  Ngày tạo" [ref=e78]:
+                - columnheader "Mã PXK" [ref=e79]
+                - columnheader "Đơn hàng" [ref=e80]
+                - columnheader " Khách hàng" [ref=e81]:
+                  - generic [ref=e82]: 
+                  - text: Khách hàng
+                - columnheader " Địa chỉ giao" [ref=e83]:
+                  - generic [ref=e84]: 
+                  - text: Địa chỉ giao
+                - columnheader "Trạng thái" [ref=e85]
+                - columnheader " Ngày tạo" [ref=e86]:
+                  - generic [ref=e87]: 
+                  - text: Ngày tạo
+                - columnheader [ref=e88]
+            - rowgroup [ref=e89]:
+              - row "PX-2605-001 DB-2605-002 Hùng Cường 0972791277 Chùa Phước Lập Xã Tân Phú Tỉnh Đồng Nai  Đã giao 31/05 14:15 31/05/2026 14:14 " [ref=e90]:
+                - cell "PX-2605-001" [ref=e91]:
+                  - link "PX-2605-001" [ref=e92] [cursor=pointer]:
+                    - /url: /DeliveryNote/Details/9a771b5f-4240-4eba-91a6-6ff4db019554
+                - cell "DB-2605-002" [ref=e93]:
+                  - link "DB-2605-002" [ref=e94] [cursor=pointer]:
+                    - /url: /Order/Details/4c0b8ce8-98a8-44e9-8244-0c6c66640060
+                - cell "Hùng Cường 0972791277" [ref=e95]:
+                  - generic [ref=e96]: Hùng Cường
+                  - link "0972791277" [ref=e97] [cursor=pointer]:
+                    - /url: tel:0972791277
+                  - text: 
+                - cell "Chùa Phước Lập Xã Tân Phú Tỉnh Đồng Nai" [ref=e98]:
+                  - generic "Chùa Phước Lập Xã Tân Phú Tỉnh Đồng Nai" [ref=e99]
+                - cell " Đã giao 31/05 14:15" [ref=e100]:
+                  - generic [ref=e101]:
+                    - generic [ref=e102]: 
+                    - text: Đã giao
+                  - generic [ref=e103]: 31/05 14:15
+                - cell "31/05/2026 14:14" [ref=e104]
+                - cell "" [ref=e105]:
+                  - generic [ref=e106]:
+                    - button "" [ref=e107] [cursor=pointer]:
+                      - generic [ref=e108]: 
+                    - text:  
+          - text:   
+          - generic [ref=e111]:
+            - text: Tổng
+            - strong [ref=e112]: "1"
+            - text: bản ghi
+      - contentinfo [ref=e113]:
+        - generic [ref=e114]: © 2026 VLXD Tuấn Khôi — Hệ thống quản lý bán hàng

@@ -3,12 +3,15 @@ import { apiFetch } from "../api/client";
 import type { ContactInfo, OtpRequestResult, PublicDeliveryNote } from "../api/types";
 import { navigate } from "../app/routes";
 import { deliveryNoteStatusText, shortDate } from "../app/format";
+import { useAuth } from "../auth/useAuth";
+import { getCurrentCustomerLocation } from "../app/geolocation";
 
 export function PublicDeliveryPage({ token }: { token: string }) {
   const [note, setNote] = useState<PublicDeliveryNote | null>(null);
   const [error, setError] = useState("");
   const [contact, setContact] = useState<ContactInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const { refresh } = useAuth();
 
   useEffect(() => {
     setLoading(true);
@@ -27,8 +30,15 @@ export function PublicDeliveryPage({ token }: { token: string }) {
 
     const result = await apiFetch<OtpRequestResult>("/api/auth/otp/request", {
       method: "POST",
-      body: JSON.stringify({ deliveryToken: token }),
+      body: JSON.stringify({ deliveryToken: token, location: await getCurrentCustomerLocation() }),
     });
+
+    if (result.success && result.requiresOtp === false) {
+      await refresh();
+      navigate(`/delivery-notes/${note.id}`);
+      return;
+    }
+
     if (result.success && result.challengeId) {
       const query = new URLSearchParams({
         challengeId: result.challengeId,

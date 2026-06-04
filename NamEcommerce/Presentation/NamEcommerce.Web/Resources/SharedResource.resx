@@ -132,6 +132,9 @@
   <data name="Error.NotMatch" xml:space="preserve">
     <value>{0} does not match.</value>
   </data>
+  <data name="Error.QuantityMustBeInteger" xml:space="preserve">
+    <value>Quantity must be a whole number for this unit of measure.</value>
+  </data>
   <data name="Error.QuantityMustBePositive" xml:space="preserve">
     <value>Quantity must be greater than 0.</value>
   </data>
@@ -627,6 +630,12 @@
   <data name="Error.ShippingAddressRequired" xml:space="preserve">
     <value>Shipping address is required.</value>
   </data>
+  <data name="Error.DirectShipContactPhoneRequired" xml:space="preserve">
+    <value>Direct-ship contact phone is required.</value>
+  </data>
+  <data name="Error.DirectShipAddressRequired" xml:space="preserve">
+    <value>Direct-ship address is required.</value>
+  </data>
   <data name="Error.DeliveryNoteItemsRequired" xml:space="preserve">
     <value>At least one item is required for the delivery note.</value>
   </data>
@@ -899,5 +908,44 @@
   </data>
   <data name="Error.WarehouseIsNotSuitableException" xml:space="preserve">
     <value>Warehouse is not suitable.</value>
+  </data>
+  <data name="Error.DirectShipAllocationNoRemainingQuantity" xml:space="preserve">
+    <value>The allocation has already been fully received and cannot be marked as direct ship.</value>
+  </data>
+  <data name="Error.UnexpectedError" xml:space="preserve">
+    <value>An unexpected error occurred. Please try again.</value>
+  </data>
+  <data name="Error.Network" xml:space="preserve">
+    <value>Network error. Please try again.</value>
+  </data>
+  <data name="Common.Processing" xml:space="preserve">
+    <value>Processing...</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.Action" xml:space="preserve">
+    <value>Mark as direct ship</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.Title" xml:space="preserve">
+    <value>Mark allocation as direct ship</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.HelpText" xml:space="preserve">
+    <value>The remaining quantity of this allocation will be shipped directly when goods are received.</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.Address" xml:space="preserve">
+    <value>Shipping address</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.ContactName" xml:space="preserve">
+    <value>Receiver</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.ContactPhone" xml:space="preserve">
+    <value>Phone</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.Submit" xml:space="preserve">
+    <value>Confirm direct ship</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.OrderPrefix" xml:space="preserve">
+    <value>Sales order</value>
+  </data>
+  <data name="PurchaseOrder.MarkDirectShip.CustomerPrefix" xml:space="preserve">
+    <value>Customer</value>
   </data>
 </root>

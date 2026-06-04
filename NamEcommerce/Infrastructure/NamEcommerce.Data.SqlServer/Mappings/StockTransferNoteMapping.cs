@@ -1,5 +1,4 @@
 using NamEcommerce.Domain.Entities.StockTransfer;
-using static NamEcommerce.Data.SqlServer.NamEcommerceEfDataDefaults;
 
 namespace NamEcommerce.Data.SqlServer.Mappings;
 
@@ -28,13 +27,11 @@ public sealed class StockTransferNoteMapping : IEntityTypeConfiguration<StockTra
         builder.HasIndex(n => new { n.FromWarehouseId, n.Status });
         builder.HasIndex(n => n.CreatedOnUtc);
 
-        builder.Metadata.FindNavigation(nameof(StockTransferNote.Items))
-            ?.SetPropertyAccessMode(PropertyAccessMode.Field);
         builder.HasMany(n => n.Items)
             .WithOne()
             .HasForeignKey(i => i.NoteId)
             .OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(n => n.Items).AutoInclude();
+        builder.Navigation(n => n.Items).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
     }
 }
 

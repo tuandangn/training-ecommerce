@@ -22,6 +22,7 @@ public sealed class InventoryAppService : IInventoryAppService
     private readonly IEntityDataReader<Order> _orderReader;
     private readonly IEntityDataReader<Warehouse> _warehouseReader;
     private readonly IEntityDataReader<InventoryCostLedgerEntry> _costLedgerReader;
+    private readonly IEntityDataReader<StockMovementLog> _stockMovementReader;
     private readonly IInventoryCostingManager _inventoryCostingManager;
 
     public InventoryAppService(
@@ -31,6 +32,7 @@ public sealed class InventoryAppService : IInventoryAppService
         IEntityDataReader<Order> orderReader,
         IEntityDataReader<Warehouse> warehouseReader,
         IEntityDataReader<InventoryCostLedgerEntry> costLedgerReader,
+        IEntityDataReader<StockMovementLog> stockMovementReader,
         IInventoryCostingManager inventoryCostingManager)
     {
         _stockManager = stockManager;
@@ -39,6 +41,7 @@ public sealed class InventoryAppService : IInventoryAppService
         _orderReader = orderReader;
         _warehouseReader = warehouseReader;
         _costLedgerReader = costLedgerReader;
+        _stockMovementReader = stockMovementReader;
         _inventoryCostingManager = inventoryCostingManager;
     }
 
@@ -339,6 +342,26 @@ public sealed class InventoryAppService : IInventoryAppService
             .ToDictionary(g => g.Key, g => (IReadOnlyList<InventoryCostHistoryAppDto>)g.Take(take).ToList());
     }
 
+    public async Task<string?> GetReturnWarehouseNameForDeliveryNoteAsync(Guid deliveryNoteId, Guid deliveryNoteWarehouseId)
+    {
+        var returnWarehouseId = _stockMovementReader.DataSource
+            .Where(log => log.ReferenceId == deliveryNoteId
+                          && log.ReferenceType == StockReferenceType.StockTransfer
+                          && log.WarehouseId != deliveryNoteWarehouseId)
+            .Select(log => log.WarehouseId)
+            .FirstOrDefault();
+
+        if (returnWarehouseId == default)
+            return null;
+
+        var name = _warehouseReader.DataSource
+            .Where(w => w.Id == returnWarehouseId)
+            .Select(w => w.Name)
+            .FirstOrDefault();
+
+        return name.Value;
+    }
+
     private IReadOnlyList<InventoryCostHistoryAppDto> MapCostHistory(IReadOnlyCollection<InventoryCostLedgerEntry> entries)
     {
         if (entries.Count == 0)
@@ -359,7 +382,7 @@ public sealed class InventoryAppService : IInventoryAppService
             ProductId = x.ProductId,
             ProductName = productMap.GetValueOrDefault(x.ProductId) ?? string.Empty,
             WarehouseId = x.WarehouseId,
-            WarehouseName = warehouseMap.GetValueOrDefault(x.WarehouseId) ?? string.Empty,
+            WarehouseName = warehouseMap.GetValueOrDefault(x.WarehouseId).Value ?? string.Empty,
             OccurredAtUtc = x.OccurredAtUtc,
             SequenceNumber = x.SequenceNumber,
             MovementType = (int)x.MovementType,
