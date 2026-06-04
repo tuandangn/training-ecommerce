@@ -24,6 +24,7 @@ public sealed class ProductModelFactory : IProductModelFactory
     public async Task<CreateProductModel> PrepareCreateProductModel(CreateProductModel? oldModel = null)
     {
         var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
+        var unitMeasurementList = await _mediator.Send(new GetUnitMeasurementListQuery { Keywords = null, PageIndex = 0, PageSize = int.MaxValue }).ConfigureAwait(false);
         var unitMeasurementOptions = await _mediator.Send(new GetUnitMeasurementOptionListQuery()).ConfigureAwait(false);
         var vendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
         var warehouseOptions = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
@@ -31,6 +32,8 @@ public sealed class ProductModelFactory : IProductModelFactory
         var model = oldModel ?? new CreateProductModel { DisplayOrder = 1 };
         model.AvailableCategories = categoryOptions;
         model.AvailableUnitMeasurements = unitMeasurementOptions;
+        model.UnitMeasurementDecimalPlacesMap = unitMeasurementList.Data
+            .ToDictionary(u => u.Id.ToString(), u => u.DecimalPlaces);
         model.AvailableVendors = vendorOptions;
         if (model.ProductInventory.ProductStocks.Count == 0)
         {
@@ -54,7 +57,9 @@ public sealed class ProductModelFactory : IProductModelFactory
             return null;
 
         var categoryOptions = await _mediator.Send(new GetCategoryOptionListQuery()).ConfigureAwait(false);
+        var unitMeasurementList2 = await _mediator.Send(new GetUnitMeasurementListQuery { Keywords = null, PageIndex = 0, PageSize = int.MaxValue }).ConfigureAwait(false);
         var unitMeasurementOptions = await _mediator.Send(new GetUnitMeasurementOptionListQuery()).ConfigureAwait(false);
+        var unitDecimalPlacesMap = unitMeasurementList2.Data.ToDictionary(u => u.Id.ToString(), u => u.DecimalPlaces);
         var vendorOptions = await _mediator.Send(new GetVendorOptionListQuery()).ConfigureAwait(false);
         var model = oldModel ?? new EditProductModel
         {
@@ -65,6 +70,7 @@ public sealed class ProductModelFactory : IProductModelFactory
             AvailableCategories = categoryOptions,
             UnitMeasurementId = product.UnitMeasurementId,
             AvailableUnitMeasurements = unitMeasurementOptions,
+            UnitMeasurementDecimalPlacesMap = unitDecimalPlacesMap,
             VendorIds = product.VendorIds,
             AvailableVendors = vendorOptions,
             DisplayOrder = product.DisplayOrder,
@@ -76,6 +82,7 @@ public sealed class ProductModelFactory : IProductModelFactory
         {
             model.AvailableCategories = categoryOptions;
             model.AvailableUnitMeasurements = unitMeasurementOptions;
+            model.UnitMeasurementDecimalPlacesMap = unitDecimalPlacesMap;
             model.AvailableVendors = vendorOptions;
         }
 

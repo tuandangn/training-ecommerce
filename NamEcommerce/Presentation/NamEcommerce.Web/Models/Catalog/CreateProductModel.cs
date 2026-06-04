@@ -22,6 +22,8 @@ public sealed class CreateProductModel
     public Guid? UnitMeasurementId { get; set; }
     [ValidateNever]
     public EntityOptionListModel? AvailableUnitMeasurements { get; set; }
+    [ValidateNever]
+    public Dictionary<string, int> UnitMeasurementDecimalPlacesMap { get; set; } = [];
 
     [Display(Name = "Nhà cung cấp")]
     public IList<Guid> VendorIds { get; set; } = [];
