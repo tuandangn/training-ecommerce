@@ -8,6 +8,7 @@
 
     var hasOutstanding = Model.TotalRemainingAmount > 0;
     var hasAdvance     = Model.AdvanceBalance > 0;
+    var hasCreditNote  = Model.UnappliedCreditNoteBalance > 0;
     var paidPct = Model.TotalDebtAmount > 0
         ? (Model.TotalPaidAmount / Model.TotalDebtAmount * 100m)
         : 0m;
@@ -349,6 +350,14 @@
                 <span class="chip-value">@Model.AdvanceBalance.ToString(ViewConstants.CurrencyDisplayFormat)</span>
             </span>
         }
+        @if (hasCreditNote)
+        {
+            <span class="chip is-advance">
+                <i class="bi bi-arrow-return-left" aria-hidden="true"></i>
+                <span class="chip-label">Trả hàng chưa cấn:</span>
+                <span class="chip-value">@Model.UnappliedCreditNoteBalance.ToString(ViewConstants.CurrencyDisplayFormat)</span>
+            </span>
+        }
     </div>
 </section>
 
@@ -397,6 +406,36 @@
 }
 
 @* ── Danh sách phiếu công nợ ──────────────────────────── *@
+@if (Model.UnappliedCreditNotes.Any())
+{
+    <section class="advance-card" aria-label="Chứng từ điều chỉnh từ trả hàng chưa cấn trừ">
+        <div class="icon"><i class="bi bi-arrow-return-left" aria-hidden="true"></i></div>
+        <div class="flex-grow-1">
+            <div class="fw-semibold">
+                Có @Model.UnappliedCreditNoteBalance.ToString(ViewConstants.CurrencyDisplayFormat) từ trả hàng NCC chưa cấn trừ
+            </div>
+            <div class="advance-list">
+                @foreach (var credit in Model.UnappliedCreditNotes)
+                {
+                    <div class="advance-item">
+                        <div class="d-flex align-items-center gap-2 text-muted">
+                            <a asp-controller="VendorReturn" asp-action="Details" asp-route-id="@credit.SourceReturnId"
+                               class="text-decoration-none">@credit.SourceReturnCode</a>
+                            <span class="text-muted">·</span>
+                            <span class="font-monospace">@credit.Code</span>
+                            <span class="text-muted">·</span>
+                            <span>@credit.CreatedOn.ToString(ViewConstants.DefaultDateFormat)</span>
+                        </div>
+                        <div class="fw-bold text-warning">
+                            @credit.RemainingAmount.ToString(ViewConstants.CurrencyDisplayFormat)
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+}
+
 <section class="debt-list-section">
     <div class="section-title">
         <h6>Phiếu công nợ</h6>
@@ -507,6 +546,25 @@
                                             <i class="bi bi-printer" aria-hidden="true"></i>
                                         </a>
                                     </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    @if (debt.CreditNoteAllocations.Any())
+                    {
+                        <div class="payment-history">
+                            @foreach (var allocation in debt.CreditNoteAllocations)
+                            {
+                                var reversed = allocation.ReversedOn.HasValue;
+                                <div class="pmt-row @(reversed ? "text-muted" : "")">
+                                    <div class="pmt-meta">
+                                        <i class="bi bi-arrow-return-left" aria-hidden="true"></i>
+                                        <span>@(reversed ? "Đã đảo cấn trừ" : "Cấn trừ") từ trả hàng</span>
+                                        <a asp-controller="VendorReturn" asp-action="Details" asp-route-id="@allocation.SourceReturnId"
+                                           class="text-decoration-none">@allocation.SourceReturnCode</a>
+                                        <span class="font-monospace">@allocation.CreditNoteCode</span>
+                                    </div>
+                                    <span class="pmt-amt">−@allocation.Amount.ToString(ViewConstants.CurrencyDisplayFormat)</span>
                                 </div>
                             }
                         </div>

@@ -96,7 +96,9 @@ public sealed class CustomerDebtAppService(ICustomerDebtManager debtManager) : I
             DepositBalance = result.DepositBalance,
             Debts = result.Debts.Select(d => d.ToDto()).ToList(),
             Deposits = result.Deposits.Select(p => p.ToDto()).ToList(),
-            RecentPayments = result.RecentPayments.Select(p => p.ToDto()).ToList()
+            RecentPayments = result.RecentPayments.Select(p => p.ToDto()).ToList(),
+            UnappliedCreditNoteBalance = result.UnappliedCreditNoteBalance,
+            UnappliedCreditNotes = result.UnappliedCreditNotes.Select(c => c.ToDto()).ToList()
         };
     }
 

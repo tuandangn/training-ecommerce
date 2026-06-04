@@ -476,16 +476,12 @@ public sealed class CustomerReturnManager(
 
         if (netRefundAmount <= 0) return;
 
-        var (overRefundAmount, debtId) = await customerDebtManager.ApplyReturnFromCustomerReturnAsync(
+        await customerDebtManager.ApplyCreditNoteFromCustomerReturnAsync(
             customerReturn.CustomerId,
-            returnId,
+            customerReturn.Id,
+            customerReturn.Code,
+            customerReturn.DeliveryNoteId == Guid.Empty ? null : customerReturn.DeliveryNoteId,
             netRefundAmount).ConfigureAwait(false);
-
-        if (overRefundAmount > 0 && debtId.HasValue)
-        {
-            customerReturn.MarkOverRefunded(overRefundAmount, debtId.Value);
-            await customerReturnRepository.UpdateAsync(customerReturn).ConfigureAwait(false);
-        }
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────

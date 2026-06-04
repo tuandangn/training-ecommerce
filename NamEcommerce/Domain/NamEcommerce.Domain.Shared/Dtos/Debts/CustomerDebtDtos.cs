@@ -30,6 +30,8 @@ public sealed record CustomerDebtsByCustomerDto
     public IList<CustomerDebtDto> Debts { get; init; } = [];
     public IList<CustomerPaymentDto> Deposits { get; init; } = [];
     public IList<CustomerPaymentDto> RecentPayments { get; init; } = [];
+    public decimal UnappliedCreditNoteBalance { get; init; }
+    public IList<CustomerCreditNoteDto> UnappliedCreditNotes { get; init; } = [];
 }
 
 [Serializable]
@@ -57,6 +59,42 @@ public sealed record CustomerDebtDto
     public DateTime CreatedOnUtc { get; init; }
 
     public IList<CustomerPaymentDto> Payments { get; init; } = [];
+    public IList<CustomerCreditNoteAllocationDto> CreditNoteAllocations { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerCreditNoteDto
+{
+    public required Guid Id { get; init; }
+    public required string Code { get; init; }
+    public required Guid CustomerId { get; init; }
+    public required string CustomerName { get; init; }
+    public required Guid SourceReturnId { get; init; }
+    public required string SourceReturnCode { get; init; }
+    public Guid? SourceDeliveryNoteId { get; init; }
+    public decimal Amount { get; init; }
+    public decimal AppliedAmount { get; init; }
+    public decimal RemainingAmount { get; init; }
+    public CreditNoteStatus Status { get; init; }
+    public DateTime CreatedOnUtc { get; init; }
+    public IList<CustomerCreditNoteAllocationDto> Allocations { get; init; } = [];
+}
+
+[Serializable]
+public sealed record CustomerCreditNoteAllocationDto
+{
+    public required Guid Id { get; init; }
+    public required Guid CustomerCreditNoteId { get; init; }
+    public required string CustomerCreditNoteCode { get; init; }
+    public required Guid SourceReturnId { get; init; }
+    public required string SourceReturnCode { get; init; }
+    public required Guid CustomerDebtId { get; init; }
+    public required string CustomerDebtCode { get; init; }
+    public decimal Amount { get; init; }
+    public DateTime AppliedOnUtc { get; init; }
+    public Guid? AppliedByUserId { get; init; }
+    public DateTime? ReversedOnUtc { get; init; }
+    public string? ReverseReason { get; init; }
 }
 
 [Serializable]

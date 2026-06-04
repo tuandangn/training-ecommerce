@@ -225,10 +225,9 @@ public sealed class VendorReturnManager(
         var totalReturnAmount = Math.Max(0,
             vendorReturn.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitCost) - vendorReturn.AdditionalCost);
         if (totalReturnAmount > 0)
-            await vendorDebtManager.ReverseReturnFromVendorReturnAsync(
-                vendorReturn.GoodsReceiptId,
-                vendorReturn.PurchaseOrderId,
-                totalReturnAmount).ConfigureAwait(false);
+            await vendorDebtManager.ReverseCreditNoteFromVendorReturnAsync(
+                vendorReturn.Id,
+                reason).ConfigureAwait(false);
 
         var linkedExpense = expenseDataReader.DataSource
             .FirstOrDefault(e => e.SourceVendorReturnId == vendorReturn.Id);
@@ -319,8 +318,10 @@ public sealed class VendorReturnManager(
 
         if (totalReturnAmount <= 0) return;
 
-        await vendorDebtManager.ApplyReturnFromVendorReturnAsync(
-            returnId,
+        await vendorDebtManager.ApplyCreditNoteFromVendorReturnAsync(
+            vendorReturn.VendorId,
+            vendorReturn.Id,
+            vendorReturn.Code,
             vendorReturn.GoodsReceiptId,
             vendorReturn.PurchaseOrderId,
             totalReturnAmount).ConfigureAwait(false);

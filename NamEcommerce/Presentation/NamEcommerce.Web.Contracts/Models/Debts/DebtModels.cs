@@ -35,6 +35,7 @@ public sealed class CustomerDebtDetailsModel
     public decimal TotalPaidAmount { get; init; }
     public decimal TotalRemainingAmount { get; init; }
     public decimal DepositBalance { get; init; }
+    public decimal UnappliedCreditNoteBalance { get; init; }
 
     /// <summary>Danh sách từng phiếu công nợ (kèm lịch sử thanh toán của từng phiếu).</summary>
     public IList<CustomerDebtItemModel> Debts { get; init; } = [];
@@ -44,6 +45,7 @@ public sealed class CustomerDebtDetailsModel
 
     /// <summary>Lịch sử 20 giao dịch gần nhất.</summary>
     public IList<CustomerPaymentListItemModel> RecentPayments { get; init; } = [];
+    public IList<CustomerCreditNoteModel> UnappliedCreditNotes { get; init; } = [];
 }
 
 /// <summary>Một phiếu công nợ trong trang Details của khách hàng.</summary>
@@ -65,6 +67,31 @@ public sealed record CustomerDebtItemModel
     public DateTime CreatedOnUtc { get; init; }
 
     public IList<CustomerPaymentListItemModel> Payments { get; init; } = [];
+    public IList<CreditNoteAllocationModel> CreditNoteAllocations { get; init; } = [];
+}
+
+public sealed record CustomerCreditNoteModel
+{
+    public required Guid Id { get; init; }
+    public required string Code { get; init; }
+    public required Guid SourceReturnId { get; init; }
+    public required string SourceReturnCode { get; init; }
+    public decimal Amount { get; init; }
+    public decimal AppliedAmount { get; init; }
+    public decimal RemainingAmount { get; init; }
+    public DateTime CreatedOn { get; init; }
+}
+
+public sealed record CreditNoteAllocationModel
+{
+    public required Guid Id { get; init; }
+    public required string CreditNoteCode { get; init; }
+    public required Guid SourceReturnId { get; init; }
+    public required string SourceReturnCode { get; init; }
+    public decimal Amount { get; init; }
+    public DateTime AppliedOn { get; init; }
+    public DateTime? ReversedOn { get; init; }
+    public string? ReverseReason { get; init; }
 }
 
 // ── Shared / Payment ─────────────────────────────────────────────────────────

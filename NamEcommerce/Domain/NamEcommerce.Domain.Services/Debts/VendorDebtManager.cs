@@ -18,6 +18,8 @@ public sealed class VendorDebtManager(
     IEntityDataReader<VendorDebt> debtReader,
     IRepository<VendorPayment> paymentRepository,
     IEntityDataReader<VendorPayment> paymentReader,
+    IRepository<VendorCreditNote> creditNoteRepository,
+    IEntityDataReader<VendorCreditNote> creditNoteReader,
     IEntityDataReader<Vendor> vendorReader,
     IEntityDataReader<PurchaseOrder> purchaseOrderReader,
     IEntityDataReader<GoodsReceipt> goodsReceiptReader) : IVendorDebtManager
@@ -34,6 +36,13 @@ public sealed class VendorDebtManager(
         var monthPrefix = $"PC-NCC-{DateTime.UtcNow:yyMM}";
         var count = paymentReader.SecuredDataSource.Count(p => p.Code.StartsWith(monthPrefix));
         return $"{monthPrefix}-{(count + 1):D3}";
+    }
+
+    private Task<string> GenerateCreditNoteCodeAsync()
+    {
+        var monthPrefix = $"DC-NCC-{DateTime.UtcNow:yyMM}";
+        var count = creditNoteReader.SecuredDataSource.Count(c => c.Code.StartsWith(monthPrefix));
+        return Task.FromResult($"{monthPrefix}-{(count + 1):D3}");
     }
 
     public async Task<VendorDebtDto> CreateInitialDebtAsync(CreateInitialVendorDebtDto dto)
@@ -339,8 +348,14 @@ public sealed class VendorDebtManager(
             .OrderBy(p => p.PaidOnUtc)
             .ToList();
 
+        var allocations = GetCreditNoteAllocationsByDebtId(id);
+
         var dto = debt.ToDto();
-        return dto with { Payments = payments.Select(p => p.ToDto()).ToList() };
+        return dto with
+        {
+            Payments = payments.Select(p => p.ToDto()).ToList(),
+            CreditNoteAllocations = allocations
+        };
     }
 
     public async Task<VendorDebtDto?> GetDebtByGoodsReceiptIdAsync(Guid goodsReceiptId)
@@ -355,8 +370,14 @@ public sealed class VendorDebtManager(
             .OrderBy(p => p.PaidOnUtc)
             .ToList();
 
+        var allocations = GetCreditNoteAllocationsByDebtId(debt.Id);
+
         var dto = debt.ToDto();
-        return dto with { Payments = payments.Select(p => p.ToDto()).ToList() };
+        return dto with
+        {
+            Payments = payments.Select(p => p.ToDto()).ToList(),
+            CreditNoteAllocations = allocations
+        };
     }
 
     public async Task DeleteDebtFromGoodsReceiptAsync(Guid goodsReceiptId)
@@ -368,82 +389,92 @@ public sealed class VendorDebtManager(
         await debtRepository.DeleteAsync(debt).ConfigureAwait(false);
     }
 
-    public async Task ApplyReturnFromVendorReturnAsync(Guid returnId, Guid? goodsReceiptId, Guid? purchaseOrderId, decimal amount)
+    public async Task<VendorCreditNoteDto> ApplyCreditNoteFromVendorReturnAsync(
+        Guid vendorId,
+        Guid returnId,
+        string returnCode,
+        Guid? sourceGoodsReceiptId,
+        Guid? sourcePurchaseOrderId,
+        decimal amount)
     {
-        if (amount <= 0) return;
+        if (amount <= 0)
+            throw new ArgumentException("Credit note amount must be positive", nameof(amount));
 
-        var debtsQuery = debtReader.DataSource.AsQueryable();
-        if (goodsReceiptId.HasValue)
-            debtsQuery = debtsQuery.Where(d => d.GoodsReceiptId == goodsReceiptId.Value);
-        else if (purchaseOrderId.HasValue)
-            debtsQuery = debtsQuery.Where(d => d.PurchaseOrderId == purchaseOrderId.Value);
-        else
-            return;
+        var existing = creditNoteReader.DataSource
+            .FirstOrDefault(c => c.SourceReturnId == returnId && c.Status != CreditNoteStatus.Cancelled);
+        if (existing is not null)
+            return existing.ToDto();
 
-        var orderedDebts = debtsQuery.OrderBy(d => d.CreatedOnUtc).ToList();
-        if (!orderedDebts.Any()) return;
+        var vendor = await vendorReader.GetByIdAsync(vendorId).ConfigureAwait(false);
+        if (vendor == null)
+            throw new ArgumentException($"Vendor with id '{vendorId}' is not found");
 
-        var touchedDebts = new List<VendorDebt>();
-        var remaining = amount;
+        var code = await GenerateCreditNoteCodeAsync().ConfigureAwait(false);
+        var creditNote = new VendorCreditNote(
+            code,
+            vendor.Id,
+            vendor.Name,
+            returnId,
+            returnCode,
+            sourceGoodsReceiptId,
+            sourcePurchaseOrderId,
+            amount);
 
-        foreach (var debt in orderedDebts)
+        var sourceDebt = ResolveSourceDebt(vendorId, sourceGoodsReceiptId, sourcePurchaseOrderId);
+        if (sourceDebt is not null)
         {
-            if (remaining <= 0) break;
-            if (debt.RemainingAmount <= 0) continue;
-
-            var toApply = Math.Min(remaining, debt.RemainingAmount);
-            debt.ApplyReturn(toApply, returnId);
-            touchedDebts.Add(debt);
-            remaining -= toApply;
+            var applyAmount = Math.Min(creditNote.RemainingAmount, sourceDebt.RemainingAmount);
+            creditNote.AllocateToDebt(sourceDebt, applyAmount, null);
+            sourceDebt.MarkUpdated();
+            await debtRepository.UpdateAsync(sourceDebt).ConfigureAwait(false);
         }
 
-        if (remaining > 0)
-        {
-            var first = orderedDebts[0];
-            first.ApplyReturn(remaining, returnId);
-            if (!touchedDebts.Contains(first))
-                touchedDebts.Add(first);
-        }
-
-        foreach (var debt in touchedDebts)
-            await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+        var inserted = await creditNoteRepository.InsertAsync(creditNote).ConfigureAwait(false);
+        return inserted.ToDto();
     }
 
-    public async Task ReverseReturnFromVendorReturnAsync(Guid? goodsReceiptId, Guid? purchaseOrderId, decimal amount)
+    public async Task ReverseCreditNoteFromVendorReturnAsync(Guid returnId, string reason)
     {
-        if (amount <= 0) return;
+        var creditNote = creditNoteReader.DataSource
+            .FirstOrDefault(c => c.SourceReturnId == returnId && c.Status != CreditNoteStatus.Cancelled);
+        if (creditNote is null) return;
 
-        var debtsQuery = debtReader.DataSource.AsQueryable();
-        if (goodsReceiptId.HasValue)
-            debtsQuery = debtsQuery.Where(d => d.GoodsReceiptId == goodsReceiptId.Value);
-        else if (purchaseOrderId.HasValue)
-            debtsQuery = debtsQuery.Where(d => d.PurchaseOrderId == purchaseOrderId.Value);
-        else
-            return;
+        var activeAllocations = creditNote.Allocations
+            .Where(a => !a.IsReversed)
+            .ToList();
 
-        var orderedDebts = debtsQuery.OrderByDescending(d => d.CreatedOnUtc).ToList();
-        if (!orderedDebts.Any()) return;
-
-        var remaining = amount;
-        foreach (var debt in orderedDebts)
+        foreach (var allocation in activeAllocations)
         {
-            if (remaining <= 0) break;
+            var debt = await debtRepository.GetByIdAsync(allocation.VendorDebtId).ConfigureAwait(false);
+            if (debt is null) continue;
 
-            var alreadyReturned = debt.TotalAmount - debt.PaidAmount - debt.RemainingAmount;
-            var toReverse = Math.Min(remaining, Math.Max(0, alreadyReturned));
-            if (toReverse <= 0) continue;
-
-            debt.ReverseReturn(toReverse);
-            remaining -= toReverse;
+            debt.ReverseCreditNote(allocation.Amount);
+            creditNote.ReverseAllocation(allocation, null, reason);
+            debt.MarkUpdated();
             await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
         }
 
-        if (remaining > 0)
+        creditNote.Cancel();
+        await creditNoteRepository.UpdateAsync(creditNote).ConfigureAwait(false);
+    }
+
+    private VendorDebt? ResolveSourceDebt(Guid vendorId, Guid? sourceGoodsReceiptId, Guid? sourcePurchaseOrderId)
+    {
+        if (sourceGoodsReceiptId.HasValue)
         {
-            var first = orderedDebts[0];
-            first.ReverseReturn(remaining);
-            await debtRepository.UpdateAsync(first).ConfigureAwait(false);
+            return debtReader.DataSource.FirstOrDefault(d => d.VendorId == vendorId
+                && d.GoodsReceiptId == sourceGoodsReceiptId.Value
+                && d.RemainingAmount > 0);
         }
+
+        if (sourcePurchaseOrderId.HasValue)
+        {
+            return debtReader.DataSource.FirstOrDefault(d => d.VendorId == vendorId
+                && d.PurchaseOrderId == sourcePurchaseOrderId.Value
+                && d.RemainingAmount > 0);
+        }
+
+        return null;
     }
 
     public async Task<VendorPaymentDto?> GetPaymentByIdAsync(Guid paymentId)
@@ -543,7 +574,12 @@ public sealed class VendorDebtManager(
                 .Where(p => p.VendorDebtId == debt.Id)
                 .OrderBy(p => p.PaidOnUtc)
                 .ToList();
-            debtDtos.Add(debt.ToDto() with { Payments = payments.Select(p => p.ToDto()).ToList() });
+            var allocations = GetCreditNoteAllocationsByDebtId(debt.Id);
+            debtDtos.Add(debt.ToDto() with
+            {
+                Payments = payments.Select(p => p.ToDto()).ToList(),
+                CreditNoteAllocations = allocations
+            });
         }
 
         // Tiền ứng trước chưa áp dụng
@@ -560,6 +596,12 @@ public sealed class VendorDebtManager(
             .ToList();
 
         var advanceBalance = advances.Sum(p => p.Amount);
+        var unappliedCreditNotes = creditNoteReader.DataSource
+            .Where(c => c.VendorId == vendorId
+                && c.Status != CreditNoteStatus.Cancelled
+                && c.RemainingAmount > 0)
+            .OrderByDescending(c => c.CreatedOnUtc)
+            .ToList();
 
         return new VendorDebtsByVendorDto
         {
@@ -571,7 +613,9 @@ public sealed class VendorDebtManager(
             AdvanceBalance = advanceBalance,
             Debts = debtDtos,
             AdvancePayments = advances.Select(p => p.ToDto()).ToList(),
-            RecentPayments = recentPayments.Select(p => p.ToDto()).ToList()
+            RecentPayments = recentPayments.Select(p => p.ToDto()).ToList(),
+            UnappliedCreditNoteBalance = unappliedCreditNotes.Sum(c => c.RemainingAmount),
+            UnappliedCreditNotes = unappliedCreditNotes.Select(c => c.ToDto()).ToList()
         };
     }
 
@@ -608,4 +652,12 @@ public sealed class VendorDebtManager(
 
         return PagedDataDto.Create(items.Select(p => p.ToDto()).ToList(), pageIndex, pageSize, total);
     }
+
+    private IList<VendorCreditNoteAllocationDto> GetCreditNoteAllocationsByDebtId(Guid debtId)
+        => creditNoteReader.DataSource
+            .SelectMany(c => c.Allocations)
+            .Where(a => a.VendorDebtId == debtId)
+            .OrderBy(a => a.AppliedOnUtc)
+            .Select(a => a.ToDto())
+            .ToList();
 }
