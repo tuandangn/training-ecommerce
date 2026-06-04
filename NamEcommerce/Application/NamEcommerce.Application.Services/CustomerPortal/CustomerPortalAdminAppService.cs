@@ -50,7 +50,9 @@ public sealed class CustomerPortalAdminAppService(
             RecentSecurityEvents = (await GetSecurityEventsAsync(take: 10).ConfigureAwait(false)).ToList(),
             PendingOrderRequests = (await GetOrderRequestsAsync((int)CustomerOrderRequestStatus.PendingApproval).ConfigureAwait(false)).Take(10).ToList(),
             PendingReturnRequests = (await GetReturnRequestsAsync((int)CustomerReturnRequestStatus.PendingReview).ConfigureAwait(false)).Take(10).ToList(),
-            PendingPaymentIntents = (await GetPaymentIntentsAsync((int)CustomerPaymentIntentStatus.SucceededPendingReconciliation).ConfigureAwait(false)).Take(10).ToList()
+            PendingPaymentIntents = (await GetPaymentIntentsAsync((int)CustomerPaymentIntentStatus.SucceededPendingReconciliation).ConfigureAwait(false)).Take(10).ToList(),
+            RecentNotifications = (await GetNotificationsAsync((int)CustomerPortalNotificationStatus.Unread, take: 10).ConfigureAwait(false)).ToList(),
+            UnreadNotificationCount = await customerPortalManager.CountNotificationsAsync(CustomerPortalNotificationStatus.Unread).ConfigureAwait(false)
         };
 
     public async Task<CustomerPortalSettingsAdminAppDto> GetSettingsAsync()
@@ -173,6 +175,46 @@ public sealed class CustomerPortalAdminAppService(
             .ToList();
 
         return Task.FromResult<IReadOnlyCollection<CustomerPortalSecurityEventAdminAppDto>>(events);
+    }
+
+    public async Task<IReadOnlyCollection<CustomerPortalNotificationAdminAppDto>> GetNotificationsAsync(int? status = null, int take = 100)
+    {
+        var filter = status.HasValue && Enum.IsDefined(typeof(CustomerPortalNotificationStatus), status.Value)
+            ? (CustomerPortalNotificationStatus?)status.Value
+            : null;
+        var notifications = await customerPortalManager.GetNotificationsAsync(filter, take).ConfigureAwait(false);
+        var customerIds = notifications.Select(notification => notification.CustomerId).Distinct().ToList();
+        var customers = customerReader.DataSource
+            .Where(customer => customerIds.Contains(customer.Id))
+            .ToDictionary(customer => customer.Id);
+
+        return notifications
+            .Select(notification => MapNotification(notification, customers.GetValueOrDefault(notification.CustomerId)))
+            .ToList();
+    }
+
+    public async Task<CustomerPortalNotificationAdminAppDto?> GetNotificationAsync(Guid id)
+    {
+        var notification = await customerPortalManager.GetNotificationByIdAsync(id).ConfigureAwait(false);
+        if (notification is null)
+            return null;
+
+        var customer = await customerReader.GetByIdAsync(notification.CustomerId).ConfigureAwait(false);
+        return MapNotification(notification, customer);
+    }
+
+    public async Task<CustomerActionResultAppDto> MarkNotificationReadAsync(Guid id)
+    {
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        if (currentUser is null)
+            return CustomerActionResultAppDto.Fail("Không xác định được người đọc thông báo.");
+
+        var notification = await customerPortalManager.GetNotificationByIdAsync(id).ConfigureAwait(false);
+        if (notification is null)
+            return CustomerActionResultAppDto.Fail("Không tìm thấy thông báo.");
+
+        await customerPortalManager.MarkNotificationReadAsync(id, currentUser.Id, DateTime.UtcNow).ConfigureAwait(false);
+        return CustomerActionResultAppDto.Ok("Đã đánh dấu thông báo là đã đọc.");
     }
 
     public Task<IReadOnlyCollection<CustomerPortalOrderRequestAdminAppDto>> GetOrderRequestsAsync(int? status = null)
@@ -524,6 +566,24 @@ public sealed class CustomerPortalAdminAppService(
             OtpEnabled = settings.OtpEnabled,
             UpdatedOnUtc = settings.UpdatedOnUtc,
             UpdatedByUserId = settings.UpdatedByUserId
+        };
+
+    private static CustomerPortalNotificationAdminAppDto MapNotification(CustomerPortalNotificationDto notification, Customer? customer)
+        => new()
+        {
+            Id = notification.Id,
+            CustomerId = notification.CustomerId,
+            CustomerName = customer?.FullName ?? "Khách hàng",
+            CustomerPhone = customer?.PhoneNumber,
+            Type = (int)notification.Type,
+            Status = (int)notification.Status,
+            Title = notification.Title,
+            Message = notification.Message,
+            RelatedEntityId = notification.RelatedEntityId,
+            RelatedEntityType = notification.RelatedEntityType,
+            CreatedOnUtc = notification.CreatedOnUtc,
+            ReadOnUtc = notification.ReadOnUtc,
+            ReadByUserId = notification.ReadByUserId
         };
 
     private static CustomerPortalSecurityEventAdminAppDto MapSecurityEvent(CustomerSecurityEvent securityEvent, Customer? customer, DeliveryNote? deliveryNote)

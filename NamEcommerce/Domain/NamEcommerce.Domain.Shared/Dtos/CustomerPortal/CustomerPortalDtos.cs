@@ -224,6 +224,40 @@ public sealed record CustomerDeliveryFeedbackDto(Guid Id)
 }
 
 [Serializable]
+public sealed record CreateCustomerPortalNotificationDto
+{
+    public required Guid CustomerId { get; init; }
+    public required CustomerPortalNotificationType Type { get; init; }
+    public required string Title { get; init; }
+    public string? Message { get; init; }
+    public Guid? RelatedEntityId { get; init; }
+    public string? RelatedEntityType { get; init; }
+
+    public void Verify()
+    {
+        if (CustomerId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.CustomerPortal.CustomerRequired");
+        if (string.IsNullOrWhiteSpace(Title))
+            throw new NamEcommerceDomainException("Error.CustomerPortal.NotificationTitleRequired");
+    }
+}
+
+[Serializable]
+public sealed record CustomerPortalNotificationDto(Guid Id)
+{
+    public required Guid CustomerId { get; init; }
+    public required CustomerPortalNotificationType Type { get; init; }
+    public required CustomerPortalNotificationStatus Status { get; init; }
+    public required string Title { get; init; }
+    public string? Message { get; init; }
+    public Guid? RelatedEntityId { get; init; }
+    public string? RelatedEntityType { get; init; }
+    public DateTime CreatedOnUtc { get; init; }
+    public DateTime? ReadOnUtc { get; init; }
+    public Guid? ReadByUserId { get; init; }
+}
+
+[Serializable]
 public sealed record CreateCustomerOrderRequestDto
 {
     public required Guid CustomerId { get; init; }

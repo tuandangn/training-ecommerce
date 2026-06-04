@@ -105,4 +105,38 @@ public static class CustomerPortalDisplayExtensions
             CustomerPaymentIntentStatus.Reconciled => "bg-success",
             _ => "bg-secondary"
         };
+
+    public static string GetDisplayText(this CustomerPortalNotificationType type)
+        => type switch
+        {
+            CustomerPortalNotificationType.OrderRequestCreated => "Đặt hàng",
+            CustomerPortalNotificationType.ReturnRequestCreated => "Trả hàng",
+            CustomerPortalNotificationType.DeliveryReceivedConfirmed => "Đã nhận hàng",
+            _ => "Không rõ"
+        };
+
+    public static string GetDisplayColor(this CustomerPortalNotificationType type)
+        => type switch
+        {
+            CustomerPortalNotificationType.OrderRequestCreated => "bg-primary",
+            CustomerPortalNotificationType.ReturnRequestCreated => "bg-warning text-dark",
+            CustomerPortalNotificationType.DeliveryReceivedConfirmed => "bg-success",
+            _ => "bg-secondary"
+        };
+
+    public static string GetDisplayText(this CustomerPortalNotificationStatus status)
+        => status switch
+        {
+            CustomerPortalNotificationStatus.Unread => "Chưa đọc",
+            CustomerPortalNotificationStatus.Read => "Đã đọc",
+            _ => "Không rõ"
+        };
+
+    public static string GetDisplayColor(this CustomerPortalNotificationStatus status)
+        => status switch
+        {
+            CustomerPortalNotificationStatus.Unread => "bg-danger",
+            CustomerPortalNotificationStatus.Read => "bg-secondary",
+            _ => "bg-secondary"
+        };
 }
