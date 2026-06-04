@@ -200,6 +200,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IOrderManager, OrderManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
     services.AddScoped<IBankTransferPaymentIntentManager, BankTransferPaymentIntentManager>();
+    services.AddScoped<IBankTransferVerificationLogManager, BankTransferVerificationLogManager>();
     services.AddScoped<ICustomerPortalSecurityManager, CustomerPortalSecurityManager>();
     services.AddScoped<ICustomerPortalManager, CustomerPortalManager>();
     services.AddScoped<IVendorDebtManager, VendorDebtManager>();
