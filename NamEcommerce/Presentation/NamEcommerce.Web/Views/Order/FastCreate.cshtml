@@ -5,8 +5,8 @@
 
 @section TitleSection {
     <h1 class="topbar-page-title">
-        Bán nhanh
-        <span class="text-muted">Tại quầy</span>
+        Đơn hàng
+        <span class="text-muted">Bán nhanh</span>
     </h1>
     <div class="topbar-page-subtitle">
         <nav aria-label="breadcrumb">
@@ -142,58 +142,6 @@
     <div class="fast-sale-grid">
         <section class="content-card">
             <div class="content-card-header">
-                <h5>Hàng hóa</h5>
-            </div>
-            <div class="content-card-body">
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted text-uppercase" for="fastSaleWarehouse">Kho</label>
-                    <select id="fastSaleWarehouse" class="form-select">
-                        <option value="">Chọn kho</option>
-                        @foreach (var warehouse in Model.Warehouses)
-                        {
-                            <option value="@warehouse.Id">@warehouse.Name</option>
-                        }
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted text-uppercase" for="fastSaleProductSearch">Tìm hàng</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input id="fastSaleProductSearch" class="form-control" autocomplete="off" placeholder="Tên hàng hoặc mã" />
-                    </div>
-                </div>
-                <div class="fast-sale-products" id="fastSaleProducts"></div>
-            </div>
-        </section>
-
-        <section class="content-card">
-            <div class="content-card-header">
-                <h5>Giỏ hàng</h5>
-                <button type="button" class="btn btn-sm btn-light" id="fastSaleClearCart" data-bs-toggle="tooltip" title="Xóa giỏ hàng">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </div>
-            <div class="content-card-body-flush">
-                <div class="table-responsive">
-                    <table class="table data-table mb-0">
-                        <thead>
-                            <tr>
-                                <th class="ps-3">Hàng hóa</th>
-                                <th class="text-center">SL</th>
-                                <th class="text-end">Đơn giá</th>
-                                <th class="text-end">Tiền</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="fastSaleCartBody"></tbody>
-                    </table>
-                </div>
-                <div id="fastSaleEmptyCart" class="py-4 text-center text-muted">Chưa có hàng hóa.</div>
-            </div>
-        </section>
-
-        <section class="content-card">
-            <div class="content-card-header">
                 <h5>Thanh toán</h5>
             </div>
             <div class="content-card-body">
@@ -270,6 +218,56 @@
                         <i class="bi bi-check2-square me-1"></i> Hoàn tất bán hàng
                     </button>
                 </div>
+            </div>
+        </section>
+        <section class="content-card">
+            <div class="content-card-header">
+                <h5>Giỏ hàng</h5>
+                <button type="button" class="btn btn-sm btn-light" id="fastSaleClearCart" data-bs-toggle="tooltip" title="Xóa giỏ hàng">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+            <div class="content-card-body-flush">
+                <div class="table-responsive">
+                    <table class="table data-table mb-0">
+                        <thead>
+                            <tr>
+                                <th class="ps-3">Hàng hóa</th>
+                                <th class="text-center">SL</th>
+                                <th class="text-end">Đơn giá</th>
+                                <th class="text-end">Tiền</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="fastSaleCartBody"></tbody>
+                    </table>
+                </div>
+                <div id="fastSaleEmptyCart" class="py-4 text-center text-muted">Chưa có hàng hóa.</div>
+            </div>
+        </section>
+        <section class="content-card">
+            <div class="content-card-header">
+                <h5>Hàng hóa</h5>
+            </div>
+            <div class="content-card-body">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase" for="fastSaleWarehouse">Kho</label>
+                    <select id="fastSaleWarehouse" class="form-select">
+                        <option value="">Chọn kho</option>
+                        @foreach (var warehouse in Model.Warehouses)
+                        {
+                            <option value="@warehouse.Id">@warehouse.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase" for="fastSaleProductSearch">Tìm hàng</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input id="fastSaleProductSearch" class="form-control" autocomplete="off" placeholder="Tên hàng hoặc mã" />
+                    </div>
+                </div>
+                <div class="fast-sale-products" id="fastSaleProducts"></div>
             </div>
         </section>
     </div>
