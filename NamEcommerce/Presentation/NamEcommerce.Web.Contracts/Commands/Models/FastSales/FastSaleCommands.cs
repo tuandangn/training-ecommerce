@@ -43,6 +43,12 @@ public sealed class CreateBankTransferPaymentIntentCommand : IRequest<BankTransf
 }
 
 [Serializable]
+public sealed class GetBankTransferPaymentIntentStatusCommand : IRequest<BankTransferPaymentIntentResultModel>
+{
+    public required Guid IntentId { get; init; }
+}
+
+[Serializable]
 public sealed class ManualConfirmBankTransferPaymentIntentCommand : IRequest<BankTransferPaymentIntentResultModel>
 {
     public required Guid IntentId { get; init; }
