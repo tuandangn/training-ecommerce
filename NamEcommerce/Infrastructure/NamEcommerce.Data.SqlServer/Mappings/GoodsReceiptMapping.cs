@@ -53,6 +53,12 @@ public sealed class GoodsReceiptMapping : IEntityTypeConfiguration<GoodsReceipt>
             vendorInfoBuilder.Property(g => g.Phone).HasColumnName($"Vendor{nameof(VendorInfo.Phone)}").HasMaxLength(50);
         });
 
+        builder.Property(g => g.VendorInvoiceNumber).HasMaxLength(20).IsRequired(false);
+        builder.Property(g => g.VendorInvoiceDate).IsRequired(false);
+
+        // Computed từ items — không persist
+        builder.Ignore(g => g.TotalTaxAmount);
+
         builder.Property(g => g.CreatedByUserId);
         builder.Property(g => g.CreatedByUsername).HasMaxLength(500);
 

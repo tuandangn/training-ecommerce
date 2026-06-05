@@ -43,6 +43,7 @@ public sealed record VendorPayment : AppAggregateEntity
     public decimal Amount { get; private set; }
     public PaymentMethod PaymentMethod { get; private set; }
     public PaymentType PaymentType { get; private set; }
+    public Guid? BankAccountId { get; internal set; }
     public string? Note { get; private set; }
 
     public DateTime PaidOnUtc { get; private set; }

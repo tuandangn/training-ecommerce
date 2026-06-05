@@ -33,6 +33,8 @@ public sealed class VendorDebtMapping : IEntityTypeConfiguration<VendorDebt>
         builder.Property(x => x.PaidAmount).IsRequired().HasColumnType("decimal(18,2)");
         builder.Property(x => x.RemainingAmount).IsRequired().HasColumnType("decimal(18,2)");
 
+        builder.Property(x => x.IsOpeningBalance).IsRequired().HasDefaultValue(false);
+
         builder.Property(x => x.Status).IsRequired();
         builder.Property(x => x.DueDateUtc).IsRequired(false);
 

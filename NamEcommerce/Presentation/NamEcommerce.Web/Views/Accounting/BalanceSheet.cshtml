@@ -1,0 +1,87 @@
+@using NamEcommerce.Application.Contracts.Dtos.Finance
+@model BalanceSheetDto
+@{
+    ViewData[ViewConstants.PageTitle] = "Bảng cân đối kế toán (B01)";
+    DateTime asOf = ViewBag.AsOf;
+    var prior = Model.PriorPeriod;
+}
+
+@section TitleSection {
+    <h1 class="topbar-page-title">B01 — Bảng cân đối kế toán</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active">Kế toán — B01</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<form method="get" class="d-flex align-items-center gap-2 mb-3 no-print">
+    <input type="date" name="asOf" class="form-control form-control-sm" style="width:160px"
+           value="@asOf.ToString("yyyy-MM-dd")" />
+    <button type="submit" class="btn btn-sm btn-primary">Xem</button>
+    <a asp-action="ExportBalanceSheetExcel" asp-route-asOf="@asOf.ToString("yyyy-MM-dd")"
+       class="btn btn-sm btn-outline-success no-print">
+        <i class="bi bi-file-earmark-excel me-1"></i>Excel
+    </a>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i>In</button>
+</form>
+
+@if (!Model.IsBalanced)
+{
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Bảng cân đối <strong>CHÊNH LỆCH</strong>: Tài sản - Nguồn vốn = @Model.Discrepancy.ToString("N0") đ. Kiểm tra lại dữ liệu.
+    </div>
+}
+
+<div class="content-card p-4">
+    <h5 class="text-center mb-1">BẢNG CÂN ĐỐI KẾ TOÁN</h5>
+    <p class="text-center text-muted small mb-4">Ngày @asOf.ToString("dd/MM/yyyy")</p>
+
+    <table class="table table-sm">
+        <thead class="table-light">
+            <tr>
+                <th>Chỉ tiêu</th>
+                <th class="text-end">Cuối kỳ</th>
+                @if (prior != null) { <th class="text-end text-muted">Đầu kỳ (@prior.AsOf.ToString("dd/MM/yyyy"))</th> }
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="fw-semibold table-secondary"><td colspan="@(prior != null ? 3 : 2)">A. TÀI SẢN NGẮN HẠN</td></tr>
+            <tr><td class="ps-3">Tiền mặt (TK 111)</td><td class="text-end">@Model.CashOnHand.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.CashOnHand.ToString("N0")</td>}</tr>
+            @foreach (var b in Model.BankDeposits)
+            {
+                <tr><td class="ps-3">@b.DisplayName (TK 112)</td><td class="text-end">@b.Balance.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@(prior.BankDeposits.FirstOrDefault(x => x.BankAccountId == b.BankAccountId)?.Balance.ToString("N0") ?? "0")</td>}</tr>
+            }
+            <tr><td class="ps-3">Phải thu khách hàng (TK 131)</td><td class="text-end">@Model.TradeReceivables.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.TradeReceivables.ToString("N0")</td>}</tr>
+            <tr><td class="ps-3">Hàng tồn kho (TK 156)</td><td class="text-end">@Model.Inventory.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.Inventory.ToString("N0")</td>}</tr>
+            <tr class="fw-bold table-active"><td>Tổng tài sản ngắn hạn</td><td class="text-end">@Model.TotalCurrentAssets.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.TotalCurrentAssets.ToString("N0")</td>}</tr>
+
+            <tr class="fw-semibold table-secondary"><td colspan="@(prior != null ? 3 : 2)">B. TÀI SẢN DÀI HẠN</td></tr>
+            <tr><td class="ps-3">Nguyên giá TSCĐ (TK 211)</td><td class="text-end">@Model.FixedAssetsGross.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.FixedAssetsGross.ToString("N0")</td>}</tr>
+            <tr><td class="ps-3">Khấu hao lũy kế (TK 214)</td><td class="text-end">(@Model.AccumulatedDepreciation.ToString("N0"))</td>@if(prior!=null){<td class="text-end text-muted">(@prior.AccumulatedDepreciation.ToString("N0"))</td>}</tr>
+            <tr class="fw-bold table-active"><td>Tổng tài sản dài hạn</td><td class="text-end">@Model.TotalNonCurrentAssets.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.TotalNonCurrentAssets.ToString("N0")</td>}</tr>
+
+            <tr class="fw-bold fs-6 table-info"><td>TỔNG CỘNG TÀI SẢN</td><td class="text-end">@Model.TotalAssets.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.TotalAssets.ToString("N0")</td>}</tr>
+
+            <tr class="fw-semibold table-secondary"><td colspan="@(prior != null ? 3 : 2)">C. NỢ PHẢI TRẢ</td></tr>
+            <tr><td class="ps-3">Phải trả nhà cung cấp (TK 331)</td><td class="text-end">@Model.TradePayables.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.TradePayables.ToString("N0")</td>}</tr>
+            <tr><td class="ps-3">Thuế GTGT phải nộp (TK 3331)</td><td class="text-end">@Model.VatPayable.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.VatPayable.ToString("N0")</td>}</tr>
+            <tr><td class="ps-3">Thuế TNDN phải nộp (TK 3334)</td><td class="text-end">@Model.CorporateTaxPayable.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.CorporateTaxPayable.ToString("N0")</td>}</tr>
+            <tr class="fw-bold table-active"><td>Tổng nợ phải trả</td><td class="text-end">@Model.TotalLiabilities.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.TotalLiabilities.ToString("N0")</td>}</tr>
+
+            <tr class="fw-semibold table-secondary"><td colspan="@(prior != null ? 3 : 2)">D. VỐN CHỦ SỞ HỮU</td></tr>
+            <tr><td class="ps-3">Vốn góp (TK 411)</td><td class="text-end">@Model.PaidInCapital.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.PaidInCapital.ToString("N0")</td>}</tr>
+            <tr><td class="ps-3">Lợi nhuận chưa phân phối (TK 421)</td><td class="text-end">@Model.RetainedEarnings.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.RetainedEarnings.ToString("N0")</td>}</tr>
+            <tr class="fw-bold table-active"><td>Tổng vốn chủ sở hữu</td><td class="text-end">@Model.TotalEquity.ToString("N0")</td>@if(prior!=null){<td class="text-end text-muted">@prior.TotalEquity.ToString("N0")</td>}</tr>
+
+            <tr class="fw-bold fs-6 @(Model.IsBalanced ? "table-success" : "table-danger")">
+                <td>TỔNG CỘNG NGUỒN VỐN</td><td class="text-end">@Model.TotalLiabilitiesAndEquity.ToString("N0")</td>
+                @if(prior!=null){<td class="text-end text-muted">@prior.TotalLiabilitiesAndEquity.ToString("N0")</td>}
+            </tr>
+        </tbody>
+    </table>
+</div>

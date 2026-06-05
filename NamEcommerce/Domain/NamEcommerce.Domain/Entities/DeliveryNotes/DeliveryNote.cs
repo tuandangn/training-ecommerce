@@ -80,6 +80,17 @@ public sealed record DeliveryNote : AppAggregateEntity
     public decimal AmountToCollect { get; internal set; }
     public decimal TotalAmount => _items.Sum(i => i.SubTotal);
 
+    // PRE-3: Chiết khấu thương mại — computed từ items
+    public decimal TotalDiscountAmount => _items.Sum(i => i.DiscountAmount);
+
+    // PRE-4a: Thuế GTGT — computed từ items
+    public decimal TotalTaxAmount => _items.Sum(i => i.TaxAmount);
+
+    // PRE-5: Số hóa đơn GTGT
+    public string? InvoiceNumber { get; internal set; }
+    public string? InvoiceSeries { get; internal set; }
+    public DateTime? InvoiceDate { get; internal set; }
+
     private readonly List<DeliveryNoteItem> _items;
     public IReadOnlyCollection<DeliveryNoteItem> Items => _items.AsReadOnly();
     

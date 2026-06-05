@@ -23,6 +23,10 @@ public record PurchaseOrderItem : AppEntity
     public decimal UnitCost { get; internal set; }
     public decimal TotalCost => QuantityOrdered * UnitCost;
 
+    // PRE-4d: Thuế GTGT đầu vào từ đơn nhập hàng
+    public decimal? TaxRate { get; internal set; }
+    public decimal TaxAmount { get; internal set; }
+
     public string? Note { get; internal set; }
 
     #region Methods

@@ -178,5 +178,36 @@
         </div>
     </li>
 
+    <!-- Kế toán -->
+    <li class="nav-item">
+        <a class="nav-link @(WebHelper.IsHasController("Accounting") ? "" : "collapsed")" data-bs-toggle="collapse" href="#collapseAccounting" aria-expanded="@(WebHelper.IsHasController("Accounting") ? "true" : "false")">
+            <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Kế toán
+        </a>
+        <div class="collapse @(WebHelper.IsHasController("Accounting") ? "show" : "")" id="collapseAccounting">
+            <ul class="nav flex-column sub-menu">
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "CashBook") ? "active" : "")" asp-controller="Accounting" asp-action="CashBook">Sổ quỹ</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "IncomeStatement") ? "active" : "")" asp-controller="Accounting" asp-action="IncomeStatement">B02 — Kết quả HĐKD</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "CashFlow") ? "active" : "")" asp-controller="Accounting" asp-action="CashFlow">B03 — Lưu chuyển tiền</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "BalanceSheet") ? "active" : "")" asp-controller="Accounting" asp-action="BalanceSheet">B01 — Cân đối kế toán</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "FixedAssets") ? "active" : "")" asp-controller="Accounting" asp-action="FixedAssets">Tài sản cố định</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "BankAccounts") ? "active" : "")" asp-controller="Accounting" asp-action="BankAccounts">Tài khoản ngân hàng</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("Accounting", "Setup") ? "active" : "")" asp-controller="Accounting" asp-action="Setup">Khai báo kế toán</a>
+                </li>
+            </ul>
+        </div>
+    </li>
 
 </ul>

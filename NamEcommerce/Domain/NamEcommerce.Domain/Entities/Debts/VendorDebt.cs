@@ -58,6 +58,7 @@ public sealed record VendorDebt : AppAggregateEntity
         PaidAmount = 0;
         Status = DebtStatus.Outstanding;
         DueDateUtc = null;
+        IsOpeningBalance = true;
         CreatedOnUtc = DateTime.UtcNow;
     }
 
@@ -106,6 +107,8 @@ public sealed record VendorDebt : AppAggregateEntity
     public decimal TotalAmount { get; private set; }
     public decimal PaidAmount { get; private set; }
     public decimal RemainingAmount { get; private set; }
+
+    public bool IsOpeningBalance { get; private set; }
 
     public DebtStatus Status { get; private set; }
     public DateTime? DueDateUtc { get; private set; }

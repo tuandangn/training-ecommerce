@@ -1,0 +1,113 @@
+@using NamEcommerce.Application.Contracts.Dtos.Finance
+@model CashBookDto
+@{
+    ViewData[ViewConstants.PageTitle] = "Sổ quỹ tiền mặt";
+    int year = ViewBag.Year;
+    int? month = ViewBag.Month;
+    int? quarter = ViewBag.Quarter;
+    var bankAccounts = ViewBag.BankAccounts as IReadOnlyList<BankAccountAppDto> ?? [];
+    Guid? selectedBankId = ViewBag.BankAccountId as Guid?;
+}
+
+@section TitleSection {
+    <h1 class="topbar-page-title">Sổ quỹ</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active">Kế toán — Sổ quỹ</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+@* Period picker *@
+<form method="get" class="d-flex align-items-center gap-2 mb-3 no-print flex-wrap">
+    <select name="year" class="form-select form-select-sm" style="width:100px">
+        @for (int y = DateTime.Today.Year; y >= DateTime.Today.Year - 5; y--)
+        {
+            <option value="@y" selected="@(y == year)">@y</option>
+        }
+    </select>
+    <select name="month" class="form-select form-select-sm" style="width:110px">
+        <option value="">Cả năm</option>
+        @for (int m = 1; m <= 12; m++)
+        {
+            <option value="@m" selected="@(m == month)">Tháng @m</option>
+        }
+    </select>
+    <select name="bankAccountId" class="form-select form-select-sm" style="width:180px">
+        <option value="" selected="@(selectedBankId == null)">Tất cả</option>
+        <option value="00000000-0000-0000-0000-000000000000" selected="@(selectedBankId == Guid.Empty)">Tiền mặt (TK 111)</option>
+        @foreach (var acct in bankAccounts)
+        {
+            <option value="@acct.Id" selected="@(acct.Id == selectedBankId)">@acct.DisplayName</option>
+        }
+    </select>
+    <button type="submit" class="btn btn-sm btn-primary">Xem</button>
+    <a asp-action="ExportCashBookExcel" asp-route-year="@year" asp-route-month="@month" asp-route-bankAccountId="@selectedBankId"
+       class="btn btn-sm btn-outline-success no-print">
+        <i class="bi bi-file-earmark-excel me-1"></i>Excel
+    </a>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i>In
+    </button>
+</form>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="content-card p-3 text-center">
+            <div class="text-muted small">Số dư đầu kỳ</div>
+            <div class="fw-bold fs-5">@Model.OpeningBalance.ToString("N0")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="content-card p-3 text-center">
+            <div class="text-muted small">Tổng tiền vào</div>
+            <div class="fw-bold fs-5 text-success">+@Model.TotalIn.ToString("N0")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="content-card p-3 text-center">
+            <div class="text-muted small">Tổng tiền ra</div>
+            <div class="fw-bold fs-5 text-danger">-@Model.TotalOut.ToString("N0")</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="content-card p-3 text-center">
+            <div class="text-muted small">Số dư cuối kỳ</div>
+            <div class="fw-bold fs-5">@Model.ClosingBalance.ToString("N0")</div>
+        </div>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="p-3 border-bottom fw-semibold">@Model.Period</div>
+    <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+            <tr>
+                <th>Ngày</th>
+                <th>Diễn giải</th>
+                <th class="text-end">Tiền vào</th>
+                <th class="text-end">Tiền ra</th>
+                <th class="text-end">Số dư</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var line in Model.Lines)
+            {
+                <tr>
+                    <td class="text-muted small">@line.Date.ToString("dd/MM")</td>
+                    <td>@line.Description</td>
+                    <td class="text-end text-success">@(line.AmountIn > 0 ? line.AmountIn.ToString("N0") : "")</td>
+                    <td class="text-end text-danger">@(line.AmountOut > 0 ? line.AmountOut.ToString("N0") : "")</td>
+                    <td class="text-end fw-semibold">@line.RunningBalance.ToString("N0")</td>
+                </tr>
+            }
+            @if (!Model.Lines.Any())
+            {
+                <tr><td colspan="5" class="text-center text-muted py-4">Không có giao dịch trong kỳ.</td></tr>
+            }
+        </tbody>
+    </table>
+</div>

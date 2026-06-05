@@ -9,5 +9,6 @@ public enum ExpenseType
     General = 5,
 
     /// <summary>Chi phí phát sinh khi nhận hàng trả / trả hàng NCC (vận chuyển, bồi thường hư hỏng...).</summary>
-    ReturnCost = 6
+    ReturnCost = 6,
+    AssetDisposal = 7
 }

@@ -196,6 +196,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerManager, CustomerManager>();
     services.AddScoped<IExpenseManager, ExpenseManager>();
     services.AddScoped<IExpenseBudgetManager, ExpenseBudgetManager>();
+    services.AddScoped<IAccountingSetupManager, AccountingSetupManager>();
+    services.AddScoped<IBankAccountManager, BankAccountManager>();
+    services.AddScoped<IFixedAssetManager, FixedAssetManager>();
     services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();
     services.AddScoped<IOrderManager, OrderManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
@@ -236,6 +239,11 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IDirectShipReportAppService, DirectShipReportAppService>();
     services.AddScoped<IExpenseAppService, ExpenseAppService>();
     services.AddScoped<IExpenseBudgetAppService, ExpenseBudgetAppService>();
+    services.AddScoped<IAccountingSetupAppService, AccountingSetupAppService>();
+    services.AddScoped<IBankAccountAppService, BankAccountAppService>();
+    services.AddScoped<IFixedAssetAppService, FixedAssetAppService>();
+    services.AddScoped<ICashBookService, CashBookService>();
+    services.AddScoped<IAccountingReportService, AccountingReportService>();
     services.AddScoped<IDeliveryNoteAppService, DeliveryNoteAppService>();
     services.AddScoped<IPreparationAppService, PreparationAppService>();
     services.AddScoped<IOrderAppService, OrderAppService>();

@@ -26,6 +26,7 @@ public sealed class CustomerPaymentMapping : IEntityTypeConfiguration<CustomerPa
         builder.Property(x => x.Amount).IsRequired().HasColumnType("decimal(18,2)");
         builder.Property(x => x.PaymentMethod).IsRequired();
         builder.Property(x => x.PaymentType).IsRequired();
+        builder.Property(x => x.BankAccountId).IsRequired(false);
         builder.Property(x => x.Note).IsRequired(false).HasMaxLength(1000);
         
         builder.Property(x => x.PaidOnUtc).IsRequired();

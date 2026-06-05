@@ -40,4 +40,15 @@ public sealed record DeliveryNoteItem : AppEntity
     public decimal? CostAtDispatch { get; internal set; }
 
     public decimal SubTotal => Quantity * UnitPrice;
+
+    // PRE-3: Chiết khấu thương mại (TK 521)
+    public decimal DiscountPercent { get; internal set; }   // 0–100
+    public decimal DiscountAmount { get; internal set; }    // = SubTotal × DiscountPercent/100
+
+    // PRE-4a: Thuế GTGT đầu ra (TK 3331)
+    public decimal? TaxRate { get; internal set; }          // null / 0 / 0.05 / 0.08 / 0.10
+    public decimal TaxAmount { get; internal set; }         // = NetAmount × TaxRate
+
+    // Computed — không persist
+    public decimal NetAmount => SubTotal - DiscountAmount;
 }

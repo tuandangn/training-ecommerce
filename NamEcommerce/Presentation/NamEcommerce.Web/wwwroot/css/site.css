@@ -1027,6 +1027,19 @@ body {
     border-color: #f59e0b;
 }
 
+/* ========================
+   Print support
+   ======================== */
+@media print {
+    .no-print { display: none !important; }
+    .sidebar, .sidebar-wrapper, nav.navbar, .topbar { display: none !important; }
+    .main-content { margin-left: 0 !important; padding: 0 !important; }
+    .content-card { border: none !important; box-shadow: none !important; }
+    body { font-size: 11pt; }
+    .table { font-size: 10pt; }
+    a[href]::after { content: none !important; }
+}
+
 .related-line-heading {
     display: flex;
     align-items: flex-start;

@@ -95,6 +95,13 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.HasMany(d => d.Items).WithOne().HasForeignKey(i => i.DeliveryNoteId).OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(d => d.Items).UsePropertyAccessMode(PropertyAccessMode.Field).AutoInclude();
 
+        builder.Property(d => d.InvoiceNumber).HasMaxLength(20).IsRequired(false);
+        builder.Property(d => d.InvoiceSeries).HasMaxLength(10).IsRequired(false);
+        builder.Property(d => d.InvoiceDate).IsRequired(false);
+
+        // Computed từ items — không persist
         builder.Ignore(d => d.TotalAmount);
+        builder.Ignore(d => d.TotalDiscountAmount);
+        builder.Ignore(d => d.TotalTaxAmount);
     }
 }
