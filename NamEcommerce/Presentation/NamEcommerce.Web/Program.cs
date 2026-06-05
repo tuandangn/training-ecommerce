@@ -176,6 +176,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     // Outbox processor (background service) — đọc OutboxMessages chưa processed và publish qua MediatR.
     services.Configure<OutboxProcessorOptions>(configuration.GetSection("Outbox"));
     services.AddHostedService<OutboxProcessor>();
+    services.AddHostedService<CassoReconciliationHostedService>();
 
     services.AddScoped<IUserManager, UserManager>();
     services.AddScoped<ICategoryManager, CategoryManager>();
