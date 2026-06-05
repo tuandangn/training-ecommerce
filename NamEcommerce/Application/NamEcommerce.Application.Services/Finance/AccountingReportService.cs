@@ -67,18 +67,20 @@ public sealed class AccountingReportService : IAccountingReportService
         var start = period.Start;
         var end = period.End;
 
-        var deliveredNoteIds = _deliveryNotes.DataSource
+        var allDeliveryNotes = _deliveryNotes.DataSource.ToList();
+
+        var deliveredNoteIds = allDeliveryNotes
             .Where(dn => dn.Status == DeliveryNoteStatus.Delivered
                       && dn.DeliveredOnUtc >= start && dn.DeliveredOnUtc <= end)
             .Select(dn => dn.Id)
             .ToHashSet();
 
-        var grossRevenue = _deliveryNotes.DataSource
+        var grossRevenue = allDeliveryNotes
             .Where(dn => deliveredNoteIds.Contains(dn.Id))
             .SelectMany(dn => dn.Items)
             .Sum(i => (decimal?)i.SubTotal) ?? 0;
 
-        var tradeDiscounts = _deliveryNotes.DataSource
+        var tradeDiscounts = allDeliveryNotes
             .Where(dn => deliveredNoteIds.Contains(dn.Id))
             .SelectMany(dn => dn.Items)
             .Sum(i => (decimal?)i.DiscountAmount) ?? 0;
@@ -101,6 +103,7 @@ public sealed class AccountingReportService : IAccountingReportService
         var sellingExp = _expenses.DataSource
             .Where(e => (e.ExpenseType == ExpenseType.Marketing || e.ExpenseType == ExpenseType.ReturnCost)
                      && e.IncurredDate >= start && e.IncurredDate <= end)
+            .ToList()
             .Sum(e => (decimal?)e.AmountExcludingTax) ?? 0;
 
         var sellingDepreciation = _fixedAssets.DataSource
@@ -113,6 +116,7 @@ public sealed class AccountingReportService : IAccountingReportService
                       || e.ExpenseType == ExpenseType.Utilities || e.ExpenseType == ExpenseType.General
                       || e.ExpenseType == ExpenseType.AssetDisposal)
                      && e.IncurredDate >= start && e.IncurredDate <= end)
+            .ToList()
             .Sum(e => (decimal?)e.AmountExcludingTax) ?? 0;
 
         var adminDepreciation = _fixedAssets.DataSource
