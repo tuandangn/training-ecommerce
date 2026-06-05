@@ -115,19 +115,27 @@ public sealed class CustomerAppService : ICustomerAppService
         bool includeSystem = false)
     {
         var paged = await _customerManager.GetCustomersAsync(keywords, pageIndex, pageSize, includeSystem).ConfigureAwait(false);
-        var items = paged.Items.Select(c => new CustomerAppDto(c.Id)
+        var items = paged.Items.Where(c => !c.IsSystem).Select(MapToAppDto).ToList();
+
+        foreach(var systemCustomer in paged.Items.Where(c => c.IsSystem).OrderByDescending(c => c.FullName))
         {
-            FullName = c.FullName,
-            PhoneNumber = c.PhoneNumber,
-            Email = c.Email,
-            Address = c.Address,
-            Note = c.Note,
-            Kind = (int)c.Kind,
-            IsSystem = c.IsSystem,
-            CreatedOnUtc = c.CreatedOnUtc
-        }).ToList();
+            items.Insert(0, MapToAppDto(systemCustomer));
+        }
 
         return PagedDataAppDto.Create(items, pageIndex, pageSize, paged.PagerInfo.TotalCount);
+
+        CustomerAppDto MapToAppDto(CustomerDto dto)
+            => new(dto.Id)
+            {
+                FullName = dto.FullName,
+                PhoneNumber = dto.PhoneNumber,
+                Email = dto.Email,
+                Address = dto.Address,
+                Note = dto.Note,
+                Kind = dto.Kind,
+                IsSystem = dto.IsSystem,
+                CreatedOnUtc = dto.CreatedOnUtc
+            };
     }
 
     private static CustomerAppDto MapToAppDto(CustomerDto dto)

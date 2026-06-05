@@ -249,7 +249,7 @@ export default class ProductBrowser {
             let qtyHtml = p.availableQty > 0
                 ? `<span class="text-success fw-medium">${DecimalFields.formatQuantity ? DecimalFields.formatQuantity(p.availableQty) : p.availableQty}</span>`
                 : `<span class="text-muted">0</span>`;
-            qtyHtml = '<div class="pb-product-stock small"><i class="bi bi-boxes me-1 text-muted"></i>Tồn:' + qtyHtml + '</div>';
+            qtyHtml = '<div class="pb-product-stock small"><i class="bi bi-boxes me-1 text-muted"></i>Tồn: ' + qtyHtml + (p.unitMeasurement ? ' ' + p.unitMeasurement : '') + '</div>';
 
             const catHtml = p.categoryName
                 ? `<div class="pb-product-category text-truncate">${_esc(p.categoryName)}</div>`

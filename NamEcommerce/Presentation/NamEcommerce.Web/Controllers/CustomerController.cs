@@ -53,7 +53,8 @@ public sealed class CustomerController : BaseAuthorizedController
         {
             Keywords = q,
             PageIndex = pageIndex,
-            PageSize = pageSize
+            PageSize = pageSize,
+            IncludeSystem = true
         });
 
         return Json(result.Data.Items.Select(it => new

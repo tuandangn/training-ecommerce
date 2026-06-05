@@ -142,7 +142,7 @@ export default class CustomerPicker {
             btn.className = 'list-group-item list-group-item-action py-2';
             btn.dataset.index = index;
             btn.innerHTML = `
-                <div><span class="fw-bold">${this.#highlight(customer.name, query)}</span> <span class="text-muted">- ${customer.phone}</span></div>
+                <div><span class="fw-bold">${this.#highlight(customer.name, query)}</span> ${customer.phone ? `<span class="text-muted">- ${customer.phone}</span>` : ''}</div>
                 <div class="text-muted">
                     ${customer.address ? `<div>${customer.address}</div>` : ''}
                 </div>`;
