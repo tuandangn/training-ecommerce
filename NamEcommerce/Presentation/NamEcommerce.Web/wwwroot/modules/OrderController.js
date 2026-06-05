@@ -117,7 +117,6 @@ export default class OrderController {
     }
 
     #render() {
-        console.count('render');
         this.#renderSummary();
         this.#renderCustomer();
         this.#renderItems();
