@@ -12,6 +12,7 @@
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Order" class="text-decoration-none">Đơn bán</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Bán nhanh</li>
             </ol>
         </nav>
@@ -128,12 +129,12 @@
 }
 
 <div id="fastSaleApp"
-     data-search-products-url="@Url.Action("SearchProducts", "FastSale")"
-     data-create-intent-url="@Url.Action("CreatePaymentIntent", "FastSale")"
-     data-status-url="@Url.Action("GetPaymentIntentStatus", "FastSale")"
-     data-confirm-intent-url="@Url.Action("ConfirmPaymentIntent", "FastSale")"
-     data-create-cash-sale-url="@Url.Action("CreateCashSale", "FastSale")"
-     data-create-bank-sale-url="@Url.Action("CreateBankTransferSale", "FastSale")"
+     data-search-products-url="@Url.Action("SearchProducts", "Order")"
+     data-create-intent-url="@Url.Action("CreatePaymentIntent", "Order")"
+     data-status-url="@Url.Action("GetPaymentIntentStatus", "Order")"
+     data-confirm-intent-url="@Url.Action("ConfirmPaymentIntent", "Order")"
+     data-create-cash-sale-url="@Url.Action("CreateCashSale", "Order")"
+     data-create-bank-sale-url="@Url.Action("CreateBankTransferSale", "Order")"
      data-bank-transfer-enabled="@Model.BankTransferEnabled.ToString().ToLowerInvariant()"
      data-manual-confirm-enabled="@Model.ManualBankTransferConfirmEnabled.ToString().ToLowerInvariant()">
     <div class="fast-sale-alert alert" id="fastSaleAlert" role="alert"></div>

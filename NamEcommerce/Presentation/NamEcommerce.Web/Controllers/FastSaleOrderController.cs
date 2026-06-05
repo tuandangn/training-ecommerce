@@ -1,25 +1,21 @@
-using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.FastSales;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
-using NamEcommerce.Web.Services.FastSales;
 
 namespace NamEcommerce.Web.Controllers;
 
-public sealed class FastSaleController(IMediator mediator, IFastSaleModelFactory fastSaleModelFactory) : BaseAuthorizedController
+public sealed partial class OrderController : BaseAuthorizedController
 {
-    public IActionResult Index() => RedirectToAction(nameof(CreateOrder));
-
-    public async Task<IActionResult> CreateOrder()
+    public async Task<IActionResult> FastCreate()
     {
-        var model = await fastSaleModelFactory.PrepareFastSaleModelAsync().ConfigureAwait(false);
+        var model = await _fastSaleModelFactory.PrepareFastSaleModelAsync().ConfigureAwait(false);
         return View(model);
     }
 
     [HttpGet]
     public async Task<IActionResult> SearchProducts(string? keywords, Guid? warehouseId)
     {
-        var products = await mediator.Send(new GetProductListForOrderQuery
+        var products = await _mediator.Send(new GetProductListForOrderQuery
         {
             Keywords = keywords,
             WarehouseId = warehouseId
@@ -50,7 +46,7 @@ public sealed class FastSaleController(IMediator mediator, IFastSaleModelFactory
     [HttpPost]
     public async Task<IActionResult> CreatePaymentIntent([FromBody] CreateBankTransferPaymentIntentCommand command)
     {
-        var result = await mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command).ConfigureAwait(false);
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.BankTransferIntentCreateFailed") });
 
@@ -60,7 +56,7 @@ public sealed class FastSaleController(IMediator mediator, IFastSaleModelFactory
     [HttpGet]
     public async Task<IActionResult> GetPaymentIntentStatus(Guid intentId)
     {
-        var result = await mediator.Send(new GetBankTransferPaymentIntentStatusCommand { IntentId = intentId }).ConfigureAwait(false);
+        var result = await _mediator.Send(new GetBankTransferPaymentIntentStatusCommand { IntentId = intentId }).ConfigureAwait(false);
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.PaymentIntentIsNotFound") });
 
@@ -70,7 +66,7 @@ public sealed class FastSaleController(IMediator mediator, IFastSaleModelFactory
     [HttpPost]
     public async Task<IActionResult> ConfirmPaymentIntent([FromBody] ManualConfirmBankTransferPaymentIntentCommand command)
     {
-        var result = await mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command).ConfigureAwait(false);
         if (!result.Success)
             return Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.BankTransferIntentConfirmFailed") });
 
@@ -80,14 +76,14 @@ public sealed class FastSaleController(IMediator mediator, IFastSaleModelFactory
     [HttpPost]
     public async Task<IActionResult> CreateCashSale([FromBody] CreateCashQuickSaleCommand command)
     {
-        var result = await mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command).ConfigureAwait(false);
         return ToQuickSaleJson(result);
     }
 
     [HttpPost]
     public async Task<IActionResult> CreateBankTransferSale([FromBody] CreateBankTransferQuickSaleCommand command)
     {
-        var result = await mediator.Send(command).ConfigureAwait(false);
+        var result = await _mediator.Send(command).ConfigureAwait(false);
         return ToQuickSaleJson(result);
     }
 
@@ -106,4 +102,5 @@ public sealed class FastSaleController(IMediator mediator, IFastSaleModelFactory
             orderUrl = result.OrderId.HasValue ? Url.Action("Details", "Order", new { id = result.OrderId.Value }) : null
         });
     }
+
 }
