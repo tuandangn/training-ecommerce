@@ -1,4 +1,5 @@
 using MediatR;
+using NamEcommerce.Application.Contracts.Customers;
 using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Contracts.Models.Common;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
@@ -9,15 +10,19 @@ namespace NamEcommerce.Web.Services.FastSales;
 
 public sealed class FastSaleModelFactory(
     IMediator mediator,
+    ICustomerAppService customerAppService,
     BankTransferPaymentSettings bankTransferPaymentSettings) : IFastSaleModelFactory
 {
     public async Task<FastSaleModel> PrepareFastSaleModelAsync()
     {
+        var retailWalkInCustomer = await customerAppService.GetOrCreateRetailWalkInCustomerAsync().ConfigureAwait(false);
+
         var customers = await mediator.Send(new GetCustomerListQuery
         {
             Keywords = null,
             PageIndex = 0,
-            PageSize = int.MaxValue
+            PageSize = int.MaxValue,
+            IncludeSystem = true
         }).ConfigureAwait(false);
 
         var warehouses = await mediator.Send(new GetWarehouseOptionListQuery
@@ -27,6 +32,7 @@ public sealed class FastSaleModelFactory(
 
         return new FastSaleModel
         {
+            DefaultCustomerId = retailWalkInCustomer.Id,
             Customers = customers.Data.Items.Select(customer => new EntityOptionListModel.EntityOptionModel
             {
                 Id = customer.Id,

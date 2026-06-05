@@ -151,7 +151,14 @@
                         <option value="">Chọn khách hàng</option>
                         @foreach (var customer in Model.Customers)
                         {
-                            <option value="@customer.Id">@customer.Name</option>
+                            if (customer.Id == Model.DefaultCustomerId)
+                            {
+                                <option value="@customer.Id" selected>@customer.Name</option>
+                            }
+                            else
+                            {
+                                <option value="@customer.Id">@customer.Name</option>
+                            }
                         }
                     </select>
                 </div>

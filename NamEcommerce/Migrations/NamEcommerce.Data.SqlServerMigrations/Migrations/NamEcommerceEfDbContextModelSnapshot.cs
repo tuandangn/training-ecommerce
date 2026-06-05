@@ -1004,8 +1004,15 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int")
+                        .HasColumnName("CustomerKind");
 
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
@@ -1051,6 +1058,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         });
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Kind", "IsSystem")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Customer_CustomerKind_IsSystem")
+                        .HasFilter("[CustomerKind] = 20 AND [IsSystem] = 1 AND [IsDeleted] = 0");
 
                     b.ToTable("Customer", "tbl");
                 });

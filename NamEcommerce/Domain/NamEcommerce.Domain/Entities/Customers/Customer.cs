@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Metadata;
 using NamEcommerce.Domain.Shared;
+using NamEcommerce.Domain.Shared.Enums.Customers;
 using NamEcommerce.Domain.Shared.Events.Customers;
 
 namespace NamEcommerce.Domain.Entities.Customers;
@@ -22,6 +23,8 @@ public sealed record Customer : AppAggregateEntity
     public string PhoneNumber { get; internal set; }
     public string? Email { get; internal set; }
     public string? Note { get; internal set; }
+    public CustomerKind Kind { get; internal set; } = CustomerKind.Standard;
+    public bool IsSystem { get; internal set; }
 
     public DateTime CreatedOnUtc { get; init; }
 
