@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Entities.Returns;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -113,6 +114,80 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         return new CreatePurchaseOrderResultDto
         {
             CreatedId = insertedPurchaseOrder.Id
+        };
+    }
+
+    public async Task<QuickCreatePurchaseOrderResultDto> QuickCreateAndReceiveAsync(QuickCreatePurchaseOrderDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        dto.Verify();
+
+        var purchaseOrder = await CreatePurchaseOrderAggregateAsync(
+            dto.VendorId, dto.DefaultWarehouseId, dto.ReceivedOnUtc, null, dto.Note, 0, 0).ConfigureAwait(false);
+
+        foreach (var item in dto.Items)
+        {
+            await purchaseOrder.AddPurchaseOrderItemAsync(
+                new PurchaseOrderItem(purchaseOrder.Id, item.ProductId, item.Quantity, item.UnitCost ?? 0),
+                _productDataReader, requireVendorProduct: false).ConfigureAwait(false);
+        }
+
+        purchaseOrder.MarkCreated();
+        var inserted = await _purchaseOrderRepository.InsertAsync(purchaseOrder).ConfigureAwait(false);
+
+        var currentUser = await _currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        var userId = currentUser?.Id;
+
+        inserted.ChangeStatus(PurchaseOrderStatus.Submitted, userId);
+        inserted.UpdatedOnUtc = DateTime.UtcNow;
+        inserted.MarkStatusChanged(PurchaseOrderStatus.Draft);
+        await _purchaseOrderRepository.UpdateAsync(inserted).ConfigureAwait(false);
+
+        inserted.ChangeStatus(PurchaseOrderStatus.Approved, userId);
+        inserted.UpdatedOnUtc = DateTime.UtcNow;
+        inserted.MarkStatusChanged(PurchaseOrderStatus.Submitted);
+        await _purchaseOrderRepository.UpdateAsync(inserted).ConfigureAwait(false);
+
+        var createdReceiptIds = new List<Guid>();
+
+        if (dto.ReceiveImmediately)
+        {
+            var insertedItems = inserted.Items.ToList();
+            var lines = dto.Items.Select((item, i) => new BulkReceiveGoodsForPurchaseOrderLineDto
+            {
+                PurchaseOrderItemId = insertedItems[i].Id,
+                WarehouseId = item.WarehouseId ?? dto.DefaultWarehouseId,
+                ReceivedQuantity = item.Quantity,
+                ActualUnitCost = item.UnitCost
+            }).ToList();
+
+            var receiveResult = await BulkReceiveItemsAsync(new BulkReceiveGoodsForPurchaseOrderDto(inserted.Id)
+            {
+                Lines = lines,
+                ReceivedByUserId = userId
+            }).ConfigureAwait(false);
+
+            createdReceiptIds.AddRange(receiveResult.CreatedGoodsReceiptIds);
+        }
+
+        if (dto.Payment is not null)
+        {
+            await _vendorDebtManager.RecordFlexiblePaymentForVendorAsync(new CreateVendorPaymentDto
+            {
+                VendorId = dto.VendorId,
+                PurchaseOrderId = inserted.Id,
+                Amount = dto.Payment.Amount,
+                PaymentMethod = dto.Payment.PaymentMethod,
+                PaymentType = dto.Payment.PaymentType,
+                PaidOnUtc = dto.ReceivedOnUtc
+            }).ConfigureAwait(false);
+        }
+
+        return new QuickCreatePurchaseOrderResultDto
+        {
+            PurchaseOrderId = inserted.Id,
+            PurchaseOrderCode = inserted.Code,
+            GoodsReceiptIds = createdReceiptIds.AsReadOnly()
         };
     }
 

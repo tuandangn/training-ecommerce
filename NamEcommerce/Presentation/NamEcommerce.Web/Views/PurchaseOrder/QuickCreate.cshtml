@@ -1,0 +1,149 @@
+@model NamEcommerce.Web.Models.PurchaseOrders.QuickCreatePurchaseOrderModel
+@{
+    ViewData["Title"] = "Nhập hàng nhanh";
+}
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Nhập hàng
+        <span class="text-muted">Nhanh</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="PurchaseOrder" class="text-decoration-none">Đơn nhập</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Nhập hàng nhanh</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="content-card">
+            <div class="content-card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
+                        <div id="vendorPicker" data-id="" data-name="" data-phone="" data-address=""></div>
+                        <input type="hidden" id="VendorId" name="VendorId" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted text-uppercase d-block">Kho nhập hàng</label>
+                        <select id="DefaultWarehouseId" class="form-select">
+                            <option value="">-- Chọn kho --</option>
+                            @foreach (var w in Model.AvailableWarehouses)
+                            {
+                                <option value="@w.Id">@w.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold text-muted text-uppercase d-block">Ngày nhận hàng</label>
+                        <input type="datetime-local" id="ReceivedOn" class="form-control" value="@Model.ReceivedOn.ToString("s")" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block">Ghi chú</label>
+                        <input asp-for="Note" id="Note" class="form-control" placeholder="Ghi chú đơn nhập" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card-body-flush border-top">
+                <div class="content-card-header">
+                    <h5 class="mb-0">Danh sách hàng hóa</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary d-lg-none"
+                            data-bs-toggle="offcanvas" data-bs-target="#productBrowserOffcanvas">
+                        <i class="bi bi-plus-lg me-1"></i>Thêm hàng
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table data-table mb-0">
+                        <thead class="d-none d-md-table-header-group">
+                            <tr>
+                                <th class="ps-3">Sản phẩm</th>
+                                <th style="width:110px">Số lượng</th>
+                                <th style="width:140px">Đơn giá nhập</th>
+                                <th class="text-end" style="width:130px">Thành tiền</th>
+                                <th style="width:40px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsBody"></tbody>
+                    </table>
+                </div>
+                <div class="content-card-footer d-flex justify-content-end align-items-center gap-2 px-3 py-2 border-top">
+                    <span class="text-muted small">Tổng cộng:</span>
+                    <span class="fw-bold fs-6" id="orderTotal">0 đ</span>
+                </div>
+            </div>
+
+            <div class="content-card-body-flush border-top px-3 py-3">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <label class="fw-medium" for="receiveImmediately">Đã nhận hàng</label>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="receiveImmediately" checked role="switch" />
+                    </div>
+                </div>
+
+                <div id="paymentSection">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <label class="fw-medium" for="isPaid">Đã thanh toán công nợ</label>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="isPaid" role="switch" />
+                        </div>
+                    </div>
+
+                    <div id="paymentFields" class="d-none">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted text-uppercase">Số tiền thanh toán</label>
+                                <div class="input-group">
+                                    <input type="text" id="paymentAmount" class="form-control" data-decimal="currency" placeholder="0" />
+                                    <span class="input-group-text">đ</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-muted text-uppercase">Hình thức thanh toán</label>
+                                <select id="paymentMethod" class="form-select">
+                                    <option value="0">Tiền mặt</option>
+                                    <option value="1">Chuyển khoản</option>
+                                    <option value="3">Khác</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-card-footer px-3 py-3">
+                <button type="button" id="btnSubmit" class="btn btn-primary w-100 fw-bold py-2">
+                    <i class="bi bi-check-circle me-1"></i>Lưu đơn nhập
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4 d-none d-lg-block">
+        <div id="productBrowser" data-col-class="col-12"></div>
+    </div>
+</div>
+
+<div class="offcanvas offcanvas-bottom d-lg-none" tabindex="-1" id="productBrowserOffcanvas"
+     style="height:85vh; border-radius: 16px 16px 0 0">
+    <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title">Chọn hàng hóa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0" id="productBrowserMobileContainer">
+        <div id="productBrowserMobile" data-col-class="col-6"></div>
+    </div>
+</div>
+
+<partial name="_ItemEditOffcanvas" />
+
+@section Scripts {
+    <script type="module">
+        import QuickCreatePurchaseOrderController from "/modules/QuickCreatePurchaseOrderController.js";
+        new QuickCreatePurchaseOrderController();
+    </script>
+}

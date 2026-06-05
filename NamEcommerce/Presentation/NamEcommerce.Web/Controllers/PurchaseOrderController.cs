@@ -146,6 +146,22 @@ public sealed class PurchaseOrderController : BaseAuthorizedController
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
+    public async Task<IActionResult> QuickCreate()
+    {
+        var model = await _purchaseOrderModelFactory.PrepareQuickCreatePurchaseOrderModel();
+        return View(model);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> QuickCreate([FromBody] QuickCreatePurchaseOrderCommand command)
+    {
+        var result = await _mediator.Send(command).ConfigureAwait(false);
+        if (!result.Success)
+            return this.JsonError(LocalizeError(result.ErrorMessage!));
+
+        return this.JsonOk(new { purchaseOrderId = result.PurchaseOrderId }, Localizer["Msg.SaveSuccess"].Value);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Edit(EditPurchaseOrderModel model)
     {
