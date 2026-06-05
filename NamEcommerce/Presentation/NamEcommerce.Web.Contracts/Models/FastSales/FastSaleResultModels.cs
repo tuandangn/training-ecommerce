@@ -23,6 +23,10 @@ public sealed record BankTransferPaymentIntentModel
     public required string AccountName { get; init; }
     public required string QrImageUrl { get; init; }
     public required int Status { get; init; }
+    public DateTime ExpiresAtUtc { get; init; }
+    public DateTime? ExpiredAtUtc { get; init; }
+    public int? VerificationSource { get; init; }
+    public DateTime? VerifiedAtUtc { get; init; }
 }
 
 [Serializable]
@@ -31,4 +35,5 @@ public sealed record BankTransferPaymentIntentResultModel
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
     public BankTransferPaymentIntentModel? Intent { get; init; }
+    public Guid? VerificationLogId { get; init; }
 }

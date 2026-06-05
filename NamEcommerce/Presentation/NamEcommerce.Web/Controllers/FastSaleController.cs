@@ -57,6 +57,16 @@ public sealed class FastSaleController(IMediator mediator, IFastSaleModelFactory
         return Json(new { success = true, intent = result.Intent });
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetPaymentIntentStatus(Guid intentId)
+    {
+        var result = await mediator.Send(new GetBankTransferPaymentIntentStatusCommand { IntentId = intentId }).ConfigureAwait(false);
+        if (!result.Success)
+            return Json(new { success = false, message = LocalizeError(result.ErrorMessage ?? "Error.PaymentIntentIsNotFound") });
+
+        return Json(new { success = true, intent = result.Intent });
+    }
+
     [HttpPost]
     public async Task<IActionResult> ConfirmPaymentIntent([FromBody] ManualConfirmBankTransferPaymentIntentCommand command)
     {

@@ -130,6 +130,7 @@
 <div id="fastSaleApp"
      data-search-products-url="@Url.Action("SearchProducts", "FastSale")"
      data-create-intent-url="@Url.Action("CreatePaymentIntent", "FastSale")"
+     data-status-url="@Url.Action("GetPaymentIntentStatus", "FastSale")"
      data-confirm-intent-url="@Url.Action("ConfirmPaymentIntent", "FastSale")"
      data-create-cash-sale-url="@Url.Action("CreateCashSale", "FastSale")"
      data-create-bank-sale-url="@Url.Action("CreateBankTransferSale", "FastSale")"
@@ -251,6 +252,8 @@
                         <span class="text-muted">Số tiền</span>
                         <strong id="fastSaleQrAmount"></strong>
                     </div>
+                    <div id="fastSaleQrStatus" class="small text-muted mt-2"></div>
+                    <div id="fastSaleQrExpires" class="small text-muted"></div>
                     <div class="d-grid gap-2 mt-3">
                         <button type="button" class="btn btn-outline-primary" id="fastSaleCreateQr">
                             <i class="bi bi-qr-code-scan me-1"></i> Tạo QR

@@ -64,6 +64,16 @@ public sealed class CreateBankTransferPaymentIntentHandler(IBankTransferPaymentI
     }
 }
 
+public sealed class GetBankTransferPaymentIntentStatusHandler(IBankTransferPaymentIntentAppService paymentIntentAppService)
+    : IRequestHandler<GetBankTransferPaymentIntentStatusCommand, BankTransferPaymentIntentResultModel>
+{
+    public async Task<BankTransferPaymentIntentResultModel> Handle(GetBankTransferPaymentIntentStatusCommand request, CancellationToken cancellationToken)
+    {
+        var result = await paymentIntentAppService.GetStatusAsync(request.IntentId).ConfigureAwait(false);
+        return FastSaleCommandHandlerMapper.MapIntentResult(result);
+    }
+}
+
 public sealed class ManualConfirmBankTransferPaymentIntentHandler(IBankTransferPaymentIntentAppService paymentIntentAppService)
     : IRequestHandler<ManualConfirmBankTransferPaymentIntentCommand, BankTransferPaymentIntentResultModel>
 {
@@ -73,6 +83,27 @@ public sealed class ManualConfirmBankTransferPaymentIntentHandler(IBankTransferP
         {
             IntentId = request.IntentId,
             Note = request.Note
+        }).ConfigureAwait(false);
+
+        return FastSaleCommandHandlerMapper.MapIntentResult(result);
+    }
+}
+
+public sealed class ProcessBankTransferProviderTransactionHandler(IBankTransferPaymentIntentAppService paymentIntentAppService)
+    : IRequestHandler<ProcessBankTransferProviderTransactionCommand, BankTransferPaymentIntentResultModel>
+{
+    public async Task<BankTransferPaymentIntentResultModel> Handle(ProcessBankTransferProviderTransactionCommand request, CancellationToken cancellationToken)
+    {
+        var result = await paymentIntentAppService.ProcessProviderTransactionAsync(new ProcessBankTransferProviderTransactionAppDto
+        {
+            ReferenceCode = request.ReferenceCode,
+            Amount = request.Amount,
+            BankId = request.BankId,
+            AccountNo = request.AccountNo,
+            ProviderTransactionId = request.ProviderTransactionId,
+            Source = request.Source,
+            RawPayload = request.RawPayload,
+            ConfirmedAtUtc = request.ConfirmedAtUtc
         }).ConfigureAwait(false);
 
         return FastSaleCommandHandlerMapper.MapIntentResult(result);
@@ -108,16 +139,34 @@ internal static class FastSaleCommandHandlerMapper
             ErrorMessage = result.ErrorMessage,
             Intent = result.Intent is null
                 ? null
-                : new BankTransferPaymentIntentModel
-                {
-                    Id = result.Intent.Id,
-                    ReferenceCode = result.Intent.ReferenceCode,
-                    Amount = result.Intent.Amount,
-                    BankId = result.Intent.BankId,
-                    AccountNo = result.Intent.AccountNo,
-                    AccountName = result.Intent.AccountName,
-                    QrImageUrl = result.Intent.QrImageUrl,
-                    Status = result.Intent.Status
-                }
+                : MapIntent(result.Intent)
+        };
+
+    public static BankTransferPaymentIntentResultModel MapIntentResult(BankTransferProviderProcessingResultAppDto result)
+        => new()
+        {
+            Success = result.Success,
+            ErrorMessage = result.ErrorMessage,
+            VerificationLogId = result.VerificationLogId,
+            Intent = result.Intent is null
+                ? null
+                : MapIntent(result.Intent)
+        };
+
+    private static BankTransferPaymentIntentModel MapIntent(BankTransferPaymentIntentAppDto intent)
+        => new()
+        {
+            Id = intent.Id,
+            ReferenceCode = intent.ReferenceCode,
+            Amount = intent.Amount,
+            BankId = intent.BankId,
+            AccountNo = intent.AccountNo,
+            AccountName = intent.AccountName,
+            QrImageUrl = intent.QrImageUrl,
+            Status = intent.Status,
+            ExpiresAtUtc = intent.ExpiresAtUtc,
+            ExpiredAtUtc = intent.ExpiredAtUtc,
+            VerificationSource = intent.VerificationSource,
+            VerifiedAtUtc = intent.VerifiedAtUtc
         };
 }

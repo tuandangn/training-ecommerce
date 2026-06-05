@@ -176,6 +176,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     // Outbox processor (background service) — đọc OutboxMessages chưa processed và publish qua MediatR.
     services.Configure<OutboxProcessorOptions>(configuration.GetSection("Outbox"));
     services.AddHostedService<OutboxProcessor>();
+    services.AddHostedService<CassoReconciliationHostedService>();
 
     services.AddScoped<IUserManager, UserManager>();
     services.AddScoped<ICategoryManager, CategoryManager>();
@@ -203,6 +204,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IOrderManager, OrderManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
     services.AddScoped<IBankTransferPaymentIntentManager, BankTransferPaymentIntentManager>();
+    services.AddScoped<IBankTransferVerificationLogManager, BankTransferVerificationLogManager>();
+    services.AddScoped<ICassoReconciliationRunManager, CassoReconciliationRunManager>();
     services.AddScoped<ICustomerPortalSecurityManager, CustomerPortalSecurityManager>();
     services.AddScoped<ICustomerPortalManager, CustomerPortalManager>();
     services.AddScoped<IVendorDebtManager, VendorDebtManager>();
@@ -252,6 +255,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
     services.AddScoped<IBankTransferPaymentIntentAppService, BankTransferPaymentIntentAppService>();
     services.AddScoped<IBankTransferVerificationProvider, NoneBankTransferVerificationProvider>();
+    services.AddScoped<CassoTransactionMapper>();
+    services.AddScoped<ICassoBankTransferAppService, CassoBankTransferAppService>();
+    services.AddHttpClient<ICassoTransactionClient, CassoTransactionClient>();
     services.AddScoped<ICustomerPortalAdminAppService, CustomerPortalAdminAppService>();
     services.AddScoped<ICustomerPortalDeliveryTokenAppService, CustomerPortalDeliveryTokenAppService>();
     services.AddScoped<ICustomerPortalNotificationSender, MockSmsCustomerPortalNotificationSender>();

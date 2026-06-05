@@ -47,13 +47,28 @@ public sealed class FastSaleAppService(
         if (!validation.Success)
             return validation;
 
-        var intent = await paymentIntentManager.GetByIdAsync(paymentIntentId).ConfigureAwait(false);
-        if (intent is null)
-            return QuickSaleResultAppDto.CreateError("Error.PaymentIntentIsNotFound");
+        BankTransferPaymentIntentDto intent;
+        try
+        {
+            intent = await paymentIntentManager.ExpireIfPendingAsync(paymentIntentId, DateTime.UtcNow).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            return QuickSaleResultAppDto.CreateError(ex.Message);
+        }
+
         if (intent.CustomerId.HasValue && intent.CustomerId.Value != dto.CustomerId)
             return QuickSaleResultAppDto.CreateError("Error.PaymentIntentCustomerMismatch");
-        if (intent.Amount != CalculateTotal(dto))
+
+        var total = CalculateTotal(dto);
+        if (intent.Amount != total || intent.Amount != dto.PaidAmount)
             return QuickSaleResultAppDto.CreateError("Error.PaymentIntentAmountMismatch");
+        if (intent.Status is BankTransferPaymentIntentStatus.Expired
+            or BankTransferPaymentIntentStatus.Cancelled
+            or BankTransferPaymentIntentStatus.Consumed)
+        {
+            return QuickSaleResultAppDto.CreateError("Error.PaymentIntentCannotConsume");
+        }
         if (intent.Status is not BankTransferPaymentIntentStatus.Confirmed and not BankTransferPaymentIntentStatus.ManuallyConfirmed)
             return QuickSaleResultAppDto.CreateError("Error.PaymentIntentIsNotConfirmed");
 

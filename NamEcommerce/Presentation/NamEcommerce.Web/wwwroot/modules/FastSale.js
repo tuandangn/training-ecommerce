@@ -1,9 +1,20 @@
+const IntentStatus = {
+    Pending: 10,
+    Confirmed: 20,
+    ManuallyConfirmed: 30,
+    Expired: 40,
+    Cancelled: 50,
+    Consumed: 60
+};
+const StatusPollingIntervalMs = 3000;
+
 class FastSale {
     constructor(root) {
         this.root = root;
         this.urls = {
             searchProducts: root.dataset.searchProductsUrl,
             createIntent: root.dataset.createIntentUrl,
+            statusIntent: root.dataset.statusUrl,
             confirmIntent: root.dataset.confirmIntentUrl,
             createCashSale: root.dataset.createCashSaleUrl,
             createBankSale: root.dataset.createBankSaleUrl
@@ -15,6 +26,9 @@ class FastSale {
         this.paymentIntent = null;
         this.paymentIntentConfirmed = false;
         this.searchTimer = null;
+        this.statusTimer = null;
+        this.saleInputVersion = 0;
+        this.pollRequestSeq = 0;
 
         this.bindElements();
         this.bindEvents();
@@ -40,6 +54,8 @@ class FastSale {
         this.qrImage = document.getElementById('fastSaleQrImage');
         this.reference = document.getElementById('fastSaleReference');
         this.qrAmount = document.getElementById('fastSaleQrAmount');
+        this.qrStatus = document.getElementById('fastSaleQrStatus');
+        this.qrExpires = document.getElementById('fastSaleQrExpires');
         this.createQr = document.getElementById('fastSaleCreateQr');
         this.confirmQr = document.getElementById('fastSaleConfirmQr');
         this.complete = document.getElementById('fastSaleComplete');
@@ -52,14 +68,16 @@ class FastSale {
             this.searchTimer = window.setTimeout(() => this.searchProducts(), 250);
         });
         this.warehouse.addEventListener('change', () => {
-            this.paymentIntent = null;
-            this.paymentIntentConfirmed = false;
+            this.resetPaymentIntent();
             this.searchProducts();
             this.render();
         });
+        this.customer.addEventListener('change', () => {
+            this.resetPaymentIntent();
+            this.render();
+        });
         this.discount.addEventListener('input', () => {
-            this.paymentIntent = null;
-            this.paymentIntentConfirmed = false;
+            this.resetPaymentIntent();
             this.render();
         });
         this.cashMethod.addEventListener('click', () => this.setPaymentMethod('cash'));
@@ -69,8 +87,7 @@ class FastSale {
         this.complete.addEventListener('click', () => this.completeSale());
         this.clearCart.addEventListener('click', () => {
             this.cart = [];
-            this.paymentIntent = null;
-            this.paymentIntentConfirmed = false;
+            this.resetPaymentIntent();
             this.render();
         });
     }
@@ -78,11 +95,18 @@ class FastSale {
     setPaymentMethod(method) {
         if (method === 'bank' && !this.bankTransferEnabled) return;
         this.paymentMethod = method;
-        this.paymentIntent = null;
-        this.paymentIntentConfirmed = false;
+        this.resetPaymentIntent();
         this.cashMethod.classList.toggle('active', method === 'cash');
         this.bankMethod.classList.toggle('active', method === 'bank');
         this.render();
+    }
+
+    resetPaymentIntent() {
+        this.saleInputVersion += 1;
+        this.pollRequestSeq += 1;
+        this.stopIntentPolling();
+        this.paymentIntent = null;
+        this.paymentIntentConfirmed = false;
     }
 
     async searchProducts() {
@@ -138,8 +162,7 @@ class FastSale {
             });
         }
 
-        this.paymentIntent = null;
-        this.paymentIntentConfirmed = false;
+        this.resetPaymentIntent();
         this.render();
     }
 
@@ -153,14 +176,25 @@ class FastSale {
         this.total.textContent = this.formatMoneyWithSymbol(total);
         this.qrPanel.classList.toggle('visible', this.paymentMethod === 'bank');
         this.createQr.disabled = this.paymentMethod !== 'bank' || total <= 0 || this.cart.length === 0;
-        this.confirmQr.disabled = !this.paymentIntent || this.paymentIntentConfirmed || !this.manualConfirmEnabled;
+        this.confirmQr.disabled = !this.paymentIntent || this.paymentIntentConfirmed || !this.manualConfirmEnabled || !this.isIntentPending(this.paymentIntent);
         this.complete.disabled = this.cart.length === 0 || total <= 0 || (this.paymentMethod === 'bank' && !this.paymentIntentConfirmed);
 
         if (!this.paymentIntent) {
             this.qrImage.removeAttribute('src');
             this.reference.textContent = '';
             this.qrAmount.textContent = '';
+            this.qrStatus.textContent = '';
+            this.qrExpires.textContent = '';
+            return;
         }
+
+        this.qrImage.src = this.paymentIntent.qrImageUrl || '';
+        this.reference.textContent = this.paymentIntent.referenceCode || '';
+        this.qrAmount.textContent = this.formatMoney(this.paymentIntent.amount);
+        this.qrStatus.textContent = `Trang thai: ${this.getIntentStatusText(this.paymentIntent.status)}`;
+        this.qrExpires.textContent = this.paymentIntent.expiresAtUtc
+            ? `Het han: ${this.formatDateTime(this.paymentIntent.expiresAtUtc)}`
+            : '';
     }
 
     renderCart() {
@@ -204,8 +238,7 @@ class FastSale {
 
             row.querySelector('button').addEventListener('click', () => {
                 this.cart.splice(index, 1);
-                this.paymentIntent = null;
-                this.paymentIntentConfirmed = false;
+                this.resetPaymentIntent();
                 this.render();
             });
 
@@ -227,11 +260,14 @@ class FastSale {
             return;
         }
 
+        const saleInputVersion = this.saleInputVersion;
         const response = await this.postJson(this.urls.createIntent, {
             customerId: this.customer.value,
             amount: total,
             note: this.note.value
         });
+        if (this.saleInputVersion !== saleInputVersion) return;
+
         if (!response.success) {
             this.showAlert('danger', response.message);
             return;
@@ -239,9 +275,7 @@ class FastSale {
 
         this.paymentIntent = response.intent;
         this.paymentIntentConfirmed = false;
-        this.qrImage.src = this.paymentIntent.qrImageUrl;
-        this.reference.textContent = this.paymentIntent.referenceCode;
-        this.qrAmount.textContent = this.formatMoneyWithSymbol(this.paymentIntent.amount);
+        this.startIntentPolling();
         this.showAlert('success', 'Đã tạo QR chuyển khoản.');
         this.render();
     }
@@ -249,18 +283,92 @@ class FastSale {
     async confirmPaymentIntent() {
         if (!this.paymentIntent) return;
 
+        const intentId = this.paymentIntent.id;
+        const saleInputVersion = this.saleInputVersion;
         const response = await this.postJson(this.urls.confirmIntent, {
-            intentId: this.paymentIntent.id,
+            intentId,
             note: this.note.value
         });
+        if (!this.paymentIntent || this.paymentIntent.id !== intentId || this.saleInputVersion !== saleInputVersion) return;
+
         if (!response.success) {
             this.showAlert('danger', response.message);
             return;
         }
+        if (response.intent?.id !== intentId) return;
 
         this.paymentIntent = response.intent;
-        this.paymentIntentConfirmed = true;
+        this.paymentIntentConfirmed = this.isIntentConfirmed(this.paymentIntent);
+        this.pollRequestSeq += 1;
+        this.stopIntentPolling();
         this.showAlert('success', 'Đã xác nhận tiền vào tài khoản.');
+        this.render();
+    }
+
+    startIntentPolling() {
+        this.stopIntentPolling();
+        if (!this.paymentIntent || !this.isIntentPending(this.paymentIntent)) return;
+
+        this.statusTimer = window.setInterval(() => this.refreshIntentStatus(), StatusPollingIntervalMs);
+        this.refreshIntentStatus();
+    }
+
+    stopIntentPolling() {
+        if (!this.statusTimer) return;
+
+        window.clearInterval(this.statusTimer);
+        this.statusTimer = null;
+    }
+
+    async refreshIntentStatus() {
+        if (!this.paymentIntent) {
+            this.stopIntentPolling();
+            return;
+        }
+
+        const intentId = this.paymentIntent.id;
+        const saleInputVersion = this.saleInputVersion;
+        const requestSeq = this.pollRequestSeq + 1;
+        this.pollRequestSeq = requestSeq;
+        const params = new URLSearchParams({ intentId });
+        let data;
+
+        try {
+            const response = await fetch(`${this.urls.statusIntent}?${params.toString()}`);
+            data = await response.json();
+        } catch {
+            if (!this.isCurrentPollingIntent(intentId, saleInputVersion, requestSeq)) return;
+
+            this.showAlert('danger', 'Khong the cap nhat trang thai QR.');
+            this.resetPaymentIntent();
+            this.render();
+            return;
+        }
+
+        if (!this.isCurrentPollingIntent(intentId, saleInputVersion, requestSeq)) return;
+
+        if (!data?.success) {
+            this.showAlert('danger', data?.message);
+            this.resetPaymentIntent();
+            this.render();
+            return;
+        }
+        if (data.intent?.id !== intentId) return;
+
+        this.paymentIntent = data.intent;
+        this.paymentIntentConfirmed = this.isIntentConfirmed(this.paymentIntent);
+        if (this.paymentIntentConfirmed) {
+            this.showAlert('success', 'Da xac nhan tien vao tai khoan.');
+            this.stopIntentPolling();
+        }
+
+        if (this.isIntentExpiredOrCancelled(this.paymentIntent)) {
+            this.showAlert('warning', 'QR da het han hoac da bi huy. Vui long tao QR moi.');
+            this.stopIntentPolling();
+        }
+
+        if (!this.isIntentPending(this.paymentIntent)) this.stopIntentPolling();
+
         this.render();
     }
 
@@ -339,6 +447,56 @@ class FastSale {
 
     calculateTotal() {
         return Math.max(0, this.calculateSubtotal() - this.getDiscount());
+    }
+
+    isIntentPending(intent) {
+        return Number(intent?.status) === IntentStatus.Pending;
+    }
+
+    isIntentConfirmed(intent) {
+        const status = Number(intent?.status);
+        return status === IntentStatus.Confirmed || status === IntentStatus.ManuallyConfirmed;
+    }
+
+    isIntentExpiredOrCancelled(intent) {
+        const status = Number(intent?.status);
+        return status === IntentStatus.Expired || status === IntentStatus.Cancelled;
+    }
+
+    isCurrentPollingIntent(intentId, saleInputVersion, requestSeq) {
+        return this.paymentIntent
+            && this.paymentIntent.id === intentId
+            && this.saleInputVersion === saleInputVersion
+            && this.pollRequestSeq === requestSeq;
+    }
+
+    getIntentStatusText(status) {
+        switch (Number(status)) {
+            case IntentStatus.Pending:
+                return 'Dang cho chuyen khoan';
+            case IntentStatus.Confirmed:
+                return 'Da nhan tien';
+            case IntentStatus.ManuallyConfirmed:
+                return 'Da xac nhan thu cong';
+            case IntentStatus.Expired:
+                return 'Da het han';
+            case IntentStatus.Cancelled:
+                return 'Da huy';
+            case IntentStatus.Consumed:
+                return 'Da su dung';
+            default:
+                return 'Khong xac dinh';
+        }
+    }
+
+    formatDateTime(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+
+        return new Intl.DateTimeFormat('vi-VN', {
+            dateStyle: 'short',
+            timeStyle: 'short'
+        }).format(date);
     }
 
     parseNumber(value) {
