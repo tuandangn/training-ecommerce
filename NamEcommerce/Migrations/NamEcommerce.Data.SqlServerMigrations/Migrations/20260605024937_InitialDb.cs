@@ -6,13 +6,62 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     /// <inheritdoc />
-    public partial class UpdateDb060426 : Migration
+    public partial class InitialDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.EnsureSchema(
                 name: "tbl");
+
+            migrationBuilder.CreateTable(
+                name: "AccountingSetup",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FiscalYearStartMonth = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
+                    FiscalYearStartDay = table.Column<int>(type: "int", nullable: false, defaultValue: 1),
+                    AccountingStartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    OpeningCash = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    OpeningEquity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    DefaultTaxRate = table.Column<decimal>(type: "decimal(5,4)", nullable: false, defaultValue: 0.10m),
+                    CorporateTaxProvision = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    IsFinalized = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    FinalizedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AccountingSetup", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BankAccount",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    DisplayName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    BankName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    AccountNumber = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    AccountHolderName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    OpeningBalance = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m),
+                    IsDefault = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BankAccount", x => x.Id);
+                });
 
             migrationBuilder.CreateTable(
                 name: "BankTransferPaymentIntent",
@@ -39,6 +88,8 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     RawPayload = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     VerifiedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     VerifiedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ExpiresAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ExpiredAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
@@ -47,6 +98,60 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_BankTransferPaymentIntent", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "BankTransferVerificationLogs",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ReferenceCode = table.Column<string>(type: "nvarchar(25)", maxLength: 25, nullable: false),
+                    Amount = table.Column<decimal>(type: "decimal(18,2)", precision: 18, scale: 2, nullable: false),
+                    BankId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    AccountNo = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    ProviderTransactionId = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Source = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    PaymentIntentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    ErrorMessage = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    RawPayload = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: true),
+                    ProviderConfirmedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_BankTransferVerificationLogs", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CassoReconciliationRuns",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    StartedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    FinishedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    FromDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ToDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Trigger = table.Column<int>(type: "int", nullable: false),
+                    TotalRecords = table.Column<int>(type: "int", nullable: false),
+                    Processed = table.Column<int>(type: "int", nullable: false),
+                    Matched = table.Column<int>(type: "int", nullable: false),
+                    Duplicate = table.Column<int>(type: "int", nullable: false),
+                    Rejected = table.Column<int>(type: "int", nullable: false),
+                    Ignored = table.Column<int>(type: "int", nullable: false),
+                    Failed = table.Column<int>(type: "int", nullable: false),
+                    ErrorMessage = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CassoReconciliationRuns", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -139,6 +244,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     PaidAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     RemainingAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    IsOpeningBalance = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     DueDateUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -240,6 +346,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     PaymentMethod = table.Column<int>(type: "int", nullable: false),
                     PaymentType = table.Column<int>(type: "int", nullable: false),
+                    BankAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Note = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     PaidOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     RecordedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
@@ -387,6 +494,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     PaymentMethod = table.Column<int>(type: "int", nullable: true),
+                    BankAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Note = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
                     RefundedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CompletedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
@@ -497,6 +605,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     Surcharge = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     SurchargeReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     AmountToCollect = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    InvoiceNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    InvoiceSeries = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    InvoiceDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     SourceType = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
                     IsDirectShip = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     DeliveryConfirmationStatus = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
@@ -573,6 +684,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     ExpenseType = table.Column<int>(type: "int", nullable: false),
                     IncurredDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    TaxRate = table.Column<decimal>(type: "decimal(5,4)", nullable: true),
+                    TaxAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m),
+                    PaymentMethod = table.Column<int>(type: "int", nullable: true),
+                    BankAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     RecordedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     SourceVendorReturnId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     SourceCustomerReturnId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
@@ -585,6 +700,36 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Expenses", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "FixedAsset",
+                schema: "tbl",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    Category = table.Column<int>(type: "int", nullable: false),
+                    CostCenter = table.Column<int>(type: "int", nullable: false),
+                    AcquisitionDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    AcquisitionCost = table.Column<decimal>(type: "decimal(18,0)", nullable: false),
+                    ResidualValue = table.Column<decimal>(type: "decimal(18,0)", nullable: false, defaultValue: 0m),
+                    UsefulLifeMonths = table.Column<int>(type: "int", nullable: false),
+                    VendorId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    VendorInvoiceNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    DisposedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FixedAsset", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -602,6 +747,8 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     TruckNumberSerial = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Note = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
                     VendorId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    VendorInvoiceNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    VendorInvoiceDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     CreatedByUsername = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1045,6 +1192,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     PaidAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     RemainingAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    IsOpeningBalance = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
                     Status = table.Column<int>(type: "int", nullable: false),
                     DueDateUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1072,6 +1220,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     PaymentMethod = table.Column<int>(type: "int", nullable: false),
                     PaymentType = table.Column<int>(type: "int", nullable: false),
+                    BankAccountId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Note = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     PaidOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     RecordedByUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
@@ -1128,14 +1277,15 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Code = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    NormalizedName = table.Column<string>(type: "nvarchar(400)", maxLength: 400, nullable: false),
-                    Address = table.Column<string>(type: "nvarchar(800)", maxLength: 800, nullable: true),
-                    NormalizedAddress = table.Column<string>(type: "nvarchar(1600)", maxLength: 1600, nullable: false),
                     PhoneNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     ManagerUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     WarehouseType = table.Column<int>(type: "int", nullable: false),
+                    DisplayOrder = table.Column<int>(type: "int", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    NormalizedAddress = table.Column<string>(type: "nvarchar(800)", maxLength: 800, nullable: false),
+                    Address = table.Column<string>(type: "nvarchar(800)", maxLength: 800, nullable: false),
+                    NormalizedName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     DeletedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -1307,7 +1457,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     ProductName = table.Column<string>(type: "nvarchar(400)", maxLength: 400, nullable: false),
                     Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    CostAtDispatch = table.Column<decimal>(type: "decimal(18,2)", nullable: true)
+                    CostAtDispatch = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    DiscountPercent = table.Column<decimal>(type: "decimal(5,2)", nullable: false, defaultValue: 0m),
+                    DiscountAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m),
+                    TaxRate = table.Column<decimal>(type: "decimal(5,4)", nullable: true),
+                    TaxAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m)
                 },
                 constraints: table =>
                 {
@@ -1332,6 +1486,8 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     ProductName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     WarehouseId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     WarehouseName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    TaxRate = table.Column<decimal>(type: "decimal(5,4)", nullable: true),
+                    TaxAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m),
                     Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     UnitCost = table.Column<decimal>(type: "decimal(18,2)", nullable: true)
                 },
@@ -1452,6 +1608,8 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     QuantityOrdered = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     QuantityReceived = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     UnitCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    TaxRate = table.Column<decimal>(type: "decimal(5,4)", nullable: true),
+                    TaxAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false, defaultValue: 0m),
                     Note = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true)
                 },
                 constraints: table =>
@@ -2000,6 +2158,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_BankAccount_Code",
+                schema: "tbl",
+                table: "BankAccount",
+                column: "Code",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_BankTransferPaymentIntent_CustomerDebtId",
                 schema: "tbl",
                 table: "BankTransferPaymentIntent",
@@ -2047,6 +2212,42 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl",
                 table: "BankTransferPaymentIntent",
                 columns: new[] { "Status", "CreatedOnUtc" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BankTransferPaymentIntent_Status_ExpiresAtUtc",
+                schema: "tbl",
+                table: "BankTransferPaymentIntent",
+                columns: new[] { "Status", "ExpiresAtUtc" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BankTransferVerificationLogs_PaymentIntentId",
+                schema: "tbl",
+                table: "BankTransferVerificationLogs",
+                column: "PaymentIntentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BankTransferVerificationLogs_ProviderTransactionId",
+                schema: "tbl",
+                table: "BankTransferVerificationLogs",
+                column: "ProviderTransactionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BankTransferVerificationLogs_ReferenceCode",
+                schema: "tbl",
+                table: "BankTransferVerificationLogs",
+                column: "ReferenceCode");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CassoReconciliationRuns_FromDate_ToDate",
+                schema: "tbl",
+                table: "CassoReconciliationRuns",
+                columns: new[] { "FromDate", "ToDate" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CassoReconciliationRuns_StartedAtUtc",
+                schema: "tbl",
+                table: "CassoReconciliationRuns",
+                column: "StartedAtUtc");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CustomerCreditNote_Code",
@@ -2356,6 +2557,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 column: "SourceVendorReturnId",
                 unique: true,
                 filter: "[SourceVendorReturnId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FixedAsset_Code",
+                schema: "tbl",
+                table: "FixedAsset",
+                column: "Code",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_GoodsReceipt_BulkReceiveBatchId",
@@ -2884,7 +3092,23 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
+                name: "AccountingSetup",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "BankAccount",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
                 name: "BankTransferPaymentIntent",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "BankTransferVerificationLogs",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "CassoReconciliationRuns",
                 schema: "tbl");
 
             migrationBuilder.DropTable(
@@ -2965,6 +3189,10 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
             migrationBuilder.DropTable(
                 name: "Expenses",
+                schema: "tbl");
+
+            migrationBuilder.DropTable(
+                name: "FixedAsset",
                 schema: "tbl");
 
             migrationBuilder.DropTable(
