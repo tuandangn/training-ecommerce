@@ -253,6 +253,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IOrderAuditAppService, OrderAuditAppService>();
     services.AddScoped<IFastSaleAppService, FastSaleAppService>();
     services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
+    services.AddScoped<IBankTransferReceivingAccountResolver, BankTransferReceivingAccountResolver>();
     services.AddScoped<IBankTransferPaymentIntentAppService, BankTransferPaymentIntentAppService>();
     services.AddScoped<IBankTransferVerificationProvider, NoneBankTransferVerificationProvider>();
     services.AddScoped<CassoTransactionMapper>();

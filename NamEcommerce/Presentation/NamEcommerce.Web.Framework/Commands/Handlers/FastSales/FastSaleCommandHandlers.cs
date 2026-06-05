@@ -20,6 +20,8 @@ public sealed class CreateCashQuickSaleHandler(IFastSaleAppService fastSaleAppSe
             Items = request.Items.Select(FastSaleCommandHandlerMapper.MapItem).ToList(),
             OrderDiscount = request.OrderDiscount,
             Note = request.Note,
+            FulfillmentMode = request.FulfillmentMode,
+            PaymentTiming = request.PaymentTiming,
             PaymentMethod = 0,
             PaidAmount = request.PaidAmount
         }).ConfigureAwait(false);
@@ -40,9 +42,33 @@ public sealed class CreateBankTransferQuickSaleHandler(IFastSaleAppService fastS
             Items = request.Items.Select(FastSaleCommandHandlerMapper.MapItem).ToList(),
             OrderDiscount = request.OrderDiscount,
             Note = request.Note,
+            FulfillmentMode = request.FulfillmentMode,
+            PaymentTiming = request.PaymentTiming,
             PaymentMethod = 1,
             PaidAmount = request.PaidAmount
         }, request.PaymentIntentId).ConfigureAwait(false);
+
+        return FastSaleCommandHandlerMapper.MapResult(result);
+    }
+}
+
+public sealed class CreateUnpaidQuickSaleHandler(IFastSaleAppService fastSaleAppService)
+    : IRequestHandler<CreateUnpaidQuickSaleCommand, QuickSaleResultModel>
+{
+    public async Task<QuickSaleResultModel> Handle(CreateUnpaidQuickSaleCommand request, CancellationToken cancellationToken)
+    {
+        var result = await fastSaleAppService.CreateUnpaidQuickSaleAsync(new CreateQuickSaleAppDto
+        {
+            CustomerId = request.CustomerId,
+            WarehouseId = request.WarehouseId,
+            Items = request.Items.Select(FastSaleCommandHandlerMapper.MapItem).ToList(),
+            OrderDiscount = request.OrderDiscount,
+            Note = request.Note,
+            FulfillmentMode = request.FulfillmentMode,
+            PaymentTiming = request.PaymentTiming,
+            PaymentMethod = 0,
+            PaidAmount = 0
+        }).ConfigureAwait(false);
 
         return FastSaleCommandHandlerMapper.MapResult(result);
     }
@@ -116,6 +142,7 @@ internal static class FastSaleCommandHandlerMapper
         => new()
         {
             ProductId = item.ProductId,
+            WarehouseId = item.WarehouseId,
             Quantity = item.Quantity,
             UnitPrice = item.UnitPrice
         };

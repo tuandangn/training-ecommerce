@@ -9,5 +9,6 @@ public interface ICustomerManager
     Task<UpdateCustomerResultDto> UpdateCustomerAsync(UpdateCustomerDto dto);
     Task DeleteCustomerAsync(Guid id);
     Task<CustomerDto?> GetCustomerByIdAsync(Guid id);
-    Task<IPagedDataDto<CustomerDto>> GetCustomersAsync(string? keywords, int pageIndex, int pageSize);
+    Task<CustomerDto> GetOrCreateRetailWalkInCustomerAsync();
+    Task<IPagedDataDto<CustomerDto>> GetCustomersAsync(string? keywords, int pageIndex, int pageSize, bool includeSystem = false);
 }

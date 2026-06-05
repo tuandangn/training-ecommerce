@@ -34,5 +34,11 @@ public sealed class CustomerMapping : IEntityTypeConfiguration<Customer>
         builder.Property(c => c.PhoneNumber).HasMaxLength(50).IsRequired();
         builder.Property(c => c.Email).HasMaxLength(200);
         builder.Property(c => c.Note).HasMaxLength(1000);
+        builder.Property(c => c.Kind).HasColumnName("CustomerKind").HasConversion<int>().IsRequired();
+        builder.Property(c => c.IsSystem).IsRequired();
+        builder.HasIndex(c => new { c.Kind, c.IsSystem })
+            .IsUnique()
+            .HasDatabaseName("IX_Customer_CustomerKind_IsSystem")
+            .HasFilter("[CustomerKind] = 20 AND [IsSystem] = 1 AND [IsDeleted] = 0");
     }
 }

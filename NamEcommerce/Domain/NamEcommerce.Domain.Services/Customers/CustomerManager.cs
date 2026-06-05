@@ -3,6 +3,8 @@ using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Shared.Dtos.Common;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Entities.Customers;
+using NamEcommerce.Domain.Shared.Enums.Customers;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Customers;
 using NamEcommerce.Domain.Shared.Services.Customers;
 using NamEcommerce.Domain.Shared.Helpers;
@@ -12,6 +14,10 @@ namespace NamEcommerce.Domain.Services.Customers;
 
 public sealed class CustomerManager : ICustomerManager
 {
+    private const string RetailWalkInCustomerName = "Khách bán lẻ";
+    private const string RetailWalkInCustomerAddress = "Tại quầy";
+    private const string RetailWalkInCustomerNote = "System customer for walk-in retail sales.";
+
     private readonly IRepository<Customer> _customerRepository;
     private readonly IEntityDataReader<Customer> _customerDataReader;
     private readonly IEntityDataReader<Order> _orderDataReader;
@@ -44,6 +50,8 @@ public sealed class CustomerManager : ICustomerManager
         ArgumentNullException.ThrowIfNull(dto);
         var customer = await _customerDataReader.GetByIdAsync(dto.Id).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.Id);
+        if (customer.IsSystem)
+            throw new NamEcommerceDomainException("Error.SystemCustomerCannotBeUpdated");
 
         customer.FullName = dto.FullName;
         customer.PhoneNumber = dto.PhoneNumber;
@@ -58,12 +66,15 @@ public sealed class CustomerManager : ICustomerManager
 
     public async Task DeleteCustomerAsync(Guid id)
     {
-        var hasOrders = await Task.Run(() => _orderDataReader.DataSource.Any(o => o.CustomerId == id)).ConfigureAwait(false);
-        if (hasOrders) throw new CustomerCannotBeDeletedException(id);
-
         var customer = await _customerDataReader.GetByIdAsync(id).ConfigureAwait(false);
         if (customer != null)
         {
+            if (customer.IsSystem)
+                throw new CustomerCannotBeDeletedException(id);
+
+            var hasOrders = await Task.Run(() => _orderDataReader.DataSource.Any(o => o.CustomerId == id)).ConfigureAwait(false);
+            if (hasOrders) throw new CustomerCannotBeDeletedException(id);
+
             customer.MarkDeleted();
             await _customerRepository.DeleteAsync(customer).ConfigureAwait(false);
         }
@@ -81,13 +92,41 @@ public sealed class CustomerManager : ICustomerManager
             Email = customer.Email,
             Address = customer.Address,
             Note = customer.Note,
+            Kind = (int)customer.Kind,
+            IsSystem = customer.IsSystem,
             CreatedOnUtc = customer.CreatedOnUtc
         };
     }
 
-    public async Task<IPagedDataDto<CustomerDto>> GetCustomersAsync(string? keywords, int pageIndex, int pageSize)
+    public async Task<CustomerDto> GetOrCreateRetailWalkInCustomerAsync()
+    {
+        var existing = _customerDataReader.DataSource.FirstOrDefault(c =>
+            c.Kind == CustomerKind.RetailWalkIn && c.IsSystem);
+        if (existing is not null)
+            return MapToDto(existing);
+
+        var customer = new Customer(Guid.NewGuid(), RetailWalkInCustomerName, string.Empty, RetailWalkInCustomerAddress)
+        {
+            Kind = CustomerKind.RetailWalkIn,
+            IsSystem = true,
+            Note = RetailWalkInCustomerNote
+        };
+        customer.MarkCreated();
+
+        var inserted = await _customerRepository.InsertAsync(customer).ConfigureAwait(false);
+        return MapToDto(inserted);
+    }
+
+    public async Task<IPagedDataDto<CustomerDto>> GetCustomersAsync(
+        string? keywords,
+        int pageIndex,
+        int pageSize,
+        bool includeSystem = false)
     {
         var query = _customerDataReader.DataSource;
+
+        if (!includeSystem)
+            query = query.Where(c => !c.IsSystem);
 
         if (!string.IsNullOrWhiteSpace(keywords))
         {
@@ -112,9 +151,24 @@ public sealed class CustomerManager : ICustomerManager
                 Email = c.Email,
                 Address = c.Address,
                 Note = c.Note,
+                Kind = (int)c.Kind,
+                IsSystem = c.IsSystem,
                 CreatedOnUtc = c.CreatedOnUtc
             }).ToList();
 
         return PagedDataDto.Create(paged, pageIndex, pageSize, total);
     }
+
+    private static CustomerDto MapToDto(Customer customer)
+        => new(customer.Id)
+        {
+            FullName = customer.FullName,
+            PhoneNumber = customer.PhoneNumber,
+            Email = customer.Email,
+            Address = customer.Address,
+            Note = customer.Note,
+            Kind = (int)customer.Kind,
+            IsSystem = customer.IsSystem,
+            CreatedOnUtc = customer.CreatedOnUtc
+        };
 }

@@ -28,33 +28,6 @@
             align-items: start;
         }
 
-        .fast-sale-products {
-            display: grid;
-            gap: .5rem;
-            max-height: calc(100vh - 290px);
-            overflow: auto;
-            padding-right: .25rem;
-        }
-
-        .fast-sale-product {
-            display: grid;
-            grid-template-columns: 44px 1fr auto;
-            gap: .75rem;
-            align-items: center;
-            padding: .65rem;
-            border: 1px solid var(--gray-200);
-            border-radius: .5rem;
-            background: #fff;
-        }
-
-        .fast-sale-product-image {
-            width: 44px;
-            height: 44px;
-            border-radius: .5rem;
-            object-fit: cover;
-            background: var(--gray-100);
-        }
-
         .fast-sale-total {
             display: flex;
             align-items: center;
@@ -73,6 +46,22 @@
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: .5rem;
+        }
+
+        .fast-sale-option-group {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .5rem;
+        }
+
+        .fast-sale-option-group .btn {
+            min-height: 2.75rem;
+        }
+
+        .fast-sale-option-group .btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
         }
 
         .fast-sale-payment-methods .btn {
@@ -121,20 +110,17 @@
                 grid-template-columns: 1fr;
             }
 
-            .fast-sale-products {
-                max-height: 420px;
-            }
         }
     </style>
 }
 
 <div id="fastSaleApp"
-     data-search-products-url="@Url.Action("SearchProducts", "Order")"
      data-create-intent-url="@Url.Action("CreatePaymentIntent", "Order")"
      data-status-url="@Url.Action("GetPaymentIntentStatus", "Order")"
      data-confirm-intent-url="@Url.Action("ConfirmPaymentIntent", "Order")"
      data-create-cash-sale-url="@Url.Action("CreateCashSale", "Order")"
      data-create-bank-sale-url="@Url.Action("CreateBankTransferSale", "Order")"
+     data-create-unpaid-sale-url="@Url.Action("CreateUnpaidSale", "Order")"
      data-bank-transfer-enabled="@Model.BankTransferEnabled.ToString().ToLowerInvariant()"
      data-manual-confirm-enabled="@Model.ManualBankTransferConfirmEnabled.ToString().ToLowerInvariant()">
     <div class="fast-sale-alert alert" id="fastSaleAlert" role="alert"></div>
@@ -146,14 +132,36 @@
             </div>
             <div class="content-card-body">
                 <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted text-uppercase" for="fastSaleCustomer">Khách hàng</label>
-                    <select id="fastSaleCustomer" class="form-select">
-                        <option value="">Chọn khách hàng</option>
-                        @foreach (var customer in Model.Customers)
-                        {
-                            <option value="@customer.Id">@customer.Name</option>
-                        }
-                    </select>
+                    <label class="form-label small fw-bold text-muted text-uppercase" for="customerSearch">Khách hàng</label>
+                    <div id="fastSaleCustomerPicker"
+                         data-id="@Model.DefaultCustomerId"
+                         data-name="@Model.DefaultCustomerName"
+                         data-phone="@Model.DefaultCustomerPhone"
+                         data-address="@Model.DefaultCustomerAddress"></div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-label small fw-bold text-muted text-uppercase">Giao hàng</div>
+                    <div class="fast-sale-option-group" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="fastSaleDeliverNow">
+                            <i class="bi bi-box-seam me-1"></i> Giao ngay
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="fastSaleNotDelivered">
+                            <i class="bi bi-clock-history me-1"></i> Chưa giao
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-label small fw-bold text-muted text-uppercase">Thanh toán</div>
+                    <div class="fast-sale-option-group" role="group">
+                        <button type="button" class="btn btn-outline-primary active" id="fastSalePayNow">
+                            <i class="bi bi-credit-card-2-front me-1"></i> Thanh toán ngay
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="fastSaleUnpaid">
+                            <i class="bi bi-receipt me-1"></i> Chưa thanh toán
+                        </button>
+                    </div>
                 </div>
 
                 <div class="mb-3">
@@ -175,7 +183,7 @@
                     <strong id="fastSaleTotal">0 đ</strong>
                 </div>
 
-                <div class="mb-3">
+                <div class="mb-3" id="fastSalePaymentMethodSection">
                     <div class="form-label small fw-bold text-muted text-uppercase">Phương thức</div>
                     <div class="fast-sale-payment-methods" role="group">
                         <button type="button" class="btn btn-outline-primary active" id="fastSaleCashMethod" data-method="cash">
@@ -233,6 +241,7 @@
                         <thead>
                             <tr>
                                 <th class="ps-3">Hàng hóa</th>
+                                <th>Kho</th>
                                 <th class="text-center">SL</th>
                                 <th class="text-end">Đơn giá</th>
                                 <th class="text-end">Tiền</th>
@@ -251,7 +260,7 @@
             </div>
             <div class="content-card-body">
                 <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted text-uppercase" for="fastSaleWarehouse">Kho</label>
+                    <label class="form-label small fw-bold text-muted text-uppercase" for="fastSaleWarehouse">Kho mặc định</label>
                     <select id="fastSaleWarehouse" class="form-select">
                         <option value="">Chọn kho</option>
                         @foreach (var warehouse in Model.Warehouses)
@@ -260,19 +269,62 @@
                         }
                     </select>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label small fw-bold text-muted text-uppercase" for="fastSaleProductSearch">Tìm hàng</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input id="fastSaleProductSearch" class="form-control" autocomplete="off" placeholder="Tên hàng hoặc mã" />
-                    </div>
-                </div>
-                <div class="fast-sale-products" id="fastSaleProducts"></div>
+                <div id="fastSaleProductBrowser" data-col-class="col-12"></div>
             </div>
         </section>
     </div>
 </div>
 
+<div class="modal fade" id="quickCustomerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Thêm khách hàng</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="QuickCreate" asp-controller="Customer" method="post" id="quickCreateCustomerForm" asp-antiforgery="true">
+                <div class="modal-body py-3">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-7">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerFullName">Họ tên</label>
+                            <input id="quickCustomerFullName" name="FullName" class="form-control" autocomplete="off" placeholder="Nhập họ và tên"
+                                   data-val="true" data-val-maxlength="Họ tên không được vượt quá 200 ký tự."
+                                   data-val-maxlength-max="200" data-val-required="Vui lòng nhập Họ tên." />
+                            <span class="text-danger small field-validation-valid" data-valmsg-for="FullName" data-valmsg-replace="true"></span>
+                        </div>
+                        <div class="col-12 col-md-5">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerPhone">Số điện thoại</label>
+                            <input id="quickCustomerPhone" name="PhoneNumber" class="form-control" autocomplete="off" placeholder="Nhập số điện thoại"
+                                   data-val="true" data-val-regex="Số điện thoại không hợp lệ." data-val-regex-pattern="0\d{9,10}"
+                                   data-val-required="Vui lòng nhập Số điện thoại." />
+                            <span class="text-danger small field-validation-valid" data-valmsg-for="PhoneNumber" data-valmsg-replace="true"></span>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerAddress">Địa chỉ</label>
+                            <input id="quickCustomerAddress" name="Address" class="form-control" autocomplete="off" placeholder="Nhập địa chỉ"
+                                   data-val="true" data-val-maxlength="Địa chỉ không được vượt quá 500 ký tự."
+                                   data-val-maxlength-max="500" data-val-required="Vui lòng nhập Địa chỉ." />
+                            <span class="text-danger small field-validation-valid" data-valmsg-for="Address" data-valmsg-replace="true"></span>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-muted text-uppercase" for="quickCustomerEmail">Email</label>
+                            <input id="quickCustomerEmail" name="Email" class="form-control" autocomplete="off" placeholder="Nhập email" />
+                            <span class="text-danger small field-validation-valid" data-valmsg-for="Email" data-valmsg-replace="true"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 pb-3">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i> Thêm khách hàng
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
     <script type="module" src="~/modules/FastSale.js" asp-append-version="true"></script>
 }

@@ -14,6 +14,7 @@ public sealed class CreateBankAccountHandler(IBankAccountAppService appService)
         var result = await appService.CreateBankAccountAsync(new CreateBankAccountAppDto
         {
             DisplayName = request.DisplayName,
+            BankCode = request.BankCode,
             BankName = request.BankName,
             AccountNumber = request.AccountNumber,
             AccountHolderName = request.AccountHolderName,
@@ -33,6 +34,7 @@ public sealed class UpdateBankAccountHandler(IBankAccountAppService appService)
         {
             Id = request.Id,
             DisplayName = request.DisplayName,
+            BankCode = request.BankCode,
             BankName = request.BankName,
             AccountNumber = request.AccountNumber,
             AccountHolderName = request.AccountHolderName

@@ -78,8 +78,16 @@ public sealed class CustomerAppService : ICustomerAppService
             Email = dto.Email,
             Address = dto.Address,
             Note = dto.Note,
+            Kind = (int)dto.Kind,
+            IsSystem = dto.IsSystem,
             CreatedOnUtc = dto.CreatedOnUtc
         };
+    }
+
+    public async Task<CustomerAppDto> GetOrCreateRetailWalkInCustomerAsync()
+    {
+        var dto = await _customerManager.GetOrCreateRetailWalkInCustomerAsync().ConfigureAwait(false);
+        return MapToAppDto(dto);
     }
 
 
@@ -94,13 +102,19 @@ public sealed class CustomerAppService : ICustomerAppService
             Email = cust.Email,
             Address = cust.Address,
             Note = cust.Note,
+            Kind = (int)cust.Kind,
+            IsSystem = cust.IsSystem,
             CreatedOnUtc = cust.CreatedOnUtc
         });
     }
 
-    public async Task<IPagedDataAppDto<CustomerAppDto>> GetCustomersAsync(string? keywords, int pageIndex, int pageSize)
+    public async Task<IPagedDataAppDto<CustomerAppDto>> GetCustomersAsync(
+        string? keywords,
+        int pageIndex,
+        int pageSize,
+        bool includeSystem = false)
     {
-        var paged = await _customerManager.GetCustomersAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);
+        var paged = await _customerManager.GetCustomersAsync(keywords, pageIndex, pageSize, includeSystem).ConfigureAwait(false);
         var items = paged.Items.Select(c => new CustomerAppDto(c.Id)
         {
             FullName = c.FullName,
@@ -108,9 +122,24 @@ public sealed class CustomerAppService : ICustomerAppService
             Email = c.Email,
             Address = c.Address,
             Note = c.Note,
+            Kind = (int)c.Kind,
+            IsSystem = c.IsSystem,
             CreatedOnUtc = c.CreatedOnUtc
         }).ToList();
 
         return PagedDataAppDto.Create(items, pageIndex, pageSize, paged.PagerInfo.TotalCount);
     }
+
+    private static CustomerAppDto MapToAppDto(CustomerDto dto)
+        => new(dto.Id)
+        {
+            FullName = dto.FullName,
+            PhoneNumber = dto.PhoneNumber,
+            Email = dto.Email,
+            Address = dto.Address,
+            Note = dto.Note,
+            Kind = dto.Kind,
+            IsSystem = dto.IsSystem,
+            CreatedOnUtc = dto.CreatedOnUtc
+        };
 }

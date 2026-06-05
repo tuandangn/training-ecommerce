@@ -14,6 +14,7 @@ public sealed class BankAccountMapping : IEntityTypeConfiguration<BankAccount>
         builder.HasIndex(x => x.Code).IsUnique();
 
         builder.Property(x => x.DisplayName).IsRequired().HasMaxLength(200);
+        builder.Property(x => x.BankCode).IsRequired().HasMaxLength(50);
         builder.Property(x => x.BankName).IsRequired().HasMaxLength(100);
         builder.Property(x => x.AccountNumber).IsRequired().HasMaxLength(30);
         builder.Property(x => x.AccountHolderName).IsRequired().HasMaxLength(200);

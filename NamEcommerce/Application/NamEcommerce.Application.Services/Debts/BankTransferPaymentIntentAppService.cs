@@ -11,6 +11,7 @@ namespace NamEcommerce.Application.Services.Debts;
 public sealed class BankTransferPaymentIntentAppService(
     IBankTransferPaymentIntentManager paymentIntentManager,
     IBankTransferVerificationLogManager verificationLogManager,
+    IBankTransferReceivingAccountResolver receivingAccountResolver,
     BankTransferPaymentSettings settings,
     ICurrentUserAccessor currentUserAccessor) : IBankTransferPaymentIntentAppService
 {
@@ -43,12 +44,10 @@ public sealed class BankTransferPaymentIntentAppService(
 
         if (!settings.Enabled)
             return BankTransferPaymentIntentResultAppDto.CreateError("Error.BankTransferPaymentDisabled");
-        if (string.IsNullOrWhiteSpace(settings.BankId)
-            || string.IsNullOrWhiteSpace(settings.AccountNo)
-            || string.IsNullOrWhiteSpace(settings.AccountName))
-        {
+
+        var receivingAccount = await receivingAccountResolver.ResolveAsync().ConfigureAwait(false);
+        if (receivingAccount?.IsConfigured != true)
             return BankTransferPaymentIntentResultAppDto.CreateError("Error.BankTransferAccountNotConfigured");
-        }
 
         try
         {
@@ -57,9 +56,9 @@ public sealed class BankTransferPaymentIntentAppService(
                 Amount = dto.Amount,
                 CustomerId = dto.CustomerId,
                 Note = dto.Note,
-                BankId = settings.BankId,
-                AccountNo = settings.AccountNo,
-                AccountName = settings.AccountName,
+                BankId = receivingAccount.BankId,
+                AccountNo = receivingAccount.AccountNo,
+                AccountName = receivingAccount.AccountName,
                 Template = string.IsNullOrWhiteSpace(settings.Template) ? "compact2" : settings.Template,
                 TransferContentPrefix = string.IsNullOrWhiteSpace(settings.TransferContentPrefix)
                     ? "QS"
