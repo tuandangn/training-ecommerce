@@ -11,4 +11,6 @@ public interface IPurchaseOrderModelFactory
     Task<PurchaseOrderDetailsModel?> PreparePurchaseOrderDetailsModel(Guid id);
 
     Task<CreatePurchaseOrderModel> PrepareCreatePurchaseOrderModel(CreatePurchaseOrderModel? model = null);
+
+    Task<QuickCreatePurchaseOrderModel> PrepareQuickCreatePurchaseOrderModel();
 }

@@ -107,6 +107,16 @@ public sealed class PurchaseOrderModelFactory : IPurchaseOrderModelFactory
         return model;
     }
 
+    public async Task<QuickCreatePurchaseOrderModel> PrepareQuickCreatePurchaseOrderModel()
+    {
+        var warehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
+        return new QuickCreatePurchaseOrderModel
+        {
+            ReceivedOn = DateTime.Now,
+            AvailableWarehouses = warehouses.Options
+        };
+    }
+
     public async Task<PurchaseOrderDetailsModel?> PreparePurchaseOrderDetailsModel(Guid id)
     {
         var purchaseOrderInfo = await _mediator.Send(new GetPurchaseOrderQuery { Id = id }).ConfigureAwait(false);
