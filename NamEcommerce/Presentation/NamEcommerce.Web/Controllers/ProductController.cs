@@ -198,7 +198,14 @@ public sealed class ProductController : BaseAuthorizedController
             unitPrice = productInfo.UnitPrice,
             availableQty = productInfo.QuantityAvailable,
             categoryName = productInfo.CategoryName,
-            availableWarehouses = productInfo.AvailableWarehouses,
+            availableWarehouses = productInfo.AvailableWarehouseStocks.Select(warehouse => new
+            {
+                id = warehouse.Id,
+                name = warehouse.Name,
+                quantityOnHand = warehouse.QuantityOnHand,
+                quantityReserved = warehouse.QuantityReserved,
+                quantityAvailable = warehouse.QuantityAvailable
+            }),
             vendorCount = productInfo.AvailableVendors.Count(),
             firstVendorId = productInfo.AvailableVendors.FirstOrDefault()?.Id.ToString(),
             availableVendors = productInfo.AvailableVendors.Select(v => new { key = v.Id.ToString(), value = v.Name })

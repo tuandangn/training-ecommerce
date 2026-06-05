@@ -1,3 +1,7 @@
+import { apiPost } from "/modules/ajax-helper.js";
+import CustomerPicker from "/modules/CustomerPicker.js";
+import ProductBrowser from "/modules/ProductBrowser.js";
+
 const IntentStatus = {
     Pending: 10,
     Confirmed: 20,
@@ -6,48 +10,65 @@ const IntentStatus = {
     Cancelled: 50,
     Consumed: 60
 };
+const FulfillmentMode = {
+    DeliverNow: 10,
+    NotDelivered: 20
+};
+const PaymentTiming = {
+    PayNow: 10,
+    Unpaid: 20
+};
 const StatusPollingIntervalMs = 3000;
+const EmptyGuid = '00000000-0000-0000-0000-000000000000';
 
 class FastSale {
     constructor(root) {
         this.root = root;
         this.urls = {
-            searchProducts: root.dataset.searchProductsUrl,
             createIntent: root.dataset.createIntentUrl,
             statusIntent: root.dataset.statusUrl,
             confirmIntent: root.dataset.confirmIntentUrl,
             createCashSale: root.dataset.createCashSaleUrl,
-            createBankSale: root.dataset.createBankSaleUrl
+            createBankSale: root.dataset.createBankSaleUrl,
+            createUnpaidSale: root.dataset.createUnpaidSaleUrl
         };
         this.bankTransferEnabled = root.dataset.bankTransferEnabled === 'true';
         this.manualConfirmEnabled = root.dataset.manualConfirmEnabled === 'true';
         this.cart = [];
+        this.selectedCustomer = null;
+        this.fulfillmentMode = 'deliverNow';
+        this.paymentTiming = 'payNow';
         this.paymentMethod = 'cash';
         this.paymentIntent = null;
         this.paymentIntentConfirmed = false;
-        this.searchTimer = null;
         this.statusTimer = null;
         this.saleInputVersion = 0;
         this.pollRequestSeq = 0;
+        this.customerPicker = null;
+        this.productBrowser = null;
 
         this.bindElements();
+        this.bindPickers();
         this.bindEvents();
-        this.searchProducts();
         this.render();
     }
 
     bindElements() {
         this.alert = document.getElementById('fastSaleAlert');
         this.warehouse = document.getElementById('fastSaleWarehouse');
-        this.customer = document.getElementById('fastSaleCustomer');
-        this.searchInput = document.getElementById('fastSaleProductSearch');
-        this.products = document.getElementById('fastSaleProducts');
+        this.customerPickerEl = document.getElementById('fastSaleCustomerPicker');
+        this.productBrowserEl = document.getElementById('fastSaleProductBrowser');
         this.cartBody = document.getElementById('fastSaleCartBody');
         this.emptyCart = document.getElementById('fastSaleEmptyCart');
         this.discount = document.getElementById('fastSaleDiscount');
         this.note = document.getElementById('fastSaleNote');
         this.subtotal = document.getElementById('fastSaleSubtotal');
         this.total = document.getElementById('fastSaleTotal');
+        this.deliverNow = document.getElementById('fastSaleDeliverNow');
+        this.notDelivered = document.getElementById('fastSaleNotDelivered');
+        this.payNow = document.getElementById('fastSalePayNow');
+        this.unpaid = document.getElementById('fastSaleUnpaid');
+        this.paymentMethodSection = document.getElementById('fastSalePaymentMethodSection');
         this.cashMethod = document.getElementById('fastSaleCashMethod');
         this.bankMethod = document.getElementById('fastSaleBankMethod');
         this.qrPanel = document.getElementById('fastSaleQrPanel');
@@ -62,24 +83,107 @@ class FastSale {
         this.clearCart = document.getElementById('fastSaleClearCart');
     }
 
-    bindEvents() {
-        this.searchInput.addEventListener('input', () => {
-            window.clearTimeout(this.searchTimer);
-            this.searchTimer = window.setTimeout(() => this.searchProducts(), 250);
+    bindPickers() {
+        if (this.customerPickerEl) {
+            this.customerPicker = new CustomerPicker(this.customerPickerEl, {
+                allowCreateNew: true
+            });
+            this.customerPickerEl.addEventListener('select', (event) => {
+                this.selectedCustomer = event.detail?.customer || null;
+                this.resetPaymentIntent();
+                this.render();
+            });
+            this.customerPickerEl.addEventListener('remove', () => {
+                this.selectedCustomer = null;
+                this.resetPaymentIntent();
+                this.render();
+            });
+
+            const initialCustomer = this.customerPickerEl.dataset;
+            if (initialCustomer.id) {
+                this.customerPicker.selectCustomer({
+                    id: initialCustomer.id,
+                    name: initialCustomer.name,
+                    phone: initialCustomer.phone,
+                    address: initialCustomer.address
+                });
+            }
+        }
+
+        if (this.productBrowserEl) {
+            this.productBrowser = new ProductBrowser(
+                this.productBrowserEl,
+                (product) => this.addItem(product),
+                {
+                    colClass: this.productBrowserEl.dataset.colClass,
+                    initialShow: true,
+                    checkProduct: (product) => this.isProductSelectable(product)
+                }
+            );
+            this.productBrowser.init();
+        }
+
+        this.bindQuickCustomerForm();
+    }
+
+    bindQuickCustomerForm() {
+        const quickCustomerModalEl = document.getElementById('quickCustomerModal');
+        const quickCustomerModal = quickCustomerModalEl
+            ? bootstrap.Modal.getOrCreateInstance(quickCustomerModalEl)
+            : null;
+
+        document.querySelectorAll('[data-open-quick-customer]').forEach(button => {
+            button.addEventListener('click', () => quickCustomerModal?.show());
         });
+
+        const form = document.getElementById('quickCreateCustomerForm');
+        form?.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            if (window.$ && typeof $(form).valid === 'function' && !$(form).valid()) {
+                return;
+            }
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                const result = await apiPost(form.action, new FormData(form));
+                if (!result.success) {
+                    this.showAlert('danger', result.message || 'Không thể tạo khách hàng.');
+                    return;
+                }
+
+                this.customerPicker?.selectCustomer(result.customer);
+                form.reset();
+                quickCustomerModal?.hide();
+                this.showAlert('success', result.message || 'Đã tạo khách hàng.');
+            } catch {
+                this.showAlert('danger', 'Có lỗi xảy ra khi tạo khách hàng.');
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+    }
+
+    bindEvents() {
         this.warehouse.addEventListener('change', () => {
             this.resetPaymentIntent();
-            this.searchProducts();
-            this.render();
-        });
-        this.customer.addEventListener('change', () => {
-            this.resetPaymentIntent();
+            if (this.fulfillmentMode === 'deliverNow') {
+                this.cart.forEach(item => {
+                    if (!item.warehouseId) item.warehouseId = this.resolveInitialWarehouseId(item);
+                });
+            }
             this.render();
         });
         this.discount.addEventListener('input', () => {
             this.resetPaymentIntent();
             this.render();
         });
+        this.deliverNow.addEventListener('click', () => this.setFulfillmentMode('deliverNow'));
+        this.notDelivered.addEventListener('click', () => this.setFulfillmentMode('notDelivered'));
+        this.payNow.addEventListener('click', () => this.setPaymentTiming('payNow'));
+        this.unpaid.addEventListener('click', () => this.setPaymentTiming('unpaid'));
         this.cashMethod.addEventListener('click', () => this.setPaymentMethod('cash'));
         this.bankMethod.addEventListener('click', () => this.setPaymentMethod('bank'));
         this.createQr.addEventListener('click', () => this.createPaymentIntent());
@@ -90,6 +194,26 @@ class FastSale {
             this.resetPaymentIntent();
             this.render();
         });
+    }
+
+    setFulfillmentMode(mode) {
+        this.fulfillmentMode = mode;
+        this.deliverNow.classList.toggle('active', mode === 'deliverNow');
+        this.notDelivered.classList.toggle('active', mode === 'notDelivered');
+        this.cart.forEach(item => {
+            item.warehouseId = mode === 'deliverNow' ? (item.warehouseId || this.resolveInitialWarehouseId(item)) : '';
+        });
+        this.resetPaymentIntent();
+        this.productBrowser?.reload();
+        this.render();
+    }
+
+    setPaymentTiming(timing) {
+        this.paymentTiming = timing;
+        this.payNow.classList.toggle('active', timing === 'payNow');
+        this.unpaid.classList.toggle('active', timing === 'unpaid');
+        this.resetPaymentIntent();
+        this.render();
     }
 
     setPaymentMethod(method) {
@@ -109,53 +233,18 @@ class FastSale {
         this.paymentIntentConfirmed = false;
     }
 
-    async searchProducts() {
-        const params = new URLSearchParams();
-        if (this.searchInput.value.trim()) params.set('keywords', this.searchInput.value.trim());
-        if (this.warehouse.value) params.set('warehouseId', this.warehouse.value);
-
-        const response = await fetch(`${this.urls.searchProducts}?${params.toString()}`);
-        const data = await response.json();
-        this.renderProducts(data.items || []);
-    }
-
-    renderProducts(items) {
-        this.products.innerHTML = '';
-        if (items.length === 0) {
-            this.products.innerHTML = '<div class="text-muted text-center py-3">Không có hàng hóa.</div>';
-            return;
-        }
-
-        for (const item of items.slice(0, 30)) {
-            const row = document.createElement('div');
-            row.className = 'fast-sale-product';
-            row.innerHTML = `
-                ${item.pictureUrl ? `<img class="fast-sale-product-image" src="${this.escape(item.pictureUrl)}" alt="">` : '<div class="fast-sale-product-image d-flex align-items-center justify-content-center"><i class="bi bi-image text-muted"></i></div>'}
-                <div class="min-w-0">
-                    <div class="fw-semibold text-truncate">${this.escape(item.name)}</div>
-                    <div class="small text-muted">${this.formatMoneyWithSymbol(item.unitPrice)} · Còn ${this.formatQuantity(item.quantityAvailable, item.quantityDecimalPlaces)}</div>
-                </div>
-                <button type="button" class="btn btn-sm btn-primary" title="Thêm">
-                    <i class="bi bi-plus-lg"></i>
-                </button>`;
-            row.querySelector('button').addEventListener('click', () => this.addItem(item));
-            this.products.appendChild(row);
-        }
-    }
-
     addItem(product) {
-        if (!this.warehouse.value) {
-            this.showAlert('warning', 'Vui lòng chọn kho.');
-            return;
-        }
-
-        const existing = this.cart.find(item => item.productId === product.id);
+        product = this.normalizeProduct(product);
+        const warehouseId = this.resolveInitialWarehouseId(product);
+        const existing = this.cart.find(item => item.productId === product.id && item.warehouseId === warehouseId);
         if (existing) {
             existing.quantity += 1;
         } else {
             this.cart.push({
                 productId: product.id,
                 name: product.name,
+                warehouseId,
+                availableWarehouses: product.availableWarehouses || [],
                 quantity: 1,
                 unitPrice: Number(product.unitPrice || 0),
                 quantityDecimalPlaces: Number(product.quantityDecimalPlaces || 0)
@@ -166,20 +255,48 @@ class FastSale {
         this.render();
     }
 
+    isProductSelectable(product) {
+        if (this.fulfillmentMode !== 'deliverNow') return true;
+
+        return Number(product?.availableQty ?? product?.quantityAvailable ?? 0) > 0;
+    }
+
+    normalizeProduct(product) {
+        return {
+            id: product.id,
+            name: product.name,
+            unitPrice: Number(product.unitPrice || 0),
+            pictureUrl: product.pictureUrl || product.picture || '',
+            quantityAvailable: Number(product.quantityAvailable ?? product.availableQty ?? 0),
+            quantityDecimalPlaces: Number(product.quantityDecimalPlaces || 0),
+            availableWarehouses: (product.availableWarehouses || []).map(warehouse => ({
+                id: warehouse.id || warehouse.key || '',
+                name: warehouse.name || warehouse.value || '',
+                quantityOnHand: Number(warehouse.quantityOnHand || 0),
+                quantityReserved: Number(warehouse.quantityReserved || 0),
+                quantityAvailable: Number(warehouse.quantityAvailable || 0)
+            })).filter(warehouse => warehouse.id)
+        };
+    }
+
     render() {
         this.renderCart();
         const subtotal = this.calculateSubtotal();
         const discount = this.getDiscount();
         const total = Math.max(0, subtotal - discount);
+        const isPayNow = this.paymentTiming === 'payNow';
+        const usesBankTransfer = isPayNow && this.paymentMethod === 'bank';
 
         this.subtotal.textContent = this.formatMoneyWithSymbol(subtotal);
         this.total.textContent = this.formatMoneyWithSymbol(total);
-        this.qrPanel.classList.toggle('visible', this.paymentMethod === 'bank');
-        this.createQr.disabled = this.paymentMethod !== 'bank' || total <= 0 || this.cart.length === 0;
+        this.paymentMethodSection.classList.toggle('d-none', !isPayNow);
+        this.qrPanel.classList.toggle('visible', usesBankTransfer);
+        this.createQr.disabled = !usesBankTransfer || total <= 0 || this.cart.length === 0;
         this.confirmQr.disabled = !this.paymentIntent || this.paymentIntentConfirmed || !this.manualConfirmEnabled || !this.isIntentPending(this.paymentIntent);
-        this.complete.disabled = this.cart.length === 0 || total <= 0 || (this.paymentMethod === 'bank' && !this.paymentIntentConfirmed);
+        this.complete.disabled = this.cart.length === 0 || total <= 0 || (usesBankTransfer && !this.paymentIntentConfirmed);
+        this.complete.innerHTML = this.getCompleteButtonHtml();
 
-        if (!this.paymentIntent) {
+        if (!this.paymentIntent || !usesBankTransfer) {
             this.qrImage.removeAttribute('src');
             this.reference.textContent = '';
             this.qrAmount.textContent = '';
@@ -205,6 +322,9 @@ class FastSale {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td class="ps-3 fw-medium">${this.escape(item.name)}</td>
+                <td style="width: 190px;">
+                    ${this.renderWarehouseSelect(item)}
+                </td>
                 <td class="text-center" style="width: 110px;">
                     <input class="form-control form-control-sm text-end" value="${this.formatQuantity(item.quantity, item.quantityDecimalPlaces)}" data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces}"/>
                 </td>
@@ -219,6 +339,7 @@ class FastSale {
 
             const quantityInput = row.querySelectorAll('input')[0];
             const priceInput = row.querySelectorAll('input')[1];
+            const warehouseSelect = row.querySelector('select[data-role="warehouse"]');
 
             const quantityChanged = debounce(() => {
                 item.quantity = DecimalFields.getValue(quantityInput);
@@ -235,6 +356,13 @@ class FastSale {
 
             quantityInput.addEventListener('input', quantityChanged);
             priceInput.addEventListener('input', unitPriceChanged);
+            if (warehouseSelect) {
+                warehouseSelect.addEventListener('change', () => {
+                    item.warehouseId = warehouseSelect.value;
+                    this.resetPaymentIntent();
+                    this.render();
+                });
+            }
 
             row.querySelector('button').addEventListener('click', () => {
                 this.cart.splice(index, 1);
@@ -247,7 +375,25 @@ class FastSale {
         DecimalFields.autoWrap(this.cartBody);
     }
 
+    renderWarehouseSelect(item) {
+        if (this.fulfillmentMode !== 'deliverNow') {
+            return '';
+        }
+
+        const warehouses = item.availableWarehouses || [];
+        const options = ['<option value="">Chọn kho</option>'];
+        for (const warehouse of warehouses) {
+            const selected = warehouse.id === item.warehouseId ? 'selected' : '';
+            const quantity = this.formatQuantity(warehouse.quantityAvailable, item.quantityDecimalPlaces);
+            options.push(`<option value="${this.escape(warehouse.id)}" ${selected}>${this.escape(warehouse.name)} (${quantity})</option>`);
+        }
+
+        return `<select class="form-select form-select-sm" data-role="warehouse">${options.join('')}</select>`;
+    }
+
     async createPaymentIntent() {
+        if (this.paymentTiming !== 'payNow') return;
+
         const validation = this.validateSaleInput();
         if (validation) {
             this.showAlert('warning', validation);
@@ -262,7 +408,7 @@ class FastSale {
 
         const saleInputVersion = this.saleInputVersion;
         const response = await this.postJson(this.urls.createIntent, {
-            customerId: this.customer.value,
+            customerId: this.getSelectedCustomerId(),
             amount: total,
             note: this.note.value
         });
@@ -379,14 +525,14 @@ class FastSale {
             return;
         }
 
-        if (this.paymentMethod === 'bank' && !this.paymentIntentConfirmed) {
+        if (this.paymentTiming === 'payNow' && this.paymentMethod === 'bank' && !this.paymentIntentConfirmed) {
             this.showAlert('warning', 'Chuyển khoản chưa được xác nhận.');
             return;
         }
 
         const payload = this.buildSalePayload();
-        const url = this.paymentMethod === 'bank' ? this.urls.createBankSale : this.urls.createCashSale;
-        if (this.paymentMethod === 'bank') payload.paymentIntentId = this.paymentIntent.id;
+        const url = this.resolveSaleUrl();
+        if (this.paymentTiming === 'payNow' && this.paymentMethod === 'bank') payload.paymentIntentId = this.paymentIntent.id;
 
         this.complete.disabled = true;
         const response = await this.postJson(url, payload);
@@ -404,28 +550,55 @@ class FastSale {
     }
 
     validateSaleInput() {
-        if (!this.customer.value) return 'Vui lòng chọn khách hàng.';
-        if (!this.warehouse.value) return 'Vui lòng chọn kho.';
+        if (!this.getSelectedCustomerId()) return 'Vui lòng chọn khách hàng.';
+        if (this.fulfillmentMode === 'deliverNow' && this.cart.some(item => !item.warehouseId)) return 'Vui lòng chọn kho cho từng dòng hàng.';
         if (this.cart.length === 0) return 'Vui lòng thêm hàng hóa.';
         if (this.cart.some(item => item.quantity <= 0)) return 'Số lượng phải lớn hơn 0.';
-        if (this.calculateTotal() <= 0) return 'Tổng thu phải lớn hơn 0.';
+        if (this.calculateTotal() <= 0) return 'Tổng tiền phải lớn hơn 0.';
         return null;
     }
 
     buildSalePayload() {
         const total = this.calculateTotal();
         return {
-            customerId: this.customer.value,
-            warehouseId: this.warehouse.value,
+            customerId: this.getSelectedCustomerId(),
+            warehouseId: this.getHeaderWarehouseId(),
             items: this.cart.map(item => ({
                 productId: item.productId,
+                warehouseId: this.fulfillmentMode === 'deliverNow' ? item.warehouseId : EmptyGuid,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice
             })),
             orderDiscount: this.getDiscount(),
             note: this.note.value,
-            paidAmount: total
+            fulfillmentMode: this.fulfillmentMode === 'deliverNow' ? FulfillmentMode.DeliverNow : FulfillmentMode.NotDelivered,
+            paymentTiming: this.paymentTiming === 'payNow' ? PaymentTiming.PayNow : PaymentTiming.Unpaid,
+            paidAmount: this.paymentTiming === 'payNow' ? total : 0
         };
+    }
+
+    resolveSaleUrl() {
+        if (this.paymentTiming === 'unpaid') return this.urls.createUnpaidSale;
+        return this.paymentMethod === 'bank' ? this.urls.createBankSale : this.urls.createCashSale;
+    }
+
+    getSelectedCustomerId() {
+        return this.selectedCustomer?.id || '';
+    }
+
+    resolveInitialWarehouseId(product) {
+        if (this.fulfillmentMode !== 'deliverNow') return '';
+
+        const warehouses = product.availableWarehouses || [];
+        const selectedWarehouse = warehouses.find(warehouse => warehouse.id === this.warehouse.value);
+        if (selectedWarehouse) return selectedWarehouse.id;
+
+        return warehouses[0]?.id || '';
+    }
+
+    getHeaderWarehouseId() {
+        if (this.fulfillmentMode !== 'deliverNow') return EmptyGuid;
+        return this.warehouse.value || this.cart.find(item => item.warehouseId)?.warehouseId || EmptyGuid;
     }
 
     async postJson(url, payload) {
@@ -487,6 +660,18 @@ class FastSale {
             default:
                 return 'Khong xac dinh';
         }
+    }
+
+    getCompleteButtonHtml() {
+        if (this.paymentTiming === 'unpaid') {
+            return '<i class="bi bi-receipt me-1"></i> Tạo đơn chưa thanh toán';
+        }
+
+        if (this.fulfillmentMode === 'notDelivered') {
+            return '<i class="bi bi-check2-square me-1"></i> Tạo đơn và ghi nhận tiền cọc';
+        }
+
+        return '<i class="bi bi-check2-square me-1"></i> Hoàn tất bán hàng';
     }
 
     formatDateTime(value) {

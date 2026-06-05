@@ -20,7 +20,8 @@ export default class ProductBrowser {
         productSearchUrl: '/Product/Search',
         purchase: false,
         initialShow: false,
-        allowCreateNew: false
+        allowCreateNew: false,
+        checkProduct: null
     };
 
     constructor(containerEl, onAdd, options = {}) {
@@ -275,6 +276,10 @@ export default class ProductBrowser {
     }
 
     #isValidProduct(product) {
+        if (typeof this.#options.checkProduct === 'function') {
+            return this.#options.checkProduct(product);
+        }
+
         if (this.#options.purchase) {
             return product.vendorCount > 0;
         }

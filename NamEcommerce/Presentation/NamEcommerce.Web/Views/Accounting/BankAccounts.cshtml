@@ -49,7 +49,7 @@
                     <tr class="@(!acc.IsActive ? "table-secondary" : "")">
                         <td class="ps-3">
                             <div class="fw-semibold">@acc.DisplayName</div>
-                            <div class="small text-muted">@acc.BankName &nbsp;·&nbsp; Mã: @acc.Code</div>
+                            <div class="small text-muted">@acc.BankName &nbsp;·&nbsp; VietQR: @acc.BankCode &nbsp;·&nbsp; Mã: @acc.Code</div>
                             @if (acc.IsDefault) { <span class="badge bg-primary-subtle text-primary">Mặc định</span> }
                             @if (!acc.IsActive) { <span class="badge bg-secondary">Ngừng</span> }
                         </td>
@@ -61,6 +61,7 @@
                             <button class="btn btn-sm btn-outline-secondary me-1 btn-edit-account"
                                     data-id="@acc.Id"
                                     data-display-name="@acc.DisplayName"
+                                    data-bank-code="@acc.BankCode"
                                     data-bank-name="@acc.BankName"
                                     data-account-number="@acc.AccountNumber"
                                     data-account-holder="@acc.AccountHolderName">
@@ -110,17 +111,21 @@
                     <input type="text" id="bankDisplayName" class="form-control" placeholder="VD: Vietcombank - CN Quận 1" />
                 </div>
                 <div class="row g-3 mb-3">
-                    <div class="col-6">
-                        <label class="form-label fw-medium">Tên ngân hàng</label>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-medium">Mã ngân hàng VietQR <span class="text-danger">*</span></label>
+                        <input type="text" id="bankCode" class="form-control" placeholder="VD: VCB" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label fw-medium">Tên ngân hàng <span class="text-danger">*</span></label>
                         <input type="text" id="bankName" class="form-control" placeholder="VD: Vietcombank" />
                     </div>
-                    <div class="col-6">
+                    <div class="col-12 col-md-4">
                         <label class="form-label fw-medium">Số tài khoản <span class="text-danger">*</span></label>
                         <input type="text" id="bankAccountNumber" class="form-control" placeholder="1234567890" />
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-medium">Chủ tài khoản</label>
+                    <label class="form-label fw-medium">Chủ tài khoản <span class="text-danger">*</span></label>
                     <input type="text" id="bankAccountHolder" class="form-control" />
                 </div>
                 <div class="mb-3" id="openingBalanceSection">
@@ -160,6 +165,7 @@
         document.getElementById('bankAccountId').value = '';
         document.getElementById('bankAccountModalTitle').textContent = 'Thêm tài khoản ngân hàng';
         document.getElementById('bankDisplayName').value = '';
+        document.getElementById('bankCode').value = '';
         document.getElementById('bankName').value = '';
         document.getElementById('bankAccountNumber').value = '';
         document.getElementById('bankAccountHolder').value = '';
@@ -176,6 +182,7 @@
             document.getElementById('bankAccountId').value = btn.dataset.id;
             document.getElementById('bankAccountModalTitle').textContent = 'Sửa tài khoản ngân hàng';
             document.getElementById('bankDisplayName').value = btn.dataset.displayName;
+            document.getElementById('bankCode').value = btn.dataset.bankCode;
             document.getElementById('bankName').value = btn.dataset.bankName;
             document.getElementById('bankAccountNumber').value = btn.dataset.accountNumber;
             document.getElementById('bankAccountHolder').value = btn.dataset.accountHolder;
@@ -195,6 +202,7 @@
         if (!id) {
             result = await postJson('@Url.Action("CreateBankAccount")', {
                 displayName: document.getElementById('bankDisplayName').value,
+                bankCode: document.getElementById('bankCode').value,
                 bankName: document.getElementById('bankName').value,
                 accountNumber: document.getElementById('bankAccountNumber').value,
                 accountHolderName: document.getElementById('bankAccountHolder').value,
@@ -205,6 +213,7 @@
             result = await postJson('@Url.Action("UpdateBankAccount")', {
                 id,
                 displayName: document.getElementById('bankDisplayName').value,
+                bankCode: document.getElementById('bankCode').value,
                 bankName: document.getElementById('bankName').value,
                 accountNumber: document.getElementById('bankAccountNumber').value,
                 accountHolderName: document.getElementById('bankAccountHolder').value

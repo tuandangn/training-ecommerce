@@ -1,6 +1,18 @@
 namespace NamEcommerce.Application.Contracts.Dtos.Debts;
 
 [Serializable]
+public sealed record BankTransferReceivingAccountAppDto
+{
+    public required string BankId { get; init; }
+    public required string AccountNo { get; init; }
+    public required string AccountName { get; init; }
+    public bool IsConfigured =>
+        !string.IsNullOrWhiteSpace(BankId)
+        && !string.IsNullOrWhiteSpace(AccountNo)
+        && !string.IsNullOrWhiteSpace(AccountName);
+}
+
+[Serializable]
 public sealed record CreateBankTransferPaymentIntentAppDto
 {
     public required decimal Amount { get; init; }

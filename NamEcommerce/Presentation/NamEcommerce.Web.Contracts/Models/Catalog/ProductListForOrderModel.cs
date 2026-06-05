@@ -27,6 +27,17 @@ public sealed class ProductListForOrderModel
         public string? CategoryName { get; set; }
 
         public IEnumerable<EntityOptionListModel.EntityOptionModel> AvailableWarehouses { get; set; } = [];
+        public IEnumerable<ProductWarehouseStockModel> AvailableWarehouseStocks { get; set; } = [];
         public IEnumerable<EntityOptionListModel.EntityOptionModel> AvailableVendors { get; set; } = [];
+    }
+
+    [Serializable]
+    public sealed record ProductWarehouseStockModel
+    {
+        public required Guid Id { get; init; }
+        public required string Name { get; init; }
+        public required decimal QuantityOnHand { get; init; }
+        public required decimal QuantityReserved { get; init; }
+        public required decimal QuantityAvailable { get; init; }
     }
 }

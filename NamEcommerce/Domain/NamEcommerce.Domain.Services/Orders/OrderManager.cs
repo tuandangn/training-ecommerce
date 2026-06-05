@@ -61,7 +61,8 @@ public sealed class OrderManager(
         foreach (var item in dto.Items)
             await order.AddOrderItemAsync(item.ProductId, item.UnitPrice, item.Quantity, productDataReader).ConfigureAwait(false);
         order.SetOrderDiscount(dto.OrderDiscount);
-        await EnsureAvailableForProductsWithoutVendorAsync(order.OrderItems.Select(item => (item.ProductId, item.Quantity))).ConfigureAwait(false);
+        if (dto.RequireAvailableStock)
+            await EnsureAvailableForProductsWithoutVendorAsync(order.OrderItems.Select(item => (item.ProductId, item.Quantity))).ConfigureAwait(false);
 
         order.ClearDomainEvents();
         order.Place();

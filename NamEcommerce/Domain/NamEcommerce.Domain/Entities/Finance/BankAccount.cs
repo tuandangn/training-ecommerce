@@ -11,12 +11,14 @@ public sealed record BankAccount : AppAggregateEntity
     internal BankAccount(
         string code,
         string displayName,
+        string bankCode,
         string bankName,
         string accountNumber,
         string accountHolderName,
         decimal openingBalance) : base(Guid.NewGuid())
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(bankCode);
         ArgumentException.ThrowIfNullOrWhiteSpace(bankName);
         ArgumentException.ThrowIfNullOrWhiteSpace(accountNumber);
         ArgumentException.ThrowIfNullOrWhiteSpace(accountHolderName);
@@ -25,6 +27,7 @@ public sealed record BankAccount : AppAggregateEntity
 
         Code = code;
         DisplayName = displayName;
+        BankCode = bankCode;
         BankName = bankName;
         AccountNumber = accountNumber;
         AccountHolderName = accountHolderName;
@@ -36,6 +39,7 @@ public sealed record BankAccount : AppAggregateEntity
 
     public string Code { get; private set; } = string.Empty;
     public string DisplayName { get; private set; } = string.Empty;
+    public string BankCode { get; private set; } = string.Empty;
     public string BankName { get; private set; } = string.Empty;
     public string AccountNumber { get; private set; } = string.Empty;
     public string AccountHolderName { get; private set; } = string.Empty;
@@ -45,10 +49,15 @@ public sealed record BankAccount : AppAggregateEntity
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
-    internal void UpdateInfo(string displayName, string bankName, string accountNumber, string accountHolderName)
+    internal void UpdateInfo(string displayName, string bankCode, string bankName, string accountNumber, string accountHolderName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(displayName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(bankCode);
+        ArgumentException.ThrowIfNullOrWhiteSpace(bankName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountNumber);
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountHolderName);
         DisplayName = displayName;
+        BankCode = bankCode;
         BankName = bankName;
         AccountNumber = accountNumber;
         AccountHolderName = accountHolderName;

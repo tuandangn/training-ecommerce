@@ -123,9 +123,11 @@ public sealed record BankTransferPaymentIntent : AppAggregateEntity
         UpdatedOnUtc = nowUtc;
     }
 
-    internal void Consume(Guid orderId, Guid deliveryNoteId, Guid customerDebtId, Guid customerPaymentId, DateTime nowUtc)
+    internal void Consume(Guid orderId, Guid? deliveryNoteId, Guid? customerDebtId, Guid customerPaymentId, DateTime nowUtc)
     {
         if (!CanBeConsumed)
+            throw new NamEcommerceDomainException("Error.PaymentIntentCannotConsume");
+        if (orderId == Guid.Empty || customerPaymentId == Guid.Empty)
             throw new NamEcommerceDomainException("Error.PaymentIntentCannotConsume");
 
         OrderId = orderId;

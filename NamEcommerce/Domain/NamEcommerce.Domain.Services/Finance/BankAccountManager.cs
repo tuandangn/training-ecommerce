@@ -52,7 +52,7 @@ public sealed class BankAccountManager : IBankAccountManager
         var count = _dataReader.DataSource.Count();
         var code = $"NH-{(count + 1):D3}";
 
-        var account = new BankAccount(code, dto.DisplayName, dto.BankName,
+        var account = new BankAccount(code, dto.DisplayName, dto.BankCode, dto.BankName,
             dto.AccountNumber, dto.AccountHolderName, dto.OpeningBalance);
 
         var hasAny = _dataReader.DataSource.Any();
@@ -70,7 +70,7 @@ public sealed class BankAccountManager : IBankAccountManager
     {
         var account = _dataReader.DataSource.FirstOrDefault(a => a.Id == dto.Id)
             ?? throw new BankAccountNotFoundException(dto.Id);
-        account.UpdateInfo(dto.DisplayName, dto.BankName, dto.AccountNumber, dto.AccountHolderName);
+        account.UpdateInfo(dto.DisplayName, dto.BankCode, dto.BankName, dto.AccountNumber, dto.AccountHolderName);
         await _repository.UpdateAsync(account).ConfigureAwait(false);
     }
 
@@ -118,6 +118,7 @@ internal static class BankAccountExtensions
         Id = a.Id,
         Code = a.Code,
         DisplayName = a.DisplayName,
+        BankCode = a.BankCode,
         BankName = a.BankName,
         AccountNumber = a.AccountNumber,
         AccountHolderName = a.AccountHolderName,

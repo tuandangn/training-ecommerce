@@ -102,7 +102,7 @@ public sealed class BankTransferPaymentIntentManager(
         return MapToDto(intent);
     }
 
-    public async Task<BankTransferPaymentIntentDto> ConsumeAsync(Guid id, Guid orderId, Guid deliveryNoteId, Guid customerDebtId, Guid customerPaymentId)
+    public async Task<BankTransferPaymentIntentDto> ConsumeAsync(Guid id, Guid orderId, Guid? deliveryNoteId, Guid? customerDebtId, Guid customerPaymentId)
     {
         var intent = await intentRepository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new NamEcommerceDomainException("Error.PaymentIntentIsNotFound");

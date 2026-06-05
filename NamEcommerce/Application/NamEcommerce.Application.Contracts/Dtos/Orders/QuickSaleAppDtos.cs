@@ -2,10 +2,23 @@ using NamEcommerce.Application.Contracts.Dtos.Common;
 
 namespace NamEcommerce.Application.Contracts.Dtos.Orders;
 
+public enum QuickSaleFulfillmentMode
+{
+    DeliverNow = 10,
+    NotDelivered = 20
+}
+
+public enum QuickSalePaymentTiming
+{
+    PayNow = 10,
+    Unpaid = 20
+}
+
 [Serializable]
 public sealed record QuickSaleItemAppDto
 {
     public required Guid ProductId { get; init; }
+    public Guid WarehouseId { get; init; }
     public decimal Quantity { get; init; }
     public decimal UnitPrice { get; init; }
 
@@ -30,6 +43,8 @@ public sealed record CreateQuickSaleAppDto
     public IList<QuickSaleItemAppDto> Items { get; init; } = [];
     public decimal? OrderDiscount { get; init; }
     public string? Note { get; init; }
+    public int FulfillmentMode { get; init; } = (int)QuickSaleFulfillmentMode.DeliverNow;
+    public int PaymentTiming { get; init; } = (int)QuickSalePaymentTiming.PayNow;
     public int PaymentMethod { get; init; }
     public decimal PaidAmount { get; init; }
 
@@ -37,14 +52,28 @@ public sealed record CreateQuickSaleAppDto
     {
         if (CustomerId == Guid.Empty)
             return (false, "Error.CustomerRequired");
-        if (WarehouseId == Guid.Empty)
+        if (!Enum.IsDefined(typeof(QuickSaleFulfillmentMode), FulfillmentMode))
+            return (false, "Error.FastSaleFulfillmentModeInvalid");
+        if (!Enum.IsDefined(typeof(QuickSalePaymentTiming), PaymentTiming))
+            return (false, "Error.FastSalePaymentTimingInvalid");
+
+        var fulfillmentMode = (QuickSaleFulfillmentMode)FulfillmentMode;
+        var paymentTiming = (QuickSalePaymentTiming)PaymentTiming;
+
+        if (fulfillmentMode == QuickSaleFulfillmentMode.DeliverNow
+            && WarehouseId == Guid.Empty
+            && Items.Any(item => item.WarehouseId == Guid.Empty))
+        {
             return (false, "Error.WarehouseRequired");
+        }
         if (Items.Count == 0)
             return (false, "Error.OrderItemRequired");
         if (OrderDiscount is < 0)
             return (false, "Error.OrderDiscountCannotBeNegative");
-        if (PaidAmount <= 0)
+        if (paymentTiming == QuickSalePaymentTiming.PayNow && PaidAmount <= 0)
             return (false, "Error.PaymentAmountMustBePositive");
+        if (paymentTiming == QuickSalePaymentTiming.Unpaid && PaidAmount != 0)
+            return (false, "Error.PaymentAmountMustBeZeroWhenUnpaid");
 
         foreach (var item in Items)
         {

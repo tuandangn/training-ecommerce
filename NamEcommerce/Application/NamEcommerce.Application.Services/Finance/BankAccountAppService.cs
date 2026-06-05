@@ -35,6 +35,7 @@ public sealed class BankAccountAppService : IBankAccountAppService
             var result = await _manager.CreateAsync(new CreateBankAccountDto
             {
                 DisplayName = dto.DisplayName,
+                BankCode = dto.BankCode,
                 BankName = dto.BankName,
                 AccountNumber = dto.AccountNumber,
                 AccountHolderName = dto.AccountHolderName,
@@ -49,12 +50,17 @@ public sealed class BankAccountAppService : IBankAccountAppService
     public async Task<BankAccountOperationResultAppDto> UpdateBankAccountAsync(UpdateBankAccountAppDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.DisplayName)) return Fail("Error.BankAccount.DisplayNameRequired");
+        if (string.IsNullOrWhiteSpace(dto.BankCode)) return Fail("Error.BankAccount.BankCodeRequired");
+        if (string.IsNullOrWhiteSpace(dto.BankName)) return Fail("Error.BankAccount.BankNameRequired");
+        if (string.IsNullOrWhiteSpace(dto.AccountNumber)) return Fail("Error.BankAccount.AccountNumberRequired");
+        if (string.IsNullOrWhiteSpace(dto.AccountHolderName)) return Fail("Error.BankAccount.AccountHolderNameRequired");
         try
         {
             await _manager.UpdateAsync(new UpdateBankAccountDto
             {
                 Id = dto.Id,
                 DisplayName = dto.DisplayName,
+                BankCode = dto.BankCode,
                 BankName = dto.BankName,
                 AccountNumber = dto.AccountNumber,
                 AccountHolderName = dto.AccountHolderName
@@ -100,6 +106,7 @@ public sealed class BankAccountAppService : IBankAccountAppService
         Id = d.Id,
         Code = d.Code,
         DisplayName = d.DisplayName,
+        BankCode = d.BankCode,
         BankName = d.BankName,
         AccountNumber = d.AccountNumber,
         AccountHolderName = d.AccountHolderName,
