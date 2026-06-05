@@ -2,93 +2,86 @@
 @{
     ViewData[ViewConstants.PageTitle] = "Thêm mới Nhà cung cấp";
 }
-
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Thêm mới Nhà cung cấp</h1>
-        <p class="page-header-subtitle">Tạo nhà cung cấp mới</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Thêm mới
+        <span class="text-muted">Nhà cung cấp</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="Vendor" class="text-decoration-none">Nhà cung cấp</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
+            </ol>
+        </nav>
     </div>
-</div>
-
-<div class="form-card">
-    <div class="form-card-header">
-        <h2 class="form-card-title"><i class="bi bi-building me-2 text-primary"></i>Thông tin nhà cung cấp</h2>
-        <a asp-action="List" class="form-card-breadcrumb">
-            <i class="bi bi-arrow-left"></i> Trở về danh sách
-        </a>
-    </div>
-    <div class="form-card-body">
-        <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
-        <form class="row g-3" method="post" asp-antiforgery="true">
-            <ul class="nav nav-tabs" id="vendorTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="infoTab" data-bs-toggle="tab" data-bs-target="#info"
-                            type="button" role="tab" aria-selected="true">
-                        <i class="bi bi-info-circle me-1"></i>Thông tin
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="additionalTab" data-bs-toggle="tab" data-bs-target="#additional"
-                            type="button" role="tab" aria-selected="false">
-                        <i class="bi bi-sliders me-1"></i>Cài đặt
-                    </button>
-                </li>
-            </ul>
-            <div class="tab-content pt-3" id="vendorContent">
-                <div class="tab-pane fade show active" id="info" role="tabpanel">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label asp-for="Name" class="form-label"></label>
-                            <input asp-for="Name" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Name)" autofocus />
-                            <span asp-validation-for="Name" class="text-danger small"></span>
-                        </div>
-                        <div class="col-md-6">
-                            <label asp-for="PhoneNumber" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-telephone text-muted"></i></span>
+}
+<div class="content-card">
+    <form method="post" asp-antiforgery="true">
+        <div class="content-card-body">
+            <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global"></div>
+                <ul class="nav nav-tabs" id="vendorTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="infoTab" data-bs-toggle="tab" data-bs-target="#info"
+                                type="button" role="tab" aria-selected="true">
+                            <i class="bi bi-info-circle me-1"></i>Thông tin
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="additionalTab" data-bs-toggle="tab" data-bs-target="#additional"
+                                type="button" role="tab" aria-selected="false">
+                            <i class="bi bi-sliders me-1"></i>Cài đặt
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content pt-3" id="vendorContent">
+                    <div class="tab-pane fade show active" id="info" role="tabpanel">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label asp-for="Name" class="form-label"></label>
+                                <input asp-for="Name" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Name)" autofocus />
+                                <span asp-validation-for="Name" class="text-danger small"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <label asp-for="PhoneNumber" class="form-label"></label>
                                 <input asp-for="PhoneNumber" class="form-control" placeholder="@Html.DisplayNameFor(m => m.PhoneNumber)" />
+                                <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
                             </div>
-                            <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
-                        </div>
-                        <div class="col-12">
-                            <label asp-for="Address" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-geo-alt text-muted"></i></span>
+                            <div class="col-md-6">
+                                <label asp-for="Address" class="form-label"></label>
                                 <input asp-for="Address" class="form-control" placeholder="@Html.DisplayNameFor(m => m.Address)" />
+                                <span asp-validation-for="Address" class="text-danger small"></span>
                             </div>
-                            <span asp-validation-for="Address" class="text-danger small"></span>
+                            <div class="col-sm-6">
+                                <label asp-for="InitialDebt" class="form-label"></label>
+                                <input asp-for="InitialDebt" class="form-control text-start" data-decimal="currency" placeholder="Nhập số công nợ cũ" />
+                                <div class="form-text text-muted">Nhập số công nợ cũ với nhà cung cấp</div>
+                                <span asp-validation-for="InitialDebt" class="text-danger small"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="additional" role="tabpanel">
+                        <div class="row g-3">
+                            <div class="col-sm-6 col-md-4">
+                                <label asp-for="DisplayOrder" class="form-label"></label>
+                                <input asp-for="DisplayOrder" class="form-control" placeholder="0" />
+                                <span asp-validation-for="DisplayOrder" class="text-danger small"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="tab-pane fade" id="additional" role="tabpanel">
-                    <div class="row g-3">
-                        <div class="col-sm-6 col-md-4">
-                            <label asp-for="DisplayOrder" class="form-label"></label>
-                            <input asp-for="DisplayOrder" class="form-control" placeholder="0" />
-                            <span asp-validation-for="DisplayOrder" class="text-danger small"></span>
-                        </div>
-                        <div class="col-sm-6 col-md-5">
-                            <label asp-for="InitialDebt" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="bi bi-cash-stack text-muted"></i></span>
-                                <input asp-for="InitialDebt" class="form-control text-end" type="number" step="1000" min="0"
-                                       placeholder="0 — để trống nếu không có nợ cũ" />
-                                <span class="input-group-text">₫</span>
-                            </div>
-                            <div class="form-text text-muted">Số dư công nợ có sẵn trước khi dùng hệ thống. Để trống hoặc nhập 0 nếu không có.</div>
-                            <span asp-validation-for="InitialDebt" class="text-danger small"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="form-card-footer" style="margin: 0 -1.5rem -1.5rem; border-radius: 0 0 var(--card-radius) var(--card-radius);">
-                <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-1"></i>Thêm mới
-                </button>
-            </div>
-        </form>
-    </div>
+        </div>
+        <div class="content-card-footer d-flex align-items-center justify-content-between">
+            <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                <i class="bi bi-arrow-left"></i>
+                Trở về
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>Thêm mới
+            </button>
+        </div>
+    </form>
 </div>
 
 @section Scripts {

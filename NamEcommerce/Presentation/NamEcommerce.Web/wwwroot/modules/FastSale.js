@@ -150,7 +150,7 @@ class FastSale {
             try {
                 const result = await apiPost(form.action, new FormData(form));
                 if (!result.success) {
-                    this.showAlert('danger', result.message || 'Không thể tạo khách hàng.');
+                    this.showAlert('error', result.message || 'Không thể tạo khách hàng.');
                     return;
                 }
 
@@ -159,7 +159,7 @@ class FastSale {
                 quickCustomerModal?.hide();
                 this.showAlert('success', result.message || 'Đã tạo khách hàng.');
             } catch {
-                this.showAlert('danger', 'Có lỗi xảy ra khi tạo khách hàng.');
+                this.showAlert('error', 'Có lỗi xảy ra khi tạo khách hàng.');
             } finally {
                 submitButton.disabled = false;
             }
@@ -415,7 +415,7 @@ class FastSale {
         if (this.saleInputVersion !== saleInputVersion) return;
 
         if (!response.success) {
-            this.showAlert('danger', response.message);
+            this.showAlert('error', response.message);
             return;
         }
 
@@ -438,7 +438,7 @@ class FastSale {
         if (!this.paymentIntent || this.paymentIntent.id !== intentId || this.saleInputVersion !== saleInputVersion) return;
 
         if (!response.success) {
-            this.showAlert('danger', response.message);
+            this.showAlert('error', response.message);
             return;
         }
         if (response.intent?.id !== intentId) return;
@@ -485,7 +485,7 @@ class FastSale {
         } catch {
             if (!this.isCurrentPollingIntent(intentId, saleInputVersion, requestSeq)) return;
 
-            this.showAlert('danger', 'Khong the cap nhat trang thai QR.');
+            this.showAlert('error', 'Khong the cap nhat trang thai QR.');
             this.resetPaymentIntent();
             this.render();
             return;
@@ -494,7 +494,7 @@ class FastSale {
         if (!this.isCurrentPollingIntent(intentId, saleInputVersion, requestSeq)) return;
 
         if (!data?.success) {
-            this.showAlert('danger', data?.message);
+            this.showAlert('error', data?.message);
             this.resetPaymentIntent();
             this.render();
             return;
@@ -539,7 +539,7 @@ class FastSale {
         this.complete.disabled = false;
 
         if (!response.success) {
-            this.showAlert('danger', response.message);
+            this.showAlert('error', response.message);
             return;
         }
 

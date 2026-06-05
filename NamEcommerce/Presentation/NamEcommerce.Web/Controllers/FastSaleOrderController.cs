@@ -5,7 +5,7 @@ namespace NamEcommerce.Web.Controllers;
 
 public sealed partial class OrderController : BaseAuthorizedController
 {
-    public async Task<IActionResult> FastCreate()
+    public async Task<IActionResult> QuickCreate()
     {
         var model = await _fastSaleModelFactory.PrepareFastSaleModelAsync().ConfigureAwait(false);
         return View(model);

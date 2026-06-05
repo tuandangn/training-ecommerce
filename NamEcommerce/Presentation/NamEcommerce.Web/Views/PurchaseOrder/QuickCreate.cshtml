@@ -23,12 +23,16 @@
         <div class="content-card">
             <div class="content-card-body">
                 <div class="row g-3 mb-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4 col-sm-6">
                         <label class="form-label small fw-bold text-muted text-uppercase d-block">Nhà cung cấp</label>
                         <div id="vendorPicker" data-id="" data-name="" data-phone="" data-address=""></div>
                         <input type="hidden" id="VendorId" name="VendorId" />
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4 col-sm-6">
+                        <label class="form-label small fw-bold text-muted text-uppercase d-block">Ngày nhận hàng</label>
+                        <input type="datetime-local" id="ReceivedOn" class="form-control" value="@Model.ReceivedOn.ToString("s")" />
+                    </div>
+                    <div class="col-md-4 col-sm-6">
                         <label class="form-label small fw-bold text-muted text-uppercase d-block">Kho nhập hàng</label>
                         <select id="DefaultWarehouseId" class="form-select">
                             <option value="">-- Chọn kho --</option>
@@ -38,11 +42,7 @@
                             }
                         </select>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label small fw-bold text-muted text-uppercase d-block">Ngày nhận hàng</label>
-                        <input type="datetime-local" id="ReceivedOn" class="form-control" value="@Model.ReceivedOn.ToString("s")" />
-                    </div>
-                    <div class="col-md-6">
+                    <div class="col-sm-6">
                         <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block">Ghi chú</label>
                         <input asp-for="Note" id="Note" class="form-control" placeholder="Ghi chú đơn nhập" />
                     </div>
@@ -71,22 +71,23 @@
                         <tbody id="itemsBody"></tbody>
                     </table>
                 </div>
-                <div class="content-card-footer d-flex justify-content-end align-items-center gap-2 px-3 py-2 border-top">
-                    <span class="text-muted small">Tổng cộng:</span>
-                    <span class="fw-bold fs-6" id="orderTotal">0 đ</span>
+            </div>
+            <div class="content-card-footer bg-white py-2">
+                <div class="order-summary" id="tableFooter">
+                    <div class="order-summary-row total border-top-0 pt-0 mt-0">
+                        <span class="label">Tổng cộng</span>
+                        <span class="value">
+                            <span id="orderTotal">0 đ</span>
+                        </span>
+                    </div>
                 </div>
             </div>
 
-            <div class="content-card-body-flush border-top px-3 py-3">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <label class="fw-medium" for="receiveImmediately">Đã nhận hàng</label>
-                    <div class="form-check form-switch mb-0">
-                        <input class="form-check-input" type="checkbox" id="receiveImmediately" checked role="switch" />
-                    </div>
-                </div>
-
+            <div class="content-card-footer">
+                <div class="d-flex flex-column gap-3">
+            <div class="d-flex align-items-start gap-3 w-100 flex-wrap justify-content-between">
                 <div id="paymentSection">
-                    <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="d-flex align-items-center justify-content-between gap-3">
                         <label class="fw-medium" for="isPaid">Đã thanh toán công nợ</label>
                         <div class="form-check form-switch mb-0">
                             <input class="form-check-input" type="checkbox" id="isPaid" role="switch" />
@@ -113,18 +114,34 @@
                         </div>
                     </div>
                 </div>
-            </div>
+                <div class="d-flex align-items-center justify-content-between gap-3">
+                    <label class="fw-medium" for="receiveImmediately">Đã nhận hàng</label>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="receiveImmediately" checked role="switch" />
+                    </div>
+                </div>
 
-            <div class="content-card-footer px-3 py-3">
-                <button type="button" id="btnSubmit" class="btn btn-primary w-100 fw-bold py-2">
-                    <i class="bi bi-check-circle me-1"></i>Lưu đơn nhập
-                </button>
+            </div>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                            <i class="bi bi-arrow-left"></i>
+                            Trở về
+                        </a>
+                        <button type="button" id="btnSubmit" class="btn btn-primary fw-bold py-2">
+                            <i class="bi bi-check-circle me-1"></i>Lưu đơn nhập
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="col-lg-4 d-none d-lg-block">
-        <div id="productBrowser" data-col-class="col-12"></div>
+        <div class="content-card">
+            <div class="content-card-body">
+                <div id="productBrowser" data-col-class="col-12"></div>
+            </div>
+        </div>
     </div>
 </div>
 

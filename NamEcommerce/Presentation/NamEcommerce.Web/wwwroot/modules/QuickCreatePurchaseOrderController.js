@@ -3,7 +3,6 @@ import { toast, confirm } from "/modules/modals.js";
 import VendorPicker from "/modules/VendorPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
 import ItemEditOffcanvas from "/modules/ItemEditOffcanvas.js";
-import DecimalFields from "/modules/DecimalFields.js";
 
 function escapeHtml(str) {
     const d = document.createElement('div');
@@ -38,9 +37,13 @@ export default class QuickCreatePurchaseOrderController {
         new VendorPicker(el, {
             onSelect: (vendor) => {
                 this.#vendorId = vendor?.id ?? null;
+                getEl('VendorId').value = this.#vendorId ?? '';
                 if (vendor) this.#refreshPricesForVendor(vendor.id);
             },
-            onRemove: () => { this.#vendorId = null; }
+            onRemove: () => {
+                this.#vendorId = null;
+                getEl('VendorId').value = '';
+            }
         });
     }
 
@@ -261,19 +264,19 @@ export default class QuickCreatePurchaseOrderController {
 
     async #submit() {
         if (this.#items.length === 0) {
-            toast.warning('Vui lòng thêm ít nhất một sản phẩm');
+            window.NotificationCenter.warning('Vui lòng thêm ít nhất một sản phẩm');
             return;
         }
 
         const vendorInput = getEl('VendorId');
         if (!vendorInput?.value) {
-            toast.warning('Vui lòng chọn nhà cung cấp');
+            window.NotificationCenter.warning('Vui lòng chọn nhà cung cấp');
             return;
         }
 
         const warehouseId = getEl('DefaultWarehouseId')?.value;
         if (!warehouseId) {
-            toast.warning('Vui lòng chọn kho nhập hàng');
+            window.NotificationCenter.warning('Vui lòng chọn kho nhập hàng');
             return;
         }
 
@@ -285,7 +288,7 @@ export default class QuickCreatePurchaseOrderController {
             const amountInput = getEl('paymentAmount');
             const amount = DecimalFields.stripFormatting(amountInput?.value ?? '0');
             if (amount <= 0) {
-                toast.warning('Số tiền thanh toán phải lớn hơn 0');
+                window.NotificationCenter.warning('Số tiền thanh toán phải lớn hơn 0');
                 return;
             }
             payment = {

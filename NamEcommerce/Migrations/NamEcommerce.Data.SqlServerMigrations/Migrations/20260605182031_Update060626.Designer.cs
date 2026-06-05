@@ -13,8 +13,8 @@ using NamEcommerce.Data.SqlServer;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     [DbContext(typeof(NamEcommerceEfDbContext))]
-    [Migration("20260605024937_InitialDb")]
-    partial class InitialDb
+    [Migration("20260605182031_Update060626")]
+    partial class Update060626
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1010,6 +1010,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int")
+                        .HasColumnName("CustomerKind");
+
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -1054,6 +1061,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         });
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Kind", "IsSystem")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Customer_CustomerKind_IsSystem")
+                        .HasFilter("[CustomerKind] = 20 AND [IsSystem] = 1 AND [IsDeleted] = 0");
 
                     b.ToTable("Customer", "tbl");
                 });
@@ -2323,6 +2335,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("BankCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("BankName")
                         .IsRequired()

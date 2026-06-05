@@ -35,7 +35,6 @@
                         <th class="ps-4">Kho hàng</th>
                         <th><i class="bi bi-phone me-1"></i>Điện thoại</th>
                         <th class="d-none d-md-table-cell"><i class="bi bi-map me-1"></i>Địa chỉ</th>
-                        <th>Loại kho</th>
                         <th class="text-center" style="width: 110px;">Trạng thái</th>
                         <th style="width: 100px;"></th>
                     </tr>
@@ -57,8 +56,8 @@
                                 <td>
                                     @if (!string.IsNullOrEmpty(item.PhoneNumber))
                                     {
-                                        <a href="tel:@item.PhoneNumber" class="text-decoration-none">
-                                            <i class="bi bi-telephone me-1"></i>@item.PhoneNumber
+                                        <a href="tel:@item.PhoneNumber" class="text-decoration-none text-dark">
+                                            @item.PhoneNumber
                                         </a>
                                     }
                                 </td>
@@ -67,13 +66,10 @@
                                     {
                                         var encodedAddress = MyUrlEncoder.Encode(item.Address);
                                         <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank"
-                                           class="text-decoration-none">
-                                            <i class="bi bi-geo-alt me-1"></i>@HighlighHelper.Highlight(item.Address, query)
+                                           class="text-decoration-none text-dark">
+                                            @HighlighHelper.Highlight(item.Address, query)
                                         </a>
                                     }
-                                </td>
-                                <td>
-                                    <span class="text-muted">@L[item.WarehouseType!]</span>
                                 </td>
                                 <td class="text-center">
                                     @if (item.IsActive)
@@ -101,7 +97,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="5">
+                            <td colspan="4">
                                 <div class="empty-state">
                                     <div class="empty-icon"><i class="bi bi-geo-alt"></i></div>
                                     <h5>Chưa có kho hàng nào</h5>
@@ -127,28 +123,23 @@
                                 <a class="text-decoration-none text-dark" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
                                     @HighlighHelper.Highlight(item.Name, query)
                                 </a>
+                                <span class="text-muted small">(@item.Code)</span>
                             </div>
-                            <div class="list-card-meta">@item.Code</div>
                         </div>
                         @if (item.IsActive)
                         {
-                            <span class="status-badge success"><i class="bi bi-check-circle"></i>Hoạt động</span>
+                            <span class="status-badge success"><i class="bi bi-check-circle"></i>Đang hoạt động</span>
                         }
                         else
                         {
-                            <span class="status-badge secondary"><i class="bi bi-dash-circle"></i>Ngừng</span>
+                            <span class="status-badge secondary"><i class="bi bi-dash-circle"></i>Ngừng hoạt động</span>
                         }
                     </div>
                     <div class="list-card-fields">
-                        <div class="list-card-field">
-                            <span class="list-card-label">Loại kho</span>
-                            <span class="list-card-value fw-normal text-muted">@L[item.WarehouseType!]</span>
-                        </div>
                         @if (!string.IsNullOrEmpty(item.PhoneNumber))
                         {
                             <div class="list-card-field">
-                                <span class="list-card-label">Điện thoại</span>
-                                <a href="tel:@item.PhoneNumber" class="list-card-value text-decoration-none fw-normal">
+                                <a href="tel:@item.PhoneNumber" class="list-card-value text-decoration-none fw-normal text-dark">
                                     <i class="bi bi-telephone me-1"></i>@item.PhoneNumber
                                 </a>
                             </div>
@@ -157,15 +148,14 @@
                         {
                             var encodedAddress = MyUrlEncoder.Encode(item.Address);
                             <div class="list-card-field list-card-field-stack">
-                                <span class="list-card-label">Địa chỉ</span>
                                 <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank"
-                                   class="text-decoration-none text-muted small">
+                                   class="text-decoration-none text-dark">
                                     <i class="bi bi-geo-alt me-1"></i>@HighlighHelper.Highlight(item.Address, query)
                                 </a>
                             </div>
                         }
                     </div>
-                    <div class="list-card-actions">
+                    <div class="list-card-actions justify-content-start">
                         <a class="btn-table-action" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
                             <i class="bi bi-pencil"></i>
                             <span class="visually-hidden">Chỉnh sửa</span>

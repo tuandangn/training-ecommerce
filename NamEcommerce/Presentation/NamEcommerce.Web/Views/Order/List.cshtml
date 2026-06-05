@@ -46,11 +46,11 @@
 <div class="content-card" data-responsive-list data-list-key="order-list">
     <div class="action-toolbar">
         <partial name="_Search" model="@(new OrderListSearchModel { Keywords = Model.Keywords, Status = Model.Status })" />
+        <a asp-action="QuickCreate" class="btn btn-success">
+            <i class="bi bi-lightning-fill me-1"></i> Bán nhanh
+        </a>
         <a asp-action="Create" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i> Tạo đơn
-        </a>
-        <a asp-action="FastCreate" class="btn btn-outline-primary">
-            <i class="bi bi-journal-plus me-1"></i> Tạo nhanh
         </a>
         <partial name="_ResponsiveListToolbar" />
     </div>

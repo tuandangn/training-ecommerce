@@ -31,7 +31,6 @@
                 <thead>
                     <tr>
                         <th class="ps-4">Tên đơn vị</th>
-                        <th class="text-center" style="width: 120px;">Thứ tự</th>
                         <th style="width: 100px;"></th>
                     </tr>
                 </thead>
@@ -46,7 +45,6 @@
                                         @HighlighHelper.Highlight(item.Name, query)
                                     </a>
                                 </td>
-                                <td class="text-center text-muted">@item.DisplayOrder</td>
                                 <td class="text-end pe-3">
                                     <a class="btn-table-action me-1" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
                                         <i class="bi bi-pencil"></i>
@@ -62,7 +60,7 @@
                     else
                     {
                         <tr>
-                            <td colspan="3">
+                            <td colspan="2">
                                 <div class="empty-state">
                                     <div class="empty-icon"><i class="bi bi-rulers"></i></div>
                                     <h5>Chưa có đơn vị tính nào</h5>

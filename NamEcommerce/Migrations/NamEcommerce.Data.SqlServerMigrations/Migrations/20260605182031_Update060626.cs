@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialDb : Migration
+    public partial class Update060626 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -47,6 +47,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Code = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     DisplayName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    BankCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     BankName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     AccountNumber = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
                     AccountHolderName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
@@ -182,6 +183,8 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     PhoneNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Email = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Note = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    CustomerKind = table.Column<int>(type: "int", nullable: false),
+                    IsSystem = table.Column<bool>(type: "bit", nullable: false),
                     CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     NormalizedAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     Address = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
@@ -2248,6 +2251,14 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 schema: "tbl",
                 table: "CassoReconciliationRuns",
                 column: "StartedAtUtc");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Customer_CustomerKind_IsSystem",
+                schema: "tbl",
+                table: "Customer",
+                columns: new[] { "CustomerKind", "IsSystem" },
+                unique: true,
+                filter: "[CustomerKind] = 20 AND [IsSystem] = 1 AND [IsDeleted] = 0");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CustomerCreditNote_Code",
