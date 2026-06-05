@@ -246,6 +246,9 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerDebtAppService, CustomerDebtAppService>();
     services.AddScoped<IBankTransferPaymentIntentAppService, BankTransferPaymentIntentAppService>();
     services.AddScoped<IBankTransferVerificationProvider, NoneBankTransferVerificationProvider>();
+    services.AddScoped<CassoTransactionMapper>();
+    services.AddScoped<ICassoBankTransferAppService, CassoBankTransferAppService>();
+    services.AddHttpClient<ICassoTransactionClient, CassoTransactionClient>();
     services.AddScoped<ICustomerPortalAdminAppService, CustomerPortalAdminAppService>();
     services.AddScoped<ICustomerPortalDeliveryTokenAppService, CustomerPortalDeliveryTokenAppService>();
     services.AddScoped<ICustomerPortalNotificationSender, MockSmsCustomerPortalNotificationSender>();
