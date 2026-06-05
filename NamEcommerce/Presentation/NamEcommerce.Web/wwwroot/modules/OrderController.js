@@ -3,6 +3,7 @@ import { apiGet, apiPost } from "/modules/ajax-helper.js";
 import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
+import ItemEditOffcanvas from "/modules/ItemEditOffcanvas.js";
 
 class Customer {
     constructor({ id, name, phone, address }) {
@@ -60,6 +61,7 @@ export default class OrderController {
     #state;
 
     #addItemController;
+    #itemEditOffcanvas;
 
     #productBrowser;
     #productPicker;
@@ -69,6 +71,11 @@ export default class OrderController {
 
     constructor() {
         this.#addItemController = new AddItemController(() => getEl('CustomerId')?.value ?? '');
+
+        const offcanvasEl = document.getElementById('itemEditOffcanvas');
+        if (offcanvasEl) {
+            this.#itemEditOffcanvas = new ItemEditOffcanvas(offcanvasEl);
+        }
 
         this.#bindProductPicker();
         this.#bindAddItemForm();
@@ -201,7 +208,79 @@ export default class OrderController {
         }
     }
 
+    #isMobile() {
+        return window.innerWidth < 768;
+    }
+
     #buildItemRow(container, item, index) {
+        if (this.#isMobile() && this.#itemEditOffcanvas) {
+            return this.#buildMobileItemRow(container, item, index);
+        }
+        return this.#buildDesktopItemRow(container, item, index);
+    }
+
+    #buildMobileItemRow(container, item, index) {
+        const { productInfo: p, quantity, unitPrice } = item;
+        const row = document.createElement('tr');
+        row.id = `row-${index}`;
+        row.className = 'order-item-row--mobile';
+        row.style.cursor = 'pointer';
+        row.innerHTML = `
+            <input type="text" class="visually-hidden product-id" name="Items[${index}].ProductId" value="${p.id}"
+                data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
+            <input type="hidden" name="Items[${index}].QuantityDecimalPlaces" value="${p.quantityDecimalPlaces ?? 0}" />
+            <input type="hidden" class="row-qty" name="Items[${index}].Quantity" value="${quantity}"
+                data-val="true" data-val-required="Vui lòng nhập số lượng."
+                data-val-range="Số lượng phải lớn hơn 0."
+                data-val-range-min="${(p.quantityDecimalPlaces ?? 0) > 0 ? '0.001' : '1'}"
+                data-val-number="Số lượng không đúng." />
+            <input type="hidden" class="row-price" name="Items[${index}].UnitPrice" value="${unitPrice}"
+                data-val="true" data-val-required="Vui lòng nhập đơn giá"
+                data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
+                data-val-number="Đơn giá phải là số" />
+            <td class="ps-3 py-2">
+                <div class="fw-medium product-name">${escapeHtml(p.name)}</div>
+                <div class="text-muted small row-summary">
+                    ${DecimalFields.formatQuantity(quantity, p.quantityDecimalPlaces ?? 0)}
+                    × ${DecimalFields.formatCurrency(unitPrice)} đ
+                </div>
+            </td>
+            <td class="text-end fw-bold text-primary pe-3 py-2 text-nowrap align-middle">
+                <span class="row-total">${DecimalFields.formatCurrency(item.lineTotal)}</span> đ
+                <i class="bi bi-chevron-right text-muted ms-1 small"></i>
+            </td>`;
+
+        container.appendChild(row);
+
+        row.addEventListener('click', () => {
+            const currentItem = this.#state.items[index];
+            if (!currentItem) return;
+            this.#itemEditOffcanvas.open(
+                {
+                    name: currentItem.productInfo.name,
+                    picture: currentItem.productInfo.picture,
+                    quantity: currentItem.quantity,
+                    unitPrice: currentItem.unitPrice,
+                    quantityDecimalPlaces: currentItem.productInfo.quantityDecimalPlaces ?? 0,
+                    priceLabel: 'Đơn giá',
+                },
+                {
+                    onApply: (qty, price) => {
+                        this.#updateItem(index, { quantity: qty, unitPrice: price });
+                    },
+                    onDelete: () => {
+                        this.#setState({
+                            items: this.#state.items.filter((_, i) => i !== index),
+                        });
+                    },
+                }
+            );
+        });
+
+        return row;
+    }
+
+    #buildDesktopItemRow(container, item, index) {
         const { productInfo: p, quantity, unitPrice } = item;
         const row = document.createElement('tr');
         row.id = `row-${index}`;
@@ -318,12 +397,43 @@ export default class OrderController {
             existingItem.quantity += 1;
             this.#activeRowIndex = existingIndex;
             this.#setState({ items });
+            if (this.#isMobile() && this.#itemEditOffcanvas) {
+                this.#openOffcanvasForIndex(existingIndex);
+            }
         } else {
             const unitPrice = await this.#addItemController.getSuggestedUnitPrice(product.id, product.unitPrice);
             items.push(new OrderItem(new ProductInfo(product), 1, unitPrice));
             this.#activeRowIndex = items.length - 1;
             this.#setState({ items });
+            if (this.#isMobile() && this.#itemEditOffcanvas) {
+                this.#openOffcanvasForIndex(items.length - 1);
+            }
         }
+    }
+
+    #openOffcanvasForIndex(index) {
+        const item = this.#state.items[index];
+        if (!item) return;
+        this.#itemEditOffcanvas.open(
+            {
+                name: item.productInfo.name,
+                picture: item.productInfo.picture,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                quantityDecimalPlaces: item.productInfo.quantityDecimalPlaces ?? 0,
+                priceLabel: 'Đơn giá',
+            },
+            {
+                onApply: (qty, price) => {
+                    this.#updateItem(index, { quantity: qty, unitPrice: price });
+                },
+                onDelete: () => {
+                    this.#setState({
+                        items: this.#state.items.filter((_, i) => i !== index),
+                    });
+                },
+            }
+        );
     }
 
     #validateForm(triggers) {
