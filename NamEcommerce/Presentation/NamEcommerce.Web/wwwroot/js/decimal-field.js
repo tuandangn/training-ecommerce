@@ -292,7 +292,7 @@
         input.autocomplete = 'off';
         input.dataset.decimals = String(decimals);
         input.dataset.type = 'quantity';
-        input.placeholder = opts.placeholder !== null ? opts.placeholder : (decimals > 0 ? '0,00' : '0');
+        //input.placeholder = opts.placeholder !== null ? opts.placeholder : (decimals > 0 ? '0,00' : '0');
         if (opts.id) input.id = opts.id;
         if (opts.value != null) input.value = formatQuantity(String(opts.value), decimals);
 
@@ -330,7 +330,7 @@
         if (input.dataset.decimalBound === '1') return { input: input };
 
         var isCurr = (type === 'currency');
-        var decimals = isCurr ? 0 : (parseInt(input.dataset.decimals, 10) || 2);
+        var decimals = isCurr ? 0 : parseInt(input.dataset.decimals || '2', 10);
 
         var opts = Object.assign({
             showHint: false,

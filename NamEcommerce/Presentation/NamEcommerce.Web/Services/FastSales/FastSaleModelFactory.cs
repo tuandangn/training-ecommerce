@@ -27,14 +27,14 @@ public sealed class FastSaleModelFactory(
         return new FastSaleModel
         {
             DefaultCustomerId = retailWalkInCustomer.Id,
-            DefaultCustomerName = retailWalkInCustomer.FullName,
-            DefaultCustomerPhone = retailWalkInCustomer.PhoneNumber,
-            DefaultCustomerAddress = retailWalkInCustomer.Address,
+            CustomerName = retailWalkInCustomer.FullName,
+            CustomerPhone = retailWalkInCustomer.PhoneNumber,
+            CustomerAddress = retailWalkInCustomer.Address,
             Warehouses = warehouses.Options,
             BankTransferEnabled = bankTransferPaymentSettings.Enabled && receivingAccount?.IsConfigured == true,
             BankAccountLabel = string.IsNullOrWhiteSpace(receivingAccount?.AccountNo)
                 ? string.Empty
-                : $"{receivingAccount.AccountName} - {receivingAccount.AccountNo}",
+                : $"{receivingAccount.BankId} {receivingAccount.AccountNo} - {receivingAccount.AccountName}",
             ManualBankTransferConfirmEnabled = bankTransferPaymentSettings.Verification.AllowManualConfirm
         };
     }

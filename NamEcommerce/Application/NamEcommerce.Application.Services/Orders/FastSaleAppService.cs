@@ -192,8 +192,7 @@ public sealed class FastSaleAppService(
                         PaymentMethod = paymentMethod!.Value,
                         PaymentType = PaymentType.DebtPayment,
                         PaidOnUtc = DateTime.UtcNow,
-                        RecordedByUserId = currentUser!.Id,
-                        Note = BuildPaymentNote(paymentMethod.Value, paymentIntentId, dto.Note)
+                        RecordedByUserId = currentUser!.Id
                     }).ConfigureAwait(false);
                 }
 
@@ -212,8 +211,7 @@ public sealed class FastSaleAppService(
                     PaymentMethod = paymentMethod!.Value,
                     PaymentType = PaymentType.Deposit,
                     PaidOnUtc = DateTime.UtcNow,
-                    RecordedByUserId = currentUser!.Id,
-                    Note = BuildDepositPaymentNote(paymentMethod.Value, paymentIntentId, dto.Note)
+                    RecordedByUserId = currentUser!.Id
                 }).ConfigureAwait(false);
             }
 
@@ -254,7 +252,7 @@ public sealed class FastSaleAppService(
         var createOrderDto = new CreateOrderDto
         {
             CustomerId = dto.CustomerId,
-            Note = BuildOrderNote(dto.Note),
+            Note = dto.Note,
             OrderDiscount = dto.OrderDiscount,
             ExpectedShippingDateUtc = DateTime.UtcNow.Date,
             ShippingAddress = string.Empty,
@@ -288,7 +286,6 @@ public sealed class FastSaleAppService(
             ShippingAddress = string.IsNullOrWhiteSpace(order.ShippingAddress) ? "Tai quay" : order.ShippingAddress,
             ShowPrice = true,
             CompensateReturnedQuantityInNextDelivery = false,
-            Note = BuildDeliveryNote(dto.Note),
             Surcharge = 0,
             AmountToCollect = total,
             Items = orderItems.Select((item, index) => new CreateDeliveryNoteItemDto
@@ -331,29 +328,5 @@ public sealed class FastSaleAppService(
             .Where(id => id != Guid.Empty)
             .Distinct()
             .ToList();
-    }
-
-    private static string BuildOrderNote(string? note)
-        => string.IsNullOrWhiteSpace(note) ? "Fast sale at counter" : $"Fast sale at counter. {note.Trim()}";
-
-    private static string BuildDeliveryNote(string? note)
-        => string.IsNullOrWhiteSpace(note) ? "Fast sale at counter" : note.Trim();
-
-    private static string BuildPaymentNote(PaymentMethod paymentMethod, Guid? paymentIntentId, string? note)
-    {
-        var prefix = paymentMethod == PaymentMethod.BankTransfer
-            ? $"Fast sale bank transfer intent {paymentIntentId}"
-            : "Fast sale cash payment";
-
-        return string.IsNullOrWhiteSpace(note) ? prefix : $"{prefix}. {note.Trim()}";
-    }
-
-    private static string BuildDepositPaymentNote(PaymentMethod paymentMethod, Guid? paymentIntentId, string? note)
-    {
-        var prefix = paymentMethod == PaymentMethod.BankTransfer
-            ? $"Fast sale deposit bank transfer intent {paymentIntentId}"
-            : "Fast sale deposit cash payment";
-
-        return string.IsNullOrWhiteSpace(note) ? prefix : $"{prefix}. {note.Trim()}";
     }
 }

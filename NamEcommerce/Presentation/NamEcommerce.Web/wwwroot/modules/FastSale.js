@@ -47,6 +47,8 @@ class FastSale {
         this.customerPicker = null;
         this.productBrowser = null;
 
+        this.defaultCustomer = document.getElementById('CustomerId').dataset.default;
+
         this.bindElements();
         this.bindPickers();
         this.bindEvents();
@@ -61,9 +63,11 @@ class FastSale {
         this.cartBody = document.getElementById('fastSaleCartBody');
         this.emptyCart = document.getElementById('fastSaleEmptyCart');
         this.discount = document.getElementById('fastSaleDiscount');
+        this.discountDisplay = document.getElementById('fastSaleDiscountDisplay');
         this.note = document.getElementById('fastSaleNote');
         this.subtotal = document.getElementById('fastSaleSubtotal');
         this.total = document.getElementById('fastSaleTotal');
+        this.totalHint = document.getElementById('fastSaleTotalHint');
         this.deliverNow = document.getElementById('fastSaleDeliverNow');
         this.notDelivered = document.getElementById('fastSaleNotDelivered');
         this.payNow = document.getElementById('fastSalePayNow');
@@ -81,6 +85,8 @@ class FastSale {
         this.confirmQr = document.getElementById('fastSaleConfirmQr');
         this.complete = document.getElementById('fastSaleComplete');
         this.clearCart = document.getElementById('fastSaleClearCart');
+        this.customer = document.getElementById('CustomerId');
+        this.shippingAddress = document.getElementById('ShippingAddress');
     }
 
     bindPickers() {
@@ -244,6 +250,7 @@ class FastSale {
                 productId: product.id,
                 name: product.name,
                 warehouseId,
+                unitMeasurement: product.unitMeasurement,
                 availableWarehouses: product.availableWarehouses || [],
                 quantity: 1,
                 unitPrice: Number(product.unitPrice || 0),
@@ -269,6 +276,7 @@ class FastSale {
             pictureUrl: product.pictureUrl || product.picture || '',
             quantityAvailable: Number(product.quantityAvailable ?? product.availableQty ?? 0),
             quantityDecimalPlaces: Number(product.quantityDecimalPlaces || 0),
+            unitMeasurement: product.unitMeasurement || '',
             availableWarehouses: (product.availableWarehouses || []).map(warehouse => ({
                 id: warehouse.id || warehouse.key || '',
                 name: warehouse.name || warehouse.value || '',
@@ -282,19 +290,30 @@ class FastSale {
     render() {
         this.renderCart();
         const subtotal = this.calculateSubtotal();
-        const discount = this.getDiscount();
+        const discount = this.cart.length > 0 ? this.getDiscount() : 0;
         const total = Math.max(0, subtotal - discount);
         const isPayNow = this.paymentTiming === 'payNow';
         const usesBankTransfer = isPayNow && this.paymentMethod === 'bank';
 
         this.subtotal.textContent = this.formatMoneyWithSymbol(subtotal);
         this.total.textContent = this.formatMoneyWithSymbol(total);
+        this.discountDisplay.textContent = this.formatMoneyWithSymbol(discount);
         this.paymentMethodSection.classList.toggle('d-none', !isPayNow);
-        this.qrPanel.classList.toggle('visible', usesBankTransfer);
+        this.qrPanel.classList.toggle('d-none', !usesBankTransfer);
         this.createQr.disabled = !usesBankTransfer || total <= 0 || this.cart.length === 0;
         this.confirmQr.disabled = !this.paymentIntent || this.paymentIntentConfirmed || !this.manualConfirmEnabled || !this.isIntentPending(this.paymentIntent);
         this.complete.disabled = this.cart.length === 0 || total <= 0 || (usesBankTransfer && !this.paymentIntentConfirmed);
         this.complete.innerHTML = this.getCompleteButtonHtml();
+
+        if (total > 0)
+            this.totalHint.textContent = window.SoBangChu?.docSoTien(total) ?? '';
+
+        this.customer.value = this.selectedCustomer?.id ?? '';
+        this.shippingAddress.value = this.selectedCustomer?.address ?? '';
+        this.shippingAddress.disabled = this.selectedCustomer?.id == this.defaultCustomer;
+        this.shippingAddress.closest('div').classList.toggle('d-none', this.selectedCustomer?.id == this.defaultCustomer);
+
+        this.discount.disabled = this.cart.length === 0;
 
         if (!this.paymentIntent || !usesBankTransfer) {
             this.qrImage.removeAttribute('src');
@@ -307,7 +326,7 @@ class FastSale {
 
         this.qrImage.src = this.paymentIntent.qrImageUrl || '';
         this.reference.textContent = this.paymentIntent.referenceCode || '';
-        this.qrAmount.textContent = this.formatMoney(this.paymentIntent.amount);
+        this.qrAmount.textContent = this.formatMoneyWithSymbol(this.paymentIntent.amount);
         this.qrStatus.textContent = `Trang thai: ${this.getIntentStatusText(this.paymentIntent.status)}`;
         this.qrExpires.textContent = this.paymentIntent.expiresAtUtc
             ? `Het han: ${this.formatDateTime(this.paymentIntent.expiresAtUtc)}`
@@ -317,6 +336,7 @@ class FastSale {
     renderCart() {
         this.cartBody.innerHTML = '';
         this.emptyCart.style.display = this.cart.length === 0 ? 'block' : 'none';
+        this.clearCart.classList.toggle('d-none', this.cart.length === 0);
 
         this.cart.forEach((item, index) => {
             const row = document.createElement('tr');
@@ -333,7 +353,7 @@ class FastSale {
                 </td>
                 <td class="text-end fw-semibold text-nowrap">${this.formatMoneyWithSymbol(item.quantity * item.unitPrice)}</td>
                 <td class="text-end pe-3" style="width: 48px;">
-                    <button type="button" class="btn btn-sm btn-light" title="Xóa"><i class="bi bi-x-lg"></i></button>
+                    <button type="button" class="btn btn-link link-danger p-0 border-0" title="Xóa"><i class="bi bi-trash"></i></button>
                 </td>`;
 
 
@@ -379,13 +399,12 @@ class FastSale {
         if (this.fulfillmentMode !== 'deliverNow') {
             return '';
         }
-
         const warehouses = item.availableWarehouses || [];
         const options = ['<option value="">Chọn kho</option>'];
         for (const warehouse of warehouses) {
             const selected = warehouse.id === item.warehouseId ? 'selected' : '';
             const quantity = this.formatQuantity(warehouse.quantityAvailable, item.quantityDecimalPlaces);
-            options.push(`<option value="${this.escape(warehouse.id)}" ${selected}>${this.escape(warehouse.name)} (${quantity})</option>`);
+            options.push(`<option value="${this.escape(warehouse.id)}" ${selected}>${this.escape(warehouse.name)} - ${quantity} ${this.escape(item.unitMeasurement)}</option>`);
         }
 
         return `<select class="form-select form-select-sm" data-role="warehouse">${options.join('')}</select>`;
@@ -684,12 +703,6 @@ class FastSale {
         }).format(date);
     }
 
-    parseNumber(value) {
-        const normalized = String(value || '').replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '');
-        const parsed = Number(normalized);
-        return Number.isFinite(parsed) ? parsed : 0;
-    }
-
     formatMoney(value) {
         return DecimalFields.formatCurrency(value || 0);
     }
@@ -698,10 +711,7 @@ class FastSale {
     }
 
     formatQuantity(value, decimals) {
-        return new Intl.NumberFormat('vi-VN', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: decimals || 0
-        }).format(value || 0);
+        return DecimalFields.formatQuantity(value, decimals);
     }
 
     showAlert(type, message) {
