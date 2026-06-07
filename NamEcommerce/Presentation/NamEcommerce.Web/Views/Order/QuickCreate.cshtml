@@ -131,7 +131,7 @@
                         <div class="content-card-header">
                             <h5>Thông tin đơn bán</h5>
                         </div>
-                        <div class="content-card-body pb-2">
+                        <div class="content-card-body border-bottom pb-4">
                             <div class="mb-3">
                                 <label asp-for="CustomerId" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                                 <div id="fastSaleCustomerPicker"
@@ -226,7 +226,7 @@
                 <div class="col-12">
                     <section class="content-card">
                         <div class="content-card-body">
-                            <div id="fastSaleProductBrowser" data-col-class="col-lg-3 col-md-4 col-sm-6"></div>
+                            <div id="fastSaleProductBrowser" data-col-class="col-xl-4 col-sm-6"></div>
                         </div>
                     </section>
                 </div>
@@ -293,11 +293,11 @@
                                 </div>
                                 <div id="fastSaleQrStatus" class="small text-muted mt-2"></div>
                                 <div id="fastSaleQrExpires" class="small text-muted"></div>
-                                <div class="d-grid gap-2 mt-3">
-                                    <button type="button" class="btn btn-outline-primary" id="fastSaleCreateQr">
+                                <div class="d-flex align-items-center gap-2 mt-3">
+                                    <button type="button" class="btn btn-outline-primary flex-grow-1" id="fastSaleCreateQr">
                                         <i class="bi bi-qr-code-scan me-1"></i> Tạo QR
                                     </button>
-                                    <button type="button" class="btn btn-outline-success" id="fastSaleConfirmQr" disabled>
+                                    <button type="button" class="btn btn-outline-success flex-grow-1" id="fastSaleConfirmQr" disabled>
                                         <i class="bi bi-check2-circle me-1"></i> Xác nhận đã nhận tiền
                                     </button>
                                 </div>
@@ -319,6 +319,9 @@
         </div>
     </div>
 </div>
+
+@await Html.PartialAsync("_ItemEditOffcanvas")
+<partial name="_ItemEditModal" />
 
 <div class="modal fade" id="quickCustomerModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

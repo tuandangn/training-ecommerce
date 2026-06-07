@@ -12,16 +12,28 @@
 (function (global) {
     'use strict';
 
+    const numberSettings = {
+        groupSeparator: '.',
+        decimalSeparator: ','
+    };
+
     // ---- Helpers -------------------------------------------------------
 
     function stripFormatting(str, decimals) {
         if (!str) return '';
         str = str.trim();
         if (!decimals) return str.replace(/[^\d]/g, '');
-        var lastDot = str.lastIndexOf('.');
-        var lastComma = str.lastIndexOf(',');
+
+        const lastDot = str.lastIndexOf('.');
+        const lastComma = str.lastIndexOf(',');
         if (lastDot === -1 && lastComma === -1) return str.replace(/[^\d]/g, '');
         if (lastComma > lastDot) return str.replace(/\./g, '').replace(',', '.');
+        if (lastDot != -1 && lastComma == -1) {
+            const dotCount = Array.from(str.matchAll(/\./g)).length;
+            if (dotCount > 1) return str.replace(/\./g, '');
+            if (str.length - (lastDot + 1) != 3) return str;
+            return str.replace(/\./g, '');
+        }
         return str.replace(/,/g, '');
     }
 
@@ -31,6 +43,13 @@
         if (!value || value == '0') return stripFormatting(value, 0);
         var decimals = parseInt(input.dataset.decimals, 10) || 0;
         return stripFormatting(value, decimals);
+    }
+
+    // Dùng riêng trong blur: lúc này user đã gõ, "." luôn là dấu thập phân
+    // (keypress handler đảm bảo chỉ có tối đa một ".")
+    function parseTypedDecimal(str) {
+        if (!str) return '';
+        return str.trim().replace(/[^\d.]/g, '');
     }
 
     function formatCurrency(raw, endSymbol, decimals) {
@@ -43,14 +62,14 @@
 
         // 3. Làm tròn số theo decimals được truyền vào
         const fixedNumber = n.toFixed(decimals);
-        const parts = fixedNumber.split('.');
+        const parts = fixedNumber.split(numberSettings.groupSeparator);
 
         // Định dạng dấu chấm phân cách hàng nghìn cho phần số nguyên
-        let currencyText = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        let currencyText = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, numberSettings.groupSeparator);
 
         // 4. Nếu có phần thập phân (và decimals > 0), ghép nó vào bằng dấu phẩy
         if (parts[1] && parseInt(parts[1], 10) > 0) {
-            currencyText += ',' + parts[1];
+            currencyText += numberSettings.decimalSeparator + parts[1];
         }
 
         // 5. Thêm ký hiệu tiền tệ ở cuối nếu có
@@ -74,10 +93,10 @@
 
         // 2. Dùng toFixed(decimals) để làm tròn chuẩn theo tham số truyền vào
         const fixedNumber = n.toFixed(decimals);
-        const parts = fixedNumber.split('.');
+        const parts = fixedNumber.split(numberSettings.groupSeparator);
 
         // Định dạng dấu chấm phân cách hàng nghìn cho phần số nguyên
-        const formattedInteger = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        const formattedInteger = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, numberSettings.groupSeparator);
 
         // 3. Nếu không có phần thập phân hoặc decimals = 0 thì chỉ trả về phần nguyên
         if (!parts[1] || parseInt(parts[1], 10) === 0) {
@@ -85,7 +104,7 @@
         }
 
         // 4. Trả về kết quả kết hợp với phần thập phân sau dấu phẩy
-        return formattedInteger + ',' + parts[1];
+        return formattedInteger + numberSettings.decimalSeparator + parts[1];
     }
 
     function formatInput(input) {
@@ -163,19 +182,21 @@
         });
 
         input.addEventListener('blur', function (e) {
-            var raw = stripInputFormatting(this);
+            // parseTypedDecimal vì tại đây value do user gõ, "." là thập phân
+            // stripInputFormatting dùng heuristic "3 chữ số sau dấu chấm = hàng nghìn"
+            // sẽ sai khi user gõ "1.004" với ý nghĩa một phẩy lẻ bốn
+            var raw = parseTypedDecimal(this.value);
 
-            // Validate truoc khi format
-            // jQuery Validate unobtrusive: kiem tra field nay co hop le khong
             if (raw !== '' && !isValidDecimal(this, raw)) {
-                // Gia tri sai: khong format, giu nguyen de nguoi dung biet
                 return;
             }
 
             if (raw === '') {
                 this.value = '';
             } else {
-                this.value = formatInput(this);
+                var type = this.dataset.type || 'quantity';
+                var decimals = parseInt(this.dataset.decimals, 10) || 0;
+                this.value = type === 'currency' ? formatCurrency(raw) : formatQuantity(raw, decimals);
             }
         });
 

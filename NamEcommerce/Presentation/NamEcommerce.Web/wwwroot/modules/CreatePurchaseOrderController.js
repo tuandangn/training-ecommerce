@@ -4,7 +4,7 @@ import { ProductPriceController } from "/modules/ProductPricePicker.js";
 import VendorPicker from "/modules/VendorPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
-import ItemEditOffcanvas from "/modules/ItemEditOffcanvas.js";
+import ItemEditor from "/modules/ItemEditor.js";
 
 class Vendor {
     constructor({ id, name, phone }) {
@@ -72,7 +72,7 @@ export default class CreatePurchaseOrderController {
 
     #addItemController;
     #priceController;
-    #itemEditOffcanvas;
+    #itemEditor;
 
     #browser;
     #productPicker;
@@ -85,8 +85,9 @@ export default class CreatePurchaseOrderController {
         this.#addItemController = new AddItemController();
 
         const offcanvasEl = document.getElementById('itemEditOffcanvas');
-        if (offcanvasEl) {
-            this.#itemEditOffcanvas = new ItemEditOffcanvas(offcanvasEl);
+        const modalEl = document.getElementById('itemEditModal');
+        if (offcanvasEl || modalEl) {
+            this.#itemEditor = new ItemEditor(offcanvasEl, modalEl);
         }
 
         this.#bindProductPicker();
@@ -103,7 +104,12 @@ export default class CreatePurchaseOrderController {
             this.#browser = new ProductBrowser(
                 browserEl,
                 (product) => this.#addOrIncrementItem(product),
-                { purchase: true, colClass: browserEl.dataset.colClass, initialShow: true }
+                {
+                    purchase: true,
+                    colClass: browserEl.dataset.colClass,
+                    initialShow: true,
+                    checkProduct: this.#isValidProduct
+                }
             );
             this.#browser.init();
         }
@@ -287,158 +293,70 @@ export default class CreatePurchaseOrderController {
         });
     }
 
-    #isMobile() {
-        return window.innerWidth < 768;
-    }
-
     #buildItemRow(container, item, index) {
-        if (this.#isMobile() && this.#itemEditOffcanvas) {
-            return this.#buildMobileItemRow(container, item, index);
-        }
-        return this.#buildDesktopItemRow(container, item, index);
-    }
-
-    #buildMobileItemRow(container, item, index) {
         const { productInfo: p, quantity, unitCost } = item;
         const row = document.createElement('tr');
         row.id = `row-${index}`;
-        row.className = 'order-item-row--mobile';
         row.style.cursor = 'pointer';
         row.innerHTML = `
-            <input type="text" class="visually-hidden product-id" name="Items[${index}].ProductId" value="${p.id}"
-                data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
-            <input type="hidden" name="Items[${index}].QuantityDecimalPlaces" value="${p.quantityDecimalPlaces ?? 0}" />
-            <input type="hidden" class="row-qty" name="Items[${index}].Quantity" value="${quantity}"
-                data-val="true" data-val-required="Vui lòng nhập số lượng."
-                data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="${(p.quantityDecimalPlaces ?? 0) > 0 ? '0.0001' : '1'}"
-                data-val-number="Số lượng phải là số" />
-            <input type="hidden" class="row-price" name="Items[${index}].UnitCost" value="${unitCost}"
-                data-val="true"
-                data-val-required="Vui lòng nhập đơn giá"
-                data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
-                data-val-number="Đơn giá phải là số" />
-            <td class="ps-3 py-2">
-                <div class="fw-medium product-name">${escapeHtml(p.name)}</div>
-                <div class="text-muted small row-summary">
-                    ${DecimalFields.formatQuantity(quantity, p.quantityDecimalPlaces ?? 0)}
-                    × ${DecimalFields.formatCurrency(unitCost)} đ
-                </div>
-            </td>
-            <td class="text-end fw-bold text-primary pe-3 py-2 text-nowrap align-middle">
-                <span class="row-total">${DecimalFields.formatCurrency(item.lineTotal)}</span> đ
-                <i class="bi bi-chevron-right text-muted ms-1 small"></i>
-            </td>`;
-
-        container.appendChild(row);
-
-        row.addEventListener('click', () => {
-            const currentItem = this.#state.items[index];
-            if (!currentItem) return;
-            this.#itemEditOffcanvas.open(
-                {
-                    name: currentItem.productInfo.name,
-                    picture: currentItem.productInfo.picture,
-                    quantity: currentItem.quantity,
-                    unitPrice: currentItem.unitCost,
-                    quantityDecimalPlaces: currentItem.productInfo.quantityDecimalPlaces ?? 0,
-                    priceLabel: 'Đơn giá nhập',
-                },
-                {
-                    onApply: (qty, price) => {
-                        this.#updateItem(index, { quantity: qty, unitCost: price });
-                    },
-                    onDelete: () => {
-                        this.#setState({
-                            items: this.#state.items.filter((_, i) => i !== index),
-                        });
-                        this.#dispatch('purchaseOrder:itemRemoved');
-                    },
-                }
-            );
-        });
-
-        return row;
-    }
-
-    #buildDesktopItemRow(container, item, index) {
-        const { productInfo: p, quantity, unitCost } = item;
-        const row = document.createElement('tr');
-        row.id = `row-${index}`;
-        row.className = 'align-middle';
-        row.innerHTML = `
-            <td class="ps-3">
-                <div class="d-flex align-items-center gap-2">
+            <td class="ps-4 align-middle">
+                <div class="d-flex align-items-center gap-3">
                     ${p.picture
-                ? `<img src="${p.picture}" class="rounded product-picture" style="width:40px; height:40px; object-fit:cover;" alt="${p.name}" />`
-                : '<div class="d-flex align-items-center justify-content-center rounded bg-light" style="width: 40px; height: 40px;"><i class="bi bi-image text-muted"></i></div>'
-            }
-                    <div class="fw-medium product-name">${p.name}</div>
+                        ? `<img src="${p.picture}" class="rounded object-fit-cover product-picture d-none d-lg-block" style="width:40px;height:40px;" alt="" />`
+                        : ''
+                    }
+                    <div>
+                        <div class="fw-medium product-name">${escapeHtml(p.name)}</div>
+                        <div class="text-muted small d-md-none">
+                            ${DecimalFields.formatQuantity(quantity, p.quantityDecimalPlaces ?? 0)} × ${DecimalFields.formatCurrency(unitCost)} đ
+                        </div>
+                    </div>
                 </div>
                 <input type="text" class="visually-hidden product-id" name="Items[${index}].ProductId" value="${p.id}"
                     data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
                 <input type="hidden" name="Items[${index}].QuantityDecimalPlaces" value="${p.quantityDecimalPlaces ?? 0}" />
-                <span class="small text-danger field-validation-valid" data-valmsg-for="Items[${index}].ProductId" data-valmsg-replace="true"></span>
-            </td>
-            <td class="text-end">
-                <input name="Items[${index}].Quantity" data-decimal="quantity" data-decimals="${p.quantityDecimalPlaces ?? 0}"
-                    class="row-qty no-additional-element" value="${quantity}" autocomplete="off"
+                <input type="hidden" class="row-qty" name="Items[${index}].Quantity" value="${quantity}"
                     data-val="true" data-val-required="Vui lòng nhập số lượng."
                     data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="${(p.quantityDecimalPlaces ?? 0) > 0 ? '0.0001' : '1'}"
                     data-val-number="Số lượng phải là số" />
-                <span class="small text-danger field-validation-valid"
-                    data-valmsg-for="Items[${index}].Quantity"
-                    data-valmsg-replace="true"></span>
-            </td>
-            <td class="text-end">
-                <input name="Items[${index}].UnitCost" data-decimal="currency"
-                    class="row-price no-additional-element" value="${unitCost}"
-                    data-val="true" autocomplete="off"
-                    data-val-required="Vui lòng nhập đơn giá"
-                    data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1" 
+                <input type="hidden" class="row-price" name="Items[${index}].UnitCost" value="${unitCost}"
+                    data-val="true" data-val-required="Vui lòng nhập đơn giá"
+                    data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
                     data-val-number="Đơn giá phải là số" />
                 <span class="small text-danger field-validation-valid"
-                    data-valmsg-for="Items[${index}].UnitCost"
+                    data-valmsg-for="Items[${index}].ProductId"
                     data-valmsg-replace="true"></span>
             </td>
-            <td class="text-end fw-bold text-primary px-3 row-total text-nowrap d-none d-lg-table-cell">
-                ${DecimalFields.formatCurrency(item.lineTotal)}
+            <td class="text-center d-none d-md-table-cell align-middle">
+                <span class="fw-medium">${DecimalFields.formatQuantity(quantity, p.quantityDecimalPlaces ?? 0)}</span>
             </td>
-            <td class="text-end pe-3 w-auto">
-                <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none"
+            <td class="text-end align-middle">
+                <span class="text-muted">${DecimalFields.formatCurrency(unitCost)} đ</span>
+            </td>
+            <td class="text-end fw-bold text-primary px-3 row-total text-nowrap d-none d-lg-table-cell align-middle">
+                ${DecimalFields.formatCurrency(item.lineTotal)} đ
+            </td>
+            <td class="text-end pe-4 w-auto align-middle">
+                <button type="button" class="btn btn-link link-danger p-0 border-0"
                     aria-label="Xóa hàng hóa">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>`;
 
-        // Events
+        container.appendChild(row);
+
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('button')) return;
+            this.#openEditorForIndex(index);
+        });
+
         row.querySelector('button').addEventListener('click', () => {
             const items = this.#state.items.filter((_, i) => i !== index);
             this.#setState({ items });
             this.#dispatch('purchaseOrder:itemRemoved');
         });
 
-        container.appendChild(row);
-        DecimalFields.autoWrap(row);
-
-        const inputQuantity = row.querySelector('.row-qty');
-        const inputUnitCost = row.querySelector('.row-price');
-
-        var inputQtyChangeDebounced = debounce((e) => {
-            const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
-            const newUnitCost = parseNumber(DecimalFields.stripFormatting(inputUnitCost.value, 0), 0);
-            this.#updateItem(index, { quantity: newQuantity, unitCost: newUnitCost });
-        }, 1500);
-        var inputUnitCostChangeDebounced = debounce((e) => {
-            const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
-            const newUnitCost = parseNumber(DecimalFields.stripFormatting(inputUnitCost.value, 0), 0);
-            this.#updateItem(index, { quantity: newQuantity, unitCost: newUnitCost });
-        }, 1500);
-
-        inputQuantity.addEventListener('input', inputQtyChangeDebounced);
-        inputQuantity.addEventListener('focusin', () => inputUnitCostChangeDebounced.cancel());
-
-        inputUnitCost.addEventListener('input', inputUnitCostChangeDebounced);
-        inputUnitCost.addEventListener('focusin', () => inputQtyChangeDebounced.cancel());
+        return row;
     }
 
     #updateItem(index, patch) {
@@ -460,9 +378,7 @@ export default class CreatePurchaseOrderController {
             existingItem.quantity += 1;
             this.#activeRowIndex = existingIndex;
             this.#setState({ items });
-            if (this.#isMobile() && this.#itemEditOffcanvas) {
-                this.#openOffcanvasForIndex(existingIndex);
-            }
+            this.#openEditorForIndex(existingIndex);
         } else {
             let unitCost = 0;
             if (this.#state.vendor)
@@ -470,16 +386,14 @@ export default class CreatePurchaseOrderController {
             items.push(new PurchaseOrderItem(new ProductInfo(product), 1, unitCost));
             this.#activeRowIndex = items.length - 1;
             this.#setState({ items });
-            if (this.#isMobile() && this.#itemEditOffcanvas) {
-                this.#openOffcanvasForIndex(items.length - 1);
-            }
+            this.#openEditorForIndex(items.length - 1);
         }
     }
 
-    #openOffcanvasForIndex(index) {
+    #openEditorForIndex(index) {
         const item = this.#state.items[index];
-        if (!item) return;
-        this.#itemEditOffcanvas.open(
+        if (!item || !this.#itemEditor) return;
+        this.#itemEditor.open(
             {
                 name: item.productInfo.name,
                 picture: item.productInfo.picture,

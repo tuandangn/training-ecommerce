@@ -1,6 +1,7 @@
 import { apiPost } from "/modules/ajax-helper.js";
 import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
+import ItemEditor from "/modules/ItemEditor.js";
 
 const IntentStatus = {
     Pending: 10,
@@ -46,10 +47,18 @@ class FastSale {
         this.pollRequestSeq = 0;
         this.customerPicker = null;
         this.productBrowser = null;
+        this.itemEditor = null;
 
         this.defaultCustomer = document.getElementById('CustomerId').dataset.default;
 
         this.bindElements();
+
+        const offcanvasEl = document.getElementById('itemEditOffcanvas');
+        const modalEl = document.getElementById('itemEditModal');
+        if (offcanvasEl || modalEl) {
+            this.itemEditor = new ItemEditor(offcanvasEl, modalEl);
+        }
+
         this.bindPickers();
         this.bindEvents();
         this.render();
@@ -389,6 +398,33 @@ class FastSale {
                 this.resetPaymentIntent();
                 this.render();
             });
+
+            if (this.itemEditor) {
+                row.style.cursor = 'pointer';
+                row.addEventListener('click', (e) => {
+                    if (e.target.closest('button') || e.target.closest('select')) return;
+                    const cartItem = this.cart[index];
+                    if (!cartItem) return;
+                    this.itemEditor.open({
+                        name: cartItem.name,
+                        quantity: cartItem.quantity,
+                        unitPrice: cartItem.unitPrice,
+                        quantityDecimalPlaces: cartItem.quantityDecimalPlaces
+                    }, {
+                        onApply: (qty, price) => {
+                            cartItem.quantity = qty;
+                            cartItem.unitPrice = price;
+                            this.resetPaymentIntent();
+                            this.render();
+                        },
+                        onDelete: () => {
+                            this.cart.splice(index, 1);
+                            this.resetPaymentIntent();
+                            this.render();
+                        }
+                    });
+                });
+            }
 
             this.cartBody.appendChild(row);
         });

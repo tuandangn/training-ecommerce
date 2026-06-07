@@ -53,7 +53,7 @@
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
-                                        <tr>
+                                        <tr style="cursor:pointer">
                                             <td class="ps-3">
                                                 <div class="fw-medium">@item.ProductDisplayName</div>
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
@@ -163,11 +163,15 @@
     </form>
 </div>
 
+@await Html.PartialAsync("_ItemEditOffcanvas")
+<partial name="_ItemEditModal" />
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script type="module">
         import CustomerPicker from '/modules/CustomerPicker.js';
         import { toast } from '/modules/modals.js';
+        import ItemEditor from '/modules/ItemEditor.js';
 
         const customerPickerEl = document.getElementById('customerPicker');
         const hiddenCustomerId = document.getElementById('hiddenCustomerId');
@@ -326,6 +330,7 @@
             const origPrice = item.unitPrice || 0;
             const available = item.availableQty ?? (item.originalQty - item.alreadyReturnedQty);
             const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
             tr.innerHTML = `
                 <td class="ps-3">
                     <div class="fw-medium">${item.productName}</div>
@@ -335,23 +340,17 @@
                     <input type="hidden" name="Items[${i}].OriginalUnitPrice" value="${origPrice}" class="item-orig-price" />
                 </td>
                 <td class="text-end text-muted small fw-medium ${available > 0 ? 'text-success' : 'text-danger'}">${fmtQty(available)}</td>
-                <td class="text-end">
-                    <input name="Items[${i}].RequestedQuantity" value="${fmtQty(available)}"
-                           class="form-control form-control-sm text-end item-req-qty"
-                           data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" max="${available}" placeholder="0" data-val="true"
-                    data-val-required="Vui lòng nhập số lượng."
-                    data-val-range="Số lượng phải lớn hơn 0."
-                    data-val-range-min="0.001" data-val-range-max="${available}"
-                    data-val-number="Số lượng không đúng."/>
+                <td class="text-end align-middle">
+                    <span class="fw-medium item-req-qty-display">${fmtQty(available)}</span>
+                    <input type="hidden" name="Items[${i}].RequestedQuantity" value="${available}"
+                           class="item-req-qty" data-decimals="${item.quantityDecimalPlaces ?? 0}" />
                 </td>
-                <td class="text-end">
-                    <input name="Items[${i}].ReturnUnitPrice" value="${fmtCurrency(origPrice)}"
-                           class="form-control form-control-sm text-end item-return-price"
-                           data-decimal="currency" min="0" placeholder="0" data-val="true" data-val-required="Vui lòng nhập đơn giá"
-                    data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1" data-val-range-max="${origPrice}"
-                    data-val-number="Đơn giá phải là số"   />
+                <td class="text-end align-middle">
+                    <span class="text-muted item-return-price-display">${fmtCurrency(origPrice, true)}</span>
+                    <input type="hidden" name="Items[${i}].ReturnUnitPrice" value="${origPrice}"
+                           class="item-return-price" />
                 </td>
-                <td class="text-end item-subtotal text-muted small">
+                <td class="text-end item-subtotal text-muted small align-middle">
                     ${fmtCurrency(origPrice * available, true)}
                 </td>
                 <td class="pe-2">
@@ -360,7 +359,6 @@
                     </button>
                 </td>`;
             tbody.appendChild(tr);
-        DecimalFields.autoWrap(tr);
             updateEmptyState();
         }
 
@@ -388,6 +386,51 @@
                 updateEmptyState();
                 updateFooter();
             }
+        });
+
+        const itemEditor = new ItemEditor(
+            document.getElementById('itemEditOffcanvas'),
+            document.getElementById('itemEditModal'),
+            { priceLabel: 'Đơn giá hoàn' }
+        );
+
+        tbody.addEventListener('click', e => {
+            if (e.target.closest('.btn-remove-item')) return;
+            const row = e.target.closest('tr');
+            if (!row) return;
+
+            const name = row.querySelector('.fw-medium')?.textContent?.trim() ?? '';
+            const qtyInput = row.querySelector('.item-req-qty');
+            const priceInput = row.querySelector('.item-return-price');
+            const decimals = parseInt(qtyInput?.dataset.decimals ?? '0', 10);
+
+            itemEditor.open({
+                name,
+                quantity: DecimalFields.getValue(qtyInput),
+                unitPrice: priceInput ? DecimalFields.getValue(priceInput) : 0,
+                quantityDecimalPlaces: decimals,
+                priceLabel: 'Đơn giá hoàn'
+            }, {
+                onApply: (qty, price) => {
+                    const qtyFormatted = DecimalFields.formatQuantity(qty, decimals);
+                    qtyInput.value = qtyFormatted;
+                    const qtyDisplay = row.querySelector('.item-req-qty-display');
+                    if (qtyDisplay) qtyDisplay.textContent = qtyFormatted;
+                    if (priceInput) {
+                        priceInput.value = price;
+                        const priceDisplay = row.querySelector('.item-return-price-display');
+                        if (priceDisplay) priceDisplay.textContent = fmtCurrency(price, true);
+                    }
+                    const sub = row.querySelector('.item-subtotal');
+                    if (sub) sub.textContent = fmtCurrency(qty * price, true);
+                    updateFooter();
+                },
+                onDelete: () => {
+                    row.remove();
+                    updateEmptyState();
+                    updateFooter();
+                }
+            });
         });
 
         function renumberRows() {

@@ -1,6 +1,7 @@
 import ProductPicker from "/modules/ProductPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
 import { getWarehouseSettings } from "/modules/Settings.js";
+import ItemEditor from "/modules/ItemEditor.js";
 
 export default class GoodsReceiptCreateController {
     #state = {};
@@ -8,10 +9,17 @@ export default class GoodsReceiptCreateController {
     #browser = null;
     #warehouseSettings;
     #warehouseOptions;
+    #itemEditor = null;
 
     constructor() {
         this.#warehouseSettings = getWarehouseSettings();
         this.#bindModal();
+
+        const offcanvasEl = document.getElementById('itemEditOffcanvas');
+        const modalEl = document.getElementById('itemEditModal');
+        if (offcanvasEl || modalEl) {
+            this.#itemEditor = new ItemEditor(offcanvasEl, modalEl);
+        }
 
         const warehouseSelect = document.getElementById('WarehouseId');
         warehouseSelect.addEventListener('change', (e) => {
@@ -136,10 +144,48 @@ export default class GoodsReceiptCreateController {
     #bindTableEvents() {
         document.getElementById('itemsTableBody')?.addEventListener('click', (e) => {
             const btn = e.target.closest('.btn-remove-item');
-            if (!btn) return;
-            btn.closest('tr').remove();
-            this.#updateNoItemsVisibility();
-            this.#reindexTableRows();
+            if (btn) {
+                btn.closest('tr').remove();
+                this.#updateNoItemsVisibility();
+                this.#reindexTableRows();
+                return;
+            }
+
+            if (e.target.closest('select')) return;
+            if (!this.#itemEditor) return;
+            const row = e.target.closest('tr');
+            if (!row) return;
+
+            const name = row.querySelector('.item-product-name')?.textContent?.trim() ?? '';
+            const picture = row.querySelector('img.product-picture')?.src ?? null;
+            const qtyInput = row.querySelector('.item-qty');
+            const costInput = row.querySelector('.item-unit-cost');
+            const decimals = parseInt(qtyInput?.dataset.decimals ?? '0', 10);
+
+            this.#itemEditor.open({
+                name,
+                picture,
+                quantity: DecimalFields.getValue(qtyInput),
+                unitPrice: costInput ? DecimalFields.getValue(costInput) : 0,
+                quantityDecimalPlaces: decimals,
+                priceLabel: 'Giá nhập'
+            }, {
+                onApply: (qty, price) => {
+                    qtyInput.value = DecimalFields.formatQuantity(qty, decimals);
+                    const qtyDisplay = row.querySelector('.item-qty-display');
+                    if (qtyDisplay) qtyDisplay.textContent = DecimalFields.formatQuantity(qty, decimals);
+                    if (costInput) {
+                        costInput.value = price > 0 ? DecimalFields.formatCurrency(price) : '';
+                        const costDisplay = row.querySelector('.item-unit-cost-display');
+                        if (costDisplay) costDisplay.textContent = price > 0 ? DecimalFields.formatCurrency(price) + ' đ' : '—';
+                    }
+                },
+                onDelete: () => {
+                    row.remove();
+                    this.#updateNoItemsVisibility();
+                    this.#reindexTableRows();
+                }
+            });
         });
     }
 
@@ -186,10 +232,13 @@ export default class GoodsReceiptCreateController {
         if (existingRow) {
             const qtyInput = existingRow.querySelector('.item-qty');
             if (qtyInput) {
+                const decimals = parseInt(qtyInput.dataset.decimals ?? '0', 10);
                 const current = parseFloat(DecimalFields.stripFormatting(qtyInput.value, 2)) || 0;
                 const newQty = current + 1;
-                qtyInput.value = DecimalFields.formatQuantity ? DecimalFields.formatQuantity(newQty) : newQty;
-                qtyInput.dispatchEvent(new Event('change', { bubbles: true }));
+                const formatted = DecimalFields.formatQuantity ? DecimalFields.formatQuantity(newQty, decimals) : String(newQty);
+                qtyInput.value = formatted;
+                const qtyDisplay = existingRow.querySelector('.item-qty-display');
+                if (qtyDisplay) qtyDisplay.textContent = formatted;
             }
             existingRow.classList.add('table-success');
             setTimeout(() => existingRow.classList.remove('table-success'), 700);
@@ -239,8 +288,9 @@ export default class GoodsReceiptCreateController {
 
         const row = document.createElement('tr');
         row.id = `item-row-${i}`;
+        row.style.cursor = 'pointer';
         row.innerHTML = `
-            <td class="ps-3">
+            <td class="ps-3 align-middle">
                 <div class="d-flex align-items-center">
                     ${pictureHtml}
                     <div>
@@ -250,10 +300,10 @@ export default class GoodsReceiptCreateController {
                 <input type="hidden" name="Items[${i}].ProductId" value="${escapeHtml(product.id)}" class="item-product-id" />
                 <input type="hidden" name="Items[${i}].QuantityDecimalPlaces" value="${product.quantityDecimalPlaces ?? 0}" />
             </td>
-            <td class="text-center">
-                <input name="Items[${i}].Quantity" value="${qtyFormatted}"
-                       class="form-control form-control-sm text-end item-qty no-additional-element"
-                       data-decimal="quantity" data-decimals="${product.quantityDecimalPlaces ?? 0}" min="0.001" placeholder="0"
+            <td class="text-center align-middle">
+                <span class="fw-medium item-qty-display">${qtyFormatted}</span>
+                <input type="hidden" name="Items[${i}].Quantity" value="${qtyFormatted}"
+                       class="item-qty" data-decimals="${product.quantityDecimalPlaces ?? 0}"
                        data-val="true"
                        data-val-required="Vui lòng nhập số lượng."
                        data-val-range="Số lượng phải lớn hơn 0."
@@ -262,8 +312,8 @@ export default class GoodsReceiptCreateController {
                 <span class="small text-danger field-validation-valid"
                       data-valmsg-for="Items[${i}].Quantity" data-valmsg-replace="true"></span>
             </td>
-            <td>
-                <select name="Items[${i}].WarehouseId" class="form-select item-warehouse"
+            <td class="align-middle">
+                <select name="Items[${i}].WarehouseId" class="form-select form-select-sm item-warehouse"
                         ${this.#state.warehouse ? 'disabled' : ''}
                         data-val="${!this.#warehouseSettings.AllowNonWarehouse}"
                         data-required="Vui lòng chọn kho hàng">
@@ -272,24 +322,23 @@ export default class GoodsReceiptCreateController {
                 <span class="small text-danger field-validation-valid"
                       data-valmsg-for="Items[${i}].WarehouseId" data-valmsg-replace="true"></span>
             </td>
-            <td class="text-end">
-                <input name="Items[${i}].UnitCost" value="${costFormatted}"
-                       class="form-control form-control-sm text-end item-unit-cost no-additional-element no-hint"
-                       data-decimal="currency" placeholder="(Không rõ)" min="0"
+            <td class="text-end align-middle">
+                <span class="text-muted item-unit-cost-display">${costFormatted ? costFormatted + ' đ' : '—'}</span>
+                <input type="hidden" name="Items[${i}].UnitCost" value="${costFormatted}"
+                       class="item-unit-cost"
                        data-val-range="Đơn giá không được âm."
                        data-val-range-min="0"
                        data-val-number="Đơn giá không đúng." />
                 <span class="small text-danger field-validation-valid"
                       data-valmsg-for="Items[${i}].UnitCost" data-valmsg-replace="true"></span>
             </td>
-            <td class="text-end pe-3">
+            <td class="text-end pe-3 align-middle">
                 <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                     <i class="bi bi-trash"></i>
                 </button>
             </td>`;
 
         tbody.appendChild(row);
-        DecimalFields.autoWrap?.(row);
         this.#updateNoItemsVisibility();
         this.#reinitValidation();
     }

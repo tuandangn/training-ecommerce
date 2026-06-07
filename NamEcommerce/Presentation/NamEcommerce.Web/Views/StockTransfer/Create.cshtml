@@ -45,19 +45,19 @@
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
-                                        <tr>
-                                            <td class="ps-3">
+                                        <tr style="cursor:pointer">
+                                            <td class="ps-3 align-middle">
                                                 <div class="fw-medium">@item.ProductName</div>
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
                                                 <input type="hidden" name="Items[@i].ProductName" value="@item.ProductName" />
                                                 <input type="hidden" name="Items[@i].QuantityDecimalPlaces" value="@item.QuantityDecimalPlaces" />
                                             </td>
-                                            <td class="text-end">
-                                                <input name="Items[@i].Quantity" value="@item.Quantity"
-                                                       class="form-control form-control-sm text-end"
-                                                       data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" min="@(item.QuantityDecimalPlaces > 0 ? "0.001" : "1")" step="@(item.QuantityDecimalPlaces > 0 ? "0.001" : "1")" placeholder="0" />
+                                            <td class="text-end align-middle">
+                                                <span class="fw-medium item-qty-display">@item.Quantity.DisplayQuantity()</span>
+                                                <input type="hidden" name="Items[@i].Quantity" value="@item.Quantity"
+                                                       class="item-qty-hidden" data-decimals="@item.QuantityDecimalPlaces" />
                                             </td>
-                                            <td class="pe-3">
+                                            <td class="pe-3 align-middle">
                                                 <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
@@ -139,6 +139,9 @@
     </form>
 </div>
 
+@await Html.PartialAsync("_ItemEditOffcanvas")
+<partial name="_ItemEditModal" />
+
 <!-- Modal outside form — ModalProductId is not submitted with the main form -->
 <div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -176,6 +179,8 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script type="module">
+        import ItemEditor from '/modules/ItemEditor.js';
+
         let pickedProduct = null;
         let rowIndex = @Model.Items.Count;
         const tbody = document.getElementById('itemsTableBody');
@@ -193,20 +198,22 @@
         function addRow(productId, productName, qty, decimalPlaces) {
             const i = rowIndex++;
             const dp = parseInt(decimalPlaces ?? 0, 10);
+            const qtyFormatted = DecimalFields.formatQuantity ? DecimalFields.formatQuantity(qty, dp) : String(qty);
             const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
             tr.innerHTML = `
-                <td class="ps-3">
+                <td class="ps-3 align-middle">
                     <div class="fw-medium">${escHtml(productName)}</div>
                     <input type="hidden" name="Items[${i}].ProductId" value="${escAttr(productId)}" />
                     <input type="hidden" name="Items[${i}].ProductName" value="${escAttr(productName)}" />
                     <input type="hidden" name="Items[${i}].QuantityDecimalPlaces" value="${dp}" />
                 </td>
-                <td class="text-end">
-                    <input name="Items[${i}].Quantity" value="${qty}"
-                           class="form-control form-control-sm text-end"
-                           data-decimal="quantity" data-decimals="${dp}" min="${dp > 0 ? '0.001' : '1'}" step="${dp > 0 ? '0.001' : '1'}" placeholder="0" />
+                <td class="text-end align-middle">
+                    <span class="fw-medium item-qty-display">${qtyFormatted}</span>
+                    <input type="hidden" name="Items[${i}].Quantity" value="${qty}"
+                           class="item-qty-hidden" data-decimals="${dp}" />
                 </td>
-                <td class="pe-3">
+                <td class="pe-3 align-middle">
                     <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                         <i class="bi bi-trash"></i>
                     </button>
@@ -221,6 +228,40 @@
                 btn.closest('tr').remove();
                 updateEmptyState();
             }
+        });
+
+        const itemEditor = new ItemEditor(
+            document.getElementById('itemEditOffcanvas'),
+            document.getElementById('itemEditModal'),
+            { showPrice: false, qtyLabel: 'Số lượng chuyển' }
+        );
+
+        tbody.addEventListener('click', e => {
+            if (e.target.closest('.btn-remove-item')) return;
+            const row = e.target.closest('tr');
+            if (!row) return;
+
+            const name = row.querySelector('.fw-medium')?.textContent?.trim() ?? '';
+            const rowQtyInput = row.querySelector('.item-qty-hidden');
+            const decimals = parseInt(rowQtyInput?.dataset.decimals ?? '0', 10);
+
+            itemEditor.open({
+                name,
+                quantity: DecimalFields.getValue(rowQtyInput),
+                unitPrice: 0,
+                quantityDecimalPlaces: decimals
+            }, {
+                onApply: (qty) => {
+                    const formatted = DecimalFields.formatQuantity(qty, decimals);
+                    rowQtyInput.value = formatted;
+                    const display = row.querySelector('.item-qty-display');
+                    if (display) display.textContent = formatted;
+                },
+                onDelete: () => {
+                    row.remove();
+                    updateEmptyState();
+                }
+            });
         });
 
         document.getElementById('addItemModal').addEventListener('show.bs.modal', () => {

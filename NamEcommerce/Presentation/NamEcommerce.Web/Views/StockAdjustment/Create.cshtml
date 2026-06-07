@@ -46,30 +46,30 @@
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
-                                        <tr id="item-row-@i">
-                                            <td class="ps-3">
+                                        var delta = item.PhysicalQuantity - item.SystemQuantity;
+                                        <tr id="item-row-@i" style="cursor:pointer">
+                                            <td class="ps-3 align-middle">
                                                 <div class="fw-medium">@item.ProductName</div>
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" />
                                                 <input type="hidden" name="Items[@i].ProductName" value="@item.ProductName" />
                                                 <input type="hidden" name="Items[@i].QuantityDecimalPlaces" value="@item.QuantityDecimalPlaces" />
                                             </td>
-                                            <td class="text-end">
-                                                <input name="Items[@i].SystemQuantity" value="@item.SystemQuantity"
-                                                       class="form-control form-control-sm text-end item-system-qty"
-                                                       data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" readonly />
+                                            <td class="text-end align-middle">
+                                                <span class="text-muted">@item.SystemQuantity.DisplayQuantity()</span>
+                                                <input type="hidden" name="Items[@i].SystemQuantity" value="@item.SystemQuantity"
+                                                       class="item-system-qty" data-decimals="@item.QuantityDecimalPlaces" />
                                             </td>
-                                            <td class="text-end">
-                                                <input name="Items[@i].PhysicalQuantity" value="@item.PhysicalQuantity"
-                                                       class="form-control form-control-sm text-end item-physical-qty"
-                                                       data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" min="0" placeholder="0" />
+                                            <td class="text-end align-middle">
+                                                <span class="fw-medium item-physical-qty-display">@item.PhysicalQuantity.DisplayQuantity()</span>
+                                                <input type="hidden" name="Items[@i].PhysicalQuantity" value="@item.PhysicalQuantity"
+                                                       class="item-physical-qty" data-decimals="@item.QuantityDecimalPlaces" />
                                             </td>
-                                            <td class="text-end item-delta text-muted small">
-                                                @{ var delta = item.PhysicalQuantity - item.SystemQuantity; }
+                                            <td class="text-end item-delta text-muted small align-middle">
                                                 <span class="@(delta > 0 ? "text-success" : delta < 0 ? "text-danger" : "text-muted")">
                                                     @(delta >= 0 ? "+" : "")@delta.DisplayQuantity()
                                                 </span>
                                             </td>
-                                            <td class="pe-3">
+                                            <td class="pe-3 align-middle">
                                                 <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
@@ -137,6 +137,9 @@
     </form>
 </div>
 
+@await Html.PartialAsync("_ItemEditOffcanvas")
+<partial name="_ItemEditModal" />
+
 <!-- Modal: Thêm hàng hóa -->
 <div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -178,6 +181,8 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script type="module">
+        import ItemEditor from '/modules/ItemEditor.js';
+
         let rowIndex = @Model.Items.Count;
         const tbody = document.getElementById('itemsTableBody');
         const noMsg = document.getElementById('noItemsMessage');
@@ -198,37 +203,29 @@
             const delta = physicalQty - systemQty;
             const tr = document.createElement('tr');
             tr.id = `item-row-${i}`;
+            tr.style.cursor = 'pointer';
             tr.innerHTML = `
-                <td class="ps-3">
+                <td class="ps-3 align-middle">
                     <div class="fw-medium">${productName}</div>
                     <input type="hidden" name="Items[${i}].ProductId" value="${crypto.randomUUID()}" />
                     <input type="hidden" name="Items[${i}].ProductName" value="${productName}" />
                 </td>
-                <td class="text-end">
-                    <input name="Items[${i}].SystemQuantity" value="${systemQty}"
-                           class="form-control form-control-sm text-end item-system-qty"
-                           data-decimal="quantity" readonly />
+                <td class="text-end align-middle">
+                    <span class="text-muted">${systemQty}</span>
+                    <input type="hidden" name="Items[${i}].SystemQuantity" value="${systemQty}" class="item-system-qty" />
                 </td>
-                <td class="text-end">
-                    <input name="Items[${i}].PhysicalQuantity" value="${physicalQty}"
-                           class="form-control form-control-sm text-end item-physical-qty"
-                           data-decimal="quantity" min="0" placeholder="0" />
+                <td class="text-end align-middle">
+                    <span class="fw-medium item-physical-qty-display">${physicalQty}</span>
+                    <input type="hidden" name="Items[${i}].PhysicalQuantity" value="${physicalQty}" class="item-physical-qty" />
                 </td>
-                <td class="text-end item-delta text-muted small">${formatDelta(delta)}</td>
-                <td class="pe-3">
+                <td class="text-end item-delta text-muted small align-middle">${formatDelta(delta)}</td>
+                <td class="pe-3 align-middle">
                     <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                         <i class="bi bi-trash"></i>
                     </button>
                 </td>`;
             tbody.appendChild(tr);
             updateEmptyState();
-
-            // Update delta on physical qty change
-            tr.querySelector('.item-physical-qty').addEventListener('input', function () {
-                const sys = parseFloat(tr.querySelector('.item-system-qty').value) || 0;
-                const phys = parseFloat(this.value) || 0;
-                tr.querySelector('.item-delta').innerHTML = formatDelta(phys - sys);
-            });
         }
 
         // Xóa item
@@ -240,16 +237,41 @@
             }
         });
 
-        // Delta live update cho items render từ server
-        tbody.querySelectorAll('tr').forEach(tr => {
-            const physInput = tr.querySelector('.item-physical-qty');
-            if (physInput) {
-                physInput.addEventListener('input', function () {
-                    const sys = parseFloat(tr.querySelector('.item-system-qty').value) || 0;
-                    const phys = parseFloat(this.value) || 0;
-                    tr.querySelector('.item-delta').innerHTML = formatDelta(phys - sys);
-                });
-            }
+        const itemEditor = new ItemEditor(
+            document.getElementById('itemEditOffcanvas'),
+            document.getElementById('itemEditModal'),
+            { showPrice: false, qtyLabel: 'SL thực tế' }
+        );
+
+        tbody.addEventListener('click', e => {
+            if (e.target.closest('.btn-remove-item')) return;
+            const row = e.target.closest('tr');
+            if (!row) return;
+
+            const name = row.querySelector('.fw-medium')?.textContent?.trim() ?? '';
+            const physicalQtyInput = row.querySelector('.item-physical-qty');
+            const systemQtyInput = row.querySelector('.item-system-qty');
+            const decimals = parseInt(physicalQtyInput?.dataset.decimals ?? '0', 10);
+            const systemQty = parseFloat(systemQtyInput?.value ?? '0') || 0;
+
+            itemEditor.open({
+                name,
+                quantity: DecimalFields.getValue(physicalQtyInput),
+                unitPrice: 0,
+                quantityDecimalPlaces: decimals
+            }, {
+                onApply: (qty) => {
+                    const formatted = DecimalFields.formatQuantity(qty, decimals);
+                    physicalQtyInput.value = formatted;
+                    const display = row.querySelector('.item-physical-qty-display');
+                    if (display) display.textContent = formatted;
+                    row.querySelector('.item-delta').innerHTML = formatDelta(qty - systemQty);
+                },
+                onDelete: () => {
+                    row.remove();
+                    updateEmptyState();
+                }
+            });
         });
 
         // Mở modal thêm hàng

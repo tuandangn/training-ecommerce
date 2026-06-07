@@ -1,6 +1,6 @@
-export default class ItemEditOffcanvas {
-    #offcanvasEl;
-    #bsOffcanvas;
+export default class ItemEditModal {
+    #modalEl;
+    #bsModal;
     #callbacks = {};
     #currentItem = null;
     #showPrice = true;
@@ -19,25 +19,24 @@ export default class ItemEditOffcanvas {
     #applyBtn;
     #deleteBtn;
 
-    // opts: { showPrice?: boolean, qtyLabel?: string }
-    constructor(offcanvasEl, opts = {}) {
-        this.#offcanvasEl = offcanvasEl;
-        this.#bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(offcanvasEl);
+    constructor(modalEl, opts = {}) {
+        this.#modalEl = modalEl;
+        this.#bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
         this.#showPrice = opts.showPrice !== false;
 
-        this.#nameEl = offcanvasEl.querySelector('[data-oe-name]');
-        this.#pictureEl = offcanvasEl.querySelector('[data-oe-picture]');
-        this.#qtyLabelEl = offcanvasEl.querySelector('[data-oe-qty-label]');
-        this.#priceLabelEl = offcanvasEl.querySelector('[data-oe-price-label]');
-        this.#priceSectionEl = offcanvasEl.querySelector('[data-oe-price-section]');
-        this.#totalSectionEl = offcanvasEl.querySelector('[data-oe-total-section]');
-        this.#qtyInput = offcanvasEl.querySelector('[data-oe-qty]');
-        this.#priceInput = offcanvasEl.querySelector('[data-oe-price]');
-        this.#totalEl = offcanvasEl.querySelector('[data-oe-total]');
-        this.#decrementBtn = offcanvasEl.querySelector('[data-oe-decrement]');
-        this.#incrementBtn = offcanvasEl.querySelector('[data-oe-increment]');
-        this.#applyBtn = offcanvasEl.querySelector('[data-oe-apply]');
-        this.#deleteBtn = offcanvasEl.querySelector('[data-oe-delete]');
+        this.#nameEl = modalEl.querySelector('[data-oe-name]');
+        this.#pictureEl = modalEl.querySelector('[data-oe-picture]');
+        this.#qtyLabelEl = modalEl.querySelector('[data-oe-qty-label]');
+        this.#priceLabelEl = modalEl.querySelector('[data-oe-price-label]');
+        this.#priceSectionEl = modalEl.querySelector('[data-oe-price-section]');
+        this.#totalSectionEl = modalEl.querySelector('[data-oe-total-section]');
+        this.#qtyInput = modalEl.querySelector('[data-oe-qty]');
+        this.#priceInput = modalEl.querySelector('[data-oe-price]');
+        this.#totalEl = modalEl.querySelector('[data-oe-total]');
+        this.#decrementBtn = modalEl.querySelector('[data-oe-decrement]');
+        this.#incrementBtn = modalEl.querySelector('[data-oe-increment]');
+        this.#applyBtn = modalEl.querySelector('[data-oe-apply]');
+        this.#deleteBtn = modalEl.querySelector('[data-oe-delete]');
 
         if (opts.qtyLabel && this.#qtyLabelEl) {
             this.#qtyLabelEl.textContent = opts.qtyLabel;
@@ -56,21 +55,19 @@ export default class ItemEditOffcanvas {
         this.#bindEvents();
     }
 
-    // item: { name, picture?, quantity, unitPrice, quantityDecimalPlaces, priceLabel? }
-    // callbacks: { onApply(qty, price), onDelete() }
     open(item, callbacks = {}) {
         this.#currentItem = item;
         this.#callbacks = callbacks;
         this.#populate(item);
-        this.#bsOffcanvas.show();
-        this.#offcanvasEl.addEventListener('shown.bs.offcanvas', () => {
+        this.#bsModal.show();
+        this.#modalEl.addEventListener('shown.bs.modal', () => {
             this.#qtyInput.focus();
             this.#qtyInput.select();
         }, { once: true });
     }
 
     close() {
-        this.#bsOffcanvas.hide();
+        this.#bsModal.hide();
     }
 
     #populate(item) {

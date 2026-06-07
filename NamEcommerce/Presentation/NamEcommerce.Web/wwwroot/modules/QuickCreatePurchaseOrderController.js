@@ -2,7 +2,7 @@ import { apiGet, apiPost } from "/modules/ajax-helper.js";
 import { toast, confirm } from "/modules/modals.js";
 import VendorPicker from "/modules/VendorPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
-import ItemEditOffcanvas from "/modules/ItemEditOffcanvas.js";
+import ItemEditor from "/modules/ItemEditor.js";
 
 function escapeHtml(str) {
     const d = document.createElement('div');
@@ -15,12 +15,13 @@ function getEl(id) { return document.getElementById(id); }
 export default class QuickCreatePurchaseOrderController {
     #vendorId = null;
     #items = [];
-    #offcanvas;
+    #itemEditor;
     #browser;
 
     constructor() {
         const offcanvasEl = getEl('itemEditOffcanvas');
-        if (offcanvasEl) this.#offcanvas = new ItemEditOffcanvas(offcanvasEl);
+        const modalEl = getEl('itemEditModal');
+        this.#itemEditor = new ItemEditor(offcanvasEl, modalEl, { priceLabel: 'Đơn giá nhập' });
 
         this.#bindVendorPicker();
         this.#bindBrowser();
@@ -94,7 +95,7 @@ export default class QuickCreatePurchaseOrderController {
             this.#items[idx] = { ...this.#items[idx], quantity: this.#items[idx].quantity + 1 };
             this.#renderItems();
             this.#renderSummary();
-            if (this.#offcanvas && window.innerWidth < 768) this.#openOffcanvas(idx);
+            this.#openEditor(idx);
             return;
         }
 
@@ -122,7 +123,7 @@ export default class QuickCreatePurchaseOrderController {
         this.#renderItems();
         this.#renderSummary();
 
-        if (this.#offcanvas && window.innerWidth < 768) this.#openOffcanvas(newIdx);
+        this.#openEditor(newIdx);
     }
 
     async #refreshPricesForVendor(vendorId) {
@@ -142,10 +143,9 @@ export default class QuickCreatePurchaseOrderController {
         this.#renderSummary();
     }
 
-    #openOffcanvas(index) {
-        if (!this.#offcanvas) return;
+    #openEditor(index) {
         const item = this.#items[index];
-        this.#offcanvas.open({
+        this.#itemEditor.open({
             name: item.productName,
             picture: item.productPicture,
             quantity: item.quantity,
@@ -182,9 +182,6 @@ export default class QuickCreatePurchaseOrderController {
 
         tbody.innerHTML = this.#items.map((item, i) => this.#buildRow(item, i)).join('');
 
-        tbody.querySelectorAll('[data-edit-idx]').forEach(btn => {
-            btn.addEventListener('click', () => this.#openOffcanvas(+btn.dataset.editIdx));
-        });
         tbody.querySelectorAll('[data-del-idx]').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const ok = await confirm('Xóa sản phẩm này khỏi đơn?');
@@ -195,49 +192,29 @@ export default class QuickCreatePurchaseOrderController {
                 }
             });
         });
-        tbody.querySelectorAll('.item-qty-input').forEach((input, i) => {
-            DecimalFields.wrapExistingInput(input);
-            input.addEventListener('change', () => {
-                this.#items[i] = { ...this.#items[i], quantity: DecimalFields.stripFormatting(input.value) };
-                this.#renderSummary();
-            });
-        });
-        tbody.querySelectorAll('.item-cost-input').forEach((input, i) => {
-            DecimalFields.wrapExistingInput(input, { isCurrency: true });
-            input.addEventListener('change', () => {
-                this.#items[i] = { ...this.#items[i], unitCost: DecimalFields.stripFormatting(input.value), manualCostSet: true };
-                this.#renderSummary();
+        tbody.querySelectorAll('tr').forEach((row, i) => {
+            row.style.cursor = 'pointer';
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('button')) return;
+                this.#openEditor(i);
             });
         });
     }
 
     #buildRow(item, i) {
-        const isMobile = window.innerWidth < 768;
-        if (isMobile) {
-            return `<tr data-row-idx="${i}">
-                <td class="ps-3 py-2">
-                    <div class="fw-medium">${escapeHtml(item.productName)}</div>
-                    <div class="text-muted small">${DecimalFields.formatQuantity(item.quantity, item.quantityDecimalPlaces)} x ${DecimalFields.formatCurrency(item.unitCost)}</div>
-                </td>
-                <td class="text-end pe-2 py-2 text-nowrap align-middle">
-                    <span class="fw-bold text-primary">${DecimalFields.formatCurrency(item.quantity * item.unitCost)}</span> đ
-                    <button type="button" class="btn btn-link p-0 ms-2" data-edit-idx="${i}"><i class="bi bi-pencil-square text-muted"></i></button>
-                </td>
-            </tr>`;
-        }
-
         return `<tr data-row-idx="${i}">
             <td class="ps-3 py-2">
                 <div class="fw-medium">${escapeHtml(item.productName)}</div>
+                <div class="text-muted small d-md-none">${DecimalFields.formatQuantity(item.quantity, item.quantityDecimalPlaces)} × ${DecimalFields.formatCurrencyWithSymbol(item.unitCost)}</div>
             </td>
-            <td class="py-2">
-                <input type="text" class="form-control form-control-sm item-qty-input" value="${DecimalFields.formatQuantity(item.quantity, item.quantityDecimalPlaces)}" style="width:90px">
+            <td class="py-2 text-center d-none d-md-table-cell">
+                <span class="fw-medium">${DecimalFields.formatQuantity(item.quantity, item.quantityDecimalPlaces)}</span>
             </td>
-            <td class="py-2">
-                <input type="text" class="form-control form-control-sm item-cost-input" value="${DecimalFields.formatCurrency(item.unitCost)}" style="width:120px">
+            <td class="py-2 text-end">
+                <span class="text-muted">${DecimalFields.formatCurrency(item.unitCost)} đ</span>
             </td>
-            <td class="py-2 text-end text-nowrap">
-                ${DecimalFields.formatCurrency(item.quantity * item.unitCost)} đ
+            <td class="py-2 text-end text-nowrap d-none d-md-table-cell">
+                <span class="fw-bold text-primary">${DecimalFields.formatCurrencyWithSymbol(item.quantity * item.unitCost)}</span>
             </td>
             <td class="py-2 text-center">
                 <button type="button" class="btn btn-sm btn-link text-danger p-0" data-del-idx="${i}"><i class="bi bi-trash"></i></button>
@@ -248,7 +225,7 @@ export default class QuickCreatePurchaseOrderController {
     #renderSummary() {
         const total = this.#items.reduce((s, i) => s + i.quantity * i.unitCost, 0);
         const totalEl = getEl('orderTotal');
-        if (totalEl) totalEl.textContent = DecimalFields.formatCurrency(total) + ' đ';
+        if (totalEl) totalEl.textContent = DecimalFields.formatCurrencyWithSymbol(total);
 
         this.#syncPaymentAmount();
     }

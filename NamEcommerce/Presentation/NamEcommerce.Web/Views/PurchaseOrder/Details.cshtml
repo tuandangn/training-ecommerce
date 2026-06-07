@@ -100,7 +100,7 @@
         <span class="text-muted">@Model.Info.Code</span>
         @if (purchaseOrderStatus != PurchaseOrderStatus.Draft)
         {
-            <span class="text-muted small">
+            <span class="text-muted small d-none d-md-inline">
                 <span class="status-badge @purchaseOrderStatus.GetDisplayColor()">
                     @purchaseOrderStatus.GetDisplayText()
                 </span>
