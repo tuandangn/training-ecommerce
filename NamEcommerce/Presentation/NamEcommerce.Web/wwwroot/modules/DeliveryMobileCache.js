@@ -135,7 +135,7 @@ async function queueCompletion(form, status, message) {
             status.className = 'delivery-complete-status mobile-meta mt-2 text-warning fw-bold';
         }
     } catch {
-        if (status) status.textContent = 'Khong the luu offline';
+        if (status) status.textContent = 'Không thể lưu offline';
     } finally {
         if (!queued && submitButton) submitButton.disabled = false;
     }
@@ -148,7 +148,7 @@ export async function installDeliveryRunCache({ runId, cacheUrl }) {
     }
 
     if (!navigator.onLine) {
-        updateCacheStatus('Da luu tren may', 'text-success');
+        updateCacheStatus('Đã lưu trên máy', 'text-success');
         return;
     }
 
@@ -164,13 +164,13 @@ export async function installDeliveryRunCache({ runId, cacheUrl }) {
         });
         const result = await response.json();
         if (result?.success) {
-            updateCacheStatus('Da cache', 'text-success');
+            updateCacheStatus('Đã cache', 'text-success');
             return;
         }
 
-        updateCacheStatus('Chua xac nhan cache', 'text-warning');
+        updateCacheStatus('Chưa xác nhận cache', 'text-warning');
     } catch {
-        updateCacheStatus('Da luu tren may', 'text-success');
+        updateCacheStatus('Đã lưu trên máy', 'text-success');
     }
 }
 
@@ -179,9 +179,9 @@ export function installDeliveryCompletionForms() {
         const noteId = form.dataset.noteId;
         const stateKey = `delivery-note-sync-state:${noteId}`;
         if (localStorage.getItem(stateKey) === 'done') {
-            markCompleteFormDone(form, 'Da sync');
+            markCompleteFormDone(form, 'Đã đồng bộ');
         } else if (localStorage.getItem(stateKey) === 'pending') {
-            markCompleteFormPending(form, 'Cho dong bo');
+            markCompleteFormPending(form, 'Chờ đồng bộ');
         }
 
         form.addEventListener('submit', async event => {
@@ -190,7 +190,7 @@ export function installDeliveryCompletionForms() {
             const status = form.querySelector('.delivery-complete-status');
             const submitButton = form.querySelector('button[type="submit"]');
             submitButton.disabled = true;
-            if (status) status.textContent = 'Dang gui...';
+            if (status) status.textContent = 'Đang gửi...';
 
             const idempotencyInput = form.querySelector('input[name="idempotencyKey"]');
             if (idempotencyInput) {
@@ -204,7 +204,7 @@ export function installDeliveryCompletionForms() {
             }
 
             if (!navigator.onLine) {
-                await queueCompletion(form, status, 'Da luu offline, se sync khi co mang');
+                await queueCompletion(form, status, 'Đã lưu offline, sẽ đồng bộ khi có mạng');
                 return;
             }
 
@@ -216,15 +216,15 @@ export function installDeliveryCompletionForms() {
                 const result = await response.json();
                 if (result?.success) {
                     localStorage.setItem(stateKey, 'done');
-                    markCompleteFormDone(form, 'Da sync');
+                    markCompleteFormDone(form, 'Đã đồng bộ');
                     await updatePendingCount();
                     return;
                 }
 
                 submitButton.disabled = false;
-                if (status) status.textContent = result?.message ?? 'Khong the sync';
+                if (status) status.textContent = result?.message ?? 'Không thể đồng bộ';
             } catch {
-                await queueCompletion(form, status, 'Da luu offline, se sync khi co mang');
+                await queueCompletion(form, status, 'Đã lưu offline, sẽ đồng bộ khi có mạng');
             }
         });
     });
@@ -241,15 +241,15 @@ export function installDeliveryManualSync() {
 
     button.addEventListener('click', async () => {
         button.disabled = true;
-        if (status) status.textContent = 'Dang dong bo...';
+        if (status) status.textContent = 'Đang đồng bộ...';
 
         const result = await syncPendingCompletions();
         await updatePendingCount();
         button.disabled = false;
         if (status) {
             status.textContent = result.failed > 0
-                ? `Da sync ${result.synced}, con loi ${result.failed}`
-                : `Da sync ${result.synced}`;
+                ? `Đã đồng bộ ${result.synced}, còn lỗi ${result.failed}`
+                : `Đã đồng bộ ${result.synced}`;
         }
     });
 
@@ -287,7 +287,7 @@ async function syncPendingCompletions() {
             localStorage.setItem(`delivery-note-sync-state:${item.noteId}`, 'done');
             const form = document.querySelector(`.delivery-complete-form[data-note-id="${item.noteId}"]`);
             if (form) {
-                markCompleteFormDone(form, 'Da sync');
+                markCompleteFormDone(form, 'Đã đồng bộ');
             }
             synced++;
         } catch {
@@ -307,10 +307,10 @@ async function updatePendingCount() {
     try {
         const items = await getPendingCompletions();
         element.textContent = items.length > 0
-            ? `${items.length} phieu dang cho dong bo`
-            : 'Khong co phieu cho dong bo';
+            ? `${items.length} phiếu đang chờ đồng bộ`
+            : 'Không có phiếu chờ đồng bộ';
     } catch {
-        element.textContent = 'Khong doc duoc hang doi offline';
+        element.textContent = 'Không đọc được hàng đợi offline';
     }
 }
 

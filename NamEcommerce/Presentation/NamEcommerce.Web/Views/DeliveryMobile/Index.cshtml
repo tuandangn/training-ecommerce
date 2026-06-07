@@ -10,7 +10,7 @@
         <h1 class="mobile-title">Giao hàng</h1>
         <p class="mobile-subtitle">@Model.CurrentUserFullName</p>
     </div>
-    <a asp-controller="User" asp-action="Logout" class="btn btn-sm btn-outline-secondary">
+    <a asp-controller="User" asp-action="Logout" class="btn btn-outline-secondary mobile-icon-button" aria-label="Đăng xuất">
         <i class="bi bi-box-arrow-right"></i>
     </a>
 </div>
@@ -21,36 +21,43 @@
     {
         var status = (DeliveryRunStatus)run.Status;
         var statusClass = status == DeliveryRunStatus.ReadyForHandover
-            ? "bg-info text-white"
-            : "bg-warning text-dark";
+            ? "mobile-status-ready"
+            : "mobile-status-active";
         var offlineReady = run.DriverCachedOnUtc.HasValue || run.PaperManifestIssued;
 
         <article class="mobile-card">
-            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <div class="d-flex justify-content-between align-items-start gap-3">
                 <div>
                     <div class="fw-bold fs-5">@run.Code</div>
-                    <div class="mobile-meta">@run.ItemCount phiếu giao</div>
+                    <div class="mobile-meta mt-1">@run.ItemCount phiếu giao</div>
                 </div>
-                <span class="mobile-status @statusClass">@run.StatusName</span>
+                <span class="mobile-status @statusClass">
+                    <i class="bi @(status == DeliveryRunStatus.ReadyForHandover ? "bi-box-seam" : "bi-truck")"></i>
+                    @run.StatusName
+                </span>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="mobile-meta">Tiền cần thu</span>
-                <strong>@run.AmountToCollect.DisplayCurrencyWithSymbol()</strong>
-            </div>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <span class="mobile-meta">Offline</span>
-                @if (offlineReady)
-                {
-                    <span class="text-success fw-bold"><i class="bi bi-check2-circle me-1"></i>Sẵn sàng</span>
-                }
-                else
-                {
-                    <span class="text-muted fw-bold"><i class="bi bi-cloud-arrow-down me-1"></i>Chưa cache</span>
-                }
+            <div class="mobile-stat-grid">
+                <div class="mobile-stat">
+                    <div class="mobile-stat-label">Cần thu</div>
+                    <div class="mobile-stat-value">@run.AmountToCollect.DisplayCurrencyWithSymbol()</div>
+                </div>
+                <div class="mobile-stat">
+                    <div class="mobile-stat-label">Offline</div>
+                    <div class="mobile-stat-value @(offlineReady ? "text-success" : "text-muted")">
+                        @(offlineReady ? "Sẵn sàng" : "Chưa cache")
+                    </div>
+                </div>
             </div>
 
-            <a asp-action="Run" asp-route-id="@run.Id" class="btn btn-primary w-100">
+            @if (run.HandedOverOnUtc.HasValue)
+            {
+                <div class="mobile-meta mt-3">
+                    <i class="bi bi-clock-history me-1"></i>Bàn giao @run.HandedOverOnUtc.Value.ToLocalTime().ToString("dd/MM HH:mm")
+                </div>
+            }
+
+            <a asp-action="Run" asp-route-id="@run.Id" class="btn btn-primary mobile-action-button w-100 mt-3">
                 <i class="bi bi-arrow-right-circle me-1"></i>Mở chuyến
             </a>
         </article>
@@ -58,9 +65,9 @@
 }
 else
 {
-    <div class="mobile-card text-center py-5">
-        <div class="display-6 text-muted mb-2"><i class="bi bi-truck"></i></div>
-        <h2 class="h5 fw-bold">Chưa có chuyến cần giao</h2>
+    <div class="mobile-card mobile-empty">
+        <div class="mobile-empty-icon"><i class="bi bi-truck"></i></div>
+        <h2 class="h5 fw-bold mb-2">Chưa có chuyến cần giao</h2>
         <p class="mobile-meta mb-0">Chuyến mới sẽ hiện ở đây sau khi quản kho tạo và gán cho bạn.</p>
     </div>
 }

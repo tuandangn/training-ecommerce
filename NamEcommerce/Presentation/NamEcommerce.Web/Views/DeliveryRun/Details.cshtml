@@ -5,11 +5,11 @@
     var status = (DeliveryRunStatus)Model.Status;
     var statusTuple = status switch
     {
-        DeliveryRunStatus.ReadyForHandover => ("bg-info text-light", "bi-box-seam"),
-        DeliveryRunStatus.HandedToDriver => ("bg-warning text-dark", "bi-truck"),
-        DeliveryRunStatus.Closed => ("bg-success text-light", "bi-check-circle-fill"),
-        DeliveryRunStatus.Cancelled => ("bg-danger text-light", "bi-x-circle"),
-        _ => ("bg-secondary text-light", "bi-question-circle")
+        DeliveryRunStatus.ReadyForHandover => ("info", "bi-box-seam"),
+        DeliveryRunStatus.HandedToDriver => ("warning", "bi-truck"),
+        DeliveryRunStatus.Closed => ("success", "bi-check-circle-fill"),
+        DeliveryRunStatus.Cancelled => ("danger", "bi-x-circle"),
+        _ => ("secondary", "bi-question-circle")
     };
     var canManageDeliveryRun = User.IsInRole(SystemUserRoleNames.Admin)
         || User.IsInRole(SystemUserRoleNames.WarehouseManager);
@@ -23,6 +23,7 @@
     var expectedCashAmount = Model.Items
         .Where(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered)
         .Sum(item => item.CashCollectedAmount ?? item.AmountToCollect);
+    var totalAmountToCollect = Model.Items.Sum(item => item.AmountToCollect);
     var canConfirmCashHandover = canConfirmDeliveryRunCashHandover
         && expectedCashAmount > 0
         && status is not DeliveryRunStatus.ReadyForHandover and not DeliveryRunStatus.Cancelled
@@ -134,9 +135,9 @@
     </div>
     <div class="col-lg-4">
         <div class="content-card h-100">
-            <h5 class="fw-bold mb-3"><i class="bi bi-cash-stack me-2 text-primary"></i>Tổng cần thu</h5>
+            <h5 class="fw-bold mb-3"><i class="bi bi-cash-stack me-2 text-primary"></i>Tiền đã thu</h5>
             <div class="display-6 fw-bold">@expectedCashAmount.DisplayCurrencyWithSymbol()</div>
-            <div class="text-muted">@Model.Items.Count phiếu giao</div>
+            <div class="text-muted">COD chuyến: @totalAmountToCollect.DisplayCurrencyWithSymbol()</div>
             @if (Model.CashHandoverConfirmedOnUtc.HasValue)
             {
                 <hr />
@@ -188,7 +189,7 @@
                     <th>Đơn hàng</th>
                     <th>Khách hàng</th>
                     <th>Địa chỉ giao</th>
-                    <th class="text-end">Tiền cần thu</th>
+                    <th class="text-end">Tiền COD</th>
                     <th class="text-end">Đã thu</th>
                 </tr>
             </thead>

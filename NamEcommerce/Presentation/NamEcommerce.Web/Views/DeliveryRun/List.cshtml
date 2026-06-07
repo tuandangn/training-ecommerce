@@ -76,11 +76,11 @@
                     {
                         var statusTuple = run.Status switch
                         {
-                            (int)DeliveryRunStatus.ReadyForHandover => ("bg-info text-light", "bi-box-seam"),
-                            (int)DeliveryRunStatus.HandedToDriver => ("bg-warning text-dark", "bi-truck"),
-                            (int)DeliveryRunStatus.Closed => ("bg-success text-light", "bi-check-circle-fill"),
-                            (int)DeliveryRunStatus.Cancelled => ("bg-danger text-light", "bi-x-circle"),
-                            _ => ("bg-secondary text-light", "bi-question-circle")
+                            (int)DeliveryRunStatus.ReadyForHandover => ("info", "bi-box-seam"),
+                            (int)DeliveryRunStatus.HandedToDriver => ("warning", "bi-truck"),
+                            (int)DeliveryRunStatus.Closed => ("success", "bi-check-circle-fill"),
+                            (int)DeliveryRunStatus.Cancelled => ("danger", "bi-x-circle"),
+                            _ => ("secondary", "bi-question-circle")
                         };
                         var offlineReady = run.DriverCachedOnUtc.HasValue || run.PaperManifestIssued;
                         var canHandOver = run.Status == (int)DeliveryRunStatus.ReadyForHandover && offlineReady;
@@ -101,13 +101,13 @@
                             <td class="text-center">
                                 @if (offlineReady)
                                 {
-                                    <span class="badge bg-success">
+                                    <span class="status-badge success">
                                         <i class="bi bi-check2-circle me-1"></i>Sẵn sàng
                                     </span>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-secondary">
+                                    <span class="status-badge secondary">
                                         <i class="bi bi-exclamation-circle me-1"></i>Chưa sẵn sàng
                                     </span>
                                 }

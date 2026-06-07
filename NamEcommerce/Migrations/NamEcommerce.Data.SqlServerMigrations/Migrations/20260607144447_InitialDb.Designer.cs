@@ -13,7 +13,7 @@ using NamEcommerce.Data.SqlServer;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     [DbContext(typeof(NamEcommerceEfDbContext))]
-    [Migration("20260607050801_InitialDb")]
+    [Migration("20260607144447_InitialDb")]
     partial class InitialDb
     {
         /// <inheritdoc />
@@ -2092,6 +2092,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<DateTime?>("DeliveredOnUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("DeliveryCashCollectedAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("DeliveryCompletionIdempotencyKey")
                         .HasMaxLength(100)

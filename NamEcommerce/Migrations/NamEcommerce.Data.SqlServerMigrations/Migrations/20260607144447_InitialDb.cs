@@ -631,6 +631,7 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     DeliveryCompletionNote = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
                     DeliveryCompletionSource = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     DeliveryCompletionIdempotencyKey = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    DeliveryCashCollectedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     CreatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedOnUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CustomerAddress = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),

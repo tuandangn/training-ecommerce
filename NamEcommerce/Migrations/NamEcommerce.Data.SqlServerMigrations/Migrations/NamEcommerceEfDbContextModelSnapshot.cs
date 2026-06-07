@@ -2090,6 +2090,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<DateTime?>("DeliveredOnUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal?>("DeliveryCashCollectedAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("DeliveryCompletionIdempotencyKey")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -2106,9 +2109,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(0);
-
-                    b.Property<decimal?>("DeliveryCashCollectedAmount")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<double?>("DeliveryLatitude")
                         .HasColumnType("float");

@@ -114,6 +114,7 @@ using NamEcommerce.Web.Services.Returns;
 using NamEcommerce.Web.Services.StockAdjustment;
 using NamEcommerce.Web.Services.StockTransfer;
 using NamEcommerce.Web.Services.E2E;
+using NamEcommerce.Web.Services.Seeding;
 using NamEcommerce.Web.Services.Users;
 using NamEcommerce.Web.Validators.Users;
 using System.Globalization;
@@ -127,6 +128,13 @@ ConfigureServices(builder.Services, builder.Configuration);
 //middlewares
 var app = builder.Build();
 Configure(app);
+
+//seed
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var runner = scope.ServiceProvider.GetRequiredService<DataSeederRunner>();
+    await runner.RunAsync();
+}
 
 //start
 app.Run();
@@ -311,6 +319,14 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     {
         services.AddScoped<IE2ETestDataService, E2ETestDataService>();
     }
+
+    services.AddScoped<IDataSeeder, SystemRolesSeeder>();
+    services.AddScoped<IDataSeeder, SystemWarehousesSeeder>();
+    services.AddScoped<IDataSeeder, SystemCustomerSeeder>();
+    services.AddScoped<IDataSeeder, DefaultUnitMeasurementSeeder>();
+    services.AddScoped<IDataSeeder, AdminUserSeeder>();
+    services.AddScoped<IDataSeeder, AccountingSetupSeeder>();
+    services.AddScoped<DataSeederRunner>();
 
     services.AddMediatR(config =>
     {

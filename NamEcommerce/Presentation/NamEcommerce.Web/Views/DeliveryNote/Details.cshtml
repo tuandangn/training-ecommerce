@@ -20,7 +20,7 @@
         && Model.Status != (int)DeliveryNoteStatus.Cancelled;
     var canLeaveWarehouse = isDirectShip || isCounterPickup || Model.AssignedDeliveryUserId.HasValue;
     var canOpenDeliveredWorkflow = Model.Status == (int)DeliveryNoteStatus.Delivering || canLeaveWarehouse;
-    var deliveryUserRequiredTitle = "Can phan cong nguoi giao truoc";
+    var deliveryUserRequiredTitle = "Cần phân công người giao trước";
     var deliveryProofPictureSrc = string.IsNullOrWhiteSpace(Model.DeliveryProofPictureUrl)
         ? null
         : Model.DeliveryProofPictureUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
@@ -156,7 +156,7 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Nguoi giao hang</label>
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Người giao hàng</label>
                     @if (!string.IsNullOrWhiteSpace(Model.AssignedDeliveryFullName))
                     {
                         <div class="text-dark fw-bold">
@@ -178,7 +178,7 @@
                             <input type="hidden" name="id" value="@Model.Id" />
                             <div class="input-group input-group-sm">
                                 <select name="assignedDeliveryUserId" class="form-select" required disabled="@(!hasDeliveryUsers)">
-                                    <option value="">Chon nguoi giao</option>
+                                    <option value="">Chọn người giao</option>
                                     @foreach (var deliveryUser in deliveryUserOptions)
                                     {
                                         <option value="@deliveryUser.Id" selected="@(Model.AssignedDeliveryUserId == deliveryUser.Id)">
@@ -292,7 +292,7 @@
                     @if (Model.DeliveryCashCollectedAmount.HasValue)
                     {
                         <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Tien da thu</label>
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Tiền đã thu</label>
                             <div class="text-dark fw-bold">@Model.DeliveryCashCollectedAmount.Value.DisplayCurrencyWithSymbol()</div>
                         </div>
                     }
