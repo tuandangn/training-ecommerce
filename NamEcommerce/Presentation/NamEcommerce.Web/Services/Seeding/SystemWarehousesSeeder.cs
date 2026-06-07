@@ -16,7 +16,7 @@ public sealed class SystemWarehousesSeeder(IWarehouseAppService warehouseAppServ
     public async Task SeedAsync(CancellationToken cancellationToken = default)
     {
         var existing = await warehouseAppService
-            .GetWarehousesAsync(0, 200, includeDirectTransit: true)
+            .GetWarehousesAsync(0, 200, includeDirectTransit: true, includeDamaged: true)
             .ConfigureAwait(false);
 
         var existingCodes = existing.Items
