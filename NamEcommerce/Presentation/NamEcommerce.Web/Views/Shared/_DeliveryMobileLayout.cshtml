@@ -1,0 +1,95 @@
+@{
+    var title = ViewData["Title"] as string ?? "Giao hàng";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>@title - @Information.Name</title>
+    <link rel="manifest" href="~/delivery-mobile.webmanifest" />
+    <meta name="theme-color" content="#14532d" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons-1.13.1/bootstrap-icons.min.css" />
+    <style>
+        :root {
+            --mobile-bg: #f6f7f9;
+            --mobile-text: #15171a;
+            --mobile-muted: #667085;
+            --mobile-border: #e4e7ec;
+            --mobile-primary: #14532d;
+        }
+        body {
+            margin: 0;
+            background: var(--mobile-bg);
+            color: var(--mobile-text);
+            font-family: Arial, sans-serif;
+        }
+        .mobile-shell {
+            min-height: 100vh;
+            padding: 14px;
+            padding-bottom: calc(24px + env(safe-area-inset-bottom));
+        }
+        .mobile-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .mobile-title {
+            font-size: 22px;
+            font-weight: 800;
+            margin: 0;
+            line-height: 1.1;
+        }
+        .mobile-subtitle {
+            color: var(--mobile-muted);
+            font-size: 13px;
+            margin: 4px 0 0;
+        }
+        .mobile-card {
+            background: #fff;
+            border: 1px solid var(--mobile-border);
+            border-radius: 8px;
+            padding: 14px;
+            box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+        }
+        .mobile-card + .mobile-card {
+            margin-top: 10px;
+        }
+        .mobile-meta {
+            color: var(--mobile-muted);
+            font-size: 13px;
+        }
+        .mobile-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .mobile-sticky-actions {
+            position: sticky;
+            bottom: 0;
+            padding-top: 10px;
+            padding-bottom: env(safe-area-inset-bottom);
+            background: linear-gradient(180deg, rgba(246,247,249,0), var(--mobile-bg) 22%);
+        }
+    </style>
+    @await RenderSectionAsync(ViewConstants.StyleSection, required: false)
+</head>
+<body>
+    <main class="mobile-shell">
+        @RenderBody()
+    </main>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/delivery-mobile-sw.js');
+        }
+    </script>
+    @await RenderSectionAsync(ViewConstants.ScriptSection, required: false)
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 namespace NamEcommerce.Domain.Shared.Common;
 
-public interface IEntityDataReader<TEntity> : IGetByIdService<TEntity> where TEntity : AppAggregateEntity
+public interface IEntityDataReader<TEntity> : IGetByIdService<TEntity> where TEntity : AppEntity
 {
     IQueryable<TEntity> DataSource { get; }
     IQueryable<TEntity> SecuredDataSource { get; }

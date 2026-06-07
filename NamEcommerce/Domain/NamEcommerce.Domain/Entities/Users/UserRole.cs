@@ -5,7 +5,7 @@ namespace NamEcommerce.Domain.Entities.Users;
 [Serializable]
 public sealed record UserRole : AppEntity
 {
-    public UserRole(Guid userId, Guid roleId) : base(Guid.Empty)
+    public UserRole(Guid userId, Guid roleId) : base(Guid.NewGuid())
         => (UserId, RoleId) = (userId, roleId);
 
     public Guid UserId { get; init; }

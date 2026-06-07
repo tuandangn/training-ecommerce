@@ -1,0 +1,175 @@
+@model DeliveryRunListModel
+@using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
+@{
+    ViewData["Title"] = "Chuyến giao";
+    var deliveryUsers = (Model.AvailableDeliveryUsers?.Options ?? Enumerable.Empty<EntityOptionListModel.EntityOptionModel>()).ToList();
+    var canManageDeliveryRun = User.IsInRole(SystemUserRoleNames.Admin)
+        || User.IsInRole(SystemUserRoleNames.WarehouseManager);
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title">Chuyến giao</h1>
+        <p class="page-header-subtitle">Tổng hợp phiếu giao, chuẩn bị offline và bàn giao cho người giao</p>
+    </div>
+    @if (canManageDeliveryRun)
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1"></i>Tạo chuyến
+        </a>
+    }
+</div>
+
+<div class="content-card mb-3">
+    <form asp-action="List" method="get" class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small fw-bold text-muted text-uppercase">Từ khóa</label>
+            <input type="text" name="Keywords" value="@Model.Keywords" class="form-control" placeholder="Mã chuyến" />
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-bold text-muted text-uppercase">Người giao</label>
+            <select name="AssignedDeliveryUserId" class="form-select">
+                <option value="">Tất cả</option>
+                @foreach (var user in deliveryUsers)
+                {
+                    <option value="@user.Id" selected="@(Model.AssignedDeliveryUserId == user.Id)">@user.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-bold text-muted text-uppercase">Trạng thái</label>
+            <select name="Status" class="form-select">
+                <option value="">Tất cả</option>
+                <option value="@((int)DeliveryRunStatus.ReadyForHandover)" selected="@(Model.Status == (int)DeliveryRunStatus.ReadyForHandover)">Chờ bàn giao</option>
+                <option value="@((int)DeliveryRunStatus.HandedToDriver)" selected="@(Model.Status == (int)DeliveryRunStatus.HandedToDriver)">Đã bàn giao</option>
+                <option value="@((int)DeliveryRunStatus.Closed)" selected="@(Model.Status == (int)DeliveryRunStatus.Closed)">Đã đóng</option>
+                <option value="@((int)DeliveryRunStatus.Cancelled)" selected="@(Model.Status == (int)DeliveryRunStatus.Cancelled)">Đã hủy</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-outline-primary w-100">
+                <i class="bi bi-search me-1"></i>Lọc
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="table data-table align-middle">
+            <thead>
+                <tr>
+                    <th class="ps-4">Mã chuyến</th>
+                    <th>Người giao</th>
+                    <th class="text-center">Số phiếu</th>
+                    <th class="text-end">Tiền cần thu</th>
+                    <th class="text-center">Offline</th>
+                    <th class="text-center">Trạng thái</th>
+                    <th class="d-none d-md-table-cell">Ngày tạo</th>
+                    <th style="width: 220px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Data.Items.Any())
+                {
+                    foreach (var run in Model.Data.Items)
+                    {
+                        var statusTuple = run.Status switch
+                        {
+                            (int)DeliveryRunStatus.ReadyForHandover => ("bg-info text-light", "bi-box-seam"),
+                            (int)DeliveryRunStatus.HandedToDriver => ("bg-warning text-dark", "bi-truck"),
+                            (int)DeliveryRunStatus.Closed => ("bg-success text-light", "bi-check-circle-fill"),
+                            (int)DeliveryRunStatus.Cancelled => ("bg-danger text-light", "bi-x-circle"),
+                            _ => ("bg-secondary text-light", "bi-question-circle")
+                        };
+                        var offlineReady = run.DriverCachedOnUtc.HasValue || run.PaperManifestIssued;
+                        var canHandOver = run.Status == (int)DeliveryRunStatus.ReadyForHandover && offlineReady;
+
+                        <tr>
+                            <td class="ps-4">
+                                <a asp-action="Details" asp-route-id="@run.Id" class="fw-bold text-decoration-none">@run.Code</a>
+                            </td>
+                            <td>
+                                <div class="fw-medium">@run.AssignedDeliveryFullName</div>
+                                @if (run.HandedOverOnUtc.HasValue)
+                                {
+                                    <div class="small text-muted">Bàn giao @run.HandedOverOnUtc.Value.ToLocalTime().ToString("dd/MM HH:mm")</div>
+                                }
+                            </td>
+                            <td class="text-center">@run.ItemCount</td>
+                            <td class="text-end fw-medium">@run.AmountToCollect.DisplayCurrencyWithSymbol()</td>
+                            <td class="text-center">
+                                @if (offlineReady)
+                                {
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check2-circle me-1"></i>Sẵn sàng
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-exclamation-circle me-1"></i>Chưa sẵn sàng
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <span class="status-badge @statusTuple.Item1">
+                                    <i class="bi @statusTuple.Item2 me-1"></i>@run.StatusName
+                                </span>
+                            </td>
+                            <td class="d-none d-md-table-cell text-muted">@run.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a asp-action="Details" asp-route-id="@run.Id" class="btn btn-sm btn-light" title="Chi tiết">
+                                        <i class="bi bi-info-circle text-primary"></i>
+                                    </a>
+                                    @if (canManageDeliveryRun && run.PaperManifestIssued)
+                                    {
+                                        <a asp-action="Print" asp-route-id="@run.Id" target="_blank" class="btn btn-sm btn-light" title="In phiếu giấy">
+                                            <i class="bi bi-printer text-secondary"></i>
+                                        </a>
+                                    }
+                                    else if (canManageDeliveryRun && run.Status == (int)DeliveryRunStatus.ReadyForHandover)
+                                    {
+                                        <form asp-action="IssuePaperManifest" method="post">
+                                            <input type="hidden" name="id" value="@run.Id" />
+                                            <button type="submit" class="btn btn-sm btn-light" title="In phiếu giấy dự phòng">
+                                                <i class="bi bi-printer text-secondary"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                    @if (canManageDeliveryRun && run.Status == (int)DeliveryRunStatus.ReadyForHandover)
+                                    {
+                                        <form asp-action="HandOver" method="post">
+                                            <input type="hidden" name="id" value="@run.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-primary" disabled="@(!canHandOver)" title="@(!canHandOver ? "Cần cache app hoặc in phiếu giấy trước" : "Bàn giao")">
+                                                <i class="bi bi-truck me-1"></i>Bàn giao
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="bi bi-truck"></i></div>
+                                <h5>Chưa có chuyến giao</h5>
+                                <p>Tạo chuyến sau khi phiếu xuất đã xác nhận và đã gán người giao.</p>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (Model.Data.Pagination.TotalCount > 0)
+    {
+        <partial name="_Pager" model="Model.Data.Pagination" />
+    }
+</div>

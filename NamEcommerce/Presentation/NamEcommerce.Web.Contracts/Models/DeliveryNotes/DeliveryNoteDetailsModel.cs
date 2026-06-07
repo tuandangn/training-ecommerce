@@ -20,6 +20,11 @@ public sealed class DeliveryNoteDetailsModel
     public Guid WarehouseId { get; set; }
     public string? WarehouseName { get; set; }
     public EntityOptionListModel? AvailableWarehouses { get; set; }
+    public Guid? AssignedDeliveryUserId { get; set; }
+    public string? AssignedDeliveryUsername { get; set; }
+    public string? AssignedDeliveryFullName { get; set; }
+    public DateTime? AssignedDeliveryOnUtc { get; set; }
+    public EntityOptionListModel? AvailableDeliveryUsers { get; set; }
 
     public bool ShowPrice { get; set; }
     public string? Note { get; set; }
@@ -35,6 +40,12 @@ public sealed class DeliveryNoteDetailsModel
     public Guid? DeliveryProofPictureId { get; set; }
     public string? DeliveryProofPictureUrl { get; set; }
     public string? DeliveryReceiverName { get; set; }
+    public double? DeliveryLatitude { get; set; }
+    public double? DeliveryLongitude { get; set; }
+    public string? DeliveryLocationAddress { get; set; }
+    public string? DeliveryCompletionNote { get; set; }
+    public string? DeliveryCompletionSource { get; set; }
+    public string? DeliveryCompletionIdempotencyKey { get; set; }
 
     public decimal TotalAmount { get; set; }
     public decimal Surcharge { get; set; }

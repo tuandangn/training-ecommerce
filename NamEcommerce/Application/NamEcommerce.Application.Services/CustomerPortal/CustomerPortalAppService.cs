@@ -18,6 +18,7 @@ using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.CustomerPortal;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Services.CustomerPortal;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 
@@ -517,23 +518,30 @@ public sealed class CustomerPortalAppService(
         if (rejectedItems.Count > 0 && string.IsNullOrWhiteSpace(returnReason))
             return CustomerActionResultAppDto.Fail("Error.DeliveryAcceptance.RejectReasonRequired");
 
-        await deliveryNoteManager.MarkReceivedByCustomerAsync(
-            deliveryNote.Id,
-            DateTime.UtcNow,
-            dto.ReceiverName,
-            dto.Note,
-            new DeliveryAcceptanceDto
-            {
-                AgreedCustomerCharge = dto.Acceptance?.AgreedCustomerCharge ?? 0m,
-                AgreedCustomerChargeReason = dto.Acceptance?.AgreedCustomerChargeReason,
-                Items = deliveryNote.Items.Select(item => new DeliveryAcceptanceItemDto
+        try
+        {
+            await deliveryNoteManager.MarkReceivedByCustomerAsync(
+                deliveryNote.Id,
+                DateTime.UtcNow,
+                dto.ReceiverName,
+                dto.Note,
+                new DeliveryAcceptanceDto
                 {
-                    DeliveryNoteItemId = item.Id,
-                    AcceptedQuantity = item.Quantity,
-                    RejectedQuantity = 0m,
-                    RejectReason = null
-                }).ToList()
-            }).ConfigureAwait(false);
+                    AgreedCustomerCharge = dto.Acceptance?.AgreedCustomerCharge ?? 0m,
+                    AgreedCustomerChargeReason = dto.Acceptance?.AgreedCustomerChargeReason,
+                    Items = deliveryNote.Items.Select(item => new DeliveryAcceptanceItemDto
+                    {
+                        DeliveryNoteItemId = item.Id,
+                        AcceptedQuantity = item.Quantity,
+                        RejectedQuantity = 0m,
+                        RejectReason = null
+                    }).ToList()
+                }).ConfigureAwait(false);
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CustomerActionResultAppDto.Fail(ex.ErrorCode);
+        }
 
         if (rejectedItems.Count > 0)
         {

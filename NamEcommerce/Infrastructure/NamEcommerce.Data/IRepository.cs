@@ -2,7 +2,7 @@
 
 namespace NamEcommerce.Data.Contracts;
 
-public interface IRepository<TEntity> where TEntity : AppAggregateEntity
+public interface IRepository<TEntity> where TEntity : AppEntity
 {
     Task<IEnumerable<TEntity>> GetAllAsync();
 

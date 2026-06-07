@@ -20,6 +20,11 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.Property(d => d.OrderId).IsRequired();
         builder.Property(d => d.WarehouseId).IsRequired();
         builder.Property(d => d.OrderCode);
+        builder.Property(d => d.AssignedDeliveryUserId).IsRequired(false);
+        builder.Property(d => d.AssignedDeliveryUsername).HasMaxLength(200).IsRequired(false);
+        builder.Property(d => d.AssignedDeliveryFullName).HasMaxLength(200).IsRequired(false);
+        builder.Property(d => d.AssignedDeliveryOnUtc).IsRequired(false);
+        builder.HasIndex(d => d.AssignedDeliveryUserId);
 
         builder.Property(d => d.SourceType)
             .IsRequired()
@@ -78,7 +83,16 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
             .HasColumnType("nvarchar(max)")
             .IsRequired(false);
         builder.Property(d => d.DeliveryReceiverName).HasMaxLength(255).IsRequired(false);
-        
+        builder.Property(d => d.DeliveryLatitude).IsRequired(false);
+        builder.Property(d => d.DeliveryLongitude).IsRequired(false);
+        builder.Property(d => d.DeliveryLocationAddress).HasMaxLength(1000).IsRequired(false);
+        builder.Property(d => d.DeliveryCompletionNote).HasMaxLength(2000).IsRequired(false);
+        builder.Property(d => d.DeliveryCompletionSource).HasMaxLength(100).IsRequired(false);
+        builder.Property(d => d.DeliveryCompletionIdempotencyKey).HasMaxLength(100).IsRequired(false);
+        builder.HasIndex(d => d.DeliveryCompletionIdempotencyKey)
+            .IsUnique()
+            .HasFilter("[DeliveryCompletionIdempotencyKey] IS NOT NULL");
+
         builder.Property(d => d.IsDirectShip).IsRequired().HasDefaultValue(false);
         builder.Property(d => d.DeliveryConfirmationStatus)
             .IsRequired()

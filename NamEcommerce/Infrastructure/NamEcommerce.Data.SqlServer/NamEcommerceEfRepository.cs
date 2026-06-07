@@ -1,6 +1,6 @@
 ﻿namespace NamEcommerce.Data.SqlServer;
 
-public sealed class NamEcommerceEfRepository<TEntity> : IRepository<TEntity> where TEntity : AppAggregateEntity
+public sealed class NamEcommerceEfRepository<TEntity> : IRepository<TEntity> where TEntity : AppEntity
 {
     private readonly IDbContext _dbContext;
 
