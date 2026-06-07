@@ -12,6 +12,10 @@ public sealed record DeliveryNoteDto
     public required Guid OrderId { get; init; }
     public required string? OrderCode { get; set; }
     public required Guid WarehouseId { get; init; }
+    public Guid? AssignedDeliveryUserId { get; init; }
+    public string? AssignedDeliveryUsername { get; init; }
+    public string? AssignedDeliveryFullName { get; init; }
+    public DateTime? AssignedDeliveryOnUtc { get; init; }
 
     public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
@@ -33,6 +37,13 @@ public sealed record DeliveryNoteDto
     public DateTime? DeliveredOnUtc { get; init; }
     public Guid? DeliveryProofPictureId { get; init; }
     public string? DeliveryReceiverName { get; init; }
+    public double? DeliveryLatitude { get; init; }
+    public double? DeliveryLongitude { get; init; }
+    public string? DeliveryLocationAddress { get; init; }
+    public string? DeliveryCompletionNote { get; init; }
+    public string? DeliveryCompletionSource { get; init; }
+    public string? DeliveryCompletionIdempotencyKey { get; init; }
+    public decimal? DeliveryCashCollectedAmount { get; init; }
     
     public Guid? CreatedByUserId { get; init; }
     public DateTime CreatedOnUtc { get; init; }
@@ -128,12 +139,46 @@ public sealed record DeliveryAcceptanceDto
 }
 
 [Serializable]
+public sealed record DeliveryCompletionMetadataDto
+{
+    public double? Latitude { get; init; }
+    public double? Longitude { get; init; }
+    public string? LocationAddress { get; init; }
+    public string? Note { get; init; }
+    public string? Source { get; init; }
+    public string? IdempotencyKey { get; init; }
+    public decimal? CashCollectedAmount { get; init; }
+}
+
+[Serializable]
 public sealed record MarkDeliveryNoteDeliveredDto
 {
     public required Guid DeliveryNoteId { get; init; }
     public required IReadOnlyList<Guid> PictureIds { get; init; }
     public string? ReceiverName { get; init; }
     public DeliveryAcceptanceDto? Acceptance { get; init; }
+    public DeliveryCompletionMetadataDto? CompletionMetadata { get; init; }
+}
+
+[Serializable]
+public sealed record AssignDeliveryUserDto
+{
+    public required Guid DeliveryNoteId { get; init; }
+    public required Guid AssignedDeliveryUserId { get; init; }
+    public required string AssignedDeliveryUsername { get; init; }
+    public required string AssignedDeliveryFullName { get; init; }
+
+    public void Verify()
+    {
+        if (DeliveryNoteId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.DeliveryNoteRequired");
+        if (AssignedDeliveryUserId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.DeliveryUserRequired");
+        if (string.IsNullOrWhiteSpace(AssignedDeliveryUsername))
+            throw new NamEcommerceDomainException("Error.DeliveryUsernameRequired");
+        if (string.IsNullOrWhiteSpace(AssignedDeliveryFullName))
+            throw new NamEcommerceDomainException("Error.DeliveryFullNameRequired");
+    }
 }
 
 [Serializable]

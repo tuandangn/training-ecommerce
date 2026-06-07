@@ -1,5 +1,4 @@
 @using System.Text.Encodings.Web
-@using System.Text
 @inject UrlEncoder MyUrlEncoder
 @model VendorListModel
 @{
@@ -7,19 +6,24 @@
     string? query = Model.Keywords;
 }
 
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Nhà cung cấp</h1>
-        <p class="page-header-subtitle">Quản lý các nhà cung cấp hàng hóa</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">Nhà cung cấp</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Nhà cung cấp</li>
+            </ol>
+        </nav>
     </div>
-    <a asp-action="Create" class="btn btn-primary">
-        <i class="bi bi-plus-lg me-1"></i>Thêm mới
-    </a>
-</div>
+}
 
 <div class="content-card" data-responsive-list data-list-key="vendor-list">
     <div class="action-toolbar">
         <partial name="_Search" model="@(new VendorListSearchModel { Keywords = Model.Keywords })" />
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Thêm mới
+        </a>
         <partial name="_ResponsiveListToolbar" />
     </div>
 
@@ -97,29 +101,34 @@
                 <article class="list-card">
                     <div class="list-card-header">
                         <div class="list-card-title-group">
-                            <div class="list-card-title">@HighlighHelper.Highlight(item.Name, query)</div>
-                            <a href="tel:@item.PhoneNumber" class="list-card-meta text-decoration-none">
-                                <i class="bi bi-telephone me-1"></i>
-                                @HighlighHelper.Highlight(item.PhoneNumber, query)
-                            </a>
+                            <div class="list-card-title">
+                                <a class="text-decoration-none text-dark" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
+                                    @HighlighHelper.Highlight(item.Name, query)
+                                </a>
+                            </div>
                         </div>
-                        <span class="badge bg-light text-muted border fw-normal">@item.DisplayOrder</span>
                     </div>
                     <div class="list-card-fields">
+                        @if (!string.IsNullOrEmpty(item.PhoneNumber))
+                        {
+                            <div class="list-card-field">
+                                <a href="tel:@item.PhoneNumber" class="list-card-value text-decoration-none fw-normal text-dark">
+                                    <i class="bi bi-telephone me-1"></i>@item.PhoneNumber
+                                </a>
+                            </div>
+                        }
                         @if (!string.IsNullOrEmpty(item.Address))
                         {
                             var encodedAddress = MyUrlEncoder.Encode(item.Address);
                             <div class="list-card-field list-card-field-stack">
-                                <div class="list-card-label">Địa chỉ</div>
                                 <a href="https://www.google.com/maps/search/@encodedAddress" target="_blank"
-                                   class="text-decoration-none text-muted small">
-                                    <i class="bi bi-geo-alt me-1"></i>
-                                    @HighlighHelper.Highlight(item.Address, query)
+                                   class="text-decoration-none text-dark">
+                                    <i class="bi bi-geo-alt me-1"></i>@HighlighHelper.Highlight(item.Address, query)
                                 </a>
                             </div>
                         }
                     </div>
-                    <div class="list-card-actions">
+                    <div class="list-card-actions justify-content-start">
                         <a class="btn-table-action" asp-action="Edit" asp-route-id="@item.Id" title="Chỉnh sửa">
                             <i class="bi bi-pencil"></i>
                         </a>
@@ -156,6 +165,17 @@
     <script type="module" defer>
         import { confirm } from "/modules/modals.js";
         (function () {
+            const txtKeywords = document.getElementById('@(nameof(VendorListSearchModel.Keywords))');
+            const form = txtKeywords.closest('form');
+            const onSearchChanged = debounce(function () {
+                form.submit();
+            }, 500);
+            txtKeywords.addEventListener('input', onSearchChanged);
+
+            if (txtKeywords.value){
+                focusEnd(txtKeywords);
+            }
+
             $('.btnDelete').on('click', async function (e) {
                 e.preventDefault();
                 const name = $(this).data('name');

@@ -12,6 +12,15 @@
         _ => ("secondary", "Không rõ", "bi-question-circle")
     };
     var isDirectShip = Model.SourceType == (int)DeliveryNoteSourceType.DirectShipToCustomer;
+    var isCounterPickup = string.Equals(Model.ShippingAddress?.Trim(), "Tai quay", StringComparison.OrdinalIgnoreCase);
+    var deliveryUserOptions = (Model.AvailableDeliveryUsers?.Options ?? Enumerable.Empty<EntityOptionListModel.EntityOptionModel>()).ToList();
+    var hasDeliveryUsers = deliveryUserOptions.Any();
+    var canAssignDeliveryUser = !isDirectShip
+        && Model.Status != (int)DeliveryNoteStatus.Delivered
+        && Model.Status != (int)DeliveryNoteStatus.Cancelled;
+    var canLeaveWarehouse = isDirectShip || isCounterPickup || Model.AssignedDeliveryUserId.HasValue;
+    var canOpenDeliveredWorkflow = Model.Status == (int)DeliveryNoteStatus.Delivering || canLeaveWarehouse;
+    var deliveryUserRequiredTitle = "Cần phân công người giao trước";
     var deliveryProofPictureSrc = string.IsNullOrWhiteSpace(Model.DeliveryProofPictureUrl)
         ? null
         : Model.DeliveryProofPictureUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
@@ -19,6 +28,11 @@
             : $"data:image/jpeg;base64,{Model.DeliveryProofPictureUrl}";
     var hasDeliveryCompletionInfo = Model.DeliveredOnUtc.HasValue
         || !string.IsNullOrWhiteSpace(Model.DeliveryReceiverName)
+        || Model.DeliveryLatitude.HasValue
+        || Model.DeliveryLongitude.HasValue
+        || !string.IsNullOrWhiteSpace(Model.DeliveryCompletionNote)
+        || !string.IsNullOrWhiteSpace(Model.DeliveryCompletionSource)
+        || Model.DeliveryCashCollectedAmount.HasValue
         || !string.IsNullOrWhiteSpace(deliveryProofPictureSrc);
 }
 
@@ -61,13 +75,13 @@
         }
         @if (!isDirectShip && Model.Status == (int)DeliveryNoteStatus.Confirmed)
         {
-            <button type="button" class="btn btn-outline-secondary btn-delivering" data-testid="delivery-mark-delivering" data-id="@Model.Id">
+            <button type="button" class="btn btn-outline-secondary btn-delivering" data-testid="delivery-mark-delivering" data-id="@Model.Id" disabled="@(!canLeaveWarehouse)" title="@(!canLeaveWarehouse ? deliveryUserRequiredTitle : null)">
                 <i class="bi bi-truck me-1"></i>Đang giao
             </button>
         }
         @if (Model.Status == (int)DeliveryNoteStatus.Delivering || Model.Status == (int)DeliveryNoteStatus.Confirmed)
         {
-            <button type="button" class="btn btn-outline-success btn-delivered" data-testid="delivery-mark-delivered-open" data-id="@Model.Id">
+            <button type="button" class="btn btn-outline-success btn-delivered" data-testid="delivery-mark-delivered-open" data-id="@Model.Id" disabled="@(!canOpenDeliveredWorkflow)" title="@(!canOpenDeliveredWorkflow ? deliveryUserRequiredTitle : null)">
                 <i class="bi bi-check-circle-fill me-1"></i>Đã giao
             </button>
         }
@@ -139,6 +153,49 @@
                 <div class="mb-4">
                     <label class="form-label small fw-bold text-muted text-uppercase mb-1">Kho xuất hàng</label>
                     <div class="text-dark">@Model.WarehouseName</div>
+                </div>
+
+                <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Người giao hàng</label>
+                    @if (!string.IsNullOrWhiteSpace(Model.AssignedDeliveryFullName))
+                    {
+                        <div class="text-dark fw-bold">
+                            <i class="bi bi-person-check me-1 text-muted"></i>@Model.AssignedDeliveryFullName
+                        </div>
+                        @if (Model.AssignedDeliveryOnUtc.HasValue)
+                        {
+                            <div class="text-muted small">@Model.AssignedDeliveryOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-muted small">Chua phan cong</div>
+                    }
+
+                    @if (canAssignDeliveryUser)
+                    {
+                        <form asp-action="AssignDeliveryUser" method="post" class="mt-2">
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <div class="input-group input-group-sm">
+                                <select name="assignedDeliveryUserId" class="form-select" required disabled="@(!hasDeliveryUsers)">
+                                    <option value="">Chọn người giao</option>
+                                    @foreach (var deliveryUser in deliveryUserOptions)
+                                    {
+                                        <option value="@deliveryUser.Id" selected="@(Model.AssignedDeliveryUserId == deliveryUser.Id)">
+                                            @deliveryUser.Name
+                                        </option>
+                                    }
+                                </select>
+                                <button type="submit" class="btn btn-outline-primary" disabled="@(!hasDeliveryUsers)">
+                                    <i class="bi bi-save me-1"></i>Luu
+                                </button>
+                            </div>
+                            @if (!hasDeliveryUsers)
+                            {
+                                <div class="text-muted small mt-2">Chua co user nao co role DeliveryStaff.</div>
+                            }
+                        </form>
+                    }
                 </div>
 
                 <div class="mb-4">
@@ -229,6 +286,44 @@
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase mb-1">Người nhận</label>
                             <div class="text-dark fw-bold">@Model.DeliveryReceiverName</div>
+                        </div>
+                    }
+
+                    @if (Model.DeliveryCashCollectedAmount.HasValue)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Tiền đã thu</label>
+                            <div class="text-dark fw-bold">@Model.DeliveryCashCollectedAmount.Value.DisplayCurrencyWithSymbol()</div>
+                        </div>
+                    }
+
+                    @if (Model.DeliveryLatitude.HasValue || Model.DeliveryLongitude.HasValue || !string.IsNullOrWhiteSpace(Model.DeliveryLocationAddress))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Vị trí giao</label>
+                            @if (!string.IsNullOrWhiteSpace(Model.DeliveryLocationAddress))
+                            {
+                                <div class="text-dark">@Model.DeliveryLocationAddress</div>
+                            }
+                            @if (Model.DeliveryLatitude.HasValue && Model.DeliveryLongitude.HasValue)
+                            {
+                                <div class="small text-muted">@Model.DeliveryLatitude, @Model.DeliveryLongitude</div>
+                            }
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(Model.DeliveryCompletionNote) || !string.IsNullOrWhiteSpace(Model.DeliveryCompletionSource))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Ghi nhận giao</label>
+                            @if (!string.IsNullOrWhiteSpace(Model.DeliveryCompletionNote))
+                            {
+                                <div class="text-dark">@Model.DeliveryCompletionNote</div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(Model.DeliveryCompletionSource))
+                            {
+                                <div class="small text-muted">Nguồn: @Model.DeliveryCompletionSource</div>
+                            }
                         </div>
                     }
 

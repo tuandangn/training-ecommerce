@@ -7,19 +7,22 @@ using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Models.Orders;
+using NamEcommerce.Web.Services.FastSales;
 using NamEcommerce.Web.Services.Orders;
 
 namespace NamEcommerce.Web.Controllers;
 
-public sealed class OrderController : BaseAuthorizedController
+public sealed partial class OrderController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;
     private readonly IOrderModelFactory _orderModelFactory;
+    private readonly IFastSaleModelFactory _fastSaleModelFactory;
 
-    public OrderController(IMediator mediator, IOrderModelFactory orderModelFactory)
+    public OrderController(IMediator mediator, IOrderModelFactory orderModelFactory, IFastSaleModelFactory fastSaleModelFactory)
     {
         _mediator = mediator;
         _orderModelFactory = orderModelFactory;
+        _fastSaleModelFactory = fastSaleModelFactory;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(List));

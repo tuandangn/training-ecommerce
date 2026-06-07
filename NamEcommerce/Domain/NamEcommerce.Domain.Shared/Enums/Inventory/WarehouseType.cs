@@ -3,5 +3,6 @@
 public enum WarehouseType
 {
     Physical,
-    DirectTransit
+    DirectTransit,
+    Damaged
 }

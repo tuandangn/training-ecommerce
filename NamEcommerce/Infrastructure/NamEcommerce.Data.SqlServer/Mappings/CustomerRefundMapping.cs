@@ -24,6 +24,7 @@ public sealed class CustomerRefundMapping : IEntityTypeConfiguration<CustomerRef
         builder.Property(r => r.Amount).IsRequired().HasColumnType("decimal(18,2)");
         builder.Property(r => r.Status).IsRequired().HasConversion<int>();
         builder.Property(r => r.PaymentMethod).IsRequired(false).HasConversion<int>();
+        builder.Property(r => r.BankAccountId).IsRequired(false);
 
         builder.Property(r => r.Note).HasMaxLength(2000);
         builder.Property(r => r.RefundedOnUtc).IsRequired(false);

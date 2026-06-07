@@ -49,8 +49,8 @@
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
-                                        <tr id="item-row-@i">
-                                            <td class="ps-3">
+                                        <tr id="item-row-@i" style="cursor:pointer">
+                                            <td class="ps-3 align-middle">
                                                 <div class="d-flex align-items-center">
                                                     @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))
                                                     {
@@ -77,17 +77,17 @@
                                                 <input type="hidden" name="Items[@i].ProductId" value="@item.ProductId" class="item-product-id" />
                                                 <input type="hidden" name="Items[@i].QuantityDecimalPlaces" value="@item.QuantityDecimalPlaces" />
                                             </td>
-                                            <td class="text-center">
-                                                <input name="Items[@i].Quantity" value="@item.Quantity.DisplayQuantity()"
-                                                       class="form-control form-control-sm text-end item-qty no-additional-element"
-                                                       data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces" min="0.001" placeholder="0"
+                                            <td class="text-center align-middle">
+                                                <span class="fw-medium item-qty-display">@item.Quantity.DisplayQuantity()</span>
+                                                <input type="hidden" name="Items[@i].Quantity" value="@item.Quantity"
+                                                       class="item-qty" data-decimals="@item.QuantityDecimalPlaces"
                                                        data-val="true" data-val-number="Số lượng không đúng."
                                                        data-val-required="Vui lòng nhập số lượng."
                                                        data-val-range="Số lượng phải lớn hơn 0." data-val-range-min="@(item.QuantityDecimalPlaces > 0 ? "0.001" : "1")" />
                                                 <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].Quantity" data-valmsg-replace="true"></span>
                                             </td>
-                                            <td>
-                                                <select asp-for="Items[i].WarehouseId" class="form-select item-warehouse" disabled="@Model.WarehouseId.HasValue" data-val="@(WarehouseSettings.AllowNonWarehouse ? "false" : "true")" data-required="Vui lòng chọn kho hàng">
+                                            <td class="align-middle">
+                                                <select asp-for="Items[i].WarehouseId" class="form-select form-select-sm item-warehouse" disabled="@Model.WarehouseId.HasValue" data-val="@(WarehouseSettings.AllowNonWarehouse ? "false" : "true")" data-required="Vui lòng chọn kho hàng">
                                                     @if (WarehouseSettings.AllowNonWarehouse)
                                                     {
                                                         <option value="" selected="@(!Model.Items[i].WarehouseId.HasValue)">(Không chọn)</option>
@@ -102,16 +102,16 @@
                                                 </select>
                                                 <span asp-validation-for="Items[i].WarehouseId" class="small text-danger"></span>
                                             </td>
-                                            <td class="text-end">
-                                                <input name="Items[@i].UnitCost"
-                                                       value="@(item.UnitCost.HasValue ? item.UnitCost.Value.DisplayCurrency() : "")"
-                                                       class="form-control form-control-sm text-end item-unit-cost no-additional-element no-hint"
-                                                       data-decimal="currency" placeholder="(Không rõ)" min="0"
+                                            <td class="text-end align-middle">
+                                                <span class="text-muted item-unit-cost-display">@(item.UnitCost.HasValue ? item.UnitCost.Value.DisplayCurrency() + " đ" : "—")</span>
+                                                <input type="hidden" name="Items[@i].UnitCost"
+                                                       value="@(item.UnitCost.HasValue ? item.UnitCost.Value.ToString() : "")"
+                                                       class="item-unit-cost"
                                                        data-val="true" data-val-number="Đơn giá không đúng."
                                                        data-val-range="Đơn giá không được âm." data-val-range-min="0" />
                                                 <span class="small text-danger field-validation-valid" data-valmsg-for="Items[@i].UnitCost" data-valmsg-replace="true"></span>
                                             </td>
-                                            <td class="text-end pe-3">
+                                            <td class="text-end pe-3 align-middle">
                                                 <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
@@ -225,6 +225,9 @@
         </div>
     </form>
 </div>
+
+@await Html.PartialAsync("_ItemEditOffcanvas")
+<partial name="_ItemEditModal" />
 
 <!-- Add Item Modal (thêm thủ công qua search) -->
 <div class="modal fade" id="addItemModal" tabindex="-1" aria-hidden="true">

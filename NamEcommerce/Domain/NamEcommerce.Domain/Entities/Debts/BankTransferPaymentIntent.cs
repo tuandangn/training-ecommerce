@@ -18,6 +18,7 @@ public sealed record BankTransferPaymentIntent : AppAggregateEntity
         string accountName,
         string template,
         string qrImageUrl,
+        int intentExpiryMinutes,
         string? note) : base(Guid.NewGuid())
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(referenceCode);
@@ -29,6 +30,13 @@ public sealed record BankTransferPaymentIntent : AppAggregateEntity
         if (amount <= 0)
             throw new NamEcommerceDomainException("Error.PaymentAmountMustBePositive");
 
+        if (intentExpiryMinutes <= 0)
+            throw new NamEcommerceDomainException("Error.PaymentIntentExpiryInvalid");
+
+        var nowUtc = DateTime.UtcNow;
+        CreatedOnUtc = nowUtc;
+        ExpiresAtUtc = nowUtc.AddMinutes(intentExpiryMinutes);
+
         ReferenceCode = referenceCode;
         Amount = amount;
         CustomerId = customerId;
@@ -39,7 +47,6 @@ public sealed record BankTransferPaymentIntent : AppAggregateEntity
         QrImageUrl = qrImageUrl;
         Note = note;
         Status = BankTransferPaymentIntentStatus.Pending;
-        CreatedOnUtc = DateTime.UtcNow;
     }
 
     public string ReferenceCode { get; private set; } = string.Empty;
@@ -65,10 +72,22 @@ public sealed record BankTransferPaymentIntent : AppAggregateEntity
     public string? RawPayload { get; private set; }
     public DateTime? VerifiedAtUtc { get; private set; }
     public Guid? VerifiedByUserId { get; private set; }
+    public DateTime ExpiresAtUtc { get; private set; }
+    public DateTime? ExpiredAtUtc { get; private set; }
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
 
     internal bool CanBeConsumed => Status is BankTransferPaymentIntentStatus.Confirmed or BankTransferPaymentIntentStatus.ManuallyConfirmed;
+
+    internal void Expire(DateTime nowUtc)
+    {
+        if (Status != BankTransferPaymentIntentStatus.Pending)
+            return;
+
+        Status = BankTransferPaymentIntentStatus.Expired;
+        ExpiredAtUtc = nowUtc;
+        UpdatedOnUtc = nowUtc;
+    }
 
     internal void ConfirmManually(Guid verifiedByUserId, string? note, DateTime nowUtc)
     {
@@ -104,9 +123,11 @@ public sealed record BankTransferPaymentIntent : AppAggregateEntity
         UpdatedOnUtc = nowUtc;
     }
 
-    internal void Consume(Guid orderId, Guid deliveryNoteId, Guid customerDebtId, Guid customerPaymentId, DateTime nowUtc)
+    internal void Consume(Guid orderId, Guid? deliveryNoteId, Guid? customerDebtId, Guid customerPaymentId, DateTime nowUtc)
     {
         if (!CanBeConsumed)
+            throw new NamEcommerceDomainException("Error.PaymentIntentCannotConsume");
+        if (orderId == Guid.Empty || customerPaymentId == Guid.Empty)
             throw new NamEcommerceDomainException("Error.PaymentIntentCannotConsume");
 
         OrderId = orderId;

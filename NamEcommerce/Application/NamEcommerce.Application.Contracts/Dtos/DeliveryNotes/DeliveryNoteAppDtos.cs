@@ -13,6 +13,10 @@ public sealed record DeliveryNoteAppDto
 
     public Guid WarehouseId { get; set; }
     public string? WarehouseName { get; set; }
+    public Guid? AssignedDeliveryUserId { get; init; }
+    public string? AssignedDeliveryUsername { get; init; }
+    public string? AssignedDeliveryFullName { get; init; }
+    public DateTime? AssignedDeliveryOnUtc { get; init; }
 
     public required Guid CustomerId { get; init; }
     public required string CustomerName { get; init; }
@@ -34,6 +38,13 @@ public sealed record DeliveryNoteAppDto
     public DateTime? DeliveredOnUtc { get; init; }
     public Guid? DeliveryProofPictureId { get; init; }
     public string? DeliveryReceiverName { get; init; }
+    public double? DeliveryLatitude { get; init; }
+    public double? DeliveryLongitude { get; init; }
+    public string? DeliveryLocationAddress { get; init; }
+    public string? DeliveryCompletionNote { get; init; }
+    public string? DeliveryCompletionSource { get; init; }
+    public string? DeliveryCompletionIdempotencyKey { get; init; }
+    public decimal? DeliveryCashCollectedAmount { get; init; }
     
     public Guid? CreatedByUserId { get; init; }
     public DateTime CreatedOnUtc { get; init; }
@@ -126,16 +137,53 @@ public sealed record DeliveryAcceptanceAppDto
 }
 
 [Serializable]
+public sealed record DeliveryCompletionMetadataAppDto
+{
+    public double? Latitude { get; init; }
+    public double? Longitude { get; init; }
+    public string? LocationAddress { get; init; }
+    public string? Note { get; init; }
+    public string? Source { get; init; }
+    public string? IdempotencyKey { get; init; }
+    public decimal? CashCollectedAmount { get; init; }
+}
+
+[Serializable]
 public sealed record MarkDeliveryNoteDeliveredAppDto
 {
     public required Guid DeliveryNoteId { get; init; }
     public required IReadOnlyList<Guid> PictureIds { get; init; }
     public string? ReceiverName { get; init; }
     public DeliveryAcceptanceAppDto? Acceptance { get; init; }
+    public DeliveryCompletionMetadataAppDto? CompletionMetadata { get; init; }
 }
 
 [Serializable]
 public sealed record MarkDeliveryNoteDeliveredResultAppDto
+{
+    public bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+}
+
+[Serializable]
+public sealed record AssignDeliveryUserAppDto
+{
+    public required Guid DeliveryNoteId { get; init; }
+    public required Guid AssignedDeliveryUserId { get; init; }
+
+    public (bool valid, string? errorMessage) Validate()
+    {
+        if (DeliveryNoteId == Guid.Empty)
+            return (false, "Error.DeliveryNoteRequired");
+        if (AssignedDeliveryUserId == Guid.Empty)
+            return (false, "Error.DeliveryUserRequired");
+
+        return (true, null);
+    }
+}
+
+[Serializable]
+public sealed record AssignDeliveryUserResultAppDto
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }

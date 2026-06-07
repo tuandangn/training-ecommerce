@@ -1,0 +1,103 @@
+@using NamEcommerce.Application.Contracts.Dtos.Finance
+@model CashFlowStatementDto
+@{
+    ViewData[ViewConstants.PageTitle] = "Lưu chuyển tiền tệ (B03)";
+    int year = ViewBag.Year;
+    int? month = ViewBag.Month;
+    bool compare = ViewBag.Compare == true;
+    CashFlowStatementDto? prior = ViewBag.PriorModel as CashFlowStatementDto;
+}
+
+@section TitleSection {
+    <h1 class="topbar-page-title">B03 — Lưu chuyển tiền tệ</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active">Kế toán — B03</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<form method="get" class="d-flex align-items-center gap-2 mb-3 no-print flex-wrap">
+    <select name="year" class="form-select form-select-sm" style="width:100px">
+        @for (int y = DateTime.Today.Year; y >= DateTime.Today.Year - 5; y--)
+        {
+            <option value="@y" selected="@(y == year)">@y</option>
+        }
+    </select>
+    <select name="month" class="form-select form-select-sm" style="width:110px">
+        <option value="">Cả năm</option>
+        @for (int m = 1; m <= 12; m++)
+        {
+            <option value="@m" selected="@(m == month)">Tháng @m</option>
+        }
+    </select>
+    <div class="form-check form-check-inline ms-1 mb-0">
+        <input class="form-check-input" type="checkbox" name="compare" value="true" id="chkCompare" @(compare ? "checked" : "") onchange="this.form.submit()">
+        <label class="form-check-label small" for="chkCompare">So sánh kỳ trước</label>
+    </div>
+    <button type="submit" class="btn btn-sm btn-primary">Xem</button>
+    <a asp-action="ExportCashFlowExcel" asp-route-year="@year" asp-route-month="@month"
+       class="btn btn-sm btn-outline-success no-print">
+        <i class="bi bi-file-earmark-excel me-1"></i>Excel
+    </a>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i>In</button>
+</form>
+
+@if (!Model.ClosingCashMatches)
+{
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Tiền cuối kỳ B03: <strong>@Model.ClosingCash.DisplayCurrencyWithSymbol()</strong>
+        — Sổ quỹ: <strong>@Model.ActualClosingCash.DisplayCurrencyWithSymbol()</strong>
+        (chênh lệch @((Model.ClosingCash - Model.ActualClosingCash).DisplayCurrencyWithSymbol()))
+    </div>
+}
+
+<div class="content-card p-4" style="max-width:@(prior != null ? "900px" : "700px")">
+    <h5 class="text-center mb-1">BÁO CÁO LƯU CHUYỂN TIỀN TỆ</h5>
+    <p class="text-center text-muted small mb-4">@Model.Period</p>
+
+    <table class="table table-sm">
+        <thead class="table-light">
+            <tr>
+                <th>Chỉ tiêu</th>
+                <th class="text-end">@Model.Period</th>
+                @if (prior != null) { <th class="text-end text-muted">@prior.Period</th> }
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="fw-semibold table-secondary"><td colspan="@(prior != null ? 3 : 2)">I. Lưu chuyển tiền từ hoạt động kinh doanh</td></tr>
+            <tr><td class="ps-3">Lợi nhuận trước thuế</td><td class="text-end">@Model.ProfitBeforeTax.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.ProfitBeforeTax.DisplayCurrency()</td>}</tr>
+            <tr><td class="ps-3">Khấu hao TSCĐ (phi tiền mặt)</td><td class="text-end">@Model.DepreciationAdjustment.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.DepreciationAdjustment.DisplayCurrency()</td>}</tr>
+            <tr><td class="ps-3">Thay đổi phải thu KH</td><td class="text-end">@Model.AccountsReceivableChange.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.AccountsReceivableChange.DisplayCurrency()</td>}</tr>
+            <tr><td class="ps-3">Thay đổi phải trả NCC</td><td class="text-end">@Model.AccountsPayableChange.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.AccountsPayableChange.DisplayCurrency()</td>}</tr>
+            <tr><td class="ps-3">Thay đổi hàng tồn kho</td><td class="text-end">@Model.InventoryChange.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.InventoryChange.DisplayCurrency()</td>}</tr>
+            <tr><td class="ps-3">Thay đổi thuế GTGT phải nộp</td><td class="text-end">@Model.VatPayableChange.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.VatPayableChange.DisplayCurrency()</td>}</tr>
+            <tr><td class="ps-3">Hoàn tiền khách hàng</td><td class="text-end">@Model.CustomerRefundsOut.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.CustomerRefundsOut.DisplayCurrency()</td>}</tr>
+            <tr class="fw-bold table-active"><td>Lưu chuyển tiền thuần từ HĐKD</td><td class="text-end">@Model.OperatingCashFlow.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.OperatingCashFlow.DisplayCurrency()</td>}</tr>
+
+            <tr class="fw-semibold table-secondary"><td colspan="@(prior != null ? 3 : 2)">II. Lưu chuyển tiền từ hoạt động đầu tư</td></tr>
+            <tr><td class="ps-3">Mua sắm TSCĐ</td><td class="text-end">@Model.FixedAssetPurchases.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.FixedAssetPurchases.DisplayCurrency()</td>}</tr>
+            <tr class="fw-bold table-active"><td>Lưu chuyển tiền thuần từ HĐ đầu tư</td><td class="text-end">@Model.InvestingCashFlow.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.InvestingCashFlow.DisplayCurrency()</td>}</tr>
+
+            <tr class="fw-semibold table-secondary"><td colspan="@(prior != null ? 3 : 2)">III. Lưu chuyển tiền từ hoạt động tài chính</td></tr>
+            <tr class="fw-bold table-active"><td>Lưu chuyển tiền thuần từ HĐ tài chính</td><td class="text-end">@Model.FinancingCashFlow.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.FinancingCashFlow.DisplayCurrency()</td>}</tr>
+
+            <tr class="fw-bold table-active"><td>IV. Tăng/(giảm) tiền thuần trong kỳ</td><td class="text-end">@Model.NetCashChange.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.NetCashChange.DisplayCurrency()</td>}</tr>
+            <tr><td>V. Tiền đầu kỳ</td><td class="text-end">@Model.OpeningCash.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.OpeningCash.DisplayCurrency()</td>}</tr>
+            <tr class="fw-bold fs-6 @(Model.ClosingCashMatches ? "table-success" : "table-danger")">
+                <td>VI. Tiền cuối kỳ (B03)</td>
+                <td class="text-end">@Model.ClosingCash.DisplayCurrency()</td>
+                @if (prior != null) { <td class="text-end text-muted">@prior.ClosingCash.DisplayCurrency()</td> }
+            </tr>
+            <tr class="text-muted small">
+                <td>Tiền cuối kỳ (sổ quỹ)</td>
+                <td class="text-end">@Model.ActualClosingCash.DisplayCurrency()</td>
+                @if (prior != null) { <td class="text-end text-muted">@prior.ActualClosingCash.DisplayCurrency()</td> }
+            </tr>
+        </tbody>
+    </table>
+</div>

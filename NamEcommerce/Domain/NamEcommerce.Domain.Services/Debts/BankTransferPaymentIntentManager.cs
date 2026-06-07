@@ -29,6 +29,7 @@ public sealed class BankTransferPaymentIntentManager(
             dto.AccountName.Trim(),
             dto.Template.Trim(),
             qrImageUrl,
+            dto.IntentExpiryMinutes,
             dto.Note);
 
         var inserted = await intentRepository.InsertAsync(intent).ConfigureAwait(false);
@@ -86,7 +87,22 @@ public sealed class BankTransferPaymentIntentManager(
         return MapToDto(updated);
     }
 
-    public async Task<BankTransferPaymentIntentDto> ConsumeAsync(Guid id, Guid orderId, Guid deliveryNoteId, Guid customerDebtId, Guid customerPaymentId)
+    public async Task<BankTransferPaymentIntentDto> ExpireIfPendingAsync(Guid id, DateTime nowUtc)
+    {
+        var intent = await intentRepository.GetByIdAsync(id).ConfigureAwait(false)
+            ?? throw new NamEcommerceDomainException("Error.PaymentIntentIsNotFound");
+
+        if (intent.Status == BankTransferPaymentIntentStatus.Pending && intent.ExpiresAtUtc <= nowUtc)
+        {
+            intent.Expire(nowUtc);
+            var updated = await intentRepository.UpdateAsync(intent).ConfigureAwait(false);
+            return MapToDto(updated);
+        }
+
+        return MapToDto(intent);
+    }
+
+    public async Task<BankTransferPaymentIntentDto> ConsumeAsync(Guid id, Guid orderId, Guid? deliveryNoteId, Guid? customerDebtId, Guid customerPaymentId)
     {
         var intent = await intentRepository.GetByIdAsync(id).ConfigureAwait(false)
             ?? throw new NamEcommerceDomainException("Error.PaymentIntentIsNotFound");
@@ -156,6 +172,8 @@ public sealed class BankTransferPaymentIntentManager(
             RawPayload = intent.RawPayload,
             VerifiedAtUtc = intent.VerifiedAtUtc,
             VerifiedByUserId = intent.VerifiedByUserId,
+            ExpiresAtUtc = intent.ExpiresAtUtc,
+            ExpiredAtUtc = intent.ExpiredAtUtc,
             CreatedOnUtc = intent.CreatedOnUtc,
             UpdatedOnUtc = intent.UpdatedOnUtc
         };

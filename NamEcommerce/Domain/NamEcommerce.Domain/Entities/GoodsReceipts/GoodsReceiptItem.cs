@@ -31,6 +31,10 @@ public sealed record GoodsReceiptItem : AppEntity
     public Guid? WarehouseId { get; private set; }
     internal string? WarehouseName { get; private set; }
 
+    // PRE-4b: Thuế GTGT đầu vào (TK 133)
+    public decimal? TaxRate { get; internal set; }
+    public decimal TaxAmount { get; internal set; }
+
     public decimal Quantity
     {
         get; 
@@ -64,7 +68,9 @@ public sealed record GoodsReceiptItem : AppEntity
         return new GoodsReceiptItem(ProductId, WarehouseId, quantity, UnitCost)
         {
             ProductName = ProductName,
-            WarehouseName = WarehouseName
+            WarehouseName = WarehouseName,
+            TaxRate = TaxRate,
+            TaxAmount = quantity == Quantity ? TaxAmount : 0   // split: caller recalc nếu cần
         };
     }
 

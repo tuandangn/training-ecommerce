@@ -2,8 +2,11 @@ using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Dtos.Users;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 
@@ -13,11 +16,16 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
 {
     private readonly IDeliveryNoteManager _deliveryNoteManager;
     private readonly IWarehouseAppService _warehouseAppService;
+    private readonly IUserAppService _userAppService;
 
-    public DeliveryNoteAppService(IDeliveryNoteManager deliveryNoteManager, IWarehouseAppService warehouseAppService)
+    public DeliveryNoteAppService(
+        IDeliveryNoteManager deliveryNoteManager,
+        IWarehouseAppService warehouseAppService,
+        IUserAppService userAppService)
     {
         _deliveryNoteManager = deliveryNoteManager;
         _warehouseAppService = warehouseAppService;
+        _userAppService = userAppService;
     }
 
     public async Task<DeliveryNoteAppDto> CreateFromOrderAsync(CreateDeliveryNoteAppDto dto)
@@ -87,9 +95,17 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
         await _deliveryNoteManager.ConfirmAsync(id).ConfigureAwait(false);
     }
 
-    public async Task MarkDeliveringAsync(Guid id)
+    public async Task<CommonActionResultDto> MarkDeliveringAsync(Guid id)
     {
-        await _deliveryNoteManager.MarkDeliveringAsync(id).ConfigureAwait(false);
+        try
+        {
+            await _deliveryNoteManager.MarkDeliveringAsync(id).ConfigureAwait(false);
+            return CommonActionResultDto.CreateSuccess();
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return CommonActionResultDto.CreateError(ex.ErrorCode);
+        }
     }
 
     public async Task<MarkDeliveryNoteDeliveredResultAppDto> MarkDeliveredAsync(MarkDeliveryNoteDeliveredAppDto dto)
@@ -114,7 +130,20 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
                             AcceptedQuantity = item.AcceptedQuantity,
                             RejectedQuantity = item.RejectedQuantity,
                             RejectReason = item.RejectReason
-                        }).ToList()
+                          }).ToList()
+                      }
+                ,
+                CompletionMetadata = dto.CompletionMetadata is null
+                    ? null
+                    : new DeliveryCompletionMetadataDto
+                    {
+                        Latitude = dto.CompletionMetadata.Latitude,
+                        Longitude = dto.CompletionMetadata.Longitude,
+                        LocationAddress = dto.CompletionMetadata.LocationAddress,
+                        Note = dto.CompletionMetadata.Note,
+                        Source = dto.CompletionMetadata.Source,
+                        IdempotencyKey = dto.CompletionMetadata.IdempotencyKey,
+                        CashCollectedAmount = dto.CompletionMetadata.CashCollectedAmount
                     }
             }).ConfigureAwait(false);
 
@@ -123,12 +152,79 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
                 Success = true
             };
         }
+        catch (NamEcommerceDomainException ex)
+        {
+            return new MarkDeliveryNoteDeliveredResultAppDto
+            {
+                Success = false,
+                ErrorMessage = ex.ErrorCode
+            };
+        }
         catch (Exception ex)
         {
             return new MarkDeliveryNoteDeliveredResultAppDto
             {
                 Success = false,
                 ErrorMessage = ex.Message
+            };
+        }
+    }
+
+    public async Task<AssignDeliveryUserResultAppDto> AssignDeliveryUserAsync(AssignDeliveryUserAppDto dto)
+    {
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+        {
+            return new AssignDeliveryUserResultAppDto
+            {
+                Success = false,
+                ErrorMessage = errorMessage
+            };
+        }
+
+        var user = await _userAppService.GetUserByIdAsync(dto.AssignedDeliveryUserId).ConfigureAwait(false);
+        if (user is null)
+        {
+            return new AssignDeliveryUserResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.UserNotFound"
+            };
+        }
+
+        var isDeliveryStaff = await _userAppService
+            .IsUserInRoleAsync(user.Id, SystemUserRoleNames.DeliveryStaff)
+            .ConfigureAwait(false);
+        if (!isDeliveryStaff)
+        {
+            return new AssignDeliveryUserResultAppDto
+            {
+                Success = false,
+                ErrorMessage = "Error.UserIsNotDeliveryStaff"
+            };
+        }
+
+        try
+        {
+            await _deliveryNoteManager.AssignDeliveryUserAsync(new AssignDeliveryUserDto
+            {
+                DeliveryNoteId = dto.DeliveryNoteId,
+                AssignedDeliveryUserId = user.Id,
+                AssignedDeliveryUsername = user.Username,
+                AssignedDeliveryFullName = user.FullName
+            }).ConfigureAwait(false);
+
+            return new AssignDeliveryUserResultAppDto
+            {
+                Success = true
+            };
+        }
+        catch (NamEcommerceDomainException ex)
+        {
+            return new AssignDeliveryUserResultAppDto
+            {
+                Success = false,
+                ErrorMessage = ex.ErrorCode
             };
         }
     }

@@ -53,9 +53,11 @@ public sealed class CookieAuthenticateUserHandler : IRequestHandler<Authenticate
         {
             new Claim(ClaimTypes.Name, userDto.FullName),
             new Claim(ClaimTypes.Email, userDto.Username),
-            new Claim(ClaimTypes.NameIdentifier, userDto.Id.ToString()),
-            new Claim(ClaimTypes.Role, "User")
+            new Claim(ClaimTypes.NameIdentifier, userDto.Id.ToString())
         };
+        foreach (var roleName in userDto.RoleNames.DefaultIfEmpty("User"))
+            claims.Add(new Claim(ClaimTypes.Role, roleName));
+
         var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
         var authProperties = new AuthenticationProperties
         {

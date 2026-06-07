@@ -34,17 +34,17 @@ public sealed class NamEcommerceEfDbContext : DbContext, IDbContext
         return Expression.Lambda(equal, parameter);
     }
 
-    public IQueryable<TEntity> GetDataSource<TEntity>(bool includeHidden) where TEntity : AppAggregateEntity
+    public IQueryable<TEntity> GetDataSource<TEntity>(bool includeHidden) where TEntity : AppEntity
         => includeHidden ? Set<TEntity>().IgnoreQueryFilters().AsNoTracking() : Set<TEntity>().AsNoTracking();
 
     public async Task<TEntity?> FindAsync<TEntity>(Guid key, CancellationToken cancellationToken = default)
-        where TEntity : AppAggregateEntity
+        where TEntity : AppEntity
     {
         var entity = await FindAsync<TEntity>([key]).ConfigureAwait(false);
         return entity;
     }
 
-    public Task<IEnumerable<TEntity>> GetDataAsync<TEntity>() where TEntity : AppAggregateEntity
+    public Task<IEnumerable<TEntity>> GetDataAsync<TEntity>() where TEntity : AppEntity
     {
         IQueryable<TEntity> entities = Set<TEntity>().AsNoTracking();
         return Task.FromResult<IEnumerable<TEntity>>(entities);

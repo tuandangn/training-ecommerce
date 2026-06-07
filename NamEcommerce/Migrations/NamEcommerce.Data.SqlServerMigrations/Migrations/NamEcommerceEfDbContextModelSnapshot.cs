@@ -1007,6 +1007,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int")
+                        .HasColumnName("CustomerKind");
+
                     b.Property<string>("Note")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -1051,6 +1058,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         });
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Kind", "IsSystem")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Customer_CustomerKind_IsSystem")
+                        .HasFilter("[CustomerKind] = 20 AND [IsSystem] = 1 AND [IsDeleted] = 0");
 
                     b.ToTable("Customer", "tbl");
                 });
@@ -1097,6 +1109,12 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<Guid?>("DeliveryNoteId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("ExpiredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -1164,7 +1182,143 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.HasIndex("Status", "CreatedOnUtc");
 
+                    b.HasIndex("Status", "ExpiresAtUtc");
+
                     b.ToTable("BankTransferPaymentIntent", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.BankTransferVerificationLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AccountNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("BankId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("PaymentIntentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("ProviderConfirmedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ProviderTransactionId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("RawPayload")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("ReferenceCode")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("nvarchar(25)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentIntentId");
+
+                    b.HasIndex("ProviderTransactionId");
+
+                    b.HasIndex("ReferenceCode");
+
+                    b.ToTable("BankTransferVerificationLogs", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.CassoReconciliationRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Duplicate")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Failed")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("FinishedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FromDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Ignored")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Matched")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Processed")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Rejected")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("StartedAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ToDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("TotalRecords")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Trigger")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StartedAtUtc");
+
+                    b.HasIndex("FromDate", "ToDate");
+
+                    b.ToTable("CassoReconciliationRuns", "tbl");
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Debts.CustomerCreditNote", b =>
@@ -1348,6 +1502,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsOpeningBalance")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("NormalizedCustomerAddress")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -1405,6 +1564,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<DateTime?>("AppliedOnUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("BankAccountId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -1485,6 +1647,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("BankAccountId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -1718,6 +1883,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsOpeningBalance")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("NormalizedVendorAddress")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -1796,6 +1966,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<DateTime?>("AppliedOnUtc")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("BankAccountId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -1876,6 +2049,20 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<decimal>("AmountToCollect")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("AssignedDeliveryFullName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("AssignedDeliveryOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("AssignedDeliveryUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AssignedDeliveryUsername")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("Code")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1903,10 +2090,35 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<DateTime?>("DeliveredOnUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal?>("DeliveryCashCollectedAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DeliveryCompletionIdempotencyKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DeliveryCompletionNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("DeliveryCompletionSource")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<int>("DeliveryConfirmationStatus")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(0);
+
+                    b.Property<double?>("DeliveryLatitude")
+                        .HasColumnType("float");
+
+                    b.Property<string>("DeliveryLocationAddress")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<double?>("DeliveryLongitude")
+                        .HasColumnType("float");
 
                     b.Property<Guid?>("DeliveryProofPictureId")
                         .HasColumnType("uniqueidentifier");
@@ -1918,6 +2130,17 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<string>("DeliveryReceiverName")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTime?>("InvoiceDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InvoiceNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("InvoiceSeries")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
@@ -2010,8 +2233,14 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AssignedDeliveryUserId");
+
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("DeliveryCompletionIdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("[DeliveryCompletionIdempotencyKey] IS NOT NULL");
 
                     b.ToTable("DeliveryNote", "tbl");
                 });
@@ -2028,6 +2257,16 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<Guid>("DeliveryNoteId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<decimal>("DiscountAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal>("DiscountPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(5,2)")
+                        .HasDefaultValue(0m);
+
                     b.Property<Guid>("OrderItemId")
                         .HasColumnType("uniqueidentifier");
 
@@ -2041,6 +2280,14 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal?>("TaxRate")
+                        .HasColumnType("decimal(5,4)");
 
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,2)");
@@ -2057,6 +2304,285 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.ToTable("DeliveryNoteItem", "tbl");
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AssignedDeliveryFullName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid>("AssignedDeliveryUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AssignedDeliveryUsername")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal?>("CashHandoverAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CashHandoverConfirmedByFullName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("CashHandoverConfirmedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CashHandoverConfirmedByUsername")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("CashHandoverConfirmedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CashHandoverNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DriverCacheDeviceId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("DriverCachedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("HandedOverByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("HandedOverOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<bool>("PaperManifestIssued")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime?>("PaperManifestIssuedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("PreparedByUserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("PreparedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(20);
+
+                    b.Property<DateTime?>("UpdatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CreatedOnUtc");
+
+                    b.HasIndex("AssignedDeliveryUserId", "Status");
+
+                    b.ToTable("DeliveryRun", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryRunItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AmountToCollect")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DeliveryNoteCode")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("DeliveryNoteId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DeliveryRunId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("OrderCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ShippingAddress")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeliveryNoteId");
+
+                    b.HasIndex("DeliveryRunId");
+
+                    b.ToTable("DeliveryRunItem", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Finance.AccountingSetup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AccountingStartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("CorporateTaxProvision")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("DefaultTaxRate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(5,4)")
+                        .HasDefaultValue(0.10m);
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FinalizedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FiscalYearStartDay")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<int>("FiscalYearStartMonth")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsFinalized")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<decimal>("OpeningCash")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OpeningEquity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AccountingSetup", "tbl");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Finance.BankAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AccountHolderName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("AccountNumber")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("BankCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("BankName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("OpeningBalance")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<DateTime?>("UpdatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("BankAccount", "tbl");
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.Finance.Expense", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2065,6 +2591,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("BankAccountId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedOnUtc")
                         .HasColumnType("datetime2");
@@ -2088,6 +2617,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<DateTime?>("ModifiedOnUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("PaymentMethod")
+                        .HasColumnType("int");
+
                     b.Property<Guid?>("RecordedByUserId")
                         .HasColumnType("uniqueidentifier");
 
@@ -2099,6 +2631,14 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<Guid?>("SourceVendorReturnId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("TaxAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal?>("TaxRate")
+                        .HasColumnType("decimal(5,4)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -2158,6 +2698,83 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.ToTable("ExpenseBudgets", "tbl");
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.Finance.FixedAsset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("AcquisitionCost")
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<DateTime>("AcquisitionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("CostCenter")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DeletedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("DisposedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("ResidualValue")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,0)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedOnUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UsefulLifeMonths")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("VendorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("VendorInvoiceNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("FixedAsset", "tbl");
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.GoodsReceipts.GoodsReceipt", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2214,6 +2831,13 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<Guid?>("VendorId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("VendorInvoiceDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("VendorInvoiceNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("_pictureIds")
                         .IsRequired()
@@ -2285,6 +2909,14 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("TaxAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal?>("TaxRate")
+                        .HasColumnType("decimal(5,4)");
 
                     b.Property<decimal?>("UnitCost")
                         .HasColumnType("decimal(18,2)");
@@ -3374,6 +4006,14 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<decimal>("QuantityReceived")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<decimal>("TaxAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(0m);
+
+                    b.Property<decimal?>("TaxRate")
+                        .HasColumnType("decimal(5,4)");
+
                     b.Property<decimal>("UnitCost")
                         .HasColumnType("decimal(18,2)");
 
@@ -4228,6 +4868,15 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryRunItem", b =>
+                {
+                    b.HasOne("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryRun", null)
+                        .WithMany("Items")
+                        .HasForeignKey("DeliveryRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.GoodsReceipts.GoodsReceiptItem", b =>
                 {
                     b.HasOne("NamEcommerce.Domain.Entities.GoodsReceipts.GoodsReceipt", null)
@@ -4476,6 +5125,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                 });
 
             modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNote", b =>
+                {
+                    b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryRun", b =>
                 {
                     b.Navigation("Items");
                 });

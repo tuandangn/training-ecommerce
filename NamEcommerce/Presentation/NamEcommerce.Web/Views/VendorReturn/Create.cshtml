@@ -83,7 +83,7 @@
                                     @for (var i = 0; i < Model.Items.Count; i++)
                                     {
                                         var item = Model.Items[i];
-                                        <tr>
+                                        <tr style="cursor:pointer">
                                             <td class="ps-3">
                                                 <div class="fw-medium">@item.ProductDisplayName</div>
                                                 @if (item.OriginalUnitCost.HasValue)
@@ -329,11 +329,15 @@
     </style>
 }
 
+@await Html.PartialAsync("_ItemEditOffcanvas")
+<partial name="_ItemEditModal" />
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script type="module">
         import VendorPicker from '/modules/VendorPicker.js';
         import ProductPicker from '/modules/ProductPicker.js';
+        import ItemEditor from '/modules/ItemEditor.js';
 
         // ── VendorPicker ──────────────────────────────────────────────────────────
         const pickerEl = document.getElementById('vendorPicker');
@@ -686,6 +690,7 @@
             const available = item.availableQty ?? (item.originalQty - item.alreadyReturnedQty);
             const unit = (item.unit || '').trim();
             const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
             tr.innerHTML = `
                 <td class="ps-3">
                     <div class="fw-medium">${item.productName}</div>
@@ -701,18 +706,18 @@
                 <td class="text-end text-muted small">${fmtQty(item.originalQty)}</td>
                 <td class="text-end text-muted small">${fmtQty(item.alreadyReturnedQty)}</td>
                 <td class="text-end text-muted small fw-medium ${available > 0 ? 'text-success' : 'text-danger'}">${fmtQty(available)}</td>
-                <td class="text-end">
-                    <input name="Items[${i}].RequestedQuantity" value="${available > 0 ? available : ''}"
-                           class="form-control form-control-sm text-end item-req-qty"
-                           data-decimal="quantity" data-decimals="${item.quantityDecimalPlaces ?? 0}" min="0.001" max="${available}" placeholder="0" />
+                <td class="text-end align-middle">
+                    <span class="fw-medium item-req-qty-display">${available > 0 ? fmtQty(available) : '—'}</span>
+                    <input type="hidden" name="Items[${i}].RequestedQuantity" value="${available > 0 ? available : 0}"
+                           class="item-req-qty" data-decimals="${item.quantityDecimalPlaces ?? 0}" />
                 </td>
-                <td class="text-end text-muted small">${origCost > 0 ? fmtCurrency(origCost) : '—'}</td>
-                <td class="text-end">
-                    <input name="Items[${i}].ReturnUnitCost" value="${origCost}"
-                           class="form-control form-control-sm text-end item-return-cost"
-                           data-decimal="currency" min="0" placeholder="0" />
+                <td class="text-end text-muted small align-middle">${origCost > 0 ? fmtCurrency(origCost) : '—'}</td>
+                <td class="text-end align-middle">
+                    <span class="text-muted item-return-cost-display">${origCost > 0 ? fmtCurrency(origCost) : '—'}</span>
+                    <input type="hidden" name="Items[${i}].ReturnUnitCost" value="${origCost}"
+                           class="item-return-cost" />
                 </td>
-                <td class="text-end item-subtotal text-muted small">—</td>
+                <td class="text-end item-subtotal text-muted small align-middle">—</td>
                 <td class="pe-2">
                     <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                         <i class="bi bi-trash"></i>
@@ -733,15 +738,23 @@
             if (existingRow) {
                 const qtyInput = existingRow.querySelector('.item-req-qty');
                 const currentQty = parseQuantity(qtyInput?.value);
-                qtyInput.value = currentQty > 0 ? String(currentQty + 1) : '1';
-                qtyInput.dispatchEvent(new Event('input', { bubbles: true }));
+                const newQty = currentQty > 0 ? currentQty + 1 : 1;
+                qtyInput.value = String(newQty);
+                const qtyDisplay = existingRow.querySelector('.item-req-qty-display');
+                if (qtyDisplay) qtyDisplay.textContent = fmtQty(newQty);
+                const costInput = existingRow.querySelector('.item-return-cost');
+                const cost = parseQuantity(costInput?.value) || 0;
+                const sub = existingRow.querySelector('.item-subtotal');
+                if (sub) sub.textContent = cost > 0 ? fmtCurrency(newQty * cost) : '—';
+                updateFooter();
                 return;
             }
 
             const i = rowIndex++;
             const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
             tr.innerHTML = `
-                <td class="ps-3">
+                <td class="ps-3 align-middle">
                     <div class="fw-medium">${escapeHtml(product.name ?? '')}</div>
                     <div class="text-muted small">${escapeHtml(product.unitMeasurement ?? '') || 'Khong ro don vi'}</div>
                     <input type="hidden" name="Items[${i}].ProductId" value="${product.id}" />
@@ -749,23 +762,23 @@
                     <input type="hidden" name="Items[${i}].OriginalUnitCost" value="" class="item-orig-cost" />
                     <input type="hidden" name="Items[${i}].QuantityDecimalPlaces" value="${product.quantityDecimalPlaces ?? 0}" />
                 </td>
-                <td class="text-center text-muted small">${escapeHtml(product.unitMeasurement ?? '')}</td>
-                <td class="text-end text-muted small">—</td>
-                <td class="text-end text-muted small">—</td>
-                <td class="text-end text-muted small">—</td>
-                <td class="text-end">
-                    <input name="Items[${i}].RequestedQuantity" value="1"
-                           class="form-control form-control-sm text-end item-req-qty"
-                           data-decimal="quantity" data-decimals="${product.quantityDecimalPlaces ?? 0}" min="0.001" placeholder="0" />
+                <td class="text-center text-muted small align-middle">${escapeHtml(product.unitMeasurement ?? '')}</td>
+                <td class="text-end text-muted small align-middle">—</td>
+                <td class="text-end text-muted small align-middle">—</td>
+                <td class="text-end text-muted small align-middle">—</td>
+                <td class="text-end align-middle">
+                    <span class="fw-medium item-req-qty-display">1</span>
+                    <input type="hidden" name="Items[${i}].RequestedQuantity" value="1"
+                           class="item-req-qty" data-decimals="${product.quantityDecimalPlaces ?? 0}" />
                 </td>
-                <td class="text-end text-muted small">—</td>
-                <td class="text-end">
-                    <input name="Items[${i}].ReturnUnitCost" value=""
-                           class="form-control form-control-sm text-end item-return-cost"
-                           data-decimal="currency" min="0" placeholder="0" />
+                <td class="text-end text-muted small align-middle">—</td>
+                <td class="text-end align-middle">
+                    <span class="text-muted item-return-cost-display">—</span>
+                    <input type="hidden" name="Items[${i}].ReturnUnitCost" value="0"
+                           class="item-return-cost" />
                 </td>
-                <td class="text-end item-subtotal text-muted small">—</td>
-                <td class="pe-2">
+                <td class="text-end item-subtotal text-muted small align-middle">—</td>
+                <td class="pe-2 align-middle">
                     <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none btn-remove-item">
                         <i class="bi bi-trash"></i>
                     </button>
@@ -803,16 +816,51 @@
             }
         });
 
-        tbody.addEventListener('input', e => {
-            if (e.target.matches('.item-req-qty, .item-return-cost')) {
-                const row = e.target.closest('tr');
-                const qty = parseQuantity(row.querySelector('.item-req-qty')?.value);
-                const cost = parseCurrency(row.querySelector('.item-return-cost')?.value);
-                const sub = row.querySelector('.item-subtotal');
-                if (sub) sub.textContent = fmtCurrency(qty * cost);
-                updateFooter();
-                if (e.target.matches('.item-req-qty')) debouncedValidate();
-            }
+        const itemEditor = new ItemEditor(
+            document.getElementById('itemEditOffcanvas'),
+            document.getElementById('itemEditModal'),
+            { priceLabel: 'Giá trả NCC' }
+        );
+
+        tbody.addEventListener('click', e => {
+            if (e.target.closest('.btn-remove-item')) return;
+            const row = e.target.closest('tr');
+            if (!row) return;
+
+            const name = row.querySelector('.fw-medium')?.textContent?.trim() ?? '';
+            const qtyInput = row.querySelector('.item-req-qty');
+            const costInput = row.querySelector('.item-return-cost');
+            const decimals = parseInt(qtyInput?.dataset.decimals ?? '0', 10);
+
+            itemEditor.open({
+                name,
+                quantity: DecimalFields.getValue(qtyInput),
+                unitPrice: costInput ? DecimalFields.getValue(costInput) : 0,
+                quantityDecimalPlaces: decimals,
+                priceLabel: 'Giá trả NCC'
+            }, {
+                onApply: (qty, price) => {
+                    const qtyFormatted = DecimalFields.formatQuantity(qty, decimals);
+                    qtyInput.value = qtyFormatted;
+                    const qtyDisplay = row.querySelector('.item-req-qty-display');
+                    if (qtyDisplay) qtyDisplay.textContent = qtyFormatted;
+                    if (costInput) {
+                        costInput.value = price;
+                        const costDisplay = row.querySelector('.item-return-cost-display');
+                        if (costDisplay) costDisplay.textContent = price > 0 ? fmtCurrency(price) : '—';
+                    }
+                    const sub = row.querySelector('.item-subtotal');
+                    if (sub) sub.textContent = fmtCurrency(qty * price);
+                    updateFooter();
+                    debouncedValidate();
+                },
+                onDelete: () => {
+                    row.remove();
+                    updateEmptyState();
+                    updateFooter();
+                    debouncedValidate();
+                }
+            });
         });
 
         // ── Validate warehouse stock ─────────────────────────────────────────────

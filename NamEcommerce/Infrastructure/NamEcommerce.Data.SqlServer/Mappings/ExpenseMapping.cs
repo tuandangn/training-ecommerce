@@ -14,6 +14,13 @@ public sealed class ExpenseMapping : IEntityTypeConfiguration<Expense>
         builder.Property(x => x.Amount).IsRequired().HasColumnType("decimal(18,2)");
         builder.Property(x => x.ExpenseType).IsRequired();
         builder.Property(x => x.IncurredDate).IsRequired();
+
+        builder.Property(x => x.TaxRate).HasColumnType("decimal(5,4)").IsRequired(false);
+        builder.Property(x => x.TaxAmount).HasColumnType("decimal(18,2)").IsRequired().HasDefaultValue(0m);
+        builder.Ignore(x => x.AmountExcludingTax);   // computed — không persist
+
+        builder.Property(x => x.PaymentMethod).IsRequired(false).HasConversion<int>();
+        builder.Property(x => x.BankAccountId).IsRequired(false);
         
         builder.Property(x => x.CreatedOnUtc).IsRequired();
         builder.Property(x => x.ModifiedOnUtc);

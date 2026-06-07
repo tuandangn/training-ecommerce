@@ -1,0 +1,163 @@
+@model DeliveryMobileRunModel
+@using System.Text.Json
+@using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
+@{
+    Layout = "_DeliveryMobileLayout";
+    ViewData["Title"] = Model.Run.Code;
+    var status = (DeliveryRunStatus)Model.Run.Status;
+    var statusClass = status == DeliveryRunStatus.ReadyForHandover
+        ? "mobile-status-ready"
+        : "mobile-status-active";
+    var expectedCashAmount = Model.Run.Items.Sum(item => item.CashCollectedAmount ?? item.AmountToCollect);
+    var deliveredCount = Model.Run.Items.Count(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered);
+    var cachePayload = JsonSerializer.Serialize(Model.Run, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+}
+
+<div class="mobile-topbar">
+    <div>
+        <h1 class="mobile-title">@Model.Run.Code</h1>
+        <p class="mobile-subtitle">@deliveredCount/@Model.Run.Items.Count phiếu đã giao</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary mobile-icon-button" aria-label="Quay lại">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+</div>
+
+<div class="mobile-card mb-3">
+    <div class="d-flex justify-content-between align-items-center gap-3">
+        <span class="mobile-status @statusClass">
+            <i class="bi @(status == DeliveryRunStatus.ReadyForHandover ? "bi-box-seam" : "bi-truck")"></i>
+            @Model.Run.StatusName
+        </span>
+        <strong>@expectedCashAmount.DisplayCurrencyWithSymbol()</strong>
+    </div>
+
+    <div class="mobile-stat-grid">
+        <div class="mobile-stat">
+            <div class="mobile-stat-label">Tiến độ</div>
+            <div class="mobile-stat-value">@deliveredCount/@Model.Run.Items.Count</div>
+        </div>
+        <div class="mobile-stat">
+            <div class="mobile-stat-label">Offline</div>
+            <div id="delivery-cache-status" class="mobile-stat-value @(Model.Run.DriverCachedOnUtc.HasValue ? "text-success" : "text-muted")">
+                @(Model.Run.DriverCachedOnUtc.HasValue ? "Đã cache" : "Đang kiểm tra")
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Run.PaperManifestIssued)
+    {
+        <div class="mobile-meta mt-3">
+            <i class="bi bi-printer me-1"></i>Quản kho đã in phiếu giấy dự phòng.
+        </div>
+    }
+</div>
+
+@foreach (var item in Model.Run.Items)
+{
+    var noteStatus = item.DeliveryNoteStatus.HasValue ? (DeliveryNoteStatus)item.DeliveryNoteStatus.Value : (DeliveryNoteStatus?)null;
+    var isDelivered = noteStatus == DeliveryNoteStatus.Delivered;
+    var cashCollectedAmount = item.CashCollectedAmount ?? item.AmountToCollect;
+
+    <article class="mobile-card mobile-route-card @(isDelivered ? "is-delivered" : null)">
+        <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
+            <div>
+                <div class="fw-bold">@item.CustomerName</div>
+                <div class="mobile-meta">@item.DeliveryNoteCode @(!string.IsNullOrWhiteSpace(item.OrderCode) ? $"· {item.OrderCode}" : "")</div>
+            </div>
+            @if (item.AmountToCollect > 0)
+            {
+                <span class="mobile-status mobile-status-muted">@item.AmountToCollect.DisplayCurrencyWithSymbol()</span>
+            }
+        </div>
+
+        <div class="mobile-address">
+            <i class="bi bi-geo-alt text-primary"></i>
+            <span>@item.ShippingAddress</span>
+        </div>
+
+        @if (isDelivered)
+        {
+            <div class="mobile-status mobile-status-success mt-3">
+                <i class="bi bi-check-circle"></i>
+                Đã giao
+                @if (item.AmountToCollect > 0)
+                {
+                    <span>· Đã thu @cashCollectedAmount.DisplayCurrencyWithSymbol()</span>
+                }
+            </div>
+        }
+        else
+        {
+            <form asp-action="CompleteDeliveryNote" method="post" enctype="multipart/form-data" class="delivery-complete-form mobile-proof-form" data-note-id="@item.DeliveryNoteId">
+                <input type="hidden" name="deliveryRunId" value="@Model.Run.Id" />
+                <input type="hidden" name="deliveryNoteId" value="@item.DeliveryNoteId" />
+                <input type="hidden" name="idempotencyKey" />
+                <input type="hidden" name="latitude" />
+                <input type="hidden" name="longitude" />
+                <input type="hidden" name="locationAddress" />
+
+                <div class="mb-2">
+                    <label class="form-label">Người nhận</label>
+                    <input type="text" name="receiverName" class="form-control" autocomplete="name" />
+                </div>
+                @if (item.AmountToCollect > 0)
+                {
+                    <div class="mb-2">
+                        <label class="form-label">Tiền đã thu</label>
+                        <div class="input-group">
+                            <input type="number" name="cashCollectedAmount" class="form-control mobile-money-input" min="0" step="1000" value="@item.AmountToCollect" inputmode="decimal" />
+                            <span class="input-group-text fw-bold">VND</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <input type="hidden" name="cashCollectedAmount" value="0" />
+                }
+                <div class="mb-2">
+                    <label class="form-label">Ảnh bằng chứng</label>
+                    <input type="file" name="proofFile" class="form-control" accept="image/*" capture="environment" required />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Ghi chú</label>
+                    <textarea name="note" class="form-control" rows="2"></textarea>
+                </div>
+                <button type="submit" class="btn btn-success mobile-action-button w-100">
+                    <i class="bi bi-check-circle me-1"></i>Đã giao
+                </button>
+                <div class="delivery-complete-status mobile-meta mt-2"></div>
+            </form>
+        }
+    </article>
+}
+
+<div class="mobile-sticky-actions">
+    <div class="d-grid gap-2">
+        <div class="d-grid gap-2">
+            <button type="button" id="delivery-sync-pending" class="btn btn-success mobile-action-button">
+                <i class="bi bi-cloud-arrow-up me-1"></i>Đồng bộ offline
+            </button>
+            <a asp-action="Run" asp-route-id="@Model.Run.Id" class="btn btn-primary mobile-action-button">
+                <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
+            </a>
+        </div>
+        <div id="delivery-pending-count" class="mobile-meta text-center"></div>
+        <div id="delivery-sync-status" class="mobile-meta text-center"></div>
+    </div>
+</div>
+
+<script type="application/json" id="delivery-run-payload">@Html.Raw(cachePayload)</script>
+
+@section Scripts {
+    <script type="module">
+        import { installDeliveryRunCache, installDeliveryCompletionForms, installDeliveryManualSync } from '/modules/DeliveryMobileCache.js';
+
+        installDeliveryRunCache({
+            runId: '@Model.Run.Id',
+            cacheUrl: '@Url.Action("Cache", "DeliveryMobile")'
+        });
+        installDeliveryCompletionForms();
+        installDeliveryManualSync();
+    </script>
+}

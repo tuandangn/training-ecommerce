@@ -8,6 +8,8 @@ public sealed record CustomerDto(Guid Id)
     public required string Address { get; init; }
     public string? Email { get; set; }
     public string? Note { get; set; }
+    public int Kind { get; set; }
+    public bool IsSystem { get; set; }
     public DateTime CreatedOnUtc { get; set; }
 }
 

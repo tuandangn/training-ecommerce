@@ -27,13 +27,13 @@ public sealed class OrderMapping : IEntityTypeConfiguration<Order>
         });
         builder.Property(o => o.CompletedOnUtc).IsRequired(false);
 
-        builder.Property(o => o.OrderSubTotal);
-        builder.Property(o => o.OrderTotal);
+        builder.Property(o => o.OrderSubTotal).HasColumnType("decimal(18,2)");
+        builder.Property(o => o.OrderTotal).HasColumnType("decimal(18,2)");
 
         builder.Property(o => o.CreatedByUserId);
         builder.Property(o => o.CreatedOnUtc);
         builder.Property(o => o.ExpectedShippingDateUtc);
-        builder.Property(o => o.OrderDiscount);
+        builder.Property(o => o.OrderDiscount).HasColumnType("decimal(18,2)")   ;
 
         builder.Property(o => o.CreatedByUsername).HasMaxLength(1000);
         builder.Property(o => o.Note);

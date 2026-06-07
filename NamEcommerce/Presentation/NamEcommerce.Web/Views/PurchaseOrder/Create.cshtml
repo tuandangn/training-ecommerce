@@ -22,7 +22,7 @@
     <div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
     <form method="post" id="createPurchaseOrderForm" asp-antiforgery="true">
         <div class="row g-3">
-            <div class="col-md-8">
+            <div class="col-lg-8">
                 <div class="content-card">
                     <div class="content-card-body-flush border-bottom pt-2">
                         <div class="content-card-header">
@@ -82,7 +82,7 @@
                                     <thead>
                                         <tr>
                                             <th class="ps-3">Sản phẩm</th>
-                                            <th class="text-center">Số lượng</th>
+                                            <th class="text-center d-none d-md-table-cell">Số lượng</th>
                                             <th class="text-end">Đơn giá</th>
                                             <th class="text-end d-none d-lg-table-cell">Thành tiền</th>
                                             <th></th>
@@ -92,53 +92,47 @@
                                         @for (var i = 0; i < Model.Items.Count; i++)
                                         {
                                             var item = Model.Items[i];
-                                            <tr id="row-@i" class="align-middle">
+                                            <tr id="row-@i" class="align-middle" style="cursor:pointer">
                                                 <td class="ps-3">
                                                     <div class="d-flex align-items-center gap-2">
                                                         @if (!string.IsNullOrEmpty(item.ProductDisplayPicture))
                                                         {
-                                                            <img src="@item.ProductDisplayPicture" class="rounded product-picture"
+                                                            <img src="@item.ProductDisplayPicture" class="rounded product-picture d-none d-lg-block"
                                                                  style="width:40px; height:40px; object-fit:cover;" alt="@item.ProductDisplayName" />
                                                         }
-                                                        else
-                                                        {
-                                                            <div class="d-flex align-items-center justify-content-center rounded bg-light"
-                                                                 style="width: 40px; height: 40px;">
-                                                                <i class="bi bi-image text-muted"></i>
-                                                            </div>
-                                                        }
-                                                        <div class="fw-medium product-name">@item.ProductDisplayName</div>
+                                                        <div>
+                                                            <div class="fw-medium product-name">@item.ProductDisplayName</div>
+                                                            <div class="text-muted small d-md-none">@item.Quantity.DisplayQuantity() × @item.UnitCost.DisplayCurrency() đ</div>
+                                                        </div>
                                                     </div>
                                                     <input type="text" class="visually-hidden product-id"
                                                            name="Items[@i].ProductId" value="@item.ProductId" data-val="true"
                                                            data-val-required="Vui lòng chọn hàng hóa." />
                                                     <input type="hidden" name="Items[@i].QuantityDecimalPlaces" value="@item.QuantityDecimalPlaces" />
+                                                    <input type="hidden" class="row-qty" name="Items[@i].Quantity" value="@item.Quantity"
+                                                           data-val="true" data-val-required="Vui lòng nhập số lượng."
+                                                           data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="@(item.QuantityDecimalPlaces > 0 ? "0.0001" : "1")"
+                                                           data-val-number="Số lượng phải là số" />
+                                                    <input type="hidden" class="row-price" name="Items[@i].UnitCost" value="@item.UnitCost"
+                                                           data-val="true" data-val-required="Vui lòng nhập đơn giá"
+                                                           data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
+                                                           data-val-number="Đơn giá phải là số" />
                                                     <span class="small text-danger" asp-validation-for="Items[i].ProductId"></span>
                                                     @if (item.AvailableVendors.Any())
                                                     {
                                                         <script type="application/json" class="available-vendors">@Html.Raw(Json.Serialize(item.AvailableVendors))</script>
                                                     }
                                                 </td>
-                                                <td class="text-end">
-                                                    <input name="Items[@i].Quantity" data-decimal="quantity" data-decimals="@item.QuantityDecimalPlaces"
-                                                           class="row-qty" value="@item.Quantity.DisplayQuantity()" autocomplete="off"
-                                                           data-val="true" data-val-required="Vui lòng nhập số lượng."
-                                                           data-val-range="Số lượng phải lớn hơn 0" data-val-range-min="@(item.QuantityDecimalPlaces > 0 ? "0.0001" : "1")"
-                                                           data-val-number="Số lượng phải là số" />
-                                                    <span class="small text-danger" asp-validation-for="Items[i].Quantity"></span>
+                                                <td class="text-center d-none d-md-table-cell align-middle">
+                                                    <span class="fw-medium">@item.Quantity.DisplayQuantity()</span>
                                                 </td>
-                                                <td class="text-end">
-                                                    <input name="Items[@i].UnitCost" data-decimal="currency"
-                                                           class="row-price" value="@item.UnitCost.DisplayCurrency()" autocomplete="off"
-                                                           data-val="true" data-val-required="Vui lòng nhập đơn giá"
-                                                           data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
-                                                           data-val-number="Đơn giá phải là số" />
-                                                    <span class="small text-danger" asp-validation-for="Items[i].UnitCost"></span>
+                                                <td class="text-end align-middle">
+                                                    <span class="text-muted">@item.UnitCost.DisplayCurrency() đ</span>
                                                 </td>
-                                                <td class="text-end fw-bold text-primary px-3 row-total text-nowrap d-none d-lg-table-cell">
-                                                    @item.ItemSubTotal.DisplayCurrency()
+                                                <td class="text-end fw-bold text-primary px-3 row-total text-nowrap d-none d-lg-table-cell align-middle">
+                                                    @item.ItemSubTotal.DisplayCurrency() đ
                                                 </td>
-                                                <td class="text-end pe-3 w-auto">
+                                                <td class="text-end pe-3 w-auto align-middle">
                                                     <button type="button"
                                                             class="btn-table-action danger border-0 bg-transparent shadow-none">
                                                         <i class="bi bi-trash"></i>
@@ -191,7 +185,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-lg-4">
                 <div class="content-card">
                     <div class="content-card-body">
                         <div id="productBrowser" data-vid="@Model.VendorId" data-col-class="col-12"></div>
@@ -201,6 +195,8 @@
         </div>
     </form>
 </div>
+<partial name="_ItemEditOffcanvas" />
+<partial name="_ItemEditModal" />
 <div class="modal fade" id="addProductModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">

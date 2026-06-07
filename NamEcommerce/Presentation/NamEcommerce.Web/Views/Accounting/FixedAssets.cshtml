@@ -1,0 +1,310 @@
+@using NamEcommerce.Application.Contracts.Dtos.Finance
+@model IReadOnlyList<FixedAssetAppDto>
+@{
+    ViewData[ViewConstants.PageTitle] = "Tài sản cố định";
+}
+
+@section TitleSection {
+    <h1 class="topbar-page-title">Tài sản cố định</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active">Kế toán — TSCĐ</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div class="d-flex gap-2">
+        <a asp-action="FixedAssets" class="btn btn-sm @(ViewContext.RouteData.Values["action"]?.ToString() == "FixedAssets" && !Context.Request.Query.ContainsKey("status") ? "btn-primary" : "btn-outline-secondary")">Tất cả</a>
+        <a asp-action="FixedAssets" asp-route-status="1" class="btn btn-sm btn-outline-success">Đang dùng</a>
+        <a asp-action="FixedAssets" asp-route-status="2" class="btn btn-sm btn-outline-secondary">Hết KH</a>
+        <a asp-action="FixedAssets" asp-route-status="3" class="btn btn-sm btn-outline-danger">Đã thanh lý</a>
+    </div>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalCreate">
+        <i class="bi bi-plus-lg me-1"></i> Thêm TSCĐ
+    </button>
+</div>
+
+<div class="content-card">
+    <table class="table table-hover mb-0">
+        <thead class="table-light">
+            <tr>
+                <th>Mã</th>
+                <th>Tên TSCĐ</th>
+                <th>Loại</th>
+                <th class="text-end">Nguyên giá</th>
+                <th class="text-end">KH/tháng</th>
+                <th class="text-end">KH lũy kế</th>
+                <th class="text-end">Còn lại</th>
+                <th>Trạng thái</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in Model)
+            {
+                <tr>
+                    <td class="text-muted small">@a.Code</td>
+                    <td>
+                        <a href="#" class="fw-semibold text-decoration-none link-dark"
+                           data-bs-toggle="modal" data-bs-target="#modalSchedule"
+                           data-id="@a.Id" data-name="@a.Name">@a.Name</a>
+                        @if (!string.IsNullOrEmpty(a.Description))
+                        {
+                            <div class="text-muted small">@a.Description</div>
+                        }
+                    </td>
+                    <td class="small">@a.CategoryDisplay</td>
+                    <td class="text-end">@a.AcquisitionCost.ToString("N0")</td>
+                    <td class="text-end">@a.MonthlyDepreciation.ToString("N0")</td>
+                    <td class="text-end">@a.AccumulatedDepreciation.ToString("N0")</td>
+                    <td class="text-end fw-semibold">@a.BookValue.ToString("N0")</td>
+                    <td>
+                        @if (a.Status == 1)
+                        {
+                            <span class="badge bg-success-subtle text-success">Đang dùng</span>
+                        }
+                        else if (a.Status == 2)
+                        {
+                            <span class="badge bg-secondary-subtle text-secondary">Hết KH</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger-subtle text-danger">Đã thanh lý</span>
+                        }
+                    </td>
+                    <td class="text-end">
+                        @if (a.Status != 3)
+                        {
+                            <button class="btn btn-sm btn-outline-danger btn-dispose"
+                                    data-id="@a.Id" data-name="@a.Name"
+                                    data-bookvalue="@a.BookValue.ToString("N0")">
+                                Thanh lý
+                            </button>
+                        }
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-4">Chưa có tài sản cố định nào.</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- Modal Thêm TSCĐ -->
+<div class="modal fade" id="modalCreate" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thêm tài sản cố định</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Tên TSCĐ <span class="text-danger">*</span></label>
+                        <input id="c_name" class="form-control" placeholder="VD: Xe tải Hino 3.5 tấn" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Loại</label>
+                        <select id="c_category" class="form-select">
+                            <option value="1">Phương tiện vận chuyển</option>
+                            <option value="2">Máy móc thiết bị</option>
+                            <option value="3">Dụng cụ nội thất</option>
+                            <option value="4">Máy tính & thiết bị số</option>
+                            <option value="5">Khác</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Mô tả</label>
+                        <input id="c_description" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Trung tâm chi phí</label>
+                        <select id="c_costCenter" class="form-select">
+                            <option value="1">Bán hàng (TK 641)</option>
+                            <option value="2">QLDN (TK 642)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Ngày mua <span class="text-danger">*</span></label>
+                        <input id="c_acquisitionDate" type="date" class="form-control" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Nguyên giá (đ) <span class="text-danger">*</span></label>
+                        <input id="c_acquisitionCost" type="number" class="form-control" min="1" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Giá trị thu hồi ước tính (đ)</label>
+                        <input id="c_residualValue" type="number" class="form-control" value="0" min="0" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Thời gian sử dụng (tháng) <span class="text-danger">*</span></label>
+                        <input id="c_usefulLifeMonths" type="number" class="form-control" min="1" />
+                    </div>
+                    <div class="col-12">
+                        <div class="alert alert-info py-2 small" id="depreciationPreview" style="display:none">
+                            KH tháng: <strong id="previewMonthly"></strong> đ &nbsp;|&nbsp;
+                            Bắt đầu từ: <strong id="previewStart"></strong>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Số hóa đơn mua</label>
+                        <input id="c_vendorInvoiceNumber" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Ghi chú</label>
+                        <input id="c_note" class="form-control" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="btnSaveAsset">Lưu</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Lịch khấu hao -->
+<div class="modal fade" id="modalSchedule" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Lịch khấu hao: <span id="scheduleName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="scheduleBody">
+                <div class="text-center py-4"><span class="spinner-border spinner-border-sm"></span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thanh lý -->
+<div class="modal fade" id="modalDispose" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Thanh lý TSCĐ</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tài sản: <strong id="disposeName"></strong></p>
+                <p class="text-danger small">Giá trị còn lại <strong id="disposeBookValue"></strong> đ sẽ được ghi nhận là chi phí (TK 811).</p>
+                <div class="mb-3">
+                    <label class="form-label">Ngày thanh lý <span class="text-danger">*</span></label>
+                    <input id="disposeDate" type="date" class="form-control" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmDispose">Xác nhận thanh lý</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Depreciation preview
+        function updatePreview() {
+            const cost = parseFloat(document.getElementById('c_acquisitionCost').value) || 0;
+            const residual = parseFloat(document.getElementById('c_residualValue').value) || 0;
+            const months = parseInt(document.getElementById('c_usefulLifeMonths').value) || 0;
+            const dateVal = document.getElementById('c_acquisitionDate').value;
+            const preview = document.getElementById('depreciationPreview');
+
+            if (cost > 0 && months > 0 && dateVal) {
+                const monthly = Math.round((cost - residual) / months);
+                const d = new Date(dateVal);
+                const startMonth = d.getDate() === 1 ? d : new Date(d.getFullYear(), d.getMonth() + 1, 1);
+                document.getElementById('previewMonthly').textContent = monthly.toLocaleString('vi-VN');
+                document.getElementById('previewStart').textContent = `01/${String(startMonth.getMonth() + 1).padStart(2, '0')}/${startMonth.getFullYear()}`;
+                preview.style.display = '';
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
+        ['c_acquisitionCost', 'c_residualValue', 'c_usefulLifeMonths', 'c_acquisitionDate']
+            .forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
+
+        // Create asset
+        document.getElementById('btnSaveAsset').addEventListener('click', async function () {
+            const payload = {
+                name: document.getElementById('c_name').value,
+                description: document.getElementById('c_description').value || null,
+                category: parseInt(document.getElementById('c_category').value),
+                costCenter: parseInt(document.getElementById('c_costCenter').value),
+                acquisitionDate: document.getElementById('c_acquisitionDate').value,
+                acquisitionCost: parseFloat(document.getElementById('c_acquisitionCost').value) || 0,
+                residualValue: parseFloat(document.getElementById('c_residualValue').value) || 0,
+                usefulLifeMonths: parseInt(document.getElementById('c_usefulLifeMonths').value) || 0,
+                vendorInvoiceNumber: document.getElementById('c_vendorInvoiceNumber').value || null,
+                note: document.getElementById('c_note').value || null
+            };
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            const resp = await fetch('@Url.Action("CreateFixedAsset")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token ?? '' },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            if (data.success) location.reload();
+            else alert(data.message || 'Có lỗi xảy ra.');
+        });
+
+        // Schedule modal
+        document.getElementById('modalSchedule').addEventListener('show.bs.modal', async function (e) {
+            const btn = e.relatedTarget;
+            const id = btn.getAttribute('data-id');
+            const name = btn.getAttribute('data-name');
+            document.getElementById('scheduleName').textContent = name;
+            document.getElementById('scheduleBody').innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm"></span></div>';
+
+            const resp = await fetch('@Url.Action("FixedAssetSchedule")' + '?id=' + id);
+            const rows = await resp.json();
+            let html = '<table class="table table-sm table-bordered mb-0"><thead class="table-light"><tr><th>Tháng/Năm</th><th class="text-end">KH tháng</th><th class="text-end">KH lũy kế</th><th class="text-end">Còn lại</th></tr></thead><tbody>';
+            rows.forEach(r => {
+                html += `<tr><td>${String(r.month).padStart(2, '0')}/${r.year}</td><td class="text-end">${r.depreciationAmount.toLocaleString('vi-VN')}</td><td class="text-end">${r.cumulativeDepreciation.toLocaleString('vi-VN')}</td><td class="text-end">${r.bookValue.toLocaleString('vi-VN')}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('scheduleBody').innerHTML = html;
+        });
+
+        // Dispose
+        let disposeId = null;
+        document.querySelectorAll('.btn-dispose').forEach(btn => {
+            btn.addEventListener('click', function () {
+                disposeId = this.getAttribute('data-id');
+                document.getElementById('disposeName').textContent = this.getAttribute('data-name');
+                document.getElementById('disposeBookValue').textContent = this.getAttribute('data-bookvalue');
+                document.getElementById('disposeDate').value = new Date().toISOString().split('T')[0];
+                new bootstrap.Modal(document.getElementById('modalDispose')).show();
+            });
+        });
+
+        document.getElementById('btnConfirmDispose').addEventListener('click', async function () {
+            if (!disposeId) return;
+            const dateVal = document.getElementById('disposeDate').value;
+            if (!dateVal) { alert('Vui lòng nhập ngày thanh lý.'); return; }
+            const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            const resp = await fetch('@Url.Action("DisposeFixedAsset")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token ?? '' },
+                body: JSON.stringify({ id: disposeId, disposedOnUtc: dateVal + 'T00:00:00Z' })
+            });
+            const data = await resp.json();
+            if (data.success) location.reload();
+            else alert(data.message || 'Có lỗi xảy ra.');
+        });
+    </script>
+}

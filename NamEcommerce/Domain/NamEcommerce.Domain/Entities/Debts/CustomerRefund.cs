@@ -58,6 +58,7 @@ public sealed record CustomerRefund : AppAggregateEntity
     public CustomerRefundStatus Status { get; private set; }
 
     public PaymentMethod? PaymentMethod { get; private set; }
+    public Guid? BankAccountId { get; private set; }
     public string? Note { get; private set; }
 
     public DateTime? RefundedOnUtc { get; private set; }

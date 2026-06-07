@@ -1,0 +1,213 @@
+@model DeliveryRunDetailsModel
+@using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
+@{
+    ViewData["Title"] = "Chi tiết chuyến giao " + Model.Code;
+    var status = (DeliveryRunStatus)Model.Status;
+    var statusTuple = status switch
+    {
+        DeliveryRunStatus.ReadyForHandover => ("info", "bi-box-seam"),
+        DeliveryRunStatus.HandedToDriver => ("warning", "bi-truck"),
+        DeliveryRunStatus.Closed => ("success", "bi-check-circle-fill"),
+        DeliveryRunStatus.Cancelled => ("danger", "bi-x-circle"),
+        _ => ("secondary", "bi-question-circle")
+    };
+    var canManageDeliveryRun = User.IsInRole(SystemUserRoleNames.Admin)
+        || User.IsInRole(SystemUserRoleNames.WarehouseManager);
+    var canConfirmDeliveryRunCashHandover = User.IsInRole(SystemUserRoleNames.Admin)
+        || User.IsInRole(SystemUserRoleNames.Cashier);
+    var offlineReady = Model.DriverCachedOnUtc.HasValue || Model.PaperManifestIssued;
+    var canIssuePaperManifest = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && !Model.PaperManifestIssued;
+    var canHandOver = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && offlineReady;
+    var canClose = canManageDeliveryRun && status == DeliveryRunStatus.HandedToDriver;
+    var canCancel = canManageDeliveryRun && status is not DeliveryRunStatus.Closed and not DeliveryRunStatus.Cancelled;
+    var expectedCashAmount = Model.Items
+        .Where(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered)
+        .Sum(item => item.CashCollectedAmount ?? item.AmountToCollect);
+    var totalAmountToCollect = Model.Items.Sum(item => item.AmountToCollect);
+    var canConfirmCashHandover = canConfirmDeliveryRunCashHandover
+        && expectedCashAmount > 0
+        && status is not DeliveryRunStatus.ReadyForHandover and not DeliveryRunStatus.Cancelled
+        && !Model.CashHandoverConfirmedOnUtc.HasValue;
+}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-header-title d-flex align-items-center gap-2">
+            @Model.Code
+            <span class="status-badge @statusTuple.Item1"><i class="bi @statusTuple.Item2 me-1"></i>@Model.StatusName</span>
+        </h1>
+        <p class="page-header-subtitle">
+            <a asp-action="List" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Trở về danh sách</a>
+        </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2 justify-content-end">
+        @if (Model.PaperManifestIssued && canManageDeliveryRun)
+        {
+            <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-outline-secondary">
+                <i class="bi bi-printer me-1"></i>In phiếu giấy
+            </a>
+        }
+        else if (canIssuePaperManifest)
+        {
+            <form asp-action="IssuePaperManifest" method="post" target="_blank">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button type="submit" class="btn btn-outline-secondary">
+                    <i class="bi bi-printer me-1"></i>In phiếu giấy
+                </button>
+            </form>
+        }
+        @if (canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover)
+        {
+            <form asp-action="HandOver" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button type="submit" class="btn btn-primary" disabled="@(!canHandOver)" title="@(!canHandOver ? "Cần cache app hoặc in phiếu giấy trước" : null)">
+                    <i class="bi bi-truck me-1"></i>Bàn giao
+                </button>
+            </form>
+        }
+        @if (canClose)
+        {
+            <form asp-action="Close" method="post">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle me-1"></i>Đóng chuyến
+                </button>
+            </form>
+        }
+        @if (canCancel)
+        {
+            <form asp-action="Cancel" method="post" onsubmit="return confirm('Hủy chuyến giao này?');">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button type="submit" class="btn btn-outline-danger">
+                    <i class="bi bi-x-circle me-1"></i>Hủy chuyến
+                </button>
+            </form>
+        }
+    </div>
+</div>
+
+@if (status == DeliveryRunStatus.ReadyForHandover && !offlineReady)
+{
+    <div class="alert alert-warning d-flex align-items-center gap-2">
+        <i class="bi bi-exclamation-triangle fs-5"></i>
+        <div>Cần người giao mở app để cache chuyến, hoặc quản kho in phiếu giấy dự phòng trước khi bàn giao.</div>
+    </div>
+}
+
+<div class="row g-3 mb-3">
+    <div class="col-lg-4">
+        <div class="content-card h-100">
+            <h5 class="fw-bold mb-3"><i class="bi bi-person-check me-2 text-primary"></i>Người giao</h5>
+            <div class="fw-bold fs-5">@Model.AssignedDeliveryFullName</div>
+            <div class="text-muted">@Model.AssignedDeliveryUsername</div>
+            @if (Model.HandedOverOnUtc.HasValue)
+            {
+                <hr />
+                <div class="small text-muted text-uppercase fw-bold">Đã bàn giao</div>
+                <div>@Model.HandedOverOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+            }
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="content-card h-100">
+            <h5 class="fw-bold mb-3"><i class="bi bi-wifi-off me-2 text-primary"></i>Chuẩn bị offline</h5>
+            <div class="d-flex justify-content-between mb-2">
+                <span class="text-muted">App đã cache</span>
+                <span class="fw-bold @(Model.DriverCachedOnUtc.HasValue ? "text-success" : "text-muted")">
+                    @(Model.DriverCachedOnUtc.HasValue ? "Có" : "Chưa")
+                </span>
+            </div>
+            @if (Model.DriverCachedOnUtc.HasValue)
+            {
+                <div class="small text-muted mb-2">@Model.DriverCachedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+            }
+            <div class="d-flex justify-content-between">
+                <span class="text-muted">Phiếu giấy</span>
+                <span class="fw-bold @(Model.PaperManifestIssued ? "text-success" : "text-muted")">
+                    @(Model.PaperManifestIssued ? "Đã in" : "Chưa in")
+                </span>
+            </div>
+            @if (Model.PaperManifestIssuedOnUtc.HasValue)
+            {
+                <div class="small text-muted">@Model.PaperManifestIssuedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+            }
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="content-card h-100">
+            <h5 class="fw-bold mb-3"><i class="bi bi-cash-stack me-2 text-primary"></i>Tiền đã thu</h5>
+            <div class="display-6 fw-bold">@expectedCashAmount.DisplayCurrencyWithSymbol()</div>
+            <div class="text-muted">COD chuyến: @totalAmountToCollect.DisplayCurrencyWithSymbol()</div>
+            @if (Model.CashHandoverConfirmedOnUtc.HasValue)
+            {
+                <hr />
+                <div class="small text-muted text-uppercase fw-bold">Thủ quỹ đã nhận</div>
+                <div class="fw-bold text-success">@((Model.CashHandoverAmount ?? 0m).DisplayCurrencyWithSymbol())</div>
+                <div class="small text-muted">@Model.CashHandoverConfirmedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                @if (!string.IsNullOrWhiteSpace(Model.CashHandoverConfirmedByFullName))
+                {
+                    <div class="small text-muted">@Model.CashHandoverConfirmedByFullName</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(Model.CashHandoverNote))
+                {
+                    <div class="small mt-2">@Model.CashHandoverNote</div>
+                }
+            }
+            else if (canConfirmCashHandover)
+            {
+                <hr />
+                <form asp-action="ConfirmCashHandover" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <label class="form-label small fw-bold text-muted text-uppercase">Tiền thủ quỹ nhận</label>
+                    <input type="number" name="amount" class="form-control mb-2" min="0" step="1000" value="@expectedCashAmount" />
+                    <textarea name="note" class="form-control mb-2" rows="2" placeholder="Ghi chú bàn giao tiền"></textarea>
+                    <button type="submit" class="btn btn-outline-success w-100">
+                        <i class="bi bi-cash-coin me-1"></i>Xác nhận nhận tiền
+                    </button>
+                </form>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Note))
+            {
+                <hr />
+                <div class="small text-muted text-uppercase fw-bold">Ghi chú</div>
+                <div>@Model.Note</div>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0 fw-bold"><i class="bi bi-list-check me-2 text-primary"></i>Phiếu trong chuyến</h5>
+        <span class="badge bg-light text-dark">@Model.Items.Count phiếu</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table data-table align-middle">
+            <thead>
+                <tr>
+                    <th class="ps-4">Mã PXK</th>
+                    <th>Đơn hàng</th>
+                    <th>Khách hàng</th>
+                    <th>Địa chỉ giao</th>
+                    <th class="text-end">Tiền COD</th>
+                    <th class="text-end">Đã thu</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Items)
+                {
+                    <tr>
+                        <td class="ps-4">
+                            <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@item.DeliveryNoteId" class="fw-bold text-decoration-none">@item.DeliveryNoteCode</a>
+                        </td>
+                        <td>@item.OrderCode</td>
+                        <td class="fw-medium">@item.CustomerName</td>
+                        <td>@item.ShippingAddress</td>
+                        <td class="text-end fw-medium">@item.AmountToCollect.DisplayCurrencyWithSymbol()</td>
+                        <td class="text-end fw-medium">@((item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered ? item.CashCollectedAmount ?? item.AmountToCollect : 0m).DisplayCurrencyWithSymbol())</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

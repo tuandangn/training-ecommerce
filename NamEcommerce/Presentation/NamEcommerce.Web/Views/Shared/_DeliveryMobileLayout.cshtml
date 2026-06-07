@@ -1,0 +1,257 @@
+@{
+    var title = ViewData["Title"] as string ?? "Giao hàng";
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>@title - @Information.Name</title>
+    <link rel="manifest" href="~/delivery-mobile.webmanifest" />
+    <meta name="theme-color" content="#4F46E5" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons-1.13.1/bootstrap-icons.min.css" />
+    <style>
+        :root {
+            --mobile-bg: #f8fafc;
+            --mobile-surface: #ffffff;
+            --mobile-surface-soft: #f1f5f9;
+            --mobile-text: #0f172a;
+            --mobile-muted: #64748b;
+            --mobile-border: #e2e8f0;
+            --mobile-primary: #4f46e5;
+            --mobile-primary-dark: #4338ca;
+            --mobile-success: #10b981;
+            --mobile-warning: #f59e0b;
+            --mobile-danger: #ef4444;
+            --mobile-radius: 8px;
+            --mobile-shadow: 0 10px 28px rgba(15, 23, 42, .07);
+        }
+        body {
+            margin: 0;
+            background: var(--mobile-bg);
+            color: var(--mobile-text);
+            font-family: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+        .mobile-shell {
+            min-height: 100vh;
+            width: min(100%, 520px);
+            margin: 0 auto;
+            padding: 16px;
+            padding-bottom: calc(28px + env(safe-area-inset-bottom));
+        }
+        .mobile-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .mobile-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0;
+            line-height: 1.1;
+            letter-spacing: 0;
+        }
+        .mobile-subtitle {
+            color: var(--mobile-muted);
+            font-size: 13px;
+            margin: 4px 0 0;
+        }
+        .mobile-card {
+            background: var(--mobile-surface);
+            border: 1px solid var(--mobile-border);
+            border-radius: var(--mobile-radius);
+            padding: 16px;
+            box-shadow: var(--mobile-shadow);
+        }
+        .mobile-card + .mobile-card {
+            margin-top: 12px;
+        }
+        .mobile-meta {
+            color: var(--mobile-muted);
+            font-size: 13px;
+        }
+        .mobile-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border-radius: 999px;
+            padding: 4px 9px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .mobile-status-ready {
+            background: #eef2ff;
+            color: var(--mobile-primary);
+        }
+        .mobile-status-active {
+            background: #fffbeb;
+            color: #92400e;
+        }
+        .mobile-status-success {
+            background: #ecfdf5;
+            color: #047857;
+        }
+        .mobile-status-muted {
+            background: var(--mobile-surface-soft);
+            color: var(--mobile-muted);
+        }
+        .mobile-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .mobile-stat {
+            background: var(--mobile-surface-soft);
+            border: 1px solid var(--mobile-border);
+            border-radius: var(--mobile-radius);
+            padding: 10px 12px;
+        }
+        .mobile-stat-label {
+            color: var(--mobile-muted);
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .mobile-stat-value {
+            color: var(--mobile-text);
+            font-size: 16px;
+            font-weight: 800;
+            margin-top: 2px;
+        }
+        .mobile-route-card {
+            position: relative;
+            overflow: hidden;
+            padding-left: 18px;
+        }
+        .mobile-route-card::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 4px;
+            background: var(--mobile-primary);
+        }
+        .mobile-route-card.is-delivered::before {
+            background: var(--mobile-success);
+        }
+        .mobile-route-card > * {
+            position: relative;
+        }
+        .mobile-address {
+            display: flex;
+            gap: 8px;
+            color: #334155;
+            line-height: 1.45;
+        }
+        .mobile-proof-form {
+            border-top: 1px solid var(--mobile-border);
+            margin-top: 14px;
+            padding-top: 14px;
+        }
+        .mobile-proof-form .form-label {
+            color: var(--mobile-muted);
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .mobile-proof-form .form-control {
+            min-height: 44px;
+            border-color: var(--mobile-border);
+            border-radius: var(--mobile-radius);
+        }
+        .mobile-proof-form .form-control:focus {
+            border-color: var(--mobile-primary);
+            box-shadow: 0 0 0 .2rem rgba(79, 70, 229, .12);
+        }
+        .mobile-money-input {
+            font-size: 20px;
+            font-weight: 800;
+            text-align: right;
+        }
+        .mobile-action-button {
+            min-height: 48px;
+            border-radius: var(--mobile-radius);
+            font-weight: 800;
+        }
+        .mobile-icon-button {
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--mobile-radius);
+        }
+        .mobile-empty {
+            text-align: center;
+            padding: 36px 14px;
+        }
+        .mobile-empty-icon {
+            width: 52px;
+            height: 52px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--mobile-radius);
+            background: #eef2ff;
+            color: var(--mobile-primary);
+            font-size: 26px;
+            margin-bottom: 14px;
+        }
+        .mobile-sticky-actions {
+            position: sticky;
+            bottom: 0;
+            z-index: 5;
+            margin: 16px -16px 0;
+            padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+            background: rgba(248, 250, 252, .94);
+            border-top: 1px solid rgba(226, 232, 240, .9);
+            backdrop-filter: blur(12px);
+        }
+        .btn-primary,
+        .btn-success {
+            border-radius: var(--mobile-radius);
+            font-weight: 800;
+        }
+        .btn-primary {
+            background: var(--mobile-primary);
+            border-color: var(--mobile-primary);
+        }
+        .btn-primary:hover,
+        .btn-primary:focus {
+            background: var(--mobile-primary-dark);
+            border-color: var(--mobile-primary-dark);
+        }
+        .btn-success {
+            background: var(--mobile-success);
+            border-color: var(--mobile-success);
+        }
+        @@media (max-width: 360px) {
+            .mobile-shell {
+                padding-inline: 12px;
+            }
+            .mobile-title {
+                font-size: 21px;
+            }
+            .mobile-stat-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    @await RenderSectionAsync(ViewConstants.StyleSection, required: false)
+</head>
+<body>
+    <main class="mobile-shell">
+        @RenderBody()
+    </main>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/delivery-mobile-sw.js');
+        }
+    </script>
+    @await RenderSectionAsync(ViewConstants.ScriptSection, required: false)
+</body>
+</html>

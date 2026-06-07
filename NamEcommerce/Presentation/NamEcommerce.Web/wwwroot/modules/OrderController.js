@@ -3,6 +3,7 @@ import { apiGet, apiPost } from "/modules/ajax-helper.js";
 import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductPicker from "/modules/ProductPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
+import ItemEditor from "/modules/ItemEditor.js";
 
 class Customer {
     constructor({ id, name, phone, address }) {
@@ -60,6 +61,7 @@ export default class OrderController {
     #state;
 
     #addItemController;
+    #itemEditor;
 
     #productBrowser;
     #productPicker;
@@ -69,6 +71,12 @@ export default class OrderController {
 
     constructor() {
         this.#addItemController = new AddItemController(() => getEl('CustomerId')?.value ?? '');
+
+        const offcanvasEl = document.getElementById('itemEditOffcanvas');
+        const modalEl = document.getElementById('itemEditModal');
+        if (offcanvasEl || modalEl) {
+            this.#itemEditor = new ItemEditor(offcanvasEl, modalEl);
+        }
 
         this.#bindProductPicker();
         this.#bindAddItemForm();
@@ -87,7 +95,8 @@ export default class OrderController {
                 {
                     colClass: browserEl.dataset.colClass,
                     initialShow: true,
-                    allowCreateNew: true
+                    allowCreateNew: true,
+                    checkProduct: this.#isValidProduct
                 }
             );
             this.#productBrowser.init();
@@ -117,7 +126,6 @@ export default class OrderController {
     }
 
     #render() {
-        console.count('render');
         this.#renderSummary();
         this.#renderCustomer();
         this.#renderItems();
@@ -206,48 +214,42 @@ export default class OrderController {
         const { productInfo: p, quantity, unitPrice } = item;
         const row = document.createElement('tr');
         row.id = `row-${index}`;
-        row.className = 'align-top';
+        row.style.cursor = 'pointer';
         row.innerHTML = `
-            <td class="ps-4">
+            <td class="ps-4 align-middle">
                 <div class="d-flex align-items-center gap-3">
-                    <div class="text-center d-none d-lg-block" style="min-width:45px;">
-                        ${p.picture
-                ? `<img src="${p.picture}" class="img-fluid img-thumbnail product-picture" style="width:45px;" alt="${p.name}" />`
-                : '<i class="bi bi-image fs-4 text-muted"></i>'
-            }
-                    </div>
+                    ${p.picture
+                        ? `<img src="${p.picture}" class="rounded object-fit-cover product-picture d-none d-lg-block" style="width:40px;height:40px;" alt="" />`
+                        : ''
+                    }
                     <div>
-                        <div class="fw-bold text-dark text-nowrap product-name">${p.name}</div>
+                        <div class="fw-medium product-name">${escapeHtml(p.name)}</div>
+                        <div class="text-muted small d-md-none">
+                            ${DecimalFields.formatQuantity(quantity, p.quantityDecimalPlaces ?? 0)} × ${DecimalFields.formatCurrency(unitPrice)} đ
+                        </div>
                     </div>
                 </div>
                 <input type="text" class="visually-hidden product-id" name="Items[${index}].ProductId" value="${p.id}"
                     data-val="true" data-val-required="Vui lòng chọn hàng hóa." />
                 <input type="hidden" name="Items[${index}].QuantityDecimalPlaces" value="${p.quantityDecimalPlaces ?? 0}" />
+                <input type="hidden" class="row-qty" name="Items[${index}].Quantity" value="${quantity}"
+                    data-val="true" data-val-required="Vui lòng nhập số lượng."
+                    data-val-range="Số lượng phải lớn hơn 0."
+                    data-val-range-min="${(p.quantityDecimalPlaces ?? 0) > 0 ? '0.001' : '1'}"
+                    data-val-number="Số lượng không đúng." />
+                <input type="hidden" class="row-price" name="Items[${index}].UnitPrice" value="${unitPrice}"
+                    data-val="true" data-val-required="Vui lòng nhập đơn giá"
+                    data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
+                    data-val-number="Đơn giá phải là số" />
                 <span class="small text-danger field-validation-valid"
                     data-valmsg-for="Items[${index}].ProductId"
                     data-valmsg-replace="true"></span>
             </td>
-            <td class="text-center">
-                <input name="Items[${index}].Quantity" value="${quantity}"
-                    class="form-control row-qty"
-                    data-decimal="quantity" data-decimals="${p.quantityDecimalPlaces ?? 0}" data-val="true"
-                    data-val-required="Vui lòng nhập số lượng."
-                    data-val-range="Số lượng phải lớn hơn 0."
-                    data-val-range-min="${(p.quantityDecimalPlaces ?? 0) > 0 ? '0.001' : '1'}"
-                    data-val-number="Số lượng không đúng." />
-                <span class="small text-danger field-validation-valid"
-                    data-valmsg-for="Items[${index}].Quantity"
-                    data-valmsg-replace="true"></span>
+            <td class="text-center d-none d-md-table-cell align-middle">
+                <span class="fw-medium">${DecimalFields.formatQuantity(quantity, p.quantityDecimalPlaces ?? 0)}</span>
             </td>
-            <td class="text-end">
-                <input name="Items[${index}].UnitPrice" value="${unitPrice}"
-                    class="form-control row-price" data-decimal="currency"
-                    data-val="true" data-val-required="Vui lòng nhập đơn giá"
-                    data-val-range="Đơn giá phải lớn hơn 0" data-val-range-min="0.1"
-                    data-val-number="Đơn giá phải là số"  />
-                <span class="small text-danger field-validation-valid"
-                    data-valmsg-for="Items[${index}].UnitPrice"
-                    data-valmsg-replace="true"></span>
+            <td class="text-end align-middle">
+                <span class="text-muted">${DecimalFields.formatCurrency(unitPrice)} đ</span>
             </td>
             <td class="text-end fw-bold text-primary px-3 row-total text-nowrap d-none d-lg-table-cell align-middle">
                 ${DecimalFields.formatCurrency(item.lineTotal)} đ
@@ -260,42 +262,17 @@ export default class OrderController {
             </td>`;
 
         container.appendChild(row);
-        DecimalFields.autoWrap(row);
 
-        // Events
+        row.addEventListener('click', (e) => {
+            if (e.target.closest('.orderItemRemove')) return;
+            this.#openEditorForIndex(index);
+        });
+
         row.querySelector('.orderItemRemove').addEventListener('click', () => {
             this.#setState({
                 items: this.#state.items.filter((_, i) => i !== index),
             });
         });
-
-        const inputQuantity = row.querySelector('.row-qty');
-        const inputUnitPrice = row.querySelector('.row-price');
-
-        var inputQtyChangeDebounced = debounce((e) => {
-            const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
-            const newUnitPrice = parseNumber(DecimalFields.stripFormatting(inputUnitPrice.value, 0), 0);
-            this.#updateItem(index, { quantity: newQuantity, unitPrice: newUnitPrice });
-        }, 1500, () => {
-            var quantityRaw = DecimalFields.stripFormatting(inputQuantity.value, 2)
-            return DecimalFields.isValidDecimal(inputQuantity, quantityRaw);
-        });
-        var inputUnitPriceChangeDebounced = debounce((e) => {
-            const newQuantity = parseNumber(DecimalFields.stripFormatting(inputQuantity.value, 2), 0);
-            const newUnitPrice = parseNumber(DecimalFields.stripFormatting(inputUnitPrice.value, 0), 0);
-            this.#updateItem(index, { unitPrice: newUnitPrice, quantity: newQuantity });
-        }, 1500, () => {
-            var unitPriceRaw = DecimalFields.stripFormatting(inputUnitPrice.value)
-            return DecimalFields.isValidDecimal(inputUnitPrice, unitPriceRaw);
-        });
-
-        inputQuantity.addEventListener('input', inputQtyChangeDebounced);
-        inputQuantity.addEventListener('change', inputQtyChangeDebounced.flush);
-        inputQuantity.addEventListener('focusin', () => inputUnitPriceChangeDebounced.cancel());
-
-        inputUnitPrice.addEventListener('input', inputUnitPriceChangeDebounced);
-        inputUnitPrice.addEventListener('change', inputUnitPriceChangeDebounced.flush);
-        inputUnitPrice.addEventListener('focusin', () => inputQtyChangeDebounced.cancel());
 
         return row;
     }
@@ -319,12 +296,39 @@ export default class OrderController {
             existingItem.quantity += 1;
             this.#activeRowIndex = existingIndex;
             this.#setState({ items });
+            this.#openEditorForIndex(existingIndex);
         } else {
             const unitPrice = await this.#addItemController.getSuggestedUnitPrice(product.id, product.unitPrice);
             items.push(new OrderItem(new ProductInfo(product), 1, unitPrice));
             this.#activeRowIndex = items.length - 1;
             this.#setState({ items });
+            this.#openEditorForIndex(items.length - 1);
         }
+    }
+
+    #openEditorForIndex(index) {
+        const item = this.#state.items[index];
+        if (!item || !this.#itemEditor) return;
+        this.#itemEditor.open(
+            {
+                name: item.productInfo.name,
+                picture: item.productInfo.picture,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                quantityDecimalPlaces: item.productInfo.quantityDecimalPlaces ?? 0,
+                priceLabel: 'Đơn giá',
+            },
+            {
+                onApply: (qty, price) => {
+                    this.#updateItem(index, { quantity: qty, unitPrice: price });
+                },
+                onDelete: () => {
+                    this.#setState({
+                        items: this.#state.items.filter((_, i) => i !== index),
+                    });
+                },
+            }
+        );
     }
 
     #validateForm(triggers) {

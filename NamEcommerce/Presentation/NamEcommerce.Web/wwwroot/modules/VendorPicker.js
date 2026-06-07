@@ -13,14 +13,17 @@ export default class VendorPicker {
     #debounceTimer = null;
     #abortController = null;
 
+    #options;
+
     static #DEBOUNCE_DELAY = 500;
     static #MIN_QUERY_LENGTH = 0;
 
-    constructor(target) {
+    constructor(target, options) {
         if (!(target instanceof HTMLElement)) {
             throw new TypeError('Target phải là một HTMLElement hợp lệ');
         }
         this.target = target;
+        this.#options = Object.assign({}, options);
         this.#init();
 
         const dataset = target.dataset;
@@ -72,6 +75,13 @@ export default class VendorPicker {
         document.addEventListener('click', (e) => {
             if (!this.target.contains(e.target)) this.#hideSuggestion();
         });
+
+        if (this.#options.onSelect) {
+            this.target.addEventListener('select', (e) => this.#options.onSelect(e.detail.vendor, e.detail.oldVendor));
+        }
+        if (this.#options.onRemove) {
+            this.target.addEventListener('remove', () => this.#options.onRemove());
+        }
     }
 
     #onInput(e) {

@@ -1,311 +1,586 @@
-# Kế hoạch hoàn thiện hệ thống theo hướng Kế toán
+# Kế hoạch Hoàn thiện Hệ thống cho Module Kế toán
 
-**Mục tiêu:** Chuẩn hóa hệ thống để có thể xuất 3 báo cáo tài chính theo VAS (Chuẩn mực kế toán Việt Nam):
+**Mục tiêu:** Xuất 3 báo cáo tài chính theo **Thông tư 200/2014/TT-BTC** (VAS) cho cửa hàng bán lẻ vật liệu xây dựng:
 - **B01-DN** — Bảng cân đối kế toán
 - **B02-DN** — Báo cáo kết quả hoạt động kinh doanh
-- **B03-DN** — Báo cáo lưu chuyển tiền tệ
+- **B03-DN** — Báo cáo lưu chuyển tiền tệ (phương pháp gián tiếp)
+
+**Xác nhận từ người dùng:**
+- ✅ Có dùng chiết khấu thương mại
+- ✅ Có nhiều tài khoản ngân hàng → cần entity `BankAccount`
+- ✅ Đăng ký khai thuế GTGT
+- ✅ Có TSCĐ (xe tải, kệ, máy móc) → cần entity `FixedAsset` + khấu hao
 
 ---
 
-## Phân tích hiện trạng (Gap Analysis)
+## PHẦN I — Gap Analysis toàn diện
 
-### Đã có ✅
-| Thành phần kế toán | Nguồn dữ liệu hiện tại |
+### 1.1 Đã có ✅
+
+| Thành phần kế toán | Entity / Nguồn dữ liệu |
 |---|---|
 | Doanh thu | `DeliveryNote` (Delivered) + `DeliveryNoteItem.SubTotal` |
-| Giá vốn hàng bán | `InventoryCostLedgerEntry` (Dispatch movements) |
-| Chi phí hoạt động | `Expense` (6 loại) |
-| Phải thu KH (A/R) | `CustomerDebt` + `CustomerPayment` |
-| Phải trả NCC (A/P) | `VendorDebt` + `VendorPayment` |
-| Hàng tồn kho | `InventoryStock` × `AverageCost` |
-| Phân loại nợ đầu kỳ KH | `CustomerDebt` constructor (không gắn đơn hàng) ✅ |
-| Phân loại nợ đầu kỳ NCC | `VendorDebt` constructor (không gắn GoodsReceipt) ✅ |
+| Giá vốn hàng bán | `InventoryCostLedgerEntry` (Dispatch, trong kỳ) |
+| Chi phí hoạt động | `Expense` (6 loại: Payroll, Rent, Marketing, Utilities, General, ReturnCost) |
+| Ngân sách chi phí | `ExpenseBudget` (Year + Month + ExpenseType + Amount) |
+| Phải thu KH | `CustomerDebt` + `CustomerPayment` |
+| Phải trả NCC | `VendorDebt` + `VendorPayment` |
+| Phiếu giảm trừ KH | `CustomerCreditNote` (từ trả hàng) — entity đã có ✅ |
+| Hoàn tiền KH | `CustomerRefund` (tiền mặt/CK) — entity đã có ✅ |
+| Hàng tồn kho | `InventoryStock` × `AverageCost` (WAVG/FIFO) |
+| Hoàn trả NCC | `VendorReturn` + `VendorCreditNote` |
+| Phân biệt thanh toán KH | `CustomerPayment.PaymentMethod` (Cash/BankTransfer/COD) ✅ |
+| Phân biệt thanh toán NCC | `VendorPayment.PaymentMethod` ✅ |
+| Phân biệt hoàn tiền KH | `CustomerRefund.PaymentMethod` ✅ |
+| Số dư đầu kỳ KH | `CustomerDebt` constructor không có DeliveryNoteId ✅ |
+| Số dư đầu kỳ NCC | `VendorDebt` constructor không có GoodsReceiptId ✅ |
+| Hàng tồn kho đầu kỳ | `GoodsReceipt(OpeningBalance)` ✅ |
 
-### Chưa có / Cần bổ sung ❌
-| Thiếu | Ảnh hưởng | Độ ưu tiên |
+---
+
+### 1.2 Thiếu / Cần bổ sung ❌
+
+#### 🔴 Critical — báo cáo SAI hoặc KHÔNG CÂN nếu thiếu
+
+| # | Thiếu | Ảnh hưởng | Entity cần sửa/tạo |
+|---|---|---|---|
+| C1 | **Kỳ kế toán** (fiscal year start) | B01/B02/B03 không xác định được "kỳ" | `AccountingSetup` *(tạo mới)* |
+| C2 | **Tiền đầu kỳ — tách TK111 / TK112 per account** | B03 sai số dư mở/đóng; không biết tiền nằm ở NH nào | `AccountingSetup.OpeningCash` + `BankAccount.OpeningBalance` |
+| C3 | **Vốn chủ sở hữu đầu kỳ** | B01 không cân | `AccountingSetup.OpeningEquity` |
+| C4 | **Thuế GTGT đầu ra** | B02 doanh thu thuần sai; TK 3331 sai | `DeliveryNoteItem.TaxRate` + `TaxAmount` |
+| C5 | **Thuế GTGT đầu vào** | Thuế GTGT phải nộp sai | `GoodsReceiptItem.TaxRate` + `TaxAmount` |
+| C6 | **`IsOpeningBalance` flag trên Debt** | B01 không phân biệt số dư đầu kỳ vs. phát sinh | `CustomerDebt`, `VendorDebt` |
+| C7 | **`CustomerCreditNote` trong công thức** | B01 Phải thu cao hơn thực tế; B02 doanh thu không giảm | Tính vào công thức báo cáo |
+| C8 | **`CustomerRefund` trong B03** | Cash flow thiếu khoản hoàn tiền KH | Tính vào Cash Book |
+| C9 | **Chiết khấu thương mại (TK 521)** | B02 không có dòng "Giảm trừ doanh thu" | `DeliveryNote` + `DeliveryNoteItem` |
+| C10 | **`BankAccount` entity** (nhiều TK NH) | Không biết tiền ở đâu; B01 TK112 per bank; B03 cash flow sai | `BankAccount` *(tạo mới)* + link payments |
+| C11 | **TSCĐ & Khấu hao** | B01 thiếu tài sản dài hạn; B02 thiếu chi phí KH; B03 không adjust | `FixedAsset` + `FixedAssetDepreciationEntry` *(tạo mới)* |
+
+#### 🟡 High — ảnh hưởng độ chính xác
+
+| # | Thiếu | Ảnh hưởng |
 |---|---|---|
-| **Kỳ kế toán** (fiscal year, start date) | B01/B02/B03 không xác định được "kỳ" | 🔴 Critical |
-| **Số dư đầu kỳ** (tiền mặt, vốn CSH, nợ cũ) | B01 không cân được | 🔴 Critical |
-| **Thuế GTGT** trên doanh thu (đầu ra) | B02 thiếu dòng thuế; sổ thuế sai | 🔴 Critical |
-| **Thuế GTGT** trên mua hàng (đầu vào) | Thuế GTGT phải nộp sai | 🔴 Critical |
-| **Thuế GTGT** trên chi phí | Như trên | 🟡 High |
-| **Sổ quỹ tiền mặt** (cash book) | B03 không có số dư mở/đóng | 🟡 High |
-| Phân biệt debt đầu kỳ vs phát sinh | B01 so sánh đầu/cuối kỳ sai | 🟡 High |
+| H1 | `PaymentMethod` + `BankAccountId` trên `Expense` | B03 không tách chi phí tiền mặt vs. ngân hàng |
+| H2 | Thuế GTGT trên chi phí | Thuế đầu vào trên chi phí bị thiếu |
+| H3 | `VendorCreditNote` trong công thức | B01 Phải trả NCC không chính xác |
+| H4 | Điều chỉnh COGS cho VendorReturn | B02 giá vốn hơi cao |
+| H5 | Thuế GTGT trên PurchaseOrder | Tracking VAT từ giai đoạn đặt hàng |
+
+#### 🔵 Medium — compliance & audit
+
+| # | Thiếu |
+|---|---|
+| M1 | Số hóa đơn GTGT trên `DeliveryNote` |
+| M2 | Số hóa đơn NCC trên `GoodsReceipt` |
+| M3 | Thuế TNDN (TK 821) — manual provision |
 
 ---
 
-## Kế hoạch triển khai — 4 Phase
+### 1.3 Kết luận
+
+**Dữ liệu hiện tại CHƯA đủ.** Phải implement các pre-requisites trước khi build UI kế toán.
+Scope mở rộng so với plan cũ vì: nhiều TK ngân hàng + TSCĐ + thuế GTGT đầy đủ.
 
 ---
 
-### PHASE 1 — Khai báo kế toán đầu kỳ `AccountingSetup`
+## PHẦN II — Cải thiện hệ thống (Pre-requisites)
 
-**Mục tiêu:** Cho phép kế toán nhập số liệu gốc để hệ thống biết "bắt đầu từ đâu".
+---
 
-#### 1.1 Entity mới: `AccountingSetup`
+### PRE-1 — `AccountingSetup` entity *(tạo mới)*
 
-```
-Module: Finance / Accounting
-Singleton entity (chỉ 1 record trong hệ thống)
-```
+**Module:** Finance / Accounting — Singleton entity
 
 | Field | Type | Ý nghĩa |
 |---|---|---|
-| `FiscalYearStartMonth` | int (1–12) | Tháng bắt đầu năm tài chính (mặc định: 1 = tháng 1) |
-| `FiscalYearStartDay` | int (1–31) | Ngày bắt đầu (mặc định: 1) |
-| `AccountingStartDate` | DateTime | Ngày bắt đầu sử dụng hệ thống kế toán này |
-| `OpeningCash` | decimal | Tiền mặt + tiền gửi NH đầu kỳ (nhập thủ công) |
-| `OpeningEquity` | decimal | Vốn chủ sở hữu đầu kỳ (vốn điều lệ + lợi nhuận chưa chia) |
-| `IsFinalized` | bool | Khóa sau khi đã nhập và xác nhận |
-| `FinalizedOnUtc` | DateTime? | Ngày xác nhận |
+| `FiscalYearStartMonth` | int (1–12) | Tháng bắt đầu năm tài chính (default: 1) |
+| `FiscalYearStartDay` | int | Ngày bắt đầu (default: 1) |
+| `AccountingStartDate` | DateTime | Ngày bắt đầu dùng hệ thống |
+| `OpeningCash` | decimal | Tiền mặt quỹ đầu kỳ — **TK 111** |
+| `OpeningEquity` | decimal | Vốn chủ sở hữu đầu kỳ — TK 411 + 421 |
+| `DefaultTaxRate` | decimal | Thuế GTGT mặc định (0.10) |
+| `CorporateTaxProvision` | decimal? | Ước tính thuế TNDN kỳ (manual) |
+| `IsFinalized` | bool | Khóa sau khi xác nhận |
+| `FinalizedOnUtc` | DateTime? | |
 | `CreatedOnUtc` | DateTime | |
 
-**Lưu ý về nợ đầu kỳ:**
-- **Nợ phải thu KH đầu kỳ** → nhập qua màn hình Công nợ KH hiện có, dùng constructor `CustomerDebt(code, customerId, name, amount)` — đã sẵn sàng ✅
-- **Nợ phải trả NCC đầu kỳ** → nhập qua màn hình Công nợ NCC hiện có, dùng constructor `VendorDebt(code, vendorId, name, amount)` — đã sẵn sàng ✅
-- **Hàng tồn kho đầu kỳ** → dùng `GoodsReceipt(OpeningBalance)` — đã có ✅
-- Chỉ cần thêm flag `IsOpeningBalance` vào CustomerDebt/VendorDebt để filter báo cáo
-
-#### 1.2 Bổ sung `IsOpeningBalance` flag
-
-Thêm field `bool IsOpeningBalance` vào `CustomerDebt` và `VendorDebt`:
-- Set = true khi tạo từ constructor "số dư đầu kỳ" (constructor không có OrderId/GoodsReceiptId)
-- Dùng để phân biệt khi tính số dư đầu kỳ trong B01
-
-#### 1.3 UI cần làm
-
-- `/Accounting/Setup` — Trang khai báo kế toán:
-  - Form nhập `OpeningCash`, `OpeningEquity`, `FiscalYearStartMonth`, `AccountingStartDate`
-  - Chỉ có thể nhập 1 lần, sau đó khóa (`IsFinalized = true`)
-  - Hướng dẫn: "Nợ phải thu/trả đầu kỳ nhập riêng tại mục Công nợ"
-- Menu mới: **Kế toán** (Accounting) trong navigation
+> **Lưu ý:** `OpeningBankDeposit` KHÔNG có ở đây. Mỗi TK ngân hàng có `OpeningBalance` riêng trong entity `BankAccount` (PRE-6).
 
 ---
 
-### PHASE 2 — Thuế GTGT (VAT)
+### PRE-2 — `IsOpeningBalance` trên Debt entities
 
-**Mục tiêu:** Thêm tracking thuế GTGT trên tất cả giao dịch, phục vụ:
-- B02: Doanh thu thuần = Doanh thu gộp − Thuế đầu ra
-- Tờ khai thuế GTGT (tương lai)
-- Số dư thuế phải nộp trong B01
+Thêm `bool IsOpeningBalance` vào `CustomerDebt` và `VendorDebt`:
+- Tự động set = `true` khi tạo bằng constructor số dư đầu kỳ (không có `DeliveryNoteId`/`GoodsReceiptId`)
 
-#### 2.1 Thuế GTGT đầu ra (trên bán hàng)
-
-**Thêm vào `DeliveryNoteItem`:**
-```
-TaxRate   decimal?   (%, ví dụ: 0, 5, 8, 10)
-TaxAmount decimal    (tính từ SubTotal × TaxRate)
-```
-
-**Thêm vào `DeliveryNote` (aggregate):**
-```
-TotalTaxAmount decimal  (SUM của TaxAmount các item)
-```
-
-**Logic:** Thuế tính theo từng dòng hàng, rate do người dùng chọn khi lập phiếu xuất.
-
-#### 2.2 Thuế GTGT đầu vào (trên mua hàng)
-
-**Thêm vào `GoodsReceiptItem`:**
-```
-TaxRate   decimal?
-TaxAmount decimal
-```
-
-**Thêm vào `GoodsReceipt` (aggregate):**
-```
-TotalTaxAmount decimal
-```
-
-**Thêm vào `PurchaseOrderItem`:**
-```
-TaxRate   decimal?
-TaxAmount decimal
-```
-
-**Thêm vào `PurchaseOrder` (aggregate):**
-```
-TotalTaxAmount decimal  (thay thế/bổ sung TaxAmount hiện có nếu có)
-```
-
-#### 2.3 Thuế trên chi phí
-
-**Thêm vào `Expense`:**
-```
-TaxRate   decimal?
-TaxAmount decimal    (thuế GTGT đầu vào trên chi phí)
-AmountExcludingTax decimal  (= Amount - TaxAmount)
-```
-
-#### 2.4 Tax rate mặc định
-
-Thêm setting `DefaultTaxRate` (decimal, default = 0.10 = 10%) vào `AccountingSetup` hoặc system settings. Người dùng có thể override per line item.
-
-#### 2.5 UI cần sửa
-
-- **DeliveryNote confirm/create**: Thêm cột TaxRate + TaxAmount per item, tổng thuế
-- **GoodsReceipt/Create**: Thêm cột TaxRate + TaxAmount per item
-- **Expense/Create & Edit**: Thêm field TaxRate, hiển thị AmountExcludingTax và TaxAmount
-- **PurchaseOrder**: Thêm cột thuế per item
-
-#### 2.6 EF Migrations
-
-- `AddTaxFieldsToDeliveryNoteItems`
-- `AddTaxFieldsToGoodsReceiptItems`
-- `AddTaxFieldsToPurchaseOrderItems`
-- `AddTaxFieldsToExpenses`
+**Migration:** `AddIsOpeningBalanceToDebts`
 
 ---
 
-### PHASE 3 — Sổ quỹ & Số dư tiền mặt (Cash Book)
+### PRE-3 — Chiết khấu thương mại trên `DeliveryNote` (TK 521)
 
-**Mục tiêu:** Tính được số dư tiền mặt tại bất kỳ thời điểm nào.
-
-**Cách tiếp cận:** Không tạo entity mới — aggregate từ dữ liệu hiện có.
-
-#### Công thức tính số dư tiền:
-
+Thêm vào `DeliveryNoteItem`:
 ```
-Số dư tiền kỳ N =
-  AccountingSetup.OpeningCash                         [đầu kỳ đầu tiên]
-+ SUM(CustomerPayment.Amount WHERE PaidOnUtc <= end)  [thu từ KH]
-- SUM(VendorPayment.Amount WHERE PaidOnUtc <= end)    [trả cho NCC]
-- SUM(Expense.Amount WHERE IncurredDate <= end)       [chi phí]
+DiscountPercent   decimal?   (%, vd: 5.0 = 5%)
+DiscountAmount    decimal    (= SubTotal × DiscountPercent hoặc nhập thẳng)
+NetAmount         decimal    (= SubTotal - DiscountAmount)
 ```
 
-**Lưu ý:** Expense hiện không có PaymentMethod — giả định tất cả chi phí đã thanh toán bằng tiền. Nếu cần chính xác hơn, có thể thêm field `IsCashExpense bool` vào Expense sau.
+Thêm vào `DeliveryNote`:
+```
+TotalDiscountAmount  decimal
+```
 
-#### UI cần làm
+**UI:** Thêm cột "Chiết khấu" per item khi tạo/xác nhận phiếu xuất kho.
 
-- `/Accounting/CashBook` — Sổ quỹ:
-  - Chọn kỳ (từ ngày → đến ngày)
-  - Bảng giao dịch: ngày, loại (Thu/Chi), diễn giải, số tiền, số dư lũy kế
-  - Nguồn: CustomerPayment + VendorPayment + Expense gộp lại, sort theo ngày
+**Migration:** `AddDiscountFieldsToDeliveryNote`
 
 ---
 
-### PHASE 4 — 3 Báo cáo tài chính
+### PRE-4 — Thuế GTGT trên các giao dịch
 
-#### 4.1 B02-DN — Kết quả kinh doanh
-
+#### 4a — Bán hàng: `DeliveryNoteItem` + `DeliveryNote`
 ```
-I. Doanh thu bán hàng và cung cấp DV       = SUM(DeliveryNoteItem.SubTotal) [Delivered, trong kỳ]
-II. Các khoản giảm trừ doanh thu           = SUM(CustomerReturn điều chỉnh giảm DT)
-III. Doanh thu thuần (I - II)
-IV. Giá vốn hàng bán                       = SUM(InventoryCostLedgerEntry[Dispatch, trong kỳ].TotalCost)
-V. Lợi nhuận gộp (III - IV)
-VI. Doanh thu tài chính                    = 0 (chưa có)
-VII. Chi phí tài chính                     = 0 (chưa có)
-VIII. Chi phí bán hàng                     = SUM(Expense[Marketing, ReturnCost])
-IX. Chi phí quản lý DN                     = SUM(Expense[Payroll, Rent, Utilities, General])
-X. Lợi nhuận thuần từ HĐKD (V+VI-VII-VIII-IX)
-XI. Lợi nhuận khác                        = 0
-XII. Tổng lợi nhuận kế toán trước thuế
-XIII. Thuế TNDN (*)                        = 0 (chưa có)
-XIV. Lợi nhuận sau thuế
+TaxRate    decimal?   (0 / 0.05 / 0.08 / 0.10)
+TaxAmount  decimal    (= NetAmount × TaxRate)
 ```
+`DeliveryNote.TotalTaxAmount decimal`
 
-(*) Thuế TNDN có thể thêm sau — Phase 5
-
-#### 4.2 B03-DN — Lưu chuyển tiền tệ (phương pháp gián tiếp)
-
+#### 4b — Mua hàng: `GoodsReceiptItem` + `GoodsReceipt`
 ```
-I. LƯU CHUYỂN TIỀN TỪ HĐKD
-  1. Lợi nhuận trước thuế                 [từ B02]
-  2. Điều chỉnh cho các khoản:
-     + Tăng/giảm phải thu KH             = CustomerDebt.RemainingAmount (cuối kỳ - đầu kỳ)
-     + Tăng/giảm phải trả NCC            = VendorDebt.RemainingAmount (cuối kỳ - đầu kỳ)
-     + Tăng/giảm hàng tồn kho            = Inventory value (cuối kỳ - đầu kỳ)
-  = Lưu chuyển tiền thuần từ HĐKD
+TaxRate    decimal?
+TaxAmount  decimal
+```
+`GoodsReceipt.TotalTaxAmount decimal`
 
-II. LƯU CHUYỂN TIỀN TỪ HĐ ĐẦU TƯ       = 0 (không có tài sản cố định)
-
-III. LƯU CHUYỂN TIỀN TỪ HĐ TÀI CHÍNH   = 0 (không có vay nợ dài hạn)
-
-IV. Tăng/giảm tiền thuần trong kỳ (I+II+III)
-V. Tiền đầu kỳ                          = AccountingSetup.OpeningCash (kỳ đầu) hoặc tiền cuối kỳ trước
-VI. Tiền cuối kỳ (IV + V)
+#### 4c — Chi phí: `Expense`
+```
+TaxRate             decimal?
+TaxAmount           decimal
+AmountExcludingTax  decimal    (= Amount - TaxAmount)
+PaymentMethod       PaymentMethod?   ← giải quyết H1
+BankAccountId       Guid?            ← liên kết TK NH (PRE-6)
 ```
 
-#### 4.3 B01-DN — Bảng cân đối kế toán
-
+#### 4d — Đơn nhập hàng: `PurchaseOrderItem` *(optional)*
 ```
-TÀI SẢN
-  A. Tài sản ngắn hạn
-    I. Tiền và tương đương tiền          = Số dư tiền (Phase 3)
-    II. Phải thu ngắn hạn
-       - Phải thu KH                     = SUM(CustomerDebt.RemainingAmount [Outstanding/Partial] đến cuối kỳ)
-    III. Hàng tồn kho                    = SUM(InventoryStock.Quantity × AverageCost)
-  B. Tài sản dài hạn                    = 0
-
-TỔNG TÀI SẢN
-
-NGUỒN VỐN
-  A. Nợ phải trả
-    I. Nợ ngắn hạn
-       - Phải trả NCC                    = SUM(VendorDebt.RemainingAmount [Outstanding/Partial] đến cuối kỳ)
-       - Thuế và các khoản phải nộp      = SUM(TaxAmount đầu ra) - SUM(TaxAmount đầu vào) [lũy kế]
-  B. Vốn chủ sở hữu
-       - Vốn góp                         = AccountingSetup.OpeningEquity
-       - Lợi nhuận chưa phân phối        = SUM(Lợi nhuận sau thuế các kỳ trước + kỳ này)
-
-TỔNG NGUỒN VỐN  (= TỔNG TÀI SẢN)
+TaxRate    decimal?
+TaxAmount  decimal
 ```
 
-#### 4.4 UI báo cáo
-
-- `/Accounting/IncomeStatement` — B02, chọn kỳ (tháng/quý/năm)
-- `/Accounting/CashFlow` — B03, chọn kỳ
-- `/Accounting/BalanceSheet` — B01, chọn thời điểm
-- Nút **In / Xuất PDF** cho từng báo cáo (có thể dùng browser print)
+**Migrations:**
+- `AddTaxAndDiscountToDeliveryNote`
+- `AddTaxFieldsToGoodsReceipt`
+- `AddTaxPaymentMethodToExpense`
+- `AddTaxFieldsToPurchaseOrder` *(optional)*
 
 ---
 
-## Thứ tự triển khai & Dependencies
+### PRE-5 — Số hóa đơn GTGT
 
+Thêm vào `DeliveryNote`:
 ```
-Phase 1 (AccountingSetup)
-    └→ Phase 2 (VAT) — độc lập, có thể song song
-        └→ Phase 4 (Reports) — cần Phase 1 + Phase 2 + Phase 3
-Phase 3 (Cash Book) — cần Phase 1
-    └→ Phase 4
+InvoiceNumber   string?    (số hóa đơn, vd: "0000123")
+InvoiceSeries   string?    (ký hiệu, vd: "AA/24E")
+InvoiceDate     DateTime?
 ```
 
-**Recommended order:**
-1. Phase 1 → Phase 3 → Phase 2 → Phase 4
+Thêm vào `GoodsReceipt`:
+```
+VendorInvoiceNumber  string?
+VendorInvoiceDate    DateTime?
+```
+
+**Migration:** `AddInvoiceFieldsToDocuments`
 
 ---
 
-## Danh sách entities cần tạo/sửa
+### PRE-6 — `BankAccount` entity *(tạo mới — quan trọng)*
+
+**Module:** Finance
+
+```csharp
+BankAccount
+  Id                Guid
+  Code              string         // "VCB-001", "TCB-001"
+  DisplayName       string         // "Vietcombank - CN Quận 1"
+  BankName          string         // "Vietcombank"
+  AccountNumber     string         // "1234567890"
+  AccountHolderName string
+  OpeningBalance    decimal        // Số dư đầu kỳ — TK 112 per account
+  IsDefault         bool           // Tài khoản mặc định khi chuyển khoản
+  IsActive          bool
+  CreatedOnUtc      DateTime
+```
+
+**Link `BankAccountId` vào các entities thanh toán:**
+
+| Entity | Field thêm |
+|---|---|
+| `CustomerPayment` | `BankAccountId Guid?` (khi PaymentMethod = BankTransfer/COD) |
+| `VendorPayment` | `BankAccountId Guid?` |
+| `CustomerRefund` | `BankAccountId Guid?` (khi PaymentMethod = BankTransfer) |
+| `Expense` | `BankAccountId Guid?` (khi PaymentMethod = BankTransfer) |
+
+**Công thức số dư từng TK ngân hàng:**
+```
+Balance(TK NH X, đến ngày T) =
+  BankAccount[X].OpeningBalance
+  + SUM(CustomerPayment.Amount   WHERE BankAccountId=X AND PaidOnUtc<=T)
+  - SUM(CustomerRefund.Amount    WHERE BankAccountId=X AND RefundedOnUtc<=T AND Completed)
+  - SUM(VendorPayment.Amount     WHERE BankAccountId=X AND PaidOnUtc<=T)
+  - SUM(Expense.AmountExcludingTax WHERE BankAccountId=X AND IncurredDate<=T)
+
+TK 112 tổng = SUM over all active BankAccounts
+```
+
+**Migrations:**
+- `AddBankAccountTable`
+- `AddBankAccountIdToPayments`
+
+---
+
+### PRE-7 — `FixedAsset` & `FixedAssetDepreciationEntry` *(tạo mới)*
+
+**Module:** Finance / Assets
+
+#### Entity `FixedAsset`
+
+```csharp
+FixedAsset
+  Id                    Guid
+  Code                  string            // "TSCĐ-001"
+  Name                  string            // "Xe tải 1.5T"
+  Description           string?
+  Category              FixedAssetCategory enum
+                          // Vehicle | Equipment | FurnitureAndFixtures | Computer | Other
+  AcquisitionDate       DateTime
+  AcquisitionCost       decimal           // Nguyên giá — TK 211
+  ResidualValue         decimal           // Giá trị thu hồi ước tính
+  UsefulLifeMonths      int               // Thời gian sử dụng (tháng)
+  DepreciationMethod    DepreciationMethod enum  // StraightLine (đường thẳng)
+  VendorId              Guid?
+  VendorInvoiceNumber   string?
+  Note                  string?
+  Status                FixedAssetStatus  // Active | FullyDepreciated | Disposed
+  DisposedOnUtc         DateTime?
+  CreatedOnUtc          DateTime
+```
+
+**Tính khấu hao tháng:**
+```
+MonthlyDepreciation = (AcquisitionCost - ResidualValue) / UsefulLifeMonths
+AccumulatedDepreciation(đến kỳ T) = MonthlyDepreciation × Min(months_elapsed, UsefulLifeMonths)
+BookValue = AcquisitionCost - AccumulatedDepreciation
+```
+
+> **Lựa chọn thiết kế:** Không lưu `DepreciationEntry` riêng vì phương pháp đường thẳng tính được thuần túy từ `AcquisitionDate` + `UsefulLifeMonths` + `MonthlyDepreciation`. Chỉ lưu khi cần audit trail hoặc điều chỉnh.
+
+**Migrations:**
+- `AddFixedAssetTable`
+
+---
+
+### Tổng hợp tất cả entities cần tạo/sửa
 
 | Entity | Action | Fields mới |
 |---|---|---|
-| `AccountingSetup` | **TẠO MỚI** | FiscalYearStartMonth, AccountingStartDate, OpeningCash, OpeningEquity, IsFinalized |
+| `AccountingSetup` | **TẠO MỚI** | FiscalYearStartMonth, AccountingStartDate, OpeningCash, OpeningEquity, DefaultTaxRate, CorporateTaxProvision, IsFinalized |
+| `BankAccount` | **TẠO MỚI** | Code, DisplayName, BankName, AccountNumber, AccountHolderName, OpeningBalance, IsDefault, IsActive |
+| `FixedAsset` | **TẠO MỚI** | Code, Name, Category, AcquisitionDate, AcquisitionCost, ResidualValue, UsefulLifeMonths, DepreciationMethod, Status |
 | `CustomerDebt` | Sửa | `IsOpeningBalance bool` |
 | `VendorDebt` | Sửa | `IsOpeningBalance bool` |
-| `DeliveryNoteItem` | Sửa | `TaxRate decimal?`, `TaxAmount decimal` |
-| `DeliveryNote` | Sửa | `TotalTaxAmount decimal` |
+| `CustomerPayment` | Sửa | `BankAccountId Guid?` |
+| `VendorPayment` | Sửa | `BankAccountId Guid?` |
+| `CustomerRefund` | Sửa | `BankAccountId Guid?` |
+| `DeliveryNoteItem` | Sửa | `DiscountPercent decimal?`, `DiscountAmount decimal`, `TaxRate decimal?`, `TaxAmount decimal` |
+| `DeliveryNote` | Sửa | `TotalDiscountAmount decimal`, `TotalTaxAmount decimal`, `InvoiceNumber string?`, `InvoiceSeries string?`, `InvoiceDate DateTime?` |
 | `GoodsReceiptItem` | Sửa | `TaxRate decimal?`, `TaxAmount decimal` |
-| `GoodsReceipt` | Sửa | `TotalTaxAmount decimal` |
-| `PurchaseOrderItem` | Sửa | `TaxRate decimal?`, `TaxAmount decimal` |
-| `PurchaseOrder` | Sửa | aggregate `TotalTaxAmount` |
-| `Expense` | Sửa | `TaxRate decimal?`, `TaxAmount decimal` |
+| `GoodsReceipt` | Sửa | `TotalTaxAmount decimal`, `VendorInvoiceNumber string?`, `VendorInvoiceDate DateTime?` |
+| `Expense` | Sửa | `TaxRate decimal?`, `TaxAmount decimal`, `AmountExcludingTax decimal`, `PaymentMethod PaymentMethod?`, `BankAccountId Guid?` |
+| `PurchaseOrderItem` | Sửa *(optional)* | `TaxRate decimal?`, `TaxAmount decimal` |
 
-## Danh sách migrations
+### Danh sách migrations (thứ tự)
 
-1. `AddAccountingSetup` — bảng mới
-2. `AddIsOpeningBalanceToDebts` — CustomerDebt, VendorDebt
-3. `AddTaxFieldsToDeliveryNote` — DeliveryNote + DeliveryNoteItem
-4. `AddTaxFieldsToGoodsReceipt` — GoodsReceipt + GoodsReceiptItem
-5. `AddTaxFieldsToPurchaseOrder` — PurchaseOrder + PurchaseOrderItem
-6. `AddTaxFieldsToExpense` — Expense
+```
+1. AddAccountingSetup
+2. AddBankAccountTable
+3. AddFixedAssetTable
+4. AddIsOpeningBalanceToDebts
+5. AddBankAccountIdToPayments          ← CustomerPayment, VendorPayment, CustomerRefund
+6. AddDiscountAndTaxToDeliveryNote
+7. AddTaxFieldsToGoodsReceipt
+8. AddTaxPaymentMethodBankAccountToExpense
+9. AddInvoiceFieldsToDocuments
+10. AddTaxFieldsToPurchaseOrder        ← optional
+```
 
 ---
 
-## Ngoài phạm vi (không làm trong plan này)
+## PHẦN III — Module Kế toán (6 Phases)
 
-- Thuế TNDN (Corporate Income Tax)
-- Tài sản cố định & khấu hao
-- Sổ cái chi tiết (General Ledger) với tài khoản kép
-- Tích hợp phần mềm kế toán bên ngoài (MISA, Fast)
-- Báo cáo thuế GTGT (tờ khai 01/GTGT)
+---
+
+### PHASE 1 — Khai báo đầu kỳ & Quản lý Tài khoản NH
+
+#### 1a — `/Accounting/Setup`
+- Form nhập `AccountingSetup`: năm tài chính, tiền mặt quỹ đầu kỳ, vốn CSH, thuế mặc định, ước tính TNDN
+- Sau `IsFinalized = true` → khóa, chỉ xem
+- Hướng dẫn: "Nợ KH/NCC đầu kỳ → Công nợ | HTK đầu kỳ → Nhập hàng | TK NH → Mục dưới"
+
+#### 1b — `/Accounting/BankAccounts`
+- Danh sách tài khoản ngân hàng: thêm, sửa, đặt mặc định, ẩn
+- Mỗi TK: Tên ngân hàng, Số TK, Chủ TK, **Số dư đầu kỳ**
+- Widget "Số dư hiện tại" (real-time từ công thức)
+
+#### 1c — `/Accounting/FixedAssets`
+- Danh sách TSCĐ: thêm, sửa, thanh lý
+- Mỗi TSCĐ: Tên, Loại, Ngày mua, Nguyên giá, Thời gian KH, Phương pháp KH
+- Bảng "Lịch khấu hao" (12 tháng × năm còn lại)
+- Tổng: Nguyên giá | KH lũy kế | Giá trị còn lại
+
+---
+
+### PHASE 2 — Sổ quỹ tiền mặt & ngân hàng (`/Accounting/CashBook`)
+
+**TK 111 — Tiền mặt:**
+```
+Số dư TK111 =
+  AccountingSetup.OpeningCash
+  + SUM(CustomerPayment WHERE PaymentMethod=Cash AND PaidOnUtc<=T)
+  - SUM(CustomerRefund WHERE PaymentMethod=Cash AND Completed AND RefundedOnUtc<=T)
+  - SUM(VendorPayment WHERE PaymentMethod=Cash AND PaidOnUtc<=T)
+  - SUM(Expense.AmountExcludingTax WHERE PaymentMethod=Cash AND IncurredDate<=T)
+```
+
+**TK 112 — Ngân hàng (per account):**
+```
+Số dư NH[X] =
+  BankAccount[X].OpeningBalance
+  + SUM(CustomerPayment WHERE BankAccountId=X AND PaidOnUtc<=T)
+  - SUM(CustomerRefund WHERE BankAccountId=X AND Completed AND RefundedOnUtc<=T)
+  - SUM(VendorPayment WHERE BankAccountId=X AND PaidOnUtc<=T)
+  - SUM(Expense.AmountExcludingTax WHERE BankAccountId=X AND IncurredDate<=T)
+
+TK112 tổng = SUM(Số dư NH[X]) for all active BankAccounts
+```
+
+**UI:**
+- Filter: Kỳ | Loại tài khoản (TK111 / từng TK NH / Tổng)
+- Bảng: Ngày | Diễn giải | Loại | Tiền vào | Tiền ra | Số dư lũy kế
+- Widget tóm tắt: Tiền mặt | Ngân hàng (từng TK) | Tổng
+
+---
+
+### PHASE 3 — B02-DN: Kết quả hoạt động kinh doanh
+
+```
+MÃ | CHỈ TIÊU                                          | NGUỒN DỮ LIỆU
+----+----------------------------------------------------+----------------------------------------
+ 01 | Doanh thu bán hàng và cung cấp DV                | SUM(DeliveryNoteItem.SubTotal) [Delivered, trong kỳ]
+ 02 | Các khoản giảm trừ doanh thu:
+    |   Chiết khấu thương mại (TK 521)                  | SUM(DeliveryNote.TotalDiscountAmount) [trong kỳ]
+    |   Hàng bán bị trả lại (TK 531)                   | SUM(CustomerCreditNote.Amount) [trong kỳ]
+ 10 | Doanh thu thuần (01 - 02)                         | Tính toán
+ 11 | Giá vốn hàng bán (TK 632)                        | SUM(InventoryCostLedgerEntry[Dispatch].TotalCost) [trong kỳ]
+    |   Điều chỉnh: Hàng trả NCC                       | - SUM(VendorReturn confirmed cost) [trong kỳ]
+ 20 | Lợi nhuận gộp (10 - 11)                          | Tính toán
+ 21 | Doanh thu hoạt động tài chính                    | 0
+ 22 | Chi phí tài chính                                 | 0
+ 25 | Chi phí bán hàng (TK 641)                        | SUM(Expense[Marketing, ReturnCost].AmountExcludingTax) [trong kỳ]
+    |   + Khấu hao TSCĐ bán hàng                       | SUM(MonthlyDepreciation cho TSCĐ loại Vehicle/Equipment) [trong kỳ]
+ 26 | Chi phí quản lý doanh nghiệp (TK 642)            | SUM(Expense[Payroll, Rent, Utilities, General].AmountExcludingTax) [trong kỳ]
+    |   + Khấu hao TSCĐ QLDN                           | SUM(MonthlyDepreciation cho TSCĐ loại FurnitureAndFixtures/Computer/Other) [trong kỳ]
+ 30 | Lợi nhuận thuần từ HĐKD (20 + 21 - 22 - 25 - 26)| Tính toán
+ 40 | Lợi nhuận khác                                    | 0
+ 50 | Tổng LNKT trước thuế (30 + 40)                   | Tính toán
+ 51 | Thuế TNDN phải nộp (TK 821)                      | AccountingSetup.CorporateTaxProvision (manual) hoặc = LNTT × 20%
+ 60 | Lợi nhuận sau thuế TNDN (50 - 51)               | Tính toán
+```
+
+---
+
+### PHASE 4 — B03-DN: Lưu chuyển tiền tệ (phương pháp gián tiếp)
+
+```
+I. LƯU CHUYỂN TIỀN TỪ HOẠT ĐỘNG KINH DOANH
+
+  1. Lợi nhuận trước thuế                              [B02 dòng 50]
+
+  2. Điều chỉnh các khoản phi tiền mặt:
+     + Khấu hao TSCĐ                                   [tổng khấu hao kỳ — cộng lại vì là chi phí không tiền mặt]
+       = SUM(MonthlyDepreciation × tháng trong kỳ, tất cả FixedAsset Active)
+
+  3. Thay đổi vốn lưu động:
+     + Tăng/giảm Phải thu KH (TK 131)
+       AR_end = SUM(CustomerDebt.RemainingAmount [Outstanding/Partial, đến cuối kỳ])
+              - SUM(CustomerCreditNote.RemainingAmount [Unapplied/Partial, đến cuối kỳ])
+       AR_beg = Tương tự tại ngày đầu kỳ
+       Delta = AR_end - AR_beg  (tăng → dấu âm; giảm → dấu dương)
+
+     + Tăng/giảm Phải trả NCC (TK 331)
+       AP_end = SUM(VendorDebt.RemainingAmount) - SUM(VendorCreditNote.RemainingAmount)
+       Delta = AP_end - AP_beg  (tăng → dương; giảm → âm)
+
+     + Tăng/giảm Hàng tồn kho (TK 156)
+       INV_end = SUM(InventoryStock.Quantity × AverageCost) [cuối kỳ]
+       Delta = INV_end - INV_beg  (tăng → âm; giảm → dương)
+
+     + Tăng/giảm Thuế GTGT phải nộp (TK 3331)
+       VAT_payable = SUM(DeliveryNote.TotalTaxAmount) - SUM(GoodsReceipt.TotalTaxAmount) - SUM(Expense.TaxAmount)
+
+     - Hoàn tiền KH (TK 111/112 ra):
+       = SUM(CustomerRefund.Amount WHERE Status=Completed AND RefundedOnUtc in kỳ)
+
+= Lưu chuyển tiền thuần từ HĐKD
+
+II. LƯU CHUYỂN TIỀN TỪ HOẠT ĐỘNG ĐẦU TƯ
+     - Mua sắm TSCĐ:
+       = SUM(FixedAsset.AcquisitionCost WHERE AcquisitionDate in kỳ) × (-1)
+     + Thanh lý TSCĐ:
+       = 0 (chưa tracking tiền thu thanh lý — Phase sau)
+= Lưu chuyển tiền thuần từ HĐĐT
+
+III. LƯU CHUYỂN TIỀN TỪ HOẠT ĐỘNG TÀI CHÍNH = 0 (không có vay dài hạn)
+
+IV. Tăng/giảm tiền thuần trong kỳ (I + II + III)
+
+V. Tiền đầu kỳ
+   Kỳ đầu tiên: AccountingSetup.OpeningCash + SUM(BankAccount.OpeningBalance)
+   Kỳ sau:      Tiền cuối kỳ trước
+
+VI. Tiền cuối kỳ (IV + V)
+    [Phải khớp với: TK111 + TK112 từ Sổ quỹ Phase 2]
+```
+
+---
+
+### PHASE 5 — B01-DN: Bảng cân đối kế toán
+
+```
+TÀI SẢN
+
+A. TÀI SẢN NGẮN HẠN
+
+  I. Tiền và tương đương tiền
+     TK 111 — Tiền mặt quỹ         = Số dư TK111 từ Phase 2 tại thời điểm BC
+     TK 112 — Tiền gửi ngân hàng   = Tổng số dư TK112 từ Phase 2 (hiển thị chi tiết per bank)
+
+  II. Phải thu ngắn hạn
+     TK 131 — Phải thu KH          = SUM(CustomerDebt.RemainingAmount WHERE Status IN [Outstanding, PartiallyPaid])
+                                     - SUM(CustomerCreditNote.RemainingAmount WHERE Status IN [Unapplied, PartiallyApplied])
+             [loại trừ các debt có IsOpeningBalance nếu đã qua AccStartDate + 1 year]
+
+  III. Hàng tồn kho
+     TK 156                        = SUM(InventoryStock.Quantity × AverageCost) per warehouse
+                                     [hiển thị chi tiết per warehouse, tổng B01]
+
+  IV. Tài sản ngắn hạn khác        = 0
+
+B. TÀI SẢN DÀI HẠN
+
+  II. Tài sản cố định
+     TK 211 — Nguyên giá           = SUM(FixedAsset.AcquisitionCost WHERE Status != Disposed)
+     TK 214 — KH lũy kế (-)        = SUM(AccumulatedDepreciation tại thời điểm BC cho từng FixedAsset)
+     Giá trị còn lại               = TK211 - TK214
+
+TỔNG TÀI SẢN
+
+---
+
+NGUỒN VỐN
+
+A. NỢ PHẢI TRẢ
+
+  I. Nợ ngắn hạn
+     TK 331 — Phải trả NCC         = SUM(VendorDebt.RemainingAmount WHERE Status IN [Outstanding, PartiallyPaid])
+                                     - SUM(VendorCreditNote.RemainingAmount WHERE Status IN [Unapplied, PartiallyApplied])
+
+     TK 3331 — Thuế GTGT phải nộp = VAT lũy kế từ AccountingStartDate đến thời điểm BC:
+                                     SUM(DeliveryNote.TotalTaxAmount [Delivered])
+                                     - SUM(GoodsReceipt.TotalTaxAmount)
+                                     - SUM(Expense.TaxAmount)
+
+     TK 3334 — Thuế TNDN          = AccountingSetup.CorporateTaxProvision
+
+B. VỐN CHỦ SỞ HỮU
+
+     TK 411 — Vốn góp              = AccountingSetup.OpeningEquity
+
+     TK 421 — LNST chưa phân phối = SUM(LN sau thuế B02 từng kỳ, lũy kế từ AccountingStartDate)
+
+TỔNG NGUỒN VỐN  (= TỔNG TÀI SẢN — kiểm tra cân bằng)
+```
+
+**Kiểm tra cân bằng:** B01 phải cân `Tổng Tài sản = Tổng Nguồn vốn`. Nếu lệch → báo lỗi với dòng nguyên nhân.
+
+---
+
+### PHASE 6 — UI tổng hợp & xuất báo cáo
+
+| URL | Tên trang |
+|---|---|
+| `/Accounting/Setup` | Khai báo kế toán đầu kỳ |
+| `/Accounting/BankAccounts` | Quản lý tài khoản ngân hàng |
+| `/Accounting/FixedAssets` | Quản lý tài sản cố định |
+| `/Accounting/CashBook` | Sổ quỹ tiền mặt & ngân hàng |
+| `/Accounting/IncomeStatement` | B02 — Kết quả HĐKD |
+| `/Accounting/CashFlow` | B03 — Lưu chuyển tiền tệ |
+| `/Accounting/BalanceSheet` | B01 — Bảng cân đối kế toán |
+
+**Chức năng chung trên tất cả báo cáo:**
+- Chọn kỳ (tháng / quý / năm tài chính)
+- So sánh kỳ này vs. kỳ trước (B01 bắt buộc theo TT200)
+- Nút **In** (CSS @media print — không cần PDF library)
+- Nút **Xuất Excel** (Phase 7 — sau)
+- Hiển thị cảnh báo nếu B01 không cân
+
+---
+
+## PHẦN IV — Thứ tự triển khai & Dependencies
+
+```
+PRE-1 (AccountingSetup)
+PRE-2 (IsOpeningBalance)       ← độc lập, có thể song song
+PRE-3 (Discount DeliveryNote)  ← độc lập
+PRE-4 (VAT fields)             ← độc lập
+PRE-5 (Invoice numbers)        ← độc lập
+PRE-6 (BankAccount + link)     ← cần làm trước Phase 2
+PRE-7 (FixedAsset)             ← cần làm trước Phase 1c + Phase 3 + 5
+
+                ↓ tất cả PRE hoàn thành ↓
+
+PHASE 1a (AccountingSetup UI)     ← cần PRE-1
+PHASE 1b (BankAccounts UI)        ← cần PRE-6
+PHASE 1c (FixedAssets UI)         ← cần PRE-7
+
+PHASE 2 (Cash Book)               ← cần PRE-1, PRE-6
+PHASE 3 (B02)                     ← cần PRE-3, PRE-4, PRE-7
+PHASE 4 (B03)                     ← cần PHASE 2 + PHASE 3
+PHASE 5 (B01)                     ← cần PHASE 2 + PHASE 3 + PRE-7
+PHASE 6 (UI polish + Print)       ← sau PHASE 1-5
+```
+
+**Recommended order (tuần tự):**
+1. PRE (tất cả migrations) → 2 sprints
+2. Phase 1a + 1b + 1c (foundation UI) → 1 sprint
+3. Phase 2 (Cash Book) → 1 sprint
+4. Phase 3 (B02) → 1 sprint
+5. Phase 4 + 5 (B03 + B01) → 2 sprints
+6. Phase 6 (polish) → 1 sprint
+
+**Tổng ước lượng:** ~8 sprints (nếu sprint = 1 tuần)
+
+---
+
+## PHẦN V — Ngoài phạm vi
+
+| Mục | Lý do |
+|---|---|
+| Sổ cái tổng hợp (General Ledger với hệ thống tài khoản kép) | Quá phức tạp; dùng aggregate thay thế |
+| Tích hợp phần mềm kế toán (MISA, Fast) | Export CSV làm cầu nối nếu cần |
+| Báo cáo thuế GTGT (mẫu 01/GTGT) | Phase sau — data đã sẵn sàng sau PRE-4 |
+| Chiết khấu thanh toán (early payment discount) | Không phổ biến trong mô hình VLXD nhỏ |
+| Tỷ giá ngoại tệ | Không áp dụng |
+| Thanh lý TSCĐ có thu tiền | Phase sau — B03 mục II hiện để = 0 |
+| Vay nợ dài hạn (TK 341) | B03 mục III = 0 cho đến khi có vay |

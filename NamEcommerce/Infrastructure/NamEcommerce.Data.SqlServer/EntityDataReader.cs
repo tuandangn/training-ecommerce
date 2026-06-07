@@ -3,7 +3,7 @@ using NamEcommerce.Domain.Shared.Specifications;
 
 namespace NamEcommerce.Data.SqlServer;
 
-public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where TEntity : AppAggregateEntity
+public sealed class EntityDataReader<TEntity> : IEntityDataReader<TEntity> where TEntity : AppEntity
 {
     private readonly IDbContext _dbContext;
 

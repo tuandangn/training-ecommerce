@@ -67,6 +67,13 @@ public sealed record GoodsReceipt : AppAggregateEntity
     public Guid? VendorId { get; private set; }
     internal VendorInfo? VendorInfo { get; private set; }
 
+    // PRE-4b: Thuế GTGT đầu vào — computed từ items
+    public decimal TotalTaxAmount => _items.Sum(i => i.TaxAmount);
+
+    // PRE-5: Số hóa đơn từ nhà cung cấp
+    public string? VendorInvoiceNumber { get; internal set; }
+    public DateTime? VendorInvoiceDate { get; internal set; }
+
     public Guid? CreatedByUserId { get; private set; }
     public string? CreatedByUsername { get; private set; }
     public DateTime CreatedOnUtc { get; set; }

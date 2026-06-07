@@ -12,7 +12,12 @@ public interface ICustomerAppService
     Task<DeleteCustomerResultAppDto> DeleteCustomerAsync(Guid id);
 
     Task<CustomerAppDto?> GetCustomerByIdAsync(Guid id);
+    Task<CustomerAppDto> GetOrCreateRetailWalkInCustomerAsync();
     Task<IEnumerable<CustomerAppDto>> GetCustomersByIdsAsync(IEnumerable<Guid> ids);
 
-    Task<IPagedDataAppDto<CustomerAppDto>> GetCustomersAsync(string? keywords, int pageIndex, int pageSize);
+    Task<IPagedDataAppDto<CustomerAppDto>> GetCustomersAsync(
+        string? keywords,
+        int pageIndex,
+        int pageSize,
+        bool includeSystem = false);
 }

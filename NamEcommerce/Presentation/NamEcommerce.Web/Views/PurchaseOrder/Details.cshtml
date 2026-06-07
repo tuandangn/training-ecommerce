@@ -100,7 +100,7 @@
         <span class="text-muted">@Model.Info.Code</span>
         @if (purchaseOrderStatus != PurchaseOrderStatus.Draft)
         {
-            <span class="text-muted small">
+            <span class="text-muted small d-none d-md-inline">
                 <span class="status-badge @purchaseOrderStatus.GetDisplayColor()">
                     @purchaseOrderStatus.GetDisplayText()
                 </span>
@@ -1073,61 +1073,35 @@
                     const sellingPriceSection = document.getElementById('modalSellingPriceSection');
                     if (!warehouseSection) return;
                     const qty = _parseReceiveQty();
-                    const dsAllocs = _receiveItemDsData[currentReceivePoItemId] || [];
-                    let totalDsRem = dsAllocs.reduce((sum, a) => sum + a.remaining, 0);
-
                     const dsToggle = document.getElementById('modalDsToggle');
-                    totalDsRem += dsToggle?.checked ? currentDsAvailableQty : 0;
-
-                    let hide;
-                    if (totalDsRem > 0) {
-                        hide = qty <= totalDsRem;
-                    }  else {
-                        hide = false;
-                    }
+                    // Only hide warehouse when user explicitly enabled DS toggle and qty fully covered
+                    const isDsActive = dsToggle?.checked && currentDsAvailableQty > 0;
+                    const hide = isDsActive && qty > 0 && qty <= currentDsAvailableQty;
                     warehouseSection.classList.toggle('d-none', hide);
                     sellingPriceSection?.classList.toggle('d-none', hide);
                 }
-                function toggleDirectShipCheckbox(){
-                    const qty = _parseReceiveQty();
-                    const dsAllocs = _receiveItemDsData[currentReceivePoItemId] || [];
-                    const totalDsRem = dsAllocs.reduce((sum, a) => sum + a.remaining, 0);
-                    const disabled = qty <= totalDsRem;
-                    const dsToggle = document.getElementById('modalDsToggle');
-                    if (disabled && dsToggle.checked){
-                        dsToggle.checked = false;
-                        dsToggle.dispatchEvent(new CustomEvent('change'));
-                    }
-                    dsToggle.disabled = disabled;
-                    if (disabled){
-                        currentDsAvailableQty = 0;
-                        currentDsCustomerName = '';
-                    }
+                function toggleDirectShipCheckbox() {
+                    // DS toggle is always available — user decides whether to direct ship
                 }
 
                 function updateDistributionPreview() {
                     const preview = document.getElementById('modalDistributionPreview');
                     const details = document.getElementById('modalDistributionDetails');
                     if (!preview || !details) return;
-                    const dsAllocs = _receiveItemDsData[currentReceivePoItemId] || [];
+                    const dsToggle = document.getElementById('modalDsToggle');
                     const qty = _parseReceiveQty();
-                    if ((dsAllocs.length === 0 && currentDsAvailableQty == 0) || qty <= 0) { preview.classList.add('d-none'); return; }
+                    // Only show distribution preview when user explicitly chose DS via toggle
+                    if (!dsToggle?.checked || currentDsAvailableQty <= 0 || qty <= 0) {
+                        preview.classList.add('d-none');
+                        return;
+                    }
                     let rem = qty;
                     const rows = [];
-                    for (const a of dsAllocs) {
-                        const dsQty = Math.min(rem, a.remaining);
-                        if (dsQty <= 0) break;
+                    const dsQty = Math.min(rem, currentDsAvailableQty);
+                    if (dsQty > 0) {
                         const fmt = window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(String(dsQty)) : dsQty;
-                        rows.push(`<div class="d-flex align-items-center gap-2"><span class="badge bg-primary">${DecimalFields.formatQuantity(fmt) + currentUnitMeasurement}</span><span class="text-muted"><i class="bi bi-send me-1"></i>Giao thẳng · ${_escReceive(a.label)}</span></div>`);
+                        rows.push(`<div class="d-flex align-items-center gap-2"><span class="badge bg-primary">${DecimalFields.formatQuantity(fmt) + currentUnitMeasurement}</span><span class="text-muted"><i class="bi bi-send me-1"></i>Giao thẳng · ${_escReceive(currentDsCustomerName)}</span></div>`);
                         rem -= dsQty;
-                        if (rem <= 0) break;
-                    }
-                    if (currentDsAvailableQty > 0) {
-                        const currentDsQty = Math.min(rem, currentDsAvailableQty);
-                        if (currentDsQty > 0) {
-							rows.push(`<div class="d-flex align-items-center gap-2"><span class="badge bg-primary">${DecimalFields.formatQuantity(currentDsQty) + currentUnitMeasurement}</span><span class="text-muted"><i class="bi bi-send me-1"></i>Giao thẳng · ${_escReceive(currentDsCustomerName)}</span></div>`);
-							rem -= currentDsQty;
-                        }
                     }
                     if (rem > 0) {
                         const fmt = window.DecimalFields?.formatQuantity ? DecimalFields.formatQuantity(String(rem)) : rem;

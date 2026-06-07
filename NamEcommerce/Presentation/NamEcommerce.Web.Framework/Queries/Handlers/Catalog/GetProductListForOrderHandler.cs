@@ -59,6 +59,17 @@ public sealed class GetProductListForOrderHandler : IRequestHandler<GetProductLi
             productModel.QuantityReserved = stockInfo.QuantityReserved;
             productModel.QuantityAvailable = stockInfo.QuantityAvailable;
             productModel.AvailableWarehouses = warehouseOptions.Where(option => stockInfo.AvailableWarehouseIds.Contains(option.Id)).ToList();
+            productModel.AvailableWarehouseStocks = stockInfo.Warehouses
+                .Where(stock => stock.QuantityAvailable > 0)
+                .Select(stock => new ProductListForOrderModel.ProductWarehouseStockModel
+                {
+                    Id = stock.WarehouseId,
+                    Name = warehouseOptions.FirstOrDefault(option => option.Id == stock.WarehouseId)?.Name ?? stock.WarehouseName,
+                    QuantityOnHand = stock.QuantityOnHand,
+                    QuantityReserved = stock.QuantityReserved,
+                    QuantityAvailable = stock.QuantityAvailable
+                })
+                .ToList();
 
             if (productInfo.Vendors != null)
                 productModel.AvailableVendors = vendorOptions.Where(option => productInfo.Vendors.Any(v => v.VendorId == option.Id)).ToList();

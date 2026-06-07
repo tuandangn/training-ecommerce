@@ -15,6 +15,7 @@ using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Dtos.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
@@ -175,6 +176,40 @@ public sealed class PurchaseOrderAppService : IPurchaseOrderAppService
             Success = true,
             CreatedId = result.CreatedId
         };
+    }
+
+    public async Task<QuickCreatePurchaseOrderResultAppDto> QuickCreatePurchaseOrderAsync(QuickCreatePurchaseOrderAppDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var (valid, errorMessage) = dto.Validate();
+        if (!valid)
+            return QuickCreatePurchaseOrderResultAppDto.CreateError(errorMessage!);
+
+        var result = await _purchaseOrderManager.QuickCreateAndReceiveAsync(new QuickCreatePurchaseOrderDto
+        {
+            VendorId = dto.VendorId,
+            DefaultWarehouseId = dto.DefaultWarehouseId,
+            ReceivedOnUtc = dto.ReceivedOnUtc,
+            Note = dto.Note,
+            ReceiveImmediately = dto.ReceiveImmediately,
+            PictureIds = dto.PictureIds,
+            Items = dto.Items.Select(i => new QuickCreatePurchaseOrderItemDto
+            {
+                ProductId = i.ProductId,
+                Quantity = i.Quantity,
+                UnitCost = i.UnitCost,
+                WarehouseId = i.WarehouseId,
+                QuantityDecimalPlaces = i.QuantityDecimalPlaces
+            }).ToList(),
+            Payment = dto.Payment is null ? null : new QuickCreatePaymentDto
+            {
+                Amount = dto.Payment.Amount,
+                PaymentMethod = (PaymentMethod)dto.Payment.PaymentMethod
+            }
+        }).ConfigureAwait(false);
+
+        return QuickCreatePurchaseOrderResultAppDto.CreateSuccess(result.PurchaseOrderId, result.PurchaseOrderCode, result.GoodsReceiptIds);
     }
 
     public async Task<CreatePurchaseOrderResultAppDto> CopyPurchaseOrderAsync(Guid id)

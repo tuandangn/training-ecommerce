@@ -12,6 +12,14 @@ public static class UserDtoExtensions
             FullName = user.FullName,
             PhoneNumber = user.PhoneNumber,
             Address = user.Address,
-            CreatedOnUtc = user.CreatedOnUtc
+            CreatedOnUtc = user.CreatedOnUtc,
+            RoleNames = user.RoleNames
+        };
+
+    public static RoleAppDto ToDto(this Domain.Shared.Dtos.Users.RoleDto role)
+        => new RoleAppDto
+        {
+            Id = role.Id,
+            Name = role.Name
         };
 }

@@ -3,6 +3,7 @@ using System.Linq;
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Events.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.DeliveryNotes;
 using NamEcommerce.Domain.Values;
 
@@ -71,6 +72,11 @@ public sealed record DeliveryNote : AppAggregateEntity
     public Guid WarehouseId { get; private set; }
     public string? WarehouseName { get; internal set; }
 
+    public Guid? AssignedDeliveryUserId { get; private set; }
+    public string? AssignedDeliveryUsername { get; private set; }
+    public string? AssignedDeliveryFullName { get; private set; }
+    public DateTime? AssignedDeliveryOnUtc { get; private set; }
+
     public Guid CustomerId { get; private set; }
     public CustomerInfo CustomerInfo { get; private set; }
     public NormalizableString ShippingAddress { get; internal set; }
@@ -79,6 +85,17 @@ public sealed record DeliveryNote : AppAggregateEntity
     public string? SurchargeReason { get; internal set; }
     public decimal AmountToCollect { get; internal set; }
     public decimal TotalAmount => _items.Sum(i => i.SubTotal);
+
+    // PRE-3: Chiết khấu thương mại — computed từ items
+    public decimal TotalDiscountAmount => _items.Sum(i => i.DiscountAmount);
+
+    // PRE-4a: Thuế GTGT — computed từ items
+    public decimal TotalTaxAmount => _items.Sum(i => i.TaxAmount);
+
+    // PRE-5: Số hóa đơn GTGT
+    public string? InvoiceNumber { get; internal set; }
+    public string? InvoiceSeries { get; internal set; }
+    public DateTime? InvoiceDate { get; internal set; }
 
     private readonly List<DeliveryNoteItem> _items;
     public IReadOnlyCollection<DeliveryNoteItem> Items => _items.AsReadOnly();
@@ -96,6 +113,13 @@ public sealed record DeliveryNote : AppAggregateEntity
     // Comma-separated Guids stored via EF value converter; FirstOrDefault = DeliveryProofPictureId
     public IReadOnlyCollection<Guid> DeliveryProofPictureIds { get; private set; } = [];
     public string? DeliveryReceiverName { get; private set; }
+    public double? DeliveryLatitude { get; private set; }
+    public double? DeliveryLongitude { get; private set; }
+    public string? DeliveryLocationAddress { get; private set; }
+    public string? DeliveryCompletionNote { get; private set; }
+    public string? DeliveryCompletionSource { get; private set; }
+    public string? DeliveryCompletionIdempotencyKey { get; private set; }
+    public decimal? DeliveryCashCollectedAmount { get; private set; }
     
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
@@ -145,13 +169,44 @@ public sealed record DeliveryNote : AppAggregateEntity
         if (Status != DeliveryNoteStatus.Confirmed)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivering);
 
+        EnsureDeliveryUserAssignedBeforeLeavingWarehouse();
+
         Status = DeliveryNoteStatus.Delivering;
         UpdatedOnUtc = DateTime.UtcNow;
 
         RaiseDomainEvent(new DeliveryNoteDelivering(Id));
     }
 
-    internal void MarkDelivered(IReadOnlyList<Guid> pictureIds, string? receiverName)
+    internal void AssignDeliveryUser(Guid userId, string username, string fullName, DateTime assignedOnUtc)
+    {
+        if (userId == Guid.Empty)
+            throw new NamEcommerceDomainException("Error.DeliveryUserRequired");
+        if (string.IsNullOrWhiteSpace(username))
+            throw new NamEcommerceDomainException("Error.DeliveryUsernameRequired");
+        if (string.IsNullOrWhiteSpace(fullName))
+            throw new NamEcommerceDomainException("Error.DeliveryFullNameRequired");
+        if (IsDirectShip || SourceType != DeliveryNoteSourceType.ToCustomer)
+            throw new NamEcommerceDomainException("Error.CannotAssignDeliveryUserForThisDeliveryNote");
+        if (Status is DeliveryNoteStatus.Delivered or DeliveryNoteStatus.Cancelled)
+            throw new NamEcommerceDomainException("Error.CannotAssignDeliveryUserAfterClosed");
+
+        AssignedDeliveryUserId = userId;
+        AssignedDeliveryUsername = username.Trim();
+        AssignedDeliveryFullName = fullName.Trim();
+        AssignedDeliveryOnUtc = assignedOnUtc;
+        UpdatedOnUtc = assignedOnUtc;
+    }
+
+    internal void MarkDelivered(
+        IReadOnlyList<Guid> pictureIds,
+        string? receiverName,
+        double? latitude = null,
+        double? longitude = null,
+        string? locationAddress = null,
+        string? completionNote = null,
+        string? completionSource = null,
+        string? idempotencyKey = null,
+        decimal? cashCollectedAmount = null)
     {
         if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
@@ -159,15 +214,26 @@ public sealed record DeliveryNote : AppAggregateEntity
         if (pictureIds is null || pictureIds.Count == 0 || pictureIds[0] == Guid.Empty)
             throw new DeliveryProofRequiredException();
 
+        var wasConfirmed = Status == DeliveryNoteStatus.Confirmed;
+        if (wasConfirmed)
+            EnsureDeliveryUserAssignedBeforeLeavingWarehouse();
+
         Status = DeliveryNoteStatus.Delivered;
         DeliveredOnUtc = DateTime.UtcNow;
         DeliveryProofPictureId = pictureIds[0];
         DeliveryProofPictureIds = pictureIds.ToList().AsReadOnly();
         DeliveryReceiverName = receiverName;
+        SetDeliveryCompletionMetadata(latitude, longitude, locationAddress, completionNote, completionSource, idempotencyKey, cashCollectedAmount);
         UpdatedOnUtc = DateTime.UtcNow;
 
+        if (wasConfirmed)
+            RaiseDomainEvent(new DeliveryNoteDelivering(Id));
         RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect));
     }
+
+    internal bool HasSameDeliveryCompletionRequest(string? idempotencyKey)
+        => !string.IsNullOrWhiteSpace(idempotencyKey)
+           && string.Equals(DeliveryCompletionIdempotencyKey, idempotencyKey.Trim(), StringComparison.OrdinalIgnoreCase);
 
     internal bool MarkReceivedByCustomer(DateTime receivedAtUtc, string? receiverName, string? note)
     {
@@ -184,6 +250,10 @@ public sealed record DeliveryNote : AppAggregateEntity
         if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
 
+        var wasConfirmed = Status == DeliveryNoteStatus.Confirmed;
+        if (wasConfirmed)
+            EnsureDeliveryUserAssignedBeforeLeavingWarehouse();
+
         DeliveryConfirmationStatus = DeliveryConfirmationStatus.Confirmed;
         ConfirmedAtUtc = receivedAtUtc;
         ConfirmedNote = note;
@@ -192,6 +262,8 @@ public sealed record DeliveryNote : AppAggregateEntity
         DeliveryReceiverName = receiverName;
         UpdatedOnUtc = DateTime.UtcNow;
 
+        if (wasConfirmed)
+            RaiseDomainEvent(new DeliveryNoteDelivering(Id));
         RaiseDomainEvent(new DeliveryNoteDelivered(Id, OrderId, CustomerId, AmountToCollect));
         return true;
     }
@@ -208,6 +280,35 @@ public sealed record DeliveryNote : AppAggregateEntity
 
         RaiseDomainEvent(new DeliveryNoteCancelled(Id, wasReservingStock));
     }
+
+    private void EnsureDeliveryUserAssignedBeforeLeavingWarehouse()
+    {
+        if (RequiresDeliveryUserBeforeLeavingWarehouse() && !AssignedDeliveryUserId.HasValue)
+            throw new NamEcommerceDomainException("Error.DeliveryUserRequiredBeforeLeavingWarehouse");
+    }
+
+    private bool RequiresDeliveryUserBeforeLeavingWarehouse()
+        => SourceType == DeliveryNoteSourceType.ToCustomer
+           && !IsDirectShip
+           && !string.Equals(ShippingAddress.Value.Trim(), "Tai quay", StringComparison.OrdinalIgnoreCase);
+
+    private void SetDeliveryCompletionMetadata(double? latitude, double? longitude, string? locationAddress,
+        string? completionNote, string? completionSource, string? idempotencyKey, decimal? cashCollectedAmount)
+    {
+        if (cashCollectedAmount < 0)
+            throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotBeNegative");
+
+        DeliveryLatitude = latitude;
+        DeliveryLongitude = longitude;
+        DeliveryLocationAddress = TrimToNull(locationAddress);
+        DeliveryCompletionNote = TrimToNull(completionNote);
+        DeliveryCompletionSource = TrimToNull(completionSource);
+        DeliveryCompletionIdempotencyKey = TrimToNull(idempotencyKey);
+        DeliveryCashCollectedAmount = cashCollectedAmount;
+    }
+
+    private static string? TrimToNull(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     internal void SetAsDirectShip(Guid sourceGoodsReceiptId)
     {

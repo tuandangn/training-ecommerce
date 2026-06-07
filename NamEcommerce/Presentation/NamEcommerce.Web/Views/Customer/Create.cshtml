@@ -33,35 +33,23 @@
                 </div>
                 <div class="col-md-6">
                     <label asp-for="PhoneNumber" class="form-label"></label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-telephone text-muted"></i></span>
-                        <input asp-for="PhoneNumber" class="form-control" placeholder="Nhập số điện thoại" />
-                    </div>
+                    <input asp-for="PhoneNumber" class="form-control" placeholder="Nhập số điện thoại" />
                     <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
                 </div>
                 <div class="col-12">
                     <label asp-for="Address" class="form-label"></label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-geo-alt text-muted"></i></span>
-                        <input asp-for="Address" class="form-control" placeholder="Địa chỉ thường trú" />
-                    </div>
+                    <input asp-for="Address" class="form-control" placeholder="Địa chỉ thường trú" />
                     <span asp-validation-for="Address" class="text-danger small"></span>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="InitialDebt" class="form-label"></label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-cash-stack text-muted"></i></span>
-                        <input asp-for="InitialDebt" class="form-control text-end" placeholder="Nhập số công nợ cũ" data-decimal="currency"/>
-                    </div>
+                    <input asp-for="InitialDebt" class="form-control text-start" placeholder="Nhập số công nợ cũ" data-decimal="currency"/>
                     <span asp-validation-for="InitialDebt" class="text-danger small"></span>
                     <div class="form-text text-muted">Nhập số công nợ ban đầu của khách hàng.</div>
                 </div>
                 <div class="col-md-6">
                     <label asp-for="Email" class="form-label"></label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-envelope text-muted"></i></span>
-                        <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" />
-                    </div>
+                    <input asp-for="Email" class="form-control" type="email" placeholder="Địa chỉ email" />
                     <span asp-validation-for="Email" class="text-danger small"></span>
                 </div>
                 <div class="col-12">

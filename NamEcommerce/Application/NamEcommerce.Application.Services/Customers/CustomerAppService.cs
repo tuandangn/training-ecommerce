@@ -78,8 +78,16 @@ public sealed class CustomerAppService : ICustomerAppService
             Email = dto.Email,
             Address = dto.Address,
             Note = dto.Note,
+            Kind = (int)dto.Kind,
+            IsSystem = dto.IsSystem,
             CreatedOnUtc = dto.CreatedOnUtc
         };
+    }
+
+    public async Task<CustomerAppDto> GetOrCreateRetailWalkInCustomerAsync()
+    {
+        var dto = await _customerManager.GetOrCreateRetailWalkInCustomerAsync().ConfigureAwait(false);
+        return MapToAppDto(dto);
     }
 
 
@@ -94,23 +102,52 @@ public sealed class CustomerAppService : ICustomerAppService
             Email = cust.Email,
             Address = cust.Address,
             Note = cust.Note,
+            Kind = (int)cust.Kind,
+            IsSystem = cust.IsSystem,
             CreatedOnUtc = cust.CreatedOnUtc
         });
     }
 
-    public async Task<IPagedDataAppDto<CustomerAppDto>> GetCustomersAsync(string? keywords, int pageIndex, int pageSize)
+    public async Task<IPagedDataAppDto<CustomerAppDto>> GetCustomersAsync(
+        string? keywords,
+        int pageIndex,
+        int pageSize,
+        bool includeSystem = false)
     {
-        var paged = await _customerManager.GetCustomersAsync(keywords, pageIndex, pageSize).ConfigureAwait(false);
-        var items = paged.Items.Select(c => new CustomerAppDto(c.Id)
+        var paged = await _customerManager.GetCustomersAsync(keywords, pageIndex, pageSize, includeSystem).ConfigureAwait(false);
+        var items = paged.Items.Where(c => !c.IsSystem).Select(MapToAppDto).ToList();
+
+        foreach(var systemCustomer in paged.Items.Where(c => c.IsSystem).OrderByDescending(c => c.FullName))
         {
-            FullName = c.FullName,
-            PhoneNumber = c.PhoneNumber,
-            Email = c.Email,
-            Address = c.Address,
-            Note = c.Note,
-            CreatedOnUtc = c.CreatedOnUtc
-        }).ToList();
+            items.Insert(0, MapToAppDto(systemCustomer));
+        }
 
         return PagedDataAppDto.Create(items, pageIndex, pageSize, paged.PagerInfo.TotalCount);
+
+        CustomerAppDto MapToAppDto(CustomerDto dto)
+            => new(dto.Id)
+            {
+                FullName = dto.FullName,
+                PhoneNumber = dto.PhoneNumber,
+                Email = dto.Email,
+                Address = dto.Address,
+                Note = dto.Note,
+                Kind = dto.Kind,
+                IsSystem = dto.IsSystem,
+                CreatedOnUtc = dto.CreatedOnUtc
+            };
     }
+
+    private static CustomerAppDto MapToAppDto(CustomerDto dto)
+        => new(dto.Id)
+        {
+            FullName = dto.FullName,
+            PhoneNumber = dto.PhoneNumber,
+            Email = dto.Email,
+            Address = dto.Address,
+            Note = dto.Note,
+            Kind = dto.Kind,
+            IsSystem = dto.IsSystem,
+            CreatedOnUtc = dto.CreatedOnUtc
+        };
 }

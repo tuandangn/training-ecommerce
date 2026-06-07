@@ -1,0 +1,85 @@
+@using NamEcommerce.Application.Contracts.Dtos.Finance
+@model IncomeStatementDto
+@{
+    ViewData[ViewConstants.PageTitle] = "Kết quả hoạt động kinh doanh (B02)";
+    int year = ViewBag.Year;
+    int? month = ViewBag.Month;
+    int? quarter = ViewBag.Quarter;
+    bool compare = ViewBag.Compare == true;
+    IncomeStatementDto? prior = ViewBag.PriorModel as IncomeStatementDto;
+    int cols = prior != null ? 3 : 2;
+}
+
+@section TitleSection {
+    <h1 class="topbar-page-title">B02 — Kết quả HĐKD</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active">Kế toán — B02</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<form method="get" class="d-flex align-items-center gap-2 mb-3 no-print flex-wrap">
+    <select name="year" class="form-select form-select-sm" style="width:100px">
+        @for (int y = DateTime.Today.Year; y >= DateTime.Today.Year - 5; y--)
+        {
+            <option value="@y" selected="@(y == year)">@y</option>
+        }
+    </select>
+    <select name="month" class="form-select form-select-sm" style="width:110px">
+        <option value="">Cả năm</option>
+        @for (int m = 1; m <= 12; m++)
+        {
+            <option value="@m" selected="@(m == month)">Tháng @m</option>
+        }
+    </select>
+    <div class="form-check form-check-inline ms-1 mb-0">
+        <input class="form-check-input" type="checkbox" name="compare" value="true" id="chkCompare" @(compare ? "checked" : "") onchange="this.form.submit()">
+        <label class="form-check-label small" for="chkCompare">So sánh kỳ trước</label>
+    </div>
+    <button type="submit" class="btn btn-sm btn-primary">Xem</button>
+    <a asp-action="ExportIncomeStatementExcel" asp-route-year="@year" asp-route-month="@month"
+       class="btn btn-sm btn-outline-success no-print">
+        <i class="bi bi-file-earmark-excel me-1"></i>Excel
+    </a>
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i>In</button>
+</form>
+
+<div class="content-card p-4" style="max-width:@(prior != null ? "900px" : "700px")">
+    <h5 class="text-center mb-1">BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH</h5>
+    <p class="text-center text-muted small mb-4">@Model.Period — Từ @Model.PeriodStart.ToString("dd/MM/yyyy") đến @Model.PeriodEnd.ToString("dd/MM/yyyy")</p>
+
+    <table class="table table-sm">
+        <thead class="table-light">
+            <tr>
+                <th>Chỉ tiêu</th>
+                <th class="text-end">@Model.Period</th>
+                @if (prior != null) { <th class="text-end text-muted">@prior.Period</th> }
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>[01] Doanh thu gộp</td><td class="text-end">@Model.GrossRevenue.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.GrossRevenue.DisplayCurrency()</td>}</tr>
+            <tr><td class="ps-4 text-muted">Chiết khấu thương mại (TK 521)</td><td class="text-end text-muted">(@Model.TradeDiscounts.DisplayCurrency())</td>@if(prior!=null){<td class="text-end text-muted">(@prior.TradeDiscounts.DisplayCurrency())</td>}</tr>
+            <tr><td class="ps-4 text-muted">Hàng bán bị trả lại (TK 531)</td><td class="text-end text-muted">(@Model.SalesReturns.DisplayCurrency())</td>@if(prior!=null){<td class="text-end text-muted">(@prior.SalesReturns.DisplayCurrency())</td>}</tr>
+            <tr><td class="ps-4 text-muted">Tổng các khoản giảm trừ</td><td class="text-end text-muted">(@Model.TotalDeductions.DisplayCurrency())</td>@if(prior!=null){<td class="text-end text-muted">(@prior.TotalDeductions.DisplayCurrency())</td>}</tr>
+            <tr class="fw-bold table-active"><td>[10] Doanh thu thuần</td><td class="text-end">@Model.NetRevenue.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.NetRevenue.DisplayCurrency()</td>}</tr>
+            <tr><td>[11] Giá vốn hàng bán</td><td class="text-end">(@Model.NetCostOfGoodsSold.DisplayCurrency())</td>@if(prior!=null){<td class="text-end text-muted">(@prior.NetCostOfGoodsSold.DisplayCurrency())</td>}</tr>
+            <tr class="fw-bold table-active"><td>[20] Lợi nhuận gộp</td><td class="text-end">@Model.GrossProfit.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.GrossProfit.DisplayCurrency()</td>}</tr>
+            <tr><td>[25] Chi phí bán hàng</td><td class="text-end">(@Model.TotalSellingExpenses.DisplayCurrency())</td>@if(prior!=null){<td class="text-end text-muted">(@prior.TotalSellingExpenses.DisplayCurrency())</td>}</tr>
+            <tr><td class="ps-4 text-muted">Trong đó: Khấu hao (641)</td><td class="text-end text-muted">@Model.SellingDepreciation.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.SellingDepreciation.DisplayCurrency()</td>}</tr>
+            <tr><td>[26] Chi phí QLDN</td><td class="text-end">(@Model.TotalAdminExpenses.DisplayCurrency())</td>@if(prior!=null){<td class="text-end text-muted">(@prior.TotalAdminExpenses.DisplayCurrency())</td>}</tr>
+            <tr><td class="ps-4 text-muted">Trong đó: Khấu hao (642)</td><td class="text-end text-muted">@Model.AdminDepreciation.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.AdminDepreciation.DisplayCurrency()</td>}</tr>
+            <tr class="fw-bold table-active"><td>[30] Lợi nhuận thuần từ HĐKD</td><td class="text-end">@Model.OperatingProfit.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.OperatingProfit.DisplayCurrency()</td>}</tr>
+            <tr class="fw-bold table-active"><td>[50] Lợi nhuận trước thuế</td><td class="text-end">@Model.ProfitBeforeTax.DisplayCurrency()</td>@if(prior!=null){<td class="text-end text-muted">@prior.ProfitBeforeTax.DisplayCurrency()</td>}</tr>
+            <tr><td>[51] Thuế TNDN hiện hành (TK 821)</td><td class="text-end">(@Model.CorporateTax.DisplayCurrency())</td>@if(prior!=null){<td class="text-end text-muted">(@prior.CorporateTax.DisplayCurrency())</td>}</tr>
+            <tr class="fw-bold fs-6 @(Model.NetProfit >= 0 ? "table-success" : "table-danger")">
+                <td>[60] Lợi nhuận sau thuế</td>
+                <td class="text-end">@Model.NetProfit.DisplayCurrency()</td>
+                @if (prior != null) { <td class="text-end text-muted">@prior.NetProfit.DisplayCurrency()</td> }
+            </tr>
+        </tbody>
+    </table>
+</div>
