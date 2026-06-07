@@ -2107,6 +2107,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(0);
 
+                    b.Property<decimal?>("DeliveryCashCollectedAmount")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<double?>("DeliveryLatitude")
                         .HasColumnType("float");
 

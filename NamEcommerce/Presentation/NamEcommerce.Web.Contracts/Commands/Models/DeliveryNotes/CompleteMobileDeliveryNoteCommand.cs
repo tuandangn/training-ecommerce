@@ -15,4 +15,5 @@ public sealed class CompleteMobileDeliveryNoteCommand : IRequest<CommonActionRes
     public string? LocationAddress { get; init; }
     public string? Note { get; init; }
     public string? IdempotencyKey { get; init; }
+    public decimal? CashCollectedAmount { get; init; }
 }

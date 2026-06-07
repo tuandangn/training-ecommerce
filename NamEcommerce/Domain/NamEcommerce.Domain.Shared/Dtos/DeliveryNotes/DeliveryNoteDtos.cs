@@ -43,6 +43,7 @@ public sealed record DeliveryNoteDto
     public string? DeliveryCompletionNote { get; init; }
     public string? DeliveryCompletionSource { get; init; }
     public string? DeliveryCompletionIdempotencyKey { get; init; }
+    public decimal? DeliveryCashCollectedAmount { get; init; }
     
     public Guid? CreatedByUserId { get; init; }
     public DateTime CreatedOnUtc { get; init; }
@@ -146,6 +147,7 @@ public sealed record DeliveryCompletionMetadataDto
     public string? Note { get; init; }
     public string? Source { get; init; }
     public string? IdempotencyKey { get; init; }
+    public decimal? CashCollectedAmount { get; init; }
 }
 
 [Serializable]

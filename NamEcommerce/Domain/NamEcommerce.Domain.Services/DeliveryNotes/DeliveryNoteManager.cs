@@ -213,7 +213,8 @@ public sealed class DeliveryNoteManager(
             dto.CompletionMetadata?.LocationAddress,
             dto.CompletionMetadata?.Note,
             dto.CompletionMetadata?.Source,
-            dto.CompletionMetadata?.IdempotencyKey);
+            dto.CompletionMetadata?.IdempotencyKey,
+            dto.CompletionMetadata?.CashCollectedAmount);
         // Save entity (display cost + status) → interceptor fires events.
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
 
@@ -1008,6 +1009,7 @@ public sealed class DeliveryNoteManager(
             DeliveryCompletionNote = deliveryNote.DeliveryCompletionNote,
             DeliveryCompletionSource = deliveryNote.DeliveryCompletionSource,
             DeliveryCompletionIdempotencyKey = deliveryNote.DeliveryCompletionIdempotencyKey,
+            DeliveryCashCollectedAmount = deliveryNote.DeliveryCashCollectedAmount,
             CreatedByUserId = deliveryNote.CreatedByUserId,
             CreatedOnUtc = deliveryNote.CreatedOnUtc,
             UpdatedOnUtc = deliveryNote.UpdatedOnUtc,

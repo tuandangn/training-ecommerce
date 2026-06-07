@@ -447,6 +447,7 @@ public sealed class DirectShipManager(
             DeliveredOnUtc = d.DeliveredOnUtc,
             DeliveryProofPictureId = d.DeliveryProofPictureId,
             DeliveryReceiverName = d.DeliveryReceiverName,
+            DeliveryCashCollectedAmount = d.DeliveryCashCollectedAmount,
             TotalAmount = d.TotalAmount,
             Surcharge = d.Surcharge,
             SurchargeReason = d.SurchargeReason,

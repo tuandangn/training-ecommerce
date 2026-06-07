@@ -40,6 +40,7 @@ public static class DeliveryNoteExtensions
             DeliveryCompletionNote = deliveryNote.DeliveryCompletionNote,
             DeliveryCompletionSource = deliveryNote.DeliveryCompletionSource,
             DeliveryCompletionIdempotencyKey = deliveryNote.DeliveryCompletionIdempotencyKey,
+            DeliveryCashCollectedAmount = deliveryNote.DeliveryCashCollectedAmount,
             CreatedByUserId = deliveryNote.CreatedByUserId,
             CreatedOnUtc = deliveryNote.CreatedOnUtc,
             UpdatedOnUtc = deliveryNote.UpdatedOnUtc,

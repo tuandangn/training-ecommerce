@@ -32,6 +32,7 @@
         || Model.DeliveryLongitude.HasValue
         || !string.IsNullOrWhiteSpace(Model.DeliveryCompletionNote)
         || !string.IsNullOrWhiteSpace(Model.DeliveryCompletionSource)
+        || Model.DeliveryCashCollectedAmount.HasValue
         || !string.IsNullOrWhiteSpace(deliveryProofPictureSrc);
 }
 
@@ -285,6 +286,14 @@
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted text-uppercase mb-1">Người nhận</label>
                             <div class="text-dark fw-bold">@Model.DeliveryReceiverName</div>
+                        </div>
+                    }
+
+                    @if (Model.DeliveryCashCollectedAmount.HasValue)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Tien da thu</label>
+                            <div class="text-dark fw-bold">@Model.DeliveryCashCollectedAmount.Value.DisplayCurrencyWithSymbol()</div>
                         </div>
                     }
 
