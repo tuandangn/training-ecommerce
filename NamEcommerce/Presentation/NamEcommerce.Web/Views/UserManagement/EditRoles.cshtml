@@ -1,0 +1,79 @@
+@model UserRoleAssignmentModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Phân vai trò";
+}
+
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Phân vai trò
+        <span class="text-muted">@Model.FullName</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="Roles" asp-controller="UserManagement" class="text-decoration-none">Phân vai trò</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.FullName</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<div asp-validation-summary="ModelOnly" class="alert alert-warning alert-global alert-dismissible long-time-waiting"></div>
+<div class="content-card">
+    <form method="post" asp-antiforgery="true">
+        <div class="content-card-body">
+            <input type="hidden" asp-for="UserId" />
+            <input type="hidden" asp-for="Username" />
+            <input type="hidden" asp-for="FullName" />
+
+            <div class="row g-3">
+                <div class="col-lg-5">
+                    <label class="form-label">Nhân sự</label>
+                    <div class="form-control bg-light">
+                        <span class="fw-medium">@Model.FullName</span>
+                        <span class="text-muted ms-2">@Model.Username</span>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <label class="form-label">Vai trò</label>
+                    <div class="border rounded-2 p-3">
+                        @foreach (var role in Model.AvailableRoles)
+                        {
+                            var inputId = $"role_{role.Id:N}";
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox"
+                                       id="@inputId"
+                                       name="@nameof(Model.RoleIds)"
+                                       value="@role.Id"
+                                       checked="@role.Selected" />
+                                <label class="form-check-label" for="@inputId">@DisplayRole(role.Name)</label>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="content-card-footer d-flex align-items-center justify-content-between">
+            <a asp-action="Roles" class="btn btn-link text-decoration-none text-muted btn-sm">
+                <i class="bi bi-arrow-left"></i>
+                Trở về
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-floppy me-1"></i>Lưu thay đổi
+            </button>
+        </div>
+    </form>
+</div>
+
+@functions {
+    private static string DisplayRole(string name)
+        => name switch
+        {
+            "Admin" => "Quản trị",
+            "WarehouseManager" => "Quản kho",
+            "DeliveryStaff" => "Giao hàng",
+            "Cashier" => "Thủ quỹ",
+            _ => name
+        };
+}

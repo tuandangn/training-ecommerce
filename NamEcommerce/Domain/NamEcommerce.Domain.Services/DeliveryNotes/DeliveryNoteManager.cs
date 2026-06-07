@@ -148,9 +148,6 @@ public sealed class DeliveryNoteManager(
         if (deliveryNote.Status != DeliveryNoteStatus.Draft)
             throw new DeliveryNoteCannotChangeStatusException(deliveryNote.Status, DeliveryNoteStatus.Confirmed);
 
-        foreach (var item in deliveryNote.Items)
-            item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
-
         deliveryNote.Confirm();
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
     }
@@ -161,7 +158,26 @@ public sealed class DeliveryNoteManager(
         if (deliveryNote is null)
             throw new DeliveryNoteNotFoundException(id);
 
+        foreach (var item in deliveryNote.Items)
+            item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
+
         deliveryNote.MarkDelivering();
+        await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
+    }
+
+    public async Task AssignDeliveryUserAsync(AssignDeliveryUserDto dto)
+    {
+        dto.Verify();
+
+        var deliveryNote = await deliveryNoteRepository.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+        if (deliveryNote is null)
+            throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
+
+        deliveryNote.AssignDeliveryUser(
+            dto.AssignedDeliveryUserId,
+            dto.AssignedDeliveryUsername,
+            dto.AssignedDeliveryFullName,
+            DateTime.UtcNow);
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
     }
 
@@ -171,10 +187,16 @@ public sealed class DeliveryNoteManager(
         if (deliveryNote is null)
             throw new DeliveryNoteNotFoundException(dto.DeliveryNoteId);
 
+        if (deliveryNote.Status == DeliveryNoteStatus.Delivered
+            && deliveryNote.HasSameDeliveryCompletionRequest(dto.CompletionMetadata?.IdempotencyKey))
+        {
+            return;
+        }
+
         var acceptance = ResolveDeliveryAcceptance(deliveryNote, dto.Acceptance);
 
         // Snapshot hiển thị trước khi xuất kho; COGS authoritative được ghi trong cost allocation.
-        // Lưu cùng entity — DeliveryNoteDeliveredStockHandler sẽ dispatch stock sau khi event fire.
+        // Lưu cùng entity; DeliveryNoteDeliveringStockHandler dispatch stock nếu phiếu đi từ Confirmed tới Delivered trực tiếp.
         foreach (var item in deliveryNote.Items)
         {
             item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
@@ -183,9 +205,16 @@ public sealed class DeliveryNoteManager(
         deliveryNote.AmountToCollect = acceptance.AmountToCollect;
 
         // 1. Mark DeliveryNote Delivered — raise DeliveryNoteDelivered event
-        deliveryNote.MarkDelivered(dto.PictureIds, dto.ReceiverName);
-
-        // Save entity (display cost + status) → interceptor fires event → DeliveryNoteDeliveredStockHandler dispatches stock/cost.
+        deliveryNote.MarkDelivered(
+            dto.PictureIds,
+            dto.ReceiverName,
+            dto.CompletionMetadata?.Latitude,
+            dto.CompletionMetadata?.Longitude,
+            dto.CompletionMetadata?.LocationAddress,
+            dto.CompletionMetadata?.Note,
+            dto.CompletionMetadata?.Source,
+            dto.CompletionMetadata?.IdempotencyKey);
+        // Save entity (display cost + status) → interceptor fires events.
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
 
         // 2. Nếu khách không nhận đủ hàng, tạo phiếu CustomerReturn draft tự động để vào bước kiểm hàng/xác nhận.
@@ -391,13 +420,13 @@ public sealed class DeliveryNoteManager(
         foreach (var returnId in cancellableReturnIds)
             await customerReturnManager.CancelAsync(returnId).ConfigureAwait(false);
 
-        bool wasDraft = deliveryNote.Status == DeliveryNoteStatus.Draft;
-        bool wasConfirmed = deliveryNote.Status == DeliveryNoteStatus.Confirmed || deliveryNote.Status == DeliveryNoteStatus.Delivering;
+        bool wasBeforeDispatch = deliveryNote.Status == DeliveryNoteStatus.Draft || deliveryNote.Status == DeliveryNoteStatus.Confirmed;
+        bool wasDelivering = deliveryNote.Status == DeliveryNoteStatus.Delivering;
 
         deliveryNote.Cancel();
         await deliveryNoteRepository.UpdateAsync(deliveryNote).ConfigureAwait(false);
 
-        if (wasDraft && deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer && !deliveryNote.IsDirectShip)
+        if (wasBeforeDispatch && deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer && !deliveryNote.IsDirectShip)
         {
             var itemsByProduct = deliveryNote.Items
                 .GroupBy(item => item.ProductId)
@@ -440,7 +469,7 @@ public sealed class DeliveryNoteManager(
                 }
             }
         }
-        else if (wasConfirmed && deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer && !deliveryNote.IsDirectShip)
+        else if (wasDelivering && deliveryNote.SourceType == DeliveryNoteSourceType.ToCustomer && !deliveryNote.IsDirectShip)
         {
             foreach (var item in deliveryNote.Items)
             {
@@ -953,6 +982,10 @@ public sealed class DeliveryNoteManager(
             OrderId = deliveryNote.OrderId,
             WarehouseId = deliveryNote.WarehouseId,
             OrderCode = deliveryNote.OrderCode,
+            AssignedDeliveryUserId = deliveryNote.AssignedDeliveryUserId,
+            AssignedDeliveryUsername = deliveryNote.AssignedDeliveryUsername,
+            AssignedDeliveryFullName = deliveryNote.AssignedDeliveryFullName,
+            AssignedDeliveryOnUtc = deliveryNote.AssignedDeliveryOnUtc,
             CustomerId = deliveryNote.CustomerId,
             CustomerName = deliveryNote.CustomerInfo.FullName,
             CustomerPhone = deliveryNote.CustomerInfo.PhoneNumber,
@@ -969,6 +1002,12 @@ public sealed class DeliveryNoteManager(
             DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
             DeliveryProofPictureId = deliveryNote.DeliveryProofPictureId,
             DeliveryReceiverName = deliveryNote.DeliveryReceiverName,
+            DeliveryLatitude = deliveryNote.DeliveryLatitude,
+            DeliveryLongitude = deliveryNote.DeliveryLongitude,
+            DeliveryLocationAddress = deliveryNote.DeliveryLocationAddress,
+            DeliveryCompletionNote = deliveryNote.DeliveryCompletionNote,
+            DeliveryCompletionSource = deliveryNote.DeliveryCompletionSource,
+            DeliveryCompletionIdempotencyKey = deliveryNote.DeliveryCompletionIdempotencyKey,
             CreatedByUserId = deliveryNote.CreatedByUserId,
             CreatedOnUtc = deliveryNote.CreatedOnUtc,
             UpdatedOnUtc = deliveryNote.UpdatedOnUtc,

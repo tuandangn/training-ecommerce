@@ -1,7 +1,9 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions;
+using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
@@ -183,6 +185,24 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         }
     }
 
+    [HttpPost]
+    [Authorize(Policy = AuthorizationPolicyNames.ManageDeliveryRuns)]
+    public async Task<IActionResult> AssignDeliveryUser(Guid id, Guid assignedDeliveryUserId)
+    {
+        var result = await _mediator.Send(new AssignDeliveryUserCommand
+        {
+            DeliveryNoteId = id,
+            AssignedDeliveryUserId = assignedDeliveryUserId
+        }).ConfigureAwait(false);
+
+        if (result.Success)
+            NotifySuccess(result.SuccessMessage ?? "Msg.SaveSuccess");
+        else
+            NotifyError(result.ErrorMessage ?? "Error.AssignDeliveryUserFailed");
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
     public async Task<IActionResult> Print(Guid id)
     {
         try
@@ -223,16 +243,20 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = AuthorizationPolicyNames.ManageDeliveryRuns)]
     public async Task<IActionResult> MarkDelivering(Guid id)
     {
         var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id).ConfigureAwait(false);
         if (deliveryNote is null)
             return this.JsonError(LocalizeError("Error.DeliveryNoteNotFound"));
 
-        await _mediator.Send(new MarkDeliveringDeliveryNoteCommand
+        var result = await _mediator.Send(new MarkDeliveringDeliveryNoteCommand
         {
             DeliveryNoteId = id
         }).ConfigureAwait(false);
+
+        if (!result.Success)
+            return this.JsonError(LocalizeError(result.ErrorMessage ?? "Error.DeliveryNoteMarkDeliveringFailed"));
 
         return this.JsonOk();
     }

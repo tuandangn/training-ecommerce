@@ -1,0 +1,110 @@
+@model DeliveryMobileRunModel
+@using System.Text.Json
+@using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
+@{
+    Layout = "_DeliveryMobileLayout";
+    ViewData["Title"] = Model.Run.Code;
+    var status = (DeliveryRunStatus)Model.Run.Status;
+    var statusClass = status == DeliveryRunStatus.ReadyForHandover
+        ? "bg-info text-white"
+        : "bg-warning text-dark";
+    var cachePayload = JsonSerializer.Serialize(Model.Run, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+}
+
+<div class="mobile-topbar">
+    <div>
+        <h1 class="mobile-title">@Model.Run.Code</h1>
+        <p class="mobile-subtitle">@Model.Run.Items.Count phiếu giao</p>
+    </div>
+    <a asp-action="Index" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+</div>
+
+<div class="mobile-card mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="mobile-status @statusClass">@Model.Run.StatusName</span>
+        <strong>@Model.Run.Items.Sum(item => item.AmountToCollect).DisplayCurrencyWithSymbol()</strong>
+    </div>
+    <div class="d-flex justify-content-between align-items-center">
+        <span class="mobile-meta">Cache offline</span>
+        <span id="delivery-cache-status" class="fw-bold @(Model.Run.DriverCachedOnUtc.HasValue ? "text-success" : "text-muted")">
+            @(Model.Run.DriverCachedOnUtc.HasValue ? "Đã cache" : "Đang kiểm tra")
+        </span>
+    </div>
+    @if (Model.Run.PaperManifestIssued)
+    {
+        <div class="mobile-meta mt-2"><i class="bi bi-printer me-1"></i>Quản kho đã in phiếu giấy dự phòng.</div>
+    }
+</div>
+
+@foreach (var item in Model.Run.Items)
+{
+    <article class="mobile-card">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <div>
+                <div class="fw-bold">@item.CustomerName</div>
+                <div class="mobile-meta">@item.DeliveryNoteCode @(!string.IsNullOrWhiteSpace(item.OrderCode) ? $"· {item.OrderCode}" : "")</div>
+            </div>
+            @if (item.AmountToCollect > 0)
+            {
+                <span class="badge bg-light text-dark">@item.AmountToCollect.DisplayCurrencyWithSymbol()</span>
+            }
+        </div>
+        <div class="mb-2">
+            <i class="bi bi-geo-alt me-1 text-muted"></i>@item.ShippingAddress
+        </div>
+        <form asp-action="CompleteDeliveryNote" method="post" enctype="multipart/form-data" class="delivery-complete-form mt-3" data-note-id="@item.DeliveryNoteId">
+            <input type="hidden" name="deliveryRunId" value="@Model.Run.Id" />
+            <input type="hidden" name="deliveryNoteId" value="@item.DeliveryNoteId" />
+            <input type="hidden" name="idempotencyKey" />
+            <input type="hidden" name="latitude" />
+            <input type="hidden" name="longitude" />
+            <input type="hidden" name="locationAddress" />
+
+            <div class="mb-2">
+                <label class="form-label mobile-meta">Người nhận</label>
+                <input type="text" name="receiverName" class="form-control" autocomplete="name" />
+            </div>
+            <div class="mb-2">
+                <label class="form-label mobile-meta">Ảnh bằng chứng</label>
+                <input type="file" name="proofFile" class="form-control" accept="image/*" capture="environment" required />
+            </div>
+            <div class="mb-3">
+                <label class="form-label mobile-meta">Ghi chú</label>
+                <textarea name="note" class="form-control" rows="2"></textarea>
+            </div>
+            <button type="submit" class="btn btn-success w-100">
+                <i class="bi bi-check-circle me-1"></i>Đã giao
+            </button>
+            <div class="delivery-complete-status mobile-meta mt-2"></div>
+        </form>
+    </article>
+}
+
+<div class="mobile-sticky-actions">
+    <div class="d-grid gap-2">
+        <button type="button" id="delivery-sync-pending" class="btn btn-success">
+            <i class="bi bi-cloud-arrow-up me-1"></i>Đồng bộ offline
+        </button>
+        <a asp-action="Run" asp-route-id="@Model.Run.Id" class="btn btn-primary">
+            <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
+        </a>
+        <div id="delivery-sync-status" class="mobile-meta text-center"></div>
+    </div>
+</div>
+
+<script type="application/json" id="delivery-run-payload">@Html.Raw(cachePayload)</script>
+
+@section Scripts {
+    <script type="module">
+        import { installDeliveryRunCache, installDeliveryCompletionForms, installDeliveryManualSync } from '/modules/DeliveryMobileCache.js';
+
+        installDeliveryRunCache({
+            runId: '@Model.Run.Id',
+            cacheUrl: '@Url.Action("Cache", "DeliveryMobile")'
+        });
+        installDeliveryCompletionForms();
+        installDeliveryManualSync();
+    </script>
+}

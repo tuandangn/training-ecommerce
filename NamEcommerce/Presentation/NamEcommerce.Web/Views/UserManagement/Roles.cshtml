@@ -1,0 +1,87 @@
+@model UserRoleListModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Phân vai trò";
+}
+
+@section TitleSection {
+    <h1 class="topbar-page-title">Phân vai trò</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Phân vai trò</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<div class="content-card">
+    <div class="table-responsive">
+        <table class="table data-table mb-0">
+            <thead>
+                <tr>
+                    <th class="ps-4">Nhân sự</th>
+                    <th>Tên đăng nhập</th>
+                    <th>Vai trò</th>
+                    <th style="width: 96px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Users.Count > 0)
+                {
+                    @foreach (var user in Model.Users)
+                    {
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-medium">@user.FullName</div>
+                                <div class="small text-muted">@user.PhoneNumber</div>
+                            </td>
+                            <td>@user.Username</td>
+                            <td>
+                                @if (user.RoleNames.Count == 0)
+                                {
+                                    <span class="text-muted">Chưa gán</span>
+                                }
+                                else
+                                {
+                                    foreach (var roleName in user.RoleNames)
+                                    {
+                                        <span class="badge rounded-pill text-bg-light border me-1">@DisplayRole(roleName)</span>
+                                    }
+                                }
+                            </td>
+                            <td class="text-end pe-3">
+                                <a class="btn-table-action" asp-action="EditRoles" asp-route-id="@user.Id" title="Phân vai trò">
+                                    <i class="bi bi-person-gear"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="4">
+                            <div class="empty-state">
+                                <div class="empty-icon"><i class="bi bi-people"></i></div>
+                                <h5>Chưa có user nào</h5>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@functions {
+    private static string DisplayRole(string name)
+        => name switch
+        {
+            "Admin" => "Quản trị",
+            "WarehouseManager" => "Quản kho",
+            "DeliveryStaff" => "Giao hàng",
+            "Cashier" => "Thủ quỹ",
+            _ => name
+        };
+}

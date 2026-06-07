@@ -5,6 +5,7 @@
 @{
     ViewData["Title"] = "Phiếu xuất kho";
     var query = Model.Keywords ?? "";
+    var deliveryUserRequiredTitle = "Can phan cong nguoi giao truoc";
 }
 
 <div class="page-header">
@@ -65,6 +66,9 @@
                                 50 => ("bg-danger text-light", "Đã hủy", "bi-x-circle"),
                                 _ => ("bg-secondary text-light", "Không rõ", "bi-question-circle")
                             };
+                            var isCounterPickup = string.Equals(deliveryNote.ShippingAddress?.Trim(), "Tai quay", StringComparison.OrdinalIgnoreCase);
+                            var canLeaveWarehouse = deliveryNote.IsDirectShip || isCounterPickup || deliveryNote.AssignedDeliveryUserId.HasValue;
+                            var canOpenDeliveredWorkflow = deliveryNote.Status == (int)DeliveryNoteStatus.Delivering || canLeaveWarehouse;
 
                             <tr>
                                 <td class="ps-4">
@@ -102,6 +106,12 @@
                                     <span class="d-inline-block text-truncate small text-muted" style="max-width: 180px;" title="@deliveryNote.WarehouseName">
                                         @deliveryNote.WarehouseName
                                     </span>
+                                    @if (!string.IsNullOrWhiteSpace(deliveryNote.AssignedDeliveryFullName))
+                                    {
+                                        <div class="small text-muted mt-1">
+                                            <i class="bi bi-person-check me-1"></i>@deliveryNote.AssignedDeliveryFullName
+                                        </div>
+                                    }
                                 </td>
                                 <td class="text-center">
                                     <span class="status-badge @statusTuple.Item1 w-100">
@@ -142,7 +152,7 @@
                                             {
                                                 <li><hr class="dropdown-divider"></li>
                                                 <li>
-                                                    <a class="dropdown-item py-2 text-secondary btn-delivering fw-medium" href="#" data-id="@deliveryNote.Id">
+                                                    <a class="dropdown-item py-2 @(canLeaveWarehouse ? "text-secondary btn-delivering" : "text-muted disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canLeaveWarehouse ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canLeaveWarehouse)">
                                                         <i class="bi bi-truck me-1"></i>Đang giao
                                                     </a>
                                                 </li>
@@ -151,7 +161,7 @@
                                             {
                                                 <li><hr class="dropdown-divider"></li>
                                                 <li>
-                                                    <a class="dropdown-item py-2 text-success btn-delivered fw-medium" href="#" data-id="@deliveryNote.Id">
+                                                    <a class="dropdown-item py-2 @(canOpenDeliveredWorkflow ? "text-success btn-delivered" : "text-muted disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canOpenDeliveredWorkflow ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canOpenDeliveredWorkflow)">
                                                         <i class="bi bi-check-circle-fill me-1"></i>Đã giao
                                                     </a>
                                                 </li>
@@ -214,6 +224,9 @@
                     50 => ("bg-danger text-light", "Đã hủy", "bi-x-circle"),
                     _ => ("bg-secondary text-light", "Không rõ", "bi-question-circle")
                 };
+                var isCounterPickup = string.Equals(deliveryNote.ShippingAddress?.Trim(), "Tai quay", StringComparison.OrdinalIgnoreCase);
+                var canLeaveWarehouse = deliveryNote.IsDirectShip || isCounterPickup || deliveryNote.AssignedDeliveryUserId.HasValue;
+                var canOpenDeliveredWorkflow = deliveryNote.Status == (int)DeliveryNoteStatus.Delivering || canLeaveWarehouse;
 
                 <article class="list-card">
                     <div class="list-card-header">
@@ -251,6 +264,13 @@
                             <span class="list-card-label">Kho xuất</span>
                             <span class="list-card-value fw-normal text-muted">@deliveryNote.WarehouseName</span>
                         </div>
+                        @if (!string.IsNullOrWhiteSpace(deliveryNote.AssignedDeliveryFullName))
+                        {
+                            <div class="list-card-field">
+                                <span class="list-card-label">Nguoi giao</span>
+                                <span class="list-card-value fw-normal text-muted">@deliveryNote.AssignedDeliveryFullName</span>
+                            </div>
+                        }
                         <div class="list-card-field">
                             <span class="list-card-label">Ngày tạo</span>
                             <span class="list-card-value fw-normal text-muted">@deliveryNote.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
@@ -283,13 +303,13 @@
                             }
                             @if (!deliveryNote.IsDirectShip && deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed)
                             {
-                                <a class="btn btn-sm btn-secondary btn-delivering fw-medium" href="#" data-id="@deliveryNote.Id">
+                                <a class="btn btn-sm @(canLeaveWarehouse ? "btn-secondary btn-delivering" : "btn-outline-secondary disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canLeaveWarehouse ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canLeaveWarehouse)">
                                     <i class="bi bi-truck me-1"></i>Đang giao
                                 </a>
                             }
                             @if (deliveryNote.Status == (int)DeliveryNoteStatus.Confirmed || deliveryNote.Status == (int)DeliveryNoteStatus.Delivering)
                             {
-                                <a class="btn btn-sm btn-success btn-delivered fw-medium" href="#" data-id="@deliveryNote.Id">
+                                <a class="btn btn-sm @(canOpenDeliveredWorkflow ? "btn-success btn-delivered" : "btn-outline-secondary disabled") fw-medium" href="#" data-id="@deliveryNote.Id" title="@(!canOpenDeliveredWorkflow ? deliveryUserRequiredTitle : null)" aria-disabled="@(!canOpenDeliveredWorkflow)">
                                     <i class="bi bi-check-circle-fill me-1"></i>Đã giao
                                 </a>
                             }

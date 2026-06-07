@@ -3,6 +3,7 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
@@ -68,6 +69,7 @@ using NamEcommerce.Domain.Services.StockAdjustment;
 using NamEcommerce.Domain.Services.StockTransfer;
 using NamEcommerce.Domain.Services.Users;
 using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Services.Catalog;
 using NamEcommerce.Domain.Shared.Services.CustomerPortal;
 using NamEcommerce.Domain.Shared.Services.Customers;
@@ -89,6 +91,7 @@ using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Services;
+using NamEcommerce.Web.Authorization;
 using NamEcommerce.Web.Framework.Commands.Handlers.Users;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Mvc.Binders;
@@ -201,6 +204,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IBankAccountManager, BankAccountManager>();
     services.AddScoped<IFixedAssetManager, FixedAssetManager>();
     services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();
+    services.AddScoped<IDeliveryRunManager, DeliveryRunManager>();
     services.AddScoped<IOrderManager, OrderManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
     services.AddScoped<IBankTransferPaymentIntentManager, BankTransferPaymentIntentManager>();
@@ -248,6 +252,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICashBookService, CashBookService>();
     services.AddScoped<IAccountingReportService, AccountingReportService>();
     services.AddScoped<IDeliveryNoteAppService, DeliveryNoteAppService>();
+    services.AddScoped<IDeliveryRunAppService, DeliveryRunAppService>();
     services.AddScoped<IPreparationAppService, PreparationAppService>();
     services.AddScoped<IOrderAppService, OrderAppService>();
     services.AddScoped<IOrderAuditAppService, OrderAuditAppService>();
@@ -292,6 +297,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IOrderModelFactory, OrderModelFactory>();
     services.AddScoped<IPreparationModelFactory, PreparationModelFactory>();
     services.AddScoped<IDeliveryNoteModelFactory, DeliveryNoteModelFactory>();
+    services.AddScoped<IDeliveryRunModelFactory, DeliveryRunModelFactory>();
     services.AddScoped<IFastSaleModelFactory, FastSaleModelFactory>();
     services.AddScoped<IGoodsReceiptModelFactory, GoodsReceiptModelFactory>();
     services.AddScoped<ICustomerReturnModelFactory, CustomerReturnModelFactory>();
@@ -299,6 +305,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerRefundModelFactory, CustomerRefundModelFactory>();
     services.AddScoped<IStockAdjustmentNoteModelFactory, StockAdjustmentNoteModelFactory>();
     services.AddScoped<IStockTransferNoteModelFactory, StockTransferNoteModelFactory>();
+    services.AddScoped<IUserManagementModelFactory, UserManagementModelFactory>();
 
     if (builder.Environment.IsEnvironment("E2E"))
     {
@@ -319,6 +326,20 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     {
         opts.LoginPath = "/User/Login";
         opts.LogoutPath = "/User/Logout";
+    });
+    services.AddScoped<IAuthorizationHandler, ManageUserRolesAuthorizationHandler>();
+    services.AddAuthorization(opts =>
+    {
+        opts.AddPolicy(AuthorizationPolicyNames.ManageUserRoles,
+            policy => policy.Requirements.Add(new ManageUserRolesRequirement()));
+        opts.AddPolicy(AuthorizationPolicyNames.ViewDeliveryRuns,
+            policy => policy.RequireRole(SystemUserRoleNames.Admin, SystemUserRoleNames.WarehouseManager, SystemUserRoleNames.Cashier));
+        opts.AddPolicy(AuthorizationPolicyNames.ManageDeliveryRuns,
+            policy => policy.RequireRole(SystemUserRoleNames.Admin, SystemUserRoleNames.WarehouseManager));
+        opts.AddPolicy(AuthorizationPolicyNames.UseDeliveryMobile,
+            policy => policy.RequireRole(SystemUserRoleNames.DeliveryStaff));
+        opts.AddPolicy(AuthorizationPolicyNames.ConfirmDeliveryRunCashHandover,
+            policy => policy.RequireRole(SystemUserRoleNames.Admin, SystemUserRoleNames.Cashier));
     });
 
     services.AddHttpContextAccessor();

@@ -2,6 +2,8 @@ using MediatR;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
+using NamEcommerce.Application.Contracts.Users;
+using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
@@ -26,6 +28,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
     private readonly IDirectShipAppService _directShipAppService;
     private readonly IPictureAppService _pictureAppService;
     private readonly IWarehouseAppService _warehouseAppService;
+    private readonly IUserAppService _userAppService;
     private readonly IWebHelper _webHelper;
     private readonly IMediator _mediator;
     private readonly AppConfig _appConfig;
@@ -36,6 +39,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         IDirectShipAppService directShipAppService,
         IPictureAppService pictureAppService,
         IWarehouseAppService warehouseAppService,
+        IUserAppService userAppService,
         IWebHelper webHelper,
         IMediator mediator,
         AppConfig appConfig)
@@ -45,6 +49,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
         _directShipAppService = directShipAppService;
         _pictureAppService = pictureAppService;
         _warehouseAppService = warehouseAppService;
+        _userAppService = userAppService;
         _webHelper = webHelper;
         _mediator = mediator;
         _appConfig = appConfig;
@@ -54,12 +59,13 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
     {
         var pageNumber = searchModel?.PageNumber ?? 1;
         var pageSize = searchModel?.PageSize ?? 0;
+        var keywords = searchModel?.Keywords;
         if (pageNumber <= 0) pageNumber = 1;
         if (pageSize <= 0) pageSize = _appConfig.DefaultPageSize;
         if (_appConfig.PageSizeOptions.Contains(pageSize)) pageSize = _appConfig.DefaultPageSize;
 
         var pagedData = await _deliveryNoteAppService.GetListAsync(
-            searchModel.Keywords,
+            keywords,
             pageNumber - 1,
             pageSize).ConfigureAwait(false);
         var availableWarehouses = await _mediator.Send(new GetWarehouseOptionListQuery()).ConfigureAwait(false);
@@ -79,6 +85,8 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             Status = deliveryNote.Status,
             StatusName = GetStatusName((DeliveryNoteStatus)deliveryNote.Status),
             WarehouseId = deliveryNote.WarehouseId,
+            AssignedDeliveryUserId = deliveryNote.AssignedDeliveryUserId,
+            AssignedDeliveryFullName = deliveryNote.AssignedDeliveryFullName,
             CreatedOnUtc = deliveryNote.CreatedOnUtc,
             DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
             Items = deliveryNote.Items.Select(item => new DeliveryNoteListItemProductModel
@@ -107,7 +115,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 
         var model = new DeliveryNoteListModel
         {
-            Keywords = searchModel.Keywords,
+            Keywords = keywords,
             Data = data,
             AvailableWarehouses = availableWarehouses
         };
@@ -260,11 +268,22 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             DeliveredOnUtc = deliveryNote.DeliveredOnUtc,
             DeliveryProofPictureId = deliveryNote.DeliveryProofPictureId,
             DeliveryReceiverName = deliveryNote.DeliveryReceiverName,
+            DeliveryLatitude = deliveryNote.DeliveryLatitude,
+            DeliveryLongitude = deliveryNote.DeliveryLongitude,
+            DeliveryLocationAddress = deliveryNote.DeliveryLocationAddress,
+            DeliveryCompletionNote = deliveryNote.DeliveryCompletionNote,
+            DeliveryCompletionSource = deliveryNote.DeliveryCompletionSource,
+            DeliveryCompletionIdempotencyKey = deliveryNote.DeliveryCompletionIdempotencyKey,
             TotalAmount = deliveryNote.TotalAmount,
             Surcharge = deliveryNote.Surcharge,
             SurchargeReason = deliveryNote.SurchargeReason,
             AmountToCollect = deliveryNote.AmountToCollect,
             WarehouseId = deliveryNote.WarehouseId,
+            AssignedDeliveryUserId = deliveryNote.AssignedDeliveryUserId,
+            AssignedDeliveryUsername = deliveryNote.AssignedDeliveryUsername,
+            AssignedDeliveryFullName = deliveryNote.AssignedDeliveryFullName,
+            AssignedDeliveryOnUtc = deliveryNote.AssignedDeliveryOnUtc,
+            AvailableDeliveryUsers = await PrepareDeliveryUserOptionsAsync().ConfigureAwait(false),
             Items = deliveryNote.Items.Select(i =>
             {
                 returnedQuantities.TryGetValue(i.Id, out var summary);
@@ -318,6 +337,21 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
 
     private static string? ResolveWarehouseName(Guid warehouseId, IReadOnlyDictionary<Guid, string> warehouseNamesById)
         => warehouseId == Guid.Empty ? null : warehouseNamesById.GetValueOrDefault(warehouseId);
+
+    private async Task<EntityOptionListModel> PrepareDeliveryUserOptionsAsync()
+    {
+        var users = await _userAppService.GetUsersByRoleAsync(SystemUserRoleNames.DeliveryStaff).ConfigureAwait(false);
+        return new EntityOptionListModel
+        {
+            Options = users.Select(user => new EntityOptionListModel.EntityOptionModel
+            {
+                Id = user.Id,
+                Name = string.IsNullOrWhiteSpace(user.FullName)
+                    ? user.Username
+                    : $"{user.FullName} ({user.Username})"
+            }).ToList()
+        };
+    }
 
     private static string? BuildWarehouseSummary(IEnumerable<string?> itemWarehouseNames, string? fallbackWarehouseName)
     {

@@ -26,6 +26,8 @@ public sealed record DeliveryNoteListItemModel
 
     public Guid WarehouseId { get; init; }
     public string? WarehouseName { get; set; }
+    public Guid? AssignedDeliveryUserId { get; init; }
+    public string? AssignedDeliveryFullName { get; init; }
 
     public required bool IsDirectShip { get; set; }
 
