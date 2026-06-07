@@ -2046,26 +2046,26 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                   b.Property<decimal>("AmountToCollect")
-                       .HasColumnType("decimal(18,2)");
+                    b.Property<decimal>("AmountToCollect")
+                        .HasColumnType("decimal(18,2)");
 
-                   b.Property<string>("AssignedDeliveryFullName")
-                       .HasMaxLength(200)
-                       .HasColumnType("nvarchar(200)");
+                    b.Property<string>("AssignedDeliveryFullName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
-                   b.Property<DateTime?>("AssignedDeliveryOnUtc")
-                       .HasColumnType("datetime2");
+                    b.Property<DateTime?>("AssignedDeliveryOnUtc")
+                        .HasColumnType("datetime2");
 
-                   b.Property<Guid?>("AssignedDeliveryUserId")
-                       .HasColumnType("uniqueidentifier");
+                    b.Property<Guid?>("AssignedDeliveryUserId")
+                        .HasColumnType("uniqueidentifier");
 
-                   b.Property<string>("AssignedDeliveryUsername")
-                       .HasMaxLength(200)
-                       .HasColumnType("nvarchar(200)");
+                    b.Property<string>("AssignedDeliveryUsername")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
-                   b.Property<string>("Code")
-                       .IsRequired()
-                       .HasMaxLength(100)
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<DateTime?>("ConfirmedAtUtc")
@@ -2090,11 +2090,6 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<DateTime?>("DeliveredOnUtc")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("DeliveryConfirmationStatus")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
-
                     b.Property<string>("DeliveryCompletionIdempotencyKey")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -2106,6 +2101,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<string>("DeliveryCompletionSource")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("DeliveryConfirmationStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<double?>("DeliveryLatitude")
                         .HasColumnType("float");
@@ -2228,19 +2228,20 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                                 .HasColumnName("ShippingAddress");
                         });
 
-                   b.HasKey("Id");
+                    b.HasKey("Id");
 
-                   b.HasIndex("AssignedDeliveryUserId");
+                    b.HasIndex("AssignedDeliveryUserId");
 
-                   b.HasIndex("Code")
-                       .IsUnique();
+                    b.HasIndex("Code")
+                        .IsUnique();
 
-                   b.HasIndex("DeliveryCompletionIdempotencyKey")
-                       .IsUnique()
-                       .HasFilter("[DeliveryCompletionIdempotencyKey] IS NOT NULL");
+                    b.HasIndex("DeliveryCompletionIdempotencyKey")
+                        .IsUnique()
+                        .HasFilter("[DeliveryCompletionIdempotencyKey] IS NOT NULL");
 
-                   b.ToTable("DeliveryNote", "tbl");
+                    b.ToTable("DeliveryNote", "tbl");
                 });
+
             modelBuilder.Entity("NamEcommerce.Domain.Entities.DeliveryNotes.DeliveryNoteItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2352,12 +2353,12 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<DateTime?>("DeletedOnUtc")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("DriverCachedOnUtc")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("DriverCacheDeviceId")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("DriverCachedOnUtc")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid?>("HandedOverByUserId")
                         .HasColumnType("uniqueidentifier");
@@ -2416,21 +2417,21 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("DeliveryNoteId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("DeliveryNoteCode")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid>("DeliveryRunId")
+                    b.Property<Guid>("DeliveryNoteId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("CustomerName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                    b.Property<Guid>("DeliveryRunId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("OrderCode")
                         .HasMaxLength(100)
