@@ -119,6 +119,7 @@ public sealed record DeliveryNote : AppAggregateEntity
     public string? DeliveryCompletionNote { get; private set; }
     public string? DeliveryCompletionSource { get; private set; }
     public string? DeliveryCompletionIdempotencyKey { get; private set; }
+    public decimal? DeliveryCashCollectedAmount { get; private set; }
     
     public DateTime CreatedOnUtc { get; private set; }
     public DateTime? UpdatedOnUtc { get; private set; }
@@ -204,7 +205,8 @@ public sealed record DeliveryNote : AppAggregateEntity
         string? locationAddress = null,
         string? completionNote = null,
         string? completionSource = null,
-        string? idempotencyKey = null)
+        string? idempotencyKey = null,
+        decimal? cashCollectedAmount = null)
     {
         if (Status != DeliveryNoteStatus.Delivering && Status != DeliveryNoteStatus.Confirmed)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
@@ -221,7 +223,7 @@ public sealed record DeliveryNote : AppAggregateEntity
         DeliveryProofPictureId = pictureIds[0];
         DeliveryProofPictureIds = pictureIds.ToList().AsReadOnly();
         DeliveryReceiverName = receiverName;
-        SetDeliveryCompletionMetadata(latitude, longitude, locationAddress, completionNote, completionSource, idempotencyKey);
+        SetDeliveryCompletionMetadata(latitude, longitude, locationAddress, completionNote, completionSource, idempotencyKey, cashCollectedAmount);
         UpdatedOnUtc = DateTime.UtcNow;
 
         if (wasConfirmed)
@@ -291,14 +293,18 @@ public sealed record DeliveryNote : AppAggregateEntity
            && !string.Equals(ShippingAddress.Value.Trim(), "Tai quay", StringComparison.OrdinalIgnoreCase);
 
     private void SetDeliveryCompletionMetadata(double? latitude, double? longitude, string? locationAddress,
-        string? completionNote, string? completionSource, string? idempotencyKey)
+        string? completionNote, string? completionSource, string? idempotencyKey, decimal? cashCollectedAmount)
     {
+        if (cashCollectedAmount < 0)
+            throw new NamEcommerceDomainException("Error.CashCollectedAmountCannotBeNegative");
+
         DeliveryLatitude = latitude;
         DeliveryLongitude = longitude;
         DeliveryLocationAddress = TrimToNull(locationAddress);
         DeliveryCompletionNote = TrimToNull(completionNote);
         DeliveryCompletionSource = TrimToNull(completionSource);
         DeliveryCompletionIdempotencyKey = TrimToNull(idempotencyKey);
+        DeliveryCashCollectedAmount = cashCollectedAmount;
     }
 
     private static string? TrimToNull(string? value)

@@ -89,6 +89,7 @@ public class DeliveryNoteMap : IEntityTypeConfiguration<DeliveryNote>
         builder.Property(d => d.DeliveryCompletionNote).HasMaxLength(2000).IsRequired(false);
         builder.Property(d => d.DeliveryCompletionSource).HasMaxLength(100).IsRequired(false);
         builder.Property(d => d.DeliveryCompletionIdempotencyKey).HasMaxLength(100).IsRequired(false);
+        builder.Property(d => d.DeliveryCashCollectedAmount).HasColumnType("decimal(18,2)").IsRequired(false);
         builder.HasIndex(d => d.DeliveryCompletionIdempotencyKey)
             .IsUnique()
             .HasFilter("[DeliveryCompletionIdempotencyKey] IS NOT NULL");

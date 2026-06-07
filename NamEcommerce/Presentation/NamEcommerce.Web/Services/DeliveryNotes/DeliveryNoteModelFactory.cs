@@ -274,6 +274,7 @@ public sealed class DeliveryNoteModelFactory : IDeliveryNoteModelFactory
             DeliveryCompletionNote = deliveryNote.DeliveryCompletionNote,
             DeliveryCompletionSource = deliveryNote.DeliveryCompletionSource,
             DeliveryCompletionIdempotencyKey = deliveryNote.DeliveryCompletionIdempotencyKey,
+            DeliveryCashCollectedAmount = deliveryNote.DeliveryCashCollectedAmount,
             TotalAmount = deliveryNote.TotalAmount,
             Surcharge = deliveryNote.Surcharge,
             SurchargeReason = deliveryNote.SurchargeReason,

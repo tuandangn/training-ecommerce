@@ -29,4 +29,6 @@
 ## Remaining hardening
 
 - [x] Add role/policy enforcement for warehouse manager, delivery staff, and cashier pages/actions.
+- [x] Record COD as customer cash payments when cashier confirms delivery run cash handover.
+- [x] Improve delivery mobile offline UX with per-note cash collection and clearer pending sync states.
 - [ ] Add automated tests once a test project is available in this worktree.

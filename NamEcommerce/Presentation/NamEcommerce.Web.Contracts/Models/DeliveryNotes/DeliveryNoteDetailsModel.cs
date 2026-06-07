@@ -46,6 +46,7 @@ public sealed class DeliveryNoteDetailsModel
     public string? DeliveryCompletionNote { get; set; }
     public string? DeliveryCompletionSource { get; set; }
     public string? DeliveryCompletionIdempotencyKey { get; set; }
+    public decimal? DeliveryCashCollectedAmount { get; set; }
 
     public decimal TotalAmount { get; set; }
     public decimal Surcharge { get; set; }

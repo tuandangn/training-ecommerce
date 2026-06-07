@@ -55,6 +55,13 @@ public sealed class DeliveryRunModelFactory(
     {
         var run = await deliveryRunAppService.GetByIdAsync(id).ConfigureAwait(false)
                   ?? throw new ArgumentException("Delivery run not found");
+        var currentNotes = new Dictionary<Guid, DeliveryNoteAppDto>();
+        foreach (var item in run.Items)
+        {
+            var note = await deliveryNoteAppService.GetByIdAsync(item.DeliveryNoteId).ConfigureAwait(false);
+            if (note is not null)
+                currentNotes[item.DeliveryNoteId] = note;
+        }
 
         return new DeliveryRunDetailsModel
         {
@@ -84,13 +91,16 @@ public sealed class DeliveryRunModelFactory(
             UpdatedOnUtc = run.UpdatedOnUtc,
             Items = run.Items.Select(item => new DeliveryRunItemModel
             {
+                DeliveryNoteStatus = currentNotes.GetValueOrDefault(item.DeliveryNoteId)?.Status,
+                DeliveredOnUtc = currentNotes.GetValueOrDefault(item.DeliveryNoteId)?.DeliveredOnUtc,
                 Id = item.Id,
                 DeliveryNoteId = item.DeliveryNoteId,
                 DeliveryNoteCode = item.DeliveryNoteCode,
                 OrderCode = item.OrderCode,
                 CustomerName = item.CustomerName,
                 ShippingAddress = item.ShippingAddress,
-                AmountToCollect = item.AmountToCollect
+                AmountToCollect = currentNotes.GetValueOrDefault(item.DeliveryNoteId)?.AmountToCollect ?? item.AmountToCollect,
+                CashCollectedAmount = currentNotes.GetValueOrDefault(item.DeliveryNoteId)?.DeliveryCashCollectedAmount
             }).ToList()
         };
     }

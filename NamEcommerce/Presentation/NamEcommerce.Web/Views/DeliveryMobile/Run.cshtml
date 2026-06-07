@@ -8,6 +8,7 @@
     var statusClass = status == DeliveryRunStatus.ReadyForHandover
         ? "bg-info text-white"
         : "bg-warning text-dark";
+    var expectedCashAmount = Model.Run.Items.Sum(item => item.CashCollectedAmount ?? item.AmountToCollect);
     var cachePayload = JsonSerializer.Serialize(Model.Run, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 }
 
@@ -24,7 +25,7 @@
 <div class="mobile-card mb-3">
     <div class="d-flex justify-content-between align-items-center mb-2">
         <span class="mobile-status @statusClass">@Model.Run.StatusName</span>
-        <strong>@Model.Run.Items.Sum(item => item.AmountToCollect).DisplayCurrencyWithSymbol()</strong>
+        <strong>@expectedCashAmount.DisplayCurrencyWithSymbol()</strong>
     </div>
     <div class="d-flex justify-content-between align-items-center">
         <span class="mobile-meta">Cache offline</span>
@@ -40,6 +41,9 @@
 
 @foreach (var item in Model.Run.Items)
 {
+    var noteStatus = item.DeliveryNoteStatus.HasValue ? (DeliveryNoteStatus)item.DeliveryNoteStatus.Value : (DeliveryNoteStatus?)null;
+    var isDelivered = noteStatus == DeliveryNoteStatus.Delivered;
+    var cashCollectedAmount = item.CashCollectedAmount ?? item.AmountToCollect;
     <article class="mobile-card">
         <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
             <div>
@@ -48,12 +52,24 @@
             </div>
             @if (item.AmountToCollect > 0)
             {
-                <span class="badge bg-light text-dark">@item.AmountToCollect.DisplayCurrencyWithSymbol()</span>
+                <span class="badge bg-light text-dark">Thu @item.AmountToCollect.DisplayCurrencyWithSymbol()</span>
             }
         </div>
         <div class="mb-2">
             <i class="bi bi-geo-alt me-1 text-muted"></i>@item.ShippingAddress
         </div>
+        @if (isDelivered)
+        {
+            <div class="alert alert-success py-2 mb-0">
+                <i class="bi bi-check-circle me-1"></i>Da giao
+                @if (item.AmountToCollect > 0)
+                {
+                    <span class="ms-1">- Da thu @cashCollectedAmount.DisplayCurrencyWithSymbol()</span>
+                }
+            </div>
+        }
+        else
+        {
         <form asp-action="CompleteDeliveryNote" method="post" enctype="multipart/form-data" class="delivery-complete-form mt-3" data-note-id="@item.DeliveryNoteId">
             <input type="hidden" name="deliveryRunId" value="@Model.Run.Id" />
             <input type="hidden" name="deliveryNoteId" value="@item.DeliveryNoteId" />
@@ -66,6 +82,17 @@
                 <label class="form-label mobile-meta">Người nhận</label>
                 <input type="text" name="receiverName" class="form-control" autocomplete="name" />
             </div>
+            @if (item.AmountToCollect > 0)
+            {
+                <div class="mb-2">
+                    <label class="form-label mobile-meta">Tien da thu</label>
+                    <input type="number" name="cashCollectedAmount" class="form-control" min="0" step="1000" value="@item.AmountToCollect" inputmode="decimal" />
+                </div>
+            }
+            else
+            {
+                <input type="hidden" name="cashCollectedAmount" value="0" />
+            }
             <div class="mb-2">
                 <label class="form-label mobile-meta">Ảnh bằng chứng</label>
                 <input type="file" name="proofFile" class="form-control" accept="image/*" capture="environment" required />
@@ -79,6 +106,7 @@
             </button>
             <div class="delivery-complete-status mobile-meta mt-2"></div>
         </form>
+        }
     </article>
 }
 
@@ -87,6 +115,7 @@
         <button type="button" id="delivery-sync-pending" class="btn btn-success">
             <i class="bi bi-cloud-arrow-up me-1"></i>Đồng bộ offline
         </button>
+        <div id="delivery-pending-count" class="mobile-meta text-center"></div>
         <a asp-action="Run" asp-route-id="@Model.Run.Id" class="btn btn-primary">
             <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
         </a>

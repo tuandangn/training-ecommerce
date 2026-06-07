@@ -3,9 +3,13 @@ using NamEcommerce.Domain.Entities.DeliveryNotes;
 using NamEcommerce.Domain.Services.Extensions;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Common;
+using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.Orders;
 using NamEcommerce.Domain.Shared.Exceptions;
+using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Services.Users;
 
@@ -17,6 +21,7 @@ public sealed class DeliveryRunManager(
     IEntityDataReader<DeliveryRun> runReader,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
     IDeliveryNoteManager deliveryNoteManager,
+    ICustomerDebtManager customerDebtManager,
     ICurrentUserAccessor currentUserAccessor) : IDeliveryRunManager
 {
     private string GenerateCode()
@@ -143,23 +148,29 @@ public sealed class DeliveryRunManager(
             throw new NamEcommerceDomainException("Error.DeliveryRunCannotConfirmCashHandover");
 
         var noteIds = run.Items.Select(item => item.DeliveryNoteId).ToList();
-        var expectedAmount = deliveryNoteReader.DataSource
+        var deliveredNotes = deliveryNoteReader.DataSource
             .Where(note => noteIds.Contains(note.Id) && note.Status == DeliveryNoteStatus.Delivered)
-            .Sum(note => note.AmountToCollect);
+            .ToList();
+        var expectedAmount = deliveredNotes.Sum(GetCashCollectedAmount);
         if (expectedAmount <= 0)
             throw new NamEcommerceDomainException("Error.DeliveryRunCashHandoverNotRequired");
-        if (Math.Abs(dto.Amount - expectedAmount) > 0.0001m && string.IsNullOrWhiteSpace(dto.Note))
-            throw new NamEcommerceDomainException("Error.CashHandoverDifferenceNoteRequired");
+        if (Math.Abs(dto.Amount - expectedAmount) > 0.0001m)
+            throw new NamEcommerceDomainException("Error.CashHandoverAmountMustMatchCollectedAmount");
 
+        await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
+        var confirmedOnUtc = DateTime.UtcNow;
         run.ConfirmCashHandover(
             currentUser?.Id,
             currentUser?.Username,
             currentUser?.FullName,
             dto.Amount,
             dto.Note,
-            DateTime.UtcNow);
+            confirmedOnUtc);
+        await RecordCodPaymentsAsync(run, deliveredNotes, currentUser?.Id, confirmedOnUtc, dto.Note)
+            .ConfigureAwait(false);
         await runRepository.UpdateAsync(run).ConfigureAwait(false);
+        await transaction.CommitAsync().ConfigureAwait(false);
     }
 
     public async Task CancelAsync(Guid id)
@@ -198,4 +209,81 @@ public sealed class DeliveryRunManager(
         var items = query.Skip(pageIndex * pageSize).Take(pageSize).ToList();
         return Task.FromResult(PagedDataDto.Create(items.Select(run => run.ToDto()).ToList(), pageIndex, pageSize, total));
     }
+
+    private static decimal GetCashCollectedAmount(DeliveryNote note)
+        => note.DeliveryCashCollectedAmount ?? note.AmountToCollect;
+
+    private async Task RecordCodPaymentsAsync(
+        DeliveryRun run,
+        IList<DeliveryNote> deliveredNotes,
+        Guid? recordedByUserId,
+        DateTime paidOnUtc,
+        string? cashHandoverNote)
+    {
+        var itemOrder = run.Items
+            .Select((item, index) => new { item.DeliveryNoteId, Index = index })
+            .ToDictionary(item => item.DeliveryNoteId, item => item.Index);
+
+        foreach (var note in deliveredNotes.OrderBy(note => itemOrder.GetValueOrDefault(note.Id)))
+        {
+            var amount = GetCashCollectedAmount(note);
+            if (amount <= 0)
+                continue;
+
+            CustomerDebtDto? debt = null;
+            if (note.AmountToCollect > 0)
+            {
+                debt = await customerDebtManager.CreateDebtFromDeliveryNoteAsync(new CreateCustomerDebtDto
+                {
+                    CustomerId = note.CustomerId,
+                    DeliveryNoteId = note.Id,
+                    TotalAmount = note.AmountToCollect
+                }).ConfigureAwait(false);
+            }
+
+            var debtPaymentAmount = debt is null ? 0 : Math.Min(amount, debt.RemainingAmount);
+            if (debt is not null && debtPaymentAmount > 0)
+            {
+                await customerDebtManager.RecordPaymentAsync(new CreateCustomerPaymentDto
+                {
+                    CustomerId = note.CustomerId,
+                    OrderId = note.OrderId,
+                    DeliveryNoteId = note.Id,
+                    CustomerDebtId = debt.Id,
+                    Amount = debtPaymentAmount,
+                    PaymentMethod = PaymentMethod.Cash,
+                    PaymentType = PaymentType.DebtPayment,
+                    PaidOnUtc = paidOnUtc,
+                    RecordedByUserId = recordedByUserId,
+                    Note = BuildCodPaymentNote(run.Code, note.Code, cashHandoverNote)
+                }).ConfigureAwait(false);
+            }
+
+            var extraAmount = amount - debtPaymentAmount;
+            if (extraAmount > 0)
+            {
+                await customerDebtManager.RecordPaymentAsync(new CreateCustomerPaymentDto
+                {
+                    CustomerId = note.CustomerId,
+                    OrderId = note.OrderId,
+                    Amount = extraAmount,
+                    PaymentMethod = PaymentMethod.Cash,
+                    PaymentType = PaymentType.Deposit,
+                    PaidOnUtc = paidOnUtc,
+                    RecordedByUserId = recordedByUserId,
+                    Note = BuildCodOverpaymentNote(run.Code, note.Code, cashHandoverNote)
+                }).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static string BuildCodPaymentNote(string runCode, string noteCode, string? cashHandoverNote)
+        => string.IsNullOrWhiteSpace(cashHandoverNote)
+            ? $"Thu COD chuyen {runCode}, phieu {noteCode}"
+            : $"Thu COD chuyen {runCode}, phieu {noteCode}. {cashHandoverNote.Trim()}";
+
+    private static string BuildCodOverpaymentNote(string runCode, string noteCode, string? cashHandoverNote)
+        => string.IsNullOrWhiteSpace(cashHandoverNote)
+            ? $"Thu du COD chuyen {runCode}, phieu {noteCode}"
+            : $"Thu du COD chuyen {runCode}, phieu {noteCode}. {cashHandoverNote.Trim()}";
 }

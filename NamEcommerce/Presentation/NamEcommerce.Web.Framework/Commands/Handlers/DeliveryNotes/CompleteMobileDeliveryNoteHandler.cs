@@ -23,7 +23,8 @@ public sealed class CompleteMobileDeliveryNoteHandler(IDeliveryNoteAppService de
                 LocationAddress = request.LocationAddress,
                 Note = request.Note,
                 Source = "MobilePwa",
-                IdempotencyKey = request.IdempotencyKey
+                IdempotencyKey = request.IdempotencyKey,
+                CashCollectedAmount = request.CashCollectedAmount
             }
         }).ConfigureAwait(false);
 

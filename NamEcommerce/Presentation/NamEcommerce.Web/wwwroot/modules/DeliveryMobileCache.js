@@ -123,8 +123,13 @@ async function deletePendingCompletion(noteId) {
 
 async function queueCompletion(form, status, message) {
     const submitButton = form.querySelector('button[type="submit"]');
+    let queued = false;
     try {
         await savePendingCompletion(form);
+        queued = true;
+        localStorage.setItem(`delivery-note-sync-state:${form.dataset.noteId}`, 'pending');
+        markCompleteFormPending(form, message);
+        await updatePendingCount();
         if (status) {
             status.textContent = message;
             status.className = 'delivery-complete-status mobile-meta mt-2 text-warning fw-bold';
@@ -132,7 +137,7 @@ async function queueCompletion(form, status, message) {
     } catch {
         if (status) status.textContent = 'Khong the luu offline';
     } finally {
-        if (submitButton) submitButton.disabled = false;
+        if (!queued && submitButton) submitButton.disabled = false;
     }
 }
 
@@ -175,6 +180,8 @@ export function installDeliveryCompletionForms() {
         const stateKey = `delivery-note-sync-state:${noteId}`;
         if (localStorage.getItem(stateKey) === 'done') {
             markCompleteFormDone(form, 'Da sync');
+        } else if (localStorage.getItem(stateKey) === 'pending') {
+            markCompleteFormPending(form, 'Cho dong bo');
         }
 
         form.addEventListener('submit', async event => {
@@ -210,6 +217,7 @@ export function installDeliveryCompletionForms() {
                 if (result?.success) {
                     localStorage.setItem(stateKey, 'done');
                     markCompleteFormDone(form, 'Da sync');
+                    await updatePendingCount();
                     return;
                 }
 
@@ -229,11 +237,14 @@ export function installDeliveryManualSync() {
         return;
     }
 
+    updatePendingCount();
+
     button.addEventListener('click', async () => {
         button.disabled = true;
         if (status) status.textContent = 'Dang dong bo...';
 
         const result = await syncPendingCompletions();
+        await updatePendingCount();
         button.disabled = false;
         if (status) {
             status.textContent = result.failed > 0
@@ -243,7 +254,7 @@ export function installDeliveryManualSync() {
     });
 
     window.addEventListener('online', () => {
-        syncPendingCompletions();
+        syncPendingCompletions().then(updatePendingCount);
     });
 }
 
@@ -285,6 +296,34 @@ async function syncPendingCompletions() {
     }
 
     return { synced, failed };
+}
+
+async function updatePendingCount() {
+    const element = document.getElementById('delivery-pending-count');
+    if (!element) {
+        return;
+    }
+
+    try {
+        const items = await getPendingCompletions();
+        element.textContent = items.length > 0
+            ? `${items.length} phieu dang cho dong bo`
+            : 'Khong co phieu cho dong bo';
+    } catch {
+        element.textContent = 'Khong doc duoc hang doi offline';
+    }
+}
+
+function markCompleteFormPending(form, message) {
+    form.querySelectorAll('input, textarea, button').forEach(element => {
+        element.disabled = true;
+    });
+
+    const status = form.querySelector('.delivery-complete-status');
+    if (status) {
+        status.textContent = message;
+        status.className = 'delivery-complete-status mobile-meta mt-2 text-warning fw-bold';
+    }
 }
 
 function markCompleteFormDone(form, message) {

@@ -96,6 +96,9 @@ public sealed record DeliveryRunItemModel
     public required string CustomerName { get; init; }
     public required string ShippingAddress { get; init; }
     public decimal AmountToCollect { get; init; }
+    public decimal? CashCollectedAmount { get; init; }
+    public int? DeliveryNoteStatus { get; init; }
+    public DateTime? DeliveredOnUtc { get; init; }
 }
 
 public sealed class DeliveryMobileIndexModel

@@ -142,7 +142,8 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
                         LocationAddress = dto.CompletionMetadata.LocationAddress,
                         Note = dto.CompletionMetadata.Note,
                         Source = dto.CompletionMetadata.Source,
-                        IdempotencyKey = dto.CompletionMetadata.IdempotencyKey
+                        IdempotencyKey = dto.CompletionMetadata.IdempotencyKey,
+                        CashCollectedAmount = dto.CompletionMetadata.CashCollectedAmount
                     }
             }).ConfigureAwait(false);
 

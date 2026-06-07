@@ -90,6 +90,7 @@ public sealed class DeliveryMobileController(
         double? longitude,
         string? locationAddress,
         string? idempotencyKey,
+        decimal? cashCollectedAmount,
         IFormFile? proofFile)
     {
         var currentUser = await currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
@@ -145,7 +146,8 @@ public sealed class DeliveryMobileController(
             Longitude = longitude,
             LocationAddress = locationAddress,
             Note = note,
-            IdempotencyKey = idempotencyKey
+            IdempotencyKey = idempotencyKey,
+            CashCollectedAmount = cashCollectedAmount
         }).ConfigureAwait(false);
 
         return Json(new { success = result.Success, message = result.ErrorMessage });

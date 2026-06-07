@@ -20,7 +20,9 @@
     var canHandOver = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && offlineReady;
     var canClose = canManageDeliveryRun && status == DeliveryRunStatus.HandedToDriver;
     var canCancel = canManageDeliveryRun && status is not DeliveryRunStatus.Closed and not DeliveryRunStatus.Cancelled;
-    var expectedCashAmount = Model.Items.Sum(item => item.AmountToCollect);
+    var expectedCashAmount = Model.Items
+        .Where(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered)
+        .Sum(item => item.CashCollectedAmount ?? item.AmountToCollect);
     var canConfirmCashHandover = canConfirmDeliveryRunCashHandover
         && expectedCashAmount > 0
         && status is not DeliveryRunStatus.ReadyForHandover and not DeliveryRunStatus.Cancelled
@@ -157,7 +159,7 @@
                     <input type="hidden" name="id" value="@Model.Id" />
                     <label class="form-label small fw-bold text-muted text-uppercase">Tiền thủ quỹ nhận</label>
                     <input type="number" name="amount" class="form-control mb-2" min="0" step="1000" value="@expectedCashAmount" />
-                    <textarea name="note" class="form-control mb-2" rows="2" placeholder="Ghi chú nếu lệch tiền"></textarea>
+                    <textarea name="note" class="form-control mb-2" rows="2" placeholder="Ghi chú bàn giao tiền"></textarea>
                     <button type="submit" class="btn btn-outline-success w-100">
                         <i class="bi bi-cash-coin me-1"></i>Xác nhận nhận tiền
                     </button>
@@ -187,6 +189,7 @@
                     <th>Khách hàng</th>
                     <th>Địa chỉ giao</th>
                     <th class="text-end">Tiền cần thu</th>
+                    <th class="text-end">Đã thu</th>
                 </tr>
             </thead>
             <tbody>
@@ -200,6 +203,7 @@
                         <td class="fw-medium">@item.CustomerName</td>
                         <td>@item.ShippingAddress</td>
                         <td class="text-end fw-medium">@item.AmountToCollect.DisplayCurrencyWithSymbol()</td>
+                        <td class="text-end fw-medium">@((item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered ? item.CashCollectedAmount ?? item.AmountToCollect : 0m).DisplayCurrencyWithSymbol())</td>
                     </tr>
                 }
             </tbody>
