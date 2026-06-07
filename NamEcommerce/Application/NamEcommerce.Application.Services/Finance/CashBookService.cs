@@ -141,6 +141,7 @@ public sealed class CashBookService : ICashBookService
 
         var expensesOut = _expenses.DataSource
             .Where(e => e.BankAccountId == accountId && e.IncurredDate <= asOf)
+            .ToList()
             .Sum(e => (decimal?)e.AmountExcludingTax) ?? 0;
 
         return openingBalance + cashIn - refundsOut - vendorOut - expensesOut;

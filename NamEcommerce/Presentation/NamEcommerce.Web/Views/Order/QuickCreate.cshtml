@@ -238,10 +238,10 @@
                     <div class="form-label small fw-bold text-muted text-uppercase">Giao hàng</div>
                     <div class="mb-3">
                         <div class="fast-sale-option-group" role="group">
-                            <button type="button" class="btn btn-outline-success active" id="fastSaleDeliverNow">
+                            <button type="button" class="btn btn-outline-success" disabled id="fastSaleDeliverNow">
                                 <i class="bi bi-box-seam me-1"></i> Giao ngay
                             </button>
-                            <button type="button" class="btn btn-outline-success" id="fastSaleNotDelivered">
+                            <button type="button" class="btn btn-outline-success active" disabled id="fastSaleNotDelivered">
                                 <i class="bi bi-clock-history me-1"></i> Chưa giao
                             </button>
                         </div>
@@ -255,15 +255,15 @@
                     <div class="mb-3">
                         <div class="mb-2">
                             <div class="fast-sale-option-group" role="group">
-                                <button type="button" class="btn btn-outline-primary active" id="fastSalePayNow">
+                                <button type="button" class="btn btn-outline-primary" disabled id="fastSalePayNow">
                                     <i class="bi bi-credit-card-2-front me-1"></i> Thanh toán ngay
                                 </button>
-                                <button type="button" class="btn btn-outline-primary" id="fastSaleUnpaid">
+                                <button type="button" class="btn btn-outline-primary active" disabled id="fastSaleUnpaid">
                                     <i class="bi bi-receipt me-1"></i> Chưa thanh toán
                                 </button>
                             </div>
                         </div>
-                        <div class="p-3 border rounded" id="fastSalePaymentMethodSection">
+                        <div class="p-3 border rounded d-none" id="fastSalePaymentMethodSection">
                             <div class="form-label small text-muted">Phương thức thanh toán</div>
                             <div class="fast-sale-payment-methods" role="group">
                                 <button type="button" class="btn btn-outline-secondary active" id="fastSaleCashMethod" data-method="cash">

@@ -26,6 +26,7 @@ public sealed class FastSaleModelFactory(
 
         return new FastSaleModel
         {
+            CustomerId = retailWalkInCustomer.Id,
             DefaultCustomerId = retailWalkInCustomer.Id,
             CustomerName = retailWalkInCustomer.FullName,
             CustomerPhone = retailWalkInCustomer.PhoneNumber,

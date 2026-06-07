@@ -37,8 +37,8 @@ class FastSale {
         this.manualConfirmEnabled = root.dataset.manualConfirmEnabled === 'true';
         this.cart = [];
         this.selectedCustomer = null;
-        this.fulfillmentMode = 'deliverNow';
-        this.paymentTiming = 'payNow';
+        this.fulfillmentMode = 'notDelivered';
+        this.paymentTiming = 'unpaid';
         this.paymentMethod = 'cash';
         this.paymentIntent = null;
         this.paymentIntentConfirmed = false;
@@ -48,6 +48,7 @@ class FastSale {
         this.customerPicker = null;
         this.productBrowser = null;
         this.itemEditor = null;
+        this.fromCommand = 'add';
 
         this.defaultCustomer = document.getElementById('CustomerId').dataset.default;
 
@@ -262,10 +263,15 @@ class FastSale {
                 unitMeasurement: product.unitMeasurement,
                 availableWarehouses: product.availableWarehouses || [],
                 quantity: 1,
+                quantityAvailable: product.quantityAvailable,
                 unitPrice: Number(product.unitPrice || 0),
                 quantityDecimalPlaces: Number(product.quantityDecimalPlaces || 0)
             });
         }
+        if (product.quantityAvailable)
+            this.fromCommand = 'add-available';
+        else
+            this.fromCommand = 'add';
 
         this.resetPaymentIntent();
         this.render();
@@ -297,12 +303,42 @@ class FastSale {
     }
 
     render() {
-        this.renderCart();
         const subtotal = this.calculateSubtotal();
-        const discount = this.cart.length > 0 ? this.getDiscount() : 0;
+        let discount = this.cart.length > 0 ? this.getDiscount() : 0;
+
+        if (discount > subtotal) {
+            discount = subtotal;
+            this.discount.value = this.formatMoney(discount);
+        }
+
         const total = Math.max(0, subtotal - discount);
         const isPayNow = this.paymentTiming === 'payNow';
         const usesBankTransfer = isPayNow && this.paymentMethod === 'bank';
+
+        if (total == 0 && this.paymentTiming == 'payNow') {
+            this.setPaymentTiming('unpaid');
+            return;
+        }
+        if (total > 0 && this.selectedCustomer?.id == this.defaultCustomer && this.paymentTiming == 'unpaid') {
+            this.setPaymentTiming('payNow');
+            return;
+        }
+        if (this.fromCommand === 'add-available' && this.cart.length == 1 && this.fulfillmentMode == 'notDelivered') {
+            this.setFulfillmentMode('deliverNow');
+            return;
+        }
+        if (this.cart.some(item => item.quantity > item.quantityAvailable) && this.fulfillmentMode == 'deliverNow') {
+            this.setFulfillmentMode('notDelivered');
+            return;
+        }
+
+        this.payNow.disabled = total == 0;
+        this.unpaid.disabled = total == 0 || this.selectedCustomer?.id == this.defaultCustomer;
+
+        this.notDelivered.disabled = this.cart.length === 0;
+        this.deliverNow.disabled = this.cart.length === 0 || this.cart.some(item => item.quantity > item.quantityAvailable);
+
+        this.renderCart();
 
         this.subtotal.textContent = this.formatMoneyWithSymbol(subtotal);
         this.total.textContent = this.formatMoneyWithSymbol(total);
@@ -394,6 +430,7 @@ class FastSale {
             }
 
             row.querySelector('button').addEventListener('click', () => {
+                this.fromCommand = 'remove';
                 this.cart.splice(index, 1);
                 this.resetPaymentIntent();
                 this.render();
