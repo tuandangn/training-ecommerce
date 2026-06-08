@@ -36,7 +36,7 @@ public sealed class DeliveryRunModelFactory(
             Status = searchModel.Status,
             AvailableDeliveryUsers = await PrepareDeliveryUserOptionsAsync().ConfigureAwait(false),
             Data = PagedDataModel.Create(
-                pagedData.Items.Select(ToListModel).ToList(),
+                await PrepareDeliveryRunListItemsAsync(pagedData.Items).ConfigureAwait(false),
                 pagedData.Pagination.PageIndex,
                 pagedData.Pagination.PageSize,
                 pagedData.Pagination.TotalCount)
@@ -63,6 +63,33 @@ public sealed class DeliveryRunModelFactory(
                 currentNotes[item.DeliveryNoteId] = note;
         }
 
+        var itemModels = run.Items.Select(item =>
+        {
+            currentNotes.TryGetValue(item.DeliveryNoteId, out var note);
+            return new DeliveryRunItemModel
+            {
+                DeliveryNoteStatus = note?.Status,
+                DeliveredOnUtc = note?.DeliveredOnUtc,
+                Id = item.Id,
+                DeliveryNoteId = item.DeliveryNoteId,
+                DeliveryNoteCode = item.DeliveryNoteCode,
+                OrderCode = note?.OrderCode ?? item.OrderCode,
+                CustomerName = note?.CustomerName ?? item.CustomerName,
+                CustomerPhone = note?.CustomerPhone,
+                ShippingAddress = note?.ShippingAddress ?? item.ShippingAddress,
+                AmountToCollect = note?.AmountToCollect ?? item.AmountToCollect,
+                CashCollectedAmount = note?.DeliveryCashCollectedAmount,
+                ReceiverName = note?.DeliveryReceiverName,
+                DeliveryProofPictureId = note?.DeliveryProofPictureId,
+                ProductItems = note?.Items.Select(product => new DeliveryRunProductItemModel
+                {
+                    ProductName = product.ProductName,
+                    Quantity = product.Quantity
+                }).ToList() ?? []
+            };
+        }).ToList();
+        var progress = GetProgressInfo((DeliveryRunStatus)run.Status, itemModels);
+
         return new DeliveryRunDetailsModel
         {
             Id = run.Id,
@@ -71,7 +98,9 @@ public sealed class DeliveryRunModelFactory(
             AssignedDeliveryUsername = run.AssignedDeliveryUsername,
             AssignedDeliveryFullName = run.AssignedDeliveryFullName,
             Status = run.Status,
-            StatusName = GetStatusName((DeliveryRunStatus)run.Status),
+            StatusName = progress.StatusName,
+            DeliveredItemCount = progress.DeliveredItemCount,
+            IsDeliveryCompleted = progress.IsCompleted,
             PreparedByUserId = run.PreparedByUserId,
             PreparedOnUtc = run.PreparedOnUtc,
             HandedOverByUserId = run.HandedOverByUserId,
@@ -89,35 +118,12 @@ public sealed class DeliveryRunModelFactory(
             Note = run.Note,
             CreatedOnUtc = run.CreatedOnUtc,
             UpdatedOnUtc = run.UpdatedOnUtc,
-            Items = run.Items.Select(item =>
-            {
-                currentNotes.TryGetValue(item.DeliveryNoteId, out var note);
-                return new DeliveryRunItemModel
-                {
-                    DeliveryNoteStatus = note?.Status,
-                    DeliveredOnUtc = note?.DeliveredOnUtc,
-                    Id = item.Id,
-                    DeliveryNoteId = item.DeliveryNoteId,
-                    DeliveryNoteCode = item.DeliveryNoteCode,
-                    OrderCode = note?.OrderCode ?? item.OrderCode,
-                    CustomerName = note?.CustomerName ?? item.CustomerName,
-                    CustomerPhone = note?.CustomerPhone,
-                    ShippingAddress = note?.ShippingAddress ?? item.ShippingAddress,
-                    AmountToCollect = note?.AmountToCollect ?? item.AmountToCollect,
-                    CashCollectedAmount = note?.DeliveryCashCollectedAmount,
-                    ReceiverName = note?.DeliveryReceiverName,
-                    DeliveryProofPictureId = note?.DeliveryProofPictureId,
-                    ProductItems = note?.Items.Select(product => new DeliveryRunProductItemModel
-                    {
-                        ProductName = product.ProductName,
-                        Quantity = product.Quantity
-                    }).ToList() ?? []
-                };
-            }).ToList()
+            Items = itemModels
         };
     }
 
-    public async Task<DeliveryMobileIndexModel> PrepareDeliveryMobileIndexModelAsync(Guid currentUserId, string currentUserFullName)
+    public async Task<DeliveryMobileIndexModel> PrepareDeliveryMobileIndexModelAsync(Guid currentUserId, string currentUserFullName,
+        bool showCompleted)
     {
         var pagedData = await deliveryRunAppService.GetListAsync(
             0,
@@ -126,20 +132,25 @@ public sealed class DeliveryRunModelFactory(
             currentUserId,
             null).ConfigureAwait(false);
 
-        var activeRuns = pagedData.Items
-            .Where(run => run.Status != (int)DeliveryRunStatus.Closed && run.Status != (int)DeliveryRunStatus.Cancelled)
+        var candidateRuns = pagedData.Items
+            .Where(run => run.Status != (int)DeliveryRunStatus.Cancelled)
             .ToList();
         var runs = new List<DeliveryMobileRunListItemModel>();
-        foreach (var run in activeRuns)
+        foreach (var run in candidateRuns)
         {
             var details = await PrepareDeliveryRunDetailsModelAsync(run.Id).ConfigureAwait(false);
-            runs.Add(ToMobileListModel(run, details.Items));
+            var model = ToMobileListModel(run, details.Items);
+            if (!showCompleted && model.IsDeliveryCompleted)
+                continue;
+
+            runs.Add(model);
         }
 
         return new DeliveryMobileIndexModel
         {
             CurrentUserId = currentUserId,
             CurrentUserFullName = currentUserFullName,
+            ShowCompleted = showCompleted,
             Runs = runs
         };
     }
@@ -232,16 +243,33 @@ public sealed class DeliveryRunModelFactory(
         return $"{summary} +{itemList.Count - 2}";
     }
 
-    private static DeliveryRunListItemModel ToListModel(DeliveryRunListAppDto run)
-        => new()
+    private async Task<IList<DeliveryRunListItemModel>> PrepareDeliveryRunListItemsAsync(IEnumerable<DeliveryRunListAppDto> runs)
+    {
+        var items = new List<DeliveryRunListItemModel>();
+        foreach (var run in runs)
+        {
+            var details = await PrepareDeliveryRunDetailsModelAsync(run.Id).ConfigureAwait(false);
+            items.Add(ToListModel(run, details.Items));
+        }
+
+        return items;
+    }
+
+    private static DeliveryRunListItemModel ToListModel(DeliveryRunListAppDto run, IList<DeliveryRunItemModel> items)
+    {
+        var progress = GetProgressInfo((DeliveryRunStatus)run.Status, items);
+
+        return new()
         {
             Id = run.Id,
             Code = run.Code,
             AssignedDeliveryUserId = run.AssignedDeliveryUserId,
             AssignedDeliveryFullName = run.AssignedDeliveryFullName,
             Status = run.Status,
-            StatusName = GetStatusName((DeliveryRunStatus)run.Status),
+            StatusName = progress.StatusName,
             ItemCount = run.ItemCount,
+            DeliveredItemCount = progress.DeliveredItemCount,
+            IsDeliveryCompleted = progress.IsCompleted,
             AmountToCollect = run.AmountToCollect,
             DriverCachedOnUtc = run.DriverCachedOnUtc,
             PaperManifestIssued = run.PaperManifestIssued,
@@ -250,15 +278,21 @@ public sealed class DeliveryRunModelFactory(
             CashHandoverAmount = run.CashHandoverAmount,
             CreatedOnUtc = run.CreatedOnUtc
         };
+    }
 
     private static DeliveryMobileRunListItemModel ToMobileListModel(DeliveryRunListAppDto run, IList<DeliveryRunItemModel> items)
-        => new()
+    {
+        var progress = GetProgressInfo((DeliveryRunStatus)run.Status, items);
+
+        return new()
         {
             Id = run.Id,
             Code = run.Code,
             Status = run.Status,
-            StatusName = GetStatusName((DeliveryRunStatus)run.Status),
+            StatusName = progress.StatusName,
             ItemCount = run.ItemCount,
+            DeliveredItemCount = progress.DeliveredItemCount,
+            IsDeliveryCompleted = progress.IsCompleted,
             AmountToCollect = GetPendingCashAmount(items),
             DriverCachedOnUtc = run.DriverCachedOnUtc,
             PaperManifestIssued = run.PaperManifestIssued,
@@ -266,6 +300,30 @@ public sealed class DeliveryRunModelFactory(
             CreatedOnUtc = run.CreatedOnUtc,
             Items = items
         };
+    }
+
+    private static DeliveryRunProgressInfo GetProgressInfo(DeliveryRunStatus status, IList<DeliveryRunItemModel> items)
+    {
+        var deliveredCount = items.Count(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered);
+        var openCount = items.Count(item =>
+            item.DeliveryNoteStatus != (int)DeliveryNoteStatus.Delivered &&
+            item.DeliveryNoteStatus != (int)DeliveryNoteStatus.Cancelled);
+        var isCompleted = items.Count > 0 && openCount == 0;
+        var hasStarted = deliveredCount > 0 ||
+            items.Any(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivering);
+        var statusName = status switch
+        {
+            DeliveryRunStatus.Cancelled => "Đã hủy",
+            _ when isCompleted => "Đã giao xong",
+            _ when hasStarted || status == DeliveryRunStatus.HandedToDriver => "Đang giao",
+            DeliveryRunStatus.ReadyForHandover => "Chờ bàn giao",
+            DeliveryRunStatus.Closed => "Đã đóng",
+            DeliveryRunStatus.Planning => "Đang lập",
+            _ => status.ToString()
+        };
+
+        return new DeliveryRunProgressInfo(statusName, deliveredCount, isCompleted);
+    }
 
     private static decimal GetPendingCashAmount(IEnumerable<DeliveryRunItemModel> items)
         => items.Sum(item =>
@@ -273,14 +331,8 @@ public sealed class DeliveryRunModelFactory(
                 ? item.AmountToCollect - item.CashCollectedAmount.GetValueOrDefault()
                 : 0);
 
-    private static string GetStatusName(DeliveryRunStatus status)
-        => status switch
-        {
-            DeliveryRunStatus.Planning => "Đang lập",
-            DeliveryRunStatus.ReadyForHandover => "Chờ bàn giao",
-            DeliveryRunStatus.HandedToDriver => "Đã bàn giao",
-            DeliveryRunStatus.Closed => "Đã đóng",
-            DeliveryRunStatus.Cancelled => "Đã hủy",
-            _ => status.ToString()
-        };
+    private sealed record DeliveryRunProgressInfo(
+        string StatusName,
+        int DeliveredItemCount,
+        bool IsCompleted);
 }

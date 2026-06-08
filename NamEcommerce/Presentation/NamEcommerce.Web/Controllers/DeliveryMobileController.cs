@@ -16,13 +16,16 @@ public sealed class DeliveryMobileController(
     IDeliveryRunModelFactory deliveryRunModelFactory, ICurrentUserAccessor currentUserAccessor,
     AppConfig appConfig, IMediator mediator) : BaseAuthorizedController
 {
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(bool showCompleted = false)
     {
         var currentUser = await currentUserAccessor.GetCurrentUserAsync();
         if (currentUser is null)
             return RedirectToAction("Login", "User");
 
-        var model = await deliveryRunModelFactory.PrepareDeliveryMobileIndexModelAsync(currentUser.Id, currentUser.FullName);
+        var model = await deliveryRunModelFactory.PrepareDeliveryMobileIndexModelAsync(
+            currentUser.Id,
+            currentUser.FullName,
+            showCompleted);
         return View(model);
     }
 

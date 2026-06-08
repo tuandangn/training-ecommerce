@@ -105,7 +105,7 @@ public sealed record DeliveryRun : AppAggregateEntity
 
     internal void Close(DateTime closedOnUtc)
     {
-        if (Status != DeliveryRunStatus.HandedToDriver)
+        if (Status is not DeliveryRunStatus.HandedToDriver and not DeliveryRunStatus.ReadyForHandover)
             throw new NamEcommerceDomainException("Error.DeliveryRunCannotClose");
 
         Status = DeliveryRunStatus.Closed;

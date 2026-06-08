@@ -6,4 +6,6 @@ public sealed record AuthenticateUserResult
     public bool Success { get; init; }
 
     public string? ErrorMessage { get; init; }
+
+    public IList<string> RoleNames { get; init; } = [];
 }

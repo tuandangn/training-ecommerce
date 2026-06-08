@@ -155,13 +155,16 @@ public sealed class DeliveryRunManager(
 
         var run = await runRepository.GetByIdAsync(dto.DeliveryRunId).ConfigureAwait(false)
                   ?? throw new NamEcommerceDomainException("Error.DeliveryRunNotFound");
-        if (run.Status is DeliveryRunStatus.ReadyForHandover or DeliveryRunStatus.Cancelled)
+        if (run.Status == DeliveryRunStatus.Cancelled)
             throw new NamEcommerceDomainException("Error.DeliveryRunCannotConfirmCashHandover");
 
         var noteIds = run.Items.Select(item => item.DeliveryNoteId).ToList();
         var deliveredNotes = deliveryNoteReader.DataSource
             .Where(note => noteIds.Contains(note.Id) && note.Status == DeliveryNoteStatus.Delivered)
             .ToList();
+        if (run.Status == DeliveryRunStatus.ReadyForHandover && deliveredNotes.Count == 0)
+            throw new NamEcommerceDomainException("Error.DeliveryRunCannotConfirmCashHandover");
+
         var expectedAmount = deliveredNotes.Sum(GetCashCollectedAmount);
         if (expectedAmount <= 0)
             throw new NamEcommerceDomainException("Error.DeliveryRunCashHandoverNotRequired");

@@ -71,7 +71,8 @@ public sealed class CookieAuthenticateUserHandler : IRequestHandler<Authenticate
 
         return new AuthenticateUserResult
         {
-            Success = true
+            Success = true,
+            RoleNames = userDto.RoleNames
         };
     }
 }

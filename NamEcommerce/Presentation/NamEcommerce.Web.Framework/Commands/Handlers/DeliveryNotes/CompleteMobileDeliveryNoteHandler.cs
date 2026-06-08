@@ -6,7 +6,9 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.DeliveryNotes;
 
-public sealed class CompleteMobileDeliveryNoteHandler(IDeliveryNoteAppService deliveryNoteAppService)
+public sealed class CompleteMobileDeliveryNoteHandler(
+    IDeliveryNoteAppService deliveryNoteAppService,
+    IDeliveryRunAppService deliveryRunAppService)
     : IRequestHandler<CompleteMobileDeliveryNoteCommand, CommonActionResultModel>
 {
     public async Task<CommonActionResultModel> Handle(CompleteMobileDeliveryNoteCommand request, CancellationToken cancellationToken)
@@ -27,6 +29,8 @@ public sealed class CompleteMobileDeliveryNoteHandler(IDeliveryNoteAppService de
                 CashCollectedAmount = request.CashCollectedAmount
             }
         }).ConfigureAwait(false);
+        if (result.Success)
+            await deliveryRunAppService.CloseAsync(request.DeliveryRunId).ConfigureAwait(false);
 
         return new CommonActionResultModel
         {

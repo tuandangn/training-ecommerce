@@ -3,30 +3,39 @@
 @{
     ViewData["Title"] = "Chi tiết chuyến giao " + Model.Code;
     var status = (DeliveryRunStatus)Model.Status;
-    var statusTuple = status switch
-    {
-        DeliveryRunStatus.ReadyForHandover => ("info", "bi-box-seam"),
-        DeliveryRunStatus.HandedToDriver => ("warning", "bi-truck"),
-        DeliveryRunStatus.Closed => ("success", "bi-check-circle-fill"),
-        DeliveryRunStatus.Cancelled => ("danger", "bi-x-circle"),
-        _ => ("secondary", "bi-question-circle")
-    };
+    var statusTuple = Model.IsDeliveryCompleted
+        ? ("success", "bi-check-circle-fill")
+        : Model.DeliveredItemCount > 0 || status == DeliveryRunStatus.HandedToDriver
+            ? ("warning", "bi-truck")
+            : (status switch
+            {
+                DeliveryRunStatus.ReadyForHandover => ("info", "bi-box-seam"),
+                DeliveryRunStatus.HandedToDriver => ("warning", "bi-truck"),
+                DeliveryRunStatus.Closed => ("success", "bi-check-circle-fill"),
+                DeliveryRunStatus.Cancelled => ("danger", "bi-x-circle"),
+                _ => ("secondary", "bi-question-circle")
+            });
     var canManageDeliveryRun = User.IsInRole(SystemUserRoleNames.Admin)
         || User.IsInRole(SystemUserRoleNames.WarehouseManager);
     var canConfirmDeliveryRunCashHandover = User.IsInRole(SystemUserRoleNames.Admin)
         || User.IsInRole(SystemUserRoleNames.Cashier);
     var offlineReady = Model.DriverCachedOnUtc.HasValue || Model.PaperManifestIssued;
     var canIssuePaperManifest = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && !Model.PaperManifestIssued;
-    var canHandOver = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && offlineReady;
-    var canClose = canManageDeliveryRun && status == DeliveryRunStatus.HandedToDriver;
+    var canHandOver = canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && offlineReady && !Model.IsDeliveryCompleted;
+    var canClose = canManageDeliveryRun
+        && status is not DeliveryRunStatus.Closed and not DeliveryRunStatus.Cancelled
+        && (status == DeliveryRunStatus.HandedToDriver || Model.IsDeliveryCompleted);
     var canCancel = canManageDeliveryRun && status is not DeliveryRunStatus.Closed and not DeliveryRunStatus.Cancelled;
     var expectedCashAmount = Model.Items
         .Where(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered)
         .Sum(item => item.CashCollectedAmount ?? item.AmountToCollect);
     var totalAmountToCollect = Model.Items.Sum(item => item.AmountToCollect);
+    var deliveryProgressPercent = Model.Items.Count == 0
+        ? 0
+        : (int)Math.Round((decimal)Model.DeliveredItemCount * 100 / Model.Items.Count);
     var canConfirmCashHandover = canConfirmDeliveryRunCashHandover
         && expectedCashAmount > 0
-        && status is not DeliveryRunStatus.ReadyForHandover and not DeliveryRunStatus.Cancelled
+        && (Model.IsDeliveryCompleted || status is not DeliveryRunStatus.ReadyForHandover and not DeliveryRunStatus.Cancelled)
         && !Model.CashHandoverConfirmedOnUtc.HasValue;
 }
 @section TitleSection {
@@ -62,7 +71,7 @@
                     </button>
                 </form>
             }
-            @if (canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover)
+            @if (canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover && !Model.IsDeliveryCompleted)
             {
                 <form asp-action="HandOver" method="post">
                     <input type="hidden" name="id" value="@Model.Id" />
@@ -91,7 +100,7 @@
             }
         </div>
     </div>
-    @if (status == DeliveryRunStatus.ReadyForHandover && !offlineReady)
+    @if (status == DeliveryRunStatus.ReadyForHandover && !offlineReady && !Model.IsDeliveryCompleted)
     {
         <div class="alert alert-warning d-flex align-items-center gap-2">
             <i class="bi bi-exclamation-triangle fs-5"></i>
@@ -179,6 +188,15 @@
             <div class="col-lg-4">
                 <div class="border rounded p-3 h-100">
                     <h5 class="fw-bold mb-3"><i class="bi bi-info-circle me-2 text-primary"></i>Trạng thái</h5>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                        <span class="status-badge @statusTuple.Item1">
+                            <i class="bi @statusTuple.Item2 me-1"></i>@Model.StatusName
+                        </span>
+                        <span class="small text-muted">@Model.DeliveredItemCount/@Model.Items.Count phiếu đã giao</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 8px;">
+                        <div class="progress-bar bg-success" role="progressbar" style="width: @deliveryProgressPercent%;" aria-valuenow="@deliveryProgressPercent" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Người giao đã xem</span>
                         <span class="fw-bold @(Model.DriverCachedOnUtc.HasValue ? "text-success" : "text-muted") text-end">

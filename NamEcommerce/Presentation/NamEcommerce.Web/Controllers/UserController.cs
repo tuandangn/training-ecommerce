@@ -2,6 +2,8 @@ using MediatR;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Users;
+using NamEcommerce.Domain.Shared.Common;
+using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Users;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Models.Users;
@@ -40,7 +42,7 @@ public sealed class UserController : BaseController
 
         if (Url.IsLocalUrl(returnUrl))
             return LocalRedirect(returnUrl);
-        return RedirectToHome();
+        return RedirectToDefaultLanding(authenticateUserResult.RoleNames);
     }
 
     public async Task<IActionResult> Logout()
@@ -85,5 +87,21 @@ public sealed class UserController : BaseController
 
         AddLocalizedModelError(registerUserResult.ErrorMessage);
         return View(model);
+    }
+
+    private IActionResult RedirectToDefaultLanding(IEnumerable<string> roleNames)
+    {
+        var roles = roleNames
+            .Select(SystemUserRoleNames.Normalize)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (roles.Contains(SystemUserRoleNames.Normalize(SystemUserRoleNames.Admin)))
+            return RedirectToAction(ControllerConstants.Index, ControllerConstants.Home);
+        if (roles.Contains(SystemUserRoleNames.Normalize(SystemUserRoleNames.WarehouseManager)))
+            return RedirectToAction(ControllerConstants.List, ControllerConstants.DeliveryRun);
+        if (roles.Contains(SystemUserRoleNames.Normalize(SystemUserRoleNames.DeliveryStaff)))
+            return RedirectToAction(ControllerConstants.Index, ControllerConstants.DeliveryMobile);
+
+        return RedirectToHome();
     }
 }
