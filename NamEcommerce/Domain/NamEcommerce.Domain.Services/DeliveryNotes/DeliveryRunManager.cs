@@ -58,8 +58,6 @@ public sealed class DeliveryRunManager(
                 throw new NamEcommerceDomainException("Error.DeliveryRunDeliveryNoteMustBeConfirmed");
             if (note.IsDirectShip || note.SourceType != DeliveryNoteSourceType.ToCustomer)
                 throw new NamEcommerceDomainException("Error.DeliveryRunDeliveryNoteSourceNotSupported");
-            if (note.AssignedDeliveryUserId != dto.AssignedDeliveryUserId)
-                throw new NamEcommerceDomainException("Error.DeliveryRunDeliveryNoteDriverMismatch");
         }
 
         var currentUser = await currentUserAccessor.GetCurrentUserAsync().ConfigureAwait(false);
@@ -83,7 +81,20 @@ public sealed class DeliveryRunManager(
                 note.AmountToCollect);
         }
 
+        await using var transaction = await dbContext.BeginTransactionAsync().ConfigureAwait(false);
+        foreach (var note in notes.Where(note => note.AssignedDeliveryUserId != dto.AssignedDeliveryUserId))
+        {
+            await deliveryNoteManager.AssignDeliveryUserAsync(new AssignDeliveryUserDto
+            {
+                DeliveryNoteId = note.Id,
+                AssignedDeliveryUserId = dto.AssignedDeliveryUserId,
+                AssignedDeliveryUsername = dto.AssignedDeliveryUsername,
+                AssignedDeliveryFullName = dto.AssignedDeliveryFullName
+            }).ConfigureAwait(false);
+        }
+
         var inserted = await runRepository.InsertAsync(run).ConfigureAwait(false);
+        await transaction.CommitAsync().ConfigureAwait(false);
         return inserted.ToDto();
     }
 

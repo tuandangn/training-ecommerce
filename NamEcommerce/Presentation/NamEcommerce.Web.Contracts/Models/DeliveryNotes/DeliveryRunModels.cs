@@ -69,6 +69,9 @@ public sealed record DeliveryRunCandidateDeliveryNoteModel
     public string? OrderCode { get; init; }
     public required string CustomerName { get; init; }
     public required string ShippingAddress { get; init; }
+    public string? AssignedDeliveryFullName { get; init; }
+    public required string ProductSummary { get; init; }
+    public decimal TotalQuantity { get; init; }
     public decimal AmountToCollect { get; init; }
     public DateTime CreatedOnUtc { get; init; }
 }

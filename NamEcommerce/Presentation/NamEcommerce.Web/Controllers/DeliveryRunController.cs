@@ -36,6 +36,8 @@ public sealed class DeliveryRunController(
     [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> Create(CreateDeliveryRunModel model)
     {
+        if (model.AssignedDeliveryUserId == Guid.Empty)
+            AddLocalizedModelError("Error.DeliveryUserRequired");
         if (model.DeliveryNoteIds.Count == 0)
             AddLocalizedModelError("Error.DeliveryRunItemsRequired");
 

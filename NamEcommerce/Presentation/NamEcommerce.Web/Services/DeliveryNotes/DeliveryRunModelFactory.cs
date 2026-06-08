@@ -47,7 +47,7 @@ public sealed class DeliveryRunModelFactory(
     {
         var model = oldModel ?? new CreateDeliveryRunModel();
         model.AvailableDeliveryUsers = await PrepareDeliveryUserOptionsAsync().ConfigureAwait(false);
-        model.AvailableDeliveryNotes = await PrepareCandidateDeliveryNotesAsync(model.AssignedDeliveryUserId).ConfigureAwait(false);
+        model.AvailableDeliveryNotes = await PrepareCandidateDeliveryNotesAsync().ConfigureAwait(false);
         return model;
     }
 
@@ -173,16 +173,15 @@ public sealed class DeliveryRunModelFactory(
         };
     }
 
-    private async Task<IList<DeliveryRunCandidateDeliveryNoteModel>> PrepareCandidateDeliveryNotesAsync(Guid assignedDeliveryUserId)
+    private async Task<IList<DeliveryRunCandidateDeliveryNoteModel>> PrepareCandidateDeliveryNotesAsync()
     {
-        if (assignedDeliveryUserId == Guid.Empty)
-            return [];
-
         var notes = await deliveryNoteAppService.GetListAsync(null, 0, 500).ConfigureAwait(false);
+        var activeDeliveryNoteIds = await GetActiveDeliveryRunNoteIdsAsync().ConfigureAwait(false);
+
         return notes.Items
             .Where(note => note.Status == (int)DeliveryNoteStatus.Confirmed)
             .Where(note => !note.IsDirectShip && note.SourceType == (int)DeliveryNoteSourceType.ToCustomer)
-            .Where(note => note.AssignedDeliveryUserId == assignedDeliveryUserId)
+            .Where(note => !activeDeliveryNoteIds.Contains(note.Id))
             .OrderBy(note => note.CreatedOnUtc)
             .Select(note => new DeliveryRunCandidateDeliveryNoteModel
             {
@@ -191,10 +190,46 @@ public sealed class DeliveryRunModelFactory(
                 OrderCode = note.OrderCode,
                 CustomerName = note.CustomerName,
                 ShippingAddress = note.ShippingAddress,
+                AssignedDeliveryFullName = note.AssignedDeliveryFullName,
+                ProductSummary = BuildProductSummary(note.Items),
+                TotalQuantity = note.Items.Sum(item => item.Quantity),
                 AmountToCollect = note.AmountToCollect,
                 CreatedOnUtc = note.CreatedOnUtc
             })
             .ToList();
+    }
+
+    private async Task<HashSet<Guid>> GetActiveDeliveryRunNoteIdsAsync()
+    {
+        var runs = await deliveryRunAppService.GetListAsync(0, 500, null, null, null).ConfigureAwait(false);
+        var activeRuns = runs.Items
+            .Where(run => run.Status != (int)DeliveryRunStatus.Closed && run.Status != (int)DeliveryRunStatus.Cancelled)
+            .ToList();
+
+        var noteIds = new HashSet<Guid>();
+        foreach (var run in activeRuns)
+        {
+            var details = await deliveryRunAppService.GetByIdAsync(run.Id).ConfigureAwait(false);
+            if (details is null)
+                continue;
+
+            foreach (var item in details.Items)
+                noteIds.Add(item.DeliveryNoteId);
+        }
+
+        return noteIds;
+    }
+
+    private static string BuildProductSummary(IEnumerable<DeliveryNoteItemAppDto> items)
+    {
+        var itemList = items.ToList();
+        var summary = string.Join(", ", itemList
+            .Take(2)
+            .Select(item => $"{item.ProductName} x {item.Quantity:#,##0.##}"));
+        if (itemList.Count <= 2)
+            return summary;
+
+        return $"{summary} +{itemList.Count - 2}";
     }
 
     private static DeliveryRunListItemModel ToListModel(DeliveryRunListAppDto run)
