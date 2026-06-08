@@ -40,7 +40,7 @@ public sealed class UserController : BaseController
             return View(model);
         }
 
-        if (Url.IsLocalUrl(returnUrl))
+        if (Url.IsLocalUrl(returnUrl) && returnUrl != "/")
             return LocalRedirect(returnUrl);
         return RedirectToDefaultLanding(authenticateUserResult.RoleNames);
     }
