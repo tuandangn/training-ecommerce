@@ -7,15 +7,6 @@
             <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Dashboard
         </a>
     </li>
-    @if (Model.CanUseDeliveryMobile)
-    {
-        <li class="nav-item">
-            <a class="nav-link @(WebHelper.IsMatchRouteInfo("DeliveryMobile") ? "active" : "")" asp-controller="DeliveryMobile" asp-action="Index">
-                <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Giao hàng
-            </a>
-        </li>
-    }
-
     <!-- Bán hàng -->
     <li class="nav-item">
         <a class="nav-link @(WebHelper.IsHasController("Order", "Preparation", "Customer", "CustomerReturn") ? "" : "collapsed")"
@@ -106,6 +97,15 @@
             </ul>
         </div>
     </li>
+
+    @if (Model.CanUseDeliveryMobile)
+    {
+        <li class="nav-item">
+            <a class="nav-link @(WebHelper.IsMatchRouteInfo("DeliveryMobile") ? "active" : "")" asp-controller="DeliveryMobile" asp-action="Index">
+                <i class="bi bi-circle-fill" style="font-size: 0.4rem; margin-right: 12px; opacity: 0.7;"></i> Giao hàng
+            </a>
+        </li>
+    }
 
     <!-- Công nợ -->
     <li class="nav-item">

@@ -55,7 +55,7 @@
                     var receiverName = string.IsNullOrWhiteSpace(stop.ReceiverName) ? stop.CustomerName : stop.ReceiverName;
                     var productParts = stop.ProductItems
                         .Take(2)
-                        .Select(product => $"{product.ProductName} x{product.Quantity.DisplayQuantity()}")
+                        .Select(product => product.ProductName)
                         .ToList();
                     var productSummary = productParts.Count == 0 ? "Chưa có hàng hóa" : string.Join(", ", productParts);
                     var remainingProductCount = stop.ProductItems.Count - productParts.Count;

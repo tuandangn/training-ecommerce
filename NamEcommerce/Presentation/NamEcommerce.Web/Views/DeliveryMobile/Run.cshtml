@@ -97,10 +97,6 @@
         <div class="mobile-goods-box">
             <div class="mobile-goods-head">
                 <span>Hàng giao</span>
-                @if (totalQuantity > 0)
-                {
-                    <strong>@totalQuantity.DisplayQuantity()</strong>
-                }
             </div>
             @if (item.ProductItems.Any())
             {
@@ -109,7 +105,7 @@
                     {
                         <li>
                             <span>@product.ProductName</span>
-                            <strong>x@product.Quantity.DisplayQuantity()</strong>
+                            <strong>@product.Quantity.DisplayQuantity()</strong>
                         </li>
                     }
                 </ul>

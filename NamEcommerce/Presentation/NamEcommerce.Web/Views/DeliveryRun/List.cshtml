@@ -6,55 +6,59 @@
     var canManageDeliveryRun = User.IsInRole(SystemUserRoleNames.Admin)
         || User.IsInRole(SystemUserRoleNames.WarehouseManager);
 }
-
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Chuyến giao</h1>
-        <p class="page-header-subtitle">Tổng hợp phiếu giao, chuẩn bị offline và bàn giao cho người giao</p>
+@section TitleSection {
+    <h1 class="topbar-page-title">Chuyến giao</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Chuyến giao</li>
+            </ol>
+        </nav>
     </div>
-    @if (canManageDeliveryRun)
-    {
-        <a asp-action="Create" class="btn btn-primary">
-            <i class="bi bi-plus-circle me-1"></i>Tạo chuyến
-        </a>
-    }
-</div>
-
+}
 <div class="content-card mb-3">
-    <form asp-action="List" method="get" class="row g-2 align-items-end">
-        <div class="col-md-4">
-            <label class="form-label small fw-bold text-muted text-uppercase">Từ khóa</label>
-            <input type="text" name="Keywords" value="@Model.Keywords" class="form-control" placeholder="Mã chuyến" />
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small fw-bold text-muted text-uppercase">Người giao</label>
-            <select name="AssignedDeliveryUserId" class="form-select">
-                <option value="">Tất cả</option>
-                @foreach (var user in deliveryUsers)
-                {
-                    <option value="@user.Id" selected="@(Model.AssignedDeliveryUserId == user.Id)">@user.Name</option>
-                }
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label small fw-bold text-muted text-uppercase">Trạng thái</label>
-            <select name="Status" class="form-select">
-                <option value="">Tất cả</option>
-                <option value="@((int)DeliveryRunStatus.ReadyForHandover)" selected="@(Model.Status == (int)DeliveryRunStatus.ReadyForHandover)">Chờ bàn giao</option>
-                <option value="@((int)DeliveryRunStatus.HandedToDriver)" selected="@(Model.Status == (int)DeliveryRunStatus.HandedToDriver)">Đã bàn giao</option>
-                <option value="@((int)DeliveryRunStatus.Closed)" selected="@(Model.Status == (int)DeliveryRunStatus.Closed)">Đã đóng</option>
-                <option value="@((int)DeliveryRunStatus.Cancelled)" selected="@(Model.Status == (int)DeliveryRunStatus.Cancelled)">Đã hủy</option>
-            </select>
-        </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-outline-primary w-100">
-                <i class="bi bi-search me-1"></i>Lọc
-            </button>
-        </div>
-    </form>
-</div>
+    <div class="action-toolbar">
+        <form asp-action="List" method="get" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold text-muted text-uppercase">Từ khóa</label>
+                <input type="text" name="Keywords" value="@Model.Keywords" class="form-control" placeholder="Mã chuyến" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted text-uppercase">Người giao</label>
+                <select name="AssignedDeliveryUserId" class="form-select">
+                    <option value="">Tất cả</option>
+                    @foreach (var user in deliveryUsers)
+                    {
+                        <option value="@user.Id" selected="@(Model.AssignedDeliveryUserId == user.Id)">@user.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted text-uppercase">Trạng thái</label>
+                <select name="Status" class="form-select">
+                    <option value="">Tất cả</option>
+                    <option value="@((int)DeliveryRunStatus.ReadyForHandover)" selected="@(Model.Status == (int)DeliveryRunStatus.ReadyForHandover)">Chờ bàn giao</option>
+                    <option value="@((int)DeliveryRunStatus.HandedToDriver)" selected="@(Model.Status == (int)DeliveryRunStatus.HandedToDriver)">Đã bàn giao</option>
+                    <option value="@((int)DeliveryRunStatus.Closed)" selected="@(Model.Status == (int)DeliveryRunStatus.Closed)">Đã đóng</option>
+                    <option value="@((int)DeliveryRunStatus.Cancelled)" selected="@(Model.Status == (int)DeliveryRunStatus.Cancelled)">Đã hủy</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-search me-1"></i>Lọc
+                </button>
+            </div>
+        </form>
+        @if (canManageDeliveryRun)
+        {
+            <a asp-action="Create" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i>Tạo chuyến
+            </a>
+        }
+    </div>
 
-<div class="content-card">
+<div class="content-card-body-flush">
     <div class="table-responsive">
         <table class="table data-table align-middle">
             <thead>
@@ -172,4 +176,5 @@
     {
         <partial name="_Pager" model="Model.Data.Pagination" />
     }
+</div>
 </div>

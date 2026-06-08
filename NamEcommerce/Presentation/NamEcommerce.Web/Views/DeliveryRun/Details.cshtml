@@ -29,159 +29,187 @@
         && status is not DeliveryRunStatus.ReadyForHandover and not DeliveryRunStatus.Cancelled
         && !Model.CashHandoverConfirmedOnUtc.HasValue;
 }
-
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title d-flex align-items-center gap-2">
-            @Model.Code
-            <span class="status-badge @statusTuple.Item1"><i class="bi @statusTuple.Item2 me-1"></i>@Model.StatusName</span>
-        </h1>
-        <p class="page-header-subtitle">
-            <a asp-action="List" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Trở về danh sách</a>
-        </p>
-    </div>
-    <div class="d-flex flex-wrap gap-2 justify-content-end">
-        @if (Model.PaperManifestIssued && canManageDeliveryRun)
-        {
-            <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-outline-secondary">
-                <i class="bi bi-printer me-1"></i>In phiếu giấy
-            </a>
-        }
-        else if (canIssuePaperManifest)
-        {
-            <form asp-action="IssuePaperManifest" method="post" target="_blank">
-                <input type="hidden" name="id" value="@Model.Id" />
-                <button type="submit" class="btn btn-outline-secondary">
-                    <i class="bi bi-printer me-1"></i>In phiếu giấy
-                </button>
-            </form>
-        }
-        @if (canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover)
-        {
-            <form asp-action="HandOver" method="post">
-                <input type="hidden" name="id" value="@Model.Id" />
-                <button type="submit" class="btn btn-primary" disabled="@(!canHandOver)" title="@(!canHandOver ? "Cần cache app hoặc in phiếu giấy trước" : null)">
-                    <i class="bi bi-truck me-1"></i>Bàn giao
-                </button>
-            </form>
-        }
-        @if (canClose)
-        {
-            <form asp-action="Close" method="post">
-                <input type="hidden" name="id" value="@Model.Id" />
-                <button type="submit" class="btn btn-success">
-                    <i class="bi bi-check-circle me-1"></i>Đóng chuyến
-                </button>
-            </form>
-        }
-        @if (canCancel)
-        {
-            <form asp-action="Cancel" method="post" onsubmit="return confirm('Hủy chuyến giao này?');">
-                <input type="hidden" name="id" value="@Model.Id" />
-                <button type="submit" class="btn btn-outline-danger">
-                    <i class="bi bi-x-circle me-1"></i>Hủy chuyến
-                </button>
-            </form>
-        }
-    </div>
-</div>
-
-@if (status == DeliveryRunStatus.ReadyForHandover && !offlineReady)
-{
-    <div class="alert alert-warning d-flex align-items-center gap-2">
-        <i class="bi bi-exclamation-triangle fs-5"></i>
-        <div>Cần người giao mở app để cache chuyến, hoặc quản kho in phiếu giấy dự phòng trước khi bàn giao.</div>
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Chuyến giao
+        <span class="text-muted">@Model.Code</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="DeliveryRun" class="text-decoration-none">Chuyến giao</a></li>
+                <li class="breadcrumb-item active" aria-current="page">@Model.Code</li>
+            </ol>
+        </nav>
     </div>
 }
-
-<div class="row g-3 mb-3">
-    <div class="col-lg-4">
-        <div class="content-card h-100">
-            <h5 class="fw-bold mb-3"><i class="bi bi-person-check me-2 text-primary"></i>Người giao</h5>
-            <div class="fw-bold fs-5">@Model.AssignedDeliveryFullName</div>
-            <div class="text-muted">@Model.AssignedDeliveryUsername</div>
-            @if (Model.HandedOverOnUtc.HasValue)
+<div class="content-card">
+    <div class="content-card-header">
+        <div class="d-flex flex-wrap gap-2 justify-content-end w-100">
+            @if (Model.PaperManifestIssued && canManageDeliveryRun)
             {
-                <hr />
-                <div class="small text-muted text-uppercase fw-bold">Đã bàn giao</div>
-                <div>@Model.HandedOverOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-outline-secondary">
+                    <i class="bi bi-printer me-1"></i>In phiếu giấy
+                </a>
             }
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="content-card h-100">
-            <h5 class="fw-bold mb-3"><i class="bi bi-wifi-off me-2 text-primary"></i>Chuẩn bị offline</h5>
-            <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted">App đã cache</span>
-                <span class="fw-bold @(Model.DriverCachedOnUtc.HasValue ? "text-success" : "text-muted")">
-                    @(Model.DriverCachedOnUtc.HasValue ? "Có" : "Chưa")
-                </span>
-            </div>
-            @if (Model.DriverCachedOnUtc.HasValue)
+            else if (canIssuePaperManifest)
             {
-                <div class="small text-muted mb-2">@Model.DriverCachedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
-            }
-            <div class="d-flex justify-content-between">
-                <span class="text-muted">Phiếu giấy</span>
-                <span class="fw-bold @(Model.PaperManifestIssued ? "text-success" : "text-muted")">
-                    @(Model.PaperManifestIssued ? "Đã in" : "Chưa in")
-                </span>
-            </div>
-            @if (Model.PaperManifestIssuedOnUtc.HasValue)
-            {
-                <div class="small text-muted">@Model.PaperManifestIssuedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
-            }
-        </div>
-    </div>
-    <div class="col-lg-4">
-        <div class="content-card h-100">
-            <h5 class="fw-bold mb-3"><i class="bi bi-cash-stack me-2 text-primary"></i>Tiền đã thu</h5>
-            <div class="display-6 fw-bold">@expectedCashAmount.DisplayCurrencyWithSymbol()</div>
-            <div class="text-muted">COD chuyến: @totalAmountToCollect.DisplayCurrencyWithSymbol()</div>
-            @if (Model.CashHandoverConfirmedOnUtc.HasValue)
-            {
-                <hr />
-                <div class="small text-muted text-uppercase fw-bold">Thủ quỹ đã nhận</div>
-                <div class="fw-bold text-success">@((Model.CashHandoverAmount ?? 0m).DisplayCurrencyWithSymbol())</div>
-                <div class="small text-muted">@Model.CashHandoverConfirmedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
-                @if (!string.IsNullOrWhiteSpace(Model.CashHandoverConfirmedByFullName))
-                {
-                    <div class="small text-muted">@Model.CashHandoverConfirmedByFullName</div>
-                }
-                @if (!string.IsNullOrWhiteSpace(Model.CashHandoverNote))
-                {
-                    <div class="small mt-2">@Model.CashHandoverNote</div>
-                }
-            }
-            else if (canConfirmCashHandover)
-            {
-                <hr />
-                <form asp-action="ConfirmCashHandover" method="post">
+                <form asp-action="IssuePaperManifest" method="post" target="_blank">
                     <input type="hidden" name="id" value="@Model.Id" />
-                    <label class="form-label small fw-bold text-muted text-uppercase">Tiền thủ quỹ nhận</label>
-                    <input type="number" name="amount" class="form-control mb-2" min="0" step="1000" value="@expectedCashAmount" />
-                    <textarea name="note" class="form-control mb-2" rows="2" placeholder="Ghi chú bàn giao tiền"></textarea>
-                    <button type="submit" class="btn btn-outline-success w-100">
-                        <i class="bi bi-cash-coin me-1"></i>Xác nhận nhận tiền
+                    <button type="submit" class="btn btn-outline-secondary">
+                        <i class="bi bi-printer me-1"></i>In phiếu giấy
                     </button>
                 </form>
             }
-            @if (!string.IsNullOrWhiteSpace(Model.Note))
+            @if (canManageDeliveryRun && status == DeliveryRunStatus.ReadyForHandover)
             {
-                <hr />
-                <div class="small text-muted text-uppercase fw-bold">Ghi chú</div>
-                <div>@Model.Note</div>
+                <form asp-action="HandOver" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <button type="submit" class="btn btn-primary" disabled="@(!canHandOver)" title="@(!canHandOver ? "Cần cache app hoặc in phiếu giấy trước" : null)">
+                        <i class="bi bi-truck me-1"></i>Bàn giao
+                    </button>
+                </form>
+            }
+            @if (canClose)
+            {
+                <form asp-action="Close" method="post">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i>Đóng chuyến
+                    </button>
+                </form>
+            }
+            @if (canCancel)
+            {
+                <form asp-action="Cancel" method="post" onsubmit="return confirm('Hủy chuyến giao này?');">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="bi bi-x-circle me-1"></i>Hủy chuyến
+                    </button>
+                </form>
             }
         </div>
     </div>
-</div>
-
-<div class="content-card">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0 fw-bold"><i class="bi bi-list-check me-2 text-primary"></i>Phiếu trong chuyến</h5>
-        <span class="badge bg-light text-dark">@Model.Items.Count phiếu</span>
+    @if (status == DeliveryRunStatus.ReadyForHandover && !offlineReady)
+    {
+        <div class="alert alert-warning d-flex align-items-center gap-2">
+            <i class="bi bi-exclamation-triangle fs-5"></i>
+            <div>Cần người giao mở app để cache chuyến, hoặc quản kho in phiếu giấy dự phòng trước khi bàn giao.</div>
+        </div>
+    }
+    <div class="content-card-body-flush px-3">
+        <div class="row g-3 mb-4">
+            <div class="col-lg-4">
+                <div class="border rounded p-3 h-100">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-person-check me-2 text-primary"></i>Người giao</h5>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Tên người giao</span>
+                        <span class="fw-bold">@Model.AssignedDeliveryFullName</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Tài khoản</span>
+                        <span class="fw-bold text-muted">@Model.AssignedDeliveryUsername</span>
+                    </div>
+                    @if (Model.HandedOverOnUtc.HasValue)
+                    {
+                        <hr />
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">Đã bàn giao</span>
+                            <span class="fw-bold text-muted">@Model.HandedOverOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="border rounded p-3 h-100">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-cash-stack me-2 text-primary"></i>Tiền đã thu</h5>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Phải thu</span>
+                        <span class="fw-bold text-muted">@totalAmountToCollect.DisplayCurrencyWithSymbol()</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Đã thu</span>
+                        <span class="fw-bold">@expectedCashAmount.DisplayCurrencyWithSymbol()</span>
+                    </div>
+                    @if (Model.CashHandoverConfirmedOnUtc.HasValue)
+                    {
+                        <hr />
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted">
+                                Thủ quỹ đã nhận
+                                @if (!string.IsNullOrWhiteSpace(Model.CashHandoverConfirmedByFullName))
+                                {
+                                    <span class="small text-muted d-block fw-medium">@Model.CashHandoverConfirmedByFullName</span>
+                                }
+                            </span>
+                            <span class="fw-bold text-muted">
+                                @((Model.CashHandoverAmount ?? 0m).DisplayCurrencyWithSymbol())
+                                <span class="small text-muted fw-normal d-block">@Model.CashHandoverConfirmedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                            </span>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(Model.CashHandoverNote))
+                        {
+                            <div class="small mt-2">@Model.CashHandoverNote</div>
+                        }
+                    }
+                    else if (canConfirmCashHandover)
+                    {
+                        <hr />
+                        <form asp-action="ConfirmCashHandover" method="post">
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <label class="form-label small fw-bold text-muted text-uppercase">Tiền thủ quỹ nhận</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="number" name="amount" class="form-control" min="0" step="1000" value="@expectedCashAmount" placeholder="Nhập số tiền nhận"/>
+                                <input name="note" class="form-control" placeholder="Ghi chú bàn giao tiền"/>
+                                <button type="submit" class="btn btn-primary btn-sm text-nowrap">
+                                    <i class="bi bi-cash-coin me-1"></i>Xác nhận
+                                </button>
+                            </div>
+                        </form>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.Note))
+                    {
+                        <hr />
+                        <div class="small text-muted text-uppercase fw-bold">Ghi chú</div>
+                        <div>@Model.Note</div>
+                    }
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="border rounded p-3 h-100">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-info-circle me-2 text-primary"></i>Trạng thái</h5>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Người giao đã xem</span>
+                        <span class="fw-bold @(Model.DriverCachedOnUtc.HasValue ? "text-success" : "text-muted") text-end">
+                            @if (Model.DriverCachedOnUtc.HasValue)
+                            {
+                                <span class="text-muted fw-bold">@Model.DriverCachedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</span>
+                            } else {
+                                @(Model.DriverCachedOnUtc.HasValue ? "Có" : "Chưa")
+                            }
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Phiếu giấy</span>
+                        <span class="fw-bold @(Model.PaperManifestIssued ? "text-success" : "text-muted")">
+                            @(Model.PaperManifestIssued ? "Đã in" : "Chưa in")
+                        </span>
+                    </div>
+                    @if (Model.PaperManifestIssuedOnUtc.HasValue)
+                    {
+                        <div class="small text-muted">@Model.PaperManifestIssuedOnUtc.Value.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat)</div>
+                    }
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="table-responsive">
+    <div class="content-card-body-flush pb-3">
+        <div class="d-flex justify-content-between align-items-center mb-3 px-3">
+            <h5 class="mb-0 fw-bold"><i class="bi bi-list-check me-2 text-primary"></i>Phiếu trong chuyến</h5>
+            <span class="badge bg-light text-dark">@Model.Items.Count phiếu</span>
+        </div>
+        <div class="table-responsive">
         <table class="table data-table align-middle">
             <thead>
                 <tr>
@@ -209,5 +237,6 @@
                 }
             </tbody>
         </table>
+    </div>
     </div>
 </div>
