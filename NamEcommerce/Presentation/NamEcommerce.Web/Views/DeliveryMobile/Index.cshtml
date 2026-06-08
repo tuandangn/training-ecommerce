@@ -1,8 +1,10 @@
 @model DeliveryMobileIndexModel
+@using System.Text.Json
 @using NamEcommerce.Domain.Shared.Enums.DeliveryNotes
 @{
     Layout = "_DeliveryMobileLayout";
     ViewData["Title"] = "Giao hàng";
+    var cachePayload = JsonSerializer.Serialize(Model.Runs, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 }
 
 <div class="mobile-topbar">
@@ -23,7 +25,6 @@
         var statusClass = status == DeliveryRunStatus.ReadyForHandover
             ? "mobile-status-ready"
             : "mobile-status-active";
-        var offlineReady = run.DriverCachedOnUtc.HasValue || run.PaperManifestIssued;
 
         <article class="mobile-card">
             <div class="d-flex justify-content-between align-items-start gap-3">
@@ -39,15 +40,53 @@
 
             <div class="mobile-stat-grid">
                 <div class="mobile-stat">
+                    <div class="mobile-stat-label">Phiếu giao</div>
+                    <div class="mobile-stat-value">@run.ItemCount</div>
+                </div>
+                <div class="mobile-stat">
                     <div class="mobile-stat-label">Cần thu</div>
                     <div class="mobile-stat-value">@run.AmountToCollect.DisplayCurrencyWithSymbol()</div>
                 </div>
-                <div class="mobile-stat">
-                    <div class="mobile-stat-label">Offline</div>
-                    <div class="mobile-stat-value @(offlineReady ? "text-success" : "text-muted")">
-                        @(offlineReady ? "Sẵn sàng" : "Chưa cache")
+            </div>
+
+            <div class="mobile-stop-list">
+                @foreach (var stop in run.Items.Take(2))
+                {
+                    var receiverName = string.IsNullOrWhiteSpace(stop.ReceiverName) ? stop.CustomerName : stop.ReceiverName;
+                    var productParts = stop.ProductItems
+                        .Take(2)
+                        .Select(product => $"{product.ProductName} x{product.Quantity.DisplayQuantity()}")
+                        .ToList();
+                    var productSummary = productParts.Count == 0 ? "Chưa có hàng hóa" : string.Join(", ", productParts);
+                    var remainingProductCount = stop.ProductItems.Count - productParts.Count;
+                    var totalQuantity = stop.ProductItems.Sum(product => product.Quantity);
+                    if (remainingProductCount > 0)
+                    {
+                        productSummary = $"{productSummary} +{remainingProductCount} mặt hàng";
+                    }
+
+                    <div class="mobile-stop">
+                        <div class="mobile-stop-header">
+                            <strong>@receiverName</strong>
+                            @if (!string.IsNullOrWhiteSpace(stop.CustomerPhone))
+                            {
+                                <a href="tel:@stop.CustomerPhone" class="mobile-phone-link">@stop.CustomerPhone</a>
+                            }
+                        </div>
+                        <div class="mobile-stop-address">@stop.ShippingAddress</div>
+                        <div class="mobile-stop-goods">
+                            <span>@productSummary</span>
+                            @if (totalQuantity > 0)
+                            {
+                                <strong>@totalQuantity.DisplayQuantity()</strong>
+                            }
+                        </div>
                     </div>
-                </div>
+                }
+                @if (run.Items.Count > 2)
+                {
+                    <div class="mobile-meta mt-2">Còn @(run.Items.Count - 2) điểm giao khác</div>
+                }
             </div>
 
             @if (run.HandedOverOnUtc.HasValue)
@@ -70,4 +109,14 @@ else
         <h2 class="h5 fw-bold mb-2">Chưa có chuyến cần giao</h2>
         <p class="mobile-meta mb-0">Chuyến mới sẽ hiện ở đây sau khi quản kho tạo và gán cho bạn.</p>
     </div>
+}
+
+<script type="application/json" id="delivery-index-payload">@Html.Raw(cachePayload)</script>
+
+@section Scripts {
+    <script type="module">
+        import { installDeliveryIndexCache } from '/modules/DeliveryMobileCache.js';
+
+        installDeliveryIndexCache();
+    </script>
 }

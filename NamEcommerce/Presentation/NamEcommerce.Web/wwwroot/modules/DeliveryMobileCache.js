@@ -37,7 +37,19 @@ function updateCacheStatus(text, className) {
     }
 
     status.textContent = text;
-    status.className = `fw-bold ${className}`;
+    if (!status.classList.contains('visually-hidden')) {
+        status.className = `fw-bold ${className}`;
+    }
+}
+
+export function installDeliveryIndexCache() {
+    const payloadElement = document.getElementById('delivery-index-payload');
+    if (!payloadElement?.textContent) {
+        return;
+    }
+
+    localStorage.setItem('delivery-runs:index', payloadElement.textContent);
+    localStorage.setItem('delivery-runs:index:cached-on', new Date().toISOString());
 }
 
 function getCurrentPosition() {
@@ -135,7 +147,7 @@ async function queueCompletion(form, status, message) {
             status.className = 'delivery-complete-status mobile-meta mt-2 text-warning fw-bold';
         }
     } catch {
-        if (status) status.textContent = 'Không thể lưu offline';
+        if (status) status.textContent = 'Không thể lưu trên máy';
     } finally {
         if (!queued && submitButton) submitButton.disabled = false;
     }
@@ -176,12 +188,14 @@ export async function installDeliveryRunCache({ runId, cacheUrl }) {
 
 export function installDeliveryCompletionForms() {
     document.querySelectorAll('.delivery-complete-form').forEach(form => {
+        installProofPreview(form);
+
         const noteId = form.dataset.noteId;
         const stateKey = `delivery-note-sync-state:${noteId}`;
         if (localStorage.getItem(stateKey) === 'done') {
-            markCompleteFormDone(form, 'Đã đồng bộ');
+            markCompleteFormDone(form, 'Đã gửi');
         } else if (localStorage.getItem(stateKey) === 'pending') {
-            markCompleteFormPending(form, 'Chờ đồng bộ');
+            markCompleteFormPending(form, 'Đã lưu trên máy, chờ gửi');
         }
 
         form.addEventListener('submit', async event => {
@@ -204,7 +218,7 @@ export function installDeliveryCompletionForms() {
             }
 
             if (!navigator.onLine) {
-                await queueCompletion(form, status, 'Đã lưu offline, sẽ đồng bộ khi có mạng');
+                await queueCompletion(form, status, 'Đã lưu trên máy, sẽ tự gửi khi có mạng');
                 return;
             }
 
@@ -216,45 +230,75 @@ export function installDeliveryCompletionForms() {
                 const result = await response.json();
                 if (result?.success) {
                     localStorage.setItem(stateKey, 'done');
-                    markCompleteFormDone(form, 'Đã đồng bộ');
+                    markCompleteFormDone(form, 'Đã gửi');
                     await updatePendingCount();
                     return;
                 }
 
                 submitButton.disabled = false;
-                if (status) status.textContent = result?.message ?? 'Không thể đồng bộ';
+                if (status) status.textContent = result?.message ?? 'Không gửi được';
             } catch {
-                await queueCompletion(form, status, 'Đã lưu offline, sẽ đồng bộ khi có mạng');
+                await queueCompletion(form, status, 'Đã lưu trên máy, sẽ tự gửi khi có mạng');
             }
         });
+    });
+}
+
+function installProofPreview(form) {
+    const input = form.querySelector('input[name="proofFile"]');
+    const preview = form.querySelector('.mobile-proof-preview');
+    const image = preview?.querySelector('img');
+    if (!input || !preview || !image) {
+        return;
+    }
+
+    let objectUrl = null;
+    input.addEventListener('change', () => {
+        if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+        }
+
+        const file = input.files?.[0];
+        if (!file) {
+            image.removeAttribute('src');
+            preview.hidden = true;
+            return;
+        }
+
+        objectUrl = URL.createObjectURL(file);
+        image.src = objectUrl;
+        preview.hidden = false;
     });
 }
 
 export function installDeliveryManualSync() {
     const button = document.getElementById('delivery-sync-pending');
     const status = document.getElementById('delivery-sync-status');
-    if (!button) {
-        return;
-    }
 
     updatePendingCount();
-
-    button.addEventListener('click', async () => {
-        button.disabled = true;
-        if (status) status.textContent = 'Đang đồng bộ...';
-
-        const result = await syncPendingCompletions();
-        await updatePendingCount();
-        button.disabled = false;
-        if (status) {
-            status.textContent = result.failed > 0
-                ? `Đã đồng bộ ${result.synced}, còn lỗi ${result.failed}`
-                : `Đã đồng bộ ${result.synced}`;
-        }
+    syncPendingCompletions().then(result => {
+        updatePendingCount();
+        updateSyncStatus(result);
     });
 
+    if (button) {
+        button.addEventListener('click', async () => {
+            button.disabled = true;
+            if (status) status.textContent = 'Đang gửi...';
+
+            const result = await syncPendingCompletions();
+            await updatePendingCount();
+            button.disabled = false;
+            updateSyncStatus(result);
+        });
+    }
+
     window.addEventListener('online', () => {
-        syncPendingCompletions().then(updatePendingCount);
+        syncPendingCompletions().then(result => {
+            updatePendingCount();
+            updateSyncStatus(result);
+        });
     });
 }
 
@@ -287,7 +331,7 @@ async function syncPendingCompletions() {
             localStorage.setItem(`delivery-note-sync-state:${item.noteId}`, 'done');
             const form = document.querySelector(`.delivery-complete-form[data-note-id="${item.noteId}"]`);
             if (form) {
-                markCompleteFormDone(form, 'Đã đồng bộ');
+                markCompleteFormDone(form, 'Đã gửi');
             }
             synced++;
         } catch {
@@ -306,12 +350,36 @@ async function updatePendingCount() {
 
     try {
         const items = await getPendingCompletions();
-        element.textContent = items.length > 0
-            ? `${items.length} phiếu đang chờ đồng bộ`
-            : 'Không có phiếu chờ đồng bộ';
+        element.textContent = items.length > 0 ? `${items.length} phiếu đang chờ gửi` : '';
+        toggleSyncStrip(items.length > 0);
     } catch {
-        element.textContent = 'Không đọc được hàng đợi offline';
+        element.textContent = 'Không đọc được dữ liệu chờ gửi';
+        toggleSyncStrip(true);
     }
+}
+
+function updateSyncStatus(result) {
+    const status = document.getElementById('delivery-sync-status');
+    if (!status || !result) {
+        return;
+    }
+
+    if (result.failed > 0) {
+        status.textContent = `Có ${result.failed} phiếu chưa gửi được`;
+        toggleSyncStrip(true);
+        return;
+    }
+
+    status.textContent = '';
+}
+
+function toggleSyncStrip(visible) {
+    const strip = document.querySelector('.mobile-sticky-actions');
+    if (!strip) {
+        return;
+    }
+
+    strip.hidden = !visible;
 }
 
 function markCompleteFormPending(form, message) {

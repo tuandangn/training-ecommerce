@@ -38,6 +38,21 @@ public sealed record DeliveryRunListItemModel
     public required DateTime CreatedOnUtc { get; init; }
 }
 
+public sealed record DeliveryMobileRunListItemModel
+{
+    public required Guid Id { get; init; }
+    public required string Code { get; init; }
+    public required int Status { get; init; }
+    public required string StatusName { get; init; }
+    public int ItemCount { get; init; }
+    public decimal AmountToCollect { get; init; }
+    public DateTime? DriverCachedOnUtc { get; init; }
+    public bool PaperManifestIssued { get; init; }
+    public DateTime? HandedOverOnUtc { get; init; }
+    public required DateTime CreatedOnUtc { get; init; }
+    public IList<DeliveryRunItemModel> Items { get; init; } = [];
+}
+
 public sealed class CreateDeliveryRunModel
 {
     public Guid AssignedDeliveryUserId { get; set; }
@@ -94,18 +109,28 @@ public sealed record DeliveryRunItemModel
     public required string DeliveryNoteCode { get; init; }
     public string? OrderCode { get; init; }
     public required string CustomerName { get; init; }
+    public string? CustomerPhone { get; init; }
     public required string ShippingAddress { get; init; }
     public decimal AmountToCollect { get; init; }
     public decimal? CashCollectedAmount { get; init; }
+    public string? ReceiverName { get; init; }
+    public Guid? DeliveryProofPictureId { get; init; }
     public int? DeliveryNoteStatus { get; init; }
     public DateTime? DeliveredOnUtc { get; init; }
+    public IList<DeliveryRunProductItemModel> ProductItems { get; init; } = [];
+}
+
+public sealed record DeliveryRunProductItemModel
+{
+    public required string ProductName { get; init; }
+    public decimal Quantity { get; init; }
 }
 
 public sealed class DeliveryMobileIndexModel
 {
     public required Guid CurrentUserId { get; init; }
     public required string CurrentUserFullName { get; init; }
-    public IList<DeliveryRunListItemModel> Runs { get; init; } = [];
+    public IList<DeliveryMobileRunListItemModel> Runs { get; init; } = [];
 }
 
 public sealed class DeliveryMobileRunModel

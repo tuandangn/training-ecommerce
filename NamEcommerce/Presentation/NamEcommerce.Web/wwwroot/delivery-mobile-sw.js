@@ -1,4 +1,4 @@
-const cacheName = 'nam-delivery-mobile-v1';
+const cacheName = 'nam-delivery-mobile-v2';
 const staticAssets = [
     '/delivery-mobile.webmanifest',
     '/lib/bootstrap/dist/css/bootstrap.min.css',
@@ -30,6 +30,11 @@ self.addEventListener('fetch', event => {
     const url = new URL(request.url);
     if (url.pathname.startsWith('/DeliveryMobile')) {
         event.respondWith(networkFirst(request));
+        return;
+    }
+
+    if (url.pathname.startsWith('/Picture/')) {
+        event.respondWith(cacheFirst(request));
         return;
     }
 
