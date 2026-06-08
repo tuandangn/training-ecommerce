@@ -78,16 +78,20 @@
                 {
                     foreach (var run in Model.Data.Items)
                     {
-                        var statusTuple = run.Status switch
-                        {
-                            (int)DeliveryRunStatus.ReadyForHandover => ("info", "bi-box-seam"),
-                            (int)DeliveryRunStatus.HandedToDriver => ("warning", "bi-truck"),
-                            (int)DeliveryRunStatus.Closed => ("success", "bi-check-circle-fill"),
-                            (int)DeliveryRunStatus.Cancelled => ("danger", "bi-x-circle"),
-                            _ => ("secondary", "bi-question-circle")
-                        };
+                        var statusTuple = run.IsDeliveryCompleted
+                            ? ("success", "bi-check-circle-fill")
+                            : run.DeliveredItemCount > 0 || run.Status == (int)DeliveryRunStatus.HandedToDriver
+                                ? ("warning", "bi-truck")
+                                : (run.Status switch
+                                {
+                                    (int)DeliveryRunStatus.ReadyForHandover => ("info", "bi-box-seam"),
+                                    (int)DeliveryRunStatus.HandedToDriver => ("warning", "bi-truck"),
+                                    (int)DeliveryRunStatus.Closed => ("success", "bi-check-circle-fill"),
+                                    (int)DeliveryRunStatus.Cancelled => ("danger", "bi-x-circle"),
+                                    _ => ("secondary", "bi-question-circle")
+                                });
                         var offlineReady = run.DriverCachedOnUtc.HasValue || run.PaperManifestIssued;
-                        var canHandOver = run.Status == (int)DeliveryRunStatus.ReadyForHandover && offlineReady;
+                        var canHandOver = run.Status == (int)DeliveryRunStatus.ReadyForHandover && offlineReady && !run.IsDeliveryCompleted;
 
                         <tr>
                             <td class="ps-4">
@@ -100,7 +104,10 @@
                                     <div class="small text-muted">Bàn giao @run.HandedOverOnUtc.Value.ToLocalTime().ToString("dd/MM HH:mm")</div>
                                 }
                             </td>
-                            <td class="text-center">@run.ItemCount</td>
+                            <td class="text-center">
+                                <div class="fw-medium">@run.ItemCount</div>
+                                <div class="small text-muted">@run.DeliveredItemCount/@run.ItemCount đã giao</div>
+                            </td>
                             <td class="text-end fw-medium">@run.AmountToCollect.DisplayCurrencyWithSymbol()</td>
                             <td class="text-center">
                                 @if (offlineReady)
@@ -142,7 +149,7 @@
                                             </button>
                                         </form>
                                     }
-                                    @if (canManageDeliveryRun && run.Status == (int)DeliveryRunStatus.ReadyForHandover)
+                                    @if (canManageDeliveryRun && run.Status == (int)DeliveryRunStatus.ReadyForHandover && !run.IsDeliveryCompleted)
                                     {
                                         <form asp-action="HandOver" method="post">
                                             <input type="hidden" name="id" value="@run.Id" />

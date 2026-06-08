@@ -136,10 +136,4 @@ public sealed record User : AppAggregateEntity
         => RaiseDomainEvent(new UserDeleted(Id, Username));
 
     #endregion
-
-    #region Factory
-
-
-
-    #endregion
 }

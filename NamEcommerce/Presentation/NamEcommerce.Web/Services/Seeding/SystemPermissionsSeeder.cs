@@ -2,7 +2,6 @@ using NamEcommerce.Domain.Entities.Security;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Data.Contracts;
 using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Web.Contracts.Security;
 
 namespace NamEcommerce.Web.Services.Seeding;

@@ -27,7 +27,6 @@ public sealed class CompleteMobileDeliveryNoteHandler(IDeliveryNoteAppService de
                 CashCollectedAmount = request.CashCollectedAmount
             }
         }).ConfigureAwait(false);
-
         return new CommonActionResultModel
         {
             Success = result.Success,

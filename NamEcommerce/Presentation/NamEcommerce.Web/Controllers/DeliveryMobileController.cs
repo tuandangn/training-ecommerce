@@ -6,41 +6,38 @@ using NamEcommerce.Web.Contracts.Commands.Models.Media;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
-using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Web.Services.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Web.Controllers;
 
 [Authorize(Policy = SystemPermissions.DeliveryRuns.MobileAccess)]
 public sealed class DeliveryMobileController(
-    IDeliveryRunModelFactory deliveryRunModelFactory,
-    ICurrentUserService currentUserService,
-    AppConfig appConfig,
-    IMediator mediator) : BaseAuthorizedController
+    IDeliveryRunModelFactory deliveryRunModelFactory, ICurrentUserAccessor currentUserAccessor,
+    AppConfig appConfig, IMediator mediator) : BaseAuthorizedController
 {
-    public async Task<IActionResult> Index()
+    public async Task<IActionResult> Index(bool showCompleted = false)
     {
-        var currentUser = await currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
         if (currentUser is null)
             return RedirectToAction("Login", "User");
 
-        var model = await deliveryRunModelFactory
-            .PrepareDeliveryMobileIndexModelAsync(currentUser.Id, currentUser.FullName)
-            .ConfigureAwait(false);
+        var model = await deliveryRunModelFactory.PrepareDeliveryMobileIndexModelAsync(
+            currentUser.Id,
+            currentUser.FullName,
+            showCompleted);
         return View(model);
     }
 
     public async Task<IActionResult> Run(Guid id)
     {
-        var currentUser = await currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
         if (currentUser is null)
             return RedirectToAction("Login", "User");
 
         try
         {
-            var model = await deliveryRunModelFactory
-                .PrepareDeliveryMobileRunModelAsync(id, currentUser.Id, currentUser.FullName)
-                .ConfigureAwait(false);
+            var model = await deliveryRunModelFactory.PrepareDeliveryMobileRunModelAsync(id, currentUser.Id, currentUser.FullName);
             return View(model);
         }
         catch (UnauthorizedAccessException)
@@ -57,15 +54,13 @@ public sealed class DeliveryMobileController(
     [HttpPost]
     public async Task<IActionResult> Cache(Guid id, string? deviceId)
     {
-        var currentUser = await currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
         if (currentUser is null)
             return Json(new { success = false, message = "Error.UserNotFound" });
 
         try
         {
-            await deliveryRunModelFactory
-                .PrepareDeliveryMobileRunModelAsync(id, currentUser.Id, currentUser.FullName)
-                .ConfigureAwait(false);
+            await deliveryRunModelFactory.PrepareDeliveryMobileRunModelAsync(id, currentUser.Id, currentUser.FullName);
         }
         catch (UnauthorizedAccessException)
         {
@@ -76,7 +71,7 @@ public sealed class DeliveryMobileController(
             return Json(new { success = false, message = "Error.DeliveryRunNotFound" });
         }
 
-        var result = await mediator.Send(new AcknowledgeDriverCacheDeliveryRunCommand(id, deviceId)).ConfigureAwait(false);
+        var result = await mediator.Send(new AcknowledgeDriverCacheDeliveryRunCommand(id, deviceId));
         return Json(new { success = result.Success, message = result.ErrorMessage });
     }
 
@@ -93,16 +88,14 @@ public sealed class DeliveryMobileController(
         decimal? cashCollectedAmount,
         IFormFile? proofFile)
     {
-        var currentUser = await currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
         if (currentUser is null)
             return Json(new { success = false, message = "Error.UserNotFound" });
 
         DeliveryMobileRunModel run;
         try
         {
-            run = await deliveryRunModelFactory
-                .PrepareDeliveryMobileRunModelAsync(deliveryRunId, currentUser.Id, currentUser.FullName)
-                .ConfigureAwait(false);
+            run = await deliveryRunModelFactory.PrepareDeliveryMobileRunModelAsync(deliveryRunId, currentUser.Id, currentUser.FullName);
         }
         catch (UnauthorizedAccessException)
         {
@@ -124,7 +117,7 @@ public sealed class DeliveryMobileController(
 
         await using var stream = proofFile.OpenReadStream();
         using var memoryStream = new MemoryStream();
-        await stream.CopyToAsync(memoryStream).ConfigureAwait(false);
+        await stream.CopyToAsync(memoryStream);
 
         var upload = await mediator.Send(new UploadPictureCommand
         {
@@ -132,7 +125,7 @@ public sealed class DeliveryMobileController(
             MimeType = proofFile.ContentType,
             FileName = proofFile.FileName,
             Extension = Path.GetExtension(proofFile.FileName)
-        }).ConfigureAwait(false);
+        });
         if (!upload.Success || !upload.PictureId.HasValue)
             return Json(new { success = false, message = upload.ErrorMessage ?? "Error.UploadPictureFailed" });
 
@@ -148,7 +141,7 @@ public sealed class DeliveryMobileController(
             Note = note,
             IdempotencyKey = idempotencyKey,
             CashCollectedAmount = cashCollectedAmount
-        }).ConfigureAwait(false);
+        });
 
         return Json(new { success = result.Success, message = result.ErrorMessage });
     }

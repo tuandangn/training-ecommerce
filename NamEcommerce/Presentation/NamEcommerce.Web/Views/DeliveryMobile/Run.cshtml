@@ -5,14 +5,21 @@
     Layout = "_DeliveryMobileLayout";
     ViewData["Title"] = Model.Run.Code;
     var status = (DeliveryRunStatus)Model.Run.Status;
-    var statusClass = status == DeliveryRunStatus.ReadyForHandover
-        ? "mobile-status-ready"
-        : "mobile-status-active";
+    var statusClass = Model.Run.IsDeliveryCompleted
+        ? "mobile-status-success"
+        : status == DeliveryRunStatus.ReadyForHandover && Model.Run.DeliveredItemCount == 0
+            ? "mobile-status-ready"
+            : "mobile-status-active";
+    var statusIcon = Model.Run.IsDeliveryCompleted
+        ? "bi-check-circle"
+        : status == DeliveryRunStatus.ReadyForHandover && Model.Run.DeliveredItemCount == 0
+            ? "bi-box-seam"
+            : "bi-truck";
     var pendingCashAmount = Model.Run.Items.Sum(item =>
         item.AmountToCollect > item.CashCollectedAmount.GetValueOrDefault()
             ? item.AmountToCollect - item.CashCollectedAmount.GetValueOrDefault()
             : 0);
-    var deliveredCount = Model.Run.Items.Count(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered);
+    var deliveredCount = Model.Run.DeliveredItemCount;
     var progressPercent = Model.Run.Items.Count == 0
         ? 0
         : (int)Math.Round((double)deliveredCount * 100 / Model.Run.Items.Count);
@@ -32,7 +39,7 @@
 <div class="mobile-card mb-3">
     <div class="d-flex justify-content-between align-items-center gap-3">
         <span class="mobile-status @statusClass">
-            <i class="bi @(status == DeliveryRunStatus.ReadyForHandover ? "bi-box-seam" : "bi-truck")"></i>
+            <i class="bi @statusIcon"></i>
             @Model.Run.StatusName
         </span>
         <strong class="mobile-cash-total">@pendingCashAmount.DisplayCurrencyWithSymbol()</strong>

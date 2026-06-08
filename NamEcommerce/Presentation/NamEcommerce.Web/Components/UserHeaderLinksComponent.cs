@@ -1,36 +1,26 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Contracts.Services;
+using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Web.Models.Common;
 
 namespace NamEcommerce.Web.Components;
 
-public sealed class UserHeaderLinksComponent : ViewComponent
+public sealed class UserHeaderLinksComponent(ICurrentUserAccessor currentUserAccessor) : ViewComponent
 {
-    private readonly ICurrentUserService _currentUserService;
-
-    public UserHeaderLinksComponent(ICurrentUserService currentUserService)
-    {
-        _currentUserService = currentUserService;
-    }
-
     public async Task<IViewComponentResult> InvokeAsync()
     {
+        var currentUser = await currentUserAccessor.GetCurrentUserAsync();
         var model = new UserHeaderLinksModel
         {
-            IsAuthenticated = await _currentUserService.IsAuthenticatedAsync(),
+            IsAuthenticated = currentUser is not null
         };
         if (!model.IsAuthenticated)
             return View(model);
 
-        var userInfo = await _currentUserService.GetCurrentUserInfoAsync();
-        if (userInfo is null)
-            return View(model);
-
         model = model with
         {
-            UserId = userInfo.Id,
-            FullName = userInfo.FullName,
-            Username = userInfo.Username,
+            UserId = currentUser!.Id,
+            FullName = currentUser.FullName,
+            Username = currentUser.Username,
         };
 
         return View(model);

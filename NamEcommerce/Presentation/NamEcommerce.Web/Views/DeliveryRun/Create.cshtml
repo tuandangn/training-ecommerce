@@ -6,134 +6,178 @@
 }
 @section TitleSection {
     <h1 class="topbar-page-title">
-        Thêm mới
-        <span class="text-muted">Chuyến giao</span>
+        Tạo chuyến giao
+        <span class="text-muted">Kho vận</span>
     </h1>
     <div class="topbar-page-subtitle">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
                 <li class="breadcrumb-item"><a asp-action="List" asp-controller="DeliveryRun" class="text-decoration-none">Chuyến giao</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
+                <li class="breadcrumb-item active" aria-current="page">Tạo chuyến</li>
             </ol>
         </nav>
     </div>
 }
-<div class="content-card mb-3">
-    <div class="action-toolbar">
-        <form asp-action="Create" method="get" class="row g-3 align-items-end">
-            <div class="col-md-8">
-                <label class="form-label small fw-bold text-muted text-uppercase">Người giao</label>
-                <select name="assignedDeliveryUserId" class="form-select w-auto" required>
-                    <option value="">Chọn người giao</option>
-                    @foreach (var user in deliveryUsers)
-                    {
-                        <option value="@user.Id" selected="@(Model.AssignedDeliveryUserId == user.Id)">@user.Name</option>
-                    }
-                </select>
-            </div>
-            <div class="col-md-4">
-                <button type="submit" class="btn btn-outline-primary w-100">
-                    <i class="bi bi-filter me-1"></i>Lọc
-                </button>
-            </div>
-        </form>
-    </div>
-    <div class="content-card-body">
-@if (Model.AssignedDeliveryUserId == Guid.Empty)
-{
-    <div class="alert alert-info mb-0">
-        Chọn người giao trước để hệ thống chỉ hiển thị các phiếu xuất đã gán cho người đó.
-    </div>
-}
-else
-{
-    <form asp-action="Create" method="post">
-        <input type="hidden" asp-for="AssignedDeliveryUserId" />
 
-        <div class="content-card-body-flush mb-3">
-            @if (Model.AvailableDeliveryNotes.Any())
-            {
-                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-                <div class="mb-3">
-                    <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase">Ghi chú chuyến</label>
-                    <textarea asp-for="Note" class="form-control" rows="2" placeholder="Ví dụ: ưu tiên giao tuyến xã A trước"></textarea>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div>
-                        <h5 class="mb-0 fw-bold">Phiếu xuất đủ điều kiện</h5>
-                        <div class="text-muted small">Chỉ gồm phiếu đã xác nhận, không giao thẳng và đã gán đúng người giao.</div>
+<form asp-action="Create" method="post" id="delivery-run-create-form">
+    <div class="content-card mb-3">
+        <div class="content-card-body">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="row g-4">
+                <div class="col-xl-8">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                        <div>
+                            <h5 class="mb-1 fw-bold">Phiếu giao sẵn sàng</h5>
+                            <div class="text-muted small">Phiếu đã xác nhận, giao từ kho và chưa nằm trong chuyến đang mở.</div>
+                        </div>
+                        @if (Model.AvailableDeliveryNotes.Any())
+                        {
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-select-all">
+                                <i class="bi bi-check2-square me-1"></i>Chọn tất cả
+                            </button>
+                        }
                     </div>
+
                     @if (Model.AvailableDeliveryNotes.Any())
                     {
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-select-all">
-                            <i class="bi bi-check2-square me-1"></i>Chọn tất cả
-                        </button>
+                        <div class="table-responsive">
+                            <table class="table data-table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th class="ps-4" style="width: 48px;"></th>
+                                        <th>Mã phiếu</th>
+                                        <th>Khách hàng</th>
+                                        <th>Hàng giao</th>
+                                        <th>Địa chỉ</th>
+                                        <th>Phân công hiện tại</th>
+                                        <th class="text-end">Thu hộ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var note in Model.AvailableDeliveryNotes)
+                                    {
+                                        <tr>
+                                            <td class="ps-4">
+                                                <input class="form-check-input delivery-note-checkbox"
+                                                       type="checkbox"
+                                                       name="DeliveryNoteIds"
+                                                       value="@note.Id"
+                                                       checked="@selectedIds.Contains(note.Id)" />
+                                            </td>
+                                            <td>
+                                                <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@note.Id" class="fw-bold text-decoration-none">@note.Code</a>
+                                                @if (!string.IsNullOrWhiteSpace(note.OrderCode))
+                                                {
+                                                    <div class="text-muted small">@note.OrderCode</div>
+                                                }
+                                            </td>
+                                            <td class="fw-medium">@note.CustomerName</td>
+                                            <td>
+                                                <div class="fw-medium text-truncate" style="max-width: 220px;" title="@note.ProductSummary">@note.ProductSummary</div>
+                                                <div class="text-muted small">Tổng SL: @note.TotalQuantity.ToString("#,##0.##")</div>
+                                            </td>
+                                            <td>
+                                                <span class="d-inline-block text-truncate" style="max-width: 260px;" title="@note.ShippingAddress">@note.ShippingAddress</span>
+                                            </td>
+                                            <td>
+                                                @if (string.IsNullOrWhiteSpace(note.AssignedDeliveryFullName))
+                                                {
+                                                    <span class="badge bg-light text-muted border">Chưa phân công</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">@note.AssignedDeliveryFullName</span>
+                                                }
+                                            </td>
+                                            <td class="text-end fw-medium">@note.AmountToCollect.DisplayCurrencyWithSymbol()</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state">
+                            <div class="empty-icon"><i class="bi bi-inbox"></i></div>
+                            <h5>Không có phiếu phù hợp</h5>
+                            <p>Các phiếu đã xác nhận và chưa nằm trong chuyến đang mở sẽ xuất hiện tại đây.</p>
+                        </div>
                     }
                 </div>
-                <div class="table-responsive">
-                    <table class="table data-table align-middle">
-                        <thead>
-                            <tr>
-                                <th class="ps-4" style="width: 48px;"></th>
-                                <th>Mã PXK</th>
-                                <th>Đơn hàng</th>
-                                <th>Khách hàng</th>
-                                <th>Địa chỉ giao</th>
-                                <th class="text-end">Tiền cần thu</th>
-                                <th class="d-none d-md-table-cell">Ngày tạo</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var note in Model.AvailableDeliveryNotes)
-                            {
-                                <tr>
-                                    <td class="ps-4">
-                                        <input class="form-check-input delivery-note-checkbox" type="checkbox" name="DeliveryNoteIds" value="@note.Id" checked="@selectedIds.Contains(note.Id)" />
-                                    </td>
-                                    <td>
-                                        <a asp-controller="DeliveryNote" asp-action="Details" asp-route-id="@note.Id" class="fw-bold text-decoration-none">@note.Code</a>
-                                    </td>
-                                    <td>@note.OrderCode</td>
-                                    <td class="fw-medium">@note.CustomerName</td>
-                                    <td>
-                                        <span class="d-inline-block text-truncate" style="max-width: 320px;" title="@note.ShippingAddress">@note.ShippingAddress</span>
-                                    </td>
-                                    <td class="text-end fw-medium">@note.AmountToCollect.DisplayCurrencyWithSymbol()</td>
-                                    <td class="d-none d-md-table-cell text-muted">@note.CreatedOnUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-                <div class="d-flex justify-content-end gap-2 mt-3">
-                    <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save me-1"></i>Tạo chuyến
-                    </button>
-                </div>
-            }
-            else
-            {
-                <div class="empty-state">
-                    <div class="empty-icon"><i class="bi bi-inbox"></i></div>
-                    <h5>Không có phiếu phù hợp</h5>
-                    <p>Kiểm tra lại phiếu xuất đã xác nhận và đã gán người giao này hay chưa.</p>
-                </div>
-            }
-        </div>
-    </form>
-}
 
-</div>
-</div>
+                <div class="col-xl-4">
+                    <div class="border rounded-3 p-3 bg-light-subtle">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <h5 class="mb-0 fw-bold">Phân công</h5>
+                            <span class="badge bg-primary-subtle text-primary-emphasis border border-primary-subtle" id="selected-count">0 phiếu</span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="AssignedDeliveryUserId" class="form-label small fw-bold text-muted text-uppercase">Người giao</label>
+                            <select asp-for="AssignedDeliveryUserId" class="form-select" required>
+                                <option value="">Chọn người giao</option>
+                                @foreach (var user in deliveryUsers)
+                                {
+                                    <option value="@user.Id">@user.Name</option>
+                                }
+                            </select>
+                            <span asp-validation-for="AssignedDeliveryUserId" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase">Ghi chú chuyến</label>
+                            <textarea asp-for="Note" class="form-control" rows="3" placeholder="Ví dụ: ưu tiên tuyến xã A trước"></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary" id="btn-create-run" disabled="@(!Model.AvailableDeliveryNotes.Any())">
+                                <i class="bi bi-save me-1"></i>Tạo chuyến giao
+                            </button>
+                            <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        document.getElementById('btn-select-all')?.addEventListener('click', function () {
-            document.querySelectorAll('.delivery-note-checkbox').forEach(function (checkbox) {
-                checkbox.checked = true;
+        (() => {
+            const checkboxes = Array.from(document.querySelectorAll('.delivery-note-checkbox'));
+            const selectAllButton = document.getElementById('btn-select-all');
+            const selectedCount = document.getElementById('selected-count');
+            const createButton = document.getElementById('btn-create-run');
+
+            const refresh = () => {
+                const count = checkboxes.filter(checkbox => checkbox.checked).length;
+                if (selectedCount) {
+                    selectedCount.textContent = `${count} phiếu`;
+                }
+                if (createButton) {
+                    createButton.disabled = count === 0;
+                }
+                if (selectAllButton) {
+                    const hasUnchecked = checkboxes.some(checkbox => !checkbox.checked);
+                    selectAllButton.innerHTML = hasUnchecked
+                        ? '<i class="bi bi-check2-square me-1"></i>Chọn tất cả'
+                        : '<i class="bi bi-square me-1"></i>Bỏ chọn';
+                }
+            };
+
+            checkboxes.forEach(checkbox => checkbox.addEventListener('change', refresh));
+            selectAllButton?.addEventListener('click', () => {
+                const shouldSelect = checkboxes.some(checkbox => !checkbox.checked);
+                checkboxes.forEach(checkbox => checkbox.checked = shouldSelect);
+                refresh();
             });
-        });
+
+            refresh();
+        })();
     </script>
 }

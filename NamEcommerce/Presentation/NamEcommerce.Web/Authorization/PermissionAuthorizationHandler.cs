@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
-using NamEcommerce.Domain.Shared.Dtos.Users;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Web.Services.Permissions;
 using System.Security.Claims;
 

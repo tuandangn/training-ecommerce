@@ -1,6 +1,6 @@
 using NamEcommerce.Application.Contracts.Dtos.Users;
 using NamEcommerce.Application.Contracts.Users;
-using NamEcommerce.Domain.Shared.Dtos.Users;
+using NamEcommerce.Domain.Shared.Common;
 
 namespace NamEcommerce.Web.Services.Seeding;
 

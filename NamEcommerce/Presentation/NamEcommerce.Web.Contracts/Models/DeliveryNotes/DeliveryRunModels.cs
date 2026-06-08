@@ -29,6 +29,8 @@ public sealed record DeliveryRunListItemModel
     public required int Status { get; init; }
     public required string StatusName { get; init; }
     public int ItemCount { get; init; }
+    public int DeliveredItemCount { get; init; }
+    public bool IsDeliveryCompleted { get; init; }
     public decimal AmountToCollect { get; init; }
     public DateTime? DriverCachedOnUtc { get; init; }
     public bool PaperManifestIssued { get; init; }
@@ -45,6 +47,8 @@ public sealed record DeliveryMobileRunListItemModel
     public required int Status { get; init; }
     public required string StatusName { get; init; }
     public int ItemCount { get; init; }
+    public int DeliveredItemCount { get; init; }
+    public bool IsDeliveryCompleted { get; init; }
     public decimal AmountToCollect { get; init; }
     public DateTime? DriverCachedOnUtc { get; init; }
     public bool PaperManifestIssued { get; init; }
@@ -69,6 +73,9 @@ public sealed record DeliveryRunCandidateDeliveryNoteModel
     public string? OrderCode { get; init; }
     public required string CustomerName { get; init; }
     public required string ShippingAddress { get; init; }
+    public string? AssignedDeliveryFullName { get; init; }
+    public required string ProductSummary { get; init; }
+    public decimal TotalQuantity { get; init; }
     public decimal AmountToCollect { get; init; }
     public DateTime CreatedOnUtc { get; init; }
 }
@@ -82,6 +89,8 @@ public sealed class DeliveryRunDetailsModel
     public required string AssignedDeliveryFullName { get; init; }
     public required int Status { get; init; }
     public required string StatusName { get; init; }
+    public int DeliveredItemCount { get; init; }
+    public bool IsDeliveryCompleted { get; init; }
     public Guid? PreparedByUserId { get; init; }
     public DateTime? PreparedOnUtc { get; init; }
     public Guid? HandedOverByUserId { get; init; }
@@ -130,6 +139,7 @@ public sealed class DeliveryMobileIndexModel
 {
     public required Guid CurrentUserId { get; init; }
     public required string CurrentUserFullName { get; init; }
+    public bool ShowCompleted { get; init; }
     public IList<DeliveryMobileRunListItemModel> Runs { get; init; } = [];
 }
 

@@ -12,9 +12,14 @@
         <h1 class="mobile-title">Giao hàng</h1>
         <p class="mobile-subtitle">@Model.CurrentUserFullName</p>
     </div>
-    <a asp-controller="User" asp-action="Logout" class="btn btn-outline-secondary mobile-icon-button" aria-label="Đăng xuất">
-        <i class="bi bi-box-arrow-right"></i>
-    </a>
+    <div class="d-flex gap-2">
+        <a asp-action="Index" asp-route-showCompleted="@(!Model.ShowCompleted)" class="btn btn-outline-secondary mobile-icon-button" aria-label="@(Model.ShowCompleted ? "Ẩn chuyến đã giao" : "Xem chuyến đã giao chờ đóng")">
+            <i class="bi @(Model.ShowCompleted ? "bi-eye-slash" : "bi-clock-history")"></i>
+        </a>
+        <a asp-controller="User" asp-action="Logout" class="btn btn-outline-secondary mobile-icon-button" aria-label="Đăng xuất">
+            <i class="bi bi-box-arrow-right"></i>
+        </a>
+    </div>
 </div>
 
 @if (Model.Runs.Any())
@@ -22,18 +27,25 @@
     foreach (var run in Model.Runs)
     {
         var status = (DeliveryRunStatus)run.Status;
-        var statusClass = status == DeliveryRunStatus.ReadyForHandover
-            ? "mobile-status-ready"
-            : "mobile-status-active";
+        var statusClass = run.IsDeliveryCompleted
+            ? "mobile-status-success"
+            : status == DeliveryRunStatus.ReadyForHandover && run.DeliveredItemCount == 0
+                ? "mobile-status-ready"
+                : "mobile-status-active";
+        var statusIcon = run.IsDeliveryCompleted
+            ? "bi-check-circle"
+            : status == DeliveryRunStatus.ReadyForHandover && run.DeliveredItemCount == 0
+                ? "bi-box-seam"
+                : "bi-truck";
 
         <article class="mobile-card">
             <div class="d-flex justify-content-between align-items-start gap-3">
                 <div>
                     <div class="fw-bold fs-5">@run.Code</div>
-                    <div class="mobile-meta mt-1">@run.ItemCount phiếu giao</div>
+                    <div class="mobile-meta mt-1">@run.DeliveredItemCount/@run.ItemCount phiếu đã giao</div>
                 </div>
                 <span class="mobile-status @statusClass">
-                    <i class="bi @(status == DeliveryRunStatus.ReadyForHandover ? "bi-box-seam" : "bi-truck")"></i>
+                    <i class="bi @statusIcon"></i>
                     @run.StatusName
                 </span>
             </div>
@@ -106,8 +118,8 @@ else
 {
     <div class="mobile-card mobile-empty">
         <div class="mobile-empty-icon"><i class="bi bi-truck"></i></div>
-        <h2 class="h5 fw-bold mb-2">Chưa có chuyến cần giao</h2>
-        <p class="mobile-meta mb-0">Chuyến mới sẽ hiện ở đây sau khi quản kho tạo và gán cho bạn.</p>
+        <h2 class="h5 fw-bold mb-2">@(Model.ShowCompleted ? "Chưa có chuyến đã giao chờ đóng" : "Chưa có chuyến cần giao")</h2>
+        <p class="mobile-meta mb-0">@(Model.ShowCompleted ? "Chỉ các chuyến đã giao xong nhưng quản kho chưa đóng mới hiện ở đây." : "Chuyến mới sẽ hiện ở đây sau khi quản kho tạo và gán cho bạn.")</p>
     </div>
 }
 
