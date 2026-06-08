@@ -8,8 +8,14 @@
     var statusClass = status == DeliveryRunStatus.ReadyForHandover
         ? "mobile-status-ready"
         : "mobile-status-active";
-    var expectedCashAmount = Model.Run.Items.Sum(item => item.CashCollectedAmount ?? item.AmountToCollect);
+    var pendingCashAmount = Model.Run.Items.Sum(item =>
+        item.AmountToCollect > item.CashCollectedAmount.GetValueOrDefault()
+            ? item.AmountToCollect - item.CashCollectedAmount.GetValueOrDefault()
+            : 0);
     var deliveredCount = Model.Run.Items.Count(item => item.DeliveryNoteStatus == (int)DeliveryNoteStatus.Delivered);
+    var progressPercent = Model.Run.Items.Count == 0
+        ? 0
+        : (int)Math.Round((double)deliveredCount * 100 / Model.Run.Items.Count);
     var cachePayload = JsonSerializer.Serialize(Model.Run, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 }
 
@@ -29,7 +35,7 @@
             <i class="bi @(status == DeliveryRunStatus.ReadyForHandover ? "bi-box-seam" : "bi-truck")"></i>
             @Model.Run.StatusName
         </span>
-        <strong>@expectedCashAmount.DisplayCurrencyWithSymbol()</strong>
+        <strong class="mobile-cash-total">@pendingCashAmount.DisplayCurrencyWithSymbol()</strong>
     </div>
 
     <div class="mobile-stat-grid">
@@ -38,26 +44,24 @@
             <div class="mobile-stat-value">@deliveredCount/@Model.Run.Items.Count</div>
         </div>
         <div class="mobile-stat">
-            <div class="mobile-stat-label">Offline</div>
-            <div id="delivery-cache-status" class="mobile-stat-value @(Model.Run.DriverCachedOnUtc.HasValue ? "text-success" : "text-muted")">
-                @(Model.Run.DriverCachedOnUtc.HasValue ? "Đã cache" : "Đang kiểm tra")
-            </div>
+            <div class="mobile-stat-label">Cần thu</div>
+            <div class="mobile-stat-value">@pendingCashAmount.DisplayCurrencyWithSymbol()</div>
         </div>
     </div>
-
-    @if (Model.Run.PaperManifestIssued)
-    {
-        <div class="mobile-meta mt-3">
-            <i class="bi bi-printer me-1"></i>Quản kho đã in phiếu giấy dự phòng.
-        </div>
-    }
+    <div class="mobile-progress" role="progressbar" aria-label="Tiến độ giao hàng" aria-valuenow="@progressPercent" aria-valuemin="0" aria-valuemax="100">
+        <div class="mobile-progress-value" style="width: @progressPercent%"></div>
+    </div>
 </div>
+
+<div class="mobile-section-label">Danh sách giao</div>
 
 @foreach (var item in Model.Run.Items)
 {
     var noteStatus = item.DeliveryNoteStatus.HasValue ? (DeliveryNoteStatus)item.DeliveryNoteStatus.Value : (DeliveryNoteStatus?)null;
     var isDelivered = noteStatus == DeliveryNoteStatus.Delivered;
     var cashCollectedAmount = item.CashCollectedAmount ?? item.AmountToCollect;
+    var receiverName = string.IsNullOrWhiteSpace(item.ReceiverName) ? item.CustomerName : item.ReceiverName;
+    var totalQuantity = item.ProductItems.Sum(product => product.Quantity);
 
     <article class="mobile-card mobile-route-card @(isDelivered ? "is-delivered" : null)">
         <div class="d-flex justify-content-between align-items-start gap-3 mb-2">
@@ -67,13 +71,53 @@
             </div>
             @if (item.AmountToCollect > 0)
             {
-                <span class="mobile-status mobile-status-muted">@item.AmountToCollect.DisplayCurrencyWithSymbol()</span>
+                <span class="mobile-status mobile-status-muted">COD @item.AmountToCollect.DisplayCurrencyWithSymbol()</span>
+            }
+        </div>
+
+        <div class="mobile-info-grid">
+            <div class="mobile-info-cell">
+                <span>Người nhận</span>
+                <strong>@receiverName</strong>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(item.CustomerPhone))
+            {
+                <a href="tel:@item.CustomerPhone" class="mobile-info-cell mobile-phone-link">
+                    <span>SĐT</span>
+                    <strong>@item.CustomerPhone</strong>
+                </a>
             }
         </div>
 
         <div class="mobile-address">
             <i class="bi bi-geo-alt text-primary"></i>
             <span>@item.ShippingAddress</span>
+        </div>
+
+        <div class="mobile-goods-box">
+            <div class="mobile-goods-head">
+                <span>Hàng giao</span>
+                @if (totalQuantity > 0)
+                {
+                    <strong>@totalQuantity.DisplayQuantity()</strong>
+                }
+            </div>
+            @if (item.ProductItems.Any())
+            {
+                <ul class="mobile-goods-list">
+                    @foreach (var product in item.ProductItems)
+                    {
+                        <li>
+                            <span>@product.ProductName</span>
+                            <strong>x@product.Quantity.DisplayQuantity()</strong>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="mobile-meta">Chưa có thông tin hàng hóa</div>
+            }
         </div>
 
         @if (isDelivered)
@@ -83,9 +127,16 @@
                 Đã giao
                 @if (item.AmountToCollect > 0)
                 {
-                    <span>· Đã thu @cashCollectedAmount.DisplayCurrencyWithSymbol()</span>
+                    <span>· @(cashCollectedAmount > 0 ? $"Đã thu {cashCollectedAmount.DisplayCurrencyWithSymbol()}" : "Chưa thu tiền")</span>
                 }
             </div>
+            @if (item.DeliveryProofPictureId.HasValue)
+            {
+                <a href="/Picture/@item.DeliveryProofPictureId.Value" target="_blank" class="mobile-proof-image">
+                    <img src="/Picture/@item.DeliveryProofPictureId.Value" alt="Ảnh bằng chứng giao hàng" />
+                    <span>Ảnh bằng chứng</span>
+                </a>
+            }
         }
         else
         {
@@ -99,7 +150,7 @@
 
                 <div class="mb-2">
                     <label class="form-label">Người nhận</label>
-                    <input type="text" name="receiverName" class="form-control" autocomplete="name" />
+                    <input type="text" name="receiverName" class="form-control" autocomplete="name" value="@receiverName" />
                 </div>
                 @if (item.AmountToCollect > 0)
                 {
@@ -118,6 +169,9 @@
                 <div class="mb-2">
                     <label class="form-label">Ảnh bằng chứng</label>
                     <input type="file" name="proofFile" class="form-control" accept="image/*" capture="environment" required />
+                    <div class="mobile-proof-preview" hidden>
+                        <img alt="Ảnh bằng chứng đã chọn" />
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Ghi chú</label>
@@ -132,18 +186,13 @@
     </article>
 }
 
-<div class="mobile-sticky-actions">
-    <div class="d-grid gap-2">
-        <div class="d-grid gap-2">
-            <button type="button" id="delivery-sync-pending" class="btn btn-success mobile-action-button">
-                <i class="bi bi-cloud-arrow-up me-1"></i>Đồng bộ offline
-            </button>
-            <a asp-action="Run" asp-route-id="@Model.Run.Id" class="btn btn-primary mobile-action-button">
-                <i class="bi bi-arrow-clockwise me-1"></i>Làm mới
-            </a>
+<div class="mobile-sticky-actions" hidden>
+    <div class="mobile-sync-strip">
+        <div>
+            <div id="delivery-pending-count" class="mobile-meta"></div>
+            <div id="delivery-sync-status" class="mobile-meta"></div>
         </div>
-        <div id="delivery-pending-count" class="mobile-meta text-center"></div>
-        <div id="delivery-sync-status" class="mobile-meta text-center"></div>
+        <a asp-action="Run" asp-route-id="@Model.Run.Id" class="btn btn-outline-secondary btn-sm">Làm mới</a>
     </div>
 </div>
 

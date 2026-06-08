@@ -89,18 +89,30 @@ public sealed class DeliveryRunModelFactory(
             Note = run.Note,
             CreatedOnUtc = run.CreatedOnUtc,
             UpdatedOnUtc = run.UpdatedOnUtc,
-            Items = run.Items.Select(item => new DeliveryRunItemModel
+            Items = run.Items.Select(item =>
             {
-                DeliveryNoteStatus = currentNotes.GetValueOrDefault(item.DeliveryNoteId)?.Status,
-                DeliveredOnUtc = currentNotes.GetValueOrDefault(item.DeliveryNoteId)?.DeliveredOnUtc,
-                Id = item.Id,
-                DeliveryNoteId = item.DeliveryNoteId,
-                DeliveryNoteCode = item.DeliveryNoteCode,
-                OrderCode = item.OrderCode,
-                CustomerName = item.CustomerName,
-                ShippingAddress = item.ShippingAddress,
-                AmountToCollect = currentNotes.GetValueOrDefault(item.DeliveryNoteId)?.AmountToCollect ?? item.AmountToCollect,
-                CashCollectedAmount = currentNotes.GetValueOrDefault(item.DeliveryNoteId)?.DeliveryCashCollectedAmount
+                currentNotes.TryGetValue(item.DeliveryNoteId, out var note);
+                return new DeliveryRunItemModel
+                {
+                    DeliveryNoteStatus = note?.Status,
+                    DeliveredOnUtc = note?.DeliveredOnUtc,
+                    Id = item.Id,
+                    DeliveryNoteId = item.DeliveryNoteId,
+                    DeliveryNoteCode = item.DeliveryNoteCode,
+                    OrderCode = note?.OrderCode ?? item.OrderCode,
+                    CustomerName = note?.CustomerName ?? item.CustomerName,
+                    CustomerPhone = note?.CustomerPhone,
+                    ShippingAddress = note?.ShippingAddress ?? item.ShippingAddress,
+                    AmountToCollect = note?.AmountToCollect ?? item.AmountToCollect,
+                    CashCollectedAmount = note?.DeliveryCashCollectedAmount,
+                    ReceiverName = note?.DeliveryReceiverName,
+                    DeliveryProofPictureId = note?.DeliveryProofPictureId,
+                    ProductItems = note?.Items.Select(product => new DeliveryRunProductItemModel
+                    {
+                        ProductName = product.ProductName,
+                        Quantity = product.Quantity
+                    }).ToList() ?? []
+                };
             }).ToList()
         };
     }
@@ -114,14 +126,21 @@ public sealed class DeliveryRunModelFactory(
             currentUserId,
             null).ConfigureAwait(false);
 
+        var activeRuns = pagedData.Items
+            .Where(run => run.Status != (int)DeliveryRunStatus.Closed && run.Status != (int)DeliveryRunStatus.Cancelled)
+            .ToList();
+        var runs = new List<DeliveryMobileRunListItemModel>();
+        foreach (var run in activeRuns)
+        {
+            var details = await PrepareDeliveryRunDetailsModelAsync(run.Id).ConfigureAwait(false);
+            runs.Add(ToMobileListModel(run, details.Items));
+        }
+
         return new DeliveryMobileIndexModel
         {
             CurrentUserId = currentUserId,
             CurrentUserFullName = currentUserFullName,
-            Runs = pagedData.Items
-                .Where(run => run.Status != (int)DeliveryRunStatus.Closed && run.Status != (int)DeliveryRunStatus.Cancelled)
-                .Select(ToListModel)
-                .ToList()
+            Runs = runs
         };
     }
 
@@ -197,14 +216,36 @@ public sealed class DeliveryRunModelFactory(
             CreatedOnUtc = run.CreatedOnUtc
         };
 
+    private static DeliveryMobileRunListItemModel ToMobileListModel(DeliveryRunListAppDto run, IList<DeliveryRunItemModel> items)
+        => new()
+        {
+            Id = run.Id,
+            Code = run.Code,
+            Status = run.Status,
+            StatusName = GetStatusName((DeliveryRunStatus)run.Status),
+            ItemCount = run.ItemCount,
+            AmountToCollect = GetPendingCashAmount(items),
+            DriverCachedOnUtc = run.DriverCachedOnUtc,
+            PaperManifestIssued = run.PaperManifestIssued,
+            HandedOverOnUtc = run.HandedOverOnUtc,
+            CreatedOnUtc = run.CreatedOnUtc,
+            Items = items
+        };
+
+    private static decimal GetPendingCashAmount(IEnumerable<DeliveryRunItemModel> items)
+        => items.Sum(item =>
+            item.AmountToCollect > item.CashCollectedAmount.GetValueOrDefault()
+                ? item.AmountToCollect - item.CashCollectedAmount.GetValueOrDefault()
+                : 0);
+
     private static string GetStatusName(DeliveryRunStatus status)
         => status switch
         {
-            DeliveryRunStatus.Planning => "Dang lap",
-            DeliveryRunStatus.ReadyForHandover => "Cho ban giao",
-            DeliveryRunStatus.HandedToDriver => "Da ban giao",
-            DeliveryRunStatus.Closed => "Da dong",
-            DeliveryRunStatus.Cancelled => "Da huy",
+            DeliveryRunStatus.Planning => "Đang lập",
+            DeliveryRunStatus.ReadyForHandover => "Chờ bàn giao",
+            DeliveryRunStatus.HandedToDriver => "Đã bàn giao",
+            DeliveryRunStatus.Closed => "Đã đóng",
+            DeliveryRunStatus.Cancelled => "Đã hủy",
             _ => status.ToString()
         };
 }
