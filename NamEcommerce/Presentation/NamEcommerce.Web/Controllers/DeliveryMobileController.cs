@@ -1,17 +1,17 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Commands.Models.Media;
 using NamEcommerce.Web.Contracts.Configurations;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Web.Services.DeliveryNotes;
 
 namespace NamEcommerce.Web.Controllers;
 
-[Authorize(Policy = AuthorizationPolicyNames.UseDeliveryMobile)]
+[Authorize(Policy = SystemPermissions.DeliveryRuns.MobileAccess)]
 public sealed class DeliveryMobileController(
     IDeliveryRunModelFactory deliveryRunModelFactory,
     ICurrentUserService currentUserService,

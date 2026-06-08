@@ -3,12 +3,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.DeliveryNotes;
 using NamEcommerce.Web.Services.CustomerPortal;
@@ -38,12 +38,14 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.View)]
     public async Task<IActionResult> List(DeliveryNoteSearchModel searchModel)
     {
         var model = await _deliveryNoteModelFactory.PrepareDeliveryNoteListModelAsync(searchModel).ConfigureAwait(false);
         return View(model);
     }
 
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> Create(Guid orderId, string? selected = null)
     {
         try
@@ -81,6 +83,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> Create(CreateDeliveryNoteModel model)
     {
         if (!ModelState.IsValid)
@@ -171,6 +174,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         return Json(new { items });
     }
 
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.View)]
     public async Task<IActionResult> Details(Guid id)
     {
         try
@@ -186,7 +190,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = AuthorizationPolicyNames.ManageDeliveryRuns)]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> AssignDeliveryUser(Guid id, Guid assignedDeliveryUserId)
     {
         var result = await _mediator.Send(new AssignDeliveryUserCommand
@@ -203,6 +207,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.View)]
     public async Task<IActionResult> Print(Guid id)
     {
         try
@@ -225,6 +230,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> Confirm(Guid id)
     {
         var result = await _mediator.Send(new ConfirmDeliveryNoteCommand
@@ -243,7 +249,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
-    [Authorize(Policy = AuthorizationPolicyNames.ManageDeliveryRuns)]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> MarkDelivering(Guid id)
     {
         var deliveryNote = await _deliveryNoteAppService.GetByIdAsync(id).ConfigureAwait(false);
@@ -262,6 +268,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> MarkDelivered(
         Guid deliveryNoteId, string? receiverName, decimal agreedCustomerCharge,
         string? agreedCustomerChargeReason, bool compensateInNextDelivery,
@@ -342,6 +349,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> Cancel(Guid id)
     {
         try
@@ -360,6 +368,7 @@ public sealed class DeliveryNoteController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.DeliveryNotes.Manage)]
     public async Task<IActionResult> CreateFromPreparation([FromBody] CreateFromPreparationRequest request)
     {
         if (request == null || !request.SelectedItems.Any())

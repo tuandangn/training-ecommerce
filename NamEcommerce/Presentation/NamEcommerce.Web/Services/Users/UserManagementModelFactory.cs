@@ -26,4 +26,7 @@ public sealed class UserManagementModelFactory(IMediator mediator) : IUserManage
             }).ToList()
         };
     }
+
+    public Task<RolePermissionsPageModel?> PrepareRolePermissionsPageModel(Guid roleId)
+        => mediator.Send(new GetRolePermissionsPageQuery(roleId));
 }

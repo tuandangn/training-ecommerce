@@ -1,8 +1,10 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Dtos.Finance;
 using NamEcommerce.Web.Contracts.Commands.Models.Finance;
 using NamEcommerce.Web.Contracts.Queries.Models.Finance;
+using NamEcommerce.Web.Contracts.Security;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -10,6 +12,7 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
 {
     public IActionResult Index() => RedirectToAction(nameof(List));
 
+    [Authorize(Policy = SystemPermissions.Finance.ExpensesView)]
     public async Task<IActionResult> List(
         int page = 1,
         string? keywords = null,
@@ -34,11 +37,13 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
     }
 
     [HttpGet]
+    [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
     public IActionResult Create()
         => View(new CreateExpenseAppDto { IncurredDate = DateTime.Today, ExpenseType = 5 });
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
     public async Task<IActionResult> Create(CreateExpenseAppDto dto)
     {
         if (!ModelState.IsValid) return View(dto);
@@ -66,6 +71,7 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
     }
 
     [HttpGet]
+    [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
     public async Task<IActionResult> Edit(Guid id)
     {
         var model = await mediator.Send(new GetExpenseByIdQuery(id)).ConfigureAwait(false);
@@ -85,6 +91,7 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
     public async Task<IActionResult> Edit(UpdateExpenseAppDto dto)
     {
         if (!ModelState.IsValid) return View(dto);
@@ -114,12 +121,14 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
     public async Task<IActionResult> Delete(Guid id)
     {
         await mediator.Send(new DeleteExpenseCommand(id)).ConfigureAwait(false);
         return RedirectToAction(nameof(List));
     }
 
+    [Authorize(Policy = SystemPermissions.Finance.ExpensesView)]
     public async Task<IActionResult> Budgets(int? year, int? month)
     {
         var now = DateTime.UtcNow;
@@ -134,6 +143,7 @@ public class ExpenseController(IMediator mediator) : BaseAuthorizedController
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Policy = SystemPermissions.Finance.ExpensesManage)]
     public async Task<IActionResult> UpsertBudget(UpsertExpenseBudgetCommand command)
     {
         var result = await mediator.Send(command).ConfigureAwait(false);

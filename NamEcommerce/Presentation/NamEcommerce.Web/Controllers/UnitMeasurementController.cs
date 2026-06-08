@@ -1,12 +1,15 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Catalog;
 
 namespace NamEcommerce.Web.Controllers;
 
+[Authorize(Policy = SystemPermissions.Catalog.UnitMeasurementsManage)]
 public sealed class UnitMeasurementController : BaseAuthorizedController
 {
     private readonly AppConfig _appConfig;

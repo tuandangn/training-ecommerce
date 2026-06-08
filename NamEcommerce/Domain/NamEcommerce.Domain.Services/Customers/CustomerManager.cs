@@ -15,7 +15,7 @@ namespace NamEcommerce.Domain.Services.Customers;
 public sealed class CustomerManager : ICustomerManager
 {
     private const string RetailWalkInCustomerName = "Khách bán lẻ";
-    private const string RetailWalkInCustomerAddress = "Tại quầy";
+    private const string RetailWalkInCustomerAddress = "Tại cửa hàng";
     private const string RetailWalkInCustomerNote = "System customer for walk-in retail sales.";
 
     private readonly IRepository<Customer> _customerRepository;

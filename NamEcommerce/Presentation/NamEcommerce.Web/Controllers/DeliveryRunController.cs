@@ -1,14 +1,14 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Services.DeliveryNotes;
 
 namespace NamEcommerce.Web.Controllers;
 
-[Authorize(Policy = AuthorizationPolicyNames.ViewDeliveryRuns)]
+[Authorize(Policy = SystemPermissions.DeliveryRuns.View)]
 public sealed class DeliveryRunController(
     IDeliveryRunModelFactory deliveryRunModelFactory,
     IMediator mediator) : BaseAuthorizedController
@@ -21,7 +21,7 @@ public sealed class DeliveryRunController(
         return View(model);
     }
 
-    [Authorize(Policy = AuthorizationPolicyNames.ManageDeliveryRuns)]
+    [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> Create(Guid? assignedDeliveryUserId = null)
     {
         var model = await deliveryRunModelFactory.PrepareCreateDeliveryRunModelAsync(new CreateDeliveryRunModel
@@ -33,7 +33,7 @@ public sealed class DeliveryRunController(
     }
 
     [HttpPost]
-    [Authorize(Policy = AuthorizationPolicyNames.ManageDeliveryRuns)]
+    [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> Create(CreateDeliveryRunModel model)
     {
         if (model.DeliveryNoteIds.Count == 0)
@@ -77,7 +77,7 @@ public sealed class DeliveryRunController(
         }
     }
 
-    [Authorize(Policy = AuthorizationPolicyNames.ManageDeliveryRuns)]
+    [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> Print(Guid id)
     {
         try
@@ -93,7 +93,7 @@ public sealed class DeliveryRunController(
     }
 
     [HttpPost]
-    [Authorize(Policy = AuthorizationPolicyNames.ManageDeliveryRuns)]
+    [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> IssuePaperManifest(Guid id)
     {
         var result = await mediator.Send(new IssuePaperManifestDeliveryRunCommand(id)).ConfigureAwait(false);
@@ -105,7 +105,7 @@ public sealed class DeliveryRunController(
     }
 
     [HttpPost]
-    [Authorize(Policy = AuthorizationPolicyNames.ManageDeliveryRuns)]
+    [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> HandOver(Guid id)
     {
         var result = await mediator.Send(new HandOverDeliveryRunCommand(id)).ConfigureAwait(false);
@@ -118,7 +118,7 @@ public sealed class DeliveryRunController(
     }
 
     [HttpPost]
-    [Authorize(Policy = AuthorizationPolicyNames.ManageDeliveryRuns)]
+    [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> Close(Guid id)
     {
         var result = await mediator.Send(new CloseDeliveryRunCommand(id)).ConfigureAwait(false);
@@ -131,7 +131,7 @@ public sealed class DeliveryRunController(
     }
 
     [HttpPost]
-    [Authorize(Policy = AuthorizationPolicyNames.ConfirmDeliveryRunCashHandover)]
+    [Authorize(Policy = SystemPermissions.DeliveryRuns.ConfirmCashHandover)]
     public async Task<IActionResult> ConfirmCashHandover(Guid id, decimal amount, string? note)
     {
         var result = await mediator.Send(new ConfirmDeliveryRunCashHandoverCommand(id, amount, note)).ConfigureAwait(false);
@@ -144,7 +144,7 @@ public sealed class DeliveryRunController(
     }
 
     [HttpPost]
-    [Authorize(Policy = AuthorizationPolicyNames.ManageDeliveryRuns)]
+    [Authorize(Policy = SystemPermissions.DeliveryRuns.Manage)]
     public async Task<IActionResult> Cancel(Guid id)
     {
         var result = await mediator.Send(new CancelDeliveryRunCommand(id)).ConfigureAwait(false);

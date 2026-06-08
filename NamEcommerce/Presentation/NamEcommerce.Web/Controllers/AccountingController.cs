@@ -1,12 +1,15 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Dtos.Finance;
 using NamEcommerce.Application.Contracts.Finance;
 using NamEcommerce.Web.Contracts.Commands.Models.Finance;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Helpers;
 
 namespace NamEcommerce.Web.Controllers;
 
+[Authorize(Policy = SystemPermissions.Finance.Accounting)]
 public class AccountingController(
     IMediator mediator,
     IAccountingSetupAppService setupAppService,

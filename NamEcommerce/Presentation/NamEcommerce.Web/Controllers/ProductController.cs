@@ -1,7 +1,9 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Catalog;
 using NamEcommerce.Web.Services.Catalog;
 
@@ -20,6 +22,7 @@ public sealed class ProductController : BaseAuthorizedController
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
+    [Authorize(Policy = SystemPermissions.Catalog.ProductsView)]
     public async Task<IActionResult> List(ProductSearchModel searchModel)
     {
         var model = await _productModelFactory.PrepareProductListModel(searchModel);
@@ -27,6 +30,7 @@ public sealed class ProductController : BaseAuthorizedController
         return View(model);
     }
 
+    [Authorize(Policy = SystemPermissions.Catalog.ProductsManage)]
     public async Task<IActionResult> Create()
     {
         var model = await _productModelFactory.PrepareCreateProductModel();
@@ -34,6 +38,7 @@ public sealed class ProductController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Catalog.ProductsManage)]
     public async Task<IActionResult> Create(CreateProductModel model)
     {
         if (!ModelState.IsValid)
@@ -73,6 +78,7 @@ public sealed class ProductController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Catalog.ProductsManage)]
     public async Task<IActionResult> QuickCreate(CreateProductModel model)
     {
         if (model.VendorIds.Count == 0)
@@ -125,6 +131,7 @@ public sealed class ProductController : BaseAuthorizedController
         });
     }
 
+    [Authorize(Policy = SystemPermissions.Catalog.ProductsManage)]
     public async Task<IActionResult> Edit(Guid id)
     {
         var model = await _productModelFactory.PrepareEditProductModel(id);
@@ -138,6 +145,7 @@ public sealed class ProductController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Catalog.ProductsManage)]
     public async Task<IActionResult> Edit(EditProductModel model)
     {
         if (!ModelState.IsValid)
@@ -242,6 +250,7 @@ public sealed class ProductController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Catalog.ProductsManage)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var resultDto = await _mediator.Send(new DeleteProductCommand(id));

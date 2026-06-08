@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
@@ -6,11 +7,13 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Web.Contracts.Commands.Models.Returns;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Returns;
 using NamEcommerce.Web.Services.Returns;
 
 namespace NamEcommerce.Web.Controllers;
 
+[Authorize(Policy = SystemPermissions.CustomerReturns.Manage)]
 public sealed class CustomerReturnController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;

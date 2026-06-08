@@ -1,12 +1,15 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Preparations;
 using NamEcommerce.Web.Services.Preparations;
 
 namespace NamEcommerce.Web.Controllers;
 
+[Authorize(Policy = SystemPermissions.Inventory.Preparation)]
 public sealed class PreparationController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;

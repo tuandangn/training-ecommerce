@@ -112,13 +112,12 @@
             </div>
             <div class="text-right">
                 <strong>Mã chuyến: @Model.Code</strong><br />
-                Ngày in: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+                Ngày @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
             </div>
         </div>
 
         <div class="title">
-            <h1>Bảng giao hàng</h1>
-            <div>Phiếu giấy dự phòng cho trường hợp người giao không có mạng</div>
+            <h1>Phiếu giao hàng</h1>
         </div>
 
         <table class="summary">
@@ -127,16 +126,12 @@
                 <td>@Model.AssignedDeliveryFullName (@Model.AssignedDeliveryUsername)</td>
             </tr>
             <tr>
-                <td class="summary-label">Số phiếu giao:</td>
-                <td>@Model.Items.Count</td>
-            </tr>
-            <tr>
                 <td class="summary-label">Tổng tiền cần thu:</td>
                 <td><strong>@Model.Items.Sum(item => item.AmountToCollect).DisplayCurrencyWithSymbol()</strong></td>
             </tr>
             <tr>
-                <td class="summary-label">Thời điểm in:</td>
-                <td>@(Model.PaperManifestIssuedOnUtc?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? DateTime.Now.ToString("dd/MM/yyyy HH:mm"))</td>
+                <td class="summary-label">Phiếu ngày:</td>
+                <td>@(Model.PaperManifestIssuedOnUtc?.ToLocalTime().ToString(ViewConstants.DefaultDateTimeFormat) ?? DateTime.Now.ToString(ViewConstants.DefaultDateTimeFormat))</td>
             </tr>
         </table>
 

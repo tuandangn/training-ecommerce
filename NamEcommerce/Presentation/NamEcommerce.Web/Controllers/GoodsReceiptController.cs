@@ -1,13 +1,16 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Queries.Models.GoodsReceipts;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.GoodsReceipts;
 using NamEcommerce.Web.Services.GoodsReceipts;
 
 namespace NamEcommerce.Web.Controllers;
 
+[Authorize(Policy = SystemPermissions.GoodsReceipts.Manage)]
 public sealed class GoodsReceiptController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;

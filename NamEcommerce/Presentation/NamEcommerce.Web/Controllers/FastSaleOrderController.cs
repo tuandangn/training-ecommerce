@@ -1,10 +1,13 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.FastSales;
+using NamEcommerce.Web.Contracts.Security;
 
 namespace NamEcommerce.Web.Controllers;
 
 public sealed partial class OrderController : BaseAuthorizedController
 {
+    [Authorize(Policy = SystemPermissions.Orders.FastSale)]
     public async Task<IActionResult> QuickCreate()
     {
         var model = await _fastSaleModelFactory.PrepareFastSaleModelAsync().ConfigureAwait(false);

@@ -1,9 +1,11 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.DirectShipDelivery;
 
 namespace NamEcommerce.Web.Controllers;
@@ -13,6 +15,7 @@ public sealed class DirectShipDeliveryController(
 {
     public IActionResult Index() => RedirectToAction(nameof(Pending));
 
+    [Authorize(Policy = SystemPermissions.DirectShip.View)]
     public async Task<IActionResult> Pending(DirectShipDeliveryFilterModel filter)
     {
         var deliveryNotes = await directShipAppService.GetPendingDeliveriesAsync(new PendingDirectShipFilterAppDto
@@ -50,6 +53,7 @@ public sealed class DirectShipDeliveryController(
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.DirectShip.Manage)]
     public async Task<IActionResult> ConfirmDelivery([FromBody] ConfirmDirectShipDeliveryRequest request)
     {
         if (request.DeliveryNoteId == Guid.Empty)
@@ -73,6 +77,7 @@ public sealed class DirectShipDeliveryController(
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.DirectShip.Manage)]
     public async Task<IActionResult> RejectDelivery(RejectDirectShipDeliveryRequest request)
     {
         if (request.DeliveryNoteId == Guid.Empty)
@@ -98,6 +103,7 @@ public sealed class DirectShipDeliveryController(
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.DirectShip.Manage)]
     public async Task<IActionResult> MarkAsDirectShip([FromBody] MarkAllocationAsDirectShipRequest request)
     {
         if (request.AllocationId == Guid.Empty || string.IsNullOrWhiteSpace(request.Address))
@@ -118,6 +124,7 @@ public sealed class DirectShipDeliveryController(
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.DirectShip.Manage)]
     public async Task<IActionResult> UpdateAddress([FromBody] UpdateDirectShipAddressRequest request)
     {
         if (request.AllocationId == Guid.Empty || string.IsNullOrWhiteSpace(request.NewAddress))

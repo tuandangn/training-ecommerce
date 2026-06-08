@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.Finance;
 using NamEcommerce.Web.Contracts.Commands.Models.Orders;
@@ -6,6 +7,7 @@ using NamEcommerce.Web.Contracts.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Orders;
 using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Orders;
 using NamEcommerce.Web.Services.FastSales;
 using NamEcommerce.Web.Services.Orders;
@@ -27,6 +29,7 @@ public sealed partial class OrderController : BaseAuthorizedController
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
+    [Authorize(Policy = SystemPermissions.Orders.View)]
     public async Task<IActionResult> List(OrderListSearchModel search)
     {
         var model = await _orderModelFactory.PrepareOrderListModel(search);
@@ -34,6 +37,7 @@ public sealed partial class OrderController : BaseAuthorizedController
         return View(model);
     }
 
+    [Authorize(Policy = SystemPermissions.Orders.Create)]
     public async Task<IActionResult> Create()
     {
         var model = await _orderModelFactory.PrepareCreateOrderModel();
@@ -41,6 +45,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.Create)]
     public async Task<IActionResult> Create(CreateOrderModel model)
     {
         if (!ModelState.IsValid)
@@ -82,6 +87,7 @@ public sealed partial class OrderController : BaseAuthorizedController
         return RedirectToAction(nameof(Details), new { id = result.CreatedId });
     }
 
+    [Authorize(Policy = SystemPermissions.Orders.View)]
     public async Task<IActionResult> Details(Guid id)
     {
         var model = await _orderModelFactory.PrepareOrderDetailsModel(id);
@@ -113,6 +119,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.Edit)]
     public async Task<IActionResult> CompleteOrder(CompleteOrderModel model)
     {
         if (!ModelState.IsValid)
@@ -137,6 +144,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.Cancel)]
     public async Task<IActionResult> CancelOrder([FromBody] CancelOrderModel model)
     {
         var order = await _mediator.Send(new GetOrderByIdQuery { Id = model.OrderId });
@@ -156,6 +164,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.Edit)]
     public async Task<IActionResult> AddOrderItem(AddOrderItemModel model)
     {
         if (!ModelState.IsValid)
@@ -187,6 +196,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.Edit)]
     public async Task<IActionResult> UpdateOrderItem(EditOrderItemModel model)
     {
         if (!ModelState.IsValid)
@@ -217,6 +227,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.Edit)]
     public async Task<IActionResult> RemoveOrderItem(DeleteOrderItemModel model)
     {
         if (!ModelState.IsValid)
@@ -245,6 +256,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.Edit)]
     public async Task<IActionResult> UpdateOrderNote(EditOrderNoteModel model)
     {
         if (!ModelState.IsValid)
@@ -268,6 +280,7 @@ public sealed partial class OrderController : BaseAuthorizedController
         return Json(new { success = true, message = string.Empty });
     }
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.Edit)]
     public async Task<IActionResult> UpdateOrderDiscount(EditOrderDiscountModel model)
     {
         if (!ModelState.IsValid)
@@ -295,6 +308,7 @@ public sealed partial class OrderController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Orders.Edit)]
     public async Task<IActionResult> UpdateShipping(EditOrderShippingModel model)
     {
         if (!ModelState.IsValid)

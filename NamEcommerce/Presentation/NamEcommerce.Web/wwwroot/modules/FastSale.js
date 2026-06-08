@@ -360,6 +360,8 @@ class FastSale {
 
         this.discount.disabled = this.cart.length === 0;
 
+        this.fromCommand = '';
+
         if (!this.paymentIntent || !usesBankTransfer) {
             this.qrImage.removeAttribute('src');
             this.reference.textContent = '';

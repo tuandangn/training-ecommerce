@@ -1,7 +1,9 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Catalog;
 using NamEcommerce.Web.Services.Catalog;
 
@@ -20,6 +22,7 @@ public sealed class CategoryController : BaseAuthorizedController
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
+    [Authorize(Policy = SystemPermissions.Catalog.CategoriesView)]
     public async Task<IActionResult> List(CategoryListSearchModel searchModel)
     {
         var model = await _categoryModelFactory.PrepareCategoryListModel(searchModel);
@@ -27,6 +30,7 @@ public sealed class CategoryController : BaseAuthorizedController
         return View(model);
     }
 
+    [Authorize(Policy = SystemPermissions.Catalog.CategoriesManage)]
     public async Task<IActionResult> Create()
     {
         var model = await _categoryModelFactory.PrepareCreateCategoryModel();
@@ -35,6 +39,7 @@ public sealed class CategoryController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Catalog.CategoriesManage)]
     public async Task<IActionResult> Create(CreateCategoryModel model)
     {
         if (!ModelState.IsValid)
@@ -61,6 +66,7 @@ public sealed class CategoryController : BaseAuthorizedController
         return RedirectToAction(nameof(List));
     }
 
+    [Authorize(Policy = SystemPermissions.Catalog.CategoriesManage)]
     public async Task<IActionResult> Edit(Guid id)
     {
         var model = await _categoryModelFactory.PrepareEditCategoryModel(id);
@@ -74,6 +80,7 @@ public sealed class CategoryController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Catalog.CategoriesManage)]
     public async Task<IActionResult> Edit(EditCategoryModel model)
     {
         if (!ModelState.IsValid)
@@ -117,6 +124,7 @@ public sealed class CategoryController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Catalog.CategoriesManage)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var resultDto = await _mediator.Send(new DeleteCategoryCommand(id));

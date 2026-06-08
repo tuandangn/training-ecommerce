@@ -4,39 +4,45 @@
     var deliveryUsers = (Model.AvailableDeliveryUsers?.Options ?? Enumerable.Empty<EntityOptionListModel.EntityOptionModel>()).ToList();
     var selectedIds = Model.DeliveryNoteIds.ToHashSet();
 }
-
-<div class="page-header">
-    <div>
-        <h1 class="page-header-title">Tạo chuyến giao</h1>
-        <p class="page-header-subtitle">
-            <a asp-action="List" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Trở về danh sách</a>
-        </p>
+@section TitleSection {
+    <h1 class="topbar-page-title">
+        Thêm mới
+        <span class="text-muted">Chuyến giao</span>
+    </h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="List" asp-controller="DeliveryRun" class="text-decoration-none">Chuyến giao</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Thêm mới</li>
+            </ol>
+        </nav>
     </div>
-</div>
-
+}
 <div class="content-card mb-3">
-    <form asp-action="Create" method="get" class="row g-2 align-items-end">
-        <div class="col-md-8">
-            <label class="form-label small fw-bold text-muted text-uppercase">Người giao</label>
-            <select name="assignedDeliveryUserId" class="form-select" required>
-                <option value="">Chọn người giao</option>
-                @foreach (var user in deliveryUsers)
-                {
-                    <option value="@user.Id" selected="@(Model.AssignedDeliveryUserId == user.Id)">@user.Name</option>
-                }
-            </select>
-        </div>
-        <div class="col-md-4">
-            <button type="submit" class="btn btn-outline-primary w-100">
-                <i class="bi bi-filter me-1"></i>Lọc phiếu giao
-            </button>
-        </div>
-    </form>
-</div>
-
+    <div class="action-toolbar">
+        <form asp-action="Create" method="get" class="row g-3 align-items-end">
+            <div class="col-md-8">
+                <label class="form-label small fw-bold text-muted text-uppercase">Người giao</label>
+                <select name="assignedDeliveryUserId" class="form-select w-auto" required>
+                    <option value="">Chọn người giao</option>
+                    @foreach (var user in deliveryUsers)
+                    {
+                        <option value="@user.Id" selected="@(Model.AssignedDeliveryUserId == user.Id)">@user.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-filter me-1"></i>Lọc
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="content-card-body">
 @if (Model.AssignedDeliveryUserId == Guid.Empty)
 {
-    <div class="alert alert-info">
+    <div class="alert alert-info mb-0">
         Chọn người giao trước để hệ thống chỉ hiển thị các phiếu xuất đã gán cho người đó.
     </div>
 }
@@ -45,29 +51,26 @@ else
     <form asp-action="Create" method="post">
         <input type="hidden" asp-for="AssignedDeliveryUserId" />
 
-        <div class="content-card mb-3">
-            <div class="mb-3">
-                <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase">Ghi chú chuyến</label>
-                <textarea asp-for="Note" class="form-control" rows="2" placeholder="Ví dụ: ưu tiên giao tuyến xã A trước"></textarea>
-            </div>
-
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
-
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h5 class="mb-0 fw-bold">Phiếu xuất đủ điều kiện</h5>
-                    <div class="text-muted small">Chỉ gồm phiếu đã xác nhận, không giao thẳng và đã gán đúng người giao.</div>
-                </div>
-                @if (Model.AvailableDeliveryNotes.Any())
-                {
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-select-all">
-                        <i class="bi bi-check2-square me-1"></i>Chọn tất cả
-                    </button>
-                }
-            </div>
-
+        <div class="content-card-body-flush mb-3">
             @if (Model.AvailableDeliveryNotes.Any())
             {
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+                <div class="mb-3">
+                    <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase">Ghi chú chuyến</label>
+                    <textarea asp-for="Note" class="form-control" rows="2" placeholder="Ví dụ: ưu tiên giao tuyến xã A trước"></textarea>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h5 class="mb-0 fw-bold">Phiếu xuất đủ điều kiện</h5>
+                        <div class="text-muted small">Chỉ gồm phiếu đã xác nhận, không giao thẳng và đã gán đúng người giao.</div>
+                    </div>
+                    @if (Model.AvailableDeliveryNotes.Any())
+                    {
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-select-all">
+                            <i class="bi bi-check2-square me-1"></i>Chọn tất cả
+                        </button>
+                    }
+                </div>
                 <div class="table-responsive">
                     <table class="table data-table align-middle">
                         <thead>
@@ -103,7 +106,6 @@ else
                         </tbody>
                     </table>
                 </div>
-
                 <div class="d-flex justify-content-end gap-2 mt-3">
                     <a asp-action="List" class="btn btn-outline-secondary">Hủy</a>
                     <button type="submit" class="btn btn-primary">
@@ -123,6 +125,8 @@ else
     </form>
 }
 
+</div>
+</div>
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>

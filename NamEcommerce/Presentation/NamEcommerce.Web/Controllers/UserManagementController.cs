@@ -5,6 +5,7 @@ using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Commands.Models.Users;
 using NamEcommerce.Web.Contracts.Models.Users;
 using NamEcommerce.Web.Contracts.Queries.Models.Users;
+using NamEcommerce.Web.Services.Permissions;
 using NamEcommerce.Web.Services.Users;
 
 namespace NamEcommerce.Web.Controllers;
@@ -14,11 +15,16 @@ public sealed class UserManagementController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;
     private readonly IUserManagementModelFactory _userManagementModelFactory;
+    private readonly IPermissionCacheService _permissionCacheService;
 
-    public UserManagementController(IMediator mediator, IUserManagementModelFactory userManagementModelFactory)
+    public UserManagementController(
+        IMediator mediator,
+        IUserManagementModelFactory userManagementModelFactory,
+        IPermissionCacheService permissionCacheService)
     {
         _mediator = mediator;
         _userManagementModelFactory = userManagementModelFactory;
+        _permissionCacheService = permissionCacheService;
     }
 
     public IActionResult Index() => RedirectToAction(nameof(Roles));
@@ -82,6 +88,37 @@ public sealed class UserManagementController : BaseAuthorizedController
 
         NotifySuccess("Msg.SaveSuccess");
         return RedirectToAction(nameof(Roles));
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> RolePermissions(Guid roleId = default)
+    {
+        var model = await _userManagementModelFactory.PrepareRolePermissionsPageModel(roleId)
+            .ConfigureAwait(false);
+
+        if (model is null)
+            return RedirectToAction(nameof(Roles));
+
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RolePermissions(UpdateRolePermissionsCommand command)
+    {
+        var result = await _mediator.Send(command).ConfigureAwait(false);
+
+        if (result.Success)
+        {
+            _permissionCacheService.InvalidateAll();
+            NotifySuccess("Msg.SaveSuccess");
+        }
+        else
+        {
+            AddLocalizedModelError(result.ErrorMessage);
+        }
+
+        return RedirectToAction(nameof(RolePermissions), new { roleId = command.RoleId });
     }
 
     private Task<bool> CanManageUserRoles()
