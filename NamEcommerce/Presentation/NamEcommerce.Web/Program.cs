@@ -28,8 +28,10 @@ using NamEcommerce.Application.Contracts.Report;
 using NamEcommerce.Application.Contracts.Returns;
 using NamEcommerce.Application.Contracts.StockAdjustment;
 using NamEcommerce.Application.Contracts.StockTransfer;
+using NamEcommerce.Application.Contracts.Security;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Catalog;
+using NamEcommerce.Application.Services.Security;
 using NamEcommerce.Application.Services.Communication;
 using NamEcommerce.Application.Services.CustomerPortal;
 using NamEcommerce.Application.Services.Customers;
@@ -90,8 +92,10 @@ using NamEcommerce.Domain.Shared.Services.Users;
 using NamEcommerce.Domain.Shared.Settings;
 using NamEcommerce.Web.Constants;
 using NamEcommerce.Web.Contracts.Configurations;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Web.Authorization;
+using NamEcommerce.Web.Services.Permissions;
 using NamEcommerce.Web.Framework.Commands.Handlers.Users;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Mvc.Binders;
@@ -234,6 +238,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICategoryAppService, CategoryAppService>();
     services.AddScoped<IUnitMeasurementAppService, UnitMeasurementAppService>();
     services.AddScoped<IUserAppService, UserAppService>();
+    services.AddScoped<IPermissionAppService, PermissionAppService>();
     services.AddScoped<IVendorAppService, VendorAppService>();
     services.AddScoped<IProductAppService, ProductAppService>();
     services.AddScoped<IPictureAppService, PictureAppService>();
@@ -326,6 +331,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IDataSeeder, DefaultUnitMeasurementSeeder>();
     services.AddScoped<IDataSeeder, AdminUserSeeder>();
     services.AddScoped<IDataSeeder, AccountingSetupSeeder>();
+    services.AddScoped<IDataSeeder, SystemPermissionsSeeder>();
     services.AddScoped<DataSeederRunner>();
 
     services.AddMediatR(config =>
@@ -343,19 +349,16 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
         opts.LoginPath = "/User/Login";
         opts.LogoutPath = "/User/Logout";
     });
+    services.AddMemoryCache();
+    services.AddScoped<IPermissionCacheService, PermissionCacheService>();
+    services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
     services.AddScoped<IAuthorizationHandler, ManageUserRolesAuthorizationHandler>();
     services.AddAuthorization(opts =>
     {
         opts.AddPolicy(AuthorizationPolicyNames.ManageUserRoles,
             policy => policy.Requirements.Add(new ManageUserRolesRequirement()));
-        opts.AddPolicy(AuthorizationPolicyNames.ViewDeliveryRuns,
-            policy => policy.RequireRole(SystemUserRoleNames.Admin, SystemUserRoleNames.WarehouseManager, SystemUserRoleNames.Cashier));
-        opts.AddPolicy(AuthorizationPolicyNames.ManageDeliveryRuns,
-            policy => policy.RequireRole(SystemUserRoleNames.Admin, SystemUserRoleNames.WarehouseManager));
-        opts.AddPolicy(AuthorizationPolicyNames.UseDeliveryMobile,
-            policy => policy.RequireRole(SystemUserRoleNames.DeliveryStaff));
-        opts.AddPolicy(AuthorizationPolicyNames.ConfirmDeliveryRunCashHandover,
-            policy => policy.RequireRole(SystemUserRoleNames.Admin, SystemUserRoleNames.Cashier));
+        foreach (var permission in SystemPermissions.GetAll())
+            opts.AddPolicy(permission, policy => policy.Requirements.Add(new PermissionRequirement(permission)));
     });
 
     services.AddHttpContextAccessor();

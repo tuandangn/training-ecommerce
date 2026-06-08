@@ -8,3 +8,6 @@ public sealed record GetUserRoleListQuery : IRequest<UserRoleListModel>;
 
 [Serializable]
 public sealed record GetUserRoleAssignmentQuery(Guid UserId) : IRequest<UserRoleAssignmentModel?>;
+
+[Serializable]
+public sealed record GetRolePermissionsPageQuery(Guid RoleId) : IRequest<RolePermissionsPageModel?>;

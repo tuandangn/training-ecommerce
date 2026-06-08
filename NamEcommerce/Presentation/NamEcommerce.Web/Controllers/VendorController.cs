@@ -1,8 +1,10 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.Catalog;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Catalog;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Catalog;
 
 namespace NamEcommerce.Web.Controllers;
@@ -20,6 +22,7 @@ public sealed class VendorController : BaseAuthorizedController
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
+    [Authorize(Policy = SystemPermissions.Catalog.VendorsView)]
     public IActionResult List(VendorListSearchModel searchModel)
     {
         var pageNumber = searchModel?.PageNumber ?? 1;
@@ -38,6 +41,7 @@ public sealed class VendorController : BaseAuthorizedController
         return View(model);
     }
 
+    [Authorize(Policy = SystemPermissions.Catalog.VendorsManage)]
     public IActionResult Create()
     {
         var model = new CreateVendorModel
@@ -48,6 +52,7 @@ public sealed class VendorController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Catalog.VendorsManage)]
     public async Task<IActionResult> Create(CreateVendorModel model)
     {
         if (!ModelState.IsValid)
@@ -71,6 +76,7 @@ public sealed class VendorController : BaseAuthorizedController
         return RedirectToAction(nameof(List));
     }
 
+    [Authorize(Policy = SystemPermissions.Catalog.VendorsManage)]
     public async Task<IActionResult> Edit(Guid id)
     {
         var vendor = await _mediator.Send(new GetVendorQuery { Id = id });
@@ -93,6 +99,7 @@ public sealed class VendorController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Catalog.VendorsManage)]
     public async Task<IActionResult> Edit(EditVendorModel model)
     {
         if (!ModelState.IsValid)
@@ -124,6 +131,7 @@ public sealed class VendorController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Catalog.VendorsManage)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var resultDto = await _mediator.Send(new DeleteVendorCommand(id));

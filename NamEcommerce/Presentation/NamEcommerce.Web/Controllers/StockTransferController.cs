@@ -1,11 +1,14 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.StockTransfer;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.StockTransfer;
 using NamEcommerce.Web.Services.StockTransfer;
 
 namespace NamEcommerce.Web.Controllers;
 
+[Authorize(Policy = SystemPermissions.Inventory.Transfer)]
 public sealed class StockTransferController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;

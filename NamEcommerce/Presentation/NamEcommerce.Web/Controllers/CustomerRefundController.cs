@@ -1,11 +1,14 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.Debts;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Debts;
 using NamEcommerce.Web.Services.Debts;
 
 namespace NamEcommerce.Web.Controllers;
 
+[Authorize(Policy = SystemPermissions.Debts.CustomerRefundsManage)]
 public sealed class CustomerRefundController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;

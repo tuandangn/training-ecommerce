@@ -206,7 +206,10 @@
             <div class="collapse @(WebHelper.IsHasController("UserManagement") ? "show" : "")" id="collapseSystem">
             <ul class="nav flex-column sub-menu">
                 <li class="nav-item">
-                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("UserManagement") ? "active" : "")" asp-controller="UserManagement" asp-action="Roles">Phân vai trò</a>
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("UserManagement", "Roles") || WebHelper.IsMatchRouteInfo("UserManagement", "EditRoles") ? "active" : "")" asp-controller="UserManagement" asp-action="Roles">Phân vai trò</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link @(WebHelper.IsMatchRouteInfo("UserManagement", "RolePermissions") ? "active" : "")" asp-controller="UserManagement" asp-action="RolePermissions">Phân quyền</a>
                 </li>
             </ul>
             </div>

@@ -178,7 +178,7 @@
 
         input.addEventListener('focus', function () {
             this.value = stripInputFormatting(this);
-            this.select();
+            focusEnd(this);
         });
 
         input.addEventListener('blur', function (e) {

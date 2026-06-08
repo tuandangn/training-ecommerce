@@ -6,7 +6,10 @@ namespace NamEcommerce.Domain.Entities.Security;
 public sealed record Permission : AppAggregateEntity
 {
     public Permission(Guid id, string name) : base(id)
-        => Name = name;
+    {
+        Name = name;
+        NormalizedName = name.ToUpperInvariant();
+    }
 
     public string Name { get; init; }
     public string NormalizedName { get; internal set; } = "";

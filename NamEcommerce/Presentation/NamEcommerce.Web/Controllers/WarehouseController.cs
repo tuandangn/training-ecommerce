@@ -1,13 +1,16 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
 using NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Inventory;
 using NamEcommerce.Web.Services.Inventory;
 
 namespace NamEcommerce.Web.Controllers;
 
+[Authorize(Policy = SystemPermissions.Warehouses.Manage)]
 public sealed class WarehouseController : BaseAuthorizedController
 {
     private readonly IMediator _mediator;

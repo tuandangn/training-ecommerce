@@ -1,0 +1,83 @@
+@model RolePermissionsPageModel
+@{
+    ViewData[ViewConstants.PageTitle] = "Phân quyền vai trò";
+}
+
+@section TitleSection {
+    <h1 class="topbar-page-title">Phân quyền vai trò</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a asp-action="Roles" asp-controller="UserManagement" class="text-decoration-none">Phân vai trò</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Phân quyền</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<div class="content-card mb-3">
+    <div class="content-card-body">
+        <div class="d-flex gap-2 flex-wrap">
+            @foreach (var role in Model.AvailableRoles)
+            {
+                <a asp-action="RolePermissions" asp-route-roleId="@role.Id"
+                   class="btn btn-sm @(role.Id == Model.SelectedRoleId ? "btn-primary" : "btn-outline-secondary")">
+                    @DisplayRole(role.Name)
+                </a>
+            }
+        </div>
+    </div>
+</div>
+
+<form method="post" asp-antiforgery="true" asp-action="RolePermissions">
+    <input type="hidden" name="RoleId" value="@Model.CurrentRole.RoleId" />
+
+    <div class="row g-3">
+        @foreach (var group in Model.CurrentRole.Groups)
+        {
+            <div class="col-md-6 col-lg-4">
+                <div class="content-card h-100">
+                    <div class="content-card-header">
+                        <span class="fw-semibold">@group.GroupName</span>
+                    </div>
+                    <div class="content-card-body">
+                        @foreach (var perm in group.Items)
+                        {
+                            var inputId = $"perm_{perm.Id:N}";
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox"
+                                       id="@inputId"
+                                       name="PermissionIds"
+                                       value="@perm.Id"
+                                       @(perm.IsGranted ? "checked" : "") />
+                                <label class="form-check-label" for="@inputId">@perm.Label</label>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="mt-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-floppy me-1"></i>Lưu thay đổi
+        </button>
+        <a asp-action="Roles" class="btn btn-link text-decoration-none text-muted">
+            <i class="bi bi-arrow-left"></i> Trở về
+        </a>
+    </div>
+</form>
+
+@functions {
+    private static string DisplayRole(string name)
+        => name switch
+        {
+            "SalesStaff" => "Nhân viên bán hàng",
+            "WarehouseManager" => "Quản kho",
+            "DeliveryStaff" => "Giao hàng",
+            "Cashier" => "Thủ quỹ",
+            _ => name
+        };
+}

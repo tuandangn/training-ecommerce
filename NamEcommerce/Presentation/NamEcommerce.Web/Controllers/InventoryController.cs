@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Dtos.Inventory;
 using NamEcommerce.Application.Contracts.Inventory;
@@ -7,6 +8,7 @@ using NamEcommerce.Web.Contracts.Commands.Models.Inventory;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Inventory;
 using NamEcommerce.Web.Contracts.Queries.Models.Inventory;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Inventory;
 
 namespace NamEcommerce.Web.Controllers;
@@ -26,6 +28,7 @@ public sealed class InventoryController : BaseAuthorizedController
 
     public IActionResult Index() => RedirectToAction(nameof(StockList));
 
+    [Authorize(Policy = SystemPermissions.Inventory.View)]
     public async Task<IActionResult> StockList(int pageNumber = 1, string? keywords = null, bool includeDS = false, bool groupByProduct = false)
     {
         var pageSize = _appConfig.DefaultPageSize;
@@ -43,12 +46,14 @@ public sealed class InventoryController : BaseAuthorizedController
         return View(model);
     }
 
+    [Authorize(Policy = SystemPermissions.Inventory.ViewCostDetails)]
     public async Task<IActionResult> CostHistory(Guid productId, Guid? warehouseId = null, int take = 20)
     {
         var items = await _inventoryAppService.GetInventoryCostHistoryAsync(productId, warehouseId, take);
         return PartialView("_InventoryCostHistoryFullTable", items.Select(MapCostHistory).ToList());
     }
 
+    [Authorize(Policy = SystemPermissions.Inventory.View)]
     public async Task<IActionResult> MovementLogs(Guid productId, Guid warehouseId, int pageNumber = 1)
     {
         var pageSize = _appConfig.DefaultPageSize;
@@ -64,6 +69,7 @@ public sealed class InventoryController : BaseAuthorizedController
         return View(model);
     }
 
+    [Authorize(Policy = SystemPermissions.Inventory.View)]
     public async Task<IActionResult> ReservationLedger(Guid productId, int pageNumber = 1)
     {
         var pageSize = _appConfig.DefaultPageSize;
@@ -78,6 +84,7 @@ public sealed class InventoryController : BaseAuthorizedController
         return View(model);
     }
 
+    [Authorize(Policy = SystemPermissions.Inventory.ViewCostDetails)]
     public async Task<IActionResult> CostingPolicy()
     {
         var settings = await _mediator.Send(new GetInventoryCostingPolicyQuery());
@@ -85,6 +92,7 @@ public sealed class InventoryController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Inventory.ViewCostDetails)]
     public async Task<IActionResult> CostingPolicy(InventoryCostingPolicyModel model)
     {
         if (!ModelState.IsValid)
@@ -117,6 +125,7 @@ public sealed class InventoryController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Inventory.ViewCostDetails)]
     public async Task<IActionResult> RebuildCosting(InventoryCostingPolicyModel model)
     {
         try
@@ -144,6 +153,7 @@ public sealed class InventoryController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Inventory.Adjust)]
     public async Task<IActionResult> SetStockLevels(SetStockLevelsModel model)
     {
         if (!ModelState.IsValid)

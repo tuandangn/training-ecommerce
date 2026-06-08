@@ -1,9 +1,11 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.Debts;
 using NamEcommerce.Web.Contracts.Queries.Models.Debts;
 using NamEcommerce.Web.Contracts.Models.Debts;
 using NamEcommerce.Domain.Shared.Exceptions;
+using NamEcommerce.Web.Contracts.Security;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -11,6 +13,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
 {
     private readonly IMediator _mediator = mediator;
 
+    [Authorize(Policy = SystemPermissions.Debts.CustomerDebtsView)]
     public async Task<IActionResult> List(string? keywords, int pageIndex = 1)
     {
         var model = await _mediator.Send(new GetCustomerDebtListQuery
@@ -22,6 +25,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
         return View(model);
     }
 
+    [Authorize(Policy = SystemPermissions.Debts.CustomerDebtsView)]
     public async Task<IActionResult> Details(Guid id)
     {
         var model = await _mediator.Send(new GetCustomerDebtDetailsQuery { CustomerId = id }).ConfigureAwait(false);
@@ -33,6 +37,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
         return View(model);
     }
 
+    [Authorize(Policy = SystemPermissions.Debts.CustomerDebtsView)]
     public async Task<IActionResult> Print(Guid id)
     {
         var model = await _mediator.Send(new GetCustomerDebtDetailsQuery { CustomerId = id }).ConfigureAwait(false);
@@ -41,6 +46,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Debts.CustomerDebtsRecordPayment)]
     public async Task<IActionResult> RecordPayment(RecordPaymentModel model)
     {
         if (!ModelState.IsValid)
@@ -64,6 +70,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Debts.CustomerDebtsRecordPayment)]
     public async Task<IActionResult> RecordFlexiblePayment(RecordPaymentModel model)
     {
         if (!ModelState.IsValid)
@@ -82,7 +89,7 @@ public sealed class CustomerDebtController(IMediator mediator) : BaseAuthorizedC
         }
     }
 
-    /// <summary>In biên lai cho 1 lần thanh toán cụ thể.</summary>
+    [Authorize(Policy = SystemPermissions.Debts.CustomerDebtsView)]
     public async Task<IActionResult> Receipt(Guid paymentId)
     {
         var model = await _mediator.Send(new GetCustomerPaymentReceiptQuery { PaymentId = paymentId }).ConfigureAwait(false);

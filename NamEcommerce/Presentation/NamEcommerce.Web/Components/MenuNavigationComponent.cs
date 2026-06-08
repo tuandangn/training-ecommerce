@@ -1,23 +1,20 @@
-using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using NamEcommerce.Domain.Shared.Dtos.Users;
-using NamEcommerce.Web.Contracts.Queries.Models.Users;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Common;
 
 namespace NamEcommerce.Web.Components;
 
-public sealed class MenuNavigationComponent(IMediator mediator) : ViewComponent
+public sealed class MenuNavigationComponent(IAuthorizationService authorizationService) : ViewComponent
 {
     public async Task<IViewComponentResult> InvokeAsync()
     {
         var user = HttpContext.User;
         var model = new MenuNavigationModel
         {
-            CanManageUserRoles = await mediator.Send(new CanManageUserRolesQuery()).ConfigureAwait(false),
-            CanViewDeliveryRuns = user.IsInRole(SystemUserRoleNames.Admin)
-                || user.IsInRole(SystemUserRoleNames.WarehouseManager)
-                || user.IsInRole(SystemUserRoleNames.Cashier),
-            CanUseDeliveryMobile = user.IsInRole(SystemUserRoleNames.DeliveryStaff)
+            CanManageUserRoles = (await authorizationService.AuthorizeAsync(user, SystemPermissions.Users.ManageRoles).ConfigureAwait(false)).Succeeded,
+            CanViewDeliveryRuns = (await authorizationService.AuthorizeAsync(user, SystemPermissions.DeliveryRuns.View).ConfigureAwait(false)).Succeeded,
+            CanUseDeliveryMobile = (await authorizationService.AuthorizeAsync(user, SystemPermissions.DeliveryRuns.MobileAccess).ConfigureAwait(false)).Succeeded,
         };
 
         return View(model);

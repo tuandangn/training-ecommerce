@@ -1,8 +1,10 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Web.Contracts.Commands.Models.Debts;
 using NamEcommerce.Web.Contracts.Models.Debts;
 using NamEcommerce.Web.Contracts.Queries.Models.Debts;
+using NamEcommerce.Web.Contracts.Security;
 
 namespace NamEcommerce.Web.Controllers;
 
@@ -10,7 +12,7 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
 {
     private readonly IMediator _mediator = mediator;
 
-    /// <summary>Trang danh sách: hiển thị NCC có công nợ (gom nhóm).</summary>
+    [Authorize(Policy = SystemPermissions.Debts.VendorDebtsView)]
     public async Task<IActionResult> Index(string? keywords, int pageIndex = 1)
     {
         var model = await _mediator.Send(new GetVendorDebtListQuery
@@ -22,7 +24,7 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
         return View(model);
     }
 
-    /// <summary>Trang chi tiết: toàn bộ công nợ + tiền ứng trước của 1 NCC.</summary>
+    [Authorize(Policy = SystemPermissions.Debts.VendorDebtsView)]
     public async Task<IActionResult> Details(Guid vendorId)
     {
         var model = await _mediator.Send(new GetVendorDebtDetailsQuery { VendorId = vendorId }).ConfigureAwait(false);
@@ -34,8 +36,8 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
         return View(model);
     }
 
-    /// <summary>Ghi nhận thanh toán cho 1 phiếu nợ cụ thể (POST).</summary>
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Debts.VendorDebtsRecordPayment)]
     public async Task<IActionResult> RecordPayment(RecordVendorPaymentModel model)
     {
         if (!ModelState.IsValid)
@@ -47,8 +49,8 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
             : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
-    /// <summary>Thanh toán linh động FIFO — phân bổ vào các phiếu nợ còn lại (POST).</summary>
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Debts.VendorDebtsRecordPayment)]
     public async Task<IActionResult> RecordFlexiblePayment(RecordVendorPaymentModel model)
     {
         if (!ModelState.IsValid)
@@ -60,8 +62,8 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
             : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
-    /// <summary>Ghi nhận tiền ứng trước cho NCC (POST).</summary>
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Debts.VendorDebtsRecordPayment)]
     public async Task<IActionResult> RecordAdvance(RecordVendorPaymentModel model)
     {
         if (!ModelState.IsValid)
@@ -73,7 +75,7 @@ public sealed class VendorDebtController(IMediator mediator) : BaseAuthorizedCon
             : Json(new { success = false, message = LocalizeError(result.ErrorMessage!) });
     }
 
-    /// <summary>In phiếu chi cho 1 lần thanh toán NCC.</summary>
+    [Authorize(Policy = SystemPermissions.Debts.VendorDebtsView)]
     public async Task<IActionResult> Receipt(Guid paymentId)
     {
         var model = await _mediator.Send(new GetVendorPaymentReceiptQuery { PaymentId = paymentId }).ConfigureAwait(false);

@@ -1,9 +1,11 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.CustomerPortal;
 using NamEcommerce.Web.Contracts.Commands.Models.Customers;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Queries.Models.Customers;
+using NamEcommerce.Web.Contracts.Security;
 using NamEcommerce.Web.Models.Customers;
 
 namespace NamEcommerce.Web.Controllers;
@@ -26,6 +28,7 @@ public sealed class CustomerController : BaseAuthorizedController
 
     public IActionResult Index() => RedirectToAction(nameof(List));
 
+    [Authorize(Policy = SystemPermissions.Customers.View)]
     public async Task<IActionResult> List(CustomerListSearchModel searchModel)
     {
         var pageNumber = searchModel?.PageNumber ?? 1;
@@ -82,12 +85,14 @@ public sealed class CustomerController : BaseAuthorizedController
         });
     }
 
+    [Authorize(Policy = SystemPermissions.Customers.Manage)]
     public IActionResult Create()
     {
         return View(new CreateCustomerModel());
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Customers.Manage)]
     public async Task<IActionResult> Create(CreateCustomerModel model)
     {
         if (!ModelState.IsValid)
@@ -114,6 +119,7 @@ public sealed class CustomerController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Customers.Manage)]
     public async Task<IActionResult> QuickCreate(CreateCustomerModel model)
     {
         if (!ModelState.IsValid)
@@ -150,6 +156,7 @@ public sealed class CustomerController : BaseAuthorizedController
         });
     }
 
+    [Authorize(Policy = SystemPermissions.Customers.Manage)]
     public async Task<IActionResult> Edit(Guid id)
     {
         var customer = await _mediator.Send(new GetCustomerByIdQuery { Id = id });
@@ -174,6 +181,7 @@ public sealed class CustomerController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Customers.Manage)]
     public async Task<IActionResult> Edit(EditCustomerModel model)
     {
         if (!ModelState.IsValid)
@@ -204,6 +212,7 @@ public sealed class CustomerController : BaseAuthorizedController
     }
 
     [HttpPost]
+    [Authorize(Policy = SystemPermissions.Customers.Manage)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var result = await _mediator.Send(new DeleteCustomerCommand { Id = id });

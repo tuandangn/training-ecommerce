@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NamEcommerce.Application.Contracts.Report;
+using NamEcommerce.Web.Contracts.Security;
 using ClosedXML.Excel;
 
 namespace NamEcommerce.Web.Controllers;
@@ -16,6 +18,7 @@ public sealed class ReportController : BaseAuthorizedController
     }
 
     [HttpGet]
+    [Authorize(Policy = SystemPermissions.Finance.ReportsFinancial)]
     public async Task<IActionResult> Financial(DateTime? fromDate, DateTime? toDate)
     {
         // Default to last 30 days if not specified
@@ -31,6 +34,7 @@ public sealed class ReportController : BaseAuthorizedController
     }
 
     [HttpGet]
+    [Authorize(Policy = SystemPermissions.Finance.ReportsDirectShip)]
     public async Task<IActionResult> DirectShip(DateTime? fromDate, DateTime? toDate)
     {
         if (!fromDate.HasValue) fromDate = DateTime.Today.AddDays(-30);
@@ -45,6 +49,7 @@ public sealed class ReportController : BaseAuthorizedController
     }
 
     [HttpGet]
+    [Authorize(Policy = SystemPermissions.Finance.ReportsFinancial)]
     public async Task<IActionResult> ExportIncomeStatementExcel(DateTime? fromDate, DateTime? toDate)
     {
         if (!fromDate.HasValue) fromDate = DateTime.Today.AddDays(-30);
