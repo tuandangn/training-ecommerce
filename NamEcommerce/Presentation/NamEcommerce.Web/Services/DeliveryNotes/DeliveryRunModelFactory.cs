@@ -134,13 +134,14 @@ public sealed class DeliveryRunModelFactory(
 
         var candidateRuns = pagedData.Items
             .Where(run => run.Status != (int)DeliveryRunStatus.Cancelled)
+            .Where(run => run.Status != (int)DeliveryRunStatus.Closed)
             .ToList();
         var runs = new List<DeliveryMobileRunListItemModel>();
         foreach (var run in candidateRuns)
         {
             var details = await PrepareDeliveryRunDetailsModelAsync(run.Id).ConfigureAwait(false);
             var model = ToMobileListModel(run, details.Items);
-            if (!showCompleted && model.IsDeliveryCompleted)
+            if (showCompleted != model.IsDeliveryCompleted)
                 continue;
 
             runs.Add(model);

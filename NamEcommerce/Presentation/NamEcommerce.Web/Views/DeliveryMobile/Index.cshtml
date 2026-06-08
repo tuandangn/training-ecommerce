@@ -13,7 +13,7 @@
         <p class="mobile-subtitle">@Model.CurrentUserFullName</p>
     </div>
     <div class="d-flex gap-2">
-        <a asp-action="Index" asp-route-showCompleted="@(!Model.ShowCompleted)" class="btn btn-outline-secondary mobile-icon-button" aria-label="@(Model.ShowCompleted ? "Ẩn chuyến đã giao" : "Xem chuyến đã giao")">
+        <a asp-action="Index" asp-route-showCompleted="@(!Model.ShowCompleted)" class="btn btn-outline-secondary mobile-icon-button" aria-label="@(Model.ShowCompleted ? "Ẩn chuyến đã giao" : "Xem chuyến đã giao chờ đóng")">
             <i class="bi @(Model.ShowCompleted ? "bi-eye-slash" : "bi-clock-history")"></i>
         </a>
         <a asp-controller="User" asp-action="Logout" class="btn btn-outline-secondary mobile-icon-button" aria-label="Đăng xuất">
@@ -118,8 +118,8 @@ else
 {
     <div class="mobile-card mobile-empty">
         <div class="mobile-empty-icon"><i class="bi bi-truck"></i></div>
-        <h2 class="h5 fw-bold mb-2">@(Model.ShowCompleted ? "Chưa có chuyến đã giao" : "Chưa có chuyến cần giao")</h2>
-        <p class="mobile-meta mb-0">@(Model.ShowCompleted ? "Các chuyến đã giao xong sẽ hiện ở đây khi bạn cần xem lại." : "Chuyến mới sẽ hiện ở đây sau khi quản kho tạo và gán cho bạn.")</p>
+        <h2 class="h5 fw-bold mb-2">@(Model.ShowCompleted ? "Chưa có chuyến đã giao chờ đóng" : "Chưa có chuyến cần giao")</h2>
+        <p class="mobile-meta mb-0">@(Model.ShowCompleted ? "Chỉ các chuyến đã giao xong nhưng quản kho chưa đóng mới hiện ở đây." : "Chuyến mới sẽ hiện ở đây sau khi quản kho tạo và gán cho bạn.")</p>
     </div>
 }
 
