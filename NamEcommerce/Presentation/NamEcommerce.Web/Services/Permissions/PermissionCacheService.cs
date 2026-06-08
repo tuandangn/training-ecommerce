@@ -2,7 +2,6 @@ using Microsoft.Extensions.Caching.Memory;
 using NamEcommerce.Domain.Entities.Security;
 using NamEcommerce.Domain.Entities.Users;
 using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Domain.Shared.Dtos.Users;
 
 namespace NamEcommerce.Web.Services.Permissions;
 

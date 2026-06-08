@@ -1,7 +1,6 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Web.Contracts.Queries.Models.Users;
-using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Queries.Handlers.Users;
 

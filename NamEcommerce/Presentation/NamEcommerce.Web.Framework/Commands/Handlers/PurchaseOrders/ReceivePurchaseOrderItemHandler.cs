@@ -3,8 +3,8 @@ using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Dtos.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Commands.Models.PurchaseOrders;
-using NamEcommerce.Web.Contracts.Services;
 using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Application.Contracts.Users;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.PurchaseOrders;
 

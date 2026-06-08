@@ -1,0 +1,10 @@
+﻿using NamEcommerce.Application.Contracts.Dtos.Users;
+
+namespace NamEcommerce.Application.Contracts.Users;
+
+public interface ICurrentUserService
+{
+    ValueTask<CurrentUserInfoAppDto?> GetCurrentUserInfoAsync();
+
+    ValueTask<bool> IsAuthenticatedAsync();
+}

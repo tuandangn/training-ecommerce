@@ -1,9 +1,9 @@
 using MediatR;
 using NamEcommerce.Application.Contracts.Debts;
 using NamEcommerce.Application.Contracts.Dtos.Debts;
+using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Web.Contracts.Commands.Models.Debts;
 using NamEcommerce.Web.Contracts.Models.Common;
-using NamEcommerce.Web.Contracts.Services;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Debts;
 

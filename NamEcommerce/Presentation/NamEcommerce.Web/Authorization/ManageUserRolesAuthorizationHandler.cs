@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using NamEcommerce.Application.Contracts.Users;
-using NamEcommerce.Domain.Shared.Dtos.Users;
+using NamEcommerce.Domain.Shared.Common;
 using System.Security.Claims;
 
 namespace NamEcommerce.Web.Authorization;

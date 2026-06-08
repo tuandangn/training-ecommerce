@@ -3,7 +3,6 @@ using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Contracts.Users;
-using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Models.DeliveryNotes;
@@ -18,6 +17,7 @@ using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Web.Models.DeliveryNotes;
 using NamEcommerce.Web.Framework.Services;
 using NamEcommerce.Web.Contracts.Configurations;
+using NamEcommerce.Domain.Shared.Common;
 
 namespace NamEcommerce.Web.Services.DeliveryNotes;
 

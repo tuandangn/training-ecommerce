@@ -1,7 +1,7 @@
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Users;
-using NamEcommerce.Domain.Shared.Dtos.Users;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Web.Contracts.Configurations;
 using NamEcommerce.Web.Contracts.Models.Common;

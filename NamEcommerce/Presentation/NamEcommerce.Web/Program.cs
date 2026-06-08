@@ -71,7 +71,6 @@ using NamEcommerce.Domain.Services.StockAdjustment;
 using NamEcommerce.Domain.Services.StockTransfer;
 using NamEcommerce.Domain.Services.Users;
 using NamEcommerce.Domain.Shared.Common;
-using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Services.Catalog;
 using NamEcommerce.Domain.Shared.Services.CustomerPortal;
 using NamEcommerce.Domain.Shared.Services.Customers;

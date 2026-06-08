@@ -1,25 +1,28 @@
 ﻿using NamEcommerce.Domain.Shared.Dtos.Users;
 using NamEcommerce.Domain.Shared.Services.Users;
-using NamEcommerce.Web.Contracts.Services;
+using System.Security.Claims;
 
 namespace NamEcommerce.Web.Services.Users;
 
-public sealed class CurrentUserAccessor : ICurrentUserAccessor
+public sealed class CurrentUserAccessor(IHttpContextAccessor httpContextAccessor) : ICurrentUserAccessor
 {
-    private readonly ICurrentUserService _currentUserService;
-
-    public CurrentUserAccessor(ICurrentUserService currentUserService)
-    {
-        _currentUserService = currentUserService;
-    }
-
     public async Task<CurrentUserInfoDto?> GetCurrentUserAsync()
     {
-        var currentUser = await _currentUserService.GetCurrentUserInfoAsync();
-
-        if (currentUser is null)
+        var httpContext = httpContextAccessor.HttpContext;
+        if (httpContext is null)
             return null;
 
-        return new CurrentUserInfoDto(currentUser.Id, currentUser.Username, currentUser.FullName);
+        var claimsPrincipal = httpContext.User;
+        if (claimsPrincipal is null)
+            return null;
+
+        var isValidId = Guid.TryParse(claimsPrincipal.FindFirstValue(ClaimTypes.NameIdentifier), out var id);
+        var username = claimsPrincipal.FindFirstValue(ClaimTypes.Email);
+        var fullName = claimsPrincipal.FindFirstValue(ClaimTypes.Name);
+
+        if (!isValidId || string.IsNullOrEmpty(username) || string.IsNullOrEmpty(fullName))
+            return null;
+
+        return new CurrentUserInfoDto(id, username, fullName);
     }
 }
