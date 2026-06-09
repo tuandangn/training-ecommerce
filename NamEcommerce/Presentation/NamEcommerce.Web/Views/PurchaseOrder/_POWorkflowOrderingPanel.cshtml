@@ -18,7 +18,8 @@
             <div class="d-flex gap-2 flex-wrap align-items-center">
                 @if (Model.Info.Status == (int)PurchaseOrderStatus.Draft)
                 {
-                    <form asp-action="SubmitsPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline">
+                    <form asp-action="SubmitsPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline change-status-form" 
+                        data-new-status="@(PurchaseOrderStatus.Submitted.GetDisplayText())" data-confirm-text="Bạn muốn gửi đơn hàng này để duyệt?">
                         <button type="submit" class="btn btn-sm btn-primary" data-testid="po-submit-for-approval">
                             <i class="bi bi-send me-1"></i>Gửi đơn
                         </button>
@@ -26,15 +27,17 @@
                 }
                 else if (Model.Info.Status == (int)PurchaseOrderStatus.Submitted)
                 {
-                    <form asp-action="ChangeStatus" asp-route-id="@Model.Info.Id" asp-route-status="@((int)PurchaseOrderStatus.Approved)" method="post" class="d-inline">
+                    <form asp-action="ChangeStatus" asp-route-id="@Model.Info.Id" asp-route-status="@((int)PurchaseOrderStatus.Approved)" method="post" 
+                        class="d-inline change-status-form" data-new-status="@(PurchaseOrderStatus.Approved.GetDisplayText())" data-confirm-text="Bạn xác nhận duyệt đơn hàng này?">
                         <button type="submit" class="btn btn-sm btn-info text-white" data-testid="po-approve">
-                            <i class="bi bi-check-all me-1"></i>Duyệt đơn
+                            <i class="bi bi-check me-1"></i>Duyệt đơn
                         </button>
                     </form>
                 }
                 @if (Model.Info.Status != (int)PurchaseOrderStatus.Completed && Model.Info.Status != (int)PurchaseOrderStatus.Cancelled)
                 {
-                    <form asp-action="CancelPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline">
+                    <form asp-action="CancelPurchaseOrder" asp-route-id="@Model.Info.Id" method="post" class="d-inline change-status-form" 
+                        data-new-status="@(PurchaseOrderStatus.Cancelled.GetDisplayText())" data-confirm-text="Bạn xác nhận hủy đơn hàng này?">
                         <button type="submit" class="btn btn-sm btn-outline-danger">
                             <i class="bi bi-x-circle me-1"></i><span class="d-none d-md-inline">Hủy đơn</span>
                         </button>

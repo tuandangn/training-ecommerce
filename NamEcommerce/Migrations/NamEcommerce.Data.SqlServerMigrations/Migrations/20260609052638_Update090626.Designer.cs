@@ -13,8 +13,8 @@ using NamEcommerce.Data.SqlServer;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     [DbContext(typeof(NamEcommerceEfDbContext))]
-    [Migration("20260609040211_AddSystemNotifications")]
-    partial class AddSystemNotifications
+    [Migration("20260609052638_Update090626")]
+    partial class Update090626
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -2912,6 +2912,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid?>("SourceDeliveryNoteItemId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("TaxAmount")
                         .ValueGeneratedOnAdd()

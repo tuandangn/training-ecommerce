@@ -65,6 +65,7 @@ public sealed class SystemNotificationAppService(ISystemNotificationManager mana
             UserPermissions = dto.UserPermissions,
             UserId = dto.UserId,
             Type = GetNullableNotificationType(dto.Type),
+            Types = dto.Types?.Select(t => (SystemNotificationType)t).Where(t => Enum.IsDefined(t)).ToList(),
             Severity = GetNullableNotificationSeverity(dto.Severity),
             IsRead = dto.IsRead,
             PageIndex = dto.PageIndex,

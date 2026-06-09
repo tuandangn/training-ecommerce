@@ -51,6 +51,7 @@ public sealed record SystemNotificationListFilterAppDto
     public IReadOnlyCollection<string> UserPermissions { get; init; } = [];
     public Guid? UserId { get; init; }
     public int? Type { get; init; }
+    public IReadOnlyCollection<int>? Types { get; init; }
     public int? Severity { get; init; }
     public bool? IsRead { get; init; }
     public int PageIndex { get; init; }

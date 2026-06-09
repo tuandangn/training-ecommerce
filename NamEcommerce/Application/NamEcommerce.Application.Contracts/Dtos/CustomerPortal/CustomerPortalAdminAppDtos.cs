@@ -9,8 +9,6 @@ public sealed record CustomerPortalAdminOverviewAppDto
     public IList<CustomerPortalOrderRequestAdminAppDto> PendingOrderRequests { get; init; } = [];
     public IList<CustomerPortalReturnRequestAdminAppDto> PendingReturnRequests { get; init; } = [];
     public IList<CustomerPortalPaymentIntentAdminAppDto> PendingPaymentIntents { get; init; } = [];
-    public IList<CustomerPortalNotificationAdminAppDto> RecentNotifications { get; init; } = [];
-    public int UnreadNotificationCount { get; init; }
 }
 
 [Serializable]
@@ -77,23 +75,6 @@ public sealed record CustomerPortalSecurityEventAdminAppDto
     public DateTime CreatedOnUtc { get; init; }
 }
 
-[Serializable]
-public sealed record CustomerPortalNotificationAdminAppDto
-{
-    public required Guid Id { get; init; }
-    public required Guid CustomerId { get; init; }
-    public required string CustomerName { get; init; }
-    public string? CustomerPhone { get; init; }
-    public int Type { get; init; }
-    public int Status { get; init; }
-    public required string Title { get; init; }
-    public string? Message { get; init; }
-    public Guid? RelatedEntityId { get; init; }
-    public string? RelatedEntityType { get; init; }
-    public DateTime CreatedOnUtc { get; init; }
-    public DateTime? ReadOnUtc { get; init; }
-    public Guid? ReadByUserId { get; init; }
-}
 
 [Serializable]
 public sealed record CustomerPortalOrderRequestAdminAppDto

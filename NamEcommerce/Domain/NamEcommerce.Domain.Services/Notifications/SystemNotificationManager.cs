@@ -43,7 +43,9 @@ public sealed class SystemNotificationManager(
         var query = notificationReader.DataSource
             .Where(notification => permissions.Contains(notification.RequiredPermission));
 
-        if (dto.Type.HasValue)
+        if (dto.Types is { Count: > 0 })
+            query = query.Where(notification => dto.Types.Contains(notification.Type));
+        else if (dto.Type.HasValue)
             query = query.Where(notification => notification.Type == dto.Type.Value);
         if (dto.Severity.HasValue)
             query = query.Where(notification => notification.Severity == dto.Severity.Value);

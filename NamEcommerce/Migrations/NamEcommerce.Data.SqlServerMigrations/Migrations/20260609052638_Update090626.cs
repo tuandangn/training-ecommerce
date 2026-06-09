@@ -6,11 +6,18 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace NamEcommerce.Data.SqlServerMigrations.Migrations
 {
     /// <inheritdoc />
-    public partial class AddSystemNotifications : Migration
+    public partial class Update090626 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<Guid>(
+                name: "SourceDeliveryNoteItemId",
+                schema: "tbl",
+                table: "GoodsReceiptItem",
+                type: "uniqueidentifier",
+                nullable: true);
+
             migrationBuilder.CreateTable(
                 name: "SystemNotification",
                 schema: "tbl",
@@ -92,6 +99,11 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
             migrationBuilder.DropTable(
                 name: "SystemNotificationRead",
                 schema: "tbl");
+
+            migrationBuilder.DropColumn(
+                name: "SourceDeliveryNoteItemId",
+                schema: "tbl",
+                table: "GoodsReceiptItem");
         }
     }
 }

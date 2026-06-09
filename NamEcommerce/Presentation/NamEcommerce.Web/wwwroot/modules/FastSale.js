@@ -1,4 +1,5 @@
 import { apiPost } from "/modules/ajax-helper.js";
+import { confirm } from "/modules/modals.js";
 import CustomerPicker from "/modules/CustomerPicker.js";
 import ProductBrowser from "/modules/ProductBrowser.js";
 import ItemEditor from "/modules/ItemEditor.js";
@@ -278,7 +279,7 @@ class FastSale {
     }
 
     isProductSelectable(product) {
-        if (this.fulfillmentMode !== 'deliverNow') return true;
+        if (this.fulfillmentMode !== 'deliverNow' || this.deliverNow.disabled) return true;
 
         return Number(product?.availableQty ?? product?.quantityAvailable ?? 0) > 0;
     }
@@ -436,6 +437,7 @@ class FastSale {
                 this.cart.splice(index, 1);
                 this.resetPaymentIntent();
                 this.render();
+                this.productBrowser.refresh();
             });
 
             if (this.itemEditor) {
@@ -622,6 +624,12 @@ class FastSale {
         if (this.paymentTiming === 'payNow' && this.paymentMethod === 'bank' && !this.paymentIntentConfirmed) {
             this.showAlert('warning', 'Chuyển khoản chưa được xác nhận.');
             return;
+        }
+
+        if (this.paymentTiming == 'unpaid' && this.selectedCustomer?.id == this.defaultCustomer) {
+            if (! await confirm('Chưa thanh toán', 'Khách hàng hiện tại là khách lẻ. Bạn có chắc chắn muốn tạo đơn chưa thanh toán cho khách này không?')) {
+                return;
+            }
         }
 
         const payload = this.buildSalePayload();

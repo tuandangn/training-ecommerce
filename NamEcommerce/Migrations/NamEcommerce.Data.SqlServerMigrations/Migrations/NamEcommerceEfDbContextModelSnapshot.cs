@@ -2910,6 +2910,9 @@ namespace NamEcommerce.Data.SqlServerMigrations.Migrations
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<Guid?>("SourceDeliveryNoteItemId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<decimal>("TaxAmount")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("decimal(18,2)")

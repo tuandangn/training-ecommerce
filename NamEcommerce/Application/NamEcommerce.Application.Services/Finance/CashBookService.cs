@@ -55,6 +55,7 @@ public sealed class CashBookService : ICashBookService
         var expensesOut = _expenses.DataSource
             .Where(e => (e.PaymentMethod == null || e.PaymentMethod == PaymentMethod.Cash)
                      && e.IncurredDate <= asOf)
+            .ToList()
             .Sum(e => (decimal?)e.AmountExcludingTax) ?? 0;
 
         return setup.OpeningCash + cashIn - refundsOut - vendorOut - expensesOut;

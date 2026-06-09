@@ -10,7 +10,7 @@ public interface IInventoryAppService
     Task<IReadOnlyList<InventoryCostHistoryAppDto>> GetInventoryCostHistoryAsync(Guid productId, Guid? warehouseId = null, int take = 20);
     Task<IPagedDataAppDto<StockMovementLogAppDto>> GetStockMovementLogsAsync(Guid? productId, Guid? warehouseId, int pageIndex, int pageSize);
     Task<IPagedDataAppDto<ProductReservationLedgerAppDto>> GetProductReservationLedgerAsync(Guid productId, int pageIndex, int pageSize);
-    Task<decimal> GetGlobalAvailableForProductAsync(Guid productId);
+    Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null);
     Task<SetStockLevelsResultAppDto> SetStockLevelsAsync(SetStockLevelsAppDto dto);
     Task<string?> GetReturnWarehouseNameForDeliveryNoteAsync(Guid deliveryNoteId, Guid deliveryNoteWarehouseId);
 }

@@ -28,10 +28,10 @@
                     <div class="content-card-header">
                         <h5>Danh sách hàng trả</h5>
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnLoadFromNote" style="display:none!important">
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none @(Model.DeliveryNoteId.HasValue ? "" : "d-none")" id="btnLoadFromNote">
                                 <i class="bi bi-arrow-repeat me-1"></i>Tải lại
                             </button>
-                            <button type="button" class="btn btn-sm bg-light text-primary" id="btnAddFreeItem">
+                            <button type="button" class="btn btn-sm bg-light" id="btnAddFreeItem">
                                 <i class="bi bi-plus-lg me-1"></i>Thêm hàng trả
                             </button>
                         </div>
@@ -89,7 +89,7 @@
                             Chưa có hàng hóa nào được chọn.
                         </div>
                     </div>
-                    <div class="content-card-footer py-2">
+                    <div class="content-card-footer py-2 bg-white mb-3">
                         <div class="d-flex justify-content-end align-items-center gap-3">
                             <span class="text-muted small">Tổng giá trị:</span>
                             <span id="totalReturnValue" class="fw-semibold text-primary">0 ₫</span>
@@ -103,9 +103,10 @@
                             <span id="netRefundAmount" class="fw-bold text-success fs-6">0 ₫</span>
                         </div>
                     </div>
-                    <div class="content-card-footer py-2 d-flex align-items-center justify-content-between border-top">
-                        <a asp-action="List" class="btn btn-link text-decoration-none">
-                            <span class="text-muted small">Trở về</span>
+                    <div class="content-card-footer d-flex align-items-center justify-content-between">
+                        <a asp-action="List" class="btn btn-link text-decoration-none text-muted btn-sm">
+                            <i class="bi bi-arrow-left"></i>
+                            Trở về
                         </a>
                         <button type="submit" class="btn btn-primary">Tạo phiếu</button>
                     </div>
@@ -150,11 +151,6 @@
                         <div class="mb-0">
                             <label asp-for="Note" class="form-label small fw-bold text-muted text-uppercase d-block"></label>
                             <textarea asp-for="Note" class="form-control" rows="3" placeholder="Lý do trả hàng..."></textarea>
-                        </div>
-                    </div>
-                    <div class="content-card-footer d-none d-lg-block">
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary">Tạo phiếu</button>
                         </div>
                     </div>
                 </div>
@@ -257,7 +253,7 @@
 
         function updateLoadBtn(show) {
             const btn = document.getElementById('btnLoadFromNote');
-            btn.style.setProperty('display', show ? 'inline-flex' : 'none', 'important');
+            btn.classList.toggle('d-none', !show);
         }
 
         // ── Load items từ phiếu giao / hàng đã giao ─────────────────────────────

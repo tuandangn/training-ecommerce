@@ -309,7 +309,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         return Task.FromResult(stockQuery.Sum(x => x.QuantityOnHand));
     }
 
-    public Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId)
+    public Task<decimal> GetGlobalAvailableQuantityForProductAsync(Guid productId, Guid? excludeOrderId = null)
     {
         var stockQuery = from s in _inventoryStockDataReader.DataSource
                          join w in _warehouseDataReader.DataSource on s.WarehouseId equals w.Id
@@ -318,7 +318,7 @@ public sealed class InventoryStockManager : IInventoryStockManager
         var quantityOnHand = stockQuery.Sum(x => x.QuantityOnHand);
         var quantityReservedByWarehouse = stockQuery.Sum(x => x.QuantityReserved);
         var quantityReservedByOrder = _productReservationDataReader.DataSource
-            .Where(x => x.ProductId == productId)
+            .Where(x => x.ProductId == productId && (excludeOrderId == null || x.OrderId != excludeOrderId))
             .Sum(x => x.QuantityDelta);
 
         return Task.FromResult(quantityOnHand - quantityReservedByWarehouse - quantityReservedByOrder);

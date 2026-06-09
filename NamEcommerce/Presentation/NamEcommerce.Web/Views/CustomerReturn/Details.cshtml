@@ -122,13 +122,13 @@
                 <div class="d-flex gap-2">
                     @if (status == CustomerReturnStatus.Draft)
                     {
-                        <button type="button" class="btn btn-sm btn-outline-warning btn-move-inspecting" data-id="@Model.Id">
+                        <button type="button" class="btn btn-sm btn-secondary btn-move-inspecting" data-id="@Model.Id">
                             <i class="bi bi-search me-1"></i>Chuyển sang kiểm tra
                         </button>
                     }
                     @if (status == CustomerReturnStatus.Inspecting)
                     {
-                        <button type="button" class="btn btn-sm btn-outline-success btn-confirm" data-id="@Model.Id" data-bs-toggle="modal" data-bs-target="#confirmReturnModal">
+                        <button type="button" class="btn btn-sm btn-success btn-confirm" data-id="@Model.Id" data-bs-toggle="modal" data-bs-target="#confirmReturnModal">
                             <i class="bi bi-check-circle me-1"></i>Xác nhận trả hàng
                         </button>
                     }

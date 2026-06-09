@@ -23,6 +23,7 @@ public sealed class SystemNotificationModelFactory(
             UserId = snapshot.UserId,
             UserPermissions = snapshot.Permissions,
             Type = searchModel.Type,
+            TypeGroup = searchModel.TypeGroup,
             Severity = searchModel.Severity,
             IsRead = searchModel.IsRead,
             PageIndex = pageNumber - 1,

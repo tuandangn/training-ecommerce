@@ -275,17 +275,6 @@ public sealed record DeliveryNote : AppAggregateEntity
         RaiseDomainEvent(new DeliveryNoteCancelled(Id, wasReservingStock));
     }
 
-    private void EnsureDeliveryUserAssignedBeforeLeavingWarehouse()
-    {
-        if (RequiresDeliveryUserBeforeLeavingWarehouse() && !AssignedDeliveryUserId.HasValue)
-            throw new NamEcommerceDomainException("Error.DeliveryUserRequiredBeforeLeavingWarehouse");
-    }
-
-    private bool RequiresDeliveryUserBeforeLeavingWarehouse()
-        => SourceType == DeliveryNoteSourceType.ToCustomer
-           && !IsDirectShip
-           && !string.Equals(ShippingAddress.Value.Trim(), "Tai quay", StringComparison.OrdinalIgnoreCase);
-
     private void SetDeliveryCompletionMetadata(double? latitude, double? longitude, string? locationAddress,
         string? completionNote, string? completionSource, string? idempotencyKey, decimal? cashCollectedAmount)
     {

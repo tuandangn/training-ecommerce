@@ -1,3 +1,4 @@
+@using NamEcommerce.Web.Contracts.Models.Notifications
 @model SystemNotificationListModel
 @{
     ViewData["Title"] = "Thông báo";
@@ -29,12 +30,14 @@
         SystemNotificationType.DeliveryNoteConfirmed => "Phiếu xuất xác nhận",
         SystemNotificationType.DeliveryNoteDelivering => "Đang giao",
         SystemNotificationType.DeliveryNoteDelivered => "Đã giao",
+        SystemNotificationType.DeliveryNoteShipperNotResponded => "Shipper không phản hồi",
         SystemNotificationType.DeliveryRunCreated => "Chuyến giao mới",
         SystemNotificationType.DeliveryRunHandedOver => "Đã bàn giao",
         SystemNotificationType.DeliveryRunCashHandoverPending => "Chờ bàn giao tiền",
         SystemNotificationType.GoodsReceiptCreated => "Nhập kho",
         SystemNotificationType.PurchaseOrderCreated => "Phiếu mua mới",
         SystemNotificationType.PurchaseOrderStatusChanged => "Phiếu mua đổi trạng thái",
+        SystemNotificationType.InventoryCostReturnReversalLost => "Hoàn giá vốn lỗi",
         _ => "Thông báo"
     };
 }
@@ -51,18 +54,52 @@
 }
 
 <div class="content-card mb-3">
-    <div class="action-toolbar">
+    <div class="px-3 pt-3 border-bottom">
+        <ul class="nav nav-tabs border-0">
+            <li class="nav-item">
+                <a class="nav-link @(Model.TypeGroup == null ? "active" : "")" asp-action="List" asp-route-isRead="@Model.IsRead" asp-route-severity="@Model.Severity">Tất cả</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(Model.TypeGroup == (int)SystemNotificationTypeGroup.CustomerPortal ? "active" : "")" asp-action="List" asp-route-typeGroup="@((int)SystemNotificationTypeGroup.CustomerPortal)" asp-route-isRead="@Model.IsRead" asp-route-severity="@Model.Severity">
+                    <i class="bi bi-person-lines-fill me-1"></i>Customer Portal
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(Model.TypeGroup == (int)SystemNotificationTypeGroup.Delivery ? "active" : "")" asp-action="List" asp-route-typeGroup="@((int)SystemNotificationTypeGroup.Delivery)" asp-route-isRead="@Model.IsRead" asp-route-severity="@Model.Severity">
+                    <i class="bi bi-truck me-1"></i>Giao hàng
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(Model.TypeGroup == (int)SystemNotificationTypeGroup.Procurement ? "active" : "")" asp-action="List" asp-route-typeGroup="@((int)SystemNotificationTypeGroup.Procurement)" asp-route-isRead="@Model.IsRead" asp-route-severity="@Model.Severity">
+                    <i class="bi bi-cart3 me-1"></i>Mua hàng
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(Model.TypeGroup == (int)SystemNotificationTypeGroup.Inventory ? "active" : "")" asp-action="List" asp-route-typeGroup="@((int)SystemNotificationTypeGroup.Inventory)" asp-route-isRead="@Model.IsRead" asp-route-severity="@Model.Severity">
+                    <i class="bi bi-boxes me-1"></i>Kho
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="action-toolbar align-items-end">
         <form asp-action="List" method="get" class="row g-2 align-items-end flex-grow-1">
-            <div class="col-md-3">
-                <label class="form-label small fw-bold text-muted text-uppercase">Loại</label>
-                <select name="Type" class="form-select">
-                    <option value="">Tất cả</option>
-                    @foreach (SystemNotificationType type in Enum.GetValues<SystemNotificationType>())
-                    {
-                        <option value="@((int)type)" selected="@(Model.Type == (int)type)">@TypeName((int)type)</option>
-                    }
-                </select>
-            </div>
+            @if (Model.TypeGroup.HasValue)
+            {
+                <input type="hidden" name="TypeGroup" value="@Model.TypeGroup" />
+            }
+            @if (Model.TypeGroup == null)
+            {
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Loại</label>
+                    <select name="Type" class="form-select">
+                        <option value="">Tất cả</option>
+                        @foreach (SystemNotificationType type in Enum.GetValues<SystemNotificationType>())
+                        {
+                            <option value="@((int)type)" selected="@(Model.Type == (int)type)">@TypeName((int)type)</option>
+                        }
+                    </select>
+                </div>
+            }
             <div class="col-md-3">
                 <label class="form-label small fw-bold text-muted text-uppercase">Mức độ</label>
                 <select name="Severity" class="form-select">
@@ -81,14 +118,14 @@
                     <option value="true" selected="@(Model.IsRead == true)">Đã đọc</option>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-1">
                 <button type="submit" class="btn btn-outline-primary w-100">
                     <i class="bi bi-search me-1"></i>Lọc
                 </button>
             </div>
         </form>
         <form asp-action="MarkAllRead" method="post">
-            <button type="submit" class="btn btn-light text-nowrap">
+            <button type="submit" class="btn btn-primary text-nowrap">
                 <i class="bi bi-check2-all me-1"></i>Đọc hết
             </button>
         </form>

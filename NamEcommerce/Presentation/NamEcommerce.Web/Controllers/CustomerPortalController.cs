@@ -11,10 +11,6 @@ public sealed class CustomerPortalController(
     ICustomerPortalAdminAppService customerPortalAdminAppService,
     IWarehouseAppService warehouseAppService) : BaseAuthorizedController
 {
-    private const string OrderRequestRelatedEntityType = "CustomerOrderRequest";
-    private const string ReturnRequestRelatedEntityType = "CustomerReturnRequest";
-    private const string DeliveryNoteRelatedEntityType = "DeliveryNote";
-
     public async Task<IActionResult> Index()
     {
         var model = await customerPortalAdminAppService.GetOverviewAsync().ConfigureAwait(false);
@@ -33,12 +29,9 @@ public sealed class CustomerPortalController(
         return View(model);
     }
 
-    public async Task<IActionResult> Notifications(int? status = null)
-    {
-        var model = await customerPortalAdminAppService.GetNotificationsAsync(status).ConfigureAwait(false);
-        ViewData["Status"] = status;
-        return View(model);
-    }
+    public IActionResult Notifications()
+        => RedirectToAction("List", "SystemNotification",
+            new { TypeGroup = (int)Web.Contracts.Models.Notifications.SystemNotificationTypeGroup.CustomerPortal });
 
     public async Task<IActionResult> Settings()
     {
@@ -128,31 +121,6 @@ public sealed class CustomerPortalController(
         var result = await customerPortalAdminAppService.UnblockAccountAsync(customerId).ConfigureAwait(false);
         NotifyResult(result);
         return RedirectBack(returnUrl, nameof(Accounts));
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> MarkNotificationRead(Guid id, string? returnUrl = null)
-    {
-        var result = await customerPortalAdminAppService.MarkNotificationReadAsync(id).ConfigureAwait(false);
-        NotifyResult(result);
-        return RedirectBack(returnUrl, nameof(Notifications));
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> OpenNotification(Guid id)
-    {
-        var notification = await customerPortalAdminAppService.GetNotificationAsync(id).ConfigureAwait(false);
-        if (notification is null)
-        {
-            NotifyError("Không tìm thấy thông báo.");
-            return RedirectToAction(nameof(Notifications));
-        }
-
-        var readResult = await customerPortalAdminAppService.MarkNotificationReadAsync(id).ConfigureAwait(false);
-        if (!readResult.Success)
-            NotifyResult(readResult);
-
-        return RedirectToNotificationTarget(notification);
     }
 
     [HttpPost]
@@ -286,18 +254,4 @@ public sealed class CustomerPortalController(
         => !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
             ? Redirect(returnUrl)
             : RedirectToAction(fallbackAction);
-
-    private IActionResult RedirectToNotificationTarget(CustomerPortalNotificationAdminAppDto notification)
-    {
-        if (!notification.RelatedEntityId.HasValue)
-            return RedirectToAction(nameof(Notifications));
-
-        return notification.RelatedEntityType switch
-        {
-            OrderRequestRelatedEntityType => RedirectToAction(nameof(OrderRequestDetails), new { id = notification.RelatedEntityId.Value }),
-            ReturnRequestRelatedEntityType => RedirectToAction(nameof(ReturnRequestDetails), new { id = notification.RelatedEntityId.Value }),
-            DeliveryNoteRelatedEntityType => RedirectToAction("Details", "DeliveryNote", new { id = notification.RelatedEntityId.Value }),
-            _ => RedirectToAction(nameof(Notifications))
-        };
-    }
 }

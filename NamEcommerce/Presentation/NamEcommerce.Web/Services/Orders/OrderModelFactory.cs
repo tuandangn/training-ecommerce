@@ -29,6 +29,7 @@ using NamEcommerce.Web.Contracts.Queries.Models.PurchaseOrders;
 using NamEcommerce.Web.Contracts.Queries.Models.Returns;
 using NamEcommerce.Web.Extensions;
 using NamEcommerce.Web.Models.Orders;
+using NamEcommerce.Application.Contracts.Inventory;
 
 namespace NamEcommerce.Web.Services.Orders;
 
@@ -45,6 +46,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
     private readonly ICustomerReturnAppService _customerReturnAppService;
     private readonly IPictureAppService _pictureAppService;
     private readonly IFinancialReportAppService _financialReportAppService;
+    private readonly IInventoryAppService _inventoryAppService;
 
     public OrderModelFactory(
         AppConfig appConfig,
@@ -57,7 +59,8 @@ public sealed class OrderModelFactory : IOrderModelFactory
         IOrderAuditAppService orderAuditAppService,
         ICustomerReturnAppService customerReturnAppService,
         IPictureAppService pictureAppService,
-        IFinancialReportAppService financialReportAppService)
+        IFinancialReportAppService financialReportAppService,
+        IInventoryAppService inventoryAppService)
     {
         _appConfig = appConfig;
         _mediator = mediator;
@@ -70,6 +73,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
         _pictureAppService = pictureAppService;
         _orderAuditAppService = orderAuditAppService;
         _financialReportAppService = financialReportAppService;
+        _inventoryAppService = inventoryAppService;
     }
 
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
@@ -159,7 +163,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 ProductId = it.ProductId,
                 ProductName = it.ProductName,
                 ProductPicture = it.ProductPicture,
-                ProductAvailableQty = it.ProductAvailableQty,
+                ProductAvailableQty = await _inventoryAppService.GetGlobalAvailableQuantityForProductAsync(it.ProductId, order.Id).ConfigureAwait(false),
                 Quantity = it.Quantity,
                 UnitPrice = it.UnitPrice,
                 QuantityDecimalPlaces = orderDecimalPlacesByProductId.GetValueOrDefault(it.ProductId)
@@ -543,7 +547,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     OrderItemId = item.Id,
                     ProductName = item.ProductName ?? string.Empty,
                     OrderedQuantity = item.Quantity,
-                    AvailableQuantity = Math.Max(0, shortageItem?.AvailableQuantity ?? item.ProductAvailableQty ?? 0),
+                    AvailableQuantity = item.ProductAvailableQty ?? 0,
                     ShortageQuantity = shortageItem?.ShortageQuantity ?? 0,
                     IssuedQuantity = item.GetDeliveredQuantity(issuedNotes),
                     DeliveredQuantity = item.GetDeliveredToCustomerQuantity(validNotes),
@@ -620,7 +624,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                     OrderItemId = item.Id,
                     ProductName = item.ProductName ?? string.Empty,
                     OrderedQuantity = item.Quantity,
-                    AvailableQuantity = Math.Max(0, shortageItem?.AvailableQuantity ?? item.ProductAvailableQty ?? 0),
+                    AvailableQuantity = item.ProductAvailableQty ?? 0,
                     IssuedQuantity = item.GetDeliveredQuantity(issuedNotes),
                     DeliveredQuantity = item.GetCustomerKeptQuantity(validNotes),
                     DirectShipQuantity = directShipAllocations.Sum(allocation => allocation.AllocatedQuantity),
@@ -859,7 +863,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
                 timeline.Add(new OrderDetailsModel.TimelineEventModel
                 {
                     OccurredOn = deliveryNote.UpdatedOn ?? deliveryNote.CreatedOn,
-                    Title = "Xác nhận xuất hàng",
+                    Title = "Xác nhận phiếu giao",
                     Description = deliveryNote.Code,
                     Icon = "bi-check-all",
                     Tone = "info",

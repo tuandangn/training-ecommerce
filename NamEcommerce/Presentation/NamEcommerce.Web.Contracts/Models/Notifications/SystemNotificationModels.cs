@@ -8,6 +8,7 @@ public sealed class SystemNotificationSearchModel
     public int? Type { get; set; }
     public int? Severity { get; set; }
     public bool? IsRead { get; set; }
+    public int? TypeGroup { get; set; }
     public int? PageNumber { get; set; }
     public int? PageSize { get; set; }
 }
@@ -20,6 +21,7 @@ public sealed class SystemNotificationListModel
     public int? Type { get; init; }
     public int? Severity { get; init; }
     public bool? IsRead { get; init; }
+    public int? TypeGroup { get; init; }
     public required IPagedDataModel<SystemNotificationListItemModel> Data { get; init; }
 }
 
