@@ -16,5 +16,6 @@ public enum SystemNotificationType
     GoodsReceiptCreated = 300,
     PurchaseOrderCreated = 400,
     PurchaseOrderStatusChanged = 410,
-    InventoryCostReturnReversalLost = 500
+    InventoryCostReturnReversalLost = 500,
+    DeliveryNoteShipperNotResponded = 601
 }

@@ -169,8 +169,6 @@ public sealed record DeliveryNote : AppAggregateEntity
         if (Status != DeliveryNoteStatus.Confirmed)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivering);
 
-        EnsureDeliveryUserAssignedBeforeLeavingWarehouse();
-
         Status = DeliveryNoteStatus.Delivering;
         UpdatedOnUtc = DateTime.UtcNow;
 
@@ -215,8 +213,6 @@ public sealed record DeliveryNote : AppAggregateEntity
             throw new DeliveryProofRequiredException();
 
         var wasConfirmed = Status == DeliveryNoteStatus.Confirmed;
-        if (wasConfirmed)
-            EnsureDeliveryUserAssignedBeforeLeavingWarehouse();
 
         Status = DeliveryNoteStatus.Delivered;
         DeliveredOnUtc = DateTime.UtcNow;
@@ -251,8 +247,6 @@ public sealed record DeliveryNote : AppAggregateEntity
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
 
         var wasConfirmed = Status == DeliveryNoteStatus.Confirmed;
-        if (wasConfirmed)
-            EnsureDeliveryUserAssignedBeforeLeavingWarehouse();
 
         DeliveryConfirmationStatus = DeliveryConfirmationStatus.Confirmed;
         ConfirmedAtUtc = receivedAtUtc;
