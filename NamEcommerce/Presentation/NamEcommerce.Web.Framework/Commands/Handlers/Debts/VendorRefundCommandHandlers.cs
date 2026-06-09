@@ -7,15 +7,15 @@ using NamEcommerce.Web.Contracts.Models.Common;
 
 namespace NamEcommerce.Web.Framework.Commands.Handlers.Debts;
 
-public sealed class CompleteCustomerRefundHandler(
-    ICustomerRefundAppService customerRefundAppService,
+public sealed class CompleteVendorRefundHandler(
+    IVendorRefundAppService vendorRefundAppService,
     ICurrentUserService currentUserService)
-    : IRequestHandler<CompleteCustomerRefundCommand, CommonActionResultModel>
+    : IRequestHandler<CompleteVendorRefundCommand, CommonActionResultModel>
 {
-    public async Task<CommonActionResultModel> Handle(CompleteCustomerRefundCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(CompleteVendorRefundCommand request, CancellationToken cancellationToken)
     {
         var currentUser = await currentUserService.GetCurrentUserInfoAsync().ConfigureAwait(false);
-        var result = await customerRefundAppService.CompleteAsync(new CompleteCustomerRefundAppDto
+        var result = await vendorRefundAppService.CompleteAsync(new CompleteVendorRefundAppDto
         {
             RefundId = request.Id,
             PaymentMethod = request.PaymentMethod,
@@ -28,12 +28,12 @@ public sealed class CompleteCustomerRefundHandler(
     }
 }
 
-public sealed class CancelCustomerRefundHandler(ICustomerRefundAppService customerRefundAppService)
-    : IRequestHandler<CancelCustomerRefundCommand, CommonActionResultModel>
+public sealed class CancelVendorRefundHandler(IVendorRefundAppService vendorRefundAppService)
+    : IRequestHandler<CancelVendorRefundCommand, CommonActionResultModel>
 {
-    public async Task<CommonActionResultModel> Handle(CancelCustomerRefundCommand request, CancellationToken cancellationToken)
+    public async Task<CommonActionResultModel> Handle(CancelVendorRefundCommand request, CancellationToken cancellationToken)
     {
-        var result = await customerRefundAppService.CancelAsync(request.Id).ConfigureAwait(false);
+        var result = await vendorRefundAppService.CancelAsync(request.Id).ConfigureAwait(false);
         return new CommonActionResultModel { Success = result.Success, ErrorMessage = result.ErrorMessage };
     }
 }

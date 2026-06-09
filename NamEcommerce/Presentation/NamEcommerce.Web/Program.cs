@@ -234,6 +234,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerReturnManager, CustomerReturnManager>();
     services.AddScoped<IVendorReturnManager, VendorReturnManager>();
     services.AddScoped<ICustomerRefundManager, CustomerRefundManager>();
+    services.AddScoped<IVendorRefundManager, VendorRefundManager>();
     services.AddScoped<IStockAdjustmentNoteManager, StockAdjustmentNoteManager>();
     services.AddScoped<IStockTransferNoteManager, StockTransferNoteManager>();
 
@@ -294,6 +295,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IVendorReturnAppService, VendorReturnAppService>();
     services.AddScoped<ILocalizationAppService, LocalizationService>();
     services.AddScoped<ICustomerRefundAppService, CustomerRefundAppService>();
+    services.AddScoped<IVendorRefundAppService, VendorRefundAppService>();
     services.AddScoped<IStockAdjustmentNoteAppService, StockAdjustmentNoteAppService>();
     services.AddScoped<IStockTransferNoteAppService, StockTransferNoteAppService>();
 
@@ -324,6 +326,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ICustomerReturnModelFactory, CustomerReturnModelFactory>();
     services.AddScoped<IVendorReturnModelFactory, VendorReturnModelFactory>();
     services.AddScoped<ICustomerRefundModelFactory, CustomerRefundModelFactory>();
+    services.AddScoped<IVendorRefundModelFactory, VendorRefundModelFactory>();
     services.AddScoped<IStockAdjustmentNoteModelFactory, StockAdjustmentNoteModelFactory>();
     services.AddScoped<IStockTransferNoteModelFactory, StockTransferNoteModelFactory>();
     services.AddScoped<IUserManagementModelFactory, UserManagementModelFactory>();

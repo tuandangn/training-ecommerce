@@ -12,76 +12,76 @@ using NamEcommerce.Domain.Shared.Services.Debts;
 
 namespace NamEcommerce.Domain.Services.Debts;
 
-public sealed class CustomerRefundManager(
-    IRepository<CustomerRefund> refundRepository,
-    IEntityDataReader<CustomerRefund> refundReader,
-    IEntityDataReader<CustomerReturn> customerReturnReader) : ICustomerRefundManager
+public sealed class VendorRefundManager(
+    IRepository<VendorRefund> refundRepository,
+    IEntityDataReader<VendorRefund> refundReader,
+    IEntityDataReader<VendorReturn> vendorReturnReader) : IVendorRefundManager
 {
     private async Task<string> GenerateCodeAsync()
     {
-        var monthPrefix = $"PC-KH-{DateTime.UtcNow:yyMM}";
+        var monthPrefix = $"PT-NCC-R-{DateTime.UtcNow:yyMM}";
         var count = refundReader.SecuredDataSource.Count(r => r.Code.StartsWith(monthPrefix));
         return $"{monthPrefix}-{(count + 1):D3}";
     }
 
-    public async Task<CustomerRefundDto> CreateAsync(CreateCustomerRefundDto dto)
+    public async Task<VendorRefundDto> CreateAsync(CreateVendorRefundDto dto)
     {
         dto.Verify();
 
-        // Idempotency: đã có refund cho CustomerReturn này rồi thì trả về
+        // Idempotency: đã có refund cho VendorReturn này rồi thì trả về
         var existing = refundReader.DataSource
-            .FirstOrDefault(r => r.CustomerReturnId == dto.CustomerReturnId
-                              && r.Status != CustomerRefundStatus.Cancelled);
+            .FirstOrDefault(r => r.VendorReturnId == dto.VendorReturnId
+                              && r.Status != VendorRefundStatus.Cancelled);
         if (existing != null)
             return MapToDto(existing);
 
         var code = await GenerateCodeAsync().ConfigureAwait(false);
-        var customerReturn = await customerReturnReader.GetByIdAsync(dto.CustomerReturnId).ConfigureAwait(false)
-            ?? throw new CustomerReturnNotFoundException(dto.CustomerReturnId);
+        var vendorReturn = await vendorReturnReader.GetByIdAsync(dto.VendorReturnId).ConfigureAwait(false)
+            ?? throw new VendorReturnNotFoundException(dto.VendorReturnId);
 
-        var refund = new CustomerRefund(
+        var refund = new VendorRefund(
             code: code,
-            customerId: dto.CustomerId,
-            customerName: dto.CustomerName,
-            customerReturnId: dto.CustomerReturnId,
-            customerReturnCode: dto.CustomerReturnCode,
-            customerDebtId: dto.CustomerDebtId,
+            vendorId: dto.VendorId,
+            vendorName: dto.VendorName,
+            vendorReturnId: dto.VendorReturnId,
+            vendorReturnCode: dto.VendorReturnCode,
+            vendorDebtId: dto.VendorDebtId,
             amount: dto.Amount,
-            createdByUserId: customerReturn.CreatedByUserId);
+            createdByUserId: vendorReturn.CreatedByUserId);
 
         refund.MarkCreated();
         var inserted = await refundRepository.InsertAsync(refund).ConfigureAwait(false);
         return MapToDto(inserted);
     }
 
-    public async Task<CustomerRefundDto> CompleteAsync(Guid id, PaymentMethod paymentMethod, Guid? bankAccountId, string? note, Guid? completedByUserId)
+    public async Task<VendorRefundDto> CompleteAsync(Guid id, PaymentMethod paymentMethod, Guid? bankAccountId, string? note, Guid? completedByUserId)
     {
         var refund = await refundRepository.GetByIdAsync(id).ConfigureAwait(false)
-            ?? throw new NamEcommerceDomainException("Error.CustomerRefund.NotFound");
+            ?? throw new NamEcommerceDomainException("Error.VendorRefund.NotFound");
 
         refund.Complete(paymentMethod, bankAccountId, note, completedByUserId);
         await refundRepository.UpdateAsync(refund).ConfigureAwait(false);
         return MapToDto(refund);
     }
 
-    public async Task<CustomerRefundDto> CancelAsync(Guid id)
+    public async Task<VendorRefundDto> CancelAsync(Guid id)
     {
         var refund = await refundRepository.GetByIdAsync(id).ConfigureAwait(false)
-            ?? throw new NamEcommerceDomainException("Error.CustomerRefund.NotFound");
+            ?? throw new NamEcommerceDomainException("Error.VendorRefund.NotFound");
 
         refund.Cancel();
         await refundRepository.UpdateAsync(refund).ConfigureAwait(false);
         return MapToDto(refund);
     }
 
-    public async Task<CustomerRefundDto?> GetByIdAsync(Guid id)
+    public async Task<VendorRefundDto?> GetByIdAsync(Guid id)
     {
         var refund = await refundReader.GetByIdAsync(id).ConfigureAwait(false);
         return refund == null ? null : MapToDto(refund);
     }
 
-    public Task<IPagedDataDto<CustomerRefundDto>> GetListAsync(
-        Guid? customerId = null,
+    public Task<IPagedDataDto<VendorRefundDto>> GetListAsync(
+        Guid? vendorId = null,
         int? status = null,
         string? keywords = null,
         int pageIndex = 0,
@@ -89,14 +89,14 @@ public sealed class CustomerRefundManager(
     {
         var query = refundReader.DataSource;
 
-        if (customerId.HasValue)
-            query = query.Where(r => r.CustomerId == customerId.Value);
+        if (vendorId.HasValue)
+            query = query.Where(r => r.VendorId == vendorId.Value);
         if (status.HasValue)
             query = query.Where(r => (int)r.Status == status.Value);
         if (!string.IsNullOrWhiteSpace(keywords))
             query = query.Where(r => r.Code.Contains(keywords)
-                || r.CustomerName.Contains(keywords)
-                || r.CustomerReturnCode.Contains(keywords));
+                || r.VendorName.Contains(keywords)
+                || r.VendorReturnCode.Contains(keywords));
 
         query = query.OrderByDescending(r => r.CreatedOnUtc);
 
@@ -109,15 +109,15 @@ public sealed class CustomerRefundManager(
         return Task.FromResult(PagedDataDto.Create(items, pageIndex, pageSize, total));
     }
 
-    private static CustomerRefundDto MapToDto(CustomerRefund r) => new()
+    private static VendorRefundDto MapToDto(VendorRefund r) => new()
     {
         Id = r.Id,
         Code = r.Code,
-        CustomerId = r.CustomerId,
-        CustomerName = r.CustomerName,
-        CustomerReturnId = r.CustomerReturnId,
-        CustomerReturnCode = r.CustomerReturnCode,
-        CustomerDebtId = r.CustomerDebtId,
+        VendorId = r.VendorId,
+        VendorName = r.VendorName,
+        VendorReturnId = r.VendorReturnId,
+        VendorReturnCode = r.VendorReturnCode,
+        VendorDebtId = r.VendorDebtId,
         Amount = r.Amount,
         Status = r.Status,
         PaymentMethod = r.PaymentMethod,

@@ -14,7 +14,7 @@ public interface ICustomerRefundManager
     /// <summary>
     /// Xác nhận đã hoàn tiền cho khách (Pending → Completed).
     /// </summary>
-    Task<CustomerRefundDto> CompleteAsync(Guid id, PaymentMethod paymentMethod, string? note, Guid? completedByUserId);
+    Task<CustomerRefundDto> CompleteAsync(Guid id, PaymentMethod paymentMethod, Guid? bankAccountId, string? note, Guid? completedByUserId);
 
     /// <summary>
     /// Huỷ phiếu hoàn tiền (Pending → Cancelled).

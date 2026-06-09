@@ -22,3 +22,12 @@ public sealed record VendorReturnConfirmed(
 /// Hiện không có handler — event để audit/tracking.
 /// </summary>
 public sealed record VendorReturnCancelled(Guid VendorReturnId) : DomainEvent;
+
+/// <summary>
+/// Tổng giá trị trả hàng NCC vượt quá tổng nợ còn lại — NCC cần hoàn tiền mặt lại cho shop.
+/// Handler subscribe event này để tạo <c>VendorRefund</c> với <c>Amount = OverAmount</c>.
+/// </summary>
+public sealed record VendorReturnOverRecovered(
+    Guid VendorReturnId,
+    Guid VendorId,
+    decimal OverAmount) : DomainEvent;

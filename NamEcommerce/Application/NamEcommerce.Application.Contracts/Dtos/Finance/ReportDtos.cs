@@ -16,7 +16,8 @@ public sealed record IncomeStatementDto
 
     public decimal CostOfGoodsSold { get; init; }
     public decimal VendorReturnAdjustment { get; init; }
-    public decimal NetCostOfGoodsSold => CostOfGoodsSold - VendorReturnAdjustment;
+    public decimal CustomerReturnAdjustment { get; init; }
+    public decimal NetCostOfGoodsSold => CostOfGoodsSold - VendorReturnAdjustment - CustomerReturnAdjustment;
 
     public decimal GrossProfit => NetRevenue - NetCostOfGoodsSold;
 
@@ -49,11 +50,12 @@ public sealed record CashFlowStatementDto
     public decimal InventoryChange { get; init; }
     public decimal VatPayableChange { get; init; }
     public decimal CustomerRefundsOut { get; init; }
+    public decimal VendorRefundsIn { get; init; }
     public decimal OperatingCashFlow =>
         ProfitBeforeTax + DepreciationAdjustment
         + AccountsReceivableChange + AccountsPayableChange
         + InventoryChange + VatPayableChange
-        + CustomerRefundsOut;
+        + CustomerRefundsOut + VendorRefundsIn;
 
     public decimal FixedAssetPurchases { get; init; }
     public decimal InvestingCashFlow => FixedAssetPurchases;

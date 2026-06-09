@@ -5,6 +5,7 @@ using NamEcommerce.Domain.Entities.Debts;
 using NamEcommerce.Domain.Entities.Finance;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.Orders;
+using NamEcommerce.Data.Contracts;
 
 namespace NamEcommerce.Application.Services.Finance;
 
@@ -14,6 +15,7 @@ public sealed class CashBookService : ICashBookService
     private readonly IEntityDataReader<VendorPayment> _vendorPayments;
     private readonly IEntityDataReader<Expense> _expenses;
     private readonly IEntityDataReader<CustomerRefund> _refunds;
+    private readonly IEntityDataReader<VendorRefund> _vendorRefunds;
     private readonly IEntityDataReader<BankAccount> _bankAccounts;
     private readonly IAccountingSetupAppService _setupService;
 
@@ -22,6 +24,7 @@ public sealed class CashBookService : ICashBookService
         IEntityDataReader<VendorPayment> vendorPayments,
         IEntityDataReader<Expense> expenses,
         IEntityDataReader<CustomerRefund> refunds,
+        IEntityDataReader<VendorRefund> vendorRefunds,
         IEntityDataReader<BankAccount> bankAccounts,
         IAccountingSetupAppService setupService)
     {
@@ -29,6 +32,7 @@ public sealed class CashBookService : ICashBookService
         _vendorPayments = vendorPayments;
         _expenses = expenses;
         _refunds = refunds;
+        _vendorRefunds = vendorRefunds;
         _bankAccounts = bankAccounts;
         _setupService = setupService;
     }
@@ -48,6 +52,12 @@ public sealed class CashBookService : ICashBookService
                      && r.RefundedOnUtc <= asOf)
             .Sum(r => (decimal?)r.Amount) ?? 0;
 
+        var vendorRefundsIn = _vendorRefunds.DataSource
+            .Where(r => r.PaymentMethod == PaymentMethod.Cash
+                     && r.Status == VendorRefundStatus.Completed
+                     && r.RefundedOnUtc <= asOf)
+            .Sum(r => (decimal?)r.Amount) ?? 0;
+
         var vendorOut = _vendorPayments.DataSource
             .Where(p => p.PaymentMethod == PaymentMethod.Cash && p.PaidOnUtc <= asOf)
             .Sum(p => (decimal?)p.Amount) ?? 0;
@@ -58,7 +68,7 @@ public sealed class CashBookService : ICashBookService
             .ToList()
             .Sum(e => (decimal?)e.AmountExcludingTax) ?? 0;
 
-        return setup.OpeningCash + cashIn - refundsOut - vendorOut - expensesOut;
+        return setup.OpeningCash + cashIn + vendorRefundsIn - refundsOut - vendorOut - expensesOut;
     }
 
     public async Task<IReadOnlyList<BankBalanceLineDto>> GetBankBalancesAsync(DateTime asOf)
@@ -136,6 +146,12 @@ public sealed class CashBookService : ICashBookService
                      && r.RefundedOnUtc <= asOf)
             .Sum(r => (decimal?)r.Amount) ?? 0;
 
+        var vendorRefundsIn = _vendorRefunds.DataSource
+            .Where(r => r.BankAccountId == accountId
+                     && r.Status == VendorRefundStatus.Completed
+                     && r.RefundedOnUtc <= asOf)
+            .Sum(r => (decimal?)r.Amount) ?? 0;
+
         var vendorOut = _vendorPayments.DataSource
             .Where(p => p.BankAccountId == accountId && p.PaidOnUtc <= asOf)
             .Sum(p => (decimal?)p.Amount) ?? 0;
@@ -145,7 +161,7 @@ public sealed class CashBookService : ICashBookService
             .ToList()
             .Sum(e => (decimal?)e.AmountExcludingTax) ?? 0;
 
-        return openingBalance + cashIn - refundsOut - vendorOut - expensesOut;
+        return openingBalance + cashIn + vendorRefundsIn - refundsOut - vendorOut - expensesOut;
     }
 
     private List<CashBookLineDto> BuildLines(DateTime start, DateTime end, Guid? bankAccountId)
@@ -170,6 +186,15 @@ public sealed class CashBookService : ICashBookService
         else if (!isAll) refQuery = refQuery.Where(r => r.BankAccountId == bankAccountId);
         foreach (var r in refQuery.ToList())
             lines.Add(new CashBookLineDto { Date = r.RefundedOnUtc!.Value, Description = $"Hoàn tiền KH: {r.CustomerName}", SourceType = "CustomerRefund", SourceId = r.Id, AmountOut = r.Amount });
+
+        // VendorRefund (tiền vào — NCC hoàn tiền cho shop)
+        var vrQuery = _vendorRefunds.DataSource
+            .Where(r => r.Status == VendorRefundStatus.Completed
+                     && r.RefundedOnUtc >= start && r.RefundedOnUtc <= end);
+        if (isCash) vrQuery = vrQuery.Where(r => r.PaymentMethod == PaymentMethod.Cash);
+        else if (!isAll) vrQuery = vrQuery.Where(r => r.BankAccountId == bankAccountId);
+        foreach (var r in vrQuery.ToList())
+            lines.Add(new CashBookLineDto { Date = r.RefundedOnUtc!.Value, Description = $"NCC hoàn tiền: {r.VendorName}", SourceType = "VendorRefund", SourceId = r.Id, AmountIn = r.Amount });
 
         // VendorPayment (tiền ra)
         var vpQuery = _vendorPayments.DataSource

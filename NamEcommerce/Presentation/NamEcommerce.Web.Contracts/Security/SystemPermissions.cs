@@ -91,6 +91,7 @@ public static class SystemPermissions
         public const string CustomerRefundsManage = "Debts.CustomerRefunds.Manage";
         public const string VendorDebtsView = "Debts.VendorDebts.View";
         public const string VendorDebtsRecordPayment = "Debts.VendorDebts.RecordPayment";
+        public const string VendorRefundsManage = "Debts.VendorRefunds.Manage";
     }
 
     public static class Finance
@@ -133,6 +134,7 @@ public static class SystemPermissions
         Debts.CustomerDebtsView, Debts.CustomerDebtsRecordPayment,
         Debts.CustomerRefundsManage,
         Debts.VendorDebtsView, Debts.VendorDebtsRecordPayment,
+        Debts.VendorRefundsManage,
 
         Finance.ExpensesView, Finance.ExpensesManage,
         Finance.Accounting,
