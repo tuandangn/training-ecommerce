@@ -15,5 +15,6 @@ public enum SystemNotificationType
     DeliveryRunCashHandoverPending = 220,
     GoodsReceiptCreated = 300,
     PurchaseOrderCreated = 400,
-    PurchaseOrderStatusChanged = 410
+    PurchaseOrderStatusChanged = 410,
+    InventoryCostReturnReversalLost = 500
 }

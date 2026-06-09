@@ -549,11 +549,20 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
                     g => g.Key,
                     g => g.OrderByDescending(l => l.OpenedAtUtc).First().UnitCost);
 
+            var lostReversalNoteIds = affectedAllocations
+                .Where(a => a.Quantity < 0 && a.OutboundReferenceType == InventoryCostReferenceType.SalesOrder)
+                .Select(a => a.OutboundReferenceId)
+                .Distinct()
+                .ToList();
+
             foreach (var allocation in affectedAllocations)
             {
                 allocation.MarkSuperseded(run.Id);
                 await _allocationRepository.UpdateAsync(allocation).ConfigureAwait(false);
             }
+
+            if (lostReversalNoteIds.Count > 0)
+                run.MarkReturnReversalLost(lostReversalNoteIds);
 
             foreach (var layer in affectedLayers)
             {
