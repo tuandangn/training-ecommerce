@@ -21,6 +21,7 @@ public sealed record CustomerRefundDto
     public decimal Amount { get; init; }
     public CustomerRefundStatus Status { get; init; }
     public PaymentMethod? PaymentMethod { get; init; }
+    public Guid? BankAccountId { get; init; }
     public string? Note { get; init; }
 
     public DateTime? RefundedOnUtc { get; init; }

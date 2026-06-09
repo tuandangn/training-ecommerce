@@ -151,5 +151,8 @@ public sealed record VendorReturn : AppAggregateEntity
 
     internal void MarkCreated() { /* no event needed at Draft creation */ }
 
+    internal void MarkOverRecovered(decimal overAmount)
+        => RaiseDomainEvent(new VendorReturnOverRecovered(Id, VendorId, overAmount));
+
     #endregion
 }

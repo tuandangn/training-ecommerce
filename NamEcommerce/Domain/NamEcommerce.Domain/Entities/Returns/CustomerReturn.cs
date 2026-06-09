@@ -131,7 +131,7 @@ public sealed record CustomerReturn : AppAggregateEntity
     /// Đánh dấu phiếu trả hàng có khoản hoàn tiền vượt mức nợ — raise <see cref="CustomerReturnOverRefunded"/>.
     /// Gọi trong <c>FinalizeConfirmAsync</c> khi <c>remaining &gt; 0</c> sau khi FIFO loop kết thúc.
     /// </summary>
-    internal void MarkOverRefunded(decimal overAmount, Guid overRefundedDebtId)
+    internal void MarkOverRefunded(decimal overAmount, Guid? overRefundedDebtId)
         => RaiseDomainEvent(new CustomerReturnOverRefunded(Id, CustomerId, overAmount, overRefundedDebtId));
 
     #endregion

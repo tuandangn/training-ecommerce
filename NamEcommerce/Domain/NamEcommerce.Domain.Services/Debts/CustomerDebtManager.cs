@@ -355,6 +355,25 @@ public sealed class CustomerDebtManager(
             }
         }
 
+        if (creditNote.RemainingAmount > 0)
+        {
+            var otherDebts = debtReader.DataSource
+                .Where(d => d.CustomerId == customerId
+                         && d.RemainingAmount > 0
+                         && (!sourceId.HasValue || d.DeliveryNoteId != sourceId.Value))
+                .OrderBy(d => d.CreatedOnUtc)
+                .ToList();
+
+            foreach (var debt in otherDebts)
+            {
+                if (creditNote.RemainingAmount <= 0) break;
+                var applyAmount = Math.Min(creditNote.RemainingAmount, debt.RemainingAmount);
+                creditNote.AllocateToDebt(debt, applyAmount, null);
+                debt.MarkUpdated();
+                await debtRepository.UpdateAsync(debt).ConfigureAwait(false);
+            }
+        }
+
         var inserted = await creditNoteRepository.InsertAsync(creditNote).ConfigureAwait(false);
         return MapToCreditNoteDto(inserted);
     }

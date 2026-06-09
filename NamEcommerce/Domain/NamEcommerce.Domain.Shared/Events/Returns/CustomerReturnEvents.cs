@@ -28,4 +28,4 @@ public sealed record CustomerReturnOverRefunded(
     Guid CustomerReturnId,
     Guid CustomerId,
     decimal OverAmount,
-    Guid OverRefundedDebtId) : DomainEvent;
+    Guid? OverRefundedDebtId) : DomainEvent;

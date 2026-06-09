@@ -27,6 +27,7 @@ public sealed class AccountingReportService : IAccountingReportService
     private readonly IEntityDataReader<InventoryStock> _inventoryStocks;
     private readonly IEntityDataReader<GoodsReceipt> _goodsReceipts;
     private readonly IEntityDataReader<CustomerRefund> _refunds;
+    private readonly IEntityDataReader<VendorRefund> _vendorRefunds;
     private readonly IAccountingSetupAppService _setupService;
     private readonly ICashBookService _cashBookService;
 
@@ -42,6 +43,7 @@ public sealed class AccountingReportService : IAccountingReportService
         IEntityDataReader<InventoryStock> inventoryStocks,
         IEntityDataReader<GoodsReceipt> goodsReceipts,
         IEntityDataReader<CustomerRefund> refunds,
+        IEntityDataReader<VendorRefund> vendorRefunds,
         IAccountingSetupAppService setupService,
         ICashBookService cashBookService)
     {
@@ -56,6 +58,7 @@ public sealed class AccountingReportService : IAccountingReportService
         _inventoryStocks = inventoryStocks;
         _goodsReceipts = goodsReceipts;
         _refunds = refunds;
+        _vendorRefunds = vendorRefunds;
         _setupService = setupService;
         _cashBookService = cashBookService;
     }
@@ -100,6 +103,11 @@ public sealed class AccountingReportService : IAccountingReportService
                      && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
             .Sum(e => (decimal?)e.TotalCost) ?? 0;
 
+        var customerReturnCost = _costLedger.DataSource
+            .Where(e => e.MovementType == InventoryCostMovementType.CustomerReturn
+                     && e.OccurredAtUtc >= start && e.OccurredAtUtc <= end)
+            .Sum(e => (decimal?)e.TotalCost) ?? 0;
+
         var sellingExp = _expenses.DataSource
             .Where(e => (e.ExpenseType == ExpenseType.Marketing || e.ExpenseType == ExpenseType.ReturnCost)
                      && e.IncurredDate >= start && e.IncurredDate <= end)
@@ -136,6 +144,7 @@ public sealed class AccountingReportService : IAccountingReportService
             SalesReturns = salesReturns,
             CostOfGoodsSold = cogs,
             VendorReturnAdjustment = vendorReturnCost,
+            CustomerReturnAdjustment = customerReturnCost,
             SellingExpenses = sellingExp,
             SellingDepreciation = sellingDepreciation,
             AdminExpenses = adminExp,
@@ -191,6 +200,11 @@ public sealed class AccountingReportService : IAccountingReportService
                      && r.RefundedOnUtc >= start && r.RefundedOnUtc <= end)
             .Sum(r => (decimal?)r.Amount) ?? 0);
 
+        var vendorRefundsIn = _vendorRefunds.DataSource
+            .Where(r => r.Status == VendorRefundStatus.Completed
+                     && r.RefundedOnUtc >= start && r.RefundedOnUtc <= end)
+            .Sum(r => (decimal?)r.Amount) ?? 0;
+
         var assetPurchases = -(_fixedAssets.DataSource
             .Where(a => a.AcquisitionDate >= start && a.AcquisitionDate <= end)
             .Sum(a => (decimal?)a.AcquisitionCost) ?? 0);
@@ -211,6 +225,7 @@ public sealed class AccountingReportService : IAccountingReportService
             InventoryChange = invChange,
             VatPayableChange = vatChange,
             CustomerRefundsOut = refundsOut,
+            VendorRefundsIn = vendorRefundsIn,
             FixedAssetPurchases = assetPurchases,
             OpeningCash = openingCash,
             ActualClosingCash = actualClosingCash

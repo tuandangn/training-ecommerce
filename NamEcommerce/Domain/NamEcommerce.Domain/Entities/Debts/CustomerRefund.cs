@@ -73,13 +73,14 @@ public sealed record CustomerRefund : AppAggregateEntity
     /// <summary>
     /// Xác nhận đã hoàn tiền cho khách (Pending → Completed).
     /// </summary>
-    internal void Complete(PaymentMethod paymentMethod, string? note, Guid? completedByUserId)
+    internal void Complete(PaymentMethod paymentMethod, Guid? bankAccountId, string? note, Guid? completedByUserId)
     {
         if (Status != CustomerRefundStatus.Pending)
             throw new NamEcommerceDomainException("Error.CustomerRefund.CannotComplete");
 
         Status = CustomerRefundStatus.Completed;
         PaymentMethod = paymentMethod;
+        BankAccountId = bankAccountId;
         Note = note;
         CompletedByUserId = completedByUserId;
         RefundedOnUtc = DateTime.UtcNow;

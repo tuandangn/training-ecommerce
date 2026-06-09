@@ -1,0 +1,168 @@
+@model NamEcommerce.Web.Models.Debts.VendorRefundDetailsViewModel
+@using NamEcommerce.Domain.Shared.Enums.Debts
+@using NamEcommerce.Domain.Shared.Enums.Orders
+
+@{
+    ViewData["Title"] = $"Phiếu thu hoàn {Model.Code}";
+}
+
+<style>
+    .refund-info-list { list-style: none; padding: 0; margin: 0; }
+    .refund-info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
+    .refund-info-row:last-child { border-bottom: none; }
+    .refund-info-row .label { color: #6c757d; }
+    .refund-info-row .value { font-weight: 500; text-align: right; }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">
+        Phiếu thu hoàn NCC: <strong>@Model.Code</strong>
+        <span class="badge @Model.StatusBadgeClass ms-2">@Model.StatusLabel</span>
+    </h4>
+    <a asp-action="List" class="btn btn-sm btn-outline-secondary">← Danh sách</a>
+</div>
+
+<div class="row g-3">
+    <!-- Thông tin chính -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">Thông tin thu tiền hoàn</div>
+            <div class="card-body">
+                <ul class="refund-info-list">
+                    <li class="refund-info-row">
+                        <span class="label">Nhà cung cấp</span>
+                        <span class="value">@Model.VendorName</span>
+                    </li>
+                    <li class="refund-info-row">
+                        <span class="label">Phiếu trả hàng NCC</span>
+                        <span class="value">
+                            <a asp-controller="VendorReturn" asp-action="Details"
+                               asp-route-id="@Model.VendorReturnId">@Model.VendorReturnCode</a>
+                        </span>
+                    </li>
+                    <li class="refund-info-row">
+                        <span class="label">Số tiền thu</span>
+                        <span class="value text-success fw-bold fs-5">@Model.Amount.ToString("N0") ₫</span>
+                    </li>
+                    <li class="refund-info-row">
+                        <span class="label">Trạng thái</span>
+                        <span class="value"><span class="badge @Model.StatusBadgeClass">@Model.StatusLabel</span></span>
+                    </li>
+                    @if (Model.PaymentMethod.HasValue)
+                    {
+                        var pmLabel = Model.PaymentMethod switch
+                        {
+                            PaymentMethod.Cash => "Tiền mặt",
+                            PaymentMethod.BankTransfer => "Chuyển khoản",
+                            PaymentMethod.COD => "COD",
+                            _ => "Khác"
+                        };
+                        <li class="refund-info-row">
+                            <span class="label">Hình thức thu tiền</span>
+                            <span class="value">@pmLabel</span>
+                        </li>
+                    }
+                    @if (Model.RefundedOnUtc.HasValue)
+                    {
+                        <li class="refund-info-row">
+                            <span class="label">Thời gian thu tiền</span>
+                            <span class="value">@Model.RefundedOnUtc.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                        </li>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.Note))
+                    {
+                        <li class="refund-info-row">
+                            <span class="label">Ghi chú</span>
+                            <span class="value">@Model.Note</span>
+                        </li>
+                    }
+                    <li class="refund-info-row">
+                        <span class="label">Ngày tạo</span>
+                        <span class="value">@Model.CreatedOnUtc.ToString("dd/MM/yyyy HH:mm")</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    @if (Model.Status == VendorRefundStatus.Pending)
+    {
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-success">
+                <div class="card-header fw-semibold text-success-emphasis bg-success-subtle">
+                    Xác nhận đã thu tiền
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        Xác nhận đã thu <strong class="text-success">@Model.Amount.ToString("N0") ₫</strong>
+                        từ nhà cung cấp <strong>@Model.VendorName</strong>.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label small">Hình thức thu tiền</label>
+                        <select id="completePaymentMethod" class="form-select form-select-sm">
+                            <option value="0">Tiền mặt</option>
+                            <option value="1">Chuyển khoản</option>
+                            <option value="3">Khác</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Ghi chú</label>
+                        <input id="completeNote" type="text" class="form-control form-control-sm"
+                               placeholder="Tuỳ chọn..."/>
+                    </div>
+                    <button id="btnComplete" class="btn btn-success btn-sm w-100">
+                        ✓ Đã thu tiền
+                    </button>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-danger mt-3">
+                <div class="card-body">
+                    <p class="text-muted small mb-2">Huỷ phiếu nếu không thực hiện thu tiền.</p>
+                    <form asp-action="Cancel" asp-route-id="@Model.Id" method="post"
+                          onsubmit="return confirm('Xác nhận huỷ phiếu thu tiền hoàn này?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-danger btn-sm w-100">Huỷ phiếu</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (Model.Status == VendorRefundStatus.Pending)
+{
+    <script>
+        document.getElementById('btnComplete').addEventListener('click', async function () {
+            const btn = this;
+            const paymentMethod = parseInt(document.getElementById('completePaymentMethod').value);
+            const note = document.getElementById('completeNote').value;
+
+            btn.disabled = true;
+            btn.textContent = 'Đang xử lý...';
+
+            try {
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                const res = await fetch('@Url.Action("Complete", "VendorRefund", new { id = Model.Id })', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': token ?? '' },
+                    body: JSON.stringify({ paymentMethod, note })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Lỗi: ' + (data.message ?? 'Không thể xác nhận thu tiền.'));
+                    btn.disabled = false;
+                    btn.textContent = '✓ Đã thu tiền';
+                }
+            } catch {
+                alert('Có lỗi xảy ra. Vui lòng thử lại.');
+                btn.disabled = false;
+                btn.textContent = '✓ Đã thu tiền';
+            }
+        });
+    </script>
+    @Html.AntiForgeryToken()
+}

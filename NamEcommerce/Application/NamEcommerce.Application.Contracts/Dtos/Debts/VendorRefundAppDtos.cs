@@ -1,15 +1,15 @@
 namespace NamEcommerce.Application.Contracts.Dtos.Debts;
 
 [Serializable]
-public sealed record CustomerRefundAppDto
+public sealed record VendorRefundAppDto
 {
     public required Guid Id { get; init; }
     public required string Code { get; init; }
-    public required Guid CustomerId { get; init; }
-    public required string CustomerName { get; init; }
-    public required Guid CustomerReturnId { get; init; }
-    public required string CustomerReturnCode { get; init; }
-    public Guid? CustomerDebtId { get; init; }
+    public required Guid VendorId { get; init; }
+    public required string VendorName { get; init; }
+    public required Guid VendorReturnId { get; init; }
+    public required string VendorReturnCode { get; init; }
+    public Guid? VendorDebtId { get; init; }
     public decimal Amount { get; init; }
     public int Status { get; init; }
     public int? PaymentMethod { get; init; }
@@ -23,7 +23,7 @@ public sealed record CustomerRefundAppDto
 }
 
 [Serializable]
-public sealed record CompleteCustomerRefundAppDto
+public sealed record CompleteVendorRefundAppDto
 {
     public required Guid RefundId { get; init; }
     public int PaymentMethod { get; init; }
@@ -34,21 +34,21 @@ public sealed record CompleteCustomerRefundAppDto
     public (bool valid, string? errorMessage) Validate()
     {
         if (RefundId == Guid.Empty)
-            return (false, "Mã phiếu hoàn tiền không hợp lệ.");
+            return (false, "Mã phiếu thu tiền hoàn không hợp lệ.");
         return (true, null);
     }
 }
 
 [Serializable]
-public sealed record CompleteCustomerRefundResultAppDto
+public sealed record CompleteVendorRefundResultAppDto
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }
-    public CustomerRefundAppDto? Refund { get; init; }
+    public VendorRefundAppDto? Refund { get; init; }
 }
 
 [Serializable]
-public sealed record CancelCustomerRefundResultAppDto
+public sealed record CancelVendorRefundResultAppDto
 {
     public bool Success { get; init; }
     public string? ErrorMessage { get; init; }

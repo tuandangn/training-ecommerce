@@ -318,13 +318,19 @@ public sealed class VendorReturnManager(
 
         if (totalReturnAmount <= 0) return;
 
-        await vendorDebtManager.ApplyCreditNoteFromVendorReturnAsync(
+        var creditNote = await vendorDebtManager.ApplyCreditNoteFromVendorReturnAsync(
             vendorReturn.VendorId,
             vendorReturn.Id,
             vendorReturn.Code,
             vendorReturn.GoodsReceiptId,
             vendorReturn.PurchaseOrderId,
             totalReturnAmount).ConfigureAwait(false);
+
+        if (creditNote.RemainingAmount > 0)
+        {
+            vendorReturn.MarkOverRecovered(creditNote.RemainingAmount);
+            await vendorReturnRepository.UpdateAsync(vendorReturn).ConfigureAwait(false);
+        }
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
