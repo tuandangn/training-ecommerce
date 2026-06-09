@@ -5,8 +5,10 @@ using NamEcommerce.Application.Contracts.Dtos.CustomerPortal;
 using NamEcommerce.Application.Contracts.Dtos.Media;
 using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.Media;
+using NamEcommerce.Application.Contracts.Notifications;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.Returns;
+using NamEcommerce.Application.Services.Notifications;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Customers;
 using NamEcommerce.Domain.Entities.DeliveryNotes;
@@ -39,6 +41,7 @@ public sealed class CustomerPortalAppService(
     IEntityDataReader<Customer> customerReader,
     IEntityDataReader<Warehouse> warehouseReader,
     IPictureAppService pictureAppService,
+    ISystemNotificationAppService systemNotificationAppService,
     CustomerPortalStoreOptions storeOptions) : ICustomerPortalAppService
 {
     private const int DefaultProductPageSize = 30;
@@ -172,6 +175,9 @@ public sealed class CustomerPortalAppService(
 
         var created = await customerPortalManager.CreateOrderRequestAsync(domainDto).ConfigureAwait(false);
         await CreateOrderRequestCreatedNotificationAsync(created).ConfigureAwait(false);
+        await systemNotificationAppService
+            .CreateAsync(CustomerPortalSystemNotificationComposer.OrderRequestCreated(created))
+            .ConfigureAwait(false);
         return new CustomerOrderRequestAppDto
         {
             Id = created.Id,
@@ -569,6 +575,9 @@ public sealed class CustomerPortalAppService(
         }).ConfigureAwait(false);
 
         await CreateDeliveryConfirmedNotificationAsync(deliveryNote).ConfigureAwait(false);
+        await systemNotificationAppService
+            .CreateAsync(CustomerPortalSystemNotificationComposer.DeliveryConfirmed(deliveryNote.Id, deliveryNote.Code))
+            .ConfigureAwait(false);
         await UpdateCustomerLocationAsync(customerId, dto.Location, "DeliveryConfirmed").ConfigureAwait(false);
         return CustomerActionResultAppDto.Ok(
             rejectedItems.Count > 0
@@ -695,7 +704,11 @@ public sealed class CustomerPortalAppService(
         };
 
         var created = await customerPortalManager.CreateReturnRequestAsync(request).ConfigureAwait(false);
-        await CreateReturnRequestCreatedNotificationAsync(created, deliveryNotes.FirstOrDefault(note => note.Id == created.DeliveryNoteId)).ConfigureAwait(false);
+        var deliveryNote = deliveryNotes.FirstOrDefault(note => note.Id == created.DeliveryNoteId);
+        await CreateReturnRequestCreatedNotificationAsync(created, deliveryNote).ConfigureAwait(false);
+        await systemNotificationAppService
+            .CreateAsync(CustomerPortalSystemNotificationComposer.ReturnRequestCreated(created, deliveryNote?.Code))
+            .ConfigureAwait(false);
         return new CustomerReturnRequestAppDto
         {
             Id = created.Id,

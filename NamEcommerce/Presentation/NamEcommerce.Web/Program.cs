@@ -21,6 +21,7 @@ using NamEcommerce.Application.Contracts.GoodsReceipts;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Localizations;
 using NamEcommerce.Application.Contracts.Media;
+using NamEcommerce.Application.Contracts.Notifications;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.Preparation;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
@@ -42,6 +43,7 @@ using NamEcommerce.Application.Services.Finance;
 using NamEcommerce.Application.Services.GoodsReceipts;
 using NamEcommerce.Application.Services.Inventory;
 using NamEcommerce.Application.Services.Media;
+using NamEcommerce.Application.Services.Notifications;
 using NamEcommerce.Application.Services.Orders;
 using NamEcommerce.Application.Services.Preparation;
 using NamEcommerce.Application.Services.PurchaseOrders;
@@ -63,6 +65,7 @@ using NamEcommerce.Domain.Services.Finance;
 using NamEcommerce.Domain.Services.GoodsReceipts;
 using NamEcommerce.Domain.Services.Inventory;
 using NamEcommerce.Domain.Services.Media;
+using NamEcommerce.Domain.Services.Notifications;
 using NamEcommerce.Domain.Services.Orders;
 using NamEcommerce.Domain.Services.PurchaseOrders;
 using NamEcommerce.Domain.Services.Returns;
@@ -80,6 +83,7 @@ using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Shared.Services.Media;
+using NamEcommerce.Domain.Shared.Services.Notifications;
 using NamEcommerce.Domain.Shared.Services.Orders;
 using NamEcommerce.Domain.Shared.Services.Outbox;
 using NamEcommerce.Domain.Shared.Services.PurchaseOrders;
@@ -97,6 +101,7 @@ using NamEcommerce.Web.Authorization;
 using NamEcommerce.Web.Services.Permissions;
 using NamEcommerce.Web.Framework.Commands.Handlers.Users;
 using NamEcommerce.Web.Framework.Services;
+using NamEcommerce.Web.Hubs.Notifications;
 using NamEcommerce.Web.Mvc.Binders;
 using NamEcommerce.Web.Mvc.Filters;
 using NamEcommerce.Web.Services;
@@ -216,6 +221,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IFixedAssetManager, FixedAssetManager>();
     services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();
     services.AddScoped<IDeliveryRunManager, DeliveryRunManager>();
+    services.AddScoped<ISystemNotificationManager, SystemNotificationManager>();
     services.AddScoped<IOrderManager, OrderManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
     services.AddScoped<IBankTransferPaymentIntentManager, BankTransferPaymentIntentManager>();
@@ -265,6 +271,8 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IAccountingReportService, AccountingReportService>();
     services.AddScoped<IDeliveryNoteAppService, DeliveryNoteAppService>();
     services.AddScoped<IDeliveryRunAppService, DeliveryRunAppService>();
+    services.AddScoped<SystemNotificationAppService>();
+    services.AddScoped<ISystemNotificationAppService, RealtimeSystemNotificationAppService>();
     services.AddScoped<IPreparationAppService, PreparationAppService>();
     services.AddScoped<IOrderAppService, OrderAppService>();
     services.AddScoped<IOrderAuditAppService, OrderAuditAppService>();
@@ -300,6 +308,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IWebHelper, WebHelper>();
     services.AddScoped<ICustomerPortalQrCodeService, CustomerPortalQrCodeService>();
     services.AddScoped<INotificationService, TempDataNotificationService>();
+    services.AddScoped<ISystemNotificationRealtimePublisher, SignalRSystemNotificationRealtimePublisher>();
 
     services.AddScoped<ICategoryModelFactory, CategoryModelFactory>();
     services.AddScoped<IProductModelFactory, ProductModelFactory>();
@@ -318,6 +327,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<IStockAdjustmentNoteModelFactory, StockAdjustmentNoteModelFactory>();
     services.AddScoped<IStockTransferNoteModelFactory, StockTransferNoteModelFactory>();
     services.AddScoped<IUserManagementModelFactory, UserManagementModelFactory>();
+    services.AddScoped<ISystemNotificationModelFactory, SystemNotificationModelFactory>();
 
     if (builder.Environment.IsEnvironment("E2E"))
     {
@@ -350,6 +360,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     });
     services.AddMemoryCache();
     services.AddScoped<IPermissionCacheService, PermissionCacheService>();
+    services.AddScoped<IUserNotificationPermissionService, UserNotificationPermissionService>();
     services.AddScoped<IAuthorizationHandler, PermissionAuthorizationHandler>();
     services.AddScoped<IAuthorizationHandler, ManageUserRolesAuthorizationHandler>();
     services.AddAuthorization(opts =>
@@ -366,6 +377,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
     services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
     services.AddValidatorsFromAssemblyContaining<LoginModelValidator>();
+    services.AddSignalR();
 
     var mvcBuilder = services.AddMvc(options =>
     {
@@ -431,6 +443,7 @@ void Configure(WebApplication app)
     app.UseAuthorization();
     app.UseSession();
 
+    app.MapHub<SystemNotificationHub>(SystemNotificationHub.Route);
     app.MapControllerRoute(
         name: "default",
         pattern: "{controller=Home}/{action=Index}/{id?}");
