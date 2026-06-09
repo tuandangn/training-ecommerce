@@ -76,7 +76,8 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
             .Select(cr => new
             {
                 cr.ConfirmedOnUtc,
-                Items = cr.Items.Select(i => new { i.AcceptedQuantity, i.ReturnUnitPrice }).ToList()
+                cr.AdditionalCost,
+                Items = cr.Items.Select(i => new { i.ProductId, i.AcceptedQuantity, i.ReturnUnitPrice }).ToList()
             })
             .ToList();
 
@@ -98,7 +99,8 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
         }
 
         decimal grossRevenue = deliveredNotes.Sum(dn => dn.TotalAmount);
-        decimal totalReturnAmt = confirmedReturns.Sum(cr => cr.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitPrice));
+        decimal totalReturnAmt = confirmedReturns.Sum(cr =>
+            Math.Max(0, cr.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitPrice) - cr.AdditionalCost));
 
         var dto = new ProfitLossSummaryAppDto
         {
@@ -145,21 +147,31 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
 
         foreach (var cr in confirmedReturns)
         {
-            var returnAmt = cr.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitPrice);
+            var grossAmt = cr.Items.Sum(i => i.AcceptedQuantity * i.ReturnUnitPrice);
+            var netAmt = Math.Max(0, grossAmt - cr.AdditionalCost);
             var dateLabel = cr.ConfirmedOnUtc!.Value.ToLocalTime().ToString("dd/MM/yyyy");
             if (dateDict.TryGetValue(dateLabel, out var dayStats))
             {
-                dayStats.Revenue -= returnAmt;
-                dayStats.Profit -= returnAmt;
+                dayStats.Revenue -= netAmt;
+                dayStats.Profit -= netAmt;
             }
             else
             {
                 dateDict[dateLabel] = new RevenueByDateAppDto
                 {
                     DateLabel = dateLabel,
-                    Revenue = -returnAmt,
-                    Profit = -returnAmt
+                    Revenue = -netAmt,
+                    Profit = -netAmt
                 };
+            }
+
+            foreach (var item in cr.Items.Where(i => i.AcceptedQuantity > 0))
+            {
+                if (productDict.TryGetValue(item.ProductId, out var topProd))
+                {
+                    topProd.QuantitySold -= (int)item.AcceptedQuantity;
+                    topProd.Revenue -= item.AcceptedQuantity * item.ReturnUnitPrice;
+                }
             }
         }
 
@@ -197,5 +209,15 @@ public sealed class FinancialReportAppService : IFinancialReportAppService
             .ToList();
 
         return dto;
+    }
+
+    public async Task<(decimal TotalCost, bool HasPendingCost)> GetNetCogsForDeliveryNotesAsync(IEnumerable<Guid> deliveryNoteIds)
+    {
+        var ids = deliveryNoteIds?.ToList() ?? [];
+        if (ids.Count == 0) return (0m, false);
+        var summary = await _inventoryCostingManager
+            .GetCogsForReferencesAsync(InventoryCostReferenceType.SalesOrder, ids)
+            .ConfigureAwait(false);
+        return (summary.TotalCost, summary.HasPendingCost);
     }
 }

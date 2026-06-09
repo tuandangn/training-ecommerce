@@ -463,6 +463,8 @@ public sealed class GoodsReceiptManager(
                 item.ProductId, dto.WarehouseId, item.AcceptedQuantity, unitCost,
                 productDataReader, warehouseSettings, warehouseDataReader
             ).ConfigureAwait(false);
+            if (item.DeliveryNoteItemId.HasValue)
+                goodsReceipt.Items.Last().SourceDeliveryNoteItemId = item.DeliveryNoteItemId.Value;
         }
 
         // MarkCreated → GoodsReceiptCreatedHandler sẽ cộng tồn kho.

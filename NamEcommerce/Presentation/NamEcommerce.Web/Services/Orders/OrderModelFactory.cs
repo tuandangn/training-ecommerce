@@ -11,6 +11,7 @@ using NamEcommerce.Application.Contracts.GoodsReceipts;
 using NamEcommerce.Application.Contracts.Orders;
 using NamEcommerce.Application.Contracts.Media;
 using NamEcommerce.Application.Contracts.PurchaseOrders;
+using NamEcommerce.Application.Contracts.Report;
 using NamEcommerce.Application.Contracts.Returns;
 using NamEcommerce.Domain.Shared.Enums.Debts;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -43,6 +44,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
     private readonly IOrderAuditAppService _orderAuditAppService;
     private readonly ICustomerReturnAppService _customerReturnAppService;
     private readonly IPictureAppService _pictureAppService;
+    private readonly IFinancialReportAppService _financialReportAppService;
 
     public OrderModelFactory(
         AppConfig appConfig,
@@ -54,7 +56,8 @@ public sealed class OrderModelFactory : IOrderModelFactory
         IGoodsReceiptAppService goodsReceiptAppService,
         IOrderAuditAppService orderAuditAppService,
         ICustomerReturnAppService customerReturnAppService,
-        IPictureAppService pictureAppService)
+        IPictureAppService pictureAppService,
+        IFinancialReportAppService financialReportAppService)
     {
         _appConfig = appConfig;
         _mediator = mediator;
@@ -66,6 +69,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
         _customerReturnAppService = customerReturnAppService;
         _pictureAppService = pictureAppService;
         _orderAuditAppService = orderAuditAppService;
+        _financialReportAppService = financialReportAppService;
     }
 
     public async Task<CreateOrderModel> PrepareCreateOrderModel(CreateOrderModel? oldModel = null)
@@ -369,11 +373,19 @@ public sealed class OrderModelFactory : IOrderModelFactory
         var expenses = await _expenseAppService.GetExpensesByOrderIdAsync(model.Id).ConfigureAwait(false);
         var itemChangeAudits = await _orderAuditAppService.GetOrderItemChangeAuditsAsync(model.Id).ConfigureAwait(false);
 
+        var deliveryNoteIds = model.DeliveryNotes
+            .Where(dn => dn.Status != (int)DeliveryNoteStatus.Cancelled)
+            .Select(dn => dn.Id)
+            .ToList();
+        var (netCogs, cogsPending) = await _financialReportAppService
+            .GetNetCogsForDeliveryNotesAsync(deliveryNoteIds)
+            .ConfigureAwait(false);
+
         model.CanCompleteOrder = model.CanCompleteOrder && deliveryStatus == OrderDetailsModel.OrderDeliverySummaryStatus.Delivered;
         model.Workflow = BuildWorkflow(model, deliveryStatus, activeStage);
         model.Preparation = BuildPreparation(model);
         model.DeliveryWorkflow = BuildDeliveryWorkflow(model, deliveryStatus);
-        model.Settlement = BuildSettlement(model, orderDebts, expenses);
+        model.Settlement = BuildSettlement(model, orderDebts, expenses, netCogs, cogsPending);
         model.Timeline = BuildTimeline(model, relatedReceipts, orderDebts, itemChangeAudits);
     }
 
@@ -656,7 +668,9 @@ public sealed class OrderModelFactory : IOrderModelFactory
     private static OrderDetailsModel.SettlementModel BuildSettlement(
         OrderDetailsModel model,
         IEnumerable<CustomerDebtAppDto> debts,
-        IEnumerable<ExpenseAppDto> expenses)
+        IEnumerable<ExpenseAppDto> expenses,
+        decimal netCogs,
+        bool cogsPending)
     {
         var debtRows = debts
             .OrderBy(debt => debt.CreatedOnUtc)
@@ -707,7 +721,7 @@ public sealed class OrderModelFactory : IOrderModelFactory
             .Select(item => (item, deliveredQty: item.GetDeliveredToCustomerQuantity(model.DeliveryNotes), item.UnitPrice))
             .Where(info => info.deliveredQty > 0)
             .Sum(info => info.deliveredQty * info.UnitPrice);
-        var totalCost = costRows.Sum(row => row.TotalCost ?? 0);
+        var totalCost = netCogs;
         var totalExpenses = expenseRows.Sum(row => row.Amount);
         var confirmedReturns = model.CustomerReturns
             .Where(customerReturn => customerReturn.Status == (int)CustomerReturnStatus.Confirmed)
@@ -741,8 +755,8 @@ public sealed class OrderModelFactory : IOrderModelFactory
             ReturnAdditionalCost = returnAdditionalCost,
             ReturnNetRefundAmount = returnNetRefundAmount,
             ReturnCompensatedQuantity = returnRows.Sum(row => row.CompensatedQuantity),
-            Profit = revenue - totalCost - totalExpenses - returnNetRefundAmount - returnAdditionalCost,
-            IsProfitFinal = costRows.Count > 0 && costRows.All(row => row.UnitCost.HasValue),
+            Profit = revenue - totalCost - totalExpenses - returnNetRefundAmount,
+            IsProfitFinal = costRows.Count > 0 && !cogsPending,
             Debts = debtRows,
             Expenses = expenseRows,
             Costs = costRows,
