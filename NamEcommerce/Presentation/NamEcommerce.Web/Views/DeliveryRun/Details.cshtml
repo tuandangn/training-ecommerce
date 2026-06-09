@@ -54,11 +54,11 @@
     </div>
 }
 <div class="content-card">
-    <div class="content-card-header">
+    <div class="content-card-header mb-3">
         <div class="d-flex flex-wrap gap-2 justify-content-end w-100">
             @if (Model.PaperManifestIssued && canManageDeliveryRun)
             {
-                <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-outline-secondary">
+                <a asp-action="Print" asp-route-id="@Model.Id" target="_blank" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-printer me-1"></i>In phiếu giấy
                 </a>
             }
@@ -66,7 +66,7 @@
             {
                 <form asp-action="IssuePaperManifest" method="post" target="_blank">
                     <input type="hidden" name="id" value="@Model.Id" />
-                    <button type="submit" class="btn btn-outline-secondary">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
                         <i class="bi bi-printer me-1"></i>In phiếu giấy
                     </button>
                 </form>
@@ -75,7 +75,7 @@
             {
                 <form asp-action="HandOver" method="post">
                     <input type="hidden" name="id" value="@Model.Id" />
-                    <button type="submit" class="btn btn-primary" disabled="@(!canHandOver)" title="@(!canHandOver ? "Cần cache app hoặc in phiếu giấy trước" : null)">
+                    <button type="submit" class="btn btn-sm btn-primary" disabled="@(!canHandOver)" title="@(!canHandOver ? "Cần cache app hoặc in phiếu giấy trước" : null)">
                         <i class="bi bi-truck me-1"></i>Bàn giao
                     </button>
                 </form>
@@ -84,7 +84,7 @@
             {
                 <form asp-action="Close" method="post">
                     <input type="hidden" name="id" value="@Model.Id" />
-                    <button type="submit" class="btn btn-success">
+                    <button type="submit" class="btn btn-success btn-sm">
                         <i class="bi bi-check-circle me-1"></i>Đóng chuyến
                     </button>
                 </form>
@@ -93,7 +93,7 @@
             {
                 <form asp-action="Cancel" method="post" onsubmit="return confirm('Hủy chuyến giao này?');">
                     <input type="hidden" name="id" value="@Model.Id" />
-                    <button type="submit" class="btn btn-outline-danger">
+                    <button type="submit" class="btn btn-outline-danger btn-sm">
                         <i class="bi bi-x-circle me-1"></i>Hủy chuyến
                     </button>
                 </form>
@@ -108,7 +108,7 @@
         </div>
     }
     <div class="content-card-body-flush px-3">
-        <div class="row g-3 mb-4">
+        <div class="row g-3">
             <div class="col-lg-4">
                 <div class="border rounded p-3 h-100">
                     <h5 class="fw-bold mb-3"><i class="bi bi-person-check me-2 text-primary"></i>Người giao</h5>
@@ -222,11 +222,10 @@
             </div>
         </div>
     </div>
+    <div class="content-card-header">
+        <h5>Phiếu giao hàng</h5>
+    </div>
     <div class="content-card-body-flush pb-3">
-        <div class="d-flex justify-content-between align-items-center mb-3 px-3">
-            <h5 class="mb-0 fw-bold"><i class="bi bi-list-check me-2 text-primary"></i>Phiếu trong chuyến</h5>
-            <span class="badge bg-light text-dark">@Model.Items.Count phiếu</span>
-        </div>
         <div class="table-responsive">
         <table class="table data-table align-middle">
             <thead>

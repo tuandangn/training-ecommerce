@@ -429,6 +429,48 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
         });
     }
 
+    public Task RegisterSaleDispatchReversalAsync(RegisterSaleDispatchReversalDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        var exists = _allocationReader.DataSource.Any(a =>
+            a.OutboundLedgerEntryId == dto.InboundLedgerEntryId && a.Quantity < 0);
+        if (exists) return Task.CompletedTask;
+
+        var originalAllocation = _allocationReader.DataSource
+            .Where(a => a.OutboundReferenceType == InventoryCostReferenceType.SalesOrder
+                     && a.OutboundReferenceItemId == dto.DeliveryNoteItemId
+                     && a.ProductId == dto.ProductId
+                     && a.CostingStatus != InventoryCostingStatus.Superseded
+                     && a.Quantity > 0)
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .FirstOrDefault();
+
+        if (originalAllocation is null) return Task.CompletedTask;
+
+        var unitCost = originalAllocation.UnitCost;
+        var totalCost = unitCost.HasValue ? -(dto.ReturnedQuantity * unitCost.Value) : (decimal?)null;
+
+        var allocation = new InventoryCostAllocation(
+            Guid.NewGuid(),
+            dto.ProductId,
+            originalAllocation.WarehouseId,
+            dto.InboundLedgerEntryId,
+            InventoryCostReferenceType.SalesOrder,
+            originalAllocation.OutboundReferenceId,
+            originalAllocation.OutboundReferenceItemId,
+            null,
+            -dto.ReturnedQuantity,
+            unitCost,
+            totalCost,
+            originalAllocation.CostingStatus,
+            originalAllocation.CostingMethod,
+            originalAllocation.ValuationScope,
+            null);
+
+        return _allocationRepository.InsertAsync(allocation);
+    }
+
     public Task<InventoryCogsSummaryDto> GetCogsForReferencesAsync(InventoryCostReferenceType referenceType, IEnumerable<Guid> referenceIds)
     {
         var ids = referenceIds.Distinct().ToArray();
@@ -507,11 +549,20 @@ public sealed class InventoryCostingManager : IInventoryCostingManager
                     g => g.Key,
                     g => g.OrderByDescending(l => l.OpenedAtUtc).First().UnitCost);
 
+            var lostReversalNoteIds = affectedAllocations
+                .Where(a => a.Quantity < 0 && a.OutboundReferenceType == InventoryCostReferenceType.SalesOrder)
+                .Select(a => a.OutboundReferenceId)
+                .Distinct()
+                .ToList();
+
             foreach (var allocation in affectedAllocations)
             {
                 allocation.MarkSuperseded(run.Id);
                 await _allocationRepository.UpdateAsync(allocation).ConfigureAwait(false);
             }
+
+            if (lostReversalNoteIds.Count > 0)
+                run.MarkReturnReversalLost(lostReversalNoteIds);
 
             foreach (var layer in affectedLayers)
             {

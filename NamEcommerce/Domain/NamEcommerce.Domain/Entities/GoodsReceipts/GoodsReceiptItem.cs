@@ -47,6 +47,7 @@ public sealed record GoodsReceiptItem : AppEntity
         }
     }
     public decimal? UnitCost { get; private set; }
+    public Guid? SourceDeliveryNoteItemId { get; internal set; }
 
     #region Methods
 

@@ -1,0 +1,226 @@
+@using NamEcommerce.Web.Contracts.Models.Notifications
+@model SystemNotificationListModel
+@{
+    ViewData["Title"] = "Thông báo";
+}
+@functions {
+    private static string SeverityClass(int severity) => (SystemNotificationSeverity)severity switch
+    {
+        SystemNotificationSeverity.Success => "success",
+        SystemNotificationSeverity.Warning => "warning",
+        SystemNotificationSeverity.Danger => "danger",
+        _ => "info"
+    };
+
+    private static string SeverityName(int severity) => (SystemNotificationSeverity)severity switch
+    {
+        SystemNotificationSeverity.Success => "Thành công",
+        SystemNotificationSeverity.Warning => "Cần chú ý",
+        SystemNotificationSeverity.Danger => "Khẩn",
+        _ => "Thông tin"
+    };
+
+    private static string TypeName(int type) => (SystemNotificationType)type switch
+    {
+        SystemNotificationType.CustomerPortalOrderRequestCreated => "Portal: đặt hàng",
+        SystemNotificationType.CustomerPortalReturnRequestCreated => "Portal: trả hàng",
+        SystemNotificationType.CustomerPortalDeliveryConfirmed => "Portal: xác nhận giao",
+        SystemNotificationType.CustomerPortalPaymentPendingReconciliation => "Portal: thanh toán",
+        SystemNotificationType.DeliveryNoteCreated => "Phiếu xuất mới",
+        SystemNotificationType.DeliveryNoteConfirmed => "Phiếu xuất xác nhận",
+        SystemNotificationType.DeliveryNoteDelivering => "Đang giao",
+        SystemNotificationType.DeliveryNoteDelivered => "Đã giao",
+        SystemNotificationType.DeliveryNoteShipperNotResponded => "Shipper không phản hồi",
+        SystemNotificationType.DeliveryRunCreated => "Chuyến giao mới",
+        SystemNotificationType.DeliveryRunHandedOver => "Đã bàn giao",
+        SystemNotificationType.DeliveryRunCashHandoverPending => "Chờ bàn giao tiền",
+        SystemNotificationType.GoodsReceiptCreated => "Nhập kho",
+        SystemNotificationType.PurchaseOrderCreated => "Phiếu mua mới",
+        SystemNotificationType.PurchaseOrderStatusChanged => "Phiếu mua đổi trạng thái",
+        SystemNotificationType.InventoryCostReturnReversalLost => "Hoàn giá vốn lỗi",
+        _ => "Thông báo"
+    };
+}
+@section TitleSection {
+    <h1 class="topbar-page-title">Thông báo</h1>
+    <div class="topbar-page-subtitle">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index" asp-controller="Home" class="text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Thông báo</li>
+            </ol>
+        </nav>
+    </div>
+}
+
+<div class="content-card mb-3">
+    <div class="px-3 pt-3 border-bottom">
+        <ul class="nav nav-tabs border-0">
+            <li class="nav-item">
+                <a class="nav-link @(Model.TypeGroup == null ? "active" : "")" asp-action="List" asp-route-isRead="@Model.IsRead" asp-route-severity="@Model.Severity">Tất cả</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(Model.TypeGroup == (int)SystemNotificationTypeGroup.CustomerPortal ? "active" : "")" asp-action="List" asp-route-typeGroup="@((int)SystemNotificationTypeGroup.CustomerPortal)" asp-route-isRead="@Model.IsRead" asp-route-severity="@Model.Severity">
+                    <i class="bi bi-person-lines-fill me-1"></i>Customer Portal
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(Model.TypeGroup == (int)SystemNotificationTypeGroup.Delivery ? "active" : "")" asp-action="List" asp-route-typeGroup="@((int)SystemNotificationTypeGroup.Delivery)" asp-route-isRead="@Model.IsRead" asp-route-severity="@Model.Severity">
+                    <i class="bi bi-truck me-1"></i>Giao hàng
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(Model.TypeGroup == (int)SystemNotificationTypeGroup.Procurement ? "active" : "")" asp-action="List" asp-route-typeGroup="@((int)SystemNotificationTypeGroup.Procurement)" asp-route-isRead="@Model.IsRead" asp-route-severity="@Model.Severity">
+                    <i class="bi bi-cart3 me-1"></i>Mua hàng
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @(Model.TypeGroup == (int)SystemNotificationTypeGroup.Inventory ? "active" : "")" asp-action="List" asp-route-typeGroup="@((int)SystemNotificationTypeGroup.Inventory)" asp-route-isRead="@Model.IsRead" asp-route-severity="@Model.Severity">
+                    <i class="bi bi-boxes me-1"></i>Kho
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="action-toolbar align-items-end">
+        <form asp-action="List" method="get" class="row g-2 align-items-end flex-grow-1">
+            @if (Model.TypeGroup.HasValue)
+            {
+                <input type="hidden" name="TypeGroup" value="@Model.TypeGroup" />
+            }
+            @if (Model.TypeGroup == null)
+            {
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold text-muted text-uppercase">Loại</label>
+                    <select name="Type" class="form-select">
+                        <option value="">Tất cả</option>
+                        @foreach (SystemNotificationType type in Enum.GetValues<SystemNotificationType>())
+                        {
+                            <option value="@((int)type)" selected="@(Model.Type == (int)type)">@TypeName((int)type)</option>
+                        }
+                    </select>
+                </div>
+            }
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted text-uppercase">Mức độ</label>
+                <select name="Severity" class="form-select">
+                    <option value="">Tất cả</option>
+                    @foreach (SystemNotificationSeverity severity in Enum.GetValues<SystemNotificationSeverity>())
+                    {
+                        <option value="@((int)severity)" selected="@(Model.Severity == (int)severity)">@SeverityName((int)severity)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted text-uppercase">Trạng thái</label>
+                <select name="IsRead" class="form-select">
+                    <option value="">Tất cả</option>
+                    <option value="false" selected="@(Model.IsRead == false)">Chưa đọc</option>
+                    <option value="true" selected="@(Model.IsRead == true)">Đã đọc</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-search me-1"></i>Lọc
+                </button>
+            </div>
+        </form>
+        <form asp-action="MarkAllRead" method="post">
+            <button type="submit" class="btn btn-primary text-nowrap">
+                <i class="bi bi-check2-all me-1"></i>Đọc hết
+            </button>
+        </form>
+    </div>
+
+    <div class="content-card-body-flush">
+        <div class="table-responsive">
+            <table class="table data-table align-middle">
+                <thead>
+                    <tr>
+                        <th class="ps-4">Nội dung</th>
+                        <th>Loại</th>
+                        <th class="text-center">Mức độ</th>
+                        <th class="text-center">Trạng thái</th>
+                        <th class="d-none d-lg-table-cell">Thời gian</th>
+                        <th style="width: 150px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Data.Items.Any())
+                    {
+                        foreach (var item in Model.Data.Items)
+                        {
+                            <tr class="@(!item.IsRead ? "table-light" : "")">
+                                <td class="ps-4">
+                                    <div class="fw-semibold text-dark">@item.Title</div>
+                                    @if (!string.IsNullOrWhiteSpace(item.Message))
+                                    {
+                                        <div class="small text-muted">@item.Message</div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.RelatedEntityType))
+                                    {
+                                        <div class="small text-muted">@item.RelatedEntityType @item.RelatedEntityId</div>
+                                    }
+                                </td>
+                                <td>@TypeName(item.Type)</td>
+                                <td class="text-center">
+                                    <span class="status-badge @SeverityClass(item.Severity)">@SeverityName(item.Severity)</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (item.IsRead)
+                                    {
+                                        <span class="status-badge secondary">
+                                            <i class="bi bi-check2 me-1"></i>Đã đọc
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge info">
+                                            <i class="bi bi-circle-fill me-1"></i>Mới
+                                        </span>
+                                    }
+                                </td>
+                                <td class="d-none d-lg-table-cell text-muted">@item.CreatedOn.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <div class="d-flex justify-content-end gap-2">
+                                        @if (!string.IsNullOrWhiteSpace(item.ActionUrl))
+                                        {
+                                            <a asp-action="Open" asp-route-id="@item.Id" asp-route-actionUrl="@item.ActionUrl" class="btn btn-sm btn-light" title="Mở">
+                                                <i class="bi bi-box-arrow-up-right text-primary"></i>
+                                            </a>
+                                        }
+                                        @if (!item.IsRead)
+                                        {
+                                            <form asp-action="MarkRead" method="post">
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <button type="submit" class="btn btn-sm btn-light" title="Đánh dấu đã đọc">
+                                                    <i class="bi bi-check2 text-success"></i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <div class="empty-icon"><i class="bi bi-bell"></i></div>
+                                    <h5>Chưa có thông báo</h5>
+                                    <p>Các sự kiện cần theo dõi sẽ xuất hiện tại đây theo quyền hiện tại của bạn.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (Model.Data.Pagination.TotalCount > 0)
+        {
+            <partial name="_Pager" model="Model.Data.Pagination" />
+        }
+    </div>
+</div>

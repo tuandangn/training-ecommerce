@@ -25,6 +25,7 @@ public sealed class GoodsReceiptItemMapping : IEntityTypeConfiguration<GoodsRece
         builder.Property(i => i.UnitCost).HasColumnType("decimal(18,2)");
         builder.Property(i => i.TaxRate).HasColumnType("decimal(5,4)").IsRequired(false);
         builder.Property(i => i.TaxAmount).HasColumnType("decimal(18,2)").IsRequired().HasDefaultValue(0m);
+        builder.Property(i => i.SourceDeliveryNoteItemId);
 
         builder.HasOne<Product>()
             .WithMany()

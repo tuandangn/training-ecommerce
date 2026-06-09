@@ -62,7 +62,6 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
                 ProductName = product?.Name ?? orderItem.ProductName,
                 Quantity = orderItem.Quantity,
                 ProductPicture = product?.PictureUrl,
-                ProductAvailableQty = product?.QuantityAvailable,
                 UnitPrice = orderItem.UnitPrice
             });
         }

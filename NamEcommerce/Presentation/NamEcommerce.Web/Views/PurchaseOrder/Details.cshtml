@@ -119,7 +119,6 @@
 }
 @await Html.PartialAsync("_PurchaseOrderWorkflowBar", Model)
 
-
 <div class="order-workflow-layout">
     <div class="order-workflow-main">
         @await Html.PartialAsync("_POWorkflowOrderingPanel", Model)
@@ -876,6 +875,23 @@
                         const firstPanel = document.getElementById('po-stage-ordering');
                         if (firstPanel) firstPanel.classList.add('active');
                     }
+                })();
+            </script>
+
+            <script type="module">
+                import { confirm } from '/modules/modals.js';
+                (function(){
+                    document.querySelectorAll('.change-status-form').forEach(form => {
+                        form.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            const newStatus = this.dataset.newStatus || '';
+                            const message = this.dataset.confirmText || 'Bạn có chắc chắn muốn thay đổi trạng thái?';
+                            confirm('Xác nhận', message)
+                                .then(confirmed => {
+                                    if (confirmed) this.submit();
+                                });
+                        });
+                    });
                 })();
             </script>
 

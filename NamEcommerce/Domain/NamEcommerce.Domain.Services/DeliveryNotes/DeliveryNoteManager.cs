@@ -195,11 +195,15 @@ public sealed class DeliveryNoteManager(
 
         var acceptance = ResolveDeliveryAcceptance(deliveryNote, dto.Acceptance);
 
-        // Snapshot hiển thị trước khi xuất kho; COGS authoritative được ghi trong cost allocation.
-        // Lưu cùng entity; DeliveryNoteDeliveringStockHandler dispatch stock nếu phiếu đi từ Confirmed tới Delivered trực tiếp.
-        foreach (var item in deliveryNote.Items)
+        // Snapshot chỉ cập nhật khi phiếu chưa xuất kho (Confirmed → Delivered trực tiếp).
+        // Nếu đang ở Delivering, CostAtDispatch đã được set đúng trước khi xuất kho ở MarkDeliveringAsync.
+        // Đọc lại sau khi xuất sẽ trả về 0 vì balance cost ledger đã về 0.
+        if (deliveryNote.Status == DeliveryNoteStatus.Confirmed)
         {
-            item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
+            foreach (var item in deliveryNote.Items)
+            {
+                item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
+            }
         }
 
         deliveryNote.AmountToCollect = acceptance.AmountToCollect;
@@ -255,9 +259,12 @@ public sealed class DeliveryNoteManager(
         if (deliveryNote.Status != DeliveryNoteStatus.Delivered)
         {
             resolvedAcceptance = ResolveDeliveryAcceptance(deliveryNote, acceptance);
-            foreach (var item in deliveryNote.Items)
+            if (deliveryNote.Status == DeliveryNoteStatus.Confirmed)
             {
-                item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
+                foreach (var item in deliveryNote.Items)
+                {
+                    item.CostAtDispatch = await GetDisplayCostAsync(item.ProductId).ConfigureAwait(false);
+                }
             }
 
             deliveryNote.AmountToCollect = resolvedAcceptance.AmountToCollect;

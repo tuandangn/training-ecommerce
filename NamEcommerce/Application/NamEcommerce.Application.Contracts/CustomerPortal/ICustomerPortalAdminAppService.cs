@@ -14,9 +14,6 @@ public interface ICustomerPortalAdminAppService
     Task<CustomerActionResultAppDto> ResetAccountPasswordAsync(Guid customerId, string password);
 
     Task<IReadOnlyCollection<CustomerPortalSecurityEventAdminAppDto>> GetSecurityEventsAsync(Guid? customerId = null, int take = 100);
-    Task<IReadOnlyCollection<CustomerPortalNotificationAdminAppDto>> GetNotificationsAsync(int? status = null, int take = 100);
-    Task<CustomerPortalNotificationAdminAppDto?> GetNotificationAsync(Guid id);
-    Task<CustomerActionResultAppDto> MarkNotificationReadAsync(Guid id);
 
     Task<IReadOnlyCollection<CustomerPortalOrderRequestAdminAppDto>> GetOrderRequestsAsync(int? status = null);
     Task<CustomerPortalOrderRequestAdminAppDto?> GetOrderRequestAsync(Guid id);

@@ -16,7 +16,7 @@ export default class DeliveryNoteController {
 
     async confirm(id) {
         if (!id) throw new Error('Id is required');
-        if (!await confirm('Xuất hàng', 'Xác nhận hàng hóa đã xuất kho'))
+        if (!await confirm('Xác nhận phiếu giao', 'Xác nhận phiếu giao hàng và chuẩn bị giao hàng.'))
             return;
 
         showPageLoading();
@@ -28,7 +28,7 @@ export default class DeliveryNoteController {
 
     async delivering(id) {
         if (!id) throw new Error('Id is required');
-        if (!await confirm('Đang giao', 'Xác nhận hàng hóa đang đi giao'))
+        if (!await confirm('Đang giao', 'Xác nhận hàng hóa đang đi giao.'))
             return;
         showPageLoading();
         const result = await apiPost(this.#DELIVERING_URL + id);

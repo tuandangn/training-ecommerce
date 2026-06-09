@@ -2,10 +2,13 @@ using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Inventory;
+using NamEcommerce.Application.Contracts.Notifications;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Extensions;
+using NamEcommerce.Application.Services.Notifications;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
+using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions;
 using NamEcommerce.Domain.Shared.Exceptions.Inventory;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
@@ -17,15 +20,18 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
     private readonly IDeliveryNoteManager _deliveryNoteManager;
     private readonly IWarehouseAppService _warehouseAppService;
     private readonly IUserAppService _userAppService;
+    private readonly ISystemNotificationAppService _systemNotificationAppService;
 
     public DeliveryNoteAppService(
         IDeliveryNoteManager deliveryNoteManager,
         IWarehouseAppService warehouseAppService,
-        IUserAppService userAppService)
+        IUserAppService userAppService,
+        ISystemNotificationAppService systemNotificationAppService)
     {
         _deliveryNoteManager = deliveryNoteManager;
         _warehouseAppService = warehouseAppService;
         _userAppService = userAppService;
+        _systemNotificationAppService = systemNotificationAppService;
     }
 
     public async Task<DeliveryNoteAppDto> CreateFromOrderAsync(CreateDeliveryNoteAppDto dto)
@@ -112,6 +118,12 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
     {
         try
         {
+            var note = await _deliveryNoteManager.GetByIdAsync(dto.DeliveryNoteId).ConfigureAwait(false);
+            var isCompletedByAdminOnBehalf = note is not null
+                && note.AssignedDeliveryUserId.HasValue
+                && note.Status != DeliveryNoteStatus.Delivered
+                && !string.Equals(dto.CompletionMetadata?.Source, "MobilePwa", StringComparison.OrdinalIgnoreCase);
+
             await _deliveryNoteManager.MarkDeliveredAsync(new MarkDeliveryNoteDeliveredDto
             {
                 DeliveryNoteId = dto.DeliveryNoteId,
@@ -146,6 +158,11 @@ public sealed class DeliveryNoteAppService : IDeliveryNoteAppService
                         CashCollectedAmount = dto.CompletionMetadata.CashCollectedAmount
                     }
             }).ConfigureAwait(false);
+
+            if (isCompletedByAdminOnBehalf)
+                await _systemNotificationAppService.CreateAsync(
+                    DeliveryNoteSystemNotificationComposer.ShipperNotResponded(
+                        note!.Id, note.Code, note.AssignedDeliveryFullName)).ConfigureAwait(false);
 
             return new MarkDeliveryNoteDeliveredResultAppDto
             {

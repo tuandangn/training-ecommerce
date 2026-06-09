@@ -1,8 +1,10 @@
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Notifications;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Extensions;
+using NamEcommerce.Application.Services.Notifications;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
@@ -12,7 +14,10 @@ using NamEcommerce.Domain.Shared.Services.Users;
 
 namespace NamEcommerce.Application.Services.DeliveryNotes;
 
-public sealed class DeliveryRunAppService(IDeliveryRunManager manager, IUserAppService userAppService)
+public sealed class DeliveryRunAppService(
+    IDeliveryRunManager manager,
+    IUserAppService userAppService,
+    ISystemNotificationAppService notificationAppService)
     : IDeliveryRunAppService
 {
     public async Task<CreateDeliveryRunResultAppDto> CreateAsync(CreateDeliveryRunAppDto dto)
@@ -42,6 +47,10 @@ public sealed class DeliveryRunAppService(IDeliveryRunManager manager, IUserAppS
                 Note = dto.Note
             }).ConfigureAwait(false);
 
+            await notificationAppService
+                .CreateAsync(DeliverySystemNotificationComposer.DeliveryRunCreated(run.ToAppDto()))
+                .ConfigureAwait(false);
+
             return new CreateDeliveryRunResultAppDto { Success = true, CreatedId = run.Id };
         }
         catch (NamEcommerceDomainException ex)
@@ -56,8 +65,30 @@ public sealed class DeliveryRunAppService(IDeliveryRunManager manager, IUserAppS
     public Task<CommonActionResultDto> IssuePaperManifestAsync(Guid id)
         => RunActionAsync(() => manager.IssuePaperManifestAsync(id));
 
-    public Task<CommonActionResultDto> HandOverAsync(Guid id)
-        => RunActionAsync(() => manager.HandOverAsync(id));
+    public async Task<CommonActionResultDto> HandOverAsync(Guid id)
+    {
+        var result = await RunActionAsync(() => manager.HandOverAsync(id)).ConfigureAwait(false);
+        if (!result.Success)
+            return result;
+
+        var run = await manager.GetByIdAsync(id).ConfigureAwait(false);
+        if (run is null)
+            return result;
+
+        var appDto = run.ToAppDto();
+        await notificationAppService
+            .CreateAsync(DeliverySystemNotificationComposer.DeliveryRunHandedOver(appDto))
+            .ConfigureAwait(false);
+
+        if (appDto.Items.Sum(item => item.AmountToCollect) > 0 && appDto.CashHandoverConfirmedOnUtc is null)
+        {
+            await notificationAppService
+                .CreateAsync(DeliverySystemNotificationComposer.DeliveryRunCashHandoverPending(appDto))
+                .ConfigureAwait(false);
+        }
+
+        return result;
+    }
 
     public Task<CommonActionResultDto> CloseAsync(Guid id)
         => RunActionAsync(() => manager.CloseAsync(id));

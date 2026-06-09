@@ -39,7 +39,5 @@ public sealed record OrderModel
         public required decimal UnitPrice { get; init; }
         public string? ProductName { get; set; }
         public string? ProductPicture { get; set; }
-        public decimal? ProductAvailableQty { get; set; }
-        public decimal SubTotal => UnitPrice * Quantity;
     }
 }

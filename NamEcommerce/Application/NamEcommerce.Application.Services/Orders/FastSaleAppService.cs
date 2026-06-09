@@ -283,7 +283,7 @@ public sealed class FastSaleAppService(
         {
             OrderId = order.Id,
             WarehouseId = ResolveHeaderWarehouseId(dto),
-            ShippingAddress = string.IsNullOrWhiteSpace(order.ShippingAddress) ? "Tai quay" : order.ShippingAddress,
+            ShippingAddress = "Tai quay",
             ShowPrice = true,
             CompensateReturnedQuantityInNextDelivery = false,
             Surcharge = 0,

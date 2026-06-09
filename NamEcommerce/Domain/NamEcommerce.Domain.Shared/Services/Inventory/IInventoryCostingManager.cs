@@ -12,6 +12,7 @@ public interface IInventoryCostingManager
     Task AssignGoodsReceiptItemCostAsync(AssignGoodsReceiptItemCostDto dto);
     Task<InventoryCostSummaryDto> GetCurrentCostSummaryAsync(Guid productId);
     Task<InventoryCogsSummaryDto> GetCogsForReferencesAsync(InventoryCostReferenceType referenceType, IEnumerable<Guid> referenceIds);
+    Task RegisterSaleDispatchReversalAsync(RegisterSaleDispatchReversalDto dto);
     Task<Guid> RevalueProductFromAsync(Guid productId, DateTime fromUtc, InventoryCostRebuildTrigger trigger, Guid? requestedByUserId);
     Task<Guid> RebuildAllAsync(InventoryCostingMethod method, InventoryValuationScope scope, Guid? requestedByUserId);
 }

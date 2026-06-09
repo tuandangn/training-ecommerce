@@ -1,5 +1,6 @@
 using NamEcommerce.Domain.Shared;
 using NamEcommerce.Domain.Shared.Enums.Inventory;
+using NamEcommerce.Domain.Shared.Events.Inventory;
 
 namespace NamEcommerce.Domain.Entities.Inventory;
 
@@ -52,4 +53,7 @@ public sealed record InventoryCostRebuildRun : AppAggregateEntity
         CompletedAtUtc = DateTime.UtcNow;
         ErrorMessage = errorMessage;
     }
+
+    internal void MarkReturnReversalLost(IReadOnlyCollection<Guid> affectedDeliveryNoteIds)
+        => RaiseDomainEvent(new InventoryCostReturnReversalLost(Id, ProductId ?? Guid.Empty, affectedDeliveryNoteIds));
 }

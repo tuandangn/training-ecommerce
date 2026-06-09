@@ -20,7 +20,7 @@ public sealed class GetProductStockInfoHandler : IRequestHandler<GetProductStock
 
         var quantityAvailable = request.WarehouseId.HasValue
             ? stockItems.Sum(item => item.QuantityAvailable)
-            : await _inventoryAppService.GetGlobalAvailableForProductAsync(request.ProductId).ConfigureAwait(false);
+            : await _inventoryAppService.GetGlobalAvailableQuantityForProductAsync(request.ProductId).ConfigureAwait(false);
 
         return new ProductStockInfoModel
         {

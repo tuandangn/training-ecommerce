@@ -84,6 +84,15 @@ public sealed record InventoryCostMovementResultDto
 }
 
 [Serializable]
+public sealed record RegisterSaleDispatchReversalDto
+{
+    public required Guid ProductId { get; init; }
+    public required decimal ReturnedQuantity { get; init; }
+    public required Guid DeliveryNoteItemId { get; init; }
+    public required Guid InboundLedgerEntryId { get; init; }
+}
+
+[Serializable]
 public sealed record InventoryCogsSummaryDto
 {
     public required decimal TotalCost { get; init; }

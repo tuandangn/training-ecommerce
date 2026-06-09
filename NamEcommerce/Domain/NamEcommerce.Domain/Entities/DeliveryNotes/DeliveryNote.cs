@@ -169,8 +169,6 @@ public sealed record DeliveryNote : AppAggregateEntity
         if (Status != DeliveryNoteStatus.Confirmed)
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivering);
 
-        EnsureDeliveryUserAssignedBeforeLeavingWarehouse();
-
         Status = DeliveryNoteStatus.Delivering;
         UpdatedOnUtc = DateTime.UtcNow;
 
@@ -215,8 +213,6 @@ public sealed record DeliveryNote : AppAggregateEntity
             throw new DeliveryProofRequiredException();
 
         var wasConfirmed = Status == DeliveryNoteStatus.Confirmed;
-        if (wasConfirmed)
-            EnsureDeliveryUserAssignedBeforeLeavingWarehouse();
 
         Status = DeliveryNoteStatus.Delivered;
         DeliveredOnUtc = DateTime.UtcNow;
@@ -251,8 +247,6 @@ public sealed record DeliveryNote : AppAggregateEntity
             throw new DeliveryNoteCannotChangeStatusException(Status, DeliveryNoteStatus.Delivered);
 
         var wasConfirmed = Status == DeliveryNoteStatus.Confirmed;
-        if (wasConfirmed)
-            EnsureDeliveryUserAssignedBeforeLeavingWarehouse();
 
         DeliveryConfirmationStatus = DeliveryConfirmationStatus.Confirmed;
         ConfirmedAtUtc = receivedAtUtc;
@@ -280,17 +274,6 @@ public sealed record DeliveryNote : AppAggregateEntity
 
         RaiseDomainEvent(new DeliveryNoteCancelled(Id, wasReservingStock));
     }
-
-    private void EnsureDeliveryUserAssignedBeforeLeavingWarehouse()
-    {
-        if (RequiresDeliveryUserBeforeLeavingWarehouse() && !AssignedDeliveryUserId.HasValue)
-            throw new NamEcommerceDomainException("Error.DeliveryUserRequiredBeforeLeavingWarehouse");
-    }
-
-    private bool RequiresDeliveryUserBeforeLeavingWarehouse()
-        => SourceType == DeliveryNoteSourceType.ToCustomer
-           && !IsDirectShip
-           && !string.Equals(ShippingAddress.Value.Trim(), "Tai quay", StringComparison.OrdinalIgnoreCase);
 
     private void SetDeliveryCompletionMetadata(double? latitude, double? longitude, string? locationAddress,
         string? completionNote, string? completionSource, string? idempotencyKey, decimal? cashCollectedAmount)

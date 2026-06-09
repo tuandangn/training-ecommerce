@@ -82,7 +82,7 @@
                     <div class="content-card-header">
                         <h5>Danh sách hàng hóa</h5>
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-sm btn-link text-dark text-decoration-none" data-testid="order-add-product-open" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                            <button type="button" class="btn btn-sm btn-light" data-testid="order-add-product-open" data-bs-toggle="modal" data-bs-target="#addProductModal">
                                 <i class="bi bi-plus-lg me-1"></i>
                                 <span class="d-none d-lg-inline">Thêm hàng hóa</span>
                                 <span class="d-lg-none">Thêm</span>
@@ -140,7 +140,7 @@
                                                 <span class="text-muted">@item.UnitPrice.DisplayCurrency() đ</span>
                                             </td>
                                             <td class="text-end fw-bold text-primary row-total text-nowrap d-none d-lg-table-cell align-middle">
-                                                @item.ItemSubTotal.DisplayCurrency() đ
+                                                @item.ItemSubTotal.DisplayCurrencyWithSymbol()
                                             </td>
                                             <td class="text-end pe-3 align-middle">
                                                 <button type="button" class="btn-table-action danger border-0 bg-transparent shadow-none">
@@ -163,14 +163,14 @@
                         <div class="order-summary" id="tableFooter">
                             <div class="order-summary-row">
                                 <span class="label">Tạm tính</span>
-                                <span class="value" id="subTotal">@Model.OrderSubTotal.DisplayCurrency()</span>
+                                <span class="value" id="subTotal">@Model.OrderSubTotal.DisplayCurrencyWithSymbol()</span>
                             </div>
                             <div class="order-summary-row">
                                 <span class="label">Giảm giá</span>
                                 <span class="value" id="discountDisplay">
                                     @if (Model.OrderDiscount > 0)
                                     {
-                                        @:-@Model.OrderDiscount.DisplayCurrency()
+                                        @:-@Model.OrderDiscount.DisplayCurrencyWithSymbol()
                                     }
                                     else
                                     {
@@ -181,7 +181,7 @@
                             <div class="order-summary-row total">
                                 <span class="label">Tổng cộng</span>
                                 <span class="value">
-                                    <span id="grandTotal">@Model.OrderTotal.DisplayCurrency()</span>
+                                    <span id="grandTotal">@Model.OrderTotal.DisplayCurrencyWithSymbol()</span>
                                 </span>
                             </div>
                             <div class="currency-hint text-end visible" id="grandTotalHint">

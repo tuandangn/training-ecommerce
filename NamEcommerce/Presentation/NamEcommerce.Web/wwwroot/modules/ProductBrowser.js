@@ -13,6 +13,7 @@ export default class ProductBrowser {
         vid: null
     };
     #categories = [];
+    #recentLoadedProducts = null;
 
     static #defaults = {
         colClass: 'col-12 col-sm-6 col-md-4 col-lg-6 col-xl-4',
@@ -58,6 +59,12 @@ export default class ProductBrowser {
     }
     reload() {
         this.#setState({});
+    }
+    refresh() {
+        if (this.#recentLoadedProducts)
+            this.#renderGrid(this.#recentLoadedProducts);
+        else
+            this.#loadProducts();
     }
 
     #bindEvents() {
@@ -196,7 +203,7 @@ export default class ProductBrowser {
         this.#abortController?.abort();
         this.#abortController = new AbortController();
         this.#setLoading(true);
-
+        this.#recentLoadedProducts = null;
         try {
             let url = `${this.#options.productSearchUrl}?q=${encodeURIComponent(this.#state.q)}`;
             if (this.#state.cid) url += `&cid=${encodeURIComponent(this.#state.cid)}`;
@@ -204,6 +211,7 @@ export default class ProductBrowser {
             const res = await fetch(url, { signal: this.#abortController.signal });
             if (!res.ok) throw new Error();
             const products = await res.json();
+            this.#recentLoadedProducts = products;
             this.#renderGrid(products);
         } catch (err) {
             if (err.name !== 'AbortError') {

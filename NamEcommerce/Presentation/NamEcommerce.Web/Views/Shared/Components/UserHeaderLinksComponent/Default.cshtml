@@ -8,6 +8,24 @@
 <div class="topbar-actions">
     @if (Model.IsAuthenticated)
     {
+        <div class="system-notification-center" data-system-notification-center>
+            <button class="notification-btn" type="button" data-system-notification-toggle aria-label="Thông báo" aria-expanded="false">
+                <i class="bi bi-bell"></i>
+                <span class="system-notification-badge" data-system-notification-count hidden>0</span>
+            </button>
+            <div class="system-notification-panel" data-system-notification-panel hidden>
+                <div class="system-notification-panel-header">
+                    <div>
+                        <div class="system-notification-title">Thông báo</div>
+                        <div class="system-notification-subtitle">Sự kiện cần theo dõi</div>
+                    </div>
+                    <a asp-controller="SystemNotification" asp-action="List" class="btn btn-sm btn-link">Xem tất cả</a>
+                </div>
+                <div class="system-notification-list" data-system-notification-list>
+                    <div class="system-notification-empty">Đang tải...</div>
+                </div>
+            </div>
+        </div>
         <div class="nav-item dropdown">
             <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="color: inherit; text-decoration: none;">
                 <div class="user-avatar bg-primary text-white" style="width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">

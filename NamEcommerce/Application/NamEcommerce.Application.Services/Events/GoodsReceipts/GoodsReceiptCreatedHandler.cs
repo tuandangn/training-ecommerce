@@ -81,7 +81,7 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
                 referenceId: goodsReceipt.Id
             ).ConfigureAwait(false);
 
-            await _inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
+            var inboundResult = await _inventoryCostingManager.RegisterInboundAsync(new RegisterInventoryInboundCostDto
             {
                 ProductId = item.ProductId,
                 WarehouseId = item.WarehouseId.Value,
@@ -95,6 +95,15 @@ public sealed class GoodsReceiptCreatedHandler : INotificationHandler<GoodsRecei
                 ReferenceItemId = item.Id,
                 OccurredAtUtc = goodsReceipt.CreatedOnUtc
             }).ConfigureAwait(false);
+
+            if (isFromCustomerReturn && item.SourceDeliveryNoteItemId.HasValue)
+                await _inventoryCostingManager.RegisterSaleDispatchReversalAsync(new RegisterSaleDispatchReversalDto
+                {
+                    ProductId = item.ProductId,
+                    ReturnedQuantity = item.Quantity,
+                    DeliveryNoteItemId = item.SourceDeliveryNoteItemId.Value,
+                    InboundLedgerEntryId = inboundResult.LedgerEntryId
+                }).ConfigureAwait(false);
         }
 
         // 2. Sinh công nợ NCC nếu phiếu được tạo với đủ điều kiện ngay từ đầu.
