@@ -31,6 +31,7 @@ namespace NamEcommerce.Domain.Services.GoodsReceipts;
 
 public sealed class GoodsReceiptManager(
     IRepository<GoodsReceipt> goodsReceiptRepository,
+    IRepository<PurchaseOrder> purchaseOrderRepository,
     IEntityDataReader<GoodsReceipt> goodsReceiptDataReader,
     IEntityDataReader<Product> productDataReader,
     WarehouseSettings warehouseSettings,
@@ -316,10 +317,9 @@ public sealed class GoodsReceiptManager(
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var purchaseOrder = await purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
+        var purchaseOrder = await purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false)
             ?? throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
-        //*TODO*
         var createdByUser = purchaseOrder.CreatedByUserId.HasValue
                 ? new CurrentUserInfoDto(purchaseOrder.CreatedByUserId.Value, string.Empty, string.Empty)
                 : null;

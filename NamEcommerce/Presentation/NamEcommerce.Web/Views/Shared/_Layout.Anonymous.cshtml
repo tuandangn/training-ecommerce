@@ -1,0 +1,28 @@
+@using NamEcommerce.Web.Contracts.Configurations
+@inject IWebHelper WebHelper
+@{
+    var pageTitle = ViewData[ViewConstants.PageTitle] as string ?? Information.Name;
+}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData[ViewConstants.PageTitle] - @Information.Name</title>
+    <partial name="_Styles" />
+    @await RenderSectionAsync(ViewConstants.StyleSection, required: false)
+</head>
+<body>
+    <div class="app-layout">
+        <div class="main-area">
+            <div class="page-content">
+                <main id="mainContent" role="main">
+                    @RenderBody()
+                </main>
+            </div>
+        </div>
+    </div>
+    <partial name="_Scripts" />
+    @await RenderSectionAsync(ViewConstants.ScriptSection, required: false)
+</body>
+</html>

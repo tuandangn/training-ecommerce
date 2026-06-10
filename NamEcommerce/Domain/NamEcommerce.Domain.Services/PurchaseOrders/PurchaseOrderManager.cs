@@ -653,7 +653,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
 
         dto.Verify();
 
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 
@@ -726,7 +726,7 @@ public sealed class PurchaseOrderManager : IPurchaseOrderManager
         ArgumentNullException.ThrowIfNull(dto);
         dto.Verify();
 
-        var purchaseOrder = await _purchaseOrderDataReader.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
+        var purchaseOrder = await _purchaseOrderRepository.GetByIdAsync(dto.PurchaseOrderId).ConfigureAwait(false);
         if (purchaseOrder is null)
             throw new PurchaseOrderIsNotFoundException(dto.PurchaseOrderId);
 

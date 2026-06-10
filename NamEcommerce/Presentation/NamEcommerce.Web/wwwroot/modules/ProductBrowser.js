@@ -22,6 +22,7 @@ export default class ProductBrowser {
         purchase: false,
         initialShow: false,
         allowCreateNew: false,
+        notCollapsed: false,
         checkProduct: null
     };
 
@@ -34,6 +35,8 @@ export default class ProductBrowser {
         this.#container = containerEl;
         this.#onAdd = onAdd;
         this.#options = { ...ProductBrowser.#defaults, ...options };
+        if (this.#options.notCollapsed)
+            this.#options.initialShow = true;
 
         const initialData = Object.assign({}, containerEl.dataset);
         if (initialData.q)
@@ -112,10 +115,11 @@ export default class ProductBrowser {
             <div class="accordion accordion-flush" id="accordionProductBrowser">
                 <div class="accordion-item">
                     <div class="accordion-header position-relative">
-                        <button class="accordion-button text-dark bg-white w-auto p-1 shadow-none position-absolute ${this.#options.initialShow ? '' : 'collapsed'}" style="top:-10px;right:-10px;" type="button"
+                        ${this.#options.notCollapsed ? '' : `<button class="accordion-button text-dark bg-white w-auto p-1 shadow-none position-absolute ${this.#options.initialShow ? '' : 'collapsed'}" style="top:-10px;right:-10px;" type="button"
                             data-bs-toggle="collapse" data-bs-target="#collapseProductBrowser" aria-expanded="${this.#options.initialShow}" aria-controls="collapseProductBrowser">
                             <span class="visually-hidden">Mở thêm hàng hóa</span>
-                        </button>
+                        </button>` }
+
                         <div class="pb-search">
                             <label class="form-label small fw-bold text-muted text-uppercase d-block" for="pbSearchKeywords">Thêm hàng hóa</label>
                             <div class="input-group">

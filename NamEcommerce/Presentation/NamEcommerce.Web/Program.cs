@@ -202,7 +202,6 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
 
         if (builder.Environment.IsDevelopment())
             opts.EnableSensitiveDataLogging(true);
-
     });
     // Đảm bảo IDbContext và IUnitOfWork resolve cùng 1 scoped instance với NamEcommerceEfDbContext
     services.AddScoped<IDbContext>(sp => sp.GetRequiredService<NamEcommerceEfDbContext>());

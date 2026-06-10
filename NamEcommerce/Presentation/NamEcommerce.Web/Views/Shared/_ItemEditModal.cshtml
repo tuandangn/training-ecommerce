@@ -12,12 +12,11 @@
                 <div class="mb-3">
                     <label class="form-label small fw-bold text-muted text-uppercase" data-oe-qty-label>Số lượng</label>
                     <div class="input-group">
-                        <button type="button" class="btn btn-outline-secondary px-3" data-oe-decrement>
+                        <button type="button" class="btn btn-outline-secondary px-3" data-oe-decrement tabindex="-1">
                             <i class="bi bi-dash-lg"></i>
                         </button>
-                        <input type="text" class="form-control text-center" data-oe-qty
-                               inputmode="decimal" autocomplete="off" />
-                        <button type="button" class="btn btn-outline-secondary px-3" data-oe-increment>
+                        <input type="text" class="form-control text-end" data-oe-qty inputmode="decimal" autocomplete="off" />
+                        <button type="button" class="btn btn-outline-secondary px-3" data-oe-increment tabindex="-1">
                             <i class="bi bi-plus-lg"></i>
                         </button>
                     </div>
@@ -25,18 +24,20 @@
                 <div class="mb-3" data-oe-price-section>
                     <label class="form-label small fw-bold text-muted text-uppercase" data-oe-price-label>Đơn giá</label>
                     <div class="input-group">
-                        <input type="text" class="form-control" data-oe-price
-                               inputmode="decimal" autocomplete="off" />
+                        <input type="text" class="form-control text-end" data-oe-price inputmode="decimal" autocomplete="off" />
                         <span class="input-group-text">đ</span>
                     </div>
                 </div>
                 <div class="d-flex justify-content-between align-items-center px-1 text-muted small" data-oe-total-section>
                     <span>Thành tiền</span>
-                    <span data-oe-total class="fw-bold text-primary fs-6">0 đ</span>
+                    <div>
+                        <span data-oe-total class="fw-bold text-primary fs-6 d-block text-end">0 đ</span>
+                        <span data-oe-total-hint class="d-block"></span>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer border-top pt-3">
-                <button type="button" class="btn btn-link link-danger text-decoration-none px-1 me-auto" data-oe-delete>
+                <button type="button" class="btn btn-link link-danger text-decoration-none px-1 me-auto d-none" data-oe-delete>
                     <i class="bi bi-trash me-1"></i>Xóa dòng
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>

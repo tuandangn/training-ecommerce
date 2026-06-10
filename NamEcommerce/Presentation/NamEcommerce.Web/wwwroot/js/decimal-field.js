@@ -17,8 +17,6 @@
         decimalSeparator: ','
     };
 
-    // ---- Helpers -------------------------------------------------------
-
     function stripFormatting(str, decimals) {
         if (!str) return '';
         str = str.trim();
@@ -178,7 +176,10 @@
 
         input.addEventListener('focus', function () {
             this.value = stripInputFormatting(this);
-            focusEnd(this);
+            if (this.value == '0')
+                this.select();
+            else
+                focusEnd(this);
         });
 
         input.addEventListener('blur', function (e) {
