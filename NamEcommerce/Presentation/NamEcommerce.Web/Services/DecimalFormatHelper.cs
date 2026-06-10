@@ -33,6 +33,8 @@ public static class DecimalFormatHelper
         if (!value.HasValue)
             return string.Empty;
 
+        decimalPlaces = Math.Max(0, decimalPlaces);
+
         var raw = Math.Round(value.Value, decimalPlaces).ToString("F" + decimalPlaces, CultureInfo.InvariantCulture);
         var parts = raw.Split('.');
         var intPart = InsertThousandSeparator(parts[0], '.');
@@ -40,7 +42,7 @@ public static class DecimalFormatHelper
             return intPart;
 
         var fracPart = parts[1];
-        if (fracPart == "00")
+        if (fracPart == new string('0', decimalPlaces))
             return intPart;
 
         return $"{intPart},{fracPart}";

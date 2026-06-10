@@ -1,3 +1,4 @@
+using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
 using NamEcommerce.Application.Contracts.Dtos.Returns;
 using NamEcommerce.Application.Contracts.Returns;
 using NamEcommerce.Application.Services.Extensions;
@@ -11,6 +12,7 @@ using NamEcommerce.Domain.Shared.Enums.CustomerPortal;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.Returns;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
+using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Returns;
 
 namespace NamEcommerce.Application.Services.Returns;
@@ -31,7 +33,42 @@ public sealed class CustomerReturnAppService(
 
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
-            return new CreateCustomerReturnResultAppDto { Success = false, ErrorMessage = errorMessage };
+        {
+            return new CreateCustomerReturnResultAppDto
+            {
+                Success = false,
+                ErrorMessage = errorMessage
+            };
+        }
+
+        foreach (var item in dto.Items)
+        {
+            var product = await productDataReader.GetByIdAsync(item.ProductId).ConfigureAwait(false);
+            if (product is null)
+            {
+                return new CreateCustomerReturnResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.GoodsReceipt.ProductIsNotFound"
+                };
+            }
+
+            if (product.UnitMeasurementId.HasValue)
+            {
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                if (unitMeasurement is not null)
+                {
+                    if ((new[] { item.RequestedQuantity, item.AcceptedQuantity }).Any(quantity => !NumberHelper.IsValidDecimalPlace(quantity, unitMeasurement.DecimalPlaces)))
+                    {
+                        return new CreateCustomerReturnResultAppDto
+                        {
+                            Success = false,
+                            ErrorMessage = "Error.QuantityMustBeInteger"
+                        };
+                    }
+                }
+            }
+        }
 
         try
         {

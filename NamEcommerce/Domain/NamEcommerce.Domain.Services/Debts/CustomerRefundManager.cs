@@ -17,6 +17,7 @@ public sealed class CustomerRefundManager(
     IRepository<CustomerRefund> refundRepository,
     IEntityDataReader<CustomerRefund> refundReader,
     IEntityDataReader<CustomerReturn> customerReturnReader,
+    ICustomerLedgerManager customerLedgerManager,
     EntityCodeGenerator entityCodeGenerator) : ICustomerRefundManager
 {
     private Task<string> GenerateCodeAsync()
@@ -62,6 +63,17 @@ public sealed class CustomerRefundManager(
 
         refund.Complete(paymentMethod, bankAccountId, note, completedByUserId);
         await refundRepository.UpdateAsync(refund).ConfigureAwait(false);
+
+        await customerLedgerManager.RecordRefundPayoutAsync(new RecordCustomerLedgerRefundPayoutDto
+        {
+            CustomerId = refund.CustomerId,
+            Amount = refund.Amount,
+            ReferenceId = refund.Id,
+            ReferenceCode = refund.Code,
+            OccurredAtUtc = refund.RefundedOnUtc ?? DateTime.UtcNow,
+            CreatedByUserId = completedByUserId
+        }).ConfigureAwait(false);
+
         return MapToDto(refund);
     }
 

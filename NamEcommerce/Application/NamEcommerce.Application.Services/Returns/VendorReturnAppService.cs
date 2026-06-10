@@ -9,6 +9,7 @@ using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.Returns;
 using NamEcommerce.Domain.Shared.Enums.GoodsReceipts;
 using NamEcommerce.Domain.Shared.Exceptions.Returns;
+using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.Returns;
 
 namespace NamEcommerce.Application.Services.Returns;
@@ -29,7 +30,42 @@ public sealed class VendorReturnAppService(IVendorReturnManager manager,
 
         var (valid, errorMessage) = dto.Validate();
         if (!valid)
-            return new CreateVendorReturnResultAppDto { Success = false, ErrorMessage = errorMessage };
+        {
+            return new CreateVendorReturnResultAppDto
+            {
+                Success = false,
+                ErrorMessage = errorMessage
+            };
+        }
+
+        foreach (var item in dto.Items)
+        {
+            var product = await productDataReader.GetByIdAsync(item.ProductId).ConfigureAwait(false);
+            if (product is null)
+            {
+                return new CreateVendorReturnResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.GoodsReceipt.ProductIsNotFound"
+                };
+            }
+
+            if (product.UnitMeasurementId.HasValue)
+            {
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                if (unitMeasurement is not null)
+                {
+                    if (new[] { item.AcceptedQuantity, item.RequestedQuantity }.Any(quantity => !NumberHelper.IsValidDecimalPlace(quantity, unitMeasurement.DecimalPlaces)))
+                    {
+                        return new CreateVendorReturnResultAppDto
+                        {
+                            Success = false,
+                            ErrorMessage = "Error.QuantityMustBeInteger"
+                        };
+                    }
+                }
+            }
+        }
 
         try
         {

@@ -1,14 +1,16 @@
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
+using NamEcommerce.Application.Contracts.Dtos.Orders;
 using NamEcommerce.Application.Contracts.GoodsReceipts;
+using NamEcommerce.Application.Contracts.PurchaseOrders;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Media;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.GoodsReceipts;
+using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.GoodsReceipts;
-using NamEcommerce.Application.Contracts.PurchaseOrders;
 
 namespace NamEcommerce.Application.Services.GoodsReceipts;
 
@@ -19,19 +21,22 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
     private readonly IEntityDataReader<Product> _productDataReader;
     private readonly IEntityDataReader<Warehouse> _warehouseDataReader;
     private readonly IEntityDataReader<Picture> _pictureDataReader;
+    private readonly IEntityDataReader<UnitMeasurement> _unitMeasurementDataReader;
 
     public GoodsReceiptAppService(
         IGoodsReceiptManager goodsReceiptManager,
         IPurchaseOrderAppService purchaseOrderAppService,
         IEntityDataReader<Product> productDataReader,
         IEntityDataReader<Warehouse> warehouseDataReader,
-        IEntityDataReader<Picture> pictureDataReader)
+        IEntityDataReader<Picture> pictureDataReader,
+        IEntityDataReader<UnitMeasurement> unitMeasurementDataReader)
     {
         _goodsReceiptManager = goodsReceiptManager;
         _purchaseOrderAppService = purchaseOrderAppService;
         _productDataReader = productDataReader;
         _warehouseDataReader = warehouseDataReader;
         _pictureDataReader = pictureDataReader;
+        _unitMeasurementDataReader = unitMeasurementDataReader;
     }
 
     public async Task<IPagedDataAppDto<GoodsReceiptAppDto>> GetGoodsReceiptsAsync(
@@ -75,11 +80,29 @@ public sealed class GoodsReceiptAppService : IGoodsReceiptAppService
         {
             var product = await _productDataReader.GetByIdAsync(item.ProductId).ConfigureAwait(false);
             if (product is null)
+            {
                 return new CreateGoodsReceiptResultAppDto
                 {
                     Success = false,
                     ErrorMessage = "Error.GoodsReceipt.ProductIsNotFound"
                 };
+            }
+
+            if (product.UnitMeasurementId.HasValue)
+            {
+                var unitMeasurement = await _unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                if (unitMeasurement is not null)
+                {
+                    if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))
+                    {
+                        return new CreateGoodsReceiptResultAppDto
+                        {
+                            Success = false,
+                            ErrorMessage = "Error.QuantityMustBeInteger"
+                        };
+                    }
+                }
+            }
 
             if (item.WarehouseId.HasValue)
             {

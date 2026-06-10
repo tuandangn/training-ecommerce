@@ -1,20 +1,62 @@
 using NamEcommerce.Application.Contracts.Dtos.Common;
+using NamEcommerce.Application.Contracts.Dtos.Returns;
 using NamEcommerce.Application.Contracts.Dtos.StockAdjustment;
 using NamEcommerce.Application.Contracts.StockAdjustment;
 using NamEcommerce.Application.Services.Extensions;
+using NamEcommerce.Domain.Entities.Catalog;
+using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.StockAdjustment;
 using NamEcommerce.Domain.Shared.Enums.StockAdjustment;
 using NamEcommerce.Domain.Shared.Exceptions;
+using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.StockAdjustment;
 
 namespace NamEcommerce.Application.Services.StockAdjustment;
 
-public sealed class StockAdjustmentNoteAppService(IStockAdjustmentNoteManager manager) : IStockAdjustmentNoteAppService
+public sealed class StockAdjustmentNoteAppService(IStockAdjustmentNoteManager manager,
+    IEntityDataReader<Product> productDataReader, IEntityDataReader<UnitMeasurement> unitMeasurementDataReader) : IStockAdjustmentNoteAppService
 {
     public async Task<CreateStockAdjustmentNoteResultAppDto> CreateAsync(CreateStockAdjustmentNoteAppDto dto)
     {
         var (valid, error) = dto.Validate();
-        if (!valid) return new CreateStockAdjustmentNoteResultAppDto { Success = false, ErrorMessage = error };
+        if (!valid)
+        {
+            return new CreateStockAdjustmentNoteResultAppDto
+            {
+                Success = false,
+                ErrorMessage = error
+            };
+        }
+
+        foreach (var item in dto.Items)
+        {
+
+            var product = await productDataReader.GetByIdAsync(item.ProductId).ConfigureAwait(false);
+            if (product is null)
+            {
+                return new CreateStockAdjustmentNoteResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.GoodsReceipt.ProductIsNotFound"
+                };
+            }
+
+            if (product.UnitMeasurementId.HasValue)
+            {
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                if (unitMeasurement is not null)
+                {
+                    if (!NumberHelper.IsValidDecimalPlace(item.SystemQuantity, unitMeasurement.DecimalPlaces) || !NumberHelper.IsValidDecimalPlace(item.PhysicalQuantity, unitMeasurement.DecimalPlaces))
+                    {
+                        return new CreateStockAdjustmentNoteResultAppDto
+                        {
+                            Success = false,
+                            ErrorMessage = "Error.QuantityMustBeInteger"
+                        };
+                    }
+                }
+            }
+        }
 
         try
         {

@@ -397,7 +397,7 @@
     <value>Chiết khấu không được vượt quá tổng tiền hàng.</value>
   </data>
   <data name="Error.OrderItemIsNotFound" xml:space="preserve">
-    <value>Chi tiết đơn hàng không tồn tại.</value>
+    <value>Hàng đặt không tồn tại.</value>
   </data>
   <data name="Error.OrderItemAlreadyDelivered" xml:space="preserve">
     <value>Sản phẩm đã được giao rồi.</value>
@@ -487,7 +487,7 @@
     <value>Không thể nhận hàng cho đơn mua hàng {0}.</value>
   </data>
   <data name="Error.PurchaseOrderItemIsNotFound" xml:space="preserve">
-    <value>Không tìm thấy hàng hóa có ID {0} trong đơn mua hàng {1}.</value>
+    <value>Không tìm thấy hàng hóa có trong đơn mua hàng.</value>
   </data>
   <data name="Error.PurchaseOrderReceiveQuantityExceedsOrdered" xml:space="preserve">
     <value>Số lượng nhận {0} vượt quá số lượng đã đặt.</value>

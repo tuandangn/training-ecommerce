@@ -246,6 +246,7 @@ void ConfigureServices(IServiceCollection services, ConfigurationManager configu
     services.AddScoped<ISystemNotificationManager, SystemNotificationManager>();
     services.AddScoped<IOrderManager, OrderManager>();
     services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
+    services.AddScoped<ICustomerLedgerManager, CustomerLedgerManager>();
     services.AddScoped<IBankTransferPaymentIntentManager, BankTransferPaymentIntentManager>();
     services.AddScoped<IBankTransferVerificationLogManager, BankTransferVerificationLogManager>();
     services.AddScoped<ICassoReconciliationRunManager, CassoReconciliationRunManager>();

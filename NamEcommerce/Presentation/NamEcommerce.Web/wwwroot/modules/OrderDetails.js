@@ -92,7 +92,6 @@ async function submitFormAsync(form) {
                 addProductQuantity.value = 1;
                 addProductQuantity.dataset.decimals = String(product.quantityDecimalPlaces ?? 0);
                 addProductQuantity.dataset.decimalBound = '';
-                window.DecimalFields?.bindInput?.(addProductQuantity);
                 addProductUnitPrice.value = product.price || 0;
                 modalProductInfo.classList.remove('d-none');
                 addItemBtn.classList.remove('d-none');
@@ -114,6 +113,7 @@ async function submitFormAsync(form) {
             addProductId.value = '';
             addProductQuantity.value = 1;
             addProductUnitPrice.value = '';
+            window.DecimalFields?.wrapExistingInput?.(addProductQuantity);
         });
 
         // Submit add item via AJAX
@@ -126,7 +126,7 @@ async function submitFormAsync(form) {
             addProductModal.hide();
 
             try {
-                const result = await apiPost('/Order/AddOrderItem', new FormData(this));
+                const result = await apiPost('/Order/AddOrderItem', DecimalFields.getFormData(this));
                 if (result.success) {
                     location.reload();
                 } else {
@@ -146,19 +146,19 @@ async function submitFormAsync(form) {
 
         $('.btnEditItem').on('click', function () {
             const data = $(this).data();
+            console.log(data);
             $('#editItemId').val(data.id);
             $('#editProductName').text(data.product);
             const editQtyEl = document.getElementById('editQuantity');
-            const dp = parseInt(data.decimalplaces ?? 0, 10);
+            const dp = data.decimalplaces;
             if (editQtyEl) {
                 editQtyEl.dataset.decimals = String(dp);
-                editQtyEl.dataset.decimalBound = '';
-                window.DecimalFields?.bindInput?.(editQtyEl);
+                window.DecimalFields?.wrapExistingInput?.(editQtyEl);
             }
             const editDpInput = document.getElementById('editDecimalPlaces');
             if (editDpInput) editDpInput.value = dp;
-            $('#editQuantity').val(DecimalFields.formatQuantity(data.qty, data.decimalplaces ?? 0));
-            $('#editUnitPrice').val(DecimalFields.formatCurrency(data.price));
+            $('#editQuantity').val(this.dataset.qty);
+            $('#editUnitPrice').val(this.dataset.price);
             if (data.availableqty > 0) {
                 $('#editProductStock').find('.stock-field').text('Tồn kho: ' + DecimalFields.formatQuantity(Math.max(0, data.availableqty), data.decimalplaces ?? 0));
             } else {

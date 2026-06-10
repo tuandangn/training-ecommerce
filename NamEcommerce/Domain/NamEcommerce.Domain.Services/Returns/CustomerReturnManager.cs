@@ -20,6 +20,7 @@ using NamEcommerce.Domain.Shared.Services.Debts;
 using NamEcommerce.Domain.Shared.Services.Finance;
 using NamEcommerce.Domain.Shared.Services.Inventory;
 using NamEcommerce.Domain.Services.Common;
+using NamEcommerce.Domain.Shared.Dtos.Debts;
 using NamEcommerce.Domain.Shared.Services.Returns;
 using NamEcommerce.Domain.Shared.Services.Users;
 
@@ -33,6 +34,7 @@ public sealed class CustomerReturnManager(
     IEntityDataReader<Warehouse> warehouseDataReader,
     IEntityDataReader<CustomerReturnRequest> customerReturnRequestDataReader,
     ICustomerDebtManager customerDebtManager,
+    ICustomerLedgerManager customerLedgerManager,
     IExpenseManager expenseManager,
     IProductReservationManager productReservationManager,
     ICurrentUserAccessor currentUserAccessor,
@@ -484,6 +486,15 @@ public sealed class CustomerReturnManager(
             customerReturn.Code,
             customerReturn.DeliveryNoteId == Guid.Empty ? null : customerReturn.DeliveryNoteId,
             netRefundAmount).ConfigureAwait(false);
+
+        await customerLedgerManager.RecordReturnCreditAsync(new RecordCustomerLedgerReturnCreditDto
+        {
+            CustomerId = customerReturn.CustomerId,
+            Amount = netRefundAmount,
+            ReferenceId = customerReturn.Id,
+            ReferenceCode = customerReturn.Code,
+            OccurredAtUtc = customerReturn.ConfirmedOnUtc ?? DateTime.UtcNow
+        }).ConfigureAwait(false);
 
         if (creditNote.RemainingAmount > 0)
         {

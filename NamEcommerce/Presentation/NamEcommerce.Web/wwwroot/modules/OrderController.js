@@ -292,8 +292,6 @@ export default class OrderController {
         const items = Array.from(this.#state.items);
         const existingIndex = items.findIndex(item => item.productInfo.id === product.id);
         if (existingIndex !== -1) {
-            const existingItem = items[existingIndex];
-            existingItem.quantity += 1;
             this.#activeRowIndex = existingIndex;
             this.#setState({ items });
             this.#openEditorForIndex(existingIndex);
@@ -302,11 +300,11 @@ export default class OrderController {
             items.push(new OrderItem(new ProductInfo(product), 1, unitPrice));
             this.#activeRowIndex = items.length - 1;
             this.#setState({ items });
-            this.#openEditorForIndex(items.length - 1);
+            this.#openEditorForIndex(items.length - 1, { canRemove: false });
         }
     }
 
-    #openEditorForIndex(index) {
+    #openEditorForIndex(index, openOptions) {
         const item = this.#state.items[index];
         if (!item || !this.#itemEditor) return;
         this.#itemEditor.open(
@@ -327,7 +325,7 @@ export default class OrderController {
                         items: this.#state.items.filter((_, i) => i !== index),
                     });
                 },
-            }
+            }, openOptions
         );
     }
 

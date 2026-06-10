@@ -13,7 +13,7 @@
             </div>
         </div>
         <div class="content-card-body">
-            <div class="order-workflow-info-grid mb-3">
+            <div class="order-workflow-info-grid mb-3 three-columns">
                 <div>
                     <div class="workflow-info-label">Khách hàng</div>
                     <div class="fw-bold text-dark">@Model.CustomerName</div>
@@ -119,7 +119,7 @@
                                         <span class="fw-medium text-dark">@item.ProductName</span>
                                     </div>
                                 </td>
-                                <td class="text-end fw-600">@item.Quantity.DisplayQuantity()</td>
+                                <td class="text-end fw-600">@item.Quantity.DisplayQuantity(item.QuantityDecimalPlaces)</td>
                                 <td class="text-end text-muted">@item.UnitPrice.DisplayCurrencyWithSymbol()</td>
                                 <td class="text-end fw-600 text-primary">@item.SubTotal.DisplayCurrencyWithSymbol()</td>
                                 @if (Model.CanUpdateOrderItems)
@@ -132,9 +132,9 @@
                                             <li>
                                                 <button class="dropdown-item btnEditItem" data-id="@item.Id"
                                                         data-product="@item.ProductName"
-                                                        data-availableQty="@item.ProductAvailableQty?.DisplayQuantity()"
-                                                        data-qty="@item.Quantity.ToString("#")"
-                                                        data-price="@item.UnitPrice.ToString("#")"
+                                                        data-availableQty="@item.ProductAvailableQty?.DisplayQuantity(item.QuantityDecimalPlaces)"
+                                                        data-qty="@item.Quantity.DisplayQuantity(item.QuantityDecimalPlaces)"
+                                                        data-price="@item.UnitPrice.DisplayCurrency()"
                                                         data-decimalplaces="@item.QuantityDecimalPlaces">
                                                     <i class="bi bi-pencil me-2 text-primary"></i>Chỉnh sửa
                                                 </button>

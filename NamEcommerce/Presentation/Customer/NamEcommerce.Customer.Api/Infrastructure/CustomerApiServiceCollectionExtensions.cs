@@ -139,6 +139,7 @@ internal static class CustomerApiServiceCollectionExtensions
         services.AddScoped<IDirectShipManager, DirectShipManager>();
         services.AddScoped<IExpenseManager, ExpenseManager>();
         services.AddScoped<ICustomerDebtManager, CustomerDebtManager>();
+        services.AddScoped<ICustomerLedgerManager, CustomerLedgerManager>();
         services.AddScoped<ICustomerReturnManager, CustomerReturnManager>();
         services.AddScoped<IWarehouseManager, WarehouseManager>();
         services.AddScoped<IDeliveryNoteManager, DeliveryNoteManager>();

@@ -1,18 +1,21 @@
 using NamEcommerce.Application.Contracts.DeliveryNotes;
 using NamEcommerce.Application.Contracts.Dtos.Common;
 using NamEcommerce.Application.Contracts.Dtos.DeliveryNotes;
+using NamEcommerce.Application.Contracts.Dtos.GoodsReceipts;
 using NamEcommerce.Application.Contracts.Inventory;
 using NamEcommerce.Application.Contracts.Localizations;
 using NamEcommerce.Application.Contracts.Notifications;
 using NamEcommerce.Application.Contracts.Users;
 using NamEcommerce.Application.Services.Extensions;
 using NamEcommerce.Application.Services.Notifications;
+using NamEcommerce.Domain.Entities.Catalog;
 using NamEcommerce.Domain.Entities.Inventory;
 using NamEcommerce.Domain.Entities.Orders;
 using NamEcommerce.Domain.Shared.Common;
 using NamEcommerce.Domain.Shared.Dtos.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Enums.DeliveryNotes;
 using NamEcommerce.Domain.Shared.Exceptions;
+using NamEcommerce.Domain.Shared.Helpers;
 using NamEcommerce.Domain.Shared.Services.DeliveryNotes;
 using NamEcommerce.Domain.Specifications.Inventory;
 
@@ -26,6 +29,8 @@ public sealed class DeliveryNoteAppService(
     IEntityDataReader<Order> orderDataReader,
     IEntityDataReader<ProductReservationLedger> productReservationDataReader,
     IEntityDataReader<InventoryStock> inventoryStockDataReader,
+    IEntityDataReader<Product> productDataReader,
+    IEntityDataReader<UnitMeasurement> unitMeasurementDataReader,
     ILocalizationAppService localizationAppService) : IDeliveryNoteAppService
 {
     public async Task<CreateDeliveryNoteResultAppDto> CreateFromOrderAsync(CreateDeliveryNoteAppDto dto)
@@ -64,6 +69,43 @@ public sealed class DeliveryNoteAppService(
                         Success = false,
                         ErrorMessage = "Error.WarehouseIsNotFound"
                     };
+                }
+            }
+        }
+
+        foreach (var item in dto.Items)
+        {
+            var orderItem = order.OrderItems.FirstOrDefault(orderItem => orderItem.Id == item.OrderItemId);
+            if (orderItem is null)
+            {
+                return new CreateDeliveryNoteResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.OrderItemIsNotFound"
+                };
+            }
+            var product = await productDataReader.GetByIdAsync(orderItem.ProductId).ConfigureAwait(false);
+            if (product is null)
+            {
+                return new CreateDeliveryNoteResultAppDto
+                {
+                    Success = false,
+                    ErrorMessage = "Error.ProductIsNotFound"
+                };
+            }
+            if (product.UnitMeasurementId.HasValue)
+            {
+                var unitMeasurement = await unitMeasurementDataReader.GetByIdAsync(product.UnitMeasurementId.Value).ConfigureAwait(false);
+                if (unitMeasurement is not null)
+                {
+                    if (!NumberHelper.IsValidDecimalPlace(item.Quantity, unitMeasurement.DecimalPlaces))
+                    {
+                        return new CreateDeliveryNoteResultAppDto
+                        {
+                            Success = false,
+                            ErrorMessage = "Error.QuantityMustBeInteger"
+                        };
+                    }
                 }
             }
         }

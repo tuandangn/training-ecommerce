@@ -51,8 +51,8 @@ public sealed record CreateOrderDto : BaseOrderDto
 {
     public required Guid CustomerId { get; init; }
     public string? ShippingAddress { get; set; }
-    public bool RequireAvailableStock { get; init; } = true;
     public IList<AddOrderItemDto> Items { get; } = [];
+    public bool RequireAvailableStock { get; init; } = true;
 
     public override void Verify()
     {

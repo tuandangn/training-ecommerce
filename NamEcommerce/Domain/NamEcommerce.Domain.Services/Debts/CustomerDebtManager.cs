@@ -23,6 +23,7 @@ public sealed class CustomerDebtManager(
     IEntityDataReader<CustomerCreditNote> creditNoteReader,
     IEntityDataReader<Customer> customerReader,
     IEntityDataReader<DeliveryNote> deliveryNoteReader,
+    ICustomerLedgerManager customerLedgerManager,
     EntityCodeGenerator entityCodeGenerator) : ICustomerDebtManager
 {
     private Task<string> GenerateDebtCodeAsync()
@@ -65,6 +66,15 @@ public sealed class CustomerDebtManager(
 
         debt.MarkCreated();
         var inserted = await debtRepository.InsertAsync(debt).ConfigureAwait(false);
+
+        await customerLedgerManager.RecordChargeAsync(new RecordCustomerLedgerChargeDto
+        {
+            CustomerId = dto.CustomerId,
+            Amount = dto.TotalAmount,
+            ReferenceType = CustomerLedgerReferenceType.None,
+            OccurredAtUtc = inserted.CreatedOnUtc
+        }).ConfigureAwait(false);
+
         return MapToDto(inserted);
     }
 
@@ -192,6 +202,17 @@ public sealed class CustomerDebtManager(
 
         payment.MarkCreated();
         var inserted = await paymentRepository.InsertAsync(payment).ConfigureAwait(false);
+
+        await customerLedgerManager.RecordPaymentAsync(new RecordCustomerLedgerPaymentDto
+        {
+            CustomerId = dto.CustomerId,
+            Amount = inserted.Amount,
+            ReferenceId = inserted.Id,
+            ReferenceCode = inserted.Code,
+            OccurredAtUtc = dto.PaidOnUtc,
+            CreatedByUserId = dto.RecordedByUserId
+        }).ConfigureAwait(false);
+
         return MapToPaymentDto(inserted);
     }
 
@@ -254,6 +275,15 @@ public sealed class CustomerDebtManager(
 
         var customer = await customerReader.GetByIdAsync(dto.CustomerId).ConfigureAwait(false);
         if (customer == null) throw new CustomerIsNotFoundException(dto.CustomerId);
+
+        await customerLedgerManager.RecordPaymentAsync(new RecordCustomerLedgerPaymentDto
+        {
+            CustomerId = dto.CustomerId,
+            Amount = dto.Amount,
+            OccurredAtUtc = dto.PaidOnUtc,
+            CreatedByUserId = dto.RecordedByUserId,
+            Note = dto.Note
+        }).ConfigureAwait(false);
 
         // Lấy tất cả debts chưa trả hết, sắp xếp cũ nhất trước (FIFO)
         var pendingDebtIds = debtReader.DataSource
